@@ -73,7 +73,7 @@ class ConnectionLimits(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class ConnectionInfo(CompactValue):
-    'Immutable successful connection handshake; reading fields does not query the host again.\n\nFields:\nruntime: Canonical UUID of the connected Runtime instance.\nhost_pid: Operating-system process ID of the host, not the client.\nsdk_build: Host SDK build identity used by strict pairing checks.\nprotocol: Negotiated exact protocol pairing identifier; incompatible pairs are rejected.\ncapabilities: Finite capability names announced by the host handshake.\nlimits: Host transport/outcome-retention limits with explicit units.'
+    'Immutable successful connection handshake; reading fields does not query the host again.\n\nFields:\nruntime: Canonical UUID of the connected Runtime instance.\nhost_pid: Operating-system process ID of the host, not the client.\nsdk_build: Host SDK build identity for diagnostics and optional explicit build pinning.\nprotocol: Stable wire protocol major; independent of package versions and API additions.\ncapabilities: Optional host services; unknown names do not prevent connection.\nlimits: Host transport/outcome-retention limits with explicit units.'
     runtime: str
     host_pid: int
     sdk_build: str

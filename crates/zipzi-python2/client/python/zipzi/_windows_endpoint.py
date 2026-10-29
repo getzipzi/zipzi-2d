@@ -6,9 +6,14 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 import threading
 import time
+
+if sys.platform != 'win32':
+    raise ImportError('Win32 host discovery requires Windows')
+
 from ._windows_pipe import api, kernel, advapi, current_sid, endpoint_name, close_handle, local_free, wait
 from ._errors import SdkFailure
 from .backends.connected import ConnectedBackend

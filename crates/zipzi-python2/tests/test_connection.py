@@ -151,6 +151,52 @@ with connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2])) as r:
                 self.assertEqual(first.connection.runtime, second.connection.runtime)
             self.assertEqual(len(self.pids()), 1)
 
+    def test_same_protocol_allows_different_capabilities_and_extended_metadata(self):
+        from zipzi.backends import connected
+
+        exchange = connected._exchange
+        for capabilities in ([], ["future_optional_service"]):
+            with self.subTest(capabilities=capabilities):
+                def extended_host(stream, body):
+                    response = exchange(stream, body)
+                    if "operation" not in json.loads(body):
+                        response["ok"]["capabilities"] = capabilities
+                        response["ok"]["sdk_build"] = "99.0+different-sources"
+                        response["ok"]["host_version"] = "99.0"
+                        response["ok"]["future_metadata"] = {"enabled": True}
+                    return response
+
+                with patch.object(connected, "_exchange", side_effect=extended_host):
+                    with self.connect() as runtime:
+                        self.assertEqual(runtime.connection.protocol, "zipzi-runtime-v1")
+                        self.assertEqual(runtime.connection.sdk_build, "99.0+different-sources")
+                        self.assertEqual(runtime.connection.capabilities, tuple(capabilities))
+                        session = runtime.sessions.create()
+                        self.assertIn(session.id, [info.id for info in runtime.sessions.list()])
+                        with self.assertRaises(zipzi.SdkFailure) as failure:
+                            runtime._backend._request({"op": "future_operation"}, runtime, "future")
+                        self.assertEqual(failure.exception.code, "UNSUPPORTED_OPERATION")
+                        self.assertEqual(session.info().id, session.id)
+                        session.close(discard_modified=True)
+        self.assertEqual(len(self.pids()), 1)
+
+    def test_incompatible_host_response_is_rejected(self):
+        from zipzi.backends import connected
+
+        exchange = connected._exchange
+        def incompatible_host(stream, body):
+            response = exchange(stream, body)
+            response["ok"]["protocol"] = "zipzi-runtime-v2"
+            return response
+
+        with patch.object(connected, "_exchange", side_effect=incompatible_host):
+            with self.assertRaises(zipzi.SdkFailure) as failure:
+                self.connect()
+        self.assertEqual(failure.exception.code, "PROTOCOL_MISMATCH")
+        with self.connect() as runtime:
+            self.assertEqual(runtime.sessions.list(), ())
+        self.assertEqual(len(self.pids()), 1)
+
     def test_launcher_exit_during_startup_preserves_host(self):
         script = ('import runpy; from pathlib import Path; '
                   'connect=runpy.run_path(' + repr(str(Path(__file__).resolve())) + ')["connect"]; '

@@ -16,7 +16,9 @@ mod binary;
 pub use binary::{BinaryReply, BinarySlice, MAX_BINARY_CHUNK, MAX_BINARY_HEADER};
 mod values;
 use values::*;
-pub const CONTRACT: &str = "zipzi-runtime-r7-manual-mesh-1";
+/// Wire major version, independent of package versions and API additions.
+/// Bump only for incompatible framing, envelope or existing operation changes.
+pub const CONTRACT: &str = "zipzi-runtime-v1";
 pub const SDK_BUILD: &str = env!("ZIPZI_RUNTIME_SDK_BUILD");
 pub const MAX_FRAME: usize = 16 << 20;
 
@@ -44,7 +46,6 @@ impl Default for ProtocolLimits {
     }
 }
 #[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
 struct Hello {
     protocol: String,
     runtime: Option<RuntimeInstanceId>,
@@ -53,7 +54,6 @@ struct Hello {
     sdk_build: Option<String>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub struct Request {
     pub protocol: String,
     pub runtime: RuntimeInstanceId,
@@ -512,7 +512,7 @@ impl Protocol {
         }
     }
     /// Hello is the first frame on every socket. No Runtime registration or writes
-    /// occur until the complete protocol/build/old-instance check has passed.
+    /// occur until the protocol major, optional build pin and old-instance checks pass.
     pub fn hello(&mut self, runtime: &mut Runtime, hello: Value, now: Instant) -> Value {
         self.expire(runtime, now);
         if hello.get("protocol").and_then(Value::as_str) != Some(CONTRACT) {

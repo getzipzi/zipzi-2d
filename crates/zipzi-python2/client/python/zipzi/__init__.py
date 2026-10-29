@@ -28,9 +28,10 @@ def connect(*, endpoint: Path | None = None, start: bool = False, host: Path | N
     ZIPZI_EDITOR_HOST and the supported app locations. host requires start=True.
     timeout is the positive finite per-request transport timeout in seconds;
     startup_timeout is the positive finite total startup/handshake budget.
-    sdk_build=None accepts the compatible host build; an explicit string also
-    requires an exact build match. Protocol and required capabilities always
-    match strictly; installing native never changes the selected execution host.
+    sdk_build=None accepts any host build with the same wire protocol major;
+    an explicit string additionally requires an exact build match. Optional
+    capabilities do not gate connection; inspect runtime.connection.capabilities
+    before selecting host services. Installing native never changes the host.
 
     This blocks for connection/startup, raising ValueError for invalid options,
     PermissionError for unsafe endpoint ownership, OS connection errors when

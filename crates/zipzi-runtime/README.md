@@ -69,10 +69,32 @@ available shared budget; limits are admission ceilings, not preallocated memory.
 The `protocol` and Unix `local` modules provide authenticated connections,
 request deduplication, recovery, reconnect grace and endpoint ownership. The
 Editor assembles the listener on its application thread. The protocol uses
-bounded JSON control frames and binary blobs; hosts and native adapters must be
-rebuilt together when their contract changes. A disconnected client can resume
-within its grace period; expiry releases its edits but retains formal sessions
-and entered jobs.
+bounded JSON control frames and binary blobs. `zipzi-runtime-v1` identifies the
+wire **major**, independently of package versions, source hashes and additive API
+changes. A disconnected client can resume within its grace period; expiry
+releases its edits but retains formal sessions and entered jobs.
+
+Compatibility rules for Connected clients and Editor hosts:
+
+- Keep the wire major for new operations, optional services and compatible
+  response extensions. Advertise optional services through capabilities; missing
+  or unknown capability names do not reject the connection. Unsupported calls
+  return `UNSUPPORTED_OPERATION` while existing operations remain usable.
+- Ignore unknown handshake and request-envelope metadata. Operation arguments
+  stay strict so unsupported mutation options cannot be silently ignored. New
+  request options need host capability checks or a separate operation; older
+  callers must still work with their existing arguments and defaults.
+- Preserve existing operation semantics, required fields and binary layouts.
+  Introduce a separate operation/capability for incompatible payloads, or raise
+  the wire major if existing calls must change. Binary layout signatures remain
+  checked on the affected calls.
+- SDK build identities are diagnostic by default. An explicit Python
+  `sdk_build=...` pins that exact build. Runtime identity, resume secrets, ownership
+  and request deduplication are always enforced.
+
+The earlier feature-specific `rN` protocols require a coordinated upgrade to
+this baseline. The in-process `zipzi-native` adapter still pairs with its Python
+package and is independent of this Connected compatibility policy.
 
 ## Modeling and observation
 

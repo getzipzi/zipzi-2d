@@ -3,6 +3,7 @@
 Host discovery/start ownership lives in _endpoint; request recovery never launches.
 """
 from .._generated import binary as typed_binary
+from .._generated.catalog import CONTRACT
 from .._generated.modeling import ModelingCommandManualMesh
 import hashlib
 import json
@@ -15,11 +16,10 @@ from typing import Literal
 from .. import _operations as ops
 from .._generated.backend_bindings import ConnectedBindings
 from .._errors import Busy, JobTimeout, OutcomeUnknown, PendingRequest, SdkFailure, unwrap
-from .._values import ConnectionInfo, SessionId, Source, record, sequence
+from .._values import ConnectionInfo, SessionId, Source, record
 from . import JobKind
 from ._transfers import Transfer
 
-CONTRACT = "zipzi-runtime-r7-manual-mesh-1"
 MAX_FRAME = 16 << 20
 MAX_BINARY_CHUNK = 1 << 20
 MAX_BINARY_HEADER = 16 << 10
@@ -106,8 +106,6 @@ class ConnectedBackend(ConnectedBindings):
                 raise SdkFailure("PROTOCOL_MISMATCH", "Host returned an incompatible protocol")
             if self._sdk_build is not None and metadata.sdk_build != self._sdk_build:
                 raise SdkFailure("BUILD_MISMATCH", "Host returned a different SDK build")
-            if not {"typed_binary_arrays", "typed_full_modeling", "typed_field_addresses", "read_jobs", "project_io", "resource_jobs", "editor_context", "typed_meshes", "typed_resources_plans", "typed_resource_values", "typed_job_lifecycle", "typed_parameters", "typed_event_pages", "typed_mesh_batch", "typed_mesh_bindings", "typed_modeling_samples", "typed_scene_authoring", "typed_object_references", "binary_blobs"}.issubset(sequence(hello["capabilities"])):
-                raise SdkFailure("CONTRACT_MISMATCH", "Host lacks typed authoring operations")
         except BaseException:
             stream.close()
             raise

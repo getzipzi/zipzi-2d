@@ -172,7 +172,96 @@ fn image_prepare_failure_aborts_on_host_even_if_client_never_sends_cleanup() {
     }
 }
 #[test]
-fn a06_strict_handshake_and_old_instance_never_register_or_mutate() {
+fn handshake_extensions_do_not_block_existing_operations() {
+    let mut rt = Runtime::default();
+    let mut p = Protocol::default();
+    let now = Instant::now();
+    let hello = p.hello(
+        &mut rt,
+        json!({"protocol": CONTRACT, "client_version": "99.0", "extensions": ["future"]}),
+        now,
+    );
+    assert_eq!(hello["ok"]["protocol"], "zipzi-runtime-v1");
+    let client: ClientId = serde_json::from_value(hello["ok"]["client"].clone()).unwrap();
+    let connection = hello["ok"]["connection"].as_u64().unwrap();
+    let envelope = json!({"protocol": CONTRACT, "runtime": rt.instance_id(),
+        "client": client, "request_id": 1, "trace_id": "future-metadata",
+        "operation": {"op": "list_sessions"}});
+    let response = p.handle(
+        &mut rt,
+        client,
+        connection,
+        serde_json::from_value(envelope).unwrap(),
+        now,
+    );
+    assert_eq!(response["ok"], json!([]));
+
+    // Unknown operations fail locally to the call; the connection stays usable.
+    let unsupported = request(
+        &mut rt,
+        &mut p,
+        client,
+        connection,
+        2,
+        json!({"op": "future_operation"}),
+        now,
+    );
+    assert_eq!(unsupported["error"]["code"], "UNSUPPORTED_OPERATION");
+    // Operation arguments remain strict: ignoring a future mutation option could
+    // silently change its meaning, unlike optional envelope metadata.
+    let invalid = request(
+        &mut rt,
+        &mut p,
+        client,
+        connection,
+        3,
+        json!({"op": "create_session", "setup": ModelSetup::default(), "future_option": true}),
+        now,
+    );
+    assert!(invalid.get("error").is_some());
+    assert_eq!(
+        request(
+            &mut rt,
+            &mut p,
+            client,
+            connection,
+            4,
+            json!({"op": "list_sessions"}),
+            now,
+        )["ok"],
+        json!([])
+    );
+}
+
+#[test]
+fn incompatible_protocol_and_explicit_build_pin_never_register_clients() {
+    let mut rt = Runtime::default();
+    let mut p = Protocol::default();
+    let now = Instant::now();
+    for protocol in [
+        "zipzi-runtime-v2",
+        "zipzi-runtime-r8-quality-topology-1",
+        "",
+    ] {
+        let response = p.hello(&mut rt, json!({"protocol": protocol}), now);
+        assert_eq!(response["error"]["code"], "PROTOCOL_MISMATCH");
+        assert_eq!(rt.live_counts().0, 0);
+        assert!(!p.has_connected_clients());
+    }
+    let response = p.hello(
+        &mut rt,
+        json!({"protocol": CONTRACT, "sdk_build": "different-build"}),
+        now,
+    );
+    assert_eq!(response["error"]["code"], "BUILD_MISMATCH");
+    assert_eq!(rt.live_counts().0, 0);
+    assert!(!p.has_connected_clients());
+    let hello = p.hello(&mut rt, json!({"protocol": CONTRACT}), now);
+    assert_eq!(hello["ok"]["sdk_build"], SDK_BUILD);
+}
+
+#[test]
+fn incompatible_protocol_and_old_instance_never_mutate() {
     let (mut rt, mut p, client, connection, now) = setup(Default::default());
     let response = p.hello(&mut rt, json!({"protocol": "zipzi-runtime-r3-1"}), now);
     assert_eq!(response["error"]["code"], "PROTOCOL_MISMATCH");

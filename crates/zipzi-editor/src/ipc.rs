@@ -93,7 +93,7 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
     if let Some(ready_file) = std::env::var_os("ZIPZI_DEV_READY_FILE") {
         let endpoint = Endpoint::from_env()?;
         // The PID record establishes launch ownership early. Development
-        // readiness is published only after this real strict socket handshake.
+        // readiness is published only after this real socket handshake.
         cx.background_executor()
             .spawn(async move {
                 let result = (|| -> std::io::Result<()> {

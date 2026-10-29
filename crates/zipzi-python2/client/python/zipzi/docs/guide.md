@@ -20,6 +20,16 @@ Query `runtime.capabilities()` and `runtime.limits()` before selecting work. The
 describe current availability without reserving admission. Local has no Editor
 windows. `runtime.connection` caches handshake information.
 
+Connected compatibility uses the stable wire major `zipzi-runtime-v1`, separately
+from package versions and source build hashes. Compatible API additions and
+different optional capabilities do not prevent connection. Check
+`runtime.connection.capabilities` before choosing optional services; unsupported
+calls return `UNSUPPORTED_OPERATION` and leave the connection usable. Binary
+layout signatures are still checked for the affected calls. An explicit
+`zipzi.connect(sdk_build=...)` additionally pins an exact build; the default does
+not. Earlier feature-specific `rN` protocols require upgrading Python and Editor
+to this baseline together. `zipzi.local()` still needs its matching native wheel.
+
 ## Select and read
 
 Use `runtime.sessions.list()` and attach an explicit `SessionId`. Create with

@@ -9,10 +9,10 @@ class _Entry(TypedDict):
     fields: NotRequired[Sequence[tuple[str,str]]]
     children: tuple[str,...]
     example: NotRequired[str]
-CONTRACT = 'zipzi-runtime-r7-manual-mesh-1'
+CONTRACT = 'zipzi-runtime-v1'
 PACKAGE_VERSION = '0.1.0a2'
-CLIENT_SOURCE_SHA256 = '51723788d3faea90c426ce19b547f1da613af53f5a7da895ffca22e20599a796'
-CONTRACT_SHA256 = '2b96cff305dbb7ef4c3872796a24ec486cc68064bd74181a4023c6eaf3baf9c1'
+CLIENT_SOURCE_SHA256 = '2730bfce7ac77a521876a88e29843fe61282c2d6b9e7d3c0cbf59955c9969ef5'
+CONTRACT_SHA256 = 'e35e6a3529a4a9e51523ed9df5d44df4c5371be5650fe1ca4bc19f496b875254'
 CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                         'zipzi.Batch',
                         'zipzi.Buffer',
@@ -67,8 +67,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                         'zipzi.spatial'),
            'documentation': 'Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or '
                             'connect(), explicitly select sessions, read before editing, verify confirmed results, '
-                            'then save and release. Package 0.1.0a2; protocol zipzi-runtime-r7-manual-mesh-1; client '
-                            'source SHA-256 51723788d3faea90c426ce19b547f1da613af53f5a7da895ffca22e20599a796.',
+                            'then save and release. Package 0.1.0a2; protocol zipzi-runtime-v1; client source SHA-256 '
+                            '2730bfce7ac77a521876a88e29843fe61282c2d6b9e7d3c0cbf59955c9969ef5.',
            'example': 'docs/recipes.py',
            'kind': 'module',
            'signature': ''},
@@ -242,18 +242,22 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                            'Fields:\n'
                                            'runtime: Canonical UUID of the connected Runtime instance.\n'
                                            'host_pid: Operating-system process ID of the host, not the client.\n'
-                                           'sdk_build: Host SDK build identity used by strict pairing checks.\n'
-                                           'protocol: Negotiated exact protocol pairing identifier; incompatible pairs '
-                                           'are rejected.\n'
-                                           'capabilities: Finite capability names announced by the host handshake.\n'
+                                           'sdk_build: Host SDK build identity for diagnostics and optional explicit '
+                                           'build pinning.\n'
+                                           'protocol: Stable wire protocol major; independent of package versions and '
+                                           'API additions.\n'
+                                           'capabilities: Optional host services; unknown names do not prevent '
+                                           'connection.\n'
                                            'limits: Host transport/outcome-retention limits with explicit units.',
                           'example': 'docs/recipes.py',
                           'fields': [('runtime', 'Canonical UUID of the connected Runtime instance.'),
                                      ('host_pid', 'Operating-system process ID of the host, not the client.'),
-                                     ('sdk_build', 'Host SDK build identity used by strict pairing checks.'),
+                                     ('sdk_build',
+                                      'Host SDK build identity for diagnostics and optional explicit build pinning.'),
                                      ('protocol',
-                                      'Negotiated exact protocol pairing identifier; incompatible pairs are rejected.'),
-                                     ('capabilities', 'Finite capability names announced by the host handshake.'),
+                                      'Stable wire protocol major; independent of package versions and API additions.'),
+                                     ('capabilities',
+                                      'Optional host services; unknown names do not prevent connection.'),
                                      ('limits', 'Host transport/outcome-retention limits with explicit units.')],
                           'kind': 'type',
                           'signature': '(runtime: str, host_pid: int, sdk_build: str, protocol: str, capabilities: '
@@ -4103,9 +4107,10 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                     'ZIPZI_EDITOR_HOST and the supported app locations. host requires start=True.\n'
                                     'timeout is the positive finite per-request transport timeout in seconds;\n'
                                     'startup_timeout is the positive finite total startup/handshake budget.\n'
-                                    'sdk_build=None accepts the compatible host build; an explicit string also\n'
-                                    'requires an exact build match. Protocol and required capabilities always\n'
-                                    'match strictly; installing native never changes the selected execution host.\n'
+                                    'sdk_build=None accepts any host build with the same wire protocol major;\n'
+                                    'an explicit string additionally requires an exact build match. Optional\n'
+                                    'capabilities do not gate connection; inspect runtime.connection.capabilities\n'
+                                    'before selecting host services. Installing native never changes the host.\n'
                                     '\n'
                                     'This blocks for connection/startup, raising ValueError for invalid options,\n'
                                     'PermissionError for unsafe endpoint ownership, OS connection errors when\n'

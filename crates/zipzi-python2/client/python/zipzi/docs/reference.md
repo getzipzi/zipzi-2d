@@ -7,7 +7,7 @@ Generated from the compiled authoring contract, the finite binding directory and
 
 ``
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a2; protocol zipzi-runtime-r7-manual-mesh-1; client source SHA-256 51723788d3faea90c426ce19b547f1da613af53f5a7da895ffca22e20599a796.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a2; protocol zipzi-runtime-v1; client source SHA-256 2730bfce7ac77a521876a88e29843fe61282c2d6b9e7d3c0cbf59955c9969ef5.
 
 
 ## zipzi.ApiDescription
@@ -160,16 +160,16 @@ Immutable successful connection handshake; reading fields does not query the hos
 Fields:
 runtime: Canonical UUID of the connected Runtime instance.
 host_pid: Operating-system process ID of the host, not the client.
-sdk_build: Host SDK build identity used by strict pairing checks.
-protocol: Negotiated exact protocol pairing identifier; incompatible pairs are rejected.
-capabilities: Finite capability names announced by the host handshake.
+sdk_build: Host SDK build identity for diagnostics and optional explicit build pinning.
+protocol: Stable wire protocol major; independent of package versions and API additions.
+capabilities: Optional host services; unknown names do not prevent connection.
 limits: Host transport/outcome-retention limits with explicit units.
 
 - `runtime`: Canonical UUID of the connected Runtime instance.
 - `host_pid`: Operating-system process ID of the host, not the client.
-- `sdk_build`: Host SDK build identity used by strict pairing checks.
-- `protocol`: Negotiated exact protocol pairing identifier; incompatible pairs are rejected.
-- `capabilities`: Finite capability names announced by the host handshake.
+- `sdk_build`: Host SDK build identity for diagnostics and optional explicit build pinning.
+- `protocol`: Stable wire protocol major; independent of package versions and API additions.
+- `capabilities`: Optional host services; unknown names do not prevent connection.
 - `limits`: Host transport/outcome-retention limits with explicit units.
 
 ## zipzi.ConnectionInfo.__repr__
@@ -2917,9 +2917,10 @@ process. With start=True, host is an absolute executable, or discovery uses
 ZIPZI_EDITOR_HOST and the supported app locations. host requires start=True.
 timeout is the positive finite per-request transport timeout in seconds;
 startup_timeout is the positive finite total startup/handshake budget.
-sdk_build=None accepts the compatible host build; an explicit string also
-requires an exact build match. Protocol and required capabilities always
-match strictly; installing native never changes the selected execution host.
+sdk_build=None accepts any host build with the same wire protocol major;
+an explicit string additionally requires an exact build match. Optional
+capabilities do not gate connection; inspect runtime.connection.capabilities
+before selecting host services. Installing native never changes the host.
 
 This blocks for connection/startup, raising ValueError for invalid options,
 PermissionError for unsafe endpoint ownership, OS connection errors when

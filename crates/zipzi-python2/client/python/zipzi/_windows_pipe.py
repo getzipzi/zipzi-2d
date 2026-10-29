@@ -3,8 +3,12 @@ import ctypes as c
 from ctypes import wintypes as w
 import hashlib
 from pathlib import Path
+import sys
 import time
 from typing import Any
+
+if sys.platform != 'win32':
+    raise ImportError('Win32 Named Pipe transport requires Windows')
 
 kernel = c.WinDLL('kernel32', use_last_error=True)
 advapi = c.WinDLL('advapi32', use_last_error=True)

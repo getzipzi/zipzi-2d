@@ -120256,7 +120256,7 @@
       }
     }
   ],
-  "protocol": "zipzi-runtime-r7-manual-mesh-1",
+  "protocol": "zipzi-runtime-v1",
   "resources": {
     "binary": null,
     "bindings": [
@@ -120816,7 +120816,7 @@
         }
       }
     ],
-    "protocol": "zipzi-runtime-r7-manual-mesh-1",
+    "protocol": "zipzi-runtime-v1",
     "roots": [
       {
         "kind": "union",
