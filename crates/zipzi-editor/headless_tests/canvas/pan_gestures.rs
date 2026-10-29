@@ -217,7 +217,7 @@ fn canvas_owns_floating_tools_and_right_aligned_header_zoom_controls(cx: &mut Te
         harness.view.update(cx, |view, cx| {
             let item = ToolbarItemConfig {
                 id: "registered-toolbar-item",
-                icon: IconName::Hand,
+                icon: IconName::Hand.into(),
                 command: zipzi_editor_core::CommandId::ToggleDeformers,
             };
             view.dock

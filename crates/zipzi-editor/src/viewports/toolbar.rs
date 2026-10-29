@@ -1,7 +1,7 @@
 use crate::{EditorView, t, ui::compact};
 use gpui_kit::assets::IconName;
 use gpui_kit::component::{
-    ActiveTheme, Disableable, Selectable, Sizable,
+    ActiveTheme, Disableable, Icon, Selectable, Sizable,
     button::{Button, ButtonCustomVariant, ButtonVariants},
 };
 use gpui_kit::{prelude::*, *};
@@ -37,11 +37,32 @@ pub(super) fn button_style(button: Button, cx: &App) -> Button {
         .border_1()
 }
 
+#[derive(Clone, Copy)]
+pub(crate) enum ToolbarIcon {
+    Named(IconName),
+    Svg(&'static [u8]),
+}
+
+impl From<IconName> for ToolbarIcon {
+    fn from(icon: IconName) -> Self {
+        Self::Named(icon)
+    }
+}
+
+impl ToolbarIcon {
+    fn render(self) -> Icon {
+        match self {
+            Self::Named(icon) => Icon::new(icon),
+            Self::Svg(data) => Icon::default().data(data),
+        }
+    }
+}
+
 /// One button's appearance and behavior. Items render in registration order.
 #[derive(Clone, Copy)]
 pub(crate) struct ToolbarItemConfig {
     pub id: &'static str,
-    pub icon: IconName,
+    pub icon: ToolbarIcon,
     pub command: CommandId,
 }
 
@@ -60,17 +81,17 @@ impl ToolbarRegistry {
         for item in [
             ToolbarItemConfig {
                 id: "tool_select",
-                icon: IconName::MousePointer,
+                icon: IconName::MousePointer.into(),
                 command: CommandId::SelectTool,
             },
             ToolbarItemConfig {
                 id: "tool_lasso",
-                icon: IconName::Lasso,
+                icon: IconName::Lasso.into(),
                 command: CommandId::LassoTool,
             },
             ToolbarItemConfig {
                 id: "tool_manual_mesh",
-                icon: IconName::GitBranch,
+                icon: ToolbarIcon::Svg(include_bytes!("../../assets/icons/mesh-edit.svg")),
                 command: CommandId::ManualMesh,
             },
         ] {
@@ -144,7 +165,7 @@ impl RenderOnce for CanvasToolbar {
                     .h(compact::rem(PRIMARY.button_size))
                     .min_w(compact::rem(PRIMARY.button_size))
                     .map(|button| attached_button(button, PRIMARY, cx))
-                    .icon(item.icon)
+                    .icon(item.icon.render())
                     .accessibility_label(t!(command.spec().label).into_owned())
                     .tooltip(t!(match command {
                         CommandId::SelectTool => "editor.tool_select_hint",
