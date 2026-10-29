@@ -99,9 +99,15 @@ For each release:
 4. Follow **Actions → Alpha release**. The tag reuses a successful build of the
    exact same commit when its artifacts are still available; otherwise it builds
    normally. Once verification passes, the workflow creates
-   a GitHub prerelease containing the Mac app ZIP and DMG, Windows portable ZIP,
-   complete workspace source, Python distributions and `SHA256SUMS`. GitHub
-   automatically generates the release notes. Separate PyPI jobs then publish `zipzi` followed by `zipzi-native` using the
+   a GitHub prerelease with four uploaded downloads: the Mac DMG, Windows portable
+   ZIP, complete workspace source (including submodules), and `SHA256SUMS` for
+   those three files. Python wheels and sdists go to PyPI and remain in internal
+   Actions artifacts for verified reuse; they are not duplicated on the release
+   page. GitHub's built-in Source code links are generated separately and are not
+   installers. A generated download section links directly to the two desktop
+   downloads and provides the matching Python installation command. GitHub still
+   automatically generates the changelog; no per-version notes file is maintained.
+   Separate PyPI jobs then publish `zipzi` followed by `zipzi-native` using the
    configured API token.
 
 The Windows ZIP contains the executable, licenses/notices and build identity;

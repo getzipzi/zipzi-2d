@@ -105,7 +105,6 @@ jobs:
           RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
         run: |
           mkdir -p target/releases
-          ditto -c -k --sequesterRsrc --keepParent 'target/Zipzi Editor.app' "target/releases/Zipzi-Editor-${RELEASE_TAG}-macos-arm64.zip"
           python3 tools/packaging/package_macos.py --app 'target/Zipzi Editor.app' --output "target/releases/Zipzi-Editor-${RELEASE_TAG}-macos-arm64.dmg"
           python3 tools/packaging/package_source.py "target/releases/Zipzi-2D-${RELEASE_TAG}-source.tar.gz"
           python3 tools/packaging/verify_artifacts.py --source "target/releases/Zipzi-2D-${RELEASE_TAG}-source.tar.gz"
@@ -303,13 +302,18 @@ jobs:
         with:
           name: alpha-release-assets
           path: release
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
       - name: Verify and publish GitHub prerelease
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           (cd release && sha256sum --check SHA256SUMS)
-          gh release create "$RELEASE_TAG" release/* --verify-tag --title "Zipzi $RELEASE_TAG" --generate-notes --prerelease --latest=false
+          python tools/packaging/release_downloads.py --input release --output public-release --notes target/download-notes.md --repository "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG"
+          (cd public-release && sha256sum --check SHA256SUMS)
+          gh release create "$RELEASE_TAG" public-release/* --verify-tag --title "Zipzi $RELEASE_TAG" --notes-file target/download-notes.md --generate-notes --prerelease --latest=false
 
   pypi-client:
     if: always() && needs.collect.result == 'success' && needs.github-release.result == 'success' && github.event_name == 'push' && github.ref_type == 'tag'

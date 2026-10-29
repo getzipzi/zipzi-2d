@@ -53,6 +53,7 @@ arguments and output paths.
 | `packaging/package_windows.py` | Build and verify a Windows x86-64 portable archive from a compiled Editor |
 | `packaging/collect_python.py` | Verify acceptance reports and collect the Python release distributions |
 | `packaging/reuse_release.py` | Select a successful default-branch build and verify its commit, version and publication hashes before tag promotion |
+| `packaging/release_downloads.py` | Prepare the Mac DMG, Windows ZIP, full source and matching checksums; generate desktop download links and Python install instructions |
 | `workspace/workspace.sh`, `workspace/workspace_tools.py` | Shared path and Cargo artifact handling |
 
 See [test coverage](#test-coverage), [CI coverage](#ci-coverage) and
@@ -127,6 +128,12 @@ publication file hash before publishing those same bytes. Missing, expired,
 failed, PR or other-commit builds cannot be reused; the workflow builds normally.
 Non-tag build artifacts last one day; tag artifacts last seven days. See
 [the release guide](../docs/RELEASING.md) for setup and recovery.
+
+The public GitHub release uploads only Mac DMG, Windows portable ZIP, complete
+source and their checksums. Python distributions remain on PyPI and in the
+validated Actions bundle. A generated download section precedes GitHub's
+automatic changelog, so users do not need to choose between wheel files or
+duplicate Mac formats. It requires no per-version notes maintenance.
 
 Python still builds from extracted source archives, refreshing materialized
 timestamps so cached workspace crates cannot hide changed source. Its schema
