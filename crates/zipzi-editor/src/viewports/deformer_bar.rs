@@ -1,7 +1,7 @@
 use super::toolbar::SECONDARY;
 use crate::{t, ui::compact, viewports::ViewportSurface};
 use gpui_kit::assets::IconName;
-use gpui_kit::component::{Disableable, Sizable, WindowExt, button::Button};
+use gpui_kit::component::{Disableable, Icon, Sizable, WindowExt, button::Button};
 use gpui_kit::{prelude::*, *};
 use zipzi_editor_core::{CommandId, CommandSource, EditorCommand, ObjectKind};
 
@@ -145,12 +145,12 @@ fn render_mesh_edit_bar(
     for (id, icon, command) in [
         (
             "tool_generate_mesh",
-            IconName::Grid2x2,
+            Icon::default().data(include_bytes!("../../assets/icons/generate-mesh.svg")),
             CommandId::GenerateMesh,
         ),
         (
             "tool_manual_preview",
-            IconName::Eye,
+            Icon::new(IconName::Eye),
             CommandId::ManualPreviewResult,
         ),
     ] {
