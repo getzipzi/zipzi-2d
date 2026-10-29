@@ -150,8 +150,12 @@ impl ReadBatch {
                 if captures.is_none() {
                     if let Some(pose) = requested.get(inputs.len()) {
                         inputs.push(
-                            ObservationInput::capture_from_snapshot(&source.snapshot, pose)
-                                .map_err(crate::observation::error)?,
+                            ObservationInput::capture_from_snapshot_with_quality(
+                                &source.snapshot,
+                                pose,
+                                view.needs_quality(),
+                            )
+                            .map_err(crate::observation::error)?,
                         );
                     } else {
                         *captures = Some(
@@ -167,13 +171,13 @@ impl ReadBatch {
                 }
                 let captures = captures.as_mut().unwrap();
                 if observer.is_none() {
-                    *observer = Some(crate::observation::observer(*view)?);
+                    *observer = Some(crate::observation::observer(view)?);
                 }
                 if let Some(capture) = captures.pop_front() {
                     frames.push(crate::observation::render(
                         observer.as_mut().unwrap(),
                         &capture,
-                        *view,
+                        view,
                     )?);
                 }
                 if !captures.is_empty() {
@@ -182,7 +186,7 @@ impl ReadBatch {
                 JobValue::Observed(Arc::new(crate::observation::ObservationSampleBatch {
                     source: source.source,
                     samples: crate::observation::ObservationBatch {
-                        view: *view,
+                        view: view.clone(),
                         requested: std::mem::take(requested),
                         frames: std::mem::take(frames),
                     },

@@ -53,6 +53,7 @@ pub struct ObservedFrame {
     pub view: ViewMapping,
     pub drawable_bounds: Vec<DrawableBounds>,
     pub textures: Vec<ObservedTexture>,
+    pub quality: Vec<zipzi_sdk::MeshQuality>,
     pub adapter_name: String,
     pub adapter_backend: String,
 }
@@ -265,6 +266,11 @@ impl Observer {
         let input = &captured.input;
         let resolved = &captured.textures;
         let view = request.mapping()?;
+        crate::topology::selection(
+            &input.authoring.meshes,
+            &input.authoring.parts,
+            request.topology.as_ref(),
+        )?;
         let (width, height) = (request.width, request.height);
         #[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
         let limit = self.context.max_texture_dimension();
@@ -303,6 +309,10 @@ impl Observer {
             digest.update(value.to_bits().to_le_bytes());
         }
         digest.update(b"source-texture:linear-mipmap-linear-repeat-area-v2");
+        digest.update(
+            serde_json::to_vec(&(&request.topology, request.quality))
+                .map_err(|e| error("OVERLAY_OPTIONS", e.to_string()))?,
+        );
         let mut input_sha256 = String::with_capacity(64);
         for byte in digest.finalize() {
             use std::fmt::Write;
@@ -388,7 +398,7 @@ impl Observer {
                 }
             })
             .collect();
-        let rgba = render_sample(
+        let mut rgba = render_sample(
             &mut self.renderer,
             &self.context,
             &catalog,
@@ -398,6 +408,19 @@ impl Observer {
             offset_x,
             offset_y,
         )?;
+        let quality = captured.quality(&request)?;
+        if let Some(overlay) = &request.topology {
+            crate::topology::draw(
+                &mut rgba,
+                &request,
+                view,
+                &input.frame,
+                &input.authoring.meshes,
+                &input.authoring.parts,
+                &quality,
+                overlay,
+            )?;
+        }
         let mut textures: Vec<_> = self
             .textures
             .iter()
@@ -423,6 +446,7 @@ impl Observer {
             view,
             drawable_bounds,
             textures,
+            quality: if request.quality { quality } else { vec![] },
             adapter_name: self.adapter_name.clone(),
             adapter_backend: self.adapter_backend.clone(),
         })

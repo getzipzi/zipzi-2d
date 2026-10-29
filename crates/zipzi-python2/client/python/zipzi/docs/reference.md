@@ -7,7 +7,7 @@ Generated from the compiled authoring contract, the finite binding directory and
 
 ``
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a2; protocol zipzi-runtime-v1; client source SHA-256 2730bfce7ac77a521876a88e29843fe61282c2d6b9e7d3c0cbf59955c9969ef5.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a2; protocol zipzi-runtime-v1; client source SHA-256 464f736971b3a44c9996f99b4d2df7719739c2cc359a7c0b5970935b07a9e5a6.
 
 
 ## zipzi.ApiDescription
@@ -415,7 +415,7 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `(poses: Sequence[Mapping[str, float]], view: observation.View, *, expected: Source | None=None) -> '_lifecycle.Job[Snapshot[observation.Batch]]'`
 
-Render 1..64 explicit parameter poses from an exact frozen Source. The explicit Y-up model ROI preserves aspect ratio; frames contain GPU RGBA8, Rust-encoded PNG, view mapping, actual adapter and texture hashes. Rendering resolves one immutable texture set per batch, never publishes history and does not abort an Edit on failure. Device initialization occurs on the worker; missing GPU produces a structured failure, independently of CPU operations. Runtime count/byte/device budgets apply. Recover a lost submission or result through its original Call; wait/close the Job to release its result slot.
+Render 1..64 explicit parameter poses from an exact frozen Source. The explicit Y-up model ROI preserves aspect ratio; frames contain GPU RGBA8, Rust-encoded PNG, view mapping, actual adapter and texture hashes. view.quality includes per-mesh geometry and sampled source-alpha coverage; view.topology enables wireframe, persistent vertex IDs, constraints and strain overlays with the same frozen mapping. Rendering resolves one immutable texture set per batch, never publishes history and does not abort an Edit on failure. Device initialization occurs on the worker; missing GPU produces a structured failure, independently of CPU operations. Runtime count/byte/device budgets apply. Recover a lost submission or result through its original Call; wait/close the Job to release its result slot.
 
 
 ## zipzi.Edit.modeling.records
@@ -429,7 +429,7 @@ Read selected canonical records from one exact source without editing. query lis
 
 `(poses: Sequence[Mapping[str, float]], *, checks: sampling.Checks=sampling.Checks(), expected: Source | None=None) -> Snapshot[sampling.Result]`
 
-Synchronously evaluate CPU poses without editing or GPU work. poses is an ordered sequence of parameter-ID/value maps in each parameter domain; inputs are owned before execution. checks supplies optional native geometry diagnostics, and expected=None accepts current content while an explicit Source rejects changes atomically. Returns Snapshot[sampling.Result] with frames in pose order. Native count/byte/work budgets apply; query/diagnostic failure does not abort an Edit. A lost result recovers through its original multi-stage Call, never by silently resampling current content. Owned results need no close. Example: sampled = session.modeling.sample(({parameter_id: 0.5},)).
+Synchronously evaluate CPU poses without editing or GPU work. poses is an ordered sequence of parameter-ID/value maps in each parameter domain; inputs are owned before execution. checks supplies authored validity diagnostics and, with quality=True, per-pose model-space mesh quality relative to this frozen source at default parameters; quality reports do not cover unsampled intervals. expected=None accepts current content while an explicit Source rejects changes atomically. Returns Snapshot[sampling.Result] with frames in pose order. Native count/byte/work budgets apply; query/diagnostic failure does not abort an Edit. A lost result recovers through its original multi-stage Call, never by silently resampling current content. Owned results need no close. Example: sampled = session.modeling.sample(({parameter_id: 0.5},)).
 
 
 ## zipzi.Edit.modeling.sample_async
@@ -1614,7 +1614,7 @@ Immutable typed value. See field semantics and the linked workflow.
 
 `(poses: Sequence[Mapping[str, float]], view: observation.View, *, expected: Source | None=None) -> '_lifecycle.Job[Snapshot[observation.Batch]]'`
 
-Render 1..64 explicit parameter poses from an exact frozen Source. The explicit Y-up model ROI preserves aspect ratio; frames contain GPU RGBA8, Rust-encoded PNG, view mapping, actual adapter and texture hashes. Rendering resolves one immutable texture set per batch, never publishes history and does not abort an Edit on failure. Device initialization occurs on the worker; missing GPU produces a structured failure, independently of CPU operations. Runtime count/byte/device budgets apply. Recover a lost submission or result through its original Call; wait/close the Job to release its result slot.
+Render 1..64 explicit parameter poses from an exact frozen Source. The explicit Y-up model ROI preserves aspect ratio; frames contain GPU RGBA8, Rust-encoded PNG, view mapping, actual adapter and texture hashes. view.quality includes per-mesh geometry and sampled source-alpha coverage; view.topology enables wireframe, persistent vertex IDs, constraints and strain overlays with the same frozen mapping. Rendering resolves one immutable texture set per batch, never publishes history and does not abort an Edit on failure. Device initialization occurs on the worker; missing GPU produces a structured failure, independently of CPU operations. Runtime count/byte/device budgets apply. Recover a lost submission or result through its original Call; wait/close the Job to release its result slot.
 
 
 ## zipzi.Session.modeling.records
@@ -1628,7 +1628,7 @@ Read selected canonical records from one exact source without editing. query lis
 
 `(poses: Sequence[Mapping[str, float]], *, checks: sampling.Checks=sampling.Checks(), expected: Source | None=None) -> Snapshot[sampling.Result]`
 
-Synchronously evaluate CPU poses without editing or GPU work. poses is an ordered sequence of parameter-ID/value maps in each parameter domain; inputs are owned before execution. checks supplies optional native geometry diagnostics, and expected=None accepts current content while an explicit Source rejects changes atomically. Returns Snapshot[sampling.Result] with frames in pose order. Native count/byte/work budgets apply; query/diagnostic failure does not abort an Edit. A lost result recovers through its original multi-stage Call, never by silently resampling current content. Owned results need no close. Example: sampled = session.modeling.sample(({parameter_id: 0.5},)).
+Synchronously evaluate CPU poses without editing or GPU work. poses is an ordered sequence of parameter-ID/value maps in each parameter domain; inputs are owned before execution. checks supplies authored validity diagnostics and, with quality=True, per-pose model-space mesh quality relative to this frozen source at default parameters; quality reports do not cover unsampled intervals. expected=None accepts current content while an explicit Source rejects changes atomically. Returns Snapshot[sampling.Result] with frames in pose order. Native count/byte/work budgets apply; query/diagnostic failure does not abort an Edit. A lost result recovers through its original multi-stage Call, never by silently resampling current content. Owned results need no close. Example: sampled = session.modeling.sample(({parameter_id: 0.5},)).
 
 
 ## zipzi.Session.modeling.sample_async
@@ -10560,6 +10560,54 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.MeshQuality
+
+`(mesh_id: str, visible: bool, vertex_count: int, triangles: tuple[TriangleQuality, ...], min_angle_degrees: float | None = None, max_aspect_ratio: float | None = None, max_edge_stretch: float | None = None, degenerate_triangles: int, flipped_triangles: int, texture_coverage: TextureCoverage | None = None)`
+
+Immutable owned MeshQuality value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+mesh_id: Stable document mesh ID, in evaluated drawable order.
+visible: Evaluated enabled/visible/positive-opacity state. Metrics are geometric and ignore occlusion.
+vertex_count: Number of evaluated vertices.
+triangles: Per-triangle metrics in evaluated Y-up model coordinates, relative to default parameters
+of the same frozen authoring source. This does not certify unsampled parameter intervals.
+min_angle_degrees: Smallest angle over this mesh; None for an empty mesh.
+max_aspect_ratio: Largest finite aspect ratio; collapsed triangles are counted separately.
+max_edge_stretch: Largest finite symmetric edge-length ratio relative to the default pose.
+degenerate_triangles: Number of exactly zero-area evaluated triangles.
+flipped_triangles: Number of negative relative-area triangles. Degenerate references are excluded.
+texture_coverage: Optional source-texture coverage. CPU-only sampling does not resolve image pixels.
+
+- `mesh_id`: Stable document mesh ID, in evaluated drawable order.
+- `visible`: Evaluated enabled/visible/positive-opacity state. Metrics are geometric and ignore occlusion.
+- `vertex_count`: Number of evaluated vertices.
+- `triangles`: Per-triangle metrics in evaluated Y-up model coordinates, relative to default parameters
+of the same frozen authoring source. This does not certify unsampled parameter intervals.
+- `min_angle_degrees`: Smallest angle over this mesh; None for an empty mesh.
+- `max_aspect_ratio`: Largest finite aspect ratio; collapsed triangles are counted separately.
+- `max_edge_stretch`: Largest finite symmetric edge-length ratio relative to the default pose.
+- `degenerate_triangles`: Number of exactly zero-area evaluated triangles.
+- `flipped_triangles`: Number of negative relative-area triangles. Degenerate references are excluded.
+- `texture_coverage`: Optional source-texture coverage. CPU-only sampling does not resolve image pixels.
+
+## zipzi.modeling.MeshQuality.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.MeshQuality.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.Model3Settings
 
 `(groups: tuple[ModelParameterGroup, ...] | None = None, layout: _Mapping[str, float] | None = None, hit_areas: tuple[ModelHitArea, ...] | None = None, user_data: AttachmentRef | None = None, extensions: _Mapping[str, ExtensionValue], source_runtime_ids: _Mapping[str, str] | None = None, source_content: str | None = None)`
@@ -12630,7 +12678,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.ModelingSamples
 
-`(version: _Version, parameters: tuple[_Mapping[str, float], ...], frames: tuple[DrawableFrame, ...], diagnostics: tuple[GeometryDiagnostic, ...])`
+`(version: _Version, parameters: tuple[_Mapping[str, float], ...], frames: tuple[DrawableFrame, ...], diagnostics: tuple[GeometryDiagnostic, ...], quality: tuple[tuple[MeshQuality, ...], ...])`
 
 Immutable owned ModelingSamples value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -12640,12 +12688,16 @@ parameters: Effective parameter maps in the same order as requested poses; each 
 document parameter ID.
 frames: CPU-evaluated frames in the same order as requested parameter maps.
 diagnostics: Structured diagnostics from this query or operation; an empty list means none were reported.
+quality: Per-pose evaluated mesh quality in frame order when Checks.quality is true; empty otherwise.
+Uses default parameters of this same frozen source as the reference, without image coverage.
 
 - `version`: Exact SDK version captured for this value; not a best-effort latest-version marker.
 - `parameters`: Effective parameter maps in the same order as requested poses; each map is keyed by
 document parameter ID.
 - `frames`: CPU-evaluated frames in the same order as requested parameter maps.
 - `diagnostics`: Structured diagnostics from this query or operation; an empty list means none were reported.
+- `quality`: Per-pose evaluated mesh quality in frame order when Checks.quality is true; empty otherwise.
+Uses default parameters of this same frozen source as the reference, without image coverage.
 
 ## zipzi.modeling.ModelingSamples.__repr__
 
@@ -14346,7 +14398,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.ObservationImage
 
-`(width: int, height: int, rgba: _Bytes, png: _Bytes, document_id: str, evaluation_revision: int, capture_id: str, scene_digest: str, render_digest: str, input_sha256: str, adapter_name: str, adapter_backend: str, parameters: _Mapping[str, float], visible_roi: tuple[float, float, float, float], scale: float, offset: tuple[float, float], textures: tuple[ObservedTexture, ...], drawable_bounds: tuple[ObservedBounds, ...])`
+`(width: int, height: int, rgba: _Bytes, png: _Bytes, document_id: str, evaluation_revision: int, capture_id: str, scene_digest: str, render_digest: str, input_sha256: str, adapter_name: str, adapter_backend: str, parameters: _Mapping[str, float], visible_roi: tuple[float, float, float, float], scale: float, offset: tuple[float, float], textures: tuple[ObservedTexture, ...], drawable_bounds: tuple[ObservedBounds, ...], quality: tuple[MeshQuality, ...])`
 
 Immutable owned ObservationImage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -14369,6 +14421,9 @@ scale: Model-to-image scale. Image X=x*scale+offset[0], Y=-y*scale+offset[1].
 offset: Translation in top-left image pixels, parallel to the documented scale formula.
 textures: Source texture identities and exact content hashes shared across this batch.
 drawable_bounds: Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.
+quality: Mesh quality in evaluated drawable order when View.quality is true; empty otherwise.
+Texture coverage uses alpha >= 8, pixel centers, at most a 256x256 grid, ignoring masks,
+filtering and UV repeat outside [0,1]. A step above 1 denotes approximate coverage.
 
 - `width`: Output image width in pixels.
 - `height`: Output image height in pixels.
@@ -14388,6 +14443,9 @@ drawable_bounds: Drawable geometric image bounds in evaluated order; masks/occlu
 - `offset`: Translation in top-left image pixels, parallel to the documented scale formula.
 - `textures`: Source texture identities and exact content hashes shared across this batch.
 - `drawable_bounds`: Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.
+- `quality`: Mesh quality in evaluated drawable order when View.quality is true; empty otherwise.
+Texture coverage uses alpha >= 8, pixel centers, at most a 256x256 grid, ignoring masks,
+filtering and UV repeat outside [0,1]. A step above 1 denotes approximate coverage.
 
 ## zipzi.modeling.ObservationImage.__repr__
 
@@ -14408,7 +14466,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.ObservationView
 
-`(width: int, height: int, roi: tuple[float, float, float, float], padding_model: float = 0.0)`
+`(width: int, height: int, roi: tuple[float, float, float, float], padding_model: float = 0.0, topology: TopologyOverlay | None = None, quality: bool = False)`
 
 Immutable owned ObservationView value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -14417,11 +14475,19 @@ width: Output width in pixels, 1..4096, subject to device and Runtime budgets.
 height: Output height in pixels, 1..4096, subject to device and Runtime budgets.
 roi: Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.
 padding_model: Nonnegative padding around the ROI in model units; aspect ratio is preserved.
+topology: Optional topology overlay in the same frozen Source and ROI mapping. It ignores
+masks and occlusion; None preserves the ordinary GPU image.
+quality: Include per-mesh evaluated quality and approximate source-alpha coverage.
+Uses default parameters of the same source as reference; checks requested frames only.
 
 - `width`: Output width in pixels, 1..4096, subject to device and Runtime budgets.
 - `height`: Output height in pixels, 1..4096, subject to device and Runtime budgets.
 - `roi`: Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.
 - `padding_model`: Nonnegative padding around the ROI in model units; aspect ratio is preserved.
+- `topology`: Optional topology overlay in the same frozen Source and ROI mapping. It ignores
+masks and occlusion; None preserves the ordinary GPU image.
+- `quality`: Include per-mesh evaluated quality and approximate source-alpha coverage.
+Uses default parameters of the same source as reference; checks requested frames only.
 
 ## zipzi.modeling.ObservationView.__repr__
 
@@ -23056,6 +23122,52 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.TextureCoverage
+
+`(alpha_threshold: int, pixel_step: int, sampled_pixels: int, covered_pixels: int, transparent_covered_pixels: int, opaque_pixels: int, uncovered_opaque_pixels: int, transparent_coverage_fraction: float | None = None, uncovered_opaque_fraction: float | None = None, out_of_bounds_triangles: int)`
+
+Immutable owned TextureCoverage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+alpha_threshold: Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.
+pixel_step: Top-down source-pixel grid spacing. Values above 1 mean an approximate report.
+sampled_pixels: Number of source pixel centers tested on the regular grid.
+covered_pixels: Tested pixel centers covered by the union of UV triangles inside [0,1].
+transparent_covered_pixels: Covered centers whose source alpha is below the threshold.
+opaque_pixels: Tested centers whose source alpha is at least the threshold.
+uncovered_opaque_pixels: Opaque centers outside the UV triangle union: a contour coverage error, not a distance.
+transparent_coverage_fraction: Transparent covered / covered; None if no tested center is covered.
+uncovered_opaque_fraction: Uncovered opaque / opaque; None for an entirely transparent sampled image.
+out_of_bounds_triangles: Number of UV triangles with vertices outside [0,1]; repeat-sampled coverage is not measured.
+
+- `alpha_threshold`: Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.
+- `pixel_step`: Top-down source-pixel grid spacing. Values above 1 mean an approximate report.
+- `sampled_pixels`: Number of source pixel centers tested on the regular grid.
+- `covered_pixels`: Tested pixel centers covered by the union of UV triangles inside [0,1].
+- `transparent_covered_pixels`: Covered centers whose source alpha is below the threshold.
+- `opaque_pixels`: Tested centers whose source alpha is at least the threshold.
+- `uncovered_opaque_pixels`: Opaque centers outside the UV triangle union: a contour coverage error, not a distance.
+- `transparent_coverage_fraction`: Transparent covered / covered; None if no tested center is covered.
+- `uncovered_opaque_fraction`: Uncovered opaque / opaque; None for an entirely transparent sampled image.
+- `out_of_bounds_triangles`: Number of UV triangles with vertices outside [0,1]; repeat-sampled coverage is not measured.
+
+## zipzi.modeling.TextureCoverage.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.TextureCoverage.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.TextureSlot
 
 `(slot: int, path: str)`
@@ -23080,6 +23192,72 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.TextureSlot.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.TopologyOverlay
+
+`(targets: tuple[ObjectTarget, ...] | None = None, wireframe: bool = True, vertices: bool = False, vertex_ids: bool = False, constraints: bool = False, strain: bool = False, include_hidden: bool = False, topology_only: bool = False, heat_opacity: float = 0.25, anomalies_only: bool = False, thresholds: TopologyThresholds = field(default_factory=lambda: read_TopologyThresholds({'max_aspect_ratio': 20.0, 'max_edge_stretch': 2.0, 'min_angle_degrees': 10.0})), label_scale: int = 2, label_spacing: int = 3, max_labels: int = 256)`
+
+Immutable owned TopologyOverlay value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+targets: Diagnostic selection only; the textured context image is unchanged. None selects all
+meshes, Some([]) selects none. Mesh/Part targets are unioned and deduplicated;
+Parts include nested Parts. Missing targets fail explicitly. Maximum 256 selectors.
+wireframe: Draw triangle edges in cyan, in final evaluated model coordinates.
+vertices: Draw vertex positions as yellow dots.
+vertex_ids: Draw stable authoring vertex IDs in yellow, rather than transient array offsets.
+constraints: Draw meshing boundary edges in green and internal constraints in magenta.
+strain: Fill triangles by symmetric edge stretch relative to the default pose: blue=1,
+orange=2, red>=4; flipped or collapsed triangles are magenta.
+include_hidden: Include disabled, hidden and zero-opacity meshes. Default draws visible meshes only.
+topology_only: Clear the textured image before diagnostic drawing, retaining the exact same view.
+heat_opacity: Heat fill opacity in [0,1]. Applied once per pixel using the most severe overlapping
+triangle, so overlapping layers cannot accumulate opacity. Lines and labels stay opaque.
+anomalies_only: Restrict every diagnostic layer to anomalous triangles and their incident vertices/edges.
+Degenerate, flipped and undefined-reference triangles always count as anomalies.
+thresholds: Thresholds used by anomalies_only; reports themselves are never threshold-filtered.
+label_scale: Decimal glyph scale in output pixels, 1..4. Labels avoid other labels globally;
+an ID is omitted when no nearby in-view position has enough space.
+label_spacing: Minimum clear gap between label rectangles in pixels, 0..32.
+max_labels: Maximum labels per image, 0..4096. Vertex dots remain independent of this limit.
+
+- `targets`: Diagnostic selection only; the textured context image is unchanged. None selects all
+meshes, Some([]) selects none. Mesh/Part targets are unioned and deduplicated;
+Parts include nested Parts. Missing targets fail explicitly. Maximum 256 selectors.
+- `wireframe`: Draw triangle edges in cyan, in final evaluated model coordinates.
+- `vertices`: Draw vertex positions as yellow dots.
+- `vertex_ids`: Draw stable authoring vertex IDs in yellow, rather than transient array offsets.
+- `constraints`: Draw meshing boundary edges in green and internal constraints in magenta.
+- `strain`: Fill triangles by symmetric edge stretch relative to the default pose: blue=1,
+orange=2, red>=4; flipped or collapsed triangles are magenta.
+- `include_hidden`: Include disabled, hidden and zero-opacity meshes. Default draws visible meshes only.
+- `topology_only`: Clear the textured image before diagnostic drawing, retaining the exact same view.
+- `heat_opacity`: Heat fill opacity in [0,1]. Applied once per pixel using the most severe overlapping
+triangle, so overlapping layers cannot accumulate opacity. Lines and labels stay opaque.
+- `anomalies_only`: Restrict every diagnostic layer to anomalous triangles and their incident vertices/edges.
+Degenerate, flipped and undefined-reference triangles always count as anomalies.
+- `thresholds`: Thresholds used by anomalies_only; reports themselves are never threshold-filtered.
+- `label_scale`: Decimal glyph scale in output pixels, 1..4. Labels avoid other labels globally;
+an ID is omitted when no nearby in-view position has enough space.
+- `label_spacing`: Minimum clear gap between label rectangles in pixels, 0..32.
+- `max_labels`: Maximum labels per image, 0..4096. Vertex dots remain independent of this limit.
+
+## zipzi.modeling.TopologyOverlay.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.TopologyOverlay.summary
 
 `() -> str`
 
@@ -23120,6 +23298,38 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.TopologyReplacement.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.TopologyThresholds
+
+`(min_angle_degrees: float = 10.0, max_aspect_ratio: float = 20.0, max_edge_stretch: float = 2.0)`
+
+Immutable owned TopologyThresholds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+min_angle_degrees: An angle below this value is anomalous; finite degrees in [0,60]. Default 10.
+max_aspect_ratio: A longest-edge/altitude ratio above this is anomalous; finite and >= 1. Default 20.
+max_edge_stretch: A symmetric edge-length ratio above this is anomalous; finite and >= 1. Default 2.
+
+- `min_angle_degrees`: An angle below this value is anomalous; finite degrees in [0,60]. Default 10.
+- `max_aspect_ratio`: A longest-edge/altitude ratio above this is anomalous; finite and >= 1. Default 20.
+- `max_edge_stretch`: A symmetric edge-length ratio above this is anomalous; finite and >= 1. Default 2.
+
+## zipzi.modeling.TopologyThresholds.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.TopologyThresholds.summary
 
 `() -> str`
 
@@ -23295,6 +23505,46 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.TriangleHit.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.TriangleQuality
+
+`(triangle_index: int, area: float, min_angle_degrees: float, aspect_ratio: float | None = None, relative_area: float | None = None, edge_stretch: float | None = None)`
+
+Immutable owned TriangleQuality value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+triangle_index: Zero-based triangle offset, in the sampled drawable's index order.
+area: Unsigned evaluated area in model units squared.
+min_angle_degrees: Smallest interior angle in degrees; zero for a collapsed triangle.
+aspect_ratio: Longest edge divided by its altitude. None for a collapsed triangle.
+relative_area: Signed area / signed default-pose area. Negative means flipped; None if the reference is degenerate.
+edge_stretch: Largest symmetric edge-length ratio max(current/reference, reference/current).
+None if any reference or sampled edge is collapsed. A rigid transform gives 1.
+
+- `triangle_index`: Zero-based triangle offset, in the sampled drawable's index order.
+- `area`: Unsigned evaluated area in model units squared.
+- `min_angle_degrees`: Smallest interior angle in degrees; zero for a collapsed triangle.
+- `aspect_ratio`: Longest edge divided by its altitude. None for a collapsed triangle.
+- `relative_area`: Signed area / signed default-pose area. Negative means flipped; None if the reference is degenerate.
+- `edge_stretch`: Largest symmetric edge-length ratio max(current/reference, reference/current).
+None if any reference or sampled edge is collapsed. A rigid transform gives 1.
+
+## zipzi.modeling.TriangleQuality.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.TriangleQuality.summary
 
 `() -> str`
 
@@ -23678,7 +23928,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.observation.Image
 
-`(width: int, height: int, rgba: _Bytes, png: _Bytes, document_id: str, evaluation_revision: int, capture_id: str, scene_digest: str, render_digest: str, input_sha256: str, adapter_name: str, adapter_backend: str, parameters: _Mapping[str, float], visible_roi: tuple[float, float, float, float], scale: float, offset: tuple[float, float], textures: tuple[ObservedTexture, ...], drawable_bounds: tuple[ObservedBounds, ...])`
+`(width: int, height: int, rgba: _Bytes, png: _Bytes, document_id: str, evaluation_revision: int, capture_id: str, scene_digest: str, render_digest: str, input_sha256: str, adapter_name: str, adapter_backend: str, parameters: _Mapping[str, float], visible_roi: tuple[float, float, float, float], scale: float, offset: tuple[float, float], textures: tuple[ObservedTexture, ...], drawable_bounds: tuple[ObservedBounds, ...], quality: tuple[MeshQuality, ...])`
 
 Immutable owned ObservationImage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -23701,6 +23951,9 @@ scale: Model-to-image scale. Image X=x*scale+offset[0], Y=-y*scale+offset[1].
 offset: Translation in top-left image pixels, parallel to the documented scale formula.
 textures: Source texture identities and exact content hashes shared across this batch.
 drawable_bounds: Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.
+quality: Mesh quality in evaluated drawable order when View.quality is true; empty otherwise.
+Texture coverage uses alpha >= 8, pixel centers, at most a 256x256 grid, ignoring masks,
+filtering and UV repeat outside [0,1]. A step above 1 denotes approximate coverage.
 
 - `width`: Output image width in pixels.
 - `height`: Output image height in pixels.
@@ -23720,6 +23973,9 @@ drawable_bounds: Drawable geometric image bounds in evaluated order; masks/occlu
 - `offset`: Translation in top-left image pixels, parallel to the documented scale formula.
 - `textures`: Source texture identities and exact content hashes shared across this batch.
 - `drawable_bounds`: Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.
+- `quality`: Mesh quality in evaluated drawable order when View.quality is true; empty otherwise.
+Texture coverage uses alpha >= 8, pixel centers, at most a 256x256 grid, ignoring masks,
+filtering and UV repeat outside [0,1]. A step above 1 denotes approximate coverage.
 
 ## zipzi.observation.Image.__repr__
 
@@ -23732,6 +23988,176 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.observation.Image.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.observation.MeshQuality
+
+`(mesh_id: str, visible: bool, vertex_count: int, triangles: tuple[TriangleQuality, ...], min_angle_degrees: float | None = None, max_aspect_ratio: float | None = None, max_edge_stretch: float | None = None, degenerate_triangles: int, flipped_triangles: int, texture_coverage: TextureCoverage | None = None)`
+
+Immutable owned MeshQuality value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+mesh_id: Stable document mesh ID, in evaluated drawable order.
+visible: Evaluated enabled/visible/positive-opacity state. Metrics are geometric and ignore occlusion.
+vertex_count: Number of evaluated vertices.
+triangles: Per-triangle metrics in evaluated Y-up model coordinates, relative to default parameters
+of the same frozen authoring source. This does not certify unsampled parameter intervals.
+min_angle_degrees: Smallest angle over this mesh; None for an empty mesh.
+max_aspect_ratio: Largest finite aspect ratio; collapsed triangles are counted separately.
+max_edge_stretch: Largest finite symmetric edge-length ratio relative to the default pose.
+degenerate_triangles: Number of exactly zero-area evaluated triangles.
+flipped_triangles: Number of negative relative-area triangles. Degenerate references are excluded.
+texture_coverage: Optional source-texture coverage. CPU-only sampling does not resolve image pixels.
+
+- `mesh_id`: Stable document mesh ID, in evaluated drawable order.
+- `visible`: Evaluated enabled/visible/positive-opacity state. Metrics are geometric and ignore occlusion.
+- `vertex_count`: Number of evaluated vertices.
+- `triangles`: Per-triangle metrics in evaluated Y-up model coordinates, relative to default parameters
+of the same frozen authoring source. This does not certify unsampled parameter intervals.
+- `min_angle_degrees`: Smallest angle over this mesh; None for an empty mesh.
+- `max_aspect_ratio`: Largest finite aspect ratio; collapsed triangles are counted separately.
+- `max_edge_stretch`: Largest finite symmetric edge-length ratio relative to the default pose.
+- `degenerate_triangles`: Number of exactly zero-area evaluated triangles.
+- `flipped_triangles`: Number of negative relative-area triangles. Degenerate references are excluded.
+- `texture_coverage`: Optional source-texture coverage. CPU-only sampling does not resolve image pixels.
+
+## zipzi.observation.MeshQuality.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.observation.MeshQuality.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.observation.MeshTarget
+
+`(value: str)`
+
+Immutable owned ObjectTargetMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Persistent authoring mesh UUID.
+
+- `value`: Persistent authoring mesh UUID.
+
+## zipzi.observation.MeshTarget.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.observation.MeshTarget.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.observation.Overlay
+
+`(targets: tuple[ObjectTarget, ...] | None = None, wireframe: bool = True, vertices: bool = False, vertex_ids: bool = False, constraints: bool = False, strain: bool = False, include_hidden: bool = False, topology_only: bool = False, heat_opacity: float = 0.25, anomalies_only: bool = False, thresholds: TopologyThresholds = field(default_factory=lambda: read_TopologyThresholds({'max_aspect_ratio': 20.0, 'max_edge_stretch': 2.0, 'min_angle_degrees': 10.0})), label_scale: int = 2, label_spacing: int = 3, max_labels: int = 256)`
+
+Immutable owned TopologyOverlay value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+targets: Diagnostic selection only; the textured context image is unchanged. None selects all
+meshes, Some([]) selects none. Mesh/Part targets are unioned and deduplicated;
+Parts include nested Parts. Missing targets fail explicitly. Maximum 256 selectors.
+wireframe: Draw triangle edges in cyan, in final evaluated model coordinates.
+vertices: Draw vertex positions as yellow dots.
+vertex_ids: Draw stable authoring vertex IDs in yellow, rather than transient array offsets.
+constraints: Draw meshing boundary edges in green and internal constraints in magenta.
+strain: Fill triangles by symmetric edge stretch relative to the default pose: blue=1,
+orange=2, red>=4; flipped or collapsed triangles are magenta.
+include_hidden: Include disabled, hidden and zero-opacity meshes. Default draws visible meshes only.
+topology_only: Clear the textured image before diagnostic drawing, retaining the exact same view.
+heat_opacity: Heat fill opacity in [0,1]. Applied once per pixel using the most severe overlapping
+triangle, so overlapping layers cannot accumulate opacity. Lines and labels stay opaque.
+anomalies_only: Restrict every diagnostic layer to anomalous triangles and their incident vertices/edges.
+Degenerate, flipped and undefined-reference triangles always count as anomalies.
+thresholds: Thresholds used by anomalies_only; reports themselves are never threshold-filtered.
+label_scale: Decimal glyph scale in output pixels, 1..4. Labels avoid other labels globally;
+an ID is omitted when no nearby in-view position has enough space.
+label_spacing: Minimum clear gap between label rectangles in pixels, 0..32.
+max_labels: Maximum labels per image, 0..4096. Vertex dots remain independent of this limit.
+
+- `targets`: Diagnostic selection only; the textured context image is unchanged. None selects all
+meshes, Some([]) selects none. Mesh/Part targets are unioned and deduplicated;
+Parts include nested Parts. Missing targets fail explicitly. Maximum 256 selectors.
+- `wireframe`: Draw triangle edges in cyan, in final evaluated model coordinates.
+- `vertices`: Draw vertex positions as yellow dots.
+- `vertex_ids`: Draw stable authoring vertex IDs in yellow, rather than transient array offsets.
+- `constraints`: Draw meshing boundary edges in green and internal constraints in magenta.
+- `strain`: Fill triangles by symmetric edge stretch relative to the default pose: blue=1,
+orange=2, red>=4; flipped or collapsed triangles are magenta.
+- `include_hidden`: Include disabled, hidden and zero-opacity meshes. Default draws visible meshes only.
+- `topology_only`: Clear the textured image before diagnostic drawing, retaining the exact same view.
+- `heat_opacity`: Heat fill opacity in [0,1]. Applied once per pixel using the most severe overlapping
+triangle, so overlapping layers cannot accumulate opacity. Lines and labels stay opaque.
+- `anomalies_only`: Restrict every diagnostic layer to anomalous triangles and their incident vertices/edges.
+Degenerate, flipped and undefined-reference triangles always count as anomalies.
+- `thresholds`: Thresholds used by anomalies_only; reports themselves are never threshold-filtered.
+- `label_scale`: Decimal glyph scale in output pixels, 1..4. Labels avoid other labels globally;
+an ID is omitted when no nearby in-view position has enough space.
+- `label_spacing`: Minimum clear gap between label rectangles in pixels, 0..32.
+- `max_labels`: Maximum labels per image, 0..4096. Vertex dots remain independent of this limit.
+
+## zipzi.observation.Overlay.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.observation.Overlay.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.observation.PartTarget
+
+`(value: str)`
+
+Immutable owned ObjectTargetPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+value: Persistent Part UUID selecting descendant meshes.
+
+- `value`: Persistent Part UUID selecting descendant meshes.
+
+## zipzi.observation.PartTarget.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.observation.PartTarget.summary
 
 `() -> str`
 
@@ -23768,9 +24194,127 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.observation.TextureCoverage
+
+`(alpha_threshold: int, pixel_step: int, sampled_pixels: int, covered_pixels: int, transparent_covered_pixels: int, opaque_pixels: int, uncovered_opaque_pixels: int, transparent_coverage_fraction: float | None = None, uncovered_opaque_fraction: float | None = None, out_of_bounds_triangles: int)`
+
+Immutable owned TextureCoverage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+alpha_threshold: Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.
+pixel_step: Top-down source-pixel grid spacing. Values above 1 mean an approximate report.
+sampled_pixels: Number of source pixel centers tested on the regular grid.
+covered_pixels: Tested pixel centers covered by the union of UV triangles inside [0,1].
+transparent_covered_pixels: Covered centers whose source alpha is below the threshold.
+opaque_pixels: Tested centers whose source alpha is at least the threshold.
+uncovered_opaque_pixels: Opaque centers outside the UV triangle union: a contour coverage error, not a distance.
+transparent_coverage_fraction: Transparent covered / covered; None if no tested center is covered.
+uncovered_opaque_fraction: Uncovered opaque / opaque; None for an entirely transparent sampled image.
+out_of_bounds_triangles: Number of UV triangles with vertices outside [0,1]; repeat-sampled coverage is not measured.
+
+- `alpha_threshold`: Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.
+- `pixel_step`: Top-down source-pixel grid spacing. Values above 1 mean an approximate report.
+- `sampled_pixels`: Number of source pixel centers tested on the regular grid.
+- `covered_pixels`: Tested pixel centers covered by the union of UV triangles inside [0,1].
+- `transparent_covered_pixels`: Covered centers whose source alpha is below the threshold.
+- `opaque_pixels`: Tested centers whose source alpha is at least the threshold.
+- `uncovered_opaque_pixels`: Opaque centers outside the UV triangle union: a contour coverage error, not a distance.
+- `transparent_coverage_fraction`: Transparent covered / covered; None if no tested center is covered.
+- `uncovered_opaque_fraction`: Uncovered opaque / opaque; None for an entirely transparent sampled image.
+- `out_of_bounds_triangles`: Number of UV triangles with vertices outside [0,1]; repeat-sampled coverage is not measured.
+
+## zipzi.observation.TextureCoverage.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.observation.TextureCoverage.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.observation.Thresholds
+
+`(min_angle_degrees: float = 10.0, max_aspect_ratio: float = 20.0, max_edge_stretch: float = 2.0)`
+
+Immutable owned TopologyThresholds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+min_angle_degrees: An angle below this value is anomalous; finite degrees in [0,60]. Default 10.
+max_aspect_ratio: A longest-edge/altitude ratio above this is anomalous; finite and >= 1. Default 20.
+max_edge_stretch: A symmetric edge-length ratio above this is anomalous; finite and >= 1. Default 2.
+
+- `min_angle_degrees`: An angle below this value is anomalous; finite degrees in [0,60]. Default 10.
+- `max_aspect_ratio`: A longest-edge/altitude ratio above this is anomalous; finite and >= 1. Default 20.
+- `max_edge_stretch`: A symmetric edge-length ratio above this is anomalous; finite and >= 1. Default 2.
+
+## zipzi.observation.Thresholds.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.observation.Thresholds.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.observation.TriangleQuality
+
+`(triangle_index: int, area: float, min_angle_degrees: float, aspect_ratio: float | None = None, relative_area: float | None = None, edge_stretch: float | None = None)`
+
+Immutable owned TriangleQuality value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+triangle_index: Zero-based triangle offset, in the sampled drawable's index order.
+area: Unsigned evaluated area in model units squared.
+min_angle_degrees: Smallest interior angle in degrees; zero for a collapsed triangle.
+aspect_ratio: Longest edge divided by its altitude. None for a collapsed triangle.
+relative_area: Signed area / signed default-pose area. Negative means flipped; None if the reference is degenerate.
+edge_stretch: Largest symmetric edge-length ratio max(current/reference, reference/current).
+None if any reference or sampled edge is collapsed. A rigid transform gives 1.
+
+- `triangle_index`: Zero-based triangle offset, in the sampled drawable's index order.
+- `area`: Unsigned evaluated area in model units squared.
+- `min_angle_degrees`: Smallest interior angle in degrees; zero for a collapsed triangle.
+- `aspect_ratio`: Longest edge divided by its altitude. None for a collapsed triangle.
+- `relative_area`: Signed area / signed default-pose area. Negative means flipped; None if the reference is degenerate.
+- `edge_stretch`: Largest symmetric edge-length ratio max(current/reference, reference/current).
+None if any reference or sampled edge is collapsed. A rigid transform gives 1.
+
+## zipzi.observation.TriangleQuality.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.observation.TriangleQuality.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.observation.View
 
-`(width: int, height: int, roi: tuple[float, float, float, float], padding_model: float = 0.0)`
+`(width: int, height: int, roi: tuple[float, float, float, float], padding_model: float = 0.0, topology: TopologyOverlay | None = None, quality: bool = False)`
 
 Immutable owned ObservationView value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -23779,11 +24323,19 @@ width: Output width in pixels, 1..4096, subject to device and Runtime budgets.
 height: Output height in pixels, 1..4096, subject to device and Runtime budgets.
 roi: Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.
 padding_model: Nonnegative padding around the ROI in model units; aspect ratio is preserved.
+topology: Optional topology overlay in the same frozen Source and ROI mapping. It ignores
+masks and occlusion; None preserves the ordinary GPU image.
+quality: Include per-mesh evaluated quality and approximate source-alpha coverage.
+Uses default parameters of the same source as reference; checks requested frames only.
 
 - `width`: Output width in pixels, 1..4096, subject to device and Runtime budgets.
 - `height`: Output height in pixels, 1..4096, subject to device and Runtime budgets.
 - `roi`: Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.
 - `padding_model`: Nonnegative padding around the ROI in model units; aspect ratio is preserved.
+- `topology`: Optional topology overlay in the same frozen Source and ROI mapping. It ignores
+masks and occlusion; None preserves the ordinary GPU image.
+- `quality`: Include per-mesh evaluated quality and approximate source-alpha coverage.
+Uses default parameters of the same source as reference; checks requested frames only.
 
 ## zipzi.observation.View.__repr__
 
@@ -24831,7 +25383,7 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.sampling.Checks
 
-`(min_triangle_area: float=0.0, model_bounds: tuple[Point, Point] | None=None) -> None`
+`(min_triangle_area: float=0.0, model_bounds: tuple[Point, Point] | None=None, quality: bool=False) -> None`
 
 Owned sampling Checks value; reading fields, repr and summary performs no IO.
 
@@ -24839,10 +25391,14 @@ Fields:
 min_triangle_area: Area in authored coordinates: model units squared at the root, or
 the appropriate rotation-local / Warp-parameter units under a parent.
 model_bounds: Optional expected model bounds for root meshes only.
+quality: Include per-pose mesh quality in evaluated Y-up model space, relative to this
+snapshot evaluated with default parameters. Only the requested poses are checked.
 
 - `min_triangle_area`: Area in authored coordinates: model units squared at the root, or
 the appropriate rotation-local / Warp-parameter units under a parent.
 - `model_bounds`: Optional expected model bounds for root meshes only.
+- `quality`: Include per-pose mesh quality in evaluated Y-up model space, relative to this
+snapshot evaluated with default parameters. Only the requested poses are checked.
 
 ## zipzi.sampling.Checks.__repr__
 
@@ -25062,6 +25618,54 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.sampling.MeshQuality
+
+`(mesh_id: str, visible: bool, vertex_count: int, triangles: tuple[TriangleQuality, ...], min_angle_degrees: float | None = None, max_aspect_ratio: float | None = None, max_edge_stretch: float | None = None, degenerate_triangles: int, flipped_triangles: int, texture_coverage: TextureCoverage | None = None)`
+
+Immutable owned MeshQuality value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+mesh_id: Stable document mesh ID, in evaluated drawable order.
+visible: Evaluated enabled/visible/positive-opacity state. Metrics are geometric and ignore occlusion.
+vertex_count: Number of evaluated vertices.
+triangles: Per-triangle metrics in evaluated Y-up model coordinates, relative to default parameters
+of the same frozen authoring source. This does not certify unsampled parameter intervals.
+min_angle_degrees: Smallest angle over this mesh; None for an empty mesh.
+max_aspect_ratio: Largest finite aspect ratio; collapsed triangles are counted separately.
+max_edge_stretch: Largest finite symmetric edge-length ratio relative to the default pose.
+degenerate_triangles: Number of exactly zero-area evaluated triangles.
+flipped_triangles: Number of negative relative-area triangles. Degenerate references are excluded.
+texture_coverage: Optional source-texture coverage. CPU-only sampling does not resolve image pixels.
+
+- `mesh_id`: Stable document mesh ID, in evaluated drawable order.
+- `visible`: Evaluated enabled/visible/positive-opacity state. Metrics are geometric and ignore occlusion.
+- `vertex_count`: Number of evaluated vertices.
+- `triangles`: Per-triangle metrics in evaluated Y-up model coordinates, relative to default parameters
+of the same frozen authoring source. This does not certify unsampled parameter intervals.
+- `min_angle_degrees`: Smallest angle over this mesh; None for an empty mesh.
+- `max_aspect_ratio`: Largest finite aspect ratio; collapsed triangles are counted separately.
+- `max_edge_stretch`: Largest finite symmetric edge-length ratio relative to the default pose.
+- `degenerate_triangles`: Number of exactly zero-area evaluated triangles.
+- `flipped_triangles`: Number of negative relative-area triangles. Degenerate references are excluded.
+- `texture_coverage`: Optional source-texture coverage. CPU-only sampling does not resolve image pixels.
+
+## zipzi.sampling.MeshQuality.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.sampling.MeshQuality.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.sampling.Offscreen
 
 `(renderable: bool, id: str, runtime_id: str, owner_part_id: str, parent_offscreen_id: str | None, render_order: int, opacity: float, enabled: bool, blend_mode: int, flags: int, masks: Sequence[str], multiply_color: Sequence[float], screen_color: Sequence[float]) -> None`
@@ -25219,7 +25823,7 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.sampling.Result
 
-`(state: str, version: Version, parameters: tuple[Pose, ...], frames: Sequence[Frame], diagnostics: Sequence[Diagnostic]) -> None`
+`(state: str, version: Version, parameters: tuple[Pose, ...], frames: Sequence[Frame], diagnostics: Sequence[Diagnostic], quality: Sequence[Sequence[MeshQuality]]) -> None`
 
 Owned sampling Result value; reading fields, repr and summary performs no IO.
 
@@ -25230,12 +25834,16 @@ parameters: Effective parameter maps in the same order as requested poses; each 
 document parameter ID.
 frames: CPU-evaluated frames in the same order as requested parameter maps.
 diagnostics: Structured diagnostics from this query or operation; an empty list means none were reported.
+quality: Per-pose evaluated mesh quality in frame order when Checks.quality is true; empty otherwise.
+Uses default parameters of this same frozen source as the reference, without image coverage.
 
 - `version`: Exact SDK version captured for this value; not a best-effort latest-version marker.
 - `parameters`: Effective parameter maps in the same order as requested poses; each map is keyed by
 document parameter ID.
 - `frames`: CPU-evaluated frames in the same order as requested parameter maps.
 - `diagnostics`: Structured diagnostics from this query or operation; an empty list means none were reported.
+- `quality`: Per-pose evaluated mesh quality in frame order when Checks.quality is true; empty otherwise.
+Uses default parameters of this same frozen source as the reference, without image coverage.
 - `state`: Captured sampling source state, distinguishing formal content from an Edit candidate.
 
 ## zipzi.sampling.Result.__repr__
@@ -25249,6 +25857,92 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.sampling.Result.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.sampling.TextureCoverage
+
+`(alpha_threshold: int, pixel_step: int, sampled_pixels: int, covered_pixels: int, transparent_covered_pixels: int, opaque_pixels: int, uncovered_opaque_pixels: int, transparent_coverage_fraction: float | None = None, uncovered_opaque_fraction: float | None = None, out_of_bounds_triangles: int)`
+
+Immutable owned TextureCoverage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+alpha_threshold: Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.
+pixel_step: Top-down source-pixel grid spacing. Values above 1 mean an approximate report.
+sampled_pixels: Number of source pixel centers tested on the regular grid.
+covered_pixels: Tested pixel centers covered by the union of UV triangles inside [0,1].
+transparent_covered_pixels: Covered centers whose source alpha is below the threshold.
+opaque_pixels: Tested centers whose source alpha is at least the threshold.
+uncovered_opaque_pixels: Opaque centers outside the UV triangle union: a contour coverage error, not a distance.
+transparent_coverage_fraction: Transparent covered / covered; None if no tested center is covered.
+uncovered_opaque_fraction: Uncovered opaque / opaque; None for an entirely transparent sampled image.
+out_of_bounds_triangles: Number of UV triangles with vertices outside [0,1]; repeat-sampled coverage is not measured.
+
+- `alpha_threshold`: Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.
+- `pixel_step`: Top-down source-pixel grid spacing. Values above 1 mean an approximate report.
+- `sampled_pixels`: Number of source pixel centers tested on the regular grid.
+- `covered_pixels`: Tested pixel centers covered by the union of UV triangles inside [0,1].
+- `transparent_covered_pixels`: Covered centers whose source alpha is below the threshold.
+- `opaque_pixels`: Tested centers whose source alpha is at least the threshold.
+- `uncovered_opaque_pixels`: Opaque centers outside the UV triangle union: a contour coverage error, not a distance.
+- `transparent_coverage_fraction`: Transparent covered / covered; None if no tested center is covered.
+- `uncovered_opaque_fraction`: Uncovered opaque / opaque; None for an entirely transparent sampled image.
+- `out_of_bounds_triangles`: Number of UV triangles with vertices outside [0,1]; repeat-sampled coverage is not measured.
+
+## zipzi.sampling.TextureCoverage.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.sampling.TextureCoverage.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.sampling.TriangleQuality
+
+`(triangle_index: int, area: float, min_angle_degrees: float, aspect_ratio: float | None = None, relative_area: float | None = None, edge_stretch: float | None = None)`
+
+Immutable owned TriangleQuality value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+triangle_index: Zero-based triangle offset, in the sampled drawable's index order.
+area: Unsigned evaluated area in model units squared.
+min_angle_degrees: Smallest interior angle in degrees; zero for a collapsed triangle.
+aspect_ratio: Longest edge divided by its altitude. None for a collapsed triangle.
+relative_area: Signed area / signed default-pose area. Negative means flipped; None if the reference is degenerate.
+edge_stretch: Largest symmetric edge-length ratio max(current/reference, reference/current).
+None if any reference or sampled edge is collapsed. A rigid transform gives 1.
+
+- `triangle_index`: Zero-based triangle offset, in the sampled drawable's index order.
+- `area`: Unsigned evaluated area in model units squared.
+- `min_angle_degrees`: Smallest interior angle in degrees; zero for a collapsed triangle.
+- `aspect_ratio`: Longest edge divided by its altitude. None for a collapsed triangle.
+- `relative_area`: Signed area / signed default-pose area. Negative means flipped; None if the reference is degenerate.
+- `edge_stretch`: Largest symmetric edge-length ratio max(current/reference, reference/current).
+None if any reference or sampled edge is collapsed. A rigid transform gives 1.
+
+## zipzi.sampling.TriangleQuality.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.sampling.TriangleQuality.summary
 
 `() -> str`
 

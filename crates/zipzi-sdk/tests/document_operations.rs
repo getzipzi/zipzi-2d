@@ -206,6 +206,7 @@ fn geometry_warnings_are_separate_from_structural_validity() {
     let warnings = sdk
         .diagnose_geometry(GeometryChecks {
             min_triangle_area: 201.0,
+            quality: false,
             model_bounds: Some(GeometryBounds {
                 min: Vec2::new(0.0, 0.0),
                 max: Vec2::new(50.0, 50.0),
@@ -225,6 +226,7 @@ fn geometry_warnings_are_separate_from_structural_validity() {
     assert_eq!(
         sdk.diagnose_geometry(GeometryChecks {
             min_triangle_area: -1.0,
+            quality: false,
             model_bounds: None,
         })
         .unwrap_err()
@@ -233,6 +235,59 @@ fn geometry_warnings_are_separate_from_structural_validity() {
         "INVALID_DIAGNOSTIC_OPTIONS"
     );
     assert_eq!(sdk.version(), version);
+}
+
+#[test]
+fn quality_sampling_evaluates_disabled_meshes_and_parent_parts() {
+    for disable_parent in [false, true] {
+        let mut sdk = session();
+        let checks = GeometryChecks {
+            quality: true,
+            ..Default::default()
+        };
+        let visible = sdk
+            .read_snapshot()
+            .sample_modeling(vec![Default::default()], checks)
+            .unwrap();
+        let mut mesh = sdk.mesh(&id(3)).unwrap();
+        sdk.edit("disable geometry", None, |edit| {
+            if disable_parent {
+                edit.create_part(zipzi_core::Part {
+                    id: id(4),
+                    enabled: false,
+                    ..Default::default()
+                })?;
+                edit.set_mesh_part(&id(3), &id(4))
+            } else {
+                mesh.enabled = false;
+                edit.replace_mesh(mesh)
+            }
+        })
+        .unwrap();
+        let source = sdk.read_snapshot();
+        let sampled = source
+            .sample_modeling(vec![Default::default(), Default::default()], checks)
+            .unwrap();
+        for (frame, quality) in sampled.frames.iter().zip(&sampled.quality) {
+            assert_eq!(
+                frame.drawables[0].positions,
+                visible.frames[0].drawables[0].positions
+            );
+            assert!(!quality[0].visible);
+            assert_eq!(quality[0].triangles, visible.quality[0][0].triangles);
+            assert_eq!(quality[0].degenerate_triangles, 0);
+            assert_eq!(quality[0].flipped_triangles, 0);
+            assert_eq!(quality[0].max_edge_stretch, Some(1.));
+        }
+        let ordinary = source
+            .sample_modeling(vec![Default::default()], GeometryChecks::default())
+            .unwrap();
+        assert!(ordinary.quality.is_empty());
+        assert!(ordinary.frames[0].drawables[0]
+            .positions
+            .iter()
+            .all(|p| *p == Vec2::default()));
+    }
 }
 
 #[test]

@@ -29838,6 +29838,256 @@
                   "kind": "f32"
                 },
                 "skip": false
+              },
+              {
+                "default": null,
+                "doc": "Optional topology overlay in the same frozen Source and ROI mapping. It ignores\nmasks and occlusion; None preserves the ordinary GPU image.",
+                "name": "topology",
+                "rust_name": "topology",
+                "shape": {
+                  "item": {
+                    "fields": [
+                      {
+                        "default": null,
+                        "doc": "Diagnostic selection only; the textured context image is unchanged. None selects all\nmeshes, Some([]) selects none. Mesh/Part targets are unioned and deduplicated;\nParts include nested Parts. Missing targets fail explicitly. Maximum 256 selectors.",
+                        "name": "targets",
+                        "rust_name": "targets",
+                        "shape": {
+                          "item": {
+                            "item": {
+                              "content": "id",
+                              "kind": "serde_enum",
+                              "name": "zipzi_sdk::spatial::ObjectTarget",
+                              "tag": "kind",
+                              "variants": [
+                                {
+                                  "fields": [
+                                    {
+                                      "doc": "Persistent authoring mesh UUID.",
+                                      "name": "value",
+                                      "rust_name": "0",
+                                      "shape": {
+                                        "kind": "string"
+                                      },
+                                      "skip": false
+                                    }
+                                  ],
+                                  "form": "newtype",
+                                  "name": "mesh",
+                                  "rust_name": "Mesh"
+                                },
+                                {
+                                  "fields": [
+                                    {
+                                      "doc": "Persistent Part UUID selecting descendant meshes.",
+                                      "name": "value",
+                                      "rust_name": "0",
+                                      "shape": {
+                                        "kind": "string"
+                                      },
+                                      "skip": false
+                                    }
+                                  ],
+                                  "form": "newtype",
+                                  "name": "part",
+                                  "rust_name": "Part"
+                                }
+                              ]
+                            },
+                            "kind": "sequence"
+                          },
+                          "kind": "optional"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": true,
+                        "doc": "Draw triangle edges in cyan, in final evaluated model coordinates.",
+                        "name": "wireframe",
+                        "rust_name": "wireframe",
+                        "shape": {
+                          "kind": "bool"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": false,
+                        "doc": "Draw vertex positions as yellow dots.",
+                        "name": "vertices",
+                        "rust_name": "vertices",
+                        "shape": {
+                          "kind": "bool"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": false,
+                        "doc": "Draw stable authoring vertex IDs in yellow, rather than transient array offsets.",
+                        "name": "vertex_ids",
+                        "rust_name": "vertex_ids",
+                        "shape": {
+                          "kind": "bool"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": false,
+                        "doc": "Draw meshing boundary edges in green and internal constraints in magenta.",
+                        "name": "constraints",
+                        "rust_name": "constraints",
+                        "shape": {
+                          "kind": "bool"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": false,
+                        "doc": "Fill triangles by symmetric edge stretch relative to the default pose: blue=1,\norange=2, red>=4; flipped or collapsed triangles are magenta.",
+                        "name": "strain",
+                        "rust_name": "strain",
+                        "shape": {
+                          "kind": "bool"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": false,
+                        "doc": "Include disabled, hidden and zero-opacity meshes. Default draws visible meshes only.",
+                        "name": "include_hidden",
+                        "rust_name": "include_hidden",
+                        "shape": {
+                          "kind": "bool"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": false,
+                        "doc": "Clear the textured image before diagnostic drawing, retaining the exact same view.",
+                        "name": "topology_only",
+                        "rust_name": "topology_only",
+                        "shape": {
+                          "kind": "bool"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": 0.25,
+                        "doc": "Heat fill opacity in [0,1]. Applied once per pixel using the most severe overlapping\ntriangle, so overlapping layers cannot accumulate opacity. Lines and labels stay opaque.",
+                        "name": "heat_opacity",
+                        "rust_name": "heat_opacity",
+                        "shape": {
+                          "kind": "f32"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": false,
+                        "doc": "Restrict every diagnostic layer to anomalous triangles and their incident vertices/edges.\nDegenerate, flipped and undefined-reference triangles always count as anomalies.",
+                        "name": "anomalies_only",
+                        "rust_name": "anomalies_only",
+                        "shape": {
+                          "kind": "bool"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": {
+                          "max_aspect_ratio": 20.0,
+                          "max_edge_stretch": 2.0,
+                          "min_angle_degrees": 10.0
+                        },
+                        "doc": "Thresholds used by anomalies_only; reports themselves are never threshold-filtered.",
+                        "name": "thresholds",
+                        "rust_name": "thresholds",
+                        "shape": {
+                          "fields": [
+                            {
+                              "default": 10.0,
+                              "doc": "An angle below this value is anomalous; finite degrees in [0,60]. Default 10.",
+                              "name": "min_angle_degrees",
+                              "rust_name": "min_angle_degrees",
+                              "shape": {
+                                "kind": "f64"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "default": 20.0,
+                              "doc": "A longest-edge/altitude ratio above this is anomalous; finite and >= 1. Default 20.",
+                              "name": "max_aspect_ratio",
+                              "rust_name": "max_aspect_ratio",
+                              "shape": {
+                                "kind": "f64"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "default": 2.0,
+                              "doc": "A symmetric edge-length ratio above this is anomalous; finite and >= 1. Default 2.",
+                              "name": "max_edge_stretch",
+                              "rust_name": "max_edge_stretch",
+                              "shape": {
+                                "kind": "f64"
+                              },
+                              "skip": false
+                            }
+                          ],
+                          "kind": "serde_record",
+                          "name": "zipzi_sdk::mesh_quality::TopologyThresholds",
+                          "transparent": false,
+                          "tuple": false
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": 2,
+                        "doc": "Decimal glyph scale in output pixels, 1..4. Labels avoid other labels globally;\nan ID is omitted when no nearby in-view position has enough space.",
+                        "name": "label_scale",
+                        "rust_name": "label_scale",
+                        "shape": {
+                          "kind": "u32"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": 3,
+                        "doc": "Minimum clear gap between label rectangles in pixels, 0..32.",
+                        "name": "label_spacing",
+                        "rust_name": "label_spacing",
+                        "shape": {
+                          "kind": "u32"
+                        },
+                        "skip": false
+                      },
+                      {
+                        "default": 256,
+                        "doc": "Maximum labels per image, 0..4096. Vertex dots remain independent of this limit.",
+                        "name": "max_labels",
+                        "rust_name": "max_labels",
+                        "shape": {
+                          "kind": "usize"
+                        },
+                        "skip": false
+                      }
+                    ],
+                    "kind": "serde_record",
+                    "name": "zipzi_sdk::mesh_quality::TopologyOverlay",
+                    "transparent": false,
+                    "tuple": false
+                  },
+                  "kind": "optional"
+                },
+                "skip": false
+              },
+              {
+                "default": false,
+                "doc": "Include per-mesh evaluated quality and approximate source-alpha coverage.\nUses default parameters of the same source as reference; checks requested frames only.",
+                "name": "quality",
+                "rust_name": "quality",
+                "shape": {
+                  "kind": "bool"
+                },
+                "skip": false
               }
             ],
             "kind": "serde_record",
@@ -30116,6 +30366,306 @@
                     "kind": "sequence"
                   },
                   "skip": false
+                },
+                {
+                  "doc": "Mesh quality in evaluated drawable order when View.quality is true; empty otherwise.\nTexture coverage uses alpha >= 8, pixel centers, at most a 256x256 grid, ignoring masks,\nfiltering and UV repeat outside [0,1]. A step above 1 denotes approximate coverage.",
+                  "name": "quality",
+                  "rust_name": "quality",
+                  "shape": {
+                    "item": {
+                      "fields": [
+                        {
+                          "doc": "Stable document mesh ID, in evaluated drawable order.",
+                          "name": "mesh_id",
+                          "rust_name": "mesh_id",
+                          "shape": {
+                            "kind": "string"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Evaluated enabled/visible/positive-opacity state. Metrics are geometric and ignore occlusion.",
+                          "name": "visible",
+                          "rust_name": "visible",
+                          "shape": {
+                            "kind": "bool"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Number of evaluated vertices.",
+                          "name": "vertex_count",
+                          "rust_name": "vertex_count",
+                          "shape": {
+                            "kind": "usize"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Per-triangle metrics in evaluated Y-up model coordinates, relative to default parameters\nof the same frozen authoring source. This does not certify unsampled parameter intervals.",
+                          "name": "triangles",
+                          "rust_name": "triangles",
+                          "shape": {
+                            "item": {
+                              "fields": [
+                                {
+                                  "doc": "Zero-based triangle offset, in the sampled drawable's index order.",
+                                  "name": "triangle_index",
+                                  "rust_name": "triangle_index",
+                                  "shape": {
+                                    "kind": "usize"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Unsigned evaluated area in model units squared.",
+                                  "name": "area",
+                                  "rust_name": "area",
+                                  "shape": {
+                                    "kind": "f64"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Smallest interior angle in degrees; zero for a collapsed triangle.",
+                                  "name": "min_angle_degrees",
+                                  "rust_name": "min_angle_degrees",
+                                  "shape": {
+                                    "kind": "f64"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "default": null,
+                                  "doc": "Longest edge divided by its altitude. None for a collapsed triangle.",
+                                  "name": "aspect_ratio",
+                                  "rust_name": "aspect_ratio",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "f64"
+                                    },
+                                    "kind": "optional"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "default": null,
+                                  "doc": "Signed area / signed default-pose area. Negative means flipped; None if the reference is degenerate.",
+                                  "name": "relative_area",
+                                  "rust_name": "relative_area",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "f64"
+                                    },
+                                    "kind": "optional"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "default": null,
+                                  "doc": "Largest symmetric edge-length ratio max(current/reference, reference/current).\nNone if any reference or sampled edge is collapsed. A rigid transform gives 1.",
+                                  "name": "edge_stretch",
+                                  "rust_name": "edge_stretch",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "f64"
+                                    },
+                                    "kind": "optional"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "kind": "serde_record",
+                              "name": "zipzi_sdk::mesh_quality::TriangleQuality",
+                              "transparent": false,
+                              "tuple": false
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": null,
+                          "doc": "Smallest angle over this mesh; None for an empty mesh.",
+                          "name": "min_angle_degrees",
+                          "rust_name": "min_angle_degrees",
+                          "shape": {
+                            "item": {
+                              "kind": "f64"
+                            },
+                            "kind": "optional"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": null,
+                          "doc": "Largest finite aspect ratio; collapsed triangles are counted separately.",
+                          "name": "max_aspect_ratio",
+                          "rust_name": "max_aspect_ratio",
+                          "shape": {
+                            "item": {
+                              "kind": "f64"
+                            },
+                            "kind": "optional"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": null,
+                          "doc": "Largest finite symmetric edge-length ratio relative to the default pose.",
+                          "name": "max_edge_stretch",
+                          "rust_name": "max_edge_stretch",
+                          "shape": {
+                            "item": {
+                              "kind": "f64"
+                            },
+                            "kind": "optional"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Number of exactly zero-area evaluated triangles.",
+                          "name": "degenerate_triangles",
+                          "rust_name": "degenerate_triangles",
+                          "shape": {
+                            "kind": "usize"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Number of negative relative-area triangles. Degenerate references are excluded.",
+                          "name": "flipped_triangles",
+                          "rust_name": "flipped_triangles",
+                          "shape": {
+                            "kind": "usize"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": null,
+                          "doc": "Optional source-texture coverage. CPU-only sampling does not resolve image pixels.",
+                          "name": "texture_coverage",
+                          "rust_name": "texture_coverage",
+                          "shape": {
+                            "item": {
+                              "fields": [
+                                {
+                                  "doc": "Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.",
+                                  "name": "alpha_threshold",
+                                  "rust_name": "alpha_threshold",
+                                  "shape": {
+                                    "kind": "u8"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Top-down source-pixel grid spacing. Values above 1 mean an approximate report.",
+                                  "name": "pixel_step",
+                                  "rust_name": "pixel_step",
+                                  "shape": {
+                                    "kind": "u32"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Number of source pixel centers tested on the regular grid.",
+                                  "name": "sampled_pixels",
+                                  "rust_name": "sampled_pixels",
+                                  "shape": {
+                                    "kind": "usize"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Tested pixel centers covered by the union of UV triangles inside [0,1].",
+                                  "name": "covered_pixels",
+                                  "rust_name": "covered_pixels",
+                                  "shape": {
+                                    "kind": "usize"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Covered centers whose source alpha is below the threshold.",
+                                  "name": "transparent_covered_pixels",
+                                  "rust_name": "transparent_covered_pixels",
+                                  "shape": {
+                                    "kind": "usize"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Tested centers whose source alpha is at least the threshold.",
+                                  "name": "opaque_pixels",
+                                  "rust_name": "opaque_pixels",
+                                  "shape": {
+                                    "kind": "usize"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Opaque centers outside the UV triangle union: a contour coverage error, not a distance.",
+                                  "name": "uncovered_opaque_pixels",
+                                  "rust_name": "uncovered_opaque_pixels",
+                                  "shape": {
+                                    "kind": "usize"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "default": null,
+                                  "doc": "Transparent covered / covered; None if no tested center is covered.",
+                                  "name": "transparent_coverage_fraction",
+                                  "rust_name": "transparent_coverage_fraction",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "f64"
+                                    },
+                                    "kind": "optional"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "default": null,
+                                  "doc": "Uncovered opaque / opaque; None for an entirely transparent sampled image.",
+                                  "name": "uncovered_opaque_fraction",
+                                  "rust_name": "uncovered_opaque_fraction",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "f64"
+                                    },
+                                    "kind": "optional"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Number of UV triangles with vertices outside [0,1]; repeat-sampled coverage is not measured.",
+                                  "name": "out_of_bounds_triangles",
+                                  "rust_name": "out_of_bounds_triangles",
+                                  "shape": {
+                                    "kind": "usize"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "kind": "serde_record",
+                              "name": "zipzi_sdk::mesh_quality::TextureCoverage",
+                              "transparent": false,
+                              "tuple": false
+                            },
+                            "kind": "optional"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "kind": "serde_record",
+                      "name": "zipzi_sdk::mesh_quality::MeshQuality",
+                      "transparent": false,
+                      "tuple": false
+                    },
+                    "kind": "sequence"
+                  },
+                  "skip": false
                 }
               ],
               "kind": "serde_record",
@@ -30133,7 +30683,7 @@
       "transparent": false,
       "tuple": false
     },
-    "observation_signature": "926baacbaf017dc3d303ff29b6291edd",
+    "observation_signature": "8b73326c4fcd706a667a86beb5326015",
     "output": {
       "fields": [
         {
@@ -37487,6 +38037,256 @@
                     "kind": "f32"
                   },
                   "skip": false
+                },
+                {
+                  "default": null,
+                  "doc": "Optional topology overlay in the same frozen Source and ROI mapping. It ignores\nmasks and occlusion; None preserves the ordinary GPU image.",
+                  "name": "topology",
+                  "rust_name": "topology",
+                  "shape": {
+                    "item": {
+                      "fields": [
+                        {
+                          "default": null,
+                          "doc": "Diagnostic selection only; the textured context image is unchanged. None selects all\nmeshes, Some([]) selects none. Mesh/Part targets are unioned and deduplicated;\nParts include nested Parts. Missing targets fail explicitly. Maximum 256 selectors.",
+                          "name": "targets",
+                          "rust_name": "targets",
+                          "shape": {
+                            "item": {
+                              "item": {
+                                "content": "id",
+                                "kind": "serde_enum",
+                                "name": "zipzi_sdk::spatial::ObjectTarget",
+                                "tag": "kind",
+                                "variants": [
+                                  {
+                                    "fields": [
+                                      {
+                                        "doc": "Persistent authoring mesh UUID.",
+                                        "name": "value",
+                                        "rust_name": "0",
+                                        "shape": {
+                                          "kind": "string"
+                                        },
+                                        "skip": false
+                                      }
+                                    ],
+                                    "form": "newtype",
+                                    "name": "mesh",
+                                    "rust_name": "Mesh"
+                                  },
+                                  {
+                                    "fields": [
+                                      {
+                                        "doc": "Persistent Part UUID selecting descendant meshes.",
+                                        "name": "value",
+                                        "rust_name": "0",
+                                        "shape": {
+                                          "kind": "string"
+                                        },
+                                        "skip": false
+                                      }
+                                    ],
+                                    "form": "newtype",
+                                    "name": "part",
+                                    "rust_name": "Part"
+                                  }
+                                ]
+                              },
+                              "kind": "sequence"
+                            },
+                            "kind": "optional"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": true,
+                          "doc": "Draw triangle edges in cyan, in final evaluated model coordinates.",
+                          "name": "wireframe",
+                          "rust_name": "wireframe",
+                          "shape": {
+                            "kind": "bool"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": false,
+                          "doc": "Draw vertex positions as yellow dots.",
+                          "name": "vertices",
+                          "rust_name": "vertices",
+                          "shape": {
+                            "kind": "bool"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": false,
+                          "doc": "Draw stable authoring vertex IDs in yellow, rather than transient array offsets.",
+                          "name": "vertex_ids",
+                          "rust_name": "vertex_ids",
+                          "shape": {
+                            "kind": "bool"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": false,
+                          "doc": "Draw meshing boundary edges in green and internal constraints in magenta.",
+                          "name": "constraints",
+                          "rust_name": "constraints",
+                          "shape": {
+                            "kind": "bool"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": false,
+                          "doc": "Fill triangles by symmetric edge stretch relative to the default pose: blue=1,\norange=2, red>=4; flipped or collapsed triangles are magenta.",
+                          "name": "strain",
+                          "rust_name": "strain",
+                          "shape": {
+                            "kind": "bool"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": false,
+                          "doc": "Include disabled, hidden and zero-opacity meshes. Default draws visible meshes only.",
+                          "name": "include_hidden",
+                          "rust_name": "include_hidden",
+                          "shape": {
+                            "kind": "bool"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": false,
+                          "doc": "Clear the textured image before diagnostic drawing, retaining the exact same view.",
+                          "name": "topology_only",
+                          "rust_name": "topology_only",
+                          "shape": {
+                            "kind": "bool"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": 0.25,
+                          "doc": "Heat fill opacity in [0,1]. Applied once per pixel using the most severe overlapping\ntriangle, so overlapping layers cannot accumulate opacity. Lines and labels stay opaque.",
+                          "name": "heat_opacity",
+                          "rust_name": "heat_opacity",
+                          "shape": {
+                            "kind": "f32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": false,
+                          "doc": "Restrict every diagnostic layer to anomalous triangles and their incident vertices/edges.\nDegenerate, flipped and undefined-reference triangles always count as anomalies.",
+                          "name": "anomalies_only",
+                          "rust_name": "anomalies_only",
+                          "shape": {
+                            "kind": "bool"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": {
+                            "max_aspect_ratio": 20.0,
+                            "max_edge_stretch": 2.0,
+                            "min_angle_degrees": 10.0
+                          },
+                          "doc": "Thresholds used by anomalies_only; reports themselves are never threshold-filtered.",
+                          "name": "thresholds",
+                          "rust_name": "thresholds",
+                          "shape": {
+                            "fields": [
+                              {
+                                "default": 10.0,
+                                "doc": "An angle below this value is anomalous; finite degrees in [0,60]. Default 10.",
+                                "name": "min_angle_degrees",
+                                "rust_name": "min_angle_degrees",
+                                "shape": {
+                                  "kind": "f64"
+                                },
+                                "skip": false
+                              },
+                              {
+                                "default": 20.0,
+                                "doc": "A longest-edge/altitude ratio above this is anomalous; finite and >= 1. Default 20.",
+                                "name": "max_aspect_ratio",
+                                "rust_name": "max_aspect_ratio",
+                                "shape": {
+                                  "kind": "f64"
+                                },
+                                "skip": false
+                              },
+                              {
+                                "default": 2.0,
+                                "doc": "A symmetric edge-length ratio above this is anomalous; finite and >= 1. Default 2.",
+                                "name": "max_edge_stretch",
+                                "rust_name": "max_edge_stretch",
+                                "shape": {
+                                  "kind": "f64"
+                                },
+                                "skip": false
+                              }
+                            ],
+                            "kind": "serde_record",
+                            "name": "zipzi_sdk::mesh_quality::TopologyThresholds",
+                            "transparent": false,
+                            "tuple": false
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": 2,
+                          "doc": "Decimal glyph scale in output pixels, 1..4. Labels avoid other labels globally;\nan ID is omitted when no nearby in-view position has enough space.",
+                          "name": "label_scale",
+                          "rust_name": "label_scale",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": 3,
+                          "doc": "Minimum clear gap between label rectangles in pixels, 0..32.",
+                          "name": "label_spacing",
+                          "rust_name": "label_spacing",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": 256,
+                          "doc": "Maximum labels per image, 0..4096. Vertex dots remain independent of this limit.",
+                          "name": "max_labels",
+                          "rust_name": "max_labels",
+                          "shape": {
+                            "kind": "usize"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "kind": "serde_record",
+                      "name": "zipzi_sdk::mesh_quality::TopologyOverlay",
+                      "transparent": false,
+                      "tuple": false
+                    },
+                    "kind": "optional"
+                  },
+                  "skip": false
+                },
+                {
+                  "default": false,
+                  "doc": "Include per-mesh evaluated quality and approximate source-alpha coverage.\nUses default parameters of the same source as reference; checks requested frames only.",
+                  "name": "quality",
+                  "rust_name": "quality",
+                  "shape": {
+                    "kind": "bool"
+                  },
+                  "skip": false
                 }
               ],
               "kind": "serde_record",
@@ -37896,6 +38696,306 @@
                               ],
                               "kind": "serde_record",
                               "name": "zipzi_runtime::observation::ObservedBounds",
+                              "transparent": false,
+                              "tuple": false
+                            },
+                            "kind": "sequence"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "doc": "Mesh quality in evaluated drawable order when View.quality is true; empty otherwise.\nTexture coverage uses alpha >= 8, pixel centers, at most a 256x256 grid, ignoring masks,\nfiltering and UV repeat outside [0,1]. A step above 1 denotes approximate coverage.",
+                          "name": "quality",
+                          "rust_name": "quality",
+                          "shape": {
+                            "item": {
+                              "fields": [
+                                {
+                                  "doc": "Stable document mesh ID, in evaluated drawable order.",
+                                  "name": "mesh_id",
+                                  "rust_name": "mesh_id",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Evaluated enabled/visible/positive-opacity state. Metrics are geometric and ignore occlusion.",
+                                  "name": "visible",
+                                  "rust_name": "visible",
+                                  "shape": {
+                                    "kind": "bool"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Number of evaluated vertices.",
+                                  "name": "vertex_count",
+                                  "rust_name": "vertex_count",
+                                  "shape": {
+                                    "kind": "usize"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Per-triangle metrics in evaluated Y-up model coordinates, relative to default parameters\nof the same frozen authoring source. This does not certify unsampled parameter intervals.",
+                                  "name": "triangles",
+                                  "rust_name": "triangles",
+                                  "shape": {
+                                    "item": {
+                                      "fields": [
+                                        {
+                                          "doc": "Zero-based triangle offset, in the sampled drawable's index order.",
+                                          "name": "triangle_index",
+                                          "rust_name": "triangle_index",
+                                          "shape": {
+                                            "kind": "usize"
+                                          },
+                                          "skip": false
+                                        },
+                                        {
+                                          "doc": "Unsigned evaluated area in model units squared.",
+                                          "name": "area",
+                                          "rust_name": "area",
+                                          "shape": {
+                                            "kind": "f64"
+                                          },
+                                          "skip": false
+                                        },
+                                        {
+                                          "doc": "Smallest interior angle in degrees; zero for a collapsed triangle.",
+                                          "name": "min_angle_degrees",
+                                          "rust_name": "min_angle_degrees",
+                                          "shape": {
+                                            "kind": "f64"
+                                          },
+                                          "skip": false
+                                        },
+                                        {
+                                          "default": null,
+                                          "doc": "Longest edge divided by its altitude. None for a collapsed triangle.",
+                                          "name": "aspect_ratio",
+                                          "rust_name": "aspect_ratio",
+                                          "shape": {
+                                            "item": {
+                                              "kind": "f64"
+                                            },
+                                            "kind": "optional"
+                                          },
+                                          "skip": false
+                                        },
+                                        {
+                                          "default": null,
+                                          "doc": "Signed area / signed default-pose area. Negative means flipped; None if the reference is degenerate.",
+                                          "name": "relative_area",
+                                          "rust_name": "relative_area",
+                                          "shape": {
+                                            "item": {
+                                              "kind": "f64"
+                                            },
+                                            "kind": "optional"
+                                          },
+                                          "skip": false
+                                        },
+                                        {
+                                          "default": null,
+                                          "doc": "Largest symmetric edge-length ratio max(current/reference, reference/current).\nNone if any reference or sampled edge is collapsed. A rigid transform gives 1.",
+                                          "name": "edge_stretch",
+                                          "rust_name": "edge_stretch",
+                                          "shape": {
+                                            "item": {
+                                              "kind": "f64"
+                                            },
+                                            "kind": "optional"
+                                          },
+                                          "skip": false
+                                        }
+                                      ],
+                                      "kind": "serde_record",
+                                      "name": "zipzi_sdk::mesh_quality::TriangleQuality",
+                                      "transparent": false,
+                                      "tuple": false
+                                    },
+                                    "kind": "sequence"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "default": null,
+                                  "doc": "Smallest angle over this mesh; None for an empty mesh.",
+                                  "name": "min_angle_degrees",
+                                  "rust_name": "min_angle_degrees",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "f64"
+                                    },
+                                    "kind": "optional"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "default": null,
+                                  "doc": "Largest finite aspect ratio; collapsed triangles are counted separately.",
+                                  "name": "max_aspect_ratio",
+                                  "rust_name": "max_aspect_ratio",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "f64"
+                                    },
+                                    "kind": "optional"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "default": null,
+                                  "doc": "Largest finite symmetric edge-length ratio relative to the default pose.",
+                                  "name": "max_edge_stretch",
+                                  "rust_name": "max_edge_stretch",
+                                  "shape": {
+                                    "item": {
+                                      "kind": "f64"
+                                    },
+                                    "kind": "optional"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Number of exactly zero-area evaluated triangles.",
+                                  "name": "degenerate_triangles",
+                                  "rust_name": "degenerate_triangles",
+                                  "shape": {
+                                    "kind": "usize"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "doc": "Number of negative relative-area triangles. Degenerate references are excluded.",
+                                  "name": "flipped_triangles",
+                                  "rust_name": "flipped_triangles",
+                                  "shape": {
+                                    "kind": "usize"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "default": null,
+                                  "doc": "Optional source-texture coverage. CPU-only sampling does not resolve image pixels.",
+                                  "name": "texture_coverage",
+                                  "rust_name": "texture_coverage",
+                                  "shape": {
+                                    "item": {
+                                      "fields": [
+                                        {
+                                          "doc": "Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.",
+                                          "name": "alpha_threshold",
+                                          "rust_name": "alpha_threshold",
+                                          "shape": {
+                                            "kind": "u8"
+                                          },
+                                          "skip": false
+                                        },
+                                        {
+                                          "doc": "Top-down source-pixel grid spacing. Values above 1 mean an approximate report.",
+                                          "name": "pixel_step",
+                                          "rust_name": "pixel_step",
+                                          "shape": {
+                                            "kind": "u32"
+                                          },
+                                          "skip": false
+                                        },
+                                        {
+                                          "doc": "Number of source pixel centers tested on the regular grid.",
+                                          "name": "sampled_pixels",
+                                          "rust_name": "sampled_pixels",
+                                          "shape": {
+                                            "kind": "usize"
+                                          },
+                                          "skip": false
+                                        },
+                                        {
+                                          "doc": "Tested pixel centers covered by the union of UV triangles inside [0,1].",
+                                          "name": "covered_pixels",
+                                          "rust_name": "covered_pixels",
+                                          "shape": {
+                                            "kind": "usize"
+                                          },
+                                          "skip": false
+                                        },
+                                        {
+                                          "doc": "Covered centers whose source alpha is below the threshold.",
+                                          "name": "transparent_covered_pixels",
+                                          "rust_name": "transparent_covered_pixels",
+                                          "shape": {
+                                            "kind": "usize"
+                                          },
+                                          "skip": false
+                                        },
+                                        {
+                                          "doc": "Tested centers whose source alpha is at least the threshold.",
+                                          "name": "opaque_pixels",
+                                          "rust_name": "opaque_pixels",
+                                          "shape": {
+                                            "kind": "usize"
+                                          },
+                                          "skip": false
+                                        },
+                                        {
+                                          "doc": "Opaque centers outside the UV triangle union: a contour coverage error, not a distance.",
+                                          "name": "uncovered_opaque_pixels",
+                                          "rust_name": "uncovered_opaque_pixels",
+                                          "shape": {
+                                            "kind": "usize"
+                                          },
+                                          "skip": false
+                                        },
+                                        {
+                                          "default": null,
+                                          "doc": "Transparent covered / covered; None if no tested center is covered.",
+                                          "name": "transparent_coverage_fraction",
+                                          "rust_name": "transparent_coverage_fraction",
+                                          "shape": {
+                                            "item": {
+                                              "kind": "f64"
+                                            },
+                                            "kind": "optional"
+                                          },
+                                          "skip": false
+                                        },
+                                        {
+                                          "default": null,
+                                          "doc": "Uncovered opaque / opaque; None for an entirely transparent sampled image.",
+                                          "name": "uncovered_opaque_fraction",
+                                          "rust_name": "uncovered_opaque_fraction",
+                                          "shape": {
+                                            "item": {
+                                              "kind": "f64"
+                                            },
+                                            "kind": "optional"
+                                          },
+                                          "skip": false
+                                        },
+                                        {
+                                          "doc": "Number of UV triangles with vertices outside [0,1]; repeat-sampled coverage is not measured.",
+                                          "name": "out_of_bounds_triangles",
+                                          "rust_name": "out_of_bounds_triangles",
+                                          "shape": {
+                                            "kind": "usize"
+                                          },
+                                          "skip": false
+                                        }
+                                      ],
+                                      "kind": "serde_record",
+                                      "name": "zipzi_sdk::mesh_quality::TextureCoverage",
+                                      "transparent": false,
+                                      "tuple": false
+                                    },
+                                    "kind": "optional"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "kind": "serde_record",
+                              "name": "zipzi_sdk::mesh_quality::MeshQuality",
                               "transparent": false,
                               "tuple": false
                             },
@@ -39349,8 +40449,8 @@
       "transparent": false,
       "tuple": false
     },
-    "preview_signature": "de420995072f1a30cdaff1c3207de078",
-    "sample_signature": "a87f0d0900f9d79e2b3712201e0ee16a",
+    "preview_signature": "2d3615c77ec096438c86137436c2fcd2",
+    "sample_signature": "d439ee6cbc8d0f1feb2c30a437523a21",
     "samples": {
       "fields": [
         {
@@ -40170,6 +41270,309 @@
               "name": "zipzi_sdk::diagnostics::GeometryDiagnostic",
               "transparent": false,
               "tuple": false
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Per-pose evaluated mesh quality in frame order when Checks.quality is true; empty otherwise.\nUses default parameters of this same frozen source as the reference, without image coverage.",
+          "name": "quality",
+          "rust_name": "quality",
+          "shape": {
+            "item": {
+              "item": {
+                "fields": [
+                  {
+                    "doc": "Stable document mesh ID, in evaluated drawable order.",
+                    "name": "mesh_id",
+                    "rust_name": "mesh_id",
+                    "shape": {
+                      "kind": "string"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Evaluated enabled/visible/positive-opacity state. Metrics are geometric and ignore occlusion.",
+                    "name": "visible",
+                    "rust_name": "visible",
+                    "shape": {
+                      "kind": "bool"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Number of evaluated vertices.",
+                    "name": "vertex_count",
+                    "rust_name": "vertex_count",
+                    "shape": {
+                      "kind": "usize"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Per-triangle metrics in evaluated Y-up model coordinates, relative to default parameters\nof the same frozen authoring source. This does not certify unsampled parameter intervals.",
+                    "name": "triangles",
+                    "rust_name": "triangles",
+                    "shape": {
+                      "item": {
+                        "fields": [
+                          {
+                            "doc": "Zero-based triangle offset, in the sampled drawable's index order.",
+                            "name": "triangle_index",
+                            "rust_name": "triangle_index",
+                            "shape": {
+                              "kind": "usize"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Unsigned evaluated area in model units squared.",
+                            "name": "area",
+                            "rust_name": "area",
+                            "shape": {
+                              "kind": "f64"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Smallest interior angle in degrees; zero for a collapsed triangle.",
+                            "name": "min_angle_degrees",
+                            "rust_name": "min_angle_degrees",
+                            "shape": {
+                              "kind": "f64"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": null,
+                            "doc": "Longest edge divided by its altitude. None for a collapsed triangle.",
+                            "name": "aspect_ratio",
+                            "rust_name": "aspect_ratio",
+                            "shape": {
+                              "item": {
+                                "kind": "f64"
+                              },
+                              "kind": "optional"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": null,
+                            "doc": "Signed area / signed default-pose area. Negative means flipped; None if the reference is degenerate.",
+                            "name": "relative_area",
+                            "rust_name": "relative_area",
+                            "shape": {
+                              "item": {
+                                "kind": "f64"
+                              },
+                              "kind": "optional"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": null,
+                            "doc": "Largest symmetric edge-length ratio max(current/reference, reference/current).\nNone if any reference or sampled edge is collapsed. A rigid transform gives 1.",
+                            "name": "edge_stretch",
+                            "rust_name": "edge_stretch",
+                            "shape": {
+                              "item": {
+                                "kind": "f64"
+                              },
+                              "kind": "optional"
+                            },
+                            "skip": false
+                          }
+                        ],
+                        "kind": "serde_record",
+                        "name": "zipzi_sdk::mesh_quality::TriangleQuality",
+                        "transparent": false,
+                        "tuple": false
+                      },
+                      "kind": "sequence"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": null,
+                    "doc": "Smallest angle over this mesh; None for an empty mesh.",
+                    "name": "min_angle_degrees",
+                    "rust_name": "min_angle_degrees",
+                    "shape": {
+                      "item": {
+                        "kind": "f64"
+                      },
+                      "kind": "optional"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": null,
+                    "doc": "Largest finite aspect ratio; collapsed triangles are counted separately.",
+                    "name": "max_aspect_ratio",
+                    "rust_name": "max_aspect_ratio",
+                    "shape": {
+                      "item": {
+                        "kind": "f64"
+                      },
+                      "kind": "optional"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": null,
+                    "doc": "Largest finite symmetric edge-length ratio relative to the default pose.",
+                    "name": "max_edge_stretch",
+                    "rust_name": "max_edge_stretch",
+                    "shape": {
+                      "item": {
+                        "kind": "f64"
+                      },
+                      "kind": "optional"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Number of exactly zero-area evaluated triangles.",
+                    "name": "degenerate_triangles",
+                    "rust_name": "degenerate_triangles",
+                    "shape": {
+                      "kind": "usize"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Number of negative relative-area triangles. Degenerate references are excluded.",
+                    "name": "flipped_triangles",
+                    "rust_name": "flipped_triangles",
+                    "shape": {
+                      "kind": "usize"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": null,
+                    "doc": "Optional source-texture coverage. CPU-only sampling does not resolve image pixels.",
+                    "name": "texture_coverage",
+                    "rust_name": "texture_coverage",
+                    "shape": {
+                      "item": {
+                        "fields": [
+                          {
+                            "doc": "Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.",
+                            "name": "alpha_threshold",
+                            "rust_name": "alpha_threshold",
+                            "shape": {
+                              "kind": "u8"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Top-down source-pixel grid spacing. Values above 1 mean an approximate report.",
+                            "name": "pixel_step",
+                            "rust_name": "pixel_step",
+                            "shape": {
+                              "kind": "u32"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Number of source pixel centers tested on the regular grid.",
+                            "name": "sampled_pixels",
+                            "rust_name": "sampled_pixels",
+                            "shape": {
+                              "kind": "usize"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Tested pixel centers covered by the union of UV triangles inside [0,1].",
+                            "name": "covered_pixels",
+                            "rust_name": "covered_pixels",
+                            "shape": {
+                              "kind": "usize"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Covered centers whose source alpha is below the threshold.",
+                            "name": "transparent_covered_pixels",
+                            "rust_name": "transparent_covered_pixels",
+                            "shape": {
+                              "kind": "usize"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Tested centers whose source alpha is at least the threshold.",
+                            "name": "opaque_pixels",
+                            "rust_name": "opaque_pixels",
+                            "shape": {
+                              "kind": "usize"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Opaque centers outside the UV triangle union: a contour coverage error, not a distance.",
+                            "name": "uncovered_opaque_pixels",
+                            "rust_name": "uncovered_opaque_pixels",
+                            "shape": {
+                              "kind": "usize"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": null,
+                            "doc": "Transparent covered / covered; None if no tested center is covered.",
+                            "name": "transparent_coverage_fraction",
+                            "rust_name": "transparent_coverage_fraction",
+                            "shape": {
+                              "item": {
+                                "kind": "f64"
+                              },
+                              "kind": "optional"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": null,
+                            "doc": "Uncovered opaque / opaque; None for an entirely transparent sampled image.",
+                            "name": "uncovered_opaque_fraction",
+                            "rust_name": "uncovered_opaque_fraction",
+                            "shape": {
+                              "item": {
+                                "kind": "f64"
+                              },
+                              "kind": "optional"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Number of UV triangles with vertices outside [0,1]; repeat-sampled coverage is not measured.",
+                            "name": "out_of_bounds_triangles",
+                            "rust_name": "out_of_bounds_triangles",
+                            "shape": {
+                              "kind": "usize"
+                            },
+                            "skip": false
+                          }
+                        ],
+                        "kind": "serde_record",
+                        "name": "zipzi_sdk::mesh_quality::TextureCoverage",
+                        "transparent": false,
+                        "tuple": false
+                      },
+                      "kind": "optional"
+                    },
+                    "skip": false
+                  }
+                ],
+                "kind": "serde_record",
+                "name": "zipzi_sdk::mesh_quality::MeshQuality",
+                "transparent": false,
+                "tuple": false
+              },
+              "kind": "sequence"
             },
             "kind": "sequence"
           },
@@ -55983,6 +57386,16 @@
               "kind": "optional"
             },
             "skip": false
+          },
+          {
+            "default": false,
+            "doc": "Include per-pose mesh quality in evaluated Y-up model space, relative to this\nsnapshot evaluated with default parameters. Only the requested poses are checked.",
+            "name": "quality",
+            "rust_name": "quality",
+            "shape": {
+              "kind": "bool"
+            },
+            "skip": false
           }
         ],
         "kind": "serde_record",
@@ -56813,6 +58226,309 @@
               "kind": "sequence"
             },
             "skip": false
+          },
+          {
+            "doc": "Per-pose evaluated mesh quality in frame order when Checks.quality is true; empty otherwise.\nUses default parameters of this same frozen source as the reference, without image coverage.",
+            "name": "quality",
+            "rust_name": "quality",
+            "shape": {
+              "item": {
+                "item": {
+                  "fields": [
+                    {
+                      "doc": "Stable document mesh ID, in evaluated drawable order.",
+                      "name": "mesh_id",
+                      "rust_name": "mesh_id",
+                      "shape": {
+                        "kind": "string"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "doc": "Evaluated enabled/visible/positive-opacity state. Metrics are geometric and ignore occlusion.",
+                      "name": "visible",
+                      "rust_name": "visible",
+                      "shape": {
+                        "kind": "bool"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "doc": "Number of evaluated vertices.",
+                      "name": "vertex_count",
+                      "rust_name": "vertex_count",
+                      "shape": {
+                        "kind": "usize"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "doc": "Per-triangle metrics in evaluated Y-up model coordinates, relative to default parameters\nof the same frozen authoring source. This does not certify unsampled parameter intervals.",
+                      "name": "triangles",
+                      "rust_name": "triangles",
+                      "shape": {
+                        "item": {
+                          "fields": [
+                            {
+                              "doc": "Zero-based triangle offset, in the sampled drawable's index order.",
+                              "name": "triangle_index",
+                              "rust_name": "triangle_index",
+                              "shape": {
+                                "kind": "usize"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "doc": "Unsigned evaluated area in model units squared.",
+                              "name": "area",
+                              "rust_name": "area",
+                              "shape": {
+                                "kind": "f64"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "doc": "Smallest interior angle in degrees; zero for a collapsed triangle.",
+                              "name": "min_angle_degrees",
+                              "rust_name": "min_angle_degrees",
+                              "shape": {
+                                "kind": "f64"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "default": null,
+                              "doc": "Longest edge divided by its altitude. None for a collapsed triangle.",
+                              "name": "aspect_ratio",
+                              "rust_name": "aspect_ratio",
+                              "shape": {
+                                "item": {
+                                  "kind": "f64"
+                                },
+                                "kind": "optional"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "default": null,
+                              "doc": "Signed area / signed default-pose area. Negative means flipped; None if the reference is degenerate.",
+                              "name": "relative_area",
+                              "rust_name": "relative_area",
+                              "shape": {
+                                "item": {
+                                  "kind": "f64"
+                                },
+                                "kind": "optional"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "default": null,
+                              "doc": "Largest symmetric edge-length ratio max(current/reference, reference/current).\nNone if any reference or sampled edge is collapsed. A rigid transform gives 1.",
+                              "name": "edge_stretch",
+                              "rust_name": "edge_stretch",
+                              "shape": {
+                                "item": {
+                                  "kind": "f64"
+                                },
+                                "kind": "optional"
+                              },
+                              "skip": false
+                            }
+                          ],
+                          "kind": "serde_record",
+                          "name": "zipzi_sdk::mesh_quality::TriangleQuality",
+                          "transparent": false,
+                          "tuple": false
+                        },
+                        "kind": "sequence"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "default": null,
+                      "doc": "Smallest angle over this mesh; None for an empty mesh.",
+                      "name": "min_angle_degrees",
+                      "rust_name": "min_angle_degrees",
+                      "shape": {
+                        "item": {
+                          "kind": "f64"
+                        },
+                        "kind": "optional"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "default": null,
+                      "doc": "Largest finite aspect ratio; collapsed triangles are counted separately.",
+                      "name": "max_aspect_ratio",
+                      "rust_name": "max_aspect_ratio",
+                      "shape": {
+                        "item": {
+                          "kind": "f64"
+                        },
+                        "kind": "optional"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "default": null,
+                      "doc": "Largest finite symmetric edge-length ratio relative to the default pose.",
+                      "name": "max_edge_stretch",
+                      "rust_name": "max_edge_stretch",
+                      "shape": {
+                        "item": {
+                          "kind": "f64"
+                        },
+                        "kind": "optional"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "doc": "Number of exactly zero-area evaluated triangles.",
+                      "name": "degenerate_triangles",
+                      "rust_name": "degenerate_triangles",
+                      "shape": {
+                        "kind": "usize"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "doc": "Number of negative relative-area triangles. Degenerate references are excluded.",
+                      "name": "flipped_triangles",
+                      "rust_name": "flipped_triangles",
+                      "shape": {
+                        "kind": "usize"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "default": null,
+                      "doc": "Optional source-texture coverage. CPU-only sampling does not resolve image pixels.",
+                      "name": "texture_coverage",
+                      "rust_name": "texture_coverage",
+                      "shape": {
+                        "item": {
+                          "fields": [
+                            {
+                              "doc": "Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.",
+                              "name": "alpha_threshold",
+                              "rust_name": "alpha_threshold",
+                              "shape": {
+                                "kind": "u8"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "doc": "Top-down source-pixel grid spacing. Values above 1 mean an approximate report.",
+                              "name": "pixel_step",
+                              "rust_name": "pixel_step",
+                              "shape": {
+                                "kind": "u32"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "doc": "Number of source pixel centers tested on the regular grid.",
+                              "name": "sampled_pixels",
+                              "rust_name": "sampled_pixels",
+                              "shape": {
+                                "kind": "usize"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "doc": "Tested pixel centers covered by the union of UV triangles inside [0,1].",
+                              "name": "covered_pixels",
+                              "rust_name": "covered_pixels",
+                              "shape": {
+                                "kind": "usize"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "doc": "Covered centers whose source alpha is below the threshold.",
+                              "name": "transparent_covered_pixels",
+                              "rust_name": "transparent_covered_pixels",
+                              "shape": {
+                                "kind": "usize"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "doc": "Tested centers whose source alpha is at least the threshold.",
+                              "name": "opaque_pixels",
+                              "rust_name": "opaque_pixels",
+                              "shape": {
+                                "kind": "usize"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "doc": "Opaque centers outside the UV triangle union: a contour coverage error, not a distance.",
+                              "name": "uncovered_opaque_pixels",
+                              "rust_name": "uncovered_opaque_pixels",
+                              "shape": {
+                                "kind": "usize"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "default": null,
+                              "doc": "Transparent covered / covered; None if no tested center is covered.",
+                              "name": "transparent_coverage_fraction",
+                              "rust_name": "transparent_coverage_fraction",
+                              "shape": {
+                                "item": {
+                                  "kind": "f64"
+                                },
+                                "kind": "optional"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "default": null,
+                              "doc": "Uncovered opaque / opaque; None for an entirely transparent sampled image.",
+                              "name": "uncovered_opaque_fraction",
+                              "rust_name": "uncovered_opaque_fraction",
+                              "shape": {
+                                "item": {
+                                  "kind": "f64"
+                                },
+                                "kind": "optional"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "doc": "Number of UV triangles with vertices outside [0,1]; repeat-sampled coverage is not measured.",
+                              "name": "out_of_bounds_triangles",
+                              "rust_name": "out_of_bounds_triangles",
+                              "shape": {
+                                "kind": "usize"
+                              },
+                              "skip": false
+                            }
+                          ],
+                          "kind": "serde_record",
+                          "name": "zipzi_sdk::mesh_quality::TextureCoverage",
+                          "transparent": false,
+                          "tuple": false
+                        },
+                        "kind": "optional"
+                      },
+                      "skip": false
+                    }
+                  ],
+                  "kind": "serde_record",
+                  "name": "zipzi_sdk::mesh_quality::MeshQuality",
+                  "transparent": false,
+                  "tuple": false
+                },
+                "kind": "sequence"
+              },
+              "kind": "sequence"
+            },
+            "skip": false
           }
         ],
         "kind": "serde_record",
@@ -57610,6 +59326,16 @@
                 "tuple": false
               },
               "kind": "optional"
+            },
+            "skip": false
+          },
+          {
+            "default": false,
+            "doc": "Include per-pose mesh quality in evaluated Y-up model space, relative to this\nsnapshot evaluated with default parameters. Only the requested poses are checked.",
+            "name": "quality",
+            "rust_name": "quality",
+            "shape": {
+              "kind": "bool"
             },
             "skip": false
           }
@@ -116098,6 +117824,309 @@
               "kind": "sequence"
             },
             "skip": false
+          },
+          {
+            "doc": "Per-pose evaluated mesh quality in frame order when Checks.quality is true; empty otherwise.\nUses default parameters of this same frozen source as the reference, without image coverage.",
+            "name": "quality",
+            "rust_name": "quality",
+            "shape": {
+              "item": {
+                "item": {
+                  "fields": [
+                    {
+                      "doc": "Stable document mesh ID, in evaluated drawable order.",
+                      "name": "mesh_id",
+                      "rust_name": "mesh_id",
+                      "shape": {
+                        "kind": "string"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "doc": "Evaluated enabled/visible/positive-opacity state. Metrics are geometric and ignore occlusion.",
+                      "name": "visible",
+                      "rust_name": "visible",
+                      "shape": {
+                        "kind": "bool"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "doc": "Number of evaluated vertices.",
+                      "name": "vertex_count",
+                      "rust_name": "vertex_count",
+                      "shape": {
+                        "kind": "usize"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "doc": "Per-triangle metrics in evaluated Y-up model coordinates, relative to default parameters\nof the same frozen authoring source. This does not certify unsampled parameter intervals.",
+                      "name": "triangles",
+                      "rust_name": "triangles",
+                      "shape": {
+                        "item": {
+                          "fields": [
+                            {
+                              "doc": "Zero-based triangle offset, in the sampled drawable's index order.",
+                              "name": "triangle_index",
+                              "rust_name": "triangle_index",
+                              "shape": {
+                                "kind": "usize"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "doc": "Unsigned evaluated area in model units squared.",
+                              "name": "area",
+                              "rust_name": "area",
+                              "shape": {
+                                "kind": "f64"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "doc": "Smallest interior angle in degrees; zero for a collapsed triangle.",
+                              "name": "min_angle_degrees",
+                              "rust_name": "min_angle_degrees",
+                              "shape": {
+                                "kind": "f64"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "default": null,
+                              "doc": "Longest edge divided by its altitude. None for a collapsed triangle.",
+                              "name": "aspect_ratio",
+                              "rust_name": "aspect_ratio",
+                              "shape": {
+                                "item": {
+                                  "kind": "f64"
+                                },
+                                "kind": "optional"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "default": null,
+                              "doc": "Signed area / signed default-pose area. Negative means flipped; None if the reference is degenerate.",
+                              "name": "relative_area",
+                              "rust_name": "relative_area",
+                              "shape": {
+                                "item": {
+                                  "kind": "f64"
+                                },
+                                "kind": "optional"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "default": null,
+                              "doc": "Largest symmetric edge-length ratio max(current/reference, reference/current).\nNone if any reference or sampled edge is collapsed. A rigid transform gives 1.",
+                              "name": "edge_stretch",
+                              "rust_name": "edge_stretch",
+                              "shape": {
+                                "item": {
+                                  "kind": "f64"
+                                },
+                                "kind": "optional"
+                              },
+                              "skip": false
+                            }
+                          ],
+                          "kind": "serde_record",
+                          "name": "zipzi_sdk::mesh_quality::TriangleQuality",
+                          "transparent": false,
+                          "tuple": false
+                        },
+                        "kind": "sequence"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "default": null,
+                      "doc": "Smallest angle over this mesh; None for an empty mesh.",
+                      "name": "min_angle_degrees",
+                      "rust_name": "min_angle_degrees",
+                      "shape": {
+                        "item": {
+                          "kind": "f64"
+                        },
+                        "kind": "optional"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "default": null,
+                      "doc": "Largest finite aspect ratio; collapsed triangles are counted separately.",
+                      "name": "max_aspect_ratio",
+                      "rust_name": "max_aspect_ratio",
+                      "shape": {
+                        "item": {
+                          "kind": "f64"
+                        },
+                        "kind": "optional"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "default": null,
+                      "doc": "Largest finite symmetric edge-length ratio relative to the default pose.",
+                      "name": "max_edge_stretch",
+                      "rust_name": "max_edge_stretch",
+                      "shape": {
+                        "item": {
+                          "kind": "f64"
+                        },
+                        "kind": "optional"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "doc": "Number of exactly zero-area evaluated triangles.",
+                      "name": "degenerate_triangles",
+                      "rust_name": "degenerate_triangles",
+                      "shape": {
+                        "kind": "usize"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "doc": "Number of negative relative-area triangles. Degenerate references are excluded.",
+                      "name": "flipped_triangles",
+                      "rust_name": "flipped_triangles",
+                      "shape": {
+                        "kind": "usize"
+                      },
+                      "skip": false
+                    },
+                    {
+                      "default": null,
+                      "doc": "Optional source-texture coverage. CPU-only sampling does not resolve image pixels.",
+                      "name": "texture_coverage",
+                      "rust_name": "texture_coverage",
+                      "shape": {
+                        "item": {
+                          "fields": [
+                            {
+                              "doc": "Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.",
+                              "name": "alpha_threshold",
+                              "rust_name": "alpha_threshold",
+                              "shape": {
+                                "kind": "u8"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "doc": "Top-down source-pixel grid spacing. Values above 1 mean an approximate report.",
+                              "name": "pixel_step",
+                              "rust_name": "pixel_step",
+                              "shape": {
+                                "kind": "u32"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "doc": "Number of source pixel centers tested on the regular grid.",
+                              "name": "sampled_pixels",
+                              "rust_name": "sampled_pixels",
+                              "shape": {
+                                "kind": "usize"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "doc": "Tested pixel centers covered by the union of UV triangles inside [0,1].",
+                              "name": "covered_pixels",
+                              "rust_name": "covered_pixels",
+                              "shape": {
+                                "kind": "usize"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "doc": "Covered centers whose source alpha is below the threshold.",
+                              "name": "transparent_covered_pixels",
+                              "rust_name": "transparent_covered_pixels",
+                              "shape": {
+                                "kind": "usize"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "doc": "Tested centers whose source alpha is at least the threshold.",
+                              "name": "opaque_pixels",
+                              "rust_name": "opaque_pixels",
+                              "shape": {
+                                "kind": "usize"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "doc": "Opaque centers outside the UV triangle union: a contour coverage error, not a distance.",
+                              "name": "uncovered_opaque_pixels",
+                              "rust_name": "uncovered_opaque_pixels",
+                              "shape": {
+                                "kind": "usize"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "default": null,
+                              "doc": "Transparent covered / covered; None if no tested center is covered.",
+                              "name": "transparent_coverage_fraction",
+                              "rust_name": "transparent_coverage_fraction",
+                              "shape": {
+                                "item": {
+                                  "kind": "f64"
+                                },
+                                "kind": "optional"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "default": null,
+                              "doc": "Uncovered opaque / opaque; None for an entirely transparent sampled image.",
+                              "name": "uncovered_opaque_fraction",
+                              "rust_name": "uncovered_opaque_fraction",
+                              "shape": {
+                                "item": {
+                                  "kind": "f64"
+                                },
+                                "kind": "optional"
+                              },
+                              "skip": false
+                            },
+                            {
+                              "doc": "Number of UV triangles with vertices outside [0,1]; repeat-sampled coverage is not measured.",
+                              "name": "out_of_bounds_triangles",
+                              "rust_name": "out_of_bounds_triangles",
+                              "shape": {
+                                "kind": "usize"
+                              },
+                              "skip": false
+                            }
+                          ],
+                          "kind": "serde_record",
+                          "name": "zipzi_sdk::mesh_quality::TextureCoverage",
+                          "transparent": false,
+                          "tuple": false
+                        },
+                        "kind": "optional"
+                      },
+                      "skip": false
+                    }
+                  ],
+                  "kind": "serde_record",
+                  "name": "zipzi_sdk::mesh_quality::MeshQuality",
+                  "transparent": false,
+                  "tuple": false
+                },
+                "kind": "sequence"
+              },
+              "kind": "sequence"
+            },
+            "skip": false
           }
         ],
         "kind": "serde_record",
@@ -116984,6 +119013,256 @@
                       "kind": "f32"
                     },
                     "skip": false
+                  },
+                  {
+                    "default": null,
+                    "doc": "Optional topology overlay in the same frozen Source and ROI mapping. It ignores\nmasks and occlusion; None preserves the ordinary GPU image.",
+                    "name": "topology",
+                    "rust_name": "topology",
+                    "shape": {
+                      "item": {
+                        "fields": [
+                          {
+                            "default": null,
+                            "doc": "Diagnostic selection only; the textured context image is unchanged. None selects all\nmeshes, Some([]) selects none. Mesh/Part targets are unioned and deduplicated;\nParts include nested Parts. Missing targets fail explicitly. Maximum 256 selectors.",
+                            "name": "targets",
+                            "rust_name": "targets",
+                            "shape": {
+                              "item": {
+                                "item": {
+                                  "content": "id",
+                                  "kind": "serde_enum",
+                                  "name": "zipzi_sdk::spatial::ObjectTarget",
+                                  "tag": "kind",
+                                  "variants": [
+                                    {
+                                      "fields": [
+                                        {
+                                          "doc": "Persistent authoring mesh UUID.",
+                                          "name": "value",
+                                          "rust_name": "0",
+                                          "shape": {
+                                            "kind": "string"
+                                          },
+                                          "skip": false
+                                        }
+                                      ],
+                                      "form": "newtype",
+                                      "name": "mesh",
+                                      "rust_name": "Mesh"
+                                    },
+                                    {
+                                      "fields": [
+                                        {
+                                          "doc": "Persistent Part UUID selecting descendant meshes.",
+                                          "name": "value",
+                                          "rust_name": "0",
+                                          "shape": {
+                                            "kind": "string"
+                                          },
+                                          "skip": false
+                                        }
+                                      ],
+                                      "form": "newtype",
+                                      "name": "part",
+                                      "rust_name": "Part"
+                                    }
+                                  ]
+                                },
+                                "kind": "sequence"
+                              },
+                              "kind": "optional"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": true,
+                            "doc": "Draw triangle edges in cyan, in final evaluated model coordinates.",
+                            "name": "wireframe",
+                            "rust_name": "wireframe",
+                            "shape": {
+                              "kind": "bool"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": false,
+                            "doc": "Draw vertex positions as yellow dots.",
+                            "name": "vertices",
+                            "rust_name": "vertices",
+                            "shape": {
+                              "kind": "bool"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": false,
+                            "doc": "Draw stable authoring vertex IDs in yellow, rather than transient array offsets.",
+                            "name": "vertex_ids",
+                            "rust_name": "vertex_ids",
+                            "shape": {
+                              "kind": "bool"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": false,
+                            "doc": "Draw meshing boundary edges in green and internal constraints in magenta.",
+                            "name": "constraints",
+                            "rust_name": "constraints",
+                            "shape": {
+                              "kind": "bool"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": false,
+                            "doc": "Fill triangles by symmetric edge stretch relative to the default pose: blue=1,\norange=2, red>=4; flipped or collapsed triangles are magenta.",
+                            "name": "strain",
+                            "rust_name": "strain",
+                            "shape": {
+                              "kind": "bool"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": false,
+                            "doc": "Include disabled, hidden and zero-opacity meshes. Default draws visible meshes only.",
+                            "name": "include_hidden",
+                            "rust_name": "include_hidden",
+                            "shape": {
+                              "kind": "bool"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": false,
+                            "doc": "Clear the textured image before diagnostic drawing, retaining the exact same view.",
+                            "name": "topology_only",
+                            "rust_name": "topology_only",
+                            "shape": {
+                              "kind": "bool"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": 0.25,
+                            "doc": "Heat fill opacity in [0,1]. Applied once per pixel using the most severe overlapping\ntriangle, so overlapping layers cannot accumulate opacity. Lines and labels stay opaque.",
+                            "name": "heat_opacity",
+                            "rust_name": "heat_opacity",
+                            "shape": {
+                              "kind": "f32"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": false,
+                            "doc": "Restrict every diagnostic layer to anomalous triangles and their incident vertices/edges.\nDegenerate, flipped and undefined-reference triangles always count as anomalies.",
+                            "name": "anomalies_only",
+                            "rust_name": "anomalies_only",
+                            "shape": {
+                              "kind": "bool"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": {
+                              "max_aspect_ratio": 20.0,
+                              "max_edge_stretch": 2.0,
+                              "min_angle_degrees": 10.0
+                            },
+                            "doc": "Thresholds used by anomalies_only; reports themselves are never threshold-filtered.",
+                            "name": "thresholds",
+                            "rust_name": "thresholds",
+                            "shape": {
+                              "fields": [
+                                {
+                                  "default": 10.0,
+                                  "doc": "An angle below this value is anomalous; finite degrees in [0,60]. Default 10.",
+                                  "name": "min_angle_degrees",
+                                  "rust_name": "min_angle_degrees",
+                                  "shape": {
+                                    "kind": "f64"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "default": 20.0,
+                                  "doc": "A longest-edge/altitude ratio above this is anomalous; finite and >= 1. Default 20.",
+                                  "name": "max_aspect_ratio",
+                                  "rust_name": "max_aspect_ratio",
+                                  "shape": {
+                                    "kind": "f64"
+                                  },
+                                  "skip": false
+                                },
+                                {
+                                  "default": 2.0,
+                                  "doc": "A symmetric edge-length ratio above this is anomalous; finite and >= 1. Default 2.",
+                                  "name": "max_edge_stretch",
+                                  "rust_name": "max_edge_stretch",
+                                  "shape": {
+                                    "kind": "f64"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "kind": "serde_record",
+                              "name": "zipzi_sdk::mesh_quality::TopologyThresholds",
+                              "transparent": false,
+                              "tuple": false
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": 2,
+                            "doc": "Decimal glyph scale in output pixels, 1..4. Labels avoid other labels globally;\nan ID is omitted when no nearby in-view position has enough space.",
+                            "name": "label_scale",
+                            "rust_name": "label_scale",
+                            "shape": {
+                              "kind": "u32"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": 3,
+                            "doc": "Minimum clear gap between label rectangles in pixels, 0..32.",
+                            "name": "label_spacing",
+                            "rust_name": "label_spacing",
+                            "shape": {
+                              "kind": "u32"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": 256,
+                            "doc": "Maximum labels per image, 0..4096. Vertex dots remain independent of this limit.",
+                            "name": "max_labels",
+                            "rust_name": "max_labels",
+                            "shape": {
+                              "kind": "usize"
+                            },
+                            "skip": false
+                          }
+                        ],
+                        "kind": "serde_record",
+                        "name": "zipzi_sdk::mesh_quality::TopologyOverlay",
+                        "transparent": false,
+                        "tuple": false
+                      },
+                      "kind": "optional"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": false,
+                    "doc": "Include per-mesh evaluated quality and approximate source-alpha coverage.\nUses default parameters of the same source as reference; checks requested frames only.",
+                    "name": "quality",
+                    "rust_name": "quality",
+                    "shape": {
+                      "kind": "bool"
+                    },
+                    "skip": false
                   }
                 ],
                 "kind": "serde_record",
@@ -117393,6 +119672,306 @@
                                 ],
                                 "kind": "serde_record",
                                 "name": "zipzi_runtime::observation::ObservedBounds",
+                                "transparent": false,
+                                "tuple": false
+                              },
+                              "kind": "sequence"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Mesh quality in evaluated drawable order when View.quality is true; empty otherwise.\nTexture coverage uses alpha >= 8, pixel centers, at most a 256x256 grid, ignoring masks,\nfiltering and UV repeat outside [0,1]. A step above 1 denotes approximate coverage.",
+                            "name": "quality",
+                            "rust_name": "quality",
+                            "shape": {
+                              "item": {
+                                "fields": [
+                                  {
+                                    "doc": "Stable document mesh ID, in evaluated drawable order.",
+                                    "name": "mesh_id",
+                                    "rust_name": "mesh_id",
+                                    "shape": {
+                                      "kind": "string"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Evaluated enabled/visible/positive-opacity state. Metrics are geometric and ignore occlusion.",
+                                    "name": "visible",
+                                    "rust_name": "visible",
+                                    "shape": {
+                                      "kind": "bool"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Number of evaluated vertices.",
+                                    "name": "vertex_count",
+                                    "rust_name": "vertex_count",
+                                    "shape": {
+                                      "kind": "usize"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Per-triangle metrics in evaluated Y-up model coordinates, relative to default parameters\nof the same frozen authoring source. This does not certify unsampled parameter intervals.",
+                                    "name": "triangles",
+                                    "rust_name": "triangles",
+                                    "shape": {
+                                      "item": {
+                                        "fields": [
+                                          {
+                                            "doc": "Zero-based triangle offset, in the sampled drawable's index order.",
+                                            "name": "triangle_index",
+                                            "rust_name": "triangle_index",
+                                            "shape": {
+                                              "kind": "usize"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Unsigned evaluated area in model units squared.",
+                                            "name": "area",
+                                            "rust_name": "area",
+                                            "shape": {
+                                              "kind": "f64"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Smallest interior angle in degrees; zero for a collapsed triangle.",
+                                            "name": "min_angle_degrees",
+                                            "rust_name": "min_angle_degrees",
+                                            "shape": {
+                                              "kind": "f64"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "default": null,
+                                            "doc": "Longest edge divided by its altitude. None for a collapsed triangle.",
+                                            "name": "aspect_ratio",
+                                            "rust_name": "aspect_ratio",
+                                            "shape": {
+                                              "item": {
+                                                "kind": "f64"
+                                              },
+                                              "kind": "optional"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "default": null,
+                                            "doc": "Signed area / signed default-pose area. Negative means flipped; None if the reference is degenerate.",
+                                            "name": "relative_area",
+                                            "rust_name": "relative_area",
+                                            "shape": {
+                                              "item": {
+                                                "kind": "f64"
+                                              },
+                                              "kind": "optional"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "default": null,
+                                            "doc": "Largest symmetric edge-length ratio max(current/reference, reference/current).\nNone if any reference or sampled edge is collapsed. A rigid transform gives 1.",
+                                            "name": "edge_stretch",
+                                            "rust_name": "edge_stretch",
+                                            "shape": {
+                                              "item": {
+                                                "kind": "f64"
+                                              },
+                                              "kind": "optional"
+                                            },
+                                            "skip": false
+                                          }
+                                        ],
+                                        "kind": "serde_record",
+                                        "name": "zipzi_sdk::mesh_quality::TriangleQuality",
+                                        "transparent": false,
+                                        "tuple": false
+                                      },
+                                      "kind": "sequence"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "default": null,
+                                    "doc": "Smallest angle over this mesh; None for an empty mesh.",
+                                    "name": "min_angle_degrees",
+                                    "rust_name": "min_angle_degrees",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "f64"
+                                      },
+                                      "kind": "optional"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "default": null,
+                                    "doc": "Largest finite aspect ratio; collapsed triangles are counted separately.",
+                                    "name": "max_aspect_ratio",
+                                    "rust_name": "max_aspect_ratio",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "f64"
+                                      },
+                                      "kind": "optional"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "default": null,
+                                    "doc": "Largest finite symmetric edge-length ratio relative to the default pose.",
+                                    "name": "max_edge_stretch",
+                                    "rust_name": "max_edge_stretch",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "f64"
+                                      },
+                                      "kind": "optional"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Number of exactly zero-area evaluated triangles.",
+                                    "name": "degenerate_triangles",
+                                    "rust_name": "degenerate_triangles",
+                                    "shape": {
+                                      "kind": "usize"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Number of negative relative-area triangles. Degenerate references are excluded.",
+                                    "name": "flipped_triangles",
+                                    "rust_name": "flipped_triangles",
+                                    "shape": {
+                                      "kind": "usize"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "default": null,
+                                    "doc": "Optional source-texture coverage. CPU-only sampling does not resolve image pixels.",
+                                    "name": "texture_coverage",
+                                    "rust_name": "texture_coverage",
+                                    "shape": {
+                                      "item": {
+                                        "fields": [
+                                          {
+                                            "doc": "Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.",
+                                            "name": "alpha_threshold",
+                                            "rust_name": "alpha_threshold",
+                                            "shape": {
+                                              "kind": "u8"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Top-down source-pixel grid spacing. Values above 1 mean an approximate report.",
+                                            "name": "pixel_step",
+                                            "rust_name": "pixel_step",
+                                            "shape": {
+                                              "kind": "u32"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Number of source pixel centers tested on the regular grid.",
+                                            "name": "sampled_pixels",
+                                            "rust_name": "sampled_pixels",
+                                            "shape": {
+                                              "kind": "usize"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Tested pixel centers covered by the union of UV triangles inside [0,1].",
+                                            "name": "covered_pixels",
+                                            "rust_name": "covered_pixels",
+                                            "shape": {
+                                              "kind": "usize"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Covered centers whose source alpha is below the threshold.",
+                                            "name": "transparent_covered_pixels",
+                                            "rust_name": "transparent_covered_pixels",
+                                            "shape": {
+                                              "kind": "usize"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Tested centers whose source alpha is at least the threshold.",
+                                            "name": "opaque_pixels",
+                                            "rust_name": "opaque_pixels",
+                                            "shape": {
+                                              "kind": "usize"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Opaque centers outside the UV triangle union: a contour coverage error, not a distance.",
+                                            "name": "uncovered_opaque_pixels",
+                                            "rust_name": "uncovered_opaque_pixels",
+                                            "shape": {
+                                              "kind": "usize"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "default": null,
+                                            "doc": "Transparent covered / covered; None if no tested center is covered.",
+                                            "name": "transparent_coverage_fraction",
+                                            "rust_name": "transparent_coverage_fraction",
+                                            "shape": {
+                                              "item": {
+                                                "kind": "f64"
+                                              },
+                                              "kind": "optional"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "default": null,
+                                            "doc": "Uncovered opaque / opaque; None for an entirely transparent sampled image.",
+                                            "name": "uncovered_opaque_fraction",
+                                            "rust_name": "uncovered_opaque_fraction",
+                                            "shape": {
+                                              "item": {
+                                                "kind": "f64"
+                                              },
+                                              "kind": "optional"
+                                            },
+                                            "skip": false
+                                          },
+                                          {
+                                            "doc": "Number of UV triangles with vertices outside [0,1]; repeat-sampled coverage is not measured.",
+                                            "name": "out_of_bounds_triangles",
+                                            "rust_name": "out_of_bounds_triangles",
+                                            "shape": {
+                                              "kind": "usize"
+                                            },
+                                            "skip": false
+                                          }
+                                        ],
+                                        "kind": "serde_record",
+                                        "name": "zipzi_sdk::mesh_quality::TextureCoverage",
+                                        "transparent": false,
+                                        "tuple": false
+                                      },
+                                      "kind": "optional"
+                                    },
+                                    "skip": false
+                                  }
+                                ],
+                                "kind": "serde_record",
+                                "name": "zipzi_sdk::mesh_quality::MeshQuality",
                                 "transparent": false,
                                 "tuple": false
                               },
@@ -119507,6 +122086,256 @@
               "kind": "f32"
             },
             "skip": false
+          },
+          {
+            "default": null,
+            "doc": "Optional topology overlay in the same frozen Source and ROI mapping. It ignores\nmasks and occlusion; None preserves the ordinary GPU image.",
+            "name": "topology",
+            "rust_name": "topology",
+            "shape": {
+              "item": {
+                "fields": [
+                  {
+                    "default": null,
+                    "doc": "Diagnostic selection only; the textured context image is unchanged. None selects all\nmeshes, Some([]) selects none. Mesh/Part targets are unioned and deduplicated;\nParts include nested Parts. Missing targets fail explicitly. Maximum 256 selectors.",
+                    "name": "targets",
+                    "rust_name": "targets",
+                    "shape": {
+                      "item": {
+                        "item": {
+                          "content": "id",
+                          "kind": "serde_enum",
+                          "name": "zipzi_sdk::spatial::ObjectTarget",
+                          "tag": "kind",
+                          "variants": [
+                            {
+                              "fields": [
+                                {
+                                  "doc": "Persistent authoring mesh UUID.",
+                                  "name": "value",
+                                  "rust_name": "0",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "form": "newtype",
+                              "name": "mesh",
+                              "rust_name": "Mesh"
+                            },
+                            {
+                              "fields": [
+                                {
+                                  "doc": "Persistent Part UUID selecting descendant meshes.",
+                                  "name": "value",
+                                  "rust_name": "0",
+                                  "shape": {
+                                    "kind": "string"
+                                  },
+                                  "skip": false
+                                }
+                              ],
+                              "form": "newtype",
+                              "name": "part",
+                              "rust_name": "Part"
+                            }
+                          ]
+                        },
+                        "kind": "sequence"
+                      },
+                      "kind": "optional"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": true,
+                    "doc": "Draw triangle edges in cyan, in final evaluated model coordinates.",
+                    "name": "wireframe",
+                    "rust_name": "wireframe",
+                    "shape": {
+                      "kind": "bool"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": false,
+                    "doc": "Draw vertex positions as yellow dots.",
+                    "name": "vertices",
+                    "rust_name": "vertices",
+                    "shape": {
+                      "kind": "bool"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": false,
+                    "doc": "Draw stable authoring vertex IDs in yellow, rather than transient array offsets.",
+                    "name": "vertex_ids",
+                    "rust_name": "vertex_ids",
+                    "shape": {
+                      "kind": "bool"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": false,
+                    "doc": "Draw meshing boundary edges in green and internal constraints in magenta.",
+                    "name": "constraints",
+                    "rust_name": "constraints",
+                    "shape": {
+                      "kind": "bool"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": false,
+                    "doc": "Fill triangles by symmetric edge stretch relative to the default pose: blue=1,\norange=2, red>=4; flipped or collapsed triangles are magenta.",
+                    "name": "strain",
+                    "rust_name": "strain",
+                    "shape": {
+                      "kind": "bool"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": false,
+                    "doc": "Include disabled, hidden and zero-opacity meshes. Default draws visible meshes only.",
+                    "name": "include_hidden",
+                    "rust_name": "include_hidden",
+                    "shape": {
+                      "kind": "bool"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": false,
+                    "doc": "Clear the textured image before diagnostic drawing, retaining the exact same view.",
+                    "name": "topology_only",
+                    "rust_name": "topology_only",
+                    "shape": {
+                      "kind": "bool"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": 0.25,
+                    "doc": "Heat fill opacity in [0,1]. Applied once per pixel using the most severe overlapping\ntriangle, so overlapping layers cannot accumulate opacity. Lines and labels stay opaque.",
+                    "name": "heat_opacity",
+                    "rust_name": "heat_opacity",
+                    "shape": {
+                      "kind": "f32"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": false,
+                    "doc": "Restrict every diagnostic layer to anomalous triangles and their incident vertices/edges.\nDegenerate, flipped and undefined-reference triangles always count as anomalies.",
+                    "name": "anomalies_only",
+                    "rust_name": "anomalies_only",
+                    "shape": {
+                      "kind": "bool"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": {
+                      "max_aspect_ratio": 20.0,
+                      "max_edge_stretch": 2.0,
+                      "min_angle_degrees": 10.0
+                    },
+                    "doc": "Thresholds used by anomalies_only; reports themselves are never threshold-filtered.",
+                    "name": "thresholds",
+                    "rust_name": "thresholds",
+                    "shape": {
+                      "fields": [
+                        {
+                          "default": 10.0,
+                          "doc": "An angle below this value is anomalous; finite degrees in [0,60]. Default 10.",
+                          "name": "min_angle_degrees",
+                          "rust_name": "min_angle_degrees",
+                          "shape": {
+                            "kind": "f64"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": 20.0,
+                          "doc": "A longest-edge/altitude ratio above this is anomalous; finite and >= 1. Default 20.",
+                          "name": "max_aspect_ratio",
+                          "rust_name": "max_aspect_ratio",
+                          "shape": {
+                            "kind": "f64"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": 2.0,
+                          "doc": "A symmetric edge-length ratio above this is anomalous; finite and >= 1. Default 2.",
+                          "name": "max_edge_stretch",
+                          "rust_name": "max_edge_stretch",
+                          "shape": {
+                            "kind": "f64"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "kind": "serde_record",
+                      "name": "zipzi_sdk::mesh_quality::TopologyThresholds",
+                      "transparent": false,
+                      "tuple": false
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": 2,
+                    "doc": "Decimal glyph scale in output pixels, 1..4. Labels avoid other labels globally;\nan ID is omitted when no nearby in-view position has enough space.",
+                    "name": "label_scale",
+                    "rust_name": "label_scale",
+                    "shape": {
+                      "kind": "u32"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": 3,
+                    "doc": "Minimum clear gap between label rectangles in pixels, 0..32.",
+                    "name": "label_spacing",
+                    "rust_name": "label_spacing",
+                    "shape": {
+                      "kind": "u32"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "default": 256,
+                    "doc": "Maximum labels per image, 0..4096. Vertex dots remain independent of this limit.",
+                    "name": "max_labels",
+                    "rust_name": "max_labels",
+                    "shape": {
+                      "kind": "usize"
+                    },
+                    "skip": false
+                  }
+                ],
+                "kind": "serde_record",
+                "name": "zipzi_sdk::mesh_quality::TopologyOverlay",
+                "transparent": false,
+                "tuple": false
+              },
+              "kind": "optional"
+            },
+            "skip": false
+          },
+          {
+            "default": false,
+            "doc": "Include per-mesh evaluated quality and approximate source-alpha coverage.\nUses default parameters of the same source as reference; checks requested frames only.",
+            "name": "quality",
+            "rust_name": "quality",
+            "shape": {
+              "kind": "bool"
+            },
+            "skip": false
           }
         ],
         "kind": "serde_record",
@@ -119560,6 +122389,256 @@
                   "rust_name": "padding_model",
                   "shape": {
                     "kind": "f32"
+                  },
+                  "skip": false
+                },
+                {
+                  "default": null,
+                  "doc": "Optional topology overlay in the same frozen Source and ROI mapping. It ignores\nmasks and occlusion; None preserves the ordinary GPU image.",
+                  "name": "topology",
+                  "rust_name": "topology",
+                  "shape": {
+                    "item": {
+                      "fields": [
+                        {
+                          "default": null,
+                          "doc": "Diagnostic selection only; the textured context image is unchanged. None selects all\nmeshes, Some([]) selects none. Mesh/Part targets are unioned and deduplicated;\nParts include nested Parts. Missing targets fail explicitly. Maximum 256 selectors.",
+                          "name": "targets",
+                          "rust_name": "targets",
+                          "shape": {
+                            "item": {
+                              "item": {
+                                "content": "id",
+                                "kind": "serde_enum",
+                                "name": "zipzi_sdk::spatial::ObjectTarget",
+                                "tag": "kind",
+                                "variants": [
+                                  {
+                                    "fields": [
+                                      {
+                                        "doc": "Persistent authoring mesh UUID.",
+                                        "name": "value",
+                                        "rust_name": "0",
+                                        "shape": {
+                                          "kind": "string"
+                                        },
+                                        "skip": false
+                                      }
+                                    ],
+                                    "form": "newtype",
+                                    "name": "mesh",
+                                    "rust_name": "Mesh"
+                                  },
+                                  {
+                                    "fields": [
+                                      {
+                                        "doc": "Persistent Part UUID selecting descendant meshes.",
+                                        "name": "value",
+                                        "rust_name": "0",
+                                        "shape": {
+                                          "kind": "string"
+                                        },
+                                        "skip": false
+                                      }
+                                    ],
+                                    "form": "newtype",
+                                    "name": "part",
+                                    "rust_name": "Part"
+                                  }
+                                ]
+                              },
+                              "kind": "sequence"
+                            },
+                            "kind": "optional"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": true,
+                          "doc": "Draw triangle edges in cyan, in final evaluated model coordinates.",
+                          "name": "wireframe",
+                          "rust_name": "wireframe",
+                          "shape": {
+                            "kind": "bool"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": false,
+                          "doc": "Draw vertex positions as yellow dots.",
+                          "name": "vertices",
+                          "rust_name": "vertices",
+                          "shape": {
+                            "kind": "bool"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": false,
+                          "doc": "Draw stable authoring vertex IDs in yellow, rather than transient array offsets.",
+                          "name": "vertex_ids",
+                          "rust_name": "vertex_ids",
+                          "shape": {
+                            "kind": "bool"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": false,
+                          "doc": "Draw meshing boundary edges in green and internal constraints in magenta.",
+                          "name": "constraints",
+                          "rust_name": "constraints",
+                          "shape": {
+                            "kind": "bool"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": false,
+                          "doc": "Fill triangles by symmetric edge stretch relative to the default pose: blue=1,\norange=2, red>=4; flipped or collapsed triangles are magenta.",
+                          "name": "strain",
+                          "rust_name": "strain",
+                          "shape": {
+                            "kind": "bool"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": false,
+                          "doc": "Include disabled, hidden and zero-opacity meshes. Default draws visible meshes only.",
+                          "name": "include_hidden",
+                          "rust_name": "include_hidden",
+                          "shape": {
+                            "kind": "bool"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": false,
+                          "doc": "Clear the textured image before diagnostic drawing, retaining the exact same view.",
+                          "name": "topology_only",
+                          "rust_name": "topology_only",
+                          "shape": {
+                            "kind": "bool"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": 0.25,
+                          "doc": "Heat fill opacity in [0,1]. Applied once per pixel using the most severe overlapping\ntriangle, so overlapping layers cannot accumulate opacity. Lines and labels stay opaque.",
+                          "name": "heat_opacity",
+                          "rust_name": "heat_opacity",
+                          "shape": {
+                            "kind": "f32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": false,
+                          "doc": "Restrict every diagnostic layer to anomalous triangles and their incident vertices/edges.\nDegenerate, flipped and undefined-reference triangles always count as anomalies.",
+                          "name": "anomalies_only",
+                          "rust_name": "anomalies_only",
+                          "shape": {
+                            "kind": "bool"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": {
+                            "max_aspect_ratio": 20.0,
+                            "max_edge_stretch": 2.0,
+                            "min_angle_degrees": 10.0
+                          },
+                          "doc": "Thresholds used by anomalies_only; reports themselves are never threshold-filtered.",
+                          "name": "thresholds",
+                          "rust_name": "thresholds",
+                          "shape": {
+                            "fields": [
+                              {
+                                "default": 10.0,
+                                "doc": "An angle below this value is anomalous; finite degrees in [0,60]. Default 10.",
+                                "name": "min_angle_degrees",
+                                "rust_name": "min_angle_degrees",
+                                "shape": {
+                                  "kind": "f64"
+                                },
+                                "skip": false
+                              },
+                              {
+                                "default": 20.0,
+                                "doc": "A longest-edge/altitude ratio above this is anomalous; finite and >= 1. Default 20.",
+                                "name": "max_aspect_ratio",
+                                "rust_name": "max_aspect_ratio",
+                                "shape": {
+                                  "kind": "f64"
+                                },
+                                "skip": false
+                              },
+                              {
+                                "default": 2.0,
+                                "doc": "A symmetric edge-length ratio above this is anomalous; finite and >= 1. Default 2.",
+                                "name": "max_edge_stretch",
+                                "rust_name": "max_edge_stretch",
+                                "shape": {
+                                  "kind": "f64"
+                                },
+                                "skip": false
+                              }
+                            ],
+                            "kind": "serde_record",
+                            "name": "zipzi_sdk::mesh_quality::TopologyThresholds",
+                            "transparent": false,
+                            "tuple": false
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": 2,
+                          "doc": "Decimal glyph scale in output pixels, 1..4. Labels avoid other labels globally;\nan ID is omitted when no nearby in-view position has enough space.",
+                          "name": "label_scale",
+                          "rust_name": "label_scale",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": 3,
+                          "doc": "Minimum clear gap between label rectangles in pixels, 0..32.",
+                          "name": "label_spacing",
+                          "rust_name": "label_spacing",
+                          "shape": {
+                            "kind": "u32"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": 256,
+                          "doc": "Maximum labels per image, 0..4096. Vertex dots remain independent of this limit.",
+                          "name": "max_labels",
+                          "rust_name": "max_labels",
+                          "shape": {
+                            "kind": "usize"
+                          },
+                          "skip": false
+                        }
+                      ],
+                      "kind": "serde_record",
+                      "name": "zipzi_sdk::mesh_quality::TopologyOverlay",
+                      "transparent": false,
+                      "tuple": false
+                    },
+                    "kind": "optional"
+                  },
+                  "skip": false
+                },
+                {
+                  "default": false,
+                  "doc": "Include per-mesh evaluated quality and approximate source-alpha coverage.\nUses default parameters of the same source as reference; checks requested frames only.",
+                  "name": "quality",
+                  "rust_name": "quality",
+                  "shape": {
+                    "kind": "bool"
                   },
                   "skip": false
                 }
@@ -119834,6 +122913,306 @@
                         ],
                         "kind": "serde_record",
                         "name": "zipzi_runtime::observation::ObservedBounds",
+                        "transparent": false,
+                        "tuple": false
+                      },
+                      "kind": "sequence"
+                    },
+                    "skip": false
+                  },
+                  {
+                    "doc": "Mesh quality in evaluated drawable order when View.quality is true; empty otherwise.\nTexture coverage uses alpha >= 8, pixel centers, at most a 256x256 grid, ignoring masks,\nfiltering and UV repeat outside [0,1]. A step above 1 denotes approximate coverage.",
+                    "name": "quality",
+                    "rust_name": "quality",
+                    "shape": {
+                      "item": {
+                        "fields": [
+                          {
+                            "doc": "Stable document mesh ID, in evaluated drawable order.",
+                            "name": "mesh_id",
+                            "rust_name": "mesh_id",
+                            "shape": {
+                              "kind": "string"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Evaluated enabled/visible/positive-opacity state. Metrics are geometric and ignore occlusion.",
+                            "name": "visible",
+                            "rust_name": "visible",
+                            "shape": {
+                              "kind": "bool"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Number of evaluated vertices.",
+                            "name": "vertex_count",
+                            "rust_name": "vertex_count",
+                            "shape": {
+                              "kind": "usize"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Per-triangle metrics in evaluated Y-up model coordinates, relative to default parameters\nof the same frozen authoring source. This does not certify unsampled parameter intervals.",
+                            "name": "triangles",
+                            "rust_name": "triangles",
+                            "shape": {
+                              "item": {
+                                "fields": [
+                                  {
+                                    "doc": "Zero-based triangle offset, in the sampled drawable's index order.",
+                                    "name": "triangle_index",
+                                    "rust_name": "triangle_index",
+                                    "shape": {
+                                      "kind": "usize"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Unsigned evaluated area in model units squared.",
+                                    "name": "area",
+                                    "rust_name": "area",
+                                    "shape": {
+                                      "kind": "f64"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Smallest interior angle in degrees; zero for a collapsed triangle.",
+                                    "name": "min_angle_degrees",
+                                    "rust_name": "min_angle_degrees",
+                                    "shape": {
+                                      "kind": "f64"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "default": null,
+                                    "doc": "Longest edge divided by its altitude. None for a collapsed triangle.",
+                                    "name": "aspect_ratio",
+                                    "rust_name": "aspect_ratio",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "f64"
+                                      },
+                                      "kind": "optional"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "default": null,
+                                    "doc": "Signed area / signed default-pose area. Negative means flipped; None if the reference is degenerate.",
+                                    "name": "relative_area",
+                                    "rust_name": "relative_area",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "f64"
+                                      },
+                                      "kind": "optional"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "default": null,
+                                    "doc": "Largest symmetric edge-length ratio max(current/reference, reference/current).\nNone if any reference or sampled edge is collapsed. A rigid transform gives 1.",
+                                    "name": "edge_stretch",
+                                    "rust_name": "edge_stretch",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "f64"
+                                      },
+                                      "kind": "optional"
+                                    },
+                                    "skip": false
+                                  }
+                                ],
+                                "kind": "serde_record",
+                                "name": "zipzi_sdk::mesh_quality::TriangleQuality",
+                                "transparent": false,
+                                "tuple": false
+                              },
+                              "kind": "sequence"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": null,
+                            "doc": "Smallest angle over this mesh; None for an empty mesh.",
+                            "name": "min_angle_degrees",
+                            "rust_name": "min_angle_degrees",
+                            "shape": {
+                              "item": {
+                                "kind": "f64"
+                              },
+                              "kind": "optional"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": null,
+                            "doc": "Largest finite aspect ratio; collapsed triangles are counted separately.",
+                            "name": "max_aspect_ratio",
+                            "rust_name": "max_aspect_ratio",
+                            "shape": {
+                              "item": {
+                                "kind": "f64"
+                              },
+                              "kind": "optional"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": null,
+                            "doc": "Largest finite symmetric edge-length ratio relative to the default pose.",
+                            "name": "max_edge_stretch",
+                            "rust_name": "max_edge_stretch",
+                            "shape": {
+                              "item": {
+                                "kind": "f64"
+                              },
+                              "kind": "optional"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Number of exactly zero-area evaluated triangles.",
+                            "name": "degenerate_triangles",
+                            "rust_name": "degenerate_triangles",
+                            "shape": {
+                              "kind": "usize"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "doc": "Number of negative relative-area triangles. Degenerate references are excluded.",
+                            "name": "flipped_triangles",
+                            "rust_name": "flipped_triangles",
+                            "shape": {
+                              "kind": "usize"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": null,
+                            "doc": "Optional source-texture coverage. CPU-only sampling does not resolve image pixels.",
+                            "name": "texture_coverage",
+                            "rust_name": "texture_coverage",
+                            "shape": {
+                              "item": {
+                                "fields": [
+                                  {
+                                    "doc": "Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.",
+                                    "name": "alpha_threshold",
+                                    "rust_name": "alpha_threshold",
+                                    "shape": {
+                                      "kind": "u8"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Top-down source-pixel grid spacing. Values above 1 mean an approximate report.",
+                                    "name": "pixel_step",
+                                    "rust_name": "pixel_step",
+                                    "shape": {
+                                      "kind": "u32"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Number of source pixel centers tested on the regular grid.",
+                                    "name": "sampled_pixels",
+                                    "rust_name": "sampled_pixels",
+                                    "shape": {
+                                      "kind": "usize"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Tested pixel centers covered by the union of UV triangles inside [0,1].",
+                                    "name": "covered_pixels",
+                                    "rust_name": "covered_pixels",
+                                    "shape": {
+                                      "kind": "usize"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Covered centers whose source alpha is below the threshold.",
+                                    "name": "transparent_covered_pixels",
+                                    "rust_name": "transparent_covered_pixels",
+                                    "shape": {
+                                      "kind": "usize"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Tested centers whose source alpha is at least the threshold.",
+                                    "name": "opaque_pixels",
+                                    "rust_name": "opaque_pixels",
+                                    "shape": {
+                                      "kind": "usize"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Opaque centers outside the UV triangle union: a contour coverage error, not a distance.",
+                                    "name": "uncovered_opaque_pixels",
+                                    "rust_name": "uncovered_opaque_pixels",
+                                    "shape": {
+                                      "kind": "usize"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "default": null,
+                                    "doc": "Transparent covered / covered; None if no tested center is covered.",
+                                    "name": "transparent_coverage_fraction",
+                                    "rust_name": "transparent_coverage_fraction",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "f64"
+                                      },
+                                      "kind": "optional"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "default": null,
+                                    "doc": "Uncovered opaque / opaque; None for an entirely transparent sampled image.",
+                                    "name": "uncovered_opaque_fraction",
+                                    "rust_name": "uncovered_opaque_fraction",
+                                    "shape": {
+                                      "item": {
+                                        "kind": "f64"
+                                      },
+                                      "kind": "optional"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "doc": "Number of UV triangles with vertices outside [0,1]; repeat-sampled coverage is not measured.",
+                                    "name": "out_of_bounds_triangles",
+                                    "rust_name": "out_of_bounds_triangles",
+                                    "shape": {
+                                      "kind": "usize"
+                                    },
+                                    "skip": false
+                                  }
+                                ],
+                                "kind": "serde_record",
+                                "name": "zipzi_sdk::mesh_quality::TextureCoverage",
+                                "transparent": false,
+                                "tuple": false
+                              },
+                              "kind": "optional"
+                            },
+                            "skip": false
+                          }
+                        ],
+                        "kind": "serde_record",
+                        "name": "zipzi_sdk::mesh_quality::MeshQuality",
                         "transparent": false,
                         "tuple": false
                       },

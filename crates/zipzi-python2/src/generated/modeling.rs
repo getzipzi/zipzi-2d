@@ -19645,6 +19645,19 @@ fn write_modelingsamples_in(
         }
         out.into_any().unbind()
     })?;
+    out.set_item("quality", {
+        let out = PyList::empty(py);
+        for item0 in (&value.quality) {
+            out.append({
+                let out = PyList::empty(py);
+                for item1 in (item0) {
+                    out.append(write_meshquality_in(py, (item1), classes)?)?;
+                }
+                out.into_any().unbind()
+            })?;
+        }
+        out.into_any().unbind()
+    })?;
     Ok(classes
         .getattr("ModelingSamples")?
         .call((), Some(&out))?
@@ -20224,6 +20237,249 @@ fn write_geometrydiagnostickind_in(
     Ok(classes
         .getattr("GeometryDiagnosticKind")?
         .call1((name,))?
+        .unbind())
+}
+
+pub fn write_meshquality(py: Python<'_>, value: &zipzi_sdk::MeshQuality) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_meshquality_in(py, value, &classes)
+}
+fn write_meshquality_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::MeshQuality,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "mesh_id",
+        (&value.mesh_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "visible",
+        (&value.visible)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "vertex_count",
+        (&value.vertex_count)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("triangles", {
+        let out = PyList::empty(py);
+        for item0 in (&value.triangles) {
+            out.append(write_trianglequality_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("min_angle_degrees", {
+        match (&value.min_angle_degrees).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("max_aspect_ratio", {
+        match (&value.max_aspect_ratio).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("max_edge_stretch", {
+        match (&value.max_edge_stretch).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item(
+        "degenerate_triangles",
+        (&value.degenerate_triangles)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "flipped_triangles",
+        (&value.flipped_triangles)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("texture_coverage", {
+        match (&value.texture_coverage).as_ref() {
+            Some(item) => write_texturecoverage_in(py, (item), classes)?,
+            None => py.None(),
+        }
+    })?;
+    Ok(classes
+        .getattr("MeshQuality")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_trianglequality(
+    py: Python<'_>,
+    value: &zipzi_sdk::TriangleQuality,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_trianglequality_in(py, value, &classes)
+}
+fn write_trianglequality_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::TriangleQuality,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "triangle_index",
+        (&value.triangle_index)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "area",
+        (&value.area)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "min_angle_degrees",
+        (&value.min_angle_degrees)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("aspect_ratio", {
+        match (&value.aspect_ratio).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("relative_area", {
+        match (&value.relative_area).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("edge_stretch", {
+        match (&value.edge_stretch).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    Ok(classes
+        .getattr("TriangleQuality")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_texturecoverage(
+    py: Python<'_>,
+    value: &zipzi_sdk::TextureCoverage,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_texturecoverage_in(py, value, &classes)
+}
+fn write_texturecoverage_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::TextureCoverage,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "alpha_threshold",
+        (&value.alpha_threshold)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "pixel_step",
+        (&value.pixel_step)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "sampled_pixels",
+        (&value.sampled_pixels)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "covered_pixels",
+        (&value.covered_pixels)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "transparent_covered_pixels",
+        (&value.transparent_covered_pixels)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "opaque_pixels",
+        (&value.opaque_pixels)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "uncovered_opaque_pixels",
+        (&value.uncovered_opaque_pixels)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("transparent_coverage_fraction", {
+        match (&value.transparent_coverage_fraction).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("uncovered_opaque_fraction", {
+        match (&value.uncovered_opaque_fraction).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item(
+        "out_of_bounds_triangles",
+        (&value.out_of_bounds_triangles)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("TextureCoverage")?
+        .call((), Some(&out))?
         .unbind())
 }
 
@@ -20950,6 +21206,12 @@ pub fn read_observationview(
             .try_into()
             .map_err(|_| pyo3::exceptions::PyValueError::new_err("Invalid fixed array length"))?,
         padding_model: value.getattr("padding_model")?.extract()?,
+        topology: if value.getattr("topology")?.is_none() {
+            None
+        } else {
+            Some(read_topologyoverlay(&value.getattr("topology")?)?)
+        },
+        quality: value.getattr("quality")?.extract()?,
     })
 }
 
@@ -20997,8 +21259,288 @@ fn write_observationview_in(
             .into_any()
             .unbind(),
     )?;
+    out.set_item("topology", {
+        match (&value.topology).as_ref() {
+            Some(item) => write_topologyoverlay_in(py, (item), classes)?,
+            None => py.None(),
+        }
+    })?;
+    out.set_item(
+        "quality",
+        (&value.quality)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
     Ok(classes
         .getattr("ObservationView")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_topologyoverlay(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::TopologyOverlay> {
+    Ok(zipzi_sdk::TopologyOverlay {
+        targets: if value.getattr("targets")?.is_none() {
+            None
+        } else {
+            Some(
+                value
+                    .getattr("targets")?
+                    .try_iter()?
+                    .map(|item| -> PyResult<_> {
+                        let item0 = item?;
+                        Ok(read_objecttarget(&item0)?)
+                    })
+                    .collect::<PyResult<Vec<_>>>()?
+                    .into(),
+            )
+        },
+        wireframe: value.getattr("wireframe")?.extract()?,
+        vertices: value.getattr("vertices")?.extract()?,
+        vertex_ids: value.getattr("vertex_ids")?.extract()?,
+        constraints: value.getattr("constraints")?.extract()?,
+        strain: value.getattr("strain")?.extract()?,
+        include_hidden: value.getattr("include_hidden")?.extract()?,
+        topology_only: value.getattr("topology_only")?.extract()?,
+        heat_opacity: value.getattr("heat_opacity")?.extract()?,
+        anomalies_only: value.getattr("anomalies_only")?.extract()?,
+        thresholds: read_topologythresholds(&value.getattr("thresholds")?)?,
+        label_scale: value.getattr("label_scale")?.extract()?,
+        label_spacing: value.getattr("label_spacing")?.extract()?,
+        max_labels: value.getattr("max_labels")?.extract()?,
+    })
+}
+
+pub fn write_topologyoverlay(
+    py: Python<'_>,
+    value: &zipzi_sdk::TopologyOverlay,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_topologyoverlay_in(py, value, &classes)
+}
+fn write_topologyoverlay_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::TopologyOverlay,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item("targets", {
+        match (&value.targets).as_ref() {
+            Some(item) => {
+                let out = PyList::empty(py);
+                for item1 in (item) {
+                    out.append(write_objecttarget_in(py, (item1), classes)?)?;
+                }
+                out.into_any().unbind()
+            }
+            None => py.None(),
+        }
+    })?;
+    out.set_item(
+        "wireframe",
+        (&value.wireframe)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "vertices",
+        (&value.vertices)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "vertex_ids",
+        (&value.vertex_ids)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "constraints",
+        (&value.constraints)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "strain",
+        (&value.strain)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "include_hidden",
+        (&value.include_hidden)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "topology_only",
+        (&value.topology_only)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "heat_opacity",
+        (&value.heat_opacity)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "anomalies_only",
+        (&value.anomalies_only)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "thresholds",
+        write_topologythresholds_in(py, (&value.thresholds), classes)?,
+    )?;
+    out.set_item(
+        "label_scale",
+        (&value.label_scale)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "label_spacing",
+        (&value.label_spacing)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "max_labels",
+        (&value.max_labels)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("TopologyOverlay")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_objecttarget(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::ObjectTarget> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "mesh" => Ok(zipzi_sdk::ObjectTarget::Mesh(
+            value.getattr("value")?.extract()?,
+        )),
+        "part" => Ok(zipzi_sdk::ObjectTarget::Part(
+            value.getattr("value")?.extract()?,
+        )),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_objecttarget(py: Python<'_>, value: &zipzi_sdk::ObjectTarget) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_objecttarget_in(py, value, &classes)
+}
+fn write_objecttarget_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::ObjectTarget,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_sdk::ObjectTarget::Mesh(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item(
+                "value",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("ObjectTargetMesh")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_sdk::ObjectTarget::Part(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item(
+                "value",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("ObjectTargetPart")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+    }
+}
+
+pub fn read_topologythresholds(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_sdk::TopologyThresholds> {
+    Ok(zipzi_sdk::TopologyThresholds {
+        min_angle_degrees: value.getattr("min_angle_degrees")?.extract()?,
+        max_aspect_ratio: value.getattr("max_aspect_ratio")?.extract()?,
+        max_edge_stretch: value.getattr("max_edge_stretch")?.extract()?,
+    })
+}
+
+pub fn write_topologythresholds(
+    py: Python<'_>,
+    value: &zipzi_sdk::TopologyThresholds,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_topologythresholds_in(py, value, &classes)
+}
+fn write_topologythresholds_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::TopologyThresholds,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "min_angle_degrees",
+        (&value.min_angle_degrees)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "max_aspect_ratio",
+        (&value.max_aspect_ratio)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "max_edge_stretch",
+        (&value.max_edge_stretch)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("TopologyThresholds")?
         .call((), Some(&out))?
         .unbind())
 }
@@ -21100,55 +21642,6 @@ fn write_spatialquery_in(
             Ok(classes
                 .getattr("SpatialQueryHits")?
                 .call((), Some(&content))?
-                .unbind())
-        }
-    }
-}
-
-pub fn read_objecttarget(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::ObjectTarget> {
-    match value.getattr("_variant")?.extract::<String>()?.as_str() {
-        "mesh" => Ok(zipzi_sdk::ObjectTarget::Mesh(
-            value.getattr("value")?.extract()?,
-        )),
-        "part" => Ok(zipzi_sdk::ObjectTarget::Part(
-            value.getattr("value")?.extract()?,
-        )),
-        _ => Err(pyo3::exceptions::PyTypeError::new_err(
-            "Unexpected modeling variant",
-        )),
-    }
-}
-
-pub fn write_objecttarget(py: Python<'_>, value: &zipzi_sdk::ObjectTarget) -> PyResult<Py<PyAny>> {
-    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
-    write_objecttarget_in(py, value, &classes)
-}
-fn write_objecttarget_in(
-    py: Python<'_>,
-    value: &zipzi_sdk::ObjectTarget,
-    classes: &Bound<'_, PyModule>,
-) -> PyResult<Py<PyAny>> {
-    match value {
-        zipzi_sdk::ObjectTarget::Mesh(field0) => {
-            let kwargs = PyDict::new(py);
-            kwargs.set_item(
-                "value",
-                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
-            )?;
-            Ok(classes
-                .getattr("ObjectTargetMesh")?
-                .call((), Some(&kwargs))?
-                .unbind())
-        }
-        zipzi_sdk::ObjectTarget::Part(field0) => {
-            let kwargs = PyDict::new(py);
-            kwargs.set_item(
-                "value",
-                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
-            )?;
-            Ok(classes
-                .getattr("ObjectTargetPart")?
-                .call((), Some(&kwargs))?
                 .unbind())
         }
     }
@@ -21358,6 +21851,13 @@ fn write_observationimage_in(
         let out = PyList::empty(py);
         for item0 in (&value.drawable_bounds) {
             out.append(write_observedbounds_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("quality", {
+        let out = PyList::empty(py);
+        for item0 in (&value.quality) {
+            out.append(write_meshquality_in(py, (item0), classes)?)?;
         }
         out.into_any().unbind()
     })?;
@@ -22570,6 +23070,7 @@ pub fn read_geometrychecks(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::Geom
         } else {
             Some(read_geometrybounds(&value.getattr("model_bounds")?)?)
         },
+        quality: value.getattr("quality")?.extract()?,
     })
 }
 
@@ -29554,6 +30055,68 @@ pub fn measure_observationview(value: &Bound<'_, PyAny>) -> PyResult<usize> {
             }
             bytes
         })
+        .saturating_add(16usize)
+        .saturating_add(if (value.getattr("topology")?).is_none() {
+            0usize
+        } else {
+            measure_topologyoverlay(&(value.getattr("topology")?))?
+        })
+        .saturating_add(16usize))
+}
+
+pub fn measure_topologyoverlay(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(if (value.getattr("targets")?).is_none() {
+            0usize
+        } else {
+            {
+                let mut bytes = 64usize;
+                for value in (value.getattr("targets")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add(measure_objecttarget(&(v0))?);
+                }
+                bytes
+            }
+        })
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(measure_topologythresholds(&(value.getattr("thresholds")?))?)
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(16usize))
+}
+
+pub fn measure_objecttarget(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "mesh" => Ok(256usize.saturating_add(
+            (value.getattr("value")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "part" => Ok(256usize.saturating_add(
+            (value.getattr("value")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_topologythresholds(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(16usize)
+        .saturating_add(16usize)
         .saturating_add(16usize))
 }
 
@@ -29581,26 +30144,6 @@ pub fn measure_spatialquery(value: &Bound<'_, PyAny>) -> PyResult<usize> {
             .saturating_add(16usize)
             .saturating_add(16usize)
             .saturating_add(16usize)),
-        _ => Err(pyo3::exceptions::PyTypeError::new_err(
-            "Unexpected modeling variant",
-        )),
-    }
-}
-
-pub fn measure_objecttarget(value: &Bound<'_, PyAny>) -> PyResult<usize> {
-    match value.getattr("_variant")?.extract::<String>()?.as_str() {
-        "mesh" => Ok(256usize.saturating_add(
-            (value.getattr("value")?)
-                .len()?
-                .saturating_mul(4)
-                .saturating_add(32),
-        )),
-        "part" => Ok(256usize.saturating_add(
-            (value.getattr("value")?)
-                .len()?
-                .saturating_mul(4)
-                .saturating_add(32),
-        )),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
         )),
@@ -29846,13 +30389,14 @@ pub fn measure_meshkeyformspec(value: &Bound<'_, PyAny>) -> PyResult<usize> {
 }
 
 pub fn measure_geometrychecks(value: &Bound<'_, PyAny>) -> PyResult<usize> {
-    Ok(256usize.saturating_add(16usize).saturating_add(
-        if (value.getattr("model_bounds")?).is_none() {
+    Ok(256usize
+        .saturating_add(16usize)
+        .saturating_add(if (value.getattr("model_bounds")?).is_none() {
             0usize
         } else {
             measure_geometrybounds(&(value.getattr("model_bounds")?))?
-        },
-    ))
+        })
+        .saturating_add(16usize))
 }
 
 pub fn measure_geometrybounds(value: &Bound<'_, PyAny>) -> PyResult<usize> {

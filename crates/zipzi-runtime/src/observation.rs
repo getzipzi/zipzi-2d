@@ -5,13 +5,7 @@ use zipzi_core::PreviewValues;
 use zipzi_observe::{Observer, ObserverConfig, ResolvedObservation};
 
 #[derive(
-    Debug,
-    Clone,
-    Copy,
-    Serialize,
-    Deserialize,
-    zipzi_api_derive::ApiShape,
-    zipzi_api_derive::BinaryWire,
+    Debug, Clone, Serialize, Deserialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire,
 )]
 #[serde(deny_unknown_fields)]
 pub struct ObservationView {
@@ -24,19 +18,35 @@ pub struct ObservationView {
     /// Nonnegative padding around the ROI in model units; aspect ratio is preserved.
     #[serde(default)]
     pub padding_model: f32,
+    /// Optional topology overlay in the same frozen Source and ROI mapping. It ignores
+    /// masks and occlusion; None preserves the ordinary GPU image.
+    #[serde(default)]
+    pub topology: Option<zipzi_sdk::TopologyOverlay>,
+    /// Include per-mesh evaluated quality and approximate source-alpha coverage.
+    /// Uses default parameters of the same source as reference; checks requested frames only.
+    #[serde(default)]
+    pub quality: bool,
 }
 impl ObservationView {
+    pub fn needs_quality(&self) -> bool {
+        self.quality || self.topology.as_ref().is_some_and(|o| o.needs_quality())
+    }
     #[cfg(feature = "gpu-observation")]
-    pub fn request(self) -> zipzi_observe::RenderRequest {
+    pub fn request(&self) -> zipzi_observe::RenderRequest {
         let [x0, y0, x1, y1] = self.roi;
         zipzi_observe::RenderRequest {
             width: self.width,
             height: self.height,
             roi: zipzi_observe::ModelRoi { x0, y0, x1, y1 },
             padding_model: self.padding_model,
+            topology: self.topology.clone(),
+            quality: self.quality,
         }
     }
-    pub fn validate(self) -> crate::Result<()> {
+    pub fn validate(&self) -> crate::Result<()> {
+        if let Some(overlay) = &self.topology {
+            overlay.validate()?;
+        }
         if self.width > 4096 || self.height > 4096 {
             return Err(crate::RuntimeError::Budget("observation dimensions"));
         }
@@ -101,6 +111,10 @@ pub struct ObservationImage {
     pub textures: Vec<ObservedTexture>,
     /// Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.
     pub drawable_bounds: Vec<ObservedBounds>,
+    /// Mesh quality in evaluated drawable order when View.quality is true; empty otherwise.
+    /// Texture coverage uses alpha >= 8, pixel centers, at most a 256x256 grid, ignoring masks,
+    /// filtering and UV repeat outside [0,1]. A step above 1 denotes approximate coverage.
+    pub quality: Vec<zipzi_sdk::MeshQuality>,
 }
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct ObservationBatch {
@@ -157,7 +171,7 @@ pub(crate) fn check(cancel: &std::sync::atomic::AtomicBool) -> crate::Result<()>
     }
 }
 #[cfg(feature = "gpu-observation")]
-pub(crate) fn observer(view: ObservationView) -> crate::Result<Observer> {
+pub(crate) fn observer(view: &ObservationView) -> crate::Result<Observer> {
     view.validate()?;
     Observer::new(ObserverConfig {
         width: view.width,
@@ -169,7 +183,7 @@ pub(crate) fn observer(view: ObservationView) -> crate::Result<Observer> {
 pub(crate) fn render(
     observer: &mut Observer,
     capture: &ResolvedObservation,
-    view: ObservationView,
+    view: &ObservationView,
 ) -> crate::Result<ObservationImage> {
     let frame = observer.render(capture, view.request()).map_err(error)?;
     let mapping = frame.view;
@@ -209,5 +223,6 @@ pub(crate) fn render(
                 bounds: b.bounds.map(|(a, b, c, d)| [a, b, c, d]),
             })
             .collect(),
+        quality: frame.quality,
     })
 }

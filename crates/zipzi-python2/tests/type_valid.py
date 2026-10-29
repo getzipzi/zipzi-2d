@@ -189,7 +189,16 @@ from zipzi import animation
 from zipzi import observation,inspection
 
 def gpu_observation(session:zipzi.Session,edit:zipzi.Edit,path:Path)->inspection.Report:
-    view=observation.View(width=64,height=32,roi=(0.,0.,2.,1.))
+    view=observation.View(width=64,height=32,roi=(0.,0.,2.,1.), quality=True,
+        topology=observation.Overlay(vertices=True,vertex_ids=True,constraints=True,strain=True,
+            targets=(observation.MeshTarget(value="mesh"),observation.PartTarget(value="part")),
+            heat_opacity=.2,anomalies_only=True,thresholds=observation.Thresholds(min_angle_degrees=8.),
+            label_scale=2,label_spacing=4,max_labels=128))
+    cpu=session.modeling.sample(({},),checks=sampling.Checks(quality=True))
+    assert_type(cpu.value.quality,tuple[tuple[sampling.MeshQuality,...],...])
+    image=session.modeling.observe(({},),view).wait().value.frames[0]
+    assert_type(image.quality,tuple[observation.MeshQuality,...])
+    assert_type(image.quality[0].texture_coverage,observation.TextureCoverage|None)
     assert_type(session.modeling.observe(({},),view),zipzi.Job[zipzi.Snapshot[observation.Batch]])
     result=zipzi.recover_call(edit.modeling.observe,({},),view).wait()
     assert_type(result.value.frames[0].rgba,bytes)

@@ -256,9 +256,11 @@ fn gpu_admission_survives_yields_and_cleanup_without_blocking_cpu_work() {
         height: 8,
         roi: [0., 0., 1., 1.],
         padding_model: 0.,
+        topology: None,
+        quality: false,
     };
     let first = rt
-        .request_observation(a, s, None, vec![Default::default(); 2], view, None)
+        .request_observation(a, s, None, vec![Default::default(); 2], view.clone(), None)
         .unwrap();
     let second = rt
         .request_observation(b, s, None, vec![Default::default(); 2], view, None)

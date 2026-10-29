@@ -5,6 +5,21 @@ use crate::authoring::{
 };
 
 impl Runtime {
+    /// Optional quality DTOs, default-pose reference and bounded alpha raster workspace.
+    pub(super) fn quality_bytes(doc: &Document, poses: usize) -> usize {
+        doc.mesh_order()
+            .iter()
+            .filter_map(|id| doc.get_mesh(id))
+            .fold(1 << 20, |n, m| {
+                n.saturating_add(m.triangles.len().saturating_mul(1024).saturating_mul(poses))
+                    .saturating_add(
+                        m.base_positions
+                            .len()
+                            .saturating_mul(128)
+                            .saturating_mul(poses.max(1)),
+                    )
+            })
+    }
     /// Bound frozen evaluator workspace, typed output, diagnostic worst case and
     /// Python objects before any frame or source clone is allocated.
     pub(super) fn sample_bytes(doc: &Document, poses: usize) -> usize {
@@ -101,7 +116,15 @@ impl Runtime {
                 }
                 self.refresh_memory_budget();
                 let lease = self
-                    .reserve_transfer(Self::sample_bytes(doc, input.parameters.len()))
+                    .reserve_transfer(
+                        Self::sample_bytes(doc, input.parameters.len()).saturating_add(
+                            if input.checks.quality {
+                                Self::quality_bytes(doc, input.parameters.len())
+                            } else {
+                                0
+                            },
+                        ),
+                    )
                     .map_err(|_| RuntimeError::Budget("modeling sample workspace"))?;
                 Ok((source, lease))
             })?;

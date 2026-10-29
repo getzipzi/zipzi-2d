@@ -81,7 +81,11 @@ impl PreviewSampling {
             }
             #[cfg(feature = "gpu-observation")]
             {
-                self.observer = self.view.map(crate::observation::observer).transpose()?;
+                self.observer = self
+                    .view
+                    .as_ref()
+                    .map(crate::observation::observer)
+                    .transpose()?;
             }
             self.initialized = true;
         }
@@ -127,9 +131,10 @@ impl PreviewSampling {
             if self.view.is_some() {
                 crate::observation::check(cancel)?;
                 self.inputs.push(
-                    zipzi_observe::ObservationInput::capture_motion_from_snapshot(
+                    zipzi_observe::ObservationInput::capture_motion_from_snapshot_with_quality(
                         &source.snapshot,
                         &state,
+                        self.view.as_ref().is_some_and(|v| v.needs_quality()),
                     )
                     .map_err(crate::observation::error)?,
                 );
@@ -147,7 +152,7 @@ impl PreviewSampling {
         Ok(Some(JobValue::Previewed(Arc::new(PreviewSampleBatch {
             source: source.source,
             samples: PreviewBatch {
-                view: self.view,
+                view: self.view.clone(),
                 sequence: self.sequence,
                 frames: std::mem::take(&mut self.frames),
                 queries: std::mem::take(&mut self.queries),
@@ -156,7 +161,7 @@ impl PreviewSampling {
     }
     #[cfg(feature = "gpu-observation")]
     fn render_step(&mut self, control: &zipzi_sdk::ConversionControl) -> Result<bool> {
-        let view = self.view.expect("observation view");
+        let view = self.view.as_ref().expect("observation view");
         if self.captures.is_none() {
             self.captures = Some(
                 zipzi_observe::ResolvedObservation::capture_many_with_control(
@@ -410,7 +415,7 @@ impl Runtime {
             return Err(RuntimeError::Budget("preview motion output bytes"));
         }
         let bytes = Self::spatial_bytes(entry.source.snapshot.document(), times.len(), &queries)?
-            .saturating_add(if let Some(view) = view {
+            .saturating_add(if let Some(view) = &view {
                 Self::observation_bytes(entry.source.snapshot.document(), times.len(), view)?
             } else {
                 0

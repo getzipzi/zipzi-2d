@@ -120,7 +120,7 @@ class Reader:
 INPUT_SIGNATURE = 'b252887103a2a321a726745f003bae57'
 MESH_SIGNATURE = '6f011cf86dfd4d3f0ee05751e6a6cc13'
 BINDING_SIGNATURE = '7e7f1d80974a2ca6fa5fe1ddac9f1ebf'
-SAMPLE_SIGNATURE = 'a87f0d0900f9d79e2b3712201e0ee16a'
+SAMPLE_SIGNATURE = 'd439ee6cbc8d0f1feb2c30a437523a21'
 OUTPUT_SIGNATURE = '8cd0ae2d11ab948c6e8eb66fa80e5210'
 
 def _point(value: object) -> tuple[object, object]:
@@ -4664,7 +4664,7 @@ def _read_motiongroup(r: Reader) -> m.MotionGroup:
     return m.MotionGroup(id=r.text(), name=r.text(), entries=tuple(_read_motionregistration(r) for _ in range(r.count())))
 
 def _read_modelingsamples(r: Reader) -> m.ModelingSamples:
-    return m.ModelingSamples(version=_read_version(r), parameters=tuple({r.text(): number(r.scalar('f')) for _ in range(r.count())} for _ in range(r.count())), frames=tuple(_read_drawableframe(r) for _ in range(r.count())), diagnostics=tuple(_read_geometrydiagnostic(r) for _ in range(r.count())))
+    return m.ModelingSamples(version=_read_version(r), parameters=tuple({r.text(): number(r.scalar('f')) for _ in range(r.count())} for _ in range(r.count())), frames=tuple(_read_drawableframe(r) for _ in range(r.count())), diagnostics=tuple(_read_geometrydiagnostic(r) for _ in range(r.count())), quality=tuple(tuple(_read_meshquality(r) for _ in range(r.count())) for _ in range(r.count())))
 
 def _read_drawableframe(r: Reader) -> m.DrawableFrame:
     return m.DrawableFrame(source_revision=integer(r.scalar('Q')), parameters=tuple(_read_evaluatedparameter(r) for _ in range(r.count())), drawables=tuple(_read_drawable(r) for _ in range(r.count())), offscreens=tuple(_read_offscreenframe(r) for _ in range(r.count())), render_plan=tuple(_read_rendercommand(r) for _ in range(r.count())), deformers=tuple(_read_evaluateddeformer(r) for _ in range(r.count())))
@@ -4704,19 +4704,23 @@ def _read_geometrydiagnostickind(r: Reader) -> m.GeometryDiagnosticKind:
         return m.GeometryDiagnosticKind('OutsideModelBounds')
     raise ValueError("Unknown binary GeometryDiagnosticKind variant")
 
+def _read_meshquality(r: Reader) -> m.MeshQuality:
+    return m.MeshQuality(mesh_id=r.text(), visible=r.boolean(), vertex_count=integer(r.scalar('Q')), triangles=tuple(_read_trianglequality(r) for _ in range(r.count())), min_angle_degrees=(number(r.scalar('d')) if r.optional() else None), max_aspect_ratio=(number(r.scalar('d')) if r.optional() else None), max_edge_stretch=(number(r.scalar('d')) if r.optional() else None), degenerate_triangles=integer(r.scalar('Q')), flipped_triangles=integer(r.scalar('Q')), texture_coverage=(_read_texturecoverage(r) if r.optional() else None))
+
+def _read_trianglequality(r: Reader) -> m.TriangleQuality:
+    return m.TriangleQuality(triangle_index=integer(r.scalar('Q')), area=number(r.scalar('d')), min_angle_degrees=number(r.scalar('d')), aspect_ratio=(number(r.scalar('d')) if r.optional() else None), relative_area=(number(r.scalar('d')) if r.optional() else None), edge_stretch=(number(r.scalar('d')) if r.optional() else None))
+
+def _read_texturecoverage(r: Reader) -> m.TextureCoverage:
+    return m.TextureCoverage(alpha_threshold=integer(r.scalar('B')), pixel_step=integer(r.scalar('I')), sampled_pixels=integer(r.scalar('Q')), covered_pixels=integer(r.scalar('Q')), transparent_covered_pixels=integer(r.scalar('Q')), opaque_pixels=integer(r.scalar('Q')), uncovered_opaque_pixels=integer(r.scalar('Q')), transparent_coverage_fraction=(number(r.scalar('d')) if r.optional() else None), uncovered_opaque_fraction=(number(r.scalar('d')) if r.optional() else None), out_of_bounds_triangles=integer(r.scalar('Q')))
+
 def _read_previewbatch(r: Reader) -> m.PreviewBatch:
     return m.PreviewBatch(view=(_read_observationview(r) if r.optional() else None), queries=tuple(_read_spatialquery(r) for _ in range(r.count())), sequence=integer(r.scalar('Q')), frames=tuple(_read_previewframe(r) for _ in range(r.count())))
 
 def _read_observationview(r: Reader) -> m.ObservationView:
-    return m.ObservationView(width=integer(r.scalar('I')), height=integer(r.scalar('I')), roi=cast('tuple[float, float, float, float]', tuple(v[0] for v in r.numeric('f', 4))), padding_model=number(r.scalar('f')))
+    return m.ObservationView(width=integer(r.scalar('I')), height=integer(r.scalar('I')), roi=cast('tuple[float, float, float, float]', tuple(v[0] for v in r.numeric('f', 4))), padding_model=number(r.scalar('f')), topology=(_read_topologyoverlay(r) if r.optional() else None), quality=r.boolean())
 
-def _read_spatialquery(r: Reader) -> m.SpatialQuery:
-    tag=r.u32()
-    if tag==0:
-        return m.SpatialQueryBounds(targets=tuple(_read_objecttarget(r) for _ in range(r.count())), include_hidden=r.boolean())
-    elif tag==1:
-        return m.SpatialQueryHits(point=cast('tuple[float, float]', tuple(v[0] for v in r.numeric('d', 2))), include_hidden=r.boolean(), details=r.boolean(), max_candidates=integer(r.scalar('Q')))
-    raise ValueError("Unknown binary SpatialQuery variant")
+def _read_topologyoverlay(r: Reader) -> m.TopologyOverlay:
+    return m.TopologyOverlay(targets=(tuple(_read_objecttarget(r) for _ in range(r.count())) if r.optional() else None), wireframe=r.boolean(), vertices=r.boolean(), vertex_ids=r.boolean(), constraints=r.boolean(), strain=r.boolean(), include_hidden=r.boolean(), topology_only=r.boolean(), heat_opacity=number(r.scalar('f')), anomalies_only=r.boolean(), thresholds=_read_topologythresholds(r), label_scale=integer(r.scalar('I')), label_spacing=integer(r.scalar('I')), max_labels=integer(r.scalar('Q')))
 
 def _read_objecttarget(r: Reader) -> m.ObjectTarget:
     tag=r.u32()
@@ -4726,11 +4730,22 @@ def _read_objecttarget(r: Reader) -> m.ObjectTarget:
         return m.ObjectTargetPart(value=r.text())
     raise ValueError("Unknown binary ObjectTarget variant")
 
+def _read_topologythresholds(r: Reader) -> m.TopologyThresholds:
+    return m.TopologyThresholds(min_angle_degrees=number(r.scalar('d')), max_aspect_ratio=number(r.scalar('d')), max_edge_stretch=number(r.scalar('d')))
+
+def _read_spatialquery(r: Reader) -> m.SpatialQuery:
+    tag=r.u32()
+    if tag==0:
+        return m.SpatialQueryBounds(targets=tuple(_read_objecttarget(r) for _ in range(r.count())), include_hidden=r.boolean())
+    elif tag==1:
+        return m.SpatialQueryHits(point=cast('tuple[float, float]', tuple(v[0] for v in r.numeric('d', 2))), include_hidden=r.boolean(), details=r.boolean(), max_candidates=integer(r.scalar('Q')))
+    raise ValueError("Unknown binary SpatialQuery variant")
+
 def _read_previewframe(r: Reader) -> m.PreviewFrame:
     return m.PreviewFrame(observation=(_read_observationimage(r) if r.optional() else None), spatial=tuple(_read_spatialresult(r) for _ in range(r.count())), preview_id=integer(r.scalar('Q')), sequence=integer(r.scalar('Q')), index=integer(r.scalar('Q')), motion=_read_motionsnapshot(r), geometry=(_read_drawableframe(r) if r.optional() else None))
 
 def _read_observationimage(r: Reader) -> m.ObservationImage:
-    return m.ObservationImage(width=integer(r.scalar('I')), height=integer(r.scalar('I')), rgba=r.bytes(), png=r.bytes(), document_id=r.text(), evaluation_revision=integer(r.scalar('Q')), capture_id=r.text(), scene_digest=r.text(), render_digest=r.text(), input_sha256=r.text(), adapter_name=r.text(), adapter_backend=r.text(), parameters={r.text(): number(r.scalar('f')) for _ in range(r.count())}, visible_roi=cast('tuple[float, float, float, float]', tuple(v[0] for v in r.numeric('f', 4))), scale=number(r.scalar('f')), offset=cast('tuple[float, float]', tuple(v[0] for v in r.numeric('f', 2))), textures=tuple(_read_observedtexture(r) for _ in range(r.count())), drawable_bounds=tuple(_read_observedbounds(r) for _ in range(r.count())))
+    return m.ObservationImage(width=integer(r.scalar('I')), height=integer(r.scalar('I')), rgba=r.bytes(), png=r.bytes(), document_id=r.text(), evaluation_revision=integer(r.scalar('Q')), capture_id=r.text(), scene_digest=r.text(), render_digest=r.text(), input_sha256=r.text(), adapter_name=r.text(), adapter_backend=r.text(), parameters={r.text(): number(r.scalar('f')) for _ in range(r.count())}, visible_roi=cast('tuple[float, float, float, float]', tuple(v[0] for v in r.numeric('f', 4))), scale=number(r.scalar('f')), offset=cast('tuple[float, float]', tuple(v[0] for v in r.numeric('f', 2))), textures=tuple(_read_observedtexture(r) for _ in range(r.count())), drawable_bounds=tuple(_read_observedbounds(r) for _ in range(r.count())), quality=tuple(_read_meshquality(r) for _ in range(r.count())))
 
 def _read_observedtexture(r: Reader) -> m.ObservedTexture:
     return m.ObservedTexture(asset_id=r.text(), sha256=r.text())
@@ -4848,7 +4863,7 @@ def decode_records(value: bytes, signature: str) -> m.OwnedModelingRecords:
     return result
 
 def decode_observation(value: bytes, signature: str) -> m.ObservationBatch:
-    if signature!='926baacbaf017dc3d303ff29b6291edd': raise ValueError("Binary observation contract differs")
+    if signature!='8b73326c4fcd706a667a86beb5326015': raise ValueError("Binary observation contract differs")
     r=Reader(value)
     result=_read_observationbatch(r)
     r.finish()
@@ -4862,7 +4877,7 @@ def decode_spatial(value: bytes, signature: str) -> m.SpatialSamples:
     return result
 
 def decode_preview(value: bytes, signature: str) -> m.PreviewBatch:
-    if signature!='de420995072f1a30cdaff1c3207de078': raise ValueError("Binary preview contract differs")
+    if signature!='2d3615c77ec096438c86137436c2fcd2': raise ValueError("Binary preview contract differs")
     r=Reader(value)
     result=_read_previewbatch(r)
     r.finish()

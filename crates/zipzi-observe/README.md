@@ -28,6 +28,28 @@ asset paths. Authoring records remain internal inputs to content digests and
 batch validation. There is no scene save/open API or automatic fitted-view path.
 Python inspection exports images and metadata, not a reloadable scene.
 
+`RenderRequest.topology` optionally composites diagnostic wireframe, vertices,
+persistent vertex IDs, stored boundary/constraint edges and default-pose edge
+strain in Rust after GPU readback. `topology_only` clears appearance first.
+These layers use the exact `ViewMapping` and ignore masks/occlusion. Both render
+and input digests include the overlay options. Optional Mesh/Part `targets` select
+the diagnostic layers and quality reports while retaining the full context image.
+Parts include descendants; an empty explicit selection draws/reports no meshes.
+Labels use a bounded global screen-space layout, nearby leaders, adjustable scale,
+spacing and count; crowded labels are omitted. `anomalies_only` restricts all layers
+to threshold violations, flips, degeneracy and undefined reference ratios.
+Heat uses a separate most-severe-per-pixel layer blended once at `heat_opacity`,
+preventing opacity accumulation from shared edges or overlapping mesh layers.
+`RenderRequest.quality` includes
+per-mesh model-space metrics and source-alpha UV coverage at at most 256x256
+regular pixel-center samples (alpha >= 8). Coverage ignores filtering, atlas
+ownership and out-of-range repeat; it reports sampling step and denominators.
+Capture with `capture_*_from_snapshot_with_quality(..., true)` before requesting
+quality or strain. The reference uses default parameters of that frozen source,
+including hidden meshes. CPU-only sampling exposes the same geometric metrics
+through `GeometryChecks.quality`, without texture coverage. Reports certify only
+the requested poses. Coverage and overlay CPU work have explicit bounds.
+
 Focused CPU checks:
 
 ```sh

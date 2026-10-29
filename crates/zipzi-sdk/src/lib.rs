@@ -3,6 +3,7 @@ mod alpha_mesh;
 mod assets;
 mod diagnostics;
 mod edit;
+mod mesh_quality;
 mod project_io;
 mod session;
 mod spatial;
@@ -19,6 +20,10 @@ pub use assets::{
 };
 pub use diagnostics::{GeometryBounds, GeometryChecks, GeometryDiagnostic, GeometryDiagnosticKind};
 pub use edit::EditSession;
+pub use mesh_quality::{
+    mesh_quality, MeshQuality, TextureCoverage, TopologyOverlay, TopologyThresholds,
+    TriangleQuality,
+};
 pub use session::{AuthoringSession, AuthoringSnapshot};
 pub use spatial::{
     hit_test_geometry, object_bounds, query_spatial_frame, resolve_mesh_ids,

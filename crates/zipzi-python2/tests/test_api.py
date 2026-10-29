@@ -33,6 +33,67 @@ GEOMETRY = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
     ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
 
 class PythonSdk(unittest.TestCase):
+    def test_mesh_quality_evaluates_disabled_deformation_parent_on_both_backends(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode), self.runtime(mode) as runtime:
+                session = runtime.sessions.create(uid(1))
+                with session.edit("Hidden parent quality") as edit:
+                    mesh = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY, id=uid(2)))
+                    p = edit.parameters.create(parameters.ParameterSpec("Stretch", 0., 1., 0., id=uid(3)))
+                    edit.bindings.create(bindings.MeshBindingSpec(mesh, (bindings.Axis(p, (0., 1.)),), (
+                        bindings.Keyform((0.,), GEOMETRY.positions),
+                        bindings.Keyform((1.,), ((0., 0.), (2., 0.), (0., 1.))),
+                    )))
+                    edit.apply(scene.CreateRotation("Parent", scene.Placement(), id=uid(4)))
+                    edit.apply(scene.ReparentLocal((mesh,), uid(4)))
+                    checks = sampling.Checks(quality=True)
+                    poses = ({}, {p: 1.})
+                    visible = edit.modeling.sample(poses, checks=checks)
+                    edit.apply(scene.SetSceneEnabled(uid(4), True, False))
+                    sampled = edit.modeling.sample(poses, checks=checks)
+                    asynchronous = edit.modeling.sample_async(poses, checks=checks).wait()
+                    self.assertEqual(asynchronous.value, sampled.value)
+                    for index, row in enumerate(sampled.value.quality):
+                        quality = row[0]
+                        self.assertFalse(quality.visible)
+                        self.assertEqual(quality.triangles, visible.value.quality[index][0].triangles)
+                        self.assertEqual(quality.degenerate_triangles, 0)
+                        self.assertEqual(quality.flipped_triangles, 0)
+                    self.assertAlmostEqual(sampled.value.quality[0][0].triangles[0].area, .5)
+                    self.assertAlmostEqual(sampled.value.quality[1][0].triangles[0].area, 1.)
+                    self.assertEqual(sampled.value.quality[1][0].max_edge_stretch, 2.)
+
+    def test_mesh_quality_reports_frozen_pose_metrics_on_both_backends(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode), self.runtime(mode) as runtime:
+                session = runtime.sessions.create(uid(1))
+                with session.edit("Quality fixture") as edit:
+                    mesh = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY, id=uid(2)))
+                    p = edit.parameters.create(parameters.ParameterSpec("Stretch", 0., 1., 0., id=uid(3)))
+                    edit.bindings.create(bindings.MeshBindingSpec(mesh, (bindings.Axis(p, (0., 1.)),), (
+                        bindings.Keyform((0.,), GEOMETRY.positions),
+                        bindings.Keyform((1.,), ((0., 0.), (10., 0.), (0., .01))),
+                    )))
+                    source = edit.meshes.get(mesh).source
+                    sampled = edit.modeling.sample(({}, {p: 1.}, {}), checks=sampling.Checks(quality=True), expected=source)
+                    self.assertEqual(sampled.source, source)
+                    first, stretched, repeated = (row[0] for row in sampled.value.quality)
+                    self.assertEqual(first, repeated)
+                    self.assertEqual(first.mesh_id, mesh)
+                    self.assertAlmostEqual(first.min_angle_degrees, 45.)
+                    self.assertEqual(first.max_edge_stretch, 1.)
+                    self.assertLess(stretched.min_angle_degrees, .1)
+                    self.assertGreater(stretched.max_aspect_ratio, 999.)
+                    self.assertGreater(stretched.max_edge_stretch, 99.)
+                    self.assertIsNone(first.texture_coverage)
+                    asynchronous = edit.modeling.sample_async(({}, {p: 1.}, {}), checks=sampling.Checks(quality=True), expected=source).wait()
+                    self.assertEqual(asynchronous.value.quality, sampled.value.quality)
+                    self.assertEqual(edit.modeling.sample(({},)).value.quality, ())
+                    edit.meshes.set_positions(mesh, vertex_ids=GEOMETRY.vertex_ids, positions=((0., 0.), (2., 0.), (0., 2.)))
+                    self.assertAlmostEqual(sampled.value.quality[0][0].triangles[0].area, .5)
+                    edit.cancel()
+                self.assertEqual(session.info().history, (0, 0))
+
     def test_sampling_preserves_untranslated_rotation_basis_on_both_backends(self):
         frames = []
         for mode in ("local", "connected"):

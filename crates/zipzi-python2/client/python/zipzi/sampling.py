@@ -4,6 +4,7 @@ from ._generated.sampling_values import (
     RenderKind as RenderKind, Diagnostic as Diagnostic, Parameter as Parameter,
     Pose as Pose, Drawable as Drawable, Deformer as Deformer, Offscreen as Offscreen,
     RenderCommand as RenderCommand, Frame as Frame, Result as Result, inputs as inputs,
+    MeshQuality as MeshQuality, TriangleQuality as TriangleQuality, TextureCoverage as TextureCoverage,
 )
 from ._results import Snapshot
 from ._values import Source, record
@@ -17,4 +18,4 @@ def read(raw: object) -> Snapshot[Result]:
         raise ValueError('Inconsistent sampled source or batch')
     return Snapshot(source, value)
 
-__all__ = ['Checks', 'BlendMode', 'DiagnosticKind', 'RenderKind', 'Diagnostic', 'Parameter', 'Pose', 'Drawable', 'Deformer', 'Offscreen', 'RenderCommand', 'Frame', 'Result']
+__all__ = ['Checks', 'BlendMode', 'DiagnosticKind', 'RenderKind', 'Diagnostic', 'Parameter', 'Pose', 'Drawable', 'Deformer', 'Offscreen', 'RenderCommand', 'Frame', 'Result', 'MeshQuality', 'TriangleQuality', 'TextureCoverage']

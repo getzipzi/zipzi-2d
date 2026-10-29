@@ -10,12 +10,16 @@ pub struct ModelRoi {
     pub y1: f32,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct RenderRequest {
     pub width: u32,
     pub height: u32,
     pub roi: ModelRoi,
     pub padding_model: f32,
+    /// Optional topology diagnostics composited over this exact view.
+    pub topology: Option<zipzi_sdk::TopologyOverlay>,
+    /// Include mesh quality and alpha coverage reports. Alpha threshold is 8.
+    pub quality: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -36,7 +40,17 @@ fn invalid(message: &'static str) -> ObservationError {
 }
 
 impl RenderRequest {
-    pub fn mapping(self) -> Result<ViewMapping, ObservationError> {
+    pub fn needs_quality(&self) -> bool {
+        self.quality || self.topology.as_ref().is_some_and(|o| o.needs_quality())
+    }
+    pub fn mapping(&self) -> Result<ViewMapping, ObservationError> {
+        if let Some(overlay) = &self.topology {
+            overlay.validate().map_err(|e| ObservationError {
+                code: e.code.into(),
+                message: e.message.into(),
+                asset_id: None,
+            })?;
+        }
         let ModelRoi { x0, y0, x1, y1 } = self.roi;
         if self.width == 0 || self.height == 0 {
             return Err(invalid("Output dimensions must be positive"));
@@ -125,6 +139,8 @@ mod tests {
                 y1: 67.5,
             },
             padding_model: 5.0,
+            topology: None,
+            quality: false,
         }
         .mapping()
         .unwrap();
@@ -147,6 +163,8 @@ mod tests {
                 y1: f32::MAX,
             },
             padding_model: 0.0,
+            topology: None,
+            quality: false,
         };
         assert_eq!(request.mapping().unwrap_err().code, "INVALID_VIEW");
     }
@@ -163,6 +181,8 @@ mod tests {
                 y1: 10.0,
             },
             padding_model: 0.0,
+            topology: None,
+            quality: false,
         };
         assert_eq!(
             RenderRequest {
@@ -170,7 +190,7 @@ mod tests {
                     x1: 0.0,
                     ..request.roi
                 },
-                ..request
+                ..request.clone()
             }
             .mapping()
             .unwrap_err()

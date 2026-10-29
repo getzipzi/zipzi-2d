@@ -769,6 +769,8 @@ fn check_animation_opacity(
                         y1: canvas.height,
                     },
                     padding_model: 0.,
+                    topology: None,
+                    quality: false,
                 },
             )?;
             let mut editor = Editor::from_document(Document::open(&manifest)?);

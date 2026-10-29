@@ -76,7 +76,13 @@ impl Runtime {
                 }
                 Ok((
                     doc.estimated_content_bytes(),
-                    Self::sample_bytes(doc, input.parameters.len()),
+                    Self::sample_bytes(doc, input.parameters.len()).saturating_add(
+                        if input.checks.quality {
+                            Self::quality_bytes(doc, input.parameters.len())
+                        } else {
+                            0
+                        },
+                    ),
                 ))
             })?;
         self.check_bytes(bytes.saturating_add(document), 0, document)?;

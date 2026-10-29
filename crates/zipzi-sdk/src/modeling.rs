@@ -480,6 +480,9 @@ pub struct ModelingSamples {
     pub frames: Vec<zipzi_core::DrawableFrame>,
     /// Structured diagnostics from this query or operation; an empty list means none were reported.
     pub diagnostics: Vec<crate::GeometryDiagnostic>,
+    /// Per-pose evaluated mesh quality in frame order when Checks.quality is true; empty otherwise.
+    /// Uses default parameters of this same frozen source as the reference, without image coverage.
+    pub quality: Vec<Vec<crate::MeshQuality>>,
 }
 impl crate::AuthoringSnapshot {
     /// All samples use the exact immutable source and explicit parameter maps.
@@ -513,6 +516,7 @@ pub struct ModelingSampler<S> {
     requested: Vec<zipzi_core::PreviewValues>,
     checks: crate::GeometryChecks,
     output: Option<ModelingSamples>,
+    quality_reference: Option<zipzi_core::DrawableFrame>,
     finished: bool,
 }
 impl<S: std::borrow::Borrow<crate::AuthoringSnapshot>> ModelingSampler<S> {
@@ -526,6 +530,7 @@ impl<S: std::borrow::Borrow<crate::AuthoringSnapshot>> ModelingSampler<S> {
             requested,
             checks,
             output: None,
+            quality_reference: None,
             finished: false,
         }
     }
@@ -549,16 +554,45 @@ impl<S: std::borrow::Borrow<crate::AuthoringSnapshot>> ModelingSampler<S> {
         }
         let source = self.source.borrow();
         if self.output.is_none() {
+            if self.checks.quality {
+                self.quality_reference = Some(source.quality_reference()?);
+            }
             self.output = Some(ModelingSamples {
                 version: source.version(),
                 parameters: vec![],
                 frames: Vec::with_capacity(self.requested.len()),
                 diagnostics: source.diagnose_geometry_with_control(self.checks, control)?,
+                quality: vec![],
             });
         }
         let output = self.output.as_mut().unwrap();
         if let Some(pose) = self.requested.get(output.frames.len()) {
-            output.frames.push(source.evaluate(pose)?);
+            let frame = if self.checks.quality {
+                // Hidden drawables otherwise contain zero-filled positions, which
+                // would be reported as collapsed geometry against the reference.
+                let mut frame = zipzi_core::DrawableFrame::default();
+                let status = zipzi_core::evaluation::evaluate_frame_including_hidden(
+                    source.document(),
+                    pose,
+                    &mut frame,
+                );
+                if !status.is_ok() {
+                    return Err(crate::SdkError::from_status(
+                        status,
+                        "sample_modeling",
+                        vec![],
+                    ));
+                }
+                frame
+            } else {
+                source.evaluate(pose)?
+            };
+            if let Some(reference) = &self.quality_reference {
+                output
+                    .quality
+                    .push(crate::mesh_quality(&frame, reference, control)?);
+            }
+            output.frames.push(frame);
         }
         check()?;
         if output.frames.len() < self.requested.len() {

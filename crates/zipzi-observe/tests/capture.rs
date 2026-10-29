@@ -63,6 +63,8 @@ fn view() -> RenderRequest {
             y1: 80.,
         },
         padding_model: 0.,
+        topology: None,
+        quality: false,
     }
 }
 

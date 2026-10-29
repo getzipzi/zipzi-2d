@@ -24,6 +24,9 @@ pub struct GeometryChecks {
     pub min_triangle_area: f64,
     /// Optional expected model bounds for root meshes only.
     pub model_bounds: Option<GeometryBounds>,
+    /// Include per-pose mesh quality in evaluated Y-up model space, relative to this
+    /// snapshot evaluated with default parameters. Only the requested poses are checked.
+    pub quality: bool,
 }
 
 impl Default for GeometryChecks {
@@ -31,6 +34,7 @@ impl Default for GeometryChecks {
         Self {
             min_triangle_area: 0.0,
             model_bounds: None,
+            quality: false,
         }
     }
 }

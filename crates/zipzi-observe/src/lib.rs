@@ -19,6 +19,8 @@ use zipzi_sdk::{AuthoringSnapshot, Version};
 
 mod digest;
 mod gpu;
+mod quality;
+mod topology;
 mod view;
 pub use gpu::{DrawableBounds, ObservedFrame, ObservedTexture, Observer, ObserverConfig};
 pub use view::{ModelRoi, RenderRequest, ViewMapping};
@@ -35,6 +37,7 @@ pub struct ObservationInput {
     memory_images: BTreeMap<String, zipzi_project::PreparedImageContent>,
     source: ObservationSource,
     authoring: CapturedAuthoring,
+    reference_frame: Option<DrawableFrame>,
 }
 
 /// Authoring content retained only for the scene digest and batch validation.
@@ -243,6 +246,15 @@ impl ObservationInput {
         snapshot: &AuthoringSnapshot,
         requested: &PreviewValues,
     ) -> Result<Self, ObservationError> {
+        Self::capture_from_snapshot_with_quality(snapshot, requested, false)
+    }
+
+    /// Capture an optional default-pose reference from this exact immutable snapshot.
+    pub fn capture_from_snapshot_with_quality(
+        snapshot: &AuthoringSnapshot,
+        requested: &PreviewValues,
+        quality: bool,
+    ) -> Result<Self, ObservationError> {
         let mut frame = DrawableFrame::default();
         let status = evaluate_frame_including_hidden(snapshot.document(), requested, &mut frame);
         if !status.is_ok() {
@@ -257,6 +269,7 @@ impl ObservationInput {
             requested.clone(),
             frame,
             ObservationSource::Parameters,
+            quality,
         )
     }
 
@@ -265,6 +278,15 @@ impl ObservationInput {
     pub fn capture_motion_from_snapshot(
         snapshot: &AuthoringSnapshot,
         preview: &MotionPreview,
+    ) -> Result<Self, ObservationError> {
+        Self::capture_motion_from_snapshot_with_quality(snapshot, preview, false)
+    }
+
+    /// Capture animation and, optionally, its authoring source's default-pose reference.
+    pub fn capture_motion_from_snapshot_with_quality(
+        snapshot: &AuthoringSnapshot,
+        preview: &MotionPreview,
+        quality: bool,
     ) -> Result<Self, ObservationError> {
         let version = snapshot.version();
         if preview.source_identity() != Some((version.session_id, version.generation))
@@ -302,6 +324,7 @@ impl ObservationInput {
             ObservationSource::Animation {
                 snapshot: Box::new(preview.snapshot().clone()),
             },
+            quality,
         )
     }
 
@@ -310,6 +333,7 @@ impl ObservationInput {
         requested: PreviewValues,
         frame: DrawableFrame,
         source: ObservationSource,
+        quality: bool,
     ) -> Result<Self, ObservationError> {
         let version = snapshot.version();
         let document = snapshot.document();
@@ -457,6 +481,15 @@ impl ObservationInput {
             })
             .collect();
         Ok(Self {
+            reference_frame: if quality {
+                Some(snapshot.quality_reference().map_err(|e| ObservationError {
+                    code: e.code.into(),
+                    message: e.message.into(),
+                    asset_id: None,
+                })?)
+            } else {
+                None
+            },
             memory_images,
             version,
             evaluation_revision,

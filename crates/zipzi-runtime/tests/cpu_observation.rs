@@ -27,9 +27,11 @@ fn cpu_host_rejects_images_before_admission_and_keeps_preview_usable() {
         height: 16,
         roi: [0., 0., 1., 1.],
         padding_model: 0.,
+        topology: None,
+        quality: false,
     };
     for result in [
-        rt.request_observation(c, s, None, vec![Default::default()], view, None),
+        rt.request_observation(c, s, None, vec![Default::default()], view.clone(), None),
         rt.request_preview_frames(c, p, vec![0., 0.25], false, false, vec![], Some(view)),
     ] {
         assert!(

@@ -344,6 +344,8 @@ fn repeated_motion_events_are_admitted_before_advancing_or_allocating_results() 
             height: 8,
             roi: [0., 0., 1., 1.],
             padding_model: 0.,
+            topology: None,
+            quality: false,
         }),
     ] {
         for incremental in [false, true] {

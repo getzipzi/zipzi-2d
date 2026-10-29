@@ -11,8 +11,8 @@ class _Entry(TypedDict):
     example: NotRequired[str]
 CONTRACT = 'zipzi-runtime-v1'
 PACKAGE_VERSION = '0.1.0a2'
-CLIENT_SOURCE_SHA256 = '2730bfce7ac77a521876a88e29843fe61282c2d6b9e7d3c0cbf59955c9969ef5'
-CONTRACT_SHA256 = 'e35e6a3529a4a9e51523ed9df5d44df4c5371be5650fe1ca4bc19f496b875254'
+CLIENT_SOURCE_SHA256 = '464f736971b3a44c9996f99b4d2df7719739c2cc359a7c0b5970935b07a9e5a6'
+CONTRACT_SHA256 = '5546ac36ee5df858316f17c1d71e0069843cb705a4606ad3c6046a6efa9b84c1'
 CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                         'zipzi.Batch',
                         'zipzi.Buffer',
@@ -68,7 +68,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
            'documentation': 'Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or '
                             'connect(), explicitly select sessions, read before editing, verify confirmed results, '
                             'then save and release. Package 0.1.0a2; protocol zipzi-runtime-v1; client source SHA-256 '
-                            '2730bfce7ac77a521876a88e29843fe61282c2d6b9e7d3c0cbf59955c9969ef5.',
+                            '464f736971b3a44c9996f99b4d2df7719739c2cc359a7c0b5970935b07a9e5a6.',
            'example': 'docs/recipes.py',
            'kind': 'module',
            'signature': ''},
@@ -646,13 +646,16 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'documentation': 'Render 1..64 explicit parameter poses from an exact frozen Source. '
                                                   'The explicit Y-up model ROI preserves aspect ratio; frames contain '
                                                   'GPU RGBA8, Rust-encoded PNG, view mapping, actual adapter and '
-                                                  'texture hashes. Rendering resolves one immutable texture set per '
-                                                  'batch, never publishes history and does not abort an Edit on '
-                                                  'failure. Device initialization occurs on the worker; missing GPU '
-                                                  'produces a structured failure, independently of CPU operations. '
-                                                  'Runtime count/byte/device budgets apply. Recover a lost submission '
-                                                  'or result through its original Call; wait/close the Job to release '
-                                                  'its result slot.',
+                                                  'texture hashes. view.quality includes per-mesh geometry and sampled '
+                                                  'source-alpha coverage; view.topology enables wireframe, persistent '
+                                                  'vertex IDs, constraints and strain overlays with the same frozen '
+                                                  'mapping. Rendering resolves one immutable texture set per batch, '
+                                                  'never publishes history and does not abort an Edit on failure. '
+                                                  'Device initialization occurs on the worker; missing GPU produces a '
+                                                  'structured failure, independently of CPU operations. Runtime '
+                                                  'count/byte/device budgets apply. Recover a lost submission or '
+                                                  'result through its original Call; wait/close the Job to release its '
+                                                  'result slot.',
                                  'example': 'docs/recipes.py',
                                  'fields': [],
                                  'kind': 'callable',
@@ -677,14 +680,16 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
  'zipzi.Edit.modeling.sample': {'children': (),
                                 'documentation': 'Synchronously evaluate CPU poses without editing or GPU work. poses '
                                                  'is an ordered sequence of parameter-ID/value maps in each parameter '
-                                                 'domain; inputs are owned before execution. checks supplies optional '
-                                                 'native geometry diagnostics, and expected=None accepts current '
-                                                 'content while an explicit Source rejects changes atomically. Returns '
-                                                 'Snapshot[sampling.Result] with frames in pose order. Native '
-                                                 'count/byte/work budgets apply; query/diagnostic failure does not '
-                                                 'abort an Edit. A lost result recovers through its original '
-                                                 'multi-stage Call, never by silently resampling current content. '
-                                                 'Owned results need no close. Example: sampled = '
+                                                 'domain; inputs are owned before execution. checks supplies authored '
+                                                 'validity diagnostics and, with quality=True, per-pose model-space '
+                                                 'mesh quality relative to this frozen source at default parameters; '
+                                                 'quality reports do not cover unsampled intervals. expected=None '
+                                                 'accepts current content while an explicit Source rejects changes '
+                                                 'atomically. Returns Snapshot[sampling.Result] with frames in pose '
+                                                 'order. Native count/byte/work budgets apply; query/diagnostic '
+                                                 'failure does not abort an Edit. A lost result recovers through its '
+                                                 'original multi-stage Call, never by silently resampling current '
+                                                 'content. Owned results need no close. Example: sampled = '
                                                  'session.modeling.sample(({parameter_id: 0.5},)).',
                                 'example': 'docs/recipes.py',
                                 'fields': [],
@@ -2358,13 +2363,16 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                     'documentation': 'Render 1..64 explicit parameter poses from an exact frozen '
                                                      'Source. The explicit Y-up model ROI preserves aspect ratio; '
                                                      'frames contain GPU RGBA8, Rust-encoded PNG, view mapping, actual '
-                                                     'adapter and texture hashes. Rendering resolves one immutable '
-                                                     'texture set per batch, never publishes history and does not '
-                                                     'abort an Edit on failure. Device initialization occurs on the '
-                                                     'worker; missing GPU produces a structured failure, independently '
-                                                     'of CPU operations. Runtime count/byte/device budgets apply. '
-                                                     'Recover a lost submission or result through its original Call; '
-                                                     'wait/close the Job to release its result slot.',
+                                                     'adapter and texture hashes. view.quality includes per-mesh '
+                                                     'geometry and sampled source-alpha coverage; view.topology '
+                                                     'enables wireframe, persistent vertex IDs, constraints and strain '
+                                                     'overlays with the same frozen mapping. Rendering resolves one '
+                                                     'immutable texture set per batch, never publishes history and '
+                                                     'does not abort an Edit on failure. Device initialization occurs '
+                                                     'on the worker; missing GPU produces a structured failure, '
+                                                     'independently of CPU operations. Runtime count/byte/device '
+                                                     'budgets apply. Recover a lost submission or result through its '
+                                                     'original Call; wait/close the Job to release its result slot.',
                                     'example': 'docs/recipes.py',
                                     'fields': [],
                                     'kind': 'callable',
@@ -2390,13 +2398,16 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                    'documentation': 'Synchronously evaluate CPU poses without editing or GPU work. '
                                                     'poses is an ordered sequence of parameter-ID/value maps in each '
                                                     'parameter domain; inputs are owned before execution. checks '
-                                                    'supplies optional native geometry diagnostics, and expected=None '
-                                                    'accepts current content while an explicit Source rejects changes '
-                                                    'atomically. Returns Snapshot[sampling.Result] with frames in pose '
-                                                    'order. Native count/byte/work budgets apply; query/diagnostic '
-                                                    'failure does not abort an Edit. A lost result recovers through '
-                                                    'its original multi-stage Call, never by silently resampling '
-                                                    'current content. Owned results need no close. Example: sampled = '
+                                                    'supplies authored validity diagnostics and, with quality=True, '
+                                                    'per-pose model-space mesh quality relative to this frozen source '
+                                                    'at default parameters; quality reports do not cover unsampled '
+                                                    'intervals. expected=None accepts current content while an '
+                                                    'explicit Source rejects changes atomically. Returns '
+                                                    'Snapshot[sampling.Result] with frames in pose order. Native '
+                                                    'count/byte/work budgets apply; query/diagnostic failure does not '
+                                                    'abort an Edit. A lost result recovers through its original '
+                                                    'multi-stage Call, never by silently resampling current content. '
+                                                    'Owned results need no close. Example: sampled = '
                                                     'session.modeling.sample(({parameter_id: 0.5},)).',
                                    'example': 'docs/recipes.py',
                                    'fields': [],
@@ -5367,6 +5378,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'zipzi.modeling.MeshGridEditReorderAxes',
                                  'zipzi.modeling.MeshKeyform',
                                  'zipzi.modeling.MeshMeshing',
+                                 'zipzi.modeling.MeshQuality',
                                  'zipzi.modeling.Model3Settings',
                                  'zipzi.modeling.ModelHitArea',
                                  'zipzi.modeling.ModelParameterGroup',
@@ -5788,14 +5800,18 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'zipzi.modeling.SpatialResultBounds',
                                  'zipzi.modeling.SpatialResultHits',
                                  'zipzi.modeling.SpatialSamples',
+                                 'zipzi.modeling.TextureCoverage',
                                  'zipzi.modeling.TextureSlot',
+                                 'zipzi.modeling.TopologyOverlay',
                                  'zipzi.modeling.TopologyReplacement',
+                                 'zipzi.modeling.TopologyThresholds',
                                  'zipzi.modeling.Transform',
                                  'zipzi.modeling.TransformData',
                                  'zipzi.modeling.TransformDataRotation',
                                  'zipzi.modeling.TransformDataWarp',
                                  'zipzi.modeling.TransformId',
                                  'zipzi.modeling.TriangleHit',
+                                 'zipzi.modeling.TriangleQuality',
                                  'zipzi.modeling.Vec2',
                                  'zipzi.modeling.VertexContentPatch',
                                  'zipzi.modeling.VertexDeletePolicy',
@@ -14632,6 +14648,81 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                         'fields': [],
                                         'kind': 'callable',
                                         'signature': '() -> str'},
+ 'zipzi.modeling.MeshQuality': {'children': ('zipzi.modeling.MeshQuality.__repr__',
+                                             'zipzi.modeling.MeshQuality.summary'),
+                                'documentation': 'Immutable owned MeshQuality value. Construction owns declared '
+                                                 'collections; reading fields, repr and summary performs no IO.\n'
+                                                 '\n'
+                                                 'Fields:\n'
+                                                 'mesh_id: Stable document mesh ID, in evaluated drawable order.\n'
+                                                 'visible: Evaluated enabled/visible/positive-opacity state. Metrics '
+                                                 'are geometric and ignore occlusion.\n'
+                                                 'vertex_count: Number of evaluated vertices.\n'
+                                                 'triangles: Per-triangle metrics in evaluated Y-up model coordinates, '
+                                                 'relative to default parameters\n'
+                                                 'of the same frozen authoring source. This does not certify unsampled '
+                                                 'parameter intervals.\n'
+                                                 'min_angle_degrees: Smallest angle over this mesh; None for an empty '
+                                                 'mesh.\n'
+                                                 'max_aspect_ratio: Largest finite aspect ratio; collapsed triangles '
+                                                 'are counted separately.\n'
+                                                 'max_edge_stretch: Largest finite symmetric edge-length ratio '
+                                                 'relative to the default pose.\n'
+                                                 'degenerate_triangles: Number of exactly zero-area evaluated '
+                                                 'triangles.\n'
+                                                 'flipped_triangles: Number of negative relative-area triangles. '
+                                                 'Degenerate references are excluded.\n'
+                                                 'texture_coverage: Optional source-texture coverage. CPU-only '
+                                                 'sampling does not resolve image pixels.',
+                                'example': 'docs/recipes.py',
+                                'fields': [('mesh_id', 'Stable document mesh ID, in evaluated drawable order.'),
+                                           ('visible',
+                                            'Evaluated enabled/visible/positive-opacity state. Metrics are geometric '
+                                            'and ignore occlusion.'),
+                                           ('vertex_count', 'Number of evaluated vertices.'),
+                                           ('triangles',
+                                            'Per-triangle metrics in evaluated Y-up model coordinates, relative to '
+                                            'default parameters\n'
+                                            'of the same frozen authoring source. This does not certify unsampled '
+                                            'parameter intervals.'),
+                                           ('min_angle_degrees',
+                                            'Smallest angle over this mesh; None for an empty mesh.'),
+                                           ('max_aspect_ratio',
+                                            'Largest finite aspect ratio; collapsed triangles are counted separately.'),
+                                           ('max_edge_stretch',
+                                            'Largest finite symmetric edge-length ratio relative to the default pose.'),
+                                           ('degenerate_triangles', 'Number of exactly zero-area evaluated triangles.'),
+                                           ('flipped_triangles',
+                                            'Number of negative relative-area triangles. Degenerate references are '
+                                            'excluded.'),
+                                           ('texture_coverage',
+                                            'Optional source-texture coverage. CPU-only sampling does not resolve '
+                                            'image pixels.')],
+                                'kind': 'type',
+                                'signature': '(mesh_id: str, visible: bool, vertex_count: int, triangles: '
+                                             'tuple[TriangleQuality, ...], min_angle_degrees: float | None = None, '
+                                             'max_aspect_ratio: float | None = None, max_edge_stretch: float | None = '
+                                             'None, degenerate_triangles: int, flipped_triangles: int, '
+                                             'texture_coverage: TextureCoverage | None = None)'},
+ 'zipzi.modeling.MeshQuality.__repr__': {'children': (),
+                                         'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                          'RPC/full scan.\n'
+                                                          '\n'
+                                                          'Large arrays and bytes show bounded samples/counts. '
+                                                          'Explicit field access\n'
+                                                          'still exposes the owned full value; no host resource is '
+                                                          'created/released.',
+                                         'example': 'docs/recipes.py',
+                                         'fields': [],
+                                         'kind': 'callable',
+                                         'signature': '() -> str'},
+ 'zipzi.modeling.MeshQuality.summary': {'children': (),
+                                        'documentation': 'Return a bounded, local summary; full fields remain '
+                                                         'explicitly accessible.',
+                                        'example': 'docs/recipes.py',
+                                        'fields': [],
+                                        'kind': 'callable',
+                                        'signature': '() -> str'},
  'zipzi.modeling.Model3Settings': {'children': ('zipzi.modeling.Model3Settings.__repr__',
                                                 'zipzi.modeling.Model3Settings.summary'),
                                    'documentation': 'Immutable owned Model3Settings value. Construction owns declared '
@@ -17556,7 +17647,11 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                      'frames: CPU-evaluated frames in the same order as requested '
                                                      'parameter maps.\n'
                                                      'diagnostics: Structured diagnostics from this query or '
-                                                     'operation; an empty list means none were reported.',
+                                                     'operation; an empty list means none were reported.\n'
+                                                     'quality: Per-pose evaluated mesh quality in frame order when '
+                                                     'Checks.quality is true; empty otherwise.\n'
+                                                     'Uses default parameters of this same frozen source as the '
+                                                     'reference, without image coverage.',
                                     'example': 'docs/recipes.py',
                                     'fields': [('version',
                                                 'Exact SDK version captured for this value; not a best-effort '
@@ -17569,11 +17664,17 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                 'CPU-evaluated frames in the same order as requested parameter maps.'),
                                                ('diagnostics',
                                                 'Structured diagnostics from this query or operation; an empty list '
-                                                'means none were reported.')],
+                                                'means none were reported.'),
+                                               ('quality',
+                                                'Per-pose evaluated mesh quality in frame order when Checks.quality is '
+                                                'true; empty otherwise.\n'
+                                                'Uses default parameters of this same frozen source as the reference, '
+                                                'without image coverage.')],
                                     'kind': 'type',
                                     'signature': '(version: _Version, parameters: tuple[_Mapping[str, float], ...], '
                                                  'frames: tuple[DrawableFrame, ...], diagnostics: '
-                                                 'tuple[GeometryDiagnostic, ...])'},
+                                                 'tuple[GeometryDiagnostic, ...], quality: tuple[tuple[MeshQuality, '
+                                                 '...], ...])'},
  'zipzi.modeling.ModelingSamples.__repr__': {'children': (),
                                              'documentation': 'Return a local summary capped at 1,024 characters, with '
                                                               'no RPC/full scan.\n'
@@ -19874,7 +19975,13 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                       'textures: Source texture identities and exact content hashes '
                                                       'shared across this batch.\n'
                                                       'drawable_bounds: Drawable geometric image bounds in evaluated '
-                                                      'order; masks/occlusion are not pixel-tested here.',
+                                                      'order; masks/occlusion are not pixel-tested here.\n'
+                                                      'quality: Mesh quality in evaluated drawable order when '
+                                                      'View.quality is true; empty otherwise.\n'
+                                                      'Texture coverage uses alpha >= 8, pixel centers, at most a '
+                                                      '256x256 grid, ignoring masks,\n'
+                                                      'filtering and UV repeat outside [0,1]. A step above 1 denotes '
+                                                      'approximate coverage.',
                                      'example': 'docs/recipes.py',
                                      'fields': [('width', 'Output image width in pixels.'),
                                                 ('height', 'Output image height in pixels.'),
@@ -19919,7 +20026,14 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                  'this batch.'),
                                                 ('drawable_bounds',
                                                  'Drawable geometric image bounds in evaluated order; masks/occlusion '
-                                                 'are not pixel-tested here.')],
+                                                 'are not pixel-tested here.'),
+                                                ('quality',
+                                                 'Mesh quality in evaluated drawable order when View.quality is true; '
+                                                 'empty otherwise.\n'
+                                                 'Texture coverage uses alpha >= 8, pixel centers, at most a 256x256 '
+                                                 'grid, ignoring masks,\n'
+                                                 'filtering and UV repeat outside [0,1]. A step above 1 denotes '
+                                                 'approximate coverage.')],
                                      'kind': 'type',
                                      'signature': '(width: int, height: int, rgba: _Bytes, png: _Bytes, document_id: '
                                                   'str, evaluation_revision: int, capture_id: str, scene_digest: str, '
@@ -19927,7 +20041,8 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                   'adapter_backend: str, parameters: _Mapping[str, float], '
                                                   'visible_roi: tuple[float, float, float, float], scale: float, '
                                                   'offset: tuple[float, float], textures: tuple[ObservedTexture, ...], '
-                                                  'drawable_bounds: tuple[ObservedBounds, ...])'},
+                                                  'drawable_bounds: tuple[ObservedBounds, ...], quality: '
+                                                  'tuple[MeshQuality, ...])'},
  'zipzi.modeling.ObservationImage.__repr__': {'children': (),
                                               'documentation': 'Return a local summary capped at 1,024 characters, '
                                                                'with no RPC/full scan.\n'
@@ -19961,7 +20076,14 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                      'roi: Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model '
                                                      'coordinates.\n'
                                                      'padding_model: Nonnegative padding around the ROI in model '
-                                                     'units; aspect ratio is preserved.',
+                                                     'units; aspect ratio is preserved.\n'
+                                                     'topology: Optional topology overlay in the same frozen Source '
+                                                     'and ROI mapping. It ignores\n'
+                                                     'masks and occlusion; None preserves the ordinary GPU image.\n'
+                                                     'quality: Include per-mesh evaluated quality and approximate '
+                                                     'source-alpha coverage.\n'
+                                                     'Uses default parameters of the same source as reference; checks '
+                                                     'requested frames only.',
                                     'example': 'docs/recipes.py',
                                     'fields': [('width',
                                                 'Output width in pixels, 1..4096, subject to device and Runtime '
@@ -19973,10 +20095,20 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                 'Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.'),
                                                ('padding_model',
                                                 'Nonnegative padding around the ROI in model units; aspect ratio is '
-                                                'preserved.')],
+                                                'preserved.'),
+                                               ('topology',
+                                                'Optional topology overlay in the same frozen Source and ROI mapping. '
+                                                'It ignores\n'
+                                                'masks and occlusion; None preserves the ordinary GPU image.'),
+                                               ('quality',
+                                                'Include per-mesh evaluated quality and approximate source-alpha '
+                                                'coverage.\n'
+                                                'Uses default parameters of the same source as reference; checks '
+                                                'requested frames only.')],
                                     'kind': 'type',
                                     'signature': '(width: int, height: int, roi: tuple[float, float, float, float], '
-                                                 'padding_model: float = 0.0)'},
+                                                 'padding_model: float = 0.0, topology: TopologyOverlay | None = None, '
+                                                 'quality: bool = False)'},
  'zipzi.modeling.ObservationView.__repr__': {'children': (),
                                              'documentation': 'Return a local summary capped at 1,024 characters, with '
                                                               'no RPC/full scan.\n'
@@ -31450,6 +31582,85 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                            'fields': [],
                                            'kind': 'callable',
                                            'signature': '() -> str'},
+ 'zipzi.modeling.TextureCoverage': {'children': ('zipzi.modeling.TextureCoverage.__repr__',
+                                                 'zipzi.modeling.TextureCoverage.summary'),
+                                    'documentation': 'Immutable owned TextureCoverage value. Construction owns '
+                                                     'declared collections; reading fields, repr and summary performs '
+                                                     'no IO.\n'
+                                                     '\n'
+                                                     'Fields:\n'
+                                                     'alpha_threshold: Alpha >= this value counts as painted. Coverage '
+                                                     'ignores filtering, masks and occlusion.\n'
+                                                     'pixel_step: Top-down source-pixel grid spacing. Values above 1 '
+                                                     'mean an approximate report.\n'
+                                                     'sampled_pixels: Number of source pixel centers tested on the '
+                                                     'regular grid.\n'
+                                                     'covered_pixels: Tested pixel centers covered by the union of UV '
+                                                     'triangles inside [0,1].\n'
+                                                     'transparent_covered_pixels: Covered centers whose source alpha '
+                                                     'is below the threshold.\n'
+                                                     'opaque_pixels: Tested centers whose source alpha is at least the '
+                                                     'threshold.\n'
+                                                     'uncovered_opaque_pixels: Opaque centers outside the UV triangle '
+                                                     'union: a contour coverage error, not a distance.\n'
+                                                     'transparent_coverage_fraction: Transparent covered / covered; '
+                                                     'None if no tested center is covered.\n'
+                                                     'uncovered_opaque_fraction: Uncovered opaque / opaque; None for '
+                                                     'an entirely transparent sampled image.\n'
+                                                     'out_of_bounds_triangles: Number of UV triangles with vertices '
+                                                     'outside [0,1]; repeat-sampled coverage is not measured.',
+                                    'example': 'docs/recipes.py',
+                                    'fields': [('alpha_threshold',
+                                                'Alpha >= this value counts as painted. Coverage ignores filtering, '
+                                                'masks and occlusion.'),
+                                               ('pixel_step',
+                                                'Top-down source-pixel grid spacing. Values above 1 mean an '
+                                                'approximate report.'),
+                                               ('sampled_pixels',
+                                                'Number of source pixel centers tested on the regular grid.'),
+                                               ('covered_pixels',
+                                                'Tested pixel centers covered by the union of UV triangles inside '
+                                                '[0,1].'),
+                                               ('transparent_covered_pixels',
+                                                'Covered centers whose source alpha is below the threshold.'),
+                                               ('opaque_pixels',
+                                                'Tested centers whose source alpha is at least the threshold.'),
+                                               ('uncovered_opaque_pixels',
+                                                'Opaque centers outside the UV triangle union: a contour coverage '
+                                                'error, not a distance.'),
+                                               ('transparent_coverage_fraction',
+                                                'Transparent covered / covered; None if no tested center is covered.'),
+                                               ('uncovered_opaque_fraction',
+                                                'Uncovered opaque / opaque; None for an entirely transparent sampled '
+                                                'image.'),
+                                               ('out_of_bounds_triangles',
+                                                'Number of UV triangles with vertices outside [0,1]; repeat-sampled '
+                                                'coverage is not measured.')],
+                                    'kind': 'type',
+                                    'signature': '(alpha_threshold: int, pixel_step: int, sampled_pixels: int, '
+                                                 'covered_pixels: int, transparent_covered_pixels: int, opaque_pixels: '
+                                                 'int, uncovered_opaque_pixels: int, transparent_coverage_fraction: '
+                                                 'float | None = None, uncovered_opaque_fraction: float | None = None, '
+                                                 'out_of_bounds_triangles: int)'},
+ 'zipzi.modeling.TextureCoverage.__repr__': {'children': (),
+                                             'documentation': 'Return a local summary capped at 1,024 characters, with '
+                                                              'no RPC/full scan.\n'
+                                                              '\n'
+                                                              'Large arrays and bytes show bounded samples/counts. '
+                                                              'Explicit field access\n'
+                                                              'still exposes the owned full value; no host resource is '
+                                                              'created/released.',
+                                             'example': 'docs/recipes.py',
+                                             'fields': [],
+                                             'kind': 'callable',
+                                             'signature': '() -> str'},
+ 'zipzi.modeling.TextureCoverage.summary': {'children': (),
+                                            'documentation': 'Return a bounded, local summary; full fields remain '
+                                                             'explicitly accessible.',
+                                            'example': 'docs/recipes.py',
+                                            'fields': [],
+                                            'kind': 'callable',
+                                            'signature': '() -> str'},
  'zipzi.modeling.TextureSlot': {'children': ('zipzi.modeling.TextureSlot.__repr__',
                                              'zipzi.modeling.TextureSlot.summary'),
                                 'documentation': 'Immutable owned TextureSlot value. Construction owns declared '
@@ -31485,6 +31696,129 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                         'fields': [],
                                         'kind': 'callable',
                                         'signature': '() -> str'},
+ 'zipzi.modeling.TopologyOverlay': {'children': ('zipzi.modeling.TopologyOverlay.__repr__',
+                                                 'zipzi.modeling.TopologyOverlay.summary'),
+                                    'documentation': 'Immutable owned TopologyOverlay value. Construction owns '
+                                                     'declared collections; reading fields, repr and summary performs '
+                                                     'no IO.\n'
+                                                     '\n'
+                                                     'Fields:\n'
+                                                     'targets: Diagnostic selection only; the textured context image '
+                                                     'is unchanged. None selects all\n'
+                                                     'meshes, Some([]) selects none. Mesh/Part targets are unioned and '
+                                                     'deduplicated;\n'
+                                                     'Parts include nested Parts. Missing targets fail explicitly. '
+                                                     'Maximum 256 selectors.\n'
+                                                     'wireframe: Draw triangle edges in cyan, in final evaluated model '
+                                                     'coordinates.\n'
+                                                     'vertices: Draw vertex positions as yellow dots.\n'
+                                                     'vertex_ids: Draw stable authoring vertex IDs in yellow, rather '
+                                                     'than transient array offsets.\n'
+                                                     'constraints: Draw meshing boundary edges in green and internal '
+                                                     'constraints in magenta.\n'
+                                                     'strain: Fill triangles by symmetric edge stretch relative to the '
+                                                     'default pose: blue=1,\n'
+                                                     'orange=2, red>=4; flipped or collapsed triangles are magenta.\n'
+                                                     'include_hidden: Include disabled, hidden and zero-opacity '
+                                                     'meshes. Default draws visible meshes only.\n'
+                                                     'topology_only: Clear the textured image before diagnostic '
+                                                     'drawing, retaining the exact same view.\n'
+                                                     'heat_opacity: Heat fill opacity in [0,1]. Applied once per pixel '
+                                                     'using the most severe overlapping\n'
+                                                     'triangle, so overlapping layers cannot accumulate opacity. Lines '
+                                                     'and labels stay opaque.\n'
+                                                     'anomalies_only: Restrict every diagnostic layer to anomalous '
+                                                     'triangles and their incident vertices/edges.\n'
+                                                     'Degenerate, flipped and undefined-reference triangles always '
+                                                     'count as anomalies.\n'
+                                                     'thresholds: Thresholds used by anomalies_only; reports '
+                                                     'themselves are never threshold-filtered.\n'
+                                                     'label_scale: Decimal glyph scale in output pixels, 1..4. Labels '
+                                                     'avoid other labels globally;\n'
+                                                     'an ID is omitted when no nearby in-view position has enough '
+                                                     'space.\n'
+                                                     'label_spacing: Minimum clear gap between label rectangles in '
+                                                     'pixels, 0..32.\n'
+                                                     'max_labels: Maximum labels per image, 0..4096. Vertex dots '
+                                                     'remain independent of this limit.',
+                                    'example': 'docs/recipes.py',
+                                    'fields': [('targets',
+                                                'Diagnostic selection only; the textured context image is unchanged. '
+                                                'None selects all\n'
+                                                'meshes, Some([]) selects none. Mesh/Part targets are unioned and '
+                                                'deduplicated;\n'
+                                                'Parts include nested Parts. Missing targets fail explicitly. Maximum '
+                                                '256 selectors.'),
+                                               ('wireframe',
+                                                'Draw triangle edges in cyan, in final evaluated model coordinates.'),
+                                               ('vertices', 'Draw vertex positions as yellow dots.'),
+                                               ('vertex_ids',
+                                                'Draw stable authoring vertex IDs in yellow, rather than transient '
+                                                'array offsets.'),
+                                               ('constraints',
+                                                'Draw meshing boundary edges in green and internal constraints in '
+                                                'magenta.'),
+                                               ('strain',
+                                                'Fill triangles by symmetric edge stretch relative to the default '
+                                                'pose: blue=1,\n'
+                                                'orange=2, red>=4; flipped or collapsed triangles are magenta.'),
+                                               ('include_hidden',
+                                                'Include disabled, hidden and zero-opacity meshes. Default draws '
+                                                'visible meshes only.'),
+                                               ('topology_only',
+                                                'Clear the textured image before diagnostic drawing, retaining the '
+                                                'exact same view.'),
+                                               ('heat_opacity',
+                                                'Heat fill opacity in [0,1]. Applied once per pixel using the most '
+                                                'severe overlapping\n'
+                                                'triangle, so overlapping layers cannot accumulate opacity. Lines and '
+                                                'labels stay opaque.'),
+                                               ('anomalies_only',
+                                                'Restrict every diagnostic layer to anomalous triangles and their '
+                                                'incident vertices/edges.\n'
+                                                'Degenerate, flipped and undefined-reference triangles always count as '
+                                                'anomalies.'),
+                                               ('thresholds',
+                                                'Thresholds used by anomalies_only; reports themselves are never '
+                                                'threshold-filtered.'),
+                                               ('label_scale',
+                                                'Decimal glyph scale in output pixels, 1..4. Labels avoid other labels '
+                                                'globally;\n'
+                                                'an ID is omitted when no nearby in-view position has enough space.'),
+                                               ('label_spacing',
+                                                'Minimum clear gap between label rectangles in pixels, 0..32.'),
+                                               ('max_labels',
+                                                'Maximum labels per image, 0..4096. Vertex dots remain independent of '
+                                                'this limit.')],
+                                    'kind': 'type',
+                                    'signature': '(targets: tuple[ObjectTarget, ...] | None = None, wireframe: bool = '
+                                                 'True, vertices: bool = False, vertex_ids: bool = False, constraints: '
+                                                 'bool = False, strain: bool = False, include_hidden: bool = False, '
+                                                 'topology_only: bool = False, heat_opacity: float = 0.25, '
+                                                 'anomalies_only: bool = False, thresholds: TopologyThresholds = '
+                                                 'field(default_factory=lambda: '
+                                                 "read_TopologyThresholds({'max_aspect_ratio': 20.0, "
+                                                 "'max_edge_stretch': 2.0, 'min_angle_degrees': 10.0})), label_scale: "
+                                                 'int = 2, label_spacing: int = 3, max_labels: int = 256)'},
+ 'zipzi.modeling.TopologyOverlay.__repr__': {'children': (),
+                                             'documentation': 'Return a local summary capped at 1,024 characters, with '
+                                                              'no RPC/full scan.\n'
+                                                              '\n'
+                                                              'Large arrays and bytes show bounded samples/counts. '
+                                                              'Explicit field access\n'
+                                                              'still exposes the owned full value; no host resource is '
+                                                              'created/released.',
+                                             'example': 'docs/recipes.py',
+                                             'fields': [],
+                                             'kind': 'callable',
+                                             'signature': '() -> str'},
+ 'zipzi.modeling.TopologyOverlay.summary': {'children': (),
+                                            'documentation': 'Return a bounded, local summary; full fields remain '
+                                                             'explicitly accessible.',
+                                            'example': 'docs/recipes.py',
+                                            'fields': [],
+                                            'kind': 'callable',
+                                            'signature': '() -> str'},
  'zipzi.modeling.TopologyReplacement': {'children': ('zipzi.modeling.TopologyReplacement.__repr__',
                                                      'zipzi.modeling.TopologyReplacement.summary'),
                                         'documentation': 'Immutable owned TopologyReplacement value. Construction owns '
@@ -31546,6 +31880,51 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                 'fields': [],
                                                 'kind': 'callable',
                                                 'signature': '() -> str'},
+ 'zipzi.modeling.TopologyThresholds': {'children': ('zipzi.modeling.TopologyThresholds.__repr__',
+                                                    'zipzi.modeling.TopologyThresholds.summary'),
+                                       'documentation': 'Immutable owned TopologyThresholds value. Construction owns '
+                                                        'declared collections; reading fields, repr and summary '
+                                                        'performs no IO.\n'
+                                                        '\n'
+                                                        'Fields:\n'
+                                                        'min_angle_degrees: An angle below this value is anomalous; '
+                                                        'finite degrees in [0,60]. Default 10.\n'
+                                                        'max_aspect_ratio: A longest-edge/altitude ratio above this is '
+                                                        'anomalous; finite and >= 1. Default 20.\n'
+                                                        'max_edge_stretch: A symmetric edge-length ratio above this is '
+                                                        'anomalous; finite and >= 1. Default 2.',
+                                       'example': 'docs/recipes.py',
+                                       'fields': [('min_angle_degrees',
+                                                   'An angle below this value is anomalous; finite degrees in [0,60]. '
+                                                   'Default 10.'),
+                                                  ('max_aspect_ratio',
+                                                   'A longest-edge/altitude ratio above this is anomalous; finite and '
+                                                   '>= 1. Default 20.'),
+                                                  ('max_edge_stretch',
+                                                   'A symmetric edge-length ratio above this is anomalous; finite and '
+                                                   '>= 1. Default 2.')],
+                                       'kind': 'type',
+                                       'signature': '(min_angle_degrees: float = 10.0, max_aspect_ratio: float = 20.0, '
+                                                    'max_edge_stretch: float = 2.0)'},
+ 'zipzi.modeling.TopologyThresholds.__repr__': {'children': (),
+                                                'documentation': 'Return a local summary capped at 1,024 characters, '
+                                                                 'with no RPC/full scan.\n'
+                                                                 '\n'
+                                                                 'Large arrays and bytes show bounded samples/counts. '
+                                                                 'Explicit field access\n'
+                                                                 'still exposes the owned full value; no host resource '
+                                                                 'is created/released.',
+                                                'example': 'docs/recipes.py',
+                                                'fields': [],
+                                                'kind': 'callable',
+                                                'signature': '() -> str'},
+ 'zipzi.modeling.TopologyThresholds.summary': {'children': (),
+                                               'documentation': 'Return a bounded, local summary; full fields remain '
+                                                                'explicitly accessible.',
+                                               'example': 'docs/recipes.py',
+                                               'fields': [],
+                                               'kind': 'callable',
+                                               'signature': '() -> str'},
  'zipzi.modeling.Transform': {'children': ('zipzi.modeling.Transform.__repr__', 'zipzi.modeling.Transform.summary'),
                               'documentation': 'Immutable owned Transform value. Construction owns declared '
                                                'collections; reading fields, repr and summary performs no IO.\n'
@@ -31768,6 +32147,65 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                         'fields': [],
                                         'kind': 'callable',
                                         'signature': '() -> str'},
+ 'zipzi.modeling.TriangleQuality': {'children': ('zipzi.modeling.TriangleQuality.__repr__',
+                                                 'zipzi.modeling.TriangleQuality.summary'),
+                                    'documentation': 'Immutable owned TriangleQuality value. Construction owns '
+                                                     'declared collections; reading fields, repr and summary performs '
+                                                     'no IO.\n'
+                                                     '\n'
+                                                     'Fields:\n'
+                                                     'triangle_index: Zero-based triangle offset, in the sampled '
+                                                     "drawable's index order.\n"
+                                                     'area: Unsigned evaluated area in model units squared.\n'
+                                                     'min_angle_degrees: Smallest interior angle in degrees; zero for '
+                                                     'a collapsed triangle.\n'
+                                                     'aspect_ratio: Longest edge divided by its altitude. None for a '
+                                                     'collapsed triangle.\n'
+                                                     'relative_area: Signed area / signed default-pose area. Negative '
+                                                     'means flipped; None if the reference is degenerate.\n'
+                                                     'edge_stretch: Largest symmetric edge-length ratio '
+                                                     'max(current/reference, reference/current).\n'
+                                                     'None if any reference or sampled edge is collapsed. A rigid '
+                                                     'transform gives 1.',
+                                    'example': 'docs/recipes.py',
+                                    'fields': [('triangle_index',
+                                                "Zero-based triangle offset, in the sampled drawable's index order."),
+                                               ('area', 'Unsigned evaluated area in model units squared.'),
+                                               ('min_angle_degrees',
+                                                'Smallest interior angle in degrees; zero for a collapsed triangle.'),
+                                               ('aspect_ratio',
+                                                'Longest edge divided by its altitude. None for a collapsed triangle.'),
+                                               ('relative_area',
+                                                'Signed area / signed default-pose area. Negative means flipped; None '
+                                                'if the reference is degenerate.'),
+                                               ('edge_stretch',
+                                                'Largest symmetric edge-length ratio max(current/reference, '
+                                                'reference/current).\n'
+                                                'None if any reference or sampled edge is collapsed. A rigid transform '
+                                                'gives 1.')],
+                                    'kind': 'type',
+                                    'signature': '(triangle_index: int, area: float, min_angle_degrees: float, '
+                                                 'aspect_ratio: float | None = None, relative_area: float | None = '
+                                                 'None, edge_stretch: float | None = None)'},
+ 'zipzi.modeling.TriangleQuality.__repr__': {'children': (),
+                                             'documentation': 'Return a local summary capped at 1,024 characters, with '
+                                                              'no RPC/full scan.\n'
+                                                              '\n'
+                                                              'Large arrays and bytes show bounded samples/counts. '
+                                                              'Explicit field access\n'
+                                                              'still exposes the owned full value; no host resource is '
+                                                              'created/released.',
+                                             'example': 'docs/recipes.py',
+                                             'fields': [],
+                                             'kind': 'callable',
+                                             'signature': '() -> str'},
+ 'zipzi.modeling.TriangleQuality.summary': {'children': (),
+                                            'documentation': 'Return a bounded, local summary; full fields remain '
+                                                             'explicitly accessible.',
+                                            'example': 'docs/recipes.py',
+                                            'fields': [],
+                                            'kind': 'callable',
+                                            'signature': '() -> str'},
  'zipzi.modeling.Vec2': {'children': (),
                          'documentation': 'Immutable typed value. See field semantics and the linked workflow.',
                          'example': 'docs/recipes.py',
@@ -32156,7 +32594,14 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
  'zipzi.observation': {'children': ('zipzi.observation.Batch',
                                     'zipzi.observation.Bounds',
                                     'zipzi.observation.Image',
+                                    'zipzi.observation.MeshQuality',
+                                    'zipzi.observation.MeshTarget',
+                                    'zipzi.observation.Overlay',
+                                    'zipzi.observation.PartTarget',
                                     'zipzi.observation.Texture',
+                                    'zipzi.observation.TextureCoverage',
+                                    'zipzi.observation.Thresholds',
+                                    'zipzi.observation.TriangleQuality',
                                     'zipzi.observation.View'),
                        'documentation': 'GPU images and source metadata rendered by Rust from frozen authoring or '
                                         'Preview states.',
@@ -32277,7 +32722,13 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                               'textures: Source texture identities and exact content hashes shared '
                                               'across this batch.\n'
                                               'drawable_bounds: Drawable geometric image bounds in evaluated order; '
-                                              'masks/occlusion are not pixel-tested here.',
+                                              'masks/occlusion are not pixel-tested here.\n'
+                                              'quality: Mesh quality in evaluated drawable order when View.quality is '
+                                              'true; empty otherwise.\n'
+                                              'Texture coverage uses alpha >= 8, pixel centers, at most a 256x256 '
+                                              'grid, ignoring masks,\n'
+                                              'filtering and UV repeat outside [0,1]. A step above 1 denotes '
+                                              'approximate coverage.',
                              'example': 'docs/recipes.py',
                              'fields': [('width', 'Output image width in pixels.'),
                                         ('height', 'Output image height in pixels.'),
@@ -32320,14 +32771,22 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                          'batch.'),
                                         ('drawable_bounds',
                                          'Drawable geometric image bounds in evaluated order; masks/occlusion are not '
-                                         'pixel-tested here.')],
+                                         'pixel-tested here.'),
+                                        ('quality',
+                                         'Mesh quality in evaluated drawable order when View.quality is true; empty '
+                                         'otherwise.\n'
+                                         'Texture coverage uses alpha >= 8, pixel centers, at most a 256x256 grid, '
+                                         'ignoring masks,\n'
+                                         'filtering and UV repeat outside [0,1]. A step above 1 denotes approximate '
+                                         'coverage.')],
                              'kind': 'type',
                              'signature': '(width: int, height: int, rgba: _Bytes, png: _Bytes, document_id: str, '
                                           'evaluation_revision: int, capture_id: str, scene_digest: str, '
                                           'render_digest: str, input_sha256: str, adapter_name: str, adapter_backend: '
                                           'str, parameters: _Mapping[str, float], visible_roi: tuple[float, float, '
                                           'float, float], scale: float, offset: tuple[float, float], textures: '
-                                          'tuple[ObservedTexture, ...], drawable_bounds: tuple[ObservedBounds, ...])'},
+                                          'tuple[ObservedTexture, ...], drawable_bounds: tuple[ObservedBounds, ...], '
+                                          'quality: tuple[MeshQuality, ...])'},
  'zipzi.observation.Image.__repr__': {'children': (),
                                       'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                        'RPC/full scan.\n'
@@ -32347,6 +32806,262 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                      'fields': [],
                                      'kind': 'callable',
                                      'signature': '() -> str'},
+ 'zipzi.observation.MeshQuality': {'children': ('zipzi.observation.MeshQuality.__repr__',
+                                                'zipzi.observation.MeshQuality.summary'),
+                                   'documentation': 'Immutable owned MeshQuality value. Construction owns declared '
+                                                    'collections; reading fields, repr and summary performs no IO.\n'
+                                                    '\n'
+                                                    'Fields:\n'
+                                                    'mesh_id: Stable document mesh ID, in evaluated drawable order.\n'
+                                                    'visible: Evaluated enabled/visible/positive-opacity state. '
+                                                    'Metrics are geometric and ignore occlusion.\n'
+                                                    'vertex_count: Number of evaluated vertices.\n'
+                                                    'triangles: Per-triangle metrics in evaluated Y-up model '
+                                                    'coordinates, relative to default parameters\n'
+                                                    'of the same frozen authoring source. This does not certify '
+                                                    'unsampled parameter intervals.\n'
+                                                    'min_angle_degrees: Smallest angle over this mesh; None for an '
+                                                    'empty mesh.\n'
+                                                    'max_aspect_ratio: Largest finite aspect ratio; collapsed '
+                                                    'triangles are counted separately.\n'
+                                                    'max_edge_stretch: Largest finite symmetric edge-length ratio '
+                                                    'relative to the default pose.\n'
+                                                    'degenerate_triangles: Number of exactly zero-area evaluated '
+                                                    'triangles.\n'
+                                                    'flipped_triangles: Number of negative relative-area triangles. '
+                                                    'Degenerate references are excluded.\n'
+                                                    'texture_coverage: Optional source-texture coverage. CPU-only '
+                                                    'sampling does not resolve image pixels.',
+                                   'example': 'docs/recipes.py',
+                                   'fields': [('mesh_id', 'Stable document mesh ID, in evaluated drawable order.'),
+                                              ('visible',
+                                               'Evaluated enabled/visible/positive-opacity state. Metrics are '
+                                               'geometric and ignore occlusion.'),
+                                              ('vertex_count', 'Number of evaluated vertices.'),
+                                              ('triangles',
+                                               'Per-triangle metrics in evaluated Y-up model coordinates, relative to '
+                                               'default parameters\n'
+                                               'of the same frozen authoring source. This does not certify unsampled '
+                                               'parameter intervals.'),
+                                              ('min_angle_degrees',
+                                               'Smallest angle over this mesh; None for an empty mesh.'),
+                                              ('max_aspect_ratio',
+                                               'Largest finite aspect ratio; collapsed triangles are counted '
+                                               'separately.'),
+                                              ('max_edge_stretch',
+                                               'Largest finite symmetric edge-length ratio relative to the default '
+                                               'pose.'),
+                                              ('degenerate_triangles',
+                                               'Number of exactly zero-area evaluated triangles.'),
+                                              ('flipped_triangles',
+                                               'Number of negative relative-area triangles. Degenerate references are '
+                                               'excluded.'),
+                                              ('texture_coverage',
+                                               'Optional source-texture coverage. CPU-only sampling does not resolve '
+                                               'image pixels.')],
+                                   'kind': 'type',
+                                   'signature': '(mesh_id: str, visible: bool, vertex_count: int, triangles: '
+                                                'tuple[TriangleQuality, ...], min_angle_degrees: float | None = None, '
+                                                'max_aspect_ratio: float | None = None, max_edge_stretch: float | None '
+                                                '= None, degenerate_triangles: int, flipped_triangles: int, '
+                                                'texture_coverage: TextureCoverage | None = None)'},
+ 'zipzi.observation.MeshQuality.__repr__': {'children': (),
+                                            'documentation': 'Return a local summary capped at 1,024 characters, with '
+                                                             'no RPC/full scan.\n'
+                                                             '\n'
+                                                             'Large arrays and bytes show bounded samples/counts. '
+                                                             'Explicit field access\n'
+                                                             'still exposes the owned full value; no host resource is '
+                                                             'created/released.',
+                                            'example': 'docs/recipes.py',
+                                            'fields': [],
+                                            'kind': 'callable',
+                                            'signature': '() -> str'},
+ 'zipzi.observation.MeshQuality.summary': {'children': (),
+                                           'documentation': 'Return a bounded, local summary; full fields remain '
+                                                            'explicitly accessible.',
+                                           'example': 'docs/recipes.py',
+                                           'fields': [],
+                                           'kind': 'callable',
+                                           'signature': '() -> str'},
+ 'zipzi.observation.MeshTarget': {'children': ('zipzi.observation.MeshTarget.__repr__',
+                                               'zipzi.observation.MeshTarget.summary'),
+                                  'documentation': 'Immutable owned ObjectTargetMesh value. Construction owns declared '
+                                                   'collections; reading fields, repr and summary performs no IO.\n'
+                                                   '\n'
+                                                   'Fields:\n'
+                                                   'value: Persistent authoring mesh UUID.',
+                                  'example': 'docs/recipes.py',
+                                  'fields': [('value', 'Persistent authoring mesh UUID.')],
+                                  'kind': 'type',
+                                  'signature': '(value: str)'},
+ 'zipzi.observation.MeshTarget.__repr__': {'children': (),
+                                           'documentation': 'Return a local summary capped at 1,024 characters, with '
+                                                            'no RPC/full scan.\n'
+                                                            '\n'
+                                                            'Large arrays and bytes show bounded samples/counts. '
+                                                            'Explicit field access\n'
+                                                            'still exposes the owned full value; no host resource is '
+                                                            'created/released.',
+                                           'example': 'docs/recipes.py',
+                                           'fields': [],
+                                           'kind': 'callable',
+                                           'signature': '() -> str'},
+ 'zipzi.observation.MeshTarget.summary': {'children': (),
+                                          'documentation': 'Return a bounded, local summary; full fields remain '
+                                                           'explicitly accessible.',
+                                          'example': 'docs/recipes.py',
+                                          'fields': [],
+                                          'kind': 'callable',
+                                          'signature': '() -> str'},
+ 'zipzi.observation.Overlay': {'children': ('zipzi.observation.Overlay.__repr__', 'zipzi.observation.Overlay.summary'),
+                               'documentation': 'Immutable owned TopologyOverlay value. Construction owns declared '
+                                                'collections; reading fields, repr and summary performs no IO.\n'
+                                                '\n'
+                                                'Fields:\n'
+                                                'targets: Diagnostic selection only; the textured context image is '
+                                                'unchanged. None selects all\n'
+                                                'meshes, Some([]) selects none. Mesh/Part targets are unioned and '
+                                                'deduplicated;\n'
+                                                'Parts include nested Parts. Missing targets fail explicitly. Maximum '
+                                                '256 selectors.\n'
+                                                'wireframe: Draw triangle edges in cyan, in final evaluated model '
+                                                'coordinates.\n'
+                                                'vertices: Draw vertex positions as yellow dots.\n'
+                                                'vertex_ids: Draw stable authoring vertex IDs in yellow, rather than '
+                                                'transient array offsets.\n'
+                                                'constraints: Draw meshing boundary edges in green and internal '
+                                                'constraints in magenta.\n'
+                                                'strain: Fill triangles by symmetric edge stretch relative to the '
+                                                'default pose: blue=1,\n'
+                                                'orange=2, red>=4; flipped or collapsed triangles are magenta.\n'
+                                                'include_hidden: Include disabled, hidden and zero-opacity meshes. '
+                                                'Default draws visible meshes only.\n'
+                                                'topology_only: Clear the textured image before diagnostic drawing, '
+                                                'retaining the exact same view.\n'
+                                                'heat_opacity: Heat fill opacity in [0,1]. Applied once per pixel '
+                                                'using the most severe overlapping\n'
+                                                'triangle, so overlapping layers cannot accumulate opacity. Lines and '
+                                                'labels stay opaque.\n'
+                                                'anomalies_only: Restrict every diagnostic layer to anomalous '
+                                                'triangles and their incident vertices/edges.\n'
+                                                'Degenerate, flipped and undefined-reference triangles always count as '
+                                                'anomalies.\n'
+                                                'thresholds: Thresholds used by anomalies_only; reports themselves are '
+                                                'never threshold-filtered.\n'
+                                                'label_scale: Decimal glyph scale in output pixels, 1..4. Labels avoid '
+                                                'other labels globally;\n'
+                                                'an ID is omitted when no nearby in-view position has enough space.\n'
+                                                'label_spacing: Minimum clear gap between label rectangles in pixels, '
+                                                '0..32.\n'
+                                                'max_labels: Maximum labels per image, 0..4096. Vertex dots remain '
+                                                'independent of this limit.',
+                               'example': 'docs/recipes.py',
+                               'fields': [('targets',
+                                           'Diagnostic selection only; the textured context image is unchanged. None '
+                                           'selects all\n'
+                                           'meshes, Some([]) selects none. Mesh/Part targets are unioned and '
+                                           'deduplicated;\n'
+                                           'Parts include nested Parts. Missing targets fail explicitly. Maximum 256 '
+                                           'selectors.'),
+                                          ('wireframe',
+                                           'Draw triangle edges in cyan, in final evaluated model coordinates.'),
+                                          ('vertices', 'Draw vertex positions as yellow dots.'),
+                                          ('vertex_ids',
+                                           'Draw stable authoring vertex IDs in yellow, rather than transient array '
+                                           'offsets.'),
+                                          ('constraints',
+                                           'Draw meshing boundary edges in green and internal constraints in magenta.'),
+                                          ('strain',
+                                           'Fill triangles by symmetric edge stretch relative to the default pose: '
+                                           'blue=1,\n'
+                                           'orange=2, red>=4; flipped or collapsed triangles are magenta.'),
+                                          ('include_hidden',
+                                           'Include disabled, hidden and zero-opacity meshes. Default draws visible '
+                                           'meshes only.'),
+                                          ('topology_only',
+                                           'Clear the textured image before diagnostic drawing, retaining the exact '
+                                           'same view.'),
+                                          ('heat_opacity',
+                                           'Heat fill opacity in [0,1]. Applied once per pixel using the most severe '
+                                           'overlapping\n'
+                                           'triangle, so overlapping layers cannot accumulate opacity. Lines and '
+                                           'labels stay opaque.'),
+                                          ('anomalies_only',
+                                           'Restrict every diagnostic layer to anomalous triangles and their incident '
+                                           'vertices/edges.\n'
+                                           'Degenerate, flipped and undefined-reference triangles always count as '
+                                           'anomalies.'),
+                                          ('thresholds',
+                                           'Thresholds used by anomalies_only; reports themselves are never '
+                                           'threshold-filtered.'),
+                                          ('label_scale',
+                                           'Decimal glyph scale in output pixels, 1..4. Labels avoid other labels '
+                                           'globally;\n'
+                                           'an ID is omitted when no nearby in-view position has enough space.'),
+                                          ('label_spacing',
+                                           'Minimum clear gap between label rectangles in pixels, 0..32.'),
+                                          ('max_labels',
+                                           'Maximum labels per image, 0..4096. Vertex dots remain independent of this '
+                                           'limit.')],
+                               'kind': 'type',
+                               'signature': '(targets: tuple[ObjectTarget, ...] | None = None, wireframe: bool = True, '
+                                            'vertices: bool = False, vertex_ids: bool = False, constraints: bool = '
+                                            'False, strain: bool = False, include_hidden: bool = False, topology_only: '
+                                            'bool = False, heat_opacity: float = 0.25, anomalies_only: bool = False, '
+                                            'thresholds: TopologyThresholds = field(default_factory=lambda: '
+                                            "read_TopologyThresholds({'max_aspect_ratio': 20.0, 'max_edge_stretch': "
+                                            "2.0, 'min_angle_degrees': 10.0})), label_scale: int = 2, label_spacing: "
+                                            'int = 3, max_labels: int = 256)'},
+ 'zipzi.observation.Overlay.__repr__': {'children': (),
+                                        'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                         'RPC/full scan.\n'
+                                                         '\n'
+                                                         'Large arrays and bytes show bounded samples/counts. Explicit '
+                                                         'field access\n'
+                                                         'still exposes the owned full value; no host resource is '
+                                                         'created/released.',
+                                        'example': 'docs/recipes.py',
+                                        'fields': [],
+                                        'kind': 'callable',
+                                        'signature': '() -> str'},
+ 'zipzi.observation.Overlay.summary': {'children': (),
+                                       'documentation': 'Return a bounded, local summary; full fields remain '
+                                                        'explicitly accessible.',
+                                       'example': 'docs/recipes.py',
+                                       'fields': [],
+                                       'kind': 'callable',
+                                       'signature': '() -> str'},
+ 'zipzi.observation.PartTarget': {'children': ('zipzi.observation.PartTarget.__repr__',
+                                               'zipzi.observation.PartTarget.summary'),
+                                  'documentation': 'Immutable owned ObjectTargetPart value. Construction owns declared '
+                                                   'collections; reading fields, repr and summary performs no IO.\n'
+                                                   '\n'
+                                                   'Fields:\n'
+                                                   'value: Persistent Part UUID selecting descendant meshes.',
+                                  'example': 'docs/recipes.py',
+                                  'fields': [('value', 'Persistent Part UUID selecting descendant meshes.')],
+                                  'kind': 'type',
+                                  'signature': '(value: str)'},
+ 'zipzi.observation.PartTarget.__repr__': {'children': (),
+                                           'documentation': 'Return a local summary capped at 1,024 characters, with '
+                                                            'no RPC/full scan.\n'
+                                                            '\n'
+                                                            'Large arrays and bytes show bounded samples/counts. '
+                                                            'Explicit field access\n'
+                                                            'still exposes the owned full value; no host resource is '
+                                                            'created/released.',
+                                           'example': 'docs/recipes.py',
+                                           'fields': [],
+                                           'kind': 'callable',
+                                           'signature': '() -> str'},
+ 'zipzi.observation.PartTarget.summary': {'children': (),
+                                          'documentation': 'Return a bounded, local summary; full fields remain '
+                                                           'explicitly accessible.',
+                                          'example': 'docs/recipes.py',
+                                          'fields': [],
+                                          'kind': 'callable',
+                                          'signature': '() -> str'},
  'zipzi.observation.Texture': {'children': ('zipzi.observation.Texture.__repr__', 'zipzi.observation.Texture.summary'),
                                'documentation': 'Immutable owned ObservedTexture value. Construction owns declared '
                                                 'collections; reading fields, repr and summary performs no IO.\n'
@@ -32381,6 +33096,194 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                        'fields': [],
                                        'kind': 'callable',
                                        'signature': '() -> str'},
+ 'zipzi.observation.TextureCoverage': {'children': ('zipzi.observation.TextureCoverage.__repr__',
+                                                    'zipzi.observation.TextureCoverage.summary'),
+                                       'documentation': 'Immutable owned TextureCoverage value. Construction owns '
+                                                        'declared collections; reading fields, repr and summary '
+                                                        'performs no IO.\n'
+                                                        '\n'
+                                                        'Fields:\n'
+                                                        'alpha_threshold: Alpha >= this value counts as painted. '
+                                                        'Coverage ignores filtering, masks and occlusion.\n'
+                                                        'pixel_step: Top-down source-pixel grid spacing. Values above '
+                                                        '1 mean an approximate report.\n'
+                                                        'sampled_pixels: Number of source pixel centers tested on the '
+                                                        'regular grid.\n'
+                                                        'covered_pixels: Tested pixel centers covered by the union of '
+                                                        'UV triangles inside [0,1].\n'
+                                                        'transparent_covered_pixels: Covered centers whose source '
+                                                        'alpha is below the threshold.\n'
+                                                        'opaque_pixels: Tested centers whose source alpha is at least '
+                                                        'the threshold.\n'
+                                                        'uncovered_opaque_pixels: Opaque centers outside the UV '
+                                                        'triangle union: a contour coverage error, not a distance.\n'
+                                                        'transparent_coverage_fraction: Transparent covered / covered; '
+                                                        'None if no tested center is covered.\n'
+                                                        'uncovered_opaque_fraction: Uncovered opaque / opaque; None '
+                                                        'for an entirely transparent sampled image.\n'
+                                                        'out_of_bounds_triangles: Number of UV triangles with vertices '
+                                                        'outside [0,1]; repeat-sampled coverage is not measured.',
+                                       'example': 'docs/recipes.py',
+                                       'fields': [('alpha_threshold',
+                                                   'Alpha >= this value counts as painted. Coverage ignores filtering, '
+                                                   'masks and occlusion.'),
+                                                  ('pixel_step',
+                                                   'Top-down source-pixel grid spacing. Values above 1 mean an '
+                                                   'approximate report.'),
+                                                  ('sampled_pixels',
+                                                   'Number of source pixel centers tested on the regular grid.'),
+                                                  ('covered_pixels',
+                                                   'Tested pixel centers covered by the union of UV triangles inside '
+                                                   '[0,1].'),
+                                                  ('transparent_covered_pixels',
+                                                   'Covered centers whose source alpha is below the threshold.'),
+                                                  ('opaque_pixels',
+                                                   'Tested centers whose source alpha is at least the threshold.'),
+                                                  ('uncovered_opaque_pixels',
+                                                   'Opaque centers outside the UV triangle union: a contour coverage '
+                                                   'error, not a distance.'),
+                                                  ('transparent_coverage_fraction',
+                                                   'Transparent covered / covered; None if no tested center is '
+                                                   'covered.'),
+                                                  ('uncovered_opaque_fraction',
+                                                   'Uncovered opaque / opaque; None for an entirely transparent '
+                                                   'sampled image.'),
+                                                  ('out_of_bounds_triangles',
+                                                   'Number of UV triangles with vertices outside [0,1]; repeat-sampled '
+                                                   'coverage is not measured.')],
+                                       'kind': 'type',
+                                       'signature': '(alpha_threshold: int, pixel_step: int, sampled_pixels: int, '
+                                                    'covered_pixels: int, transparent_covered_pixels: int, '
+                                                    'opaque_pixels: int, uncovered_opaque_pixels: int, '
+                                                    'transparent_coverage_fraction: float | None = None, '
+                                                    'uncovered_opaque_fraction: float | None = None, '
+                                                    'out_of_bounds_triangles: int)'},
+ 'zipzi.observation.TextureCoverage.__repr__': {'children': (),
+                                                'documentation': 'Return a local summary capped at 1,024 characters, '
+                                                                 'with no RPC/full scan.\n'
+                                                                 '\n'
+                                                                 'Large arrays and bytes show bounded samples/counts. '
+                                                                 'Explicit field access\n'
+                                                                 'still exposes the owned full value; no host resource '
+                                                                 'is created/released.',
+                                                'example': 'docs/recipes.py',
+                                                'fields': [],
+                                                'kind': 'callable',
+                                                'signature': '() -> str'},
+ 'zipzi.observation.TextureCoverage.summary': {'children': (),
+                                               'documentation': 'Return a bounded, local summary; full fields remain '
+                                                                'explicitly accessible.',
+                                               'example': 'docs/recipes.py',
+                                               'fields': [],
+                                               'kind': 'callable',
+                                               'signature': '() -> str'},
+ 'zipzi.observation.Thresholds': {'children': ('zipzi.observation.Thresholds.__repr__',
+                                               'zipzi.observation.Thresholds.summary'),
+                                  'documentation': 'Immutable owned TopologyThresholds value. Construction owns '
+                                                   'declared collections; reading fields, repr and summary performs no '
+                                                   'IO.\n'
+                                                   '\n'
+                                                   'Fields:\n'
+                                                   'min_angle_degrees: An angle below this value is anomalous; finite '
+                                                   'degrees in [0,60]. Default 10.\n'
+                                                   'max_aspect_ratio: A longest-edge/altitude ratio above this is '
+                                                   'anomalous; finite and >= 1. Default 20.\n'
+                                                   'max_edge_stretch: A symmetric edge-length ratio above this is '
+                                                   'anomalous; finite and >= 1. Default 2.',
+                                  'example': 'docs/recipes.py',
+                                  'fields': [('min_angle_degrees',
+                                              'An angle below this value is anomalous; finite degrees in [0,60]. '
+                                              'Default 10.'),
+                                             ('max_aspect_ratio',
+                                              'A longest-edge/altitude ratio above this is anomalous; finite and >= 1. '
+                                              'Default 20.'),
+                                             ('max_edge_stretch',
+                                              'A symmetric edge-length ratio above this is anomalous; finite and >= 1. '
+                                              'Default 2.')],
+                                  'kind': 'type',
+                                  'signature': '(min_angle_degrees: float = 10.0, max_aspect_ratio: float = 20.0, '
+                                               'max_edge_stretch: float = 2.0)'},
+ 'zipzi.observation.Thresholds.__repr__': {'children': (),
+                                           'documentation': 'Return a local summary capped at 1,024 characters, with '
+                                                            'no RPC/full scan.\n'
+                                                            '\n'
+                                                            'Large arrays and bytes show bounded samples/counts. '
+                                                            'Explicit field access\n'
+                                                            'still exposes the owned full value; no host resource is '
+                                                            'created/released.',
+                                           'example': 'docs/recipes.py',
+                                           'fields': [],
+                                           'kind': 'callable',
+                                           'signature': '() -> str'},
+ 'zipzi.observation.Thresholds.summary': {'children': (),
+                                          'documentation': 'Return a bounded, local summary; full fields remain '
+                                                           'explicitly accessible.',
+                                          'example': 'docs/recipes.py',
+                                          'fields': [],
+                                          'kind': 'callable',
+                                          'signature': '() -> str'},
+ 'zipzi.observation.TriangleQuality': {'children': ('zipzi.observation.TriangleQuality.__repr__',
+                                                    'zipzi.observation.TriangleQuality.summary'),
+                                       'documentation': 'Immutable owned TriangleQuality value. Construction owns '
+                                                        'declared collections; reading fields, repr and summary '
+                                                        'performs no IO.\n'
+                                                        '\n'
+                                                        'Fields:\n'
+                                                        'triangle_index: Zero-based triangle offset, in the sampled '
+                                                        "drawable's index order.\n"
+                                                        'area: Unsigned evaluated area in model units squared.\n'
+                                                        'min_angle_degrees: Smallest interior angle in degrees; zero '
+                                                        'for a collapsed triangle.\n'
+                                                        'aspect_ratio: Longest edge divided by its altitude. None for '
+                                                        'a collapsed triangle.\n'
+                                                        'relative_area: Signed area / signed default-pose area. '
+                                                        'Negative means flipped; None if the reference is degenerate.\n'
+                                                        'edge_stretch: Largest symmetric edge-length ratio '
+                                                        'max(current/reference, reference/current).\n'
+                                                        'None if any reference or sampled edge is collapsed. A rigid '
+                                                        'transform gives 1.',
+                                       'example': 'docs/recipes.py',
+                                       'fields': [('triangle_index',
+                                                   "Zero-based triangle offset, in the sampled drawable's index "
+                                                   'order.'),
+                                                  ('area', 'Unsigned evaluated area in model units squared.'),
+                                                  ('min_angle_degrees',
+                                                   'Smallest interior angle in degrees; zero for a collapsed '
+                                                   'triangle.'),
+                                                  ('aspect_ratio',
+                                                   'Longest edge divided by its altitude. None for a collapsed '
+                                                   'triangle.'),
+                                                  ('relative_area',
+                                                   'Signed area / signed default-pose area. Negative means flipped; '
+                                                   'None if the reference is degenerate.'),
+                                                  ('edge_stretch',
+                                                   'Largest symmetric edge-length ratio max(current/reference, '
+                                                   'reference/current).\n'
+                                                   'None if any reference or sampled edge is collapsed. A rigid '
+                                                   'transform gives 1.')],
+                                       'kind': 'type',
+                                       'signature': '(triangle_index: int, area: float, min_angle_degrees: float, '
+                                                    'aspect_ratio: float | None = None, relative_area: float | None = '
+                                                    'None, edge_stretch: float | None = None)'},
+ 'zipzi.observation.TriangleQuality.__repr__': {'children': (),
+                                                'documentation': 'Return a local summary capped at 1,024 characters, '
+                                                                 'with no RPC/full scan.\n'
+                                                                 '\n'
+                                                                 'Large arrays and bytes show bounded samples/counts. '
+                                                                 'Explicit field access\n'
+                                                                 'still exposes the owned full value; no host resource '
+                                                                 'is created/released.',
+                                                'example': 'docs/recipes.py',
+                                                'fields': [],
+                                                'kind': 'callable',
+                                                'signature': '() -> str'},
+ 'zipzi.observation.TriangleQuality.summary': {'children': (),
+                                               'documentation': 'Return a bounded, local summary; full fields remain '
+                                                                'explicitly accessible.',
+                                               'example': 'docs/recipes.py',
+                                               'fields': [],
+                                               'kind': 'callable',
+                                               'signature': '() -> str'},
  'zipzi.observation.View': {'children': ('zipzi.observation.View.__repr__', 'zipzi.observation.View.summary'),
                             'documentation': 'Immutable owned ObservationView value. Construction owns declared '
                                              'collections; reading fields, repr and summary performs no IO.\n'
@@ -32393,7 +33296,14 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                              'roi: Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model '
                                              'coordinates.\n'
                                              'padding_model: Nonnegative padding around the ROI in model units; aspect '
-                                             'ratio is preserved.',
+                                             'ratio is preserved.\n'
+                                             'topology: Optional topology overlay in the same frozen Source and ROI '
+                                             'mapping. It ignores\n'
+                                             'masks and occlusion; None preserves the ordinary GPU image.\n'
+                                             'quality: Include per-mesh evaluated quality and approximate source-alpha '
+                                             'coverage.\n'
+                                             'Uses default parameters of the same source as reference; checks '
+                                             'requested frames only.',
                             'example': 'docs/recipes.py',
                             'fields': [('width',
                                         'Output width in pixels, 1..4096, subject to device and Runtime budgets.'),
@@ -32402,10 +33312,19 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                        ('roi', 'Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.'),
                                        ('padding_model',
                                         'Nonnegative padding around the ROI in model units; aspect ratio is '
-                                        'preserved.')],
+                                        'preserved.'),
+                                       ('topology',
+                                        'Optional topology overlay in the same frozen Source and ROI mapping. It '
+                                        'ignores\n'
+                                        'masks and occlusion; None preserves the ordinary GPU image.'),
+                                       ('quality',
+                                        'Include per-mesh evaluated quality and approximate source-alpha coverage.\n'
+                                        'Uses default parameters of the same source as reference; checks requested '
+                                        'frames only.')],
                             'kind': 'type',
                             'signature': '(width: int, height: int, roi: tuple[float, float, float, float], '
-                                         'padding_model: float = 0.0)'},
+                                         'padding_model: float = 0.0, topology: TopologyOverlay | None = None, '
+                                         'quality: bool = False)'},
  'zipzi.observation.View.__repr__': {'children': (),
                                      'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                       'RPC/full scan.\n'
@@ -33808,12 +34727,15 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'zipzi.sampling.DiagnosticKind',
                                  'zipzi.sampling.Drawable',
                                  'zipzi.sampling.Frame',
+                                 'zipzi.sampling.MeshQuality',
                                  'zipzi.sampling.Offscreen',
                                  'zipzi.sampling.Parameter',
                                  'zipzi.sampling.Pose',
                                  'zipzi.sampling.RenderCommand',
                                  'zipzi.sampling.RenderKind',
-                                 'zipzi.sampling.Result'),
+                                 'zipzi.sampling.Result',
+                                 'zipzi.sampling.TextureCoverage',
+                                 'zipzi.sampling.TriangleQuality'),
                     'documentation': 'Explicit CPU sampling with generated owned values and exact source checks.',
                     'kind': 'module',
                     'signature': ''},
@@ -33831,15 +34753,23 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                             'min_triangle_area: Area in authored coordinates: model units squared at '
                                             'the root, or\n'
                                             'the appropriate rotation-local / Warp-parameter units under a parent.\n'
-                                            'model_bounds: Optional expected model bounds for root meshes only.',
+                                            'model_bounds: Optional expected model bounds for root meshes only.\n'
+                                            'quality: Include per-pose mesh quality in evaluated Y-up model space, '
+                                            'relative to this\n'
+                                            'snapshot evaluated with default parameters. Only the requested poses are '
+                                            'checked.',
                            'example': 'docs/recipes.py',
                            'fields': [('min_triangle_area',
                                        'Area in authored coordinates: model units squared at the root, or\n'
                                        'the appropriate rotation-local / Warp-parameter units under a parent.'),
-                                      ('model_bounds', 'Optional expected model bounds for root meshes only.')],
+                                      ('model_bounds', 'Optional expected model bounds for root meshes only.'),
+                                      ('quality',
+                                       'Include per-pose mesh quality in evaluated Y-up model space, relative to this\n'
+                                       'snapshot evaluated with default parameters. Only the requested poses are '
+                                       'checked.')],
                            'kind': 'type',
-                           'signature': '(min_triangle_area: float=0.0, model_bounds: tuple[Point, Point] | None=None) '
-                                        '-> None'},
+                           'signature': '(min_triangle_area: float=0.0, model_bounds: tuple[Point, Point] | None=None, '
+                                        'quality: bool=False) -> None'},
  'zipzi.sampling.Checks.__repr__': {'children': (),
                                     'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                      'RPC/full scan.\n'
@@ -34144,6 +35074,81 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                   'fields': [],
                                   'kind': 'callable',
                                   'signature': '() -> str'},
+ 'zipzi.sampling.MeshQuality': {'children': ('zipzi.sampling.MeshQuality.__repr__',
+                                             'zipzi.sampling.MeshQuality.summary'),
+                                'documentation': 'Immutable owned MeshQuality value. Construction owns declared '
+                                                 'collections; reading fields, repr and summary performs no IO.\n'
+                                                 '\n'
+                                                 'Fields:\n'
+                                                 'mesh_id: Stable document mesh ID, in evaluated drawable order.\n'
+                                                 'visible: Evaluated enabled/visible/positive-opacity state. Metrics '
+                                                 'are geometric and ignore occlusion.\n'
+                                                 'vertex_count: Number of evaluated vertices.\n'
+                                                 'triangles: Per-triangle metrics in evaluated Y-up model coordinates, '
+                                                 'relative to default parameters\n'
+                                                 'of the same frozen authoring source. This does not certify unsampled '
+                                                 'parameter intervals.\n'
+                                                 'min_angle_degrees: Smallest angle over this mesh; None for an empty '
+                                                 'mesh.\n'
+                                                 'max_aspect_ratio: Largest finite aspect ratio; collapsed triangles '
+                                                 'are counted separately.\n'
+                                                 'max_edge_stretch: Largest finite symmetric edge-length ratio '
+                                                 'relative to the default pose.\n'
+                                                 'degenerate_triangles: Number of exactly zero-area evaluated '
+                                                 'triangles.\n'
+                                                 'flipped_triangles: Number of negative relative-area triangles. '
+                                                 'Degenerate references are excluded.\n'
+                                                 'texture_coverage: Optional source-texture coverage. CPU-only '
+                                                 'sampling does not resolve image pixels.',
+                                'example': 'docs/recipes.py',
+                                'fields': [('mesh_id', 'Stable document mesh ID, in evaluated drawable order.'),
+                                           ('visible',
+                                            'Evaluated enabled/visible/positive-opacity state. Metrics are geometric '
+                                            'and ignore occlusion.'),
+                                           ('vertex_count', 'Number of evaluated vertices.'),
+                                           ('triangles',
+                                            'Per-triangle metrics in evaluated Y-up model coordinates, relative to '
+                                            'default parameters\n'
+                                            'of the same frozen authoring source. This does not certify unsampled '
+                                            'parameter intervals.'),
+                                           ('min_angle_degrees',
+                                            'Smallest angle over this mesh; None for an empty mesh.'),
+                                           ('max_aspect_ratio',
+                                            'Largest finite aspect ratio; collapsed triangles are counted separately.'),
+                                           ('max_edge_stretch',
+                                            'Largest finite symmetric edge-length ratio relative to the default pose.'),
+                                           ('degenerate_triangles', 'Number of exactly zero-area evaluated triangles.'),
+                                           ('flipped_triangles',
+                                            'Number of negative relative-area triangles. Degenerate references are '
+                                            'excluded.'),
+                                           ('texture_coverage',
+                                            'Optional source-texture coverage. CPU-only sampling does not resolve '
+                                            'image pixels.')],
+                                'kind': 'type',
+                                'signature': '(mesh_id: str, visible: bool, vertex_count: int, triangles: '
+                                             'tuple[TriangleQuality, ...], min_angle_degrees: float | None = None, '
+                                             'max_aspect_ratio: float | None = None, max_edge_stretch: float | None = '
+                                             'None, degenerate_triangles: int, flipped_triangles: int, '
+                                             'texture_coverage: TextureCoverage | None = None)'},
+ 'zipzi.sampling.MeshQuality.__repr__': {'children': (),
+                                         'documentation': 'Return a local summary capped at 1,024 characters, with no '
+                                                          'RPC/full scan.\n'
+                                                          '\n'
+                                                          'Large arrays and bytes show bounded samples/counts. '
+                                                          'Explicit field access\n'
+                                                          'still exposes the owned full value; no host resource is '
+                                                          'created/released.',
+                                         'example': 'docs/recipes.py',
+                                         'fields': [],
+                                         'kind': 'callable',
+                                         'signature': '() -> str'},
+ 'zipzi.sampling.MeshQuality.summary': {'children': (),
+                                        'documentation': 'Return a bounded, local summary; full fields remain '
+                                                         'explicitly accessible.',
+                                        'example': 'docs/recipes.py',
+                                        'fields': [],
+                                        'kind': 'callable',
+                                        'signature': '() -> str'},
  'zipzi.sampling.Offscreen': {'children': ('zipzi.sampling.Offscreen.__repr__', 'zipzi.sampling.Offscreen.summary'),
                               'documentation': 'Owned sampling Offscreen value; reading fields, repr and summary '
                                                'performs no IO.\n'
@@ -34364,7 +35369,11 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                             'frames: CPU-evaluated frames in the same order as requested parameter '
                                             'maps.\n'
                                             'diagnostics: Structured diagnostics from this query or operation; an '
-                                            'empty list means none were reported.',
+                                            'empty list means none were reported.\n'
+                                            'quality: Per-pose evaluated mesh quality in frame order when '
+                                            'Checks.quality is true; empty otherwise.\n'
+                                            'Uses default parameters of this same frozen source as the reference, '
+                                            'without image coverage.',
                            'example': 'docs/recipes.py',
                            'fields': [('version',
                                        'Exact SDK version captured for this value; not a best-effort latest-version '
@@ -34377,12 +35386,18 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                       ('diagnostics',
                                        'Structured diagnostics from this query or operation; an empty list means none '
                                        'were reported.'),
+                                      ('quality',
+                                       'Per-pose evaluated mesh quality in frame order when Checks.quality is true; '
+                                       'empty otherwise.\n'
+                                       'Uses default parameters of this same frozen source as the reference, without '
+                                       'image coverage.'),
                                       ('state',
                                        'Captured sampling source state, distinguishing formal content from an Edit '
                                        'candidate.')],
                            'kind': 'type',
                            'signature': '(state: str, version: Version, parameters: tuple[Pose, ...], frames: '
-                                        'Sequence[Frame], diagnostics: Sequence[Diagnostic]) -> None'},
+                                        'Sequence[Frame], diagnostics: Sequence[Diagnostic], quality: '
+                                        'Sequence[Sequence[MeshQuality]]) -> None'},
  'zipzi.sampling.Result.__repr__': {'children': (),
                                     'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                      'RPC/full scan.\n'
@@ -34402,6 +35417,144 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                    'fields': [],
                                    'kind': 'callable',
                                    'signature': '() -> str'},
+ 'zipzi.sampling.TextureCoverage': {'children': ('zipzi.sampling.TextureCoverage.__repr__',
+                                                 'zipzi.sampling.TextureCoverage.summary'),
+                                    'documentation': 'Immutable owned TextureCoverage value. Construction owns '
+                                                     'declared collections; reading fields, repr and summary performs '
+                                                     'no IO.\n'
+                                                     '\n'
+                                                     'Fields:\n'
+                                                     'alpha_threshold: Alpha >= this value counts as painted. Coverage '
+                                                     'ignores filtering, masks and occlusion.\n'
+                                                     'pixel_step: Top-down source-pixel grid spacing. Values above 1 '
+                                                     'mean an approximate report.\n'
+                                                     'sampled_pixels: Number of source pixel centers tested on the '
+                                                     'regular grid.\n'
+                                                     'covered_pixels: Tested pixel centers covered by the union of UV '
+                                                     'triangles inside [0,1].\n'
+                                                     'transparent_covered_pixels: Covered centers whose source alpha '
+                                                     'is below the threshold.\n'
+                                                     'opaque_pixels: Tested centers whose source alpha is at least the '
+                                                     'threshold.\n'
+                                                     'uncovered_opaque_pixels: Opaque centers outside the UV triangle '
+                                                     'union: a contour coverage error, not a distance.\n'
+                                                     'transparent_coverage_fraction: Transparent covered / covered; '
+                                                     'None if no tested center is covered.\n'
+                                                     'uncovered_opaque_fraction: Uncovered opaque / opaque; None for '
+                                                     'an entirely transparent sampled image.\n'
+                                                     'out_of_bounds_triangles: Number of UV triangles with vertices '
+                                                     'outside [0,1]; repeat-sampled coverage is not measured.',
+                                    'example': 'docs/recipes.py',
+                                    'fields': [('alpha_threshold',
+                                                'Alpha >= this value counts as painted. Coverage ignores filtering, '
+                                                'masks and occlusion.'),
+                                               ('pixel_step',
+                                                'Top-down source-pixel grid spacing. Values above 1 mean an '
+                                                'approximate report.'),
+                                               ('sampled_pixels',
+                                                'Number of source pixel centers tested on the regular grid.'),
+                                               ('covered_pixels',
+                                                'Tested pixel centers covered by the union of UV triangles inside '
+                                                '[0,1].'),
+                                               ('transparent_covered_pixels',
+                                                'Covered centers whose source alpha is below the threshold.'),
+                                               ('opaque_pixels',
+                                                'Tested centers whose source alpha is at least the threshold.'),
+                                               ('uncovered_opaque_pixels',
+                                                'Opaque centers outside the UV triangle union: a contour coverage '
+                                                'error, not a distance.'),
+                                               ('transparent_coverage_fraction',
+                                                'Transparent covered / covered; None if no tested center is covered.'),
+                                               ('uncovered_opaque_fraction',
+                                                'Uncovered opaque / opaque; None for an entirely transparent sampled '
+                                                'image.'),
+                                               ('out_of_bounds_triangles',
+                                                'Number of UV triangles with vertices outside [0,1]; repeat-sampled '
+                                                'coverage is not measured.')],
+                                    'kind': 'type',
+                                    'signature': '(alpha_threshold: int, pixel_step: int, sampled_pixels: int, '
+                                                 'covered_pixels: int, transparent_covered_pixels: int, opaque_pixels: '
+                                                 'int, uncovered_opaque_pixels: int, transparent_coverage_fraction: '
+                                                 'float | None = None, uncovered_opaque_fraction: float | None = None, '
+                                                 'out_of_bounds_triangles: int)'},
+ 'zipzi.sampling.TextureCoverage.__repr__': {'children': (),
+                                             'documentation': 'Return a local summary capped at 1,024 characters, with '
+                                                              'no RPC/full scan.\n'
+                                                              '\n'
+                                                              'Large arrays and bytes show bounded samples/counts. '
+                                                              'Explicit field access\n'
+                                                              'still exposes the owned full value; no host resource is '
+                                                              'created/released.',
+                                             'example': 'docs/recipes.py',
+                                             'fields': [],
+                                             'kind': 'callable',
+                                             'signature': '() -> str'},
+ 'zipzi.sampling.TextureCoverage.summary': {'children': (),
+                                            'documentation': 'Return a bounded, local summary; full fields remain '
+                                                             'explicitly accessible.',
+                                            'example': 'docs/recipes.py',
+                                            'fields': [],
+                                            'kind': 'callable',
+                                            'signature': '() -> str'},
+ 'zipzi.sampling.TriangleQuality': {'children': ('zipzi.sampling.TriangleQuality.__repr__',
+                                                 'zipzi.sampling.TriangleQuality.summary'),
+                                    'documentation': 'Immutable owned TriangleQuality value. Construction owns '
+                                                     'declared collections; reading fields, repr and summary performs '
+                                                     'no IO.\n'
+                                                     '\n'
+                                                     'Fields:\n'
+                                                     'triangle_index: Zero-based triangle offset, in the sampled '
+                                                     "drawable's index order.\n"
+                                                     'area: Unsigned evaluated area in model units squared.\n'
+                                                     'min_angle_degrees: Smallest interior angle in degrees; zero for '
+                                                     'a collapsed triangle.\n'
+                                                     'aspect_ratio: Longest edge divided by its altitude. None for a '
+                                                     'collapsed triangle.\n'
+                                                     'relative_area: Signed area / signed default-pose area. Negative '
+                                                     'means flipped; None if the reference is degenerate.\n'
+                                                     'edge_stretch: Largest symmetric edge-length ratio '
+                                                     'max(current/reference, reference/current).\n'
+                                                     'None if any reference or sampled edge is collapsed. A rigid '
+                                                     'transform gives 1.',
+                                    'example': 'docs/recipes.py',
+                                    'fields': [('triangle_index',
+                                                "Zero-based triangle offset, in the sampled drawable's index order."),
+                                               ('area', 'Unsigned evaluated area in model units squared.'),
+                                               ('min_angle_degrees',
+                                                'Smallest interior angle in degrees; zero for a collapsed triangle.'),
+                                               ('aspect_ratio',
+                                                'Longest edge divided by its altitude. None for a collapsed triangle.'),
+                                               ('relative_area',
+                                                'Signed area / signed default-pose area. Negative means flipped; None '
+                                                'if the reference is degenerate.'),
+                                               ('edge_stretch',
+                                                'Largest symmetric edge-length ratio max(current/reference, '
+                                                'reference/current).\n'
+                                                'None if any reference or sampled edge is collapsed. A rigid transform '
+                                                'gives 1.')],
+                                    'kind': 'type',
+                                    'signature': '(triangle_index: int, area: float, min_angle_degrees: float, '
+                                                 'aspect_ratio: float | None = None, relative_area: float | None = '
+                                                 'None, edge_stretch: float | None = None)'},
+ 'zipzi.sampling.TriangleQuality.__repr__': {'children': (),
+                                             'documentation': 'Return a local summary capped at 1,024 characters, with '
+                                                              'no RPC/full scan.\n'
+                                                              '\n'
+                                                              'Large arrays and bytes show bounded samples/counts. '
+                                                              'Explicit field access\n'
+                                                              'still exposes the owned full value; no host resource is '
+                                                              'created/released.',
+                                             'example': 'docs/recipes.py',
+                                             'fields': [],
+                                             'kind': 'callable',
+                                             'signature': '() -> str'},
+ 'zipzi.sampling.TriangleQuality.summary': {'children': (),
+                                            'documentation': 'Return a bounded, local summary; full fields remain '
+                                                             'explicitly accessible.',
+                                            'example': 'docs/recipes.py',
+                                            'fields': [],
+                                            'kind': 'callable',
+                                            'signature': '() -> str'},
  'zipzi.scene': {'children': ('zipzi.scene.CreateBlendTable',
                               'zipzi.scene.CreateGlue',
                               'zipzi.scene.CreateMeshBlend',

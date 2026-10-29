@@ -31,8 +31,8 @@
 | 完整帮助输出 | 新增 ApiDescription.format()；describe 文档和安装指南提供完整打印入口，保留有界 repr/summary |
 | 根关系、Mesh 读取链路、身份与返回值差异 | 属实；安装指南补充转换规则、带 Source 前提的纹理读取示例和身份解释；保留既有数据契约 |
 | SessionInfo 显示名称 | 缺口仍存在；指南明确 path 不是 Editor 标题，不能从目录名冒充显示名称 |
-| Alpha 布网 | Python 公开入口缺口仍存在；源码确认 Rust SDK 已有 alpha_mesh_geometry 等算法，需单独接入 Runtime/Python，尚未实现 |
-| 动画质量报告、GPU 拓扑图层 | 缺口仍存在；指南明确现有检查范围，新增报告和图层尚未实现 |
+| Alpha 布网 | 2026-10-29 复核：已有 `zipzi.mesh_generation.generate()`，通过 Connected Editor 的 `editor_mesh_generate` 服务运行，支持 edges/full/interior，返回几何而不修改文档；Local 不提供该服务。Rust SDK Alpha mesher 与 Editor 服务须区分 |
+| 动画质量报告、GPU 拓扑图层 | 2026-10-29 已接入逐姿态质量报告和同 Source/视图拓扑输出；接口、近似覆盖统计及验收边界见下节 |
 | 创建 Part 的绘制分组 | 当前源码仅在已有显式分组时追加空 Part 分组；dev-python 新建 Local 会话实测 scene.CreatePart 前后均为 None，历史现象未复现为普遍行为 |
 | 宿主断连、复杂换父级、任意布网迁移、活动文档发现 | 原记录没有足以定位实现缺陷的证据，仍待针对性复现；未修改用户模型或活动 Editor |
 
@@ -43,6 +43,54 @@
 Mesh→纹理读取，以及新建 Local 会话中 CreatePart 前后均无显式分组。
 `git diff --check` 通过。本文中的模型制作质量问题不等同于 SDK 实现错误，
 本轮没有对磁盘模型执行重新布网。
+
+## 2026-10-29 视觉质量与拓扑接口
+
+- `sampling.Checks(quality=True)` 为每个采样姿态返回 `quality` 行，包括三角形最小角、
+  长细比、面积、相对面积、对称边长拉伸，以及翻转和退化计数。原有有效性诊断独立保留。
+- 参考是同一冻结 Source 的默认参数姿态，位置均为经过父变形器求值的模型坐标；
+  退化参考返回未定义比值，不以无限值或放宽比较隐藏。只覆盖请求的姿态。
+- `observation.View(quality=True)` 在同一求值帧上增加源纹理 Alpha 覆盖统计。
+  Alpha >= 8 算有色；最多 256x256 的规则像素中心采样，并返回采样间距、
+  覆盖/透明覆盖/有色漏覆盖数量和分母。漏覆盖是轮廓覆盖误差，不是距离；
+  不计过滤、遮罩、遮挡或 [0,1] 外重复采样，图集需按各网格语义解释。
+- `observation.Overlay` 经 `View.topology` 开启线框、顶点和持久编号、已存约束边、
+  拉伸热图、隐藏网格和纯拓扑输出。Rust 在 GPU readback 后使用精确视图映射叠加，
+  观察和 Preview 均可使用；输出摘要及 inspection manifest 保存设置和报告。
+- 新增传输字段要求当前宿主与适配器成对重建；协议及构建身份以公开连接元数据为准。
+- 核实布网入口时也观察到 `describe("mesh_generation.generate")` 未登记，直接 import
+  和 Local 的明确拒绝行为可用；目录登记可作为独立发现性改进，不影响已有 Editor 服务入口。
+
+公开用法见 [Mesh quality scope](../../crates/zipzi-python2/client/python/zipzi/docs/guide.md#mesh-quality-scope)。
+历史观察保留在下面，不代表新增接口仍然缺失。
+
+聚焦验证：SDK 质量计算 2 项、原几何诊断 1 项、观察 crate CPU 测试 12 项、
+CPU-only Runtime 观察拒绝 1 项、Python Local/Connected CPU 测试 2 项、
+GPU/Preview 模块 7 项及代码生成工具测试 21 项通过。新增接口和类型示例的聚焦
+Pyright 检查无错误；仓库级 Python 类型检查仍被本轮未修改的 `_transport.py`、
+`_windows_endpoint.py`、`_windows_pipe.py` 中 73 项既有错误阻塞。
+另通过 `tools/dev-python` 生成并人工查看了网格编号、约束及拉伸/翻转热图样例。
+
+### 2026-10-29 真实 Editor 可读性复核
+
+在当前开发版 Editor 打开的 `mao_pro` 上补齐并实测：
+
+- `Overlay.targets` 支持 Mesh/Part 的显式并集、去重及子 Part；只筛选诊断图层和
+  GPU 质量报告，完整纹理背景保留。None 表示全部，空选择表示无目标。
+- 编号使用全图屏幕空间避让，支持字形缩放、间距和数量限制；无空位的编号跳过。
+  标签最后绘制，短引线关联顶点，不会被后续网格图层覆盖。
+- `heat_opacity` 控制填充透明度；每像素只混合最严重结果一次，避免层叠变成不透明。
+- `anomalies_only` 和 `Thresholds` 收窄所有诊断层；翻转、退化及未定义参考比值
+  始终作为异常，另可配置最小角、长细比和边长拉伸阈值。完整报告不按阈值裁剪。
+- 实测单网格返回 1 个报告；Face Part 返回 8 个；Eyes Part 含子 Part 返回 30 个。
+  没有异常时的异常视图，以及零填充透明度视图，均与原图逐像素一致。
+- 独立 `mtn_01` Preview 的同 Source 筛选与异常输出通过。实测前后会话版本、
+  历史和 Editor 上下文一致；未修改或保存模型。图片和来源记录保存在
+  `target/python2/scratch/topology-readability/`，不是版本化测试夹具。
+
+本次新增/回归验证包括 SDK 质量与选项 3 项、观察 CPU 16 项、观察 capture 8 项、
+Python Local/Connected GPU/Preview 8 项及完整正反类型检查。先前记录的传输模块
+类型问题已由同期工作解决，本次全量 Pyright 为 0 错误。
 
 ## 复现环境
 

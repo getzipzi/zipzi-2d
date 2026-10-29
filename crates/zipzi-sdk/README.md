@@ -93,6 +93,14 @@ content; unused resources can be collected after those owners are dropped.
 Modeling plans expose source-bound cost and loss reports. Mesh binding specs
 accept numeric axes and keyforms; SDK/core allocate identities and validate grids.
 
+`GeometryChecks.quality` adds per-pose `MeshQuality` rows to `ModelingSamples`.
+These advisory model-space angle, aspect, area, edge-stretch and flip metrics
+are separate from authored validity diagnostics. Ratios use the same snapshot's
+default-parameter evaluation, including hidden reference meshes. Degenerate
+denominators produce `None`, and reports certify only the requested poses.
+`mesh_quality` also compares matching evaluated frames directly. GPU observation
+can add source-alpha coverage and `TopologyOverlay` drawings in the same view.
+
 ## Tests
 
 Run focused tests from the repository root:

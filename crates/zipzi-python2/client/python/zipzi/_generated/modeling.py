@@ -7020,17 +7020,19 @@ class ObjectKind(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingSamples(CompactValue):
-    'Immutable owned ModelingSamples value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nversion: Exact SDK version captured for this value; not a best-effort latest-version marker.\nparameters: Effective parameter maps in the same order as requested poses; each map is keyed by\ndocument parameter ID.\nframes: CPU-evaluated frames in the same order as requested parameter maps.\ndiagnostics: Structured diagnostics from this query or operation; an empty list means none were reported.'
+    'Immutable owned ModelingSamples value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nversion: Exact SDK version captured for this value; not a best-effort latest-version marker.\nparameters: Effective parameter maps in the same order as requested poses; each map is keyed by\ndocument parameter ID.\nframes: CPU-evaluated frames in the same order as requested parameter maps.\ndiagnostics: Structured diagnostics from this query or operation; an empty list means none were reported.\nquality: Per-pose evaluated mesh quality in frame order when Checks.quality is true; empty otherwise.\nUses default parameters of this same frozen source as the reference, without image coverage.'
     version: _Version
     parameters: tuple[_Mapping[str, float], ...]
     frames: tuple[DrawableFrame, ...]
     diagnostics: tuple[GeometryDiagnostic, ...]
+    quality: tuple[tuple[MeshQuality, ...], ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'version', self.version)
         object.__setattr__(self, 'parameters', tuple(MappingProxyType({key1: v1 for key1, v1 in v0.items()}) for v0 in self.parameters))
         object.__setattr__(self, 'frames', tuple(self.frames))
         object.__setattr__(self, 'diagnostics', tuple(self.diagnostics))
+        object.__setattr__(self, 'quality', tuple(tuple(v0) for v0 in self.quality))
 ModelingSamples.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7216,6 +7218,79 @@ class GeometryDiagnosticKind(str, Enum):
     SMALL_TRIANGLE = 'SmallTriangle'
     INCONSISTENT_WINDING = 'InconsistentWinding'
     OUTSIDE_MODEL_BOUNDS = 'OutsideModelBounds'
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class MeshQuality(CompactValue):
+    'Immutable owned MeshQuality value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmesh_id: Stable document mesh ID, in evaluated drawable order.\nvisible: Evaluated enabled/visible/positive-opacity state. Metrics are geometric and ignore occlusion.\nvertex_count: Number of evaluated vertices.\ntriangles: Per-triangle metrics in evaluated Y-up model coordinates, relative to default parameters\nof the same frozen authoring source. This does not certify unsampled parameter intervals.\nmin_angle_degrees: Smallest angle over this mesh; None for an empty mesh.\nmax_aspect_ratio: Largest finite aspect ratio; collapsed triangles are counted separately.\nmax_edge_stretch: Largest finite symmetric edge-length ratio relative to the default pose.\ndegenerate_triangles: Number of exactly zero-area evaluated triangles.\nflipped_triangles: Number of negative relative-area triangles. Degenerate references are excluded.\ntexture_coverage: Optional source-texture coverage. CPU-only sampling does not resolve image pixels.'
+    mesh_id: str
+    visible: bool
+    vertex_count: int
+    triangles: tuple[TriangleQuality, ...]
+    min_angle_degrees: (float | None) = None
+    max_aspect_ratio: (float | None) = None
+    max_edge_stretch: (float | None) = None
+    degenerate_triangles: int
+    flipped_triangles: int
+    texture_coverage: (TextureCoverage | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'mesh_id', self.mesh_id)
+        object.__setattr__(self, 'visible', self.visible)
+        object.__setattr__(self, 'vertex_count', self.vertex_count)
+        object.__setattr__(self, 'triangles', tuple(self.triangles))
+        object.__setattr__(self, 'min_angle_degrees', None if self.min_angle_degrees is None else self.min_angle_degrees)
+        object.__setattr__(self, 'max_aspect_ratio', None if self.max_aspect_ratio is None else self.max_aspect_ratio)
+        object.__setattr__(self, 'max_edge_stretch', None if self.max_edge_stretch is None else self.max_edge_stretch)
+        object.__setattr__(self, 'degenerate_triangles', self.degenerate_triangles)
+        object.__setattr__(self, 'flipped_triangles', self.flipped_triangles)
+        object.__setattr__(self, 'texture_coverage', None if self.texture_coverage is None else self.texture_coverage)
+MeshQuality.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class TriangleQuality(CompactValue):
+    "Immutable owned TriangleQuality value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntriangle_index: Zero-based triangle offset, in the sampled drawable's index order.\narea: Unsigned evaluated area in model units squared.\nmin_angle_degrees: Smallest interior angle in degrees; zero for a collapsed triangle.\naspect_ratio: Longest edge divided by its altitude. None for a collapsed triangle.\nrelative_area: Signed area / signed default-pose area. Negative means flipped; None if the reference is degenerate.\nedge_stretch: Largest symmetric edge-length ratio max(current/reference, reference/current).\nNone if any reference or sampled edge is collapsed. A rigid transform gives 1."
+    triangle_index: int
+    area: float
+    min_angle_degrees: float
+    aspect_ratio: (float | None) = None
+    relative_area: (float | None) = None
+    edge_stretch: (float | None) = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'triangle_index', self.triangle_index)
+        object.__setattr__(self, 'area', self.area)
+        object.__setattr__(self, 'min_angle_degrees', self.min_angle_degrees)
+        object.__setattr__(self, 'aspect_ratio', None if self.aspect_ratio is None else self.aspect_ratio)
+        object.__setattr__(self, 'relative_area', None if self.relative_area is None else self.relative_area)
+        object.__setattr__(self, 'edge_stretch', None if self.edge_stretch is None else self.edge_stretch)
+TriangleQuality.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class TextureCoverage(CompactValue):
+    'Immutable owned TextureCoverage value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nalpha_threshold: Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.\npixel_step: Top-down source-pixel grid spacing. Values above 1 mean an approximate report.\nsampled_pixels: Number of source pixel centers tested on the regular grid.\ncovered_pixels: Tested pixel centers covered by the union of UV triangles inside [0,1].\ntransparent_covered_pixels: Covered centers whose source alpha is below the threshold.\nopaque_pixels: Tested centers whose source alpha is at least the threshold.\nuncovered_opaque_pixels: Opaque centers outside the UV triangle union: a contour coverage error, not a distance.\ntransparent_coverage_fraction: Transparent covered / covered; None if no tested center is covered.\nuncovered_opaque_fraction: Uncovered opaque / opaque; None for an entirely transparent sampled image.\nout_of_bounds_triangles: Number of UV triangles with vertices outside [0,1]; repeat-sampled coverage is not measured.'
+    alpha_threshold: int
+    pixel_step: int
+    sampled_pixels: int
+    covered_pixels: int
+    transparent_covered_pixels: int
+    opaque_pixels: int
+    uncovered_opaque_pixels: int
+    transparent_coverage_fraction: (float | None) = None
+    uncovered_opaque_fraction: (float | None) = None
+    out_of_bounds_triangles: int
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'alpha_threshold', self.alpha_threshold)
+        object.__setattr__(self, 'pixel_step', self.pixel_step)
+        object.__setattr__(self, 'sampled_pixels', self.sampled_pixels)
+        object.__setattr__(self, 'covered_pixels', self.covered_pixels)
+        object.__setattr__(self, 'transparent_covered_pixels', self.transparent_covered_pixels)
+        object.__setattr__(self, 'opaque_pixels', self.opaque_pixels)
+        object.__setattr__(self, 'uncovered_opaque_pixels', self.uncovered_opaque_pixels)
+        object.__setattr__(self, 'transparent_coverage_fraction', None if self.transparent_coverage_fraction is None else self.transparent_coverage_fraction)
+        object.__setattr__(self, 'uncovered_opaque_fraction', None if self.uncovered_opaque_fraction is None else self.uncovered_opaque_fraction)
+        object.__setattr__(self, 'out_of_bounds_triangles', self.out_of_bounds_triangles)
+TextureCoverage.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ProjectRequestDiagnose(CompactValue):
@@ -7480,18 +7555,92 @@ PreviewBatch.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationView(CompactValue):
-    'Immutable owned ObservationView value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nwidth: Output width in pixels, 1..4096, subject to device and Runtime budgets.\nheight: Output height in pixels, 1..4096, subject to device and Runtime budgets.\nroi: Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.\npadding_model: Nonnegative padding around the ROI in model units; aspect ratio is preserved.'
+    'Immutable owned ObservationView value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nwidth: Output width in pixels, 1..4096, subject to device and Runtime budgets.\nheight: Output height in pixels, 1..4096, subject to device and Runtime budgets.\nroi: Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.\npadding_model: Nonnegative padding around the ROI in model units; aspect ratio is preserved.\ntopology: Optional topology overlay in the same frozen Source and ROI mapping. It ignores\nmasks and occlusion; None preserves the ordinary GPU image.\nquality: Include per-mesh evaluated quality and approximate source-alpha coverage.\nUses default parameters of the same source as reference; checks requested frames only.'
     width: int
     height: int
     roi: tuple[float, float, float, float]
     padding_model: float = field(default_factory=lambda: number(0.0))
+    topology: (TopologyOverlay | None) = None
+    quality: bool = field(default_factory=lambda: _boolean(False))
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'width', self.width)
         object.__setattr__(self, 'height', self.height)
         object.__setattr__(self, 'roi', tuple(self.roi))
         object.__setattr__(self, 'padding_model', self.padding_model)
+        object.__setattr__(self, 'topology', None if self.topology is None else self.topology)
+        object.__setattr__(self, 'quality', self.quality)
 ObservationView.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class TopologyOverlay(CompactValue):
+    'Immutable owned TopologyOverlay value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntargets: Diagnostic selection only; the textured context image is unchanged. None selects all\nmeshes, Some([]) selects none. Mesh/Part targets are unioned and deduplicated;\nParts include nested Parts. Missing targets fail explicitly. Maximum 256 selectors.\nwireframe: Draw triangle edges in cyan, in final evaluated model coordinates.\nvertices: Draw vertex positions as yellow dots.\nvertex_ids: Draw stable authoring vertex IDs in yellow, rather than transient array offsets.\nconstraints: Draw meshing boundary edges in green and internal constraints in magenta.\nstrain: Fill triangles by symmetric edge stretch relative to the default pose: blue=1,\norange=2, red>=4; flipped or collapsed triangles are magenta.\ninclude_hidden: Include disabled, hidden and zero-opacity meshes. Default draws visible meshes only.\ntopology_only: Clear the textured image before diagnostic drawing, retaining the exact same view.\nheat_opacity: Heat fill opacity in [0,1]. Applied once per pixel using the most severe overlapping\ntriangle, so overlapping layers cannot accumulate opacity. Lines and labels stay opaque.\nanomalies_only: Restrict every diagnostic layer to anomalous triangles and their incident vertices/edges.\nDegenerate, flipped and undefined-reference triangles always count as anomalies.\nthresholds: Thresholds used by anomalies_only; reports themselves are never threshold-filtered.\nlabel_scale: Decimal glyph scale in output pixels, 1..4. Labels avoid other labels globally;\nan ID is omitted when no nearby in-view position has enough space.\nlabel_spacing: Minimum clear gap between label rectangles in pixels, 0..32.\nmax_labels: Maximum labels per image, 0..4096. Vertex dots remain independent of this limit.'
+    targets: (tuple[ObjectTarget, ...] | None) = None
+    wireframe: bool = field(default_factory=lambda: _boolean(True))
+    vertices: bool = field(default_factory=lambda: _boolean(False))
+    vertex_ids: bool = field(default_factory=lambda: _boolean(False))
+    constraints: bool = field(default_factory=lambda: _boolean(False))
+    strain: bool = field(default_factory=lambda: _boolean(False))
+    include_hidden: bool = field(default_factory=lambda: _boolean(False))
+    topology_only: bool = field(default_factory=lambda: _boolean(False))
+    heat_opacity: float = field(default_factory=lambda: number(0.25))
+    anomalies_only: bool = field(default_factory=lambda: _boolean(False))
+    thresholds: TopologyThresholds = field(default_factory=lambda: read_TopologyThresholds({'max_aspect_ratio': 20.0, 'max_edge_stretch': 2.0, 'min_angle_degrees': 10.0}))
+    label_scale: int = field(default_factory=lambda: integer(2))
+    label_spacing: int = field(default_factory=lambda: integer(3))
+    max_labels: int = field(default_factory=lambda: integer(256))
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'targets', None if self.targets is None else tuple(self.targets))
+        object.__setattr__(self, 'wireframe', self.wireframe)
+        object.__setattr__(self, 'vertices', self.vertices)
+        object.__setattr__(self, 'vertex_ids', self.vertex_ids)
+        object.__setattr__(self, 'constraints', self.constraints)
+        object.__setattr__(self, 'strain', self.strain)
+        object.__setattr__(self, 'include_hidden', self.include_hidden)
+        object.__setattr__(self, 'topology_only', self.topology_only)
+        object.__setattr__(self, 'heat_opacity', self.heat_opacity)
+        object.__setattr__(self, 'anomalies_only', self.anomalies_only)
+        object.__setattr__(self, 'thresholds', self.thresholds)
+        object.__setattr__(self, 'label_scale', self.label_scale)
+        object.__setattr__(self, 'label_spacing', self.label_spacing)
+        object.__setattr__(self, 'max_labels', self.max_labels)
+TopologyOverlay.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ObjectTargetMesh(CompactValue):
+    'Immutable owned ObjectTargetMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Persistent authoring mesh UUID.'
+    _variant: _ClassVar[str] = 'mesh'
+    value: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'value', self.value)
+ObjectTargetMesh.__module__ = "zipzi.modeling"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class ObjectTargetPart(CompactValue):
+    'Immutable owned ObjectTargetPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Persistent Part UUID selecting descendant meshes.'
+    _variant: _ClassVar[str] = 'part'
+    value: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'value', self.value)
+ObjectTargetPart.__module__ = "zipzi.modeling"
+
+ObjectTarget: TypeAlias = ObjectTargetMesh | ObjectTargetPart
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class TopologyThresholds(CompactValue):
+    'Immutable owned TopologyThresholds value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmin_angle_degrees: An angle below this value is anomalous; finite degrees in [0,60]. Default 10.\nmax_aspect_ratio: A longest-edge/altitude ratio above this is anomalous; finite and >= 1. Default 20.\nmax_edge_stretch: A symmetric edge-length ratio above this is anomalous; finite and >= 1. Default 2.'
+    min_angle_degrees: float = field(default_factory=lambda: number(10.0))
+    max_aspect_ratio: float = field(default_factory=lambda: number(20.0))
+    max_edge_stretch: float = field(default_factory=lambda: number(2.0))
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'min_angle_degrees', self.min_angle_degrees)
+        object.__setattr__(self, 'max_aspect_ratio', self.max_aspect_ratio)
+        object.__setattr__(self, 'max_edge_stretch', self.max_edge_stretch)
+TopologyThresholds.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SpatialQueryBounds(CompactValue):
@@ -7524,28 +7673,6 @@ SpatialQueryHits.__module__ = "zipzi.modeling"
 SpatialQuery: TypeAlias = SpatialQueryBounds | SpatialQueryHits
 
 @dataclass(frozen=True, kw_only=True, repr=False)
-class ObjectTargetMesh(CompactValue):
-    'Immutable owned ObjectTargetMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Persistent authoring mesh UUID.'
-    _variant: _ClassVar[str] = 'mesh'
-    value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
-ObjectTargetMesh.__module__ = "zipzi.modeling"
-
-@dataclass(frozen=True, kw_only=True, repr=False)
-class ObjectTargetPart(CompactValue):
-    'Immutable owned ObjectTargetPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Persistent Part UUID selecting descendant meshes.'
-    _variant: _ClassVar[str] = 'part'
-    value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
-ObjectTargetPart.__module__ = "zipzi.modeling"
-
-ObjectTarget: TypeAlias = ObjectTargetMesh | ObjectTargetPart
-
-@dataclass(frozen=True, kw_only=True, repr=False)
 class PreviewFrame(CompactValue):
     'Immutable owned PreviewFrame value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nobservation: Optional GPU image from this exact animation state and once-resolved batch textures.\nspatial: Geometric query results in the corresponding request order, from this exact SDK state.\npreview_id: Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.\nsequence: Accepted sample request ordinal; pair with the outer Source and Preview identity.\nindex: Zero-based target slot in the ordered sample request.\nmotion: SDK Motion/Expression/Physics/Pose result and actual sample coordinates.\ngeometry: Evaluated CPU geometry when requested; model_opacity remains a separate SDK channel.'
     observation: (ObservationImage | None) = None
@@ -7568,7 +7695,7 @@ PreviewFrame.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationImage(CompactValue):
-    "Immutable owned ObservationImage value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nwidth: Output image width in pixels.\nheight: Output image height in pixels.\nrgba: Raw renderer RGBA8, row-major, top-left image origin. Renderer alpha convention is preserved.\npng: PNG encoding of exactly the returned RGBA8; encoded by Rust, never by Python.\ndocument_id: Captured authoring document UUID.\nevaluation_revision: Captured geometry evaluation revision, distinct from the outer formal/candidate Source.\ncapture_id: Shared acquisition UUID for this batch's once-resolved immutable texture set.\nscene_digest: Digest of captured evaluated geometry, authoring records and resolved texture content.\nrender_digest: Digest of the exact source scene and explicit rendering settings.\ninput_sha256: Renderer hash of evaluated input, texture content and output view.\nadapter_name: Actual GPU adapter name, obtained only when a render executes.\nadapter_backend: Actual renderer backend, Metal on macOS or the selected WGPU backend elsewhere.\nparameters: Effective evaluated parameters keyed by stable document UUID.\nvisible_roi: Actual viewport model extent [min_x,min_y,max_x,max_y], including aspect-ratio expansion.\nscale: Model-to-image scale. Image X=x*scale+offset[0], Y=-y*scale+offset[1].\noffset: Translation in top-left image pixels, parallel to the documented scale formula.\ntextures: Source texture identities and exact content hashes shared across this batch.\ndrawable_bounds: Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here."
+    "Immutable owned ObservationImage value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nwidth: Output image width in pixels.\nheight: Output image height in pixels.\nrgba: Raw renderer RGBA8, row-major, top-left image origin. Renderer alpha convention is preserved.\npng: PNG encoding of exactly the returned RGBA8; encoded by Rust, never by Python.\ndocument_id: Captured authoring document UUID.\nevaluation_revision: Captured geometry evaluation revision, distinct from the outer formal/candidate Source.\ncapture_id: Shared acquisition UUID for this batch's once-resolved immutable texture set.\nscene_digest: Digest of captured evaluated geometry, authoring records and resolved texture content.\nrender_digest: Digest of the exact source scene and explicit rendering settings.\ninput_sha256: Renderer hash of evaluated input, texture content and output view.\nadapter_name: Actual GPU adapter name, obtained only when a render executes.\nadapter_backend: Actual renderer backend, Metal on macOS or the selected WGPU backend elsewhere.\nparameters: Effective evaluated parameters keyed by stable document UUID.\nvisible_roi: Actual viewport model extent [min_x,min_y,max_x,max_y], including aspect-ratio expansion.\nscale: Model-to-image scale. Image X=x*scale+offset[0], Y=-y*scale+offset[1].\noffset: Translation in top-left image pixels, parallel to the documented scale formula.\ntextures: Source texture identities and exact content hashes shared across this batch.\ndrawable_bounds: Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.\nquality: Mesh quality in evaluated drawable order when View.quality is true; empty otherwise.\nTexture coverage uses alpha >= 8, pixel centers, at most a 256x256 grid, ignoring masks,\nfiltering and UV repeat outside [0,1]. A step above 1 denotes approximate coverage."
     width: int
     height: int
     rgba: _Bytes
@@ -7587,6 +7714,7 @@ class ObservationImage(CompactValue):
     offset: tuple[float, float]
     textures: tuple[ObservedTexture, ...]
     drawable_bounds: tuple[ObservedBounds, ...]
+    quality: tuple[MeshQuality, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'width', self.width)
@@ -7607,6 +7735,7 @@ class ObservationImage(CompactValue):
         object.__setattr__(self, 'offset', tuple(self.offset))
         object.__setattr__(self, 'textures', tuple(self.textures))
         object.__setattr__(self, 'drawable_bounds', tuple(self.drawable_bounds))
+        object.__setattr__(self, 'quality', tuple(self.quality))
 ObservationImage.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -15835,14 +15964,21 @@ def validate_ModelingSamples(value: ModelingSamples) -> None:
         raise TypeError("Expected an immutable tuple")
     for v0 in value.diagnostics:
         validate_GeometryDiagnostic(v0)
+    if not isinstance(value.quality, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.quality:
+        if not isinstance(v0, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v1 in v0:
+            validate_MeshQuality(v1)
 
 def encode_ModelingSamples(value: ModelingSamples) -> object:
-    return {'version': encode_Version(value.version), 'parameters': [{str(key1): v1 for key1, v1 in v0.items()} for v0 in value.parameters], 'frames': [encode_DrawableFrame(v0) for v0 in value.frames], 'diagnostics': [encode_GeometryDiagnostic(v0) for v0 in value.diagnostics]}
+    return {'version': encode_Version(value.version), 'parameters': [{str(key1): v1 for key1, v1 in v0.items()} for v0 in value.parameters], 'frames': [encode_DrawableFrame(v0) for v0 in value.frames], 'diagnostics': [encode_GeometryDiagnostic(v0) for v0 in value.diagnostics], 'quality': [[encode_MeshQuality(v1) for v1 in v0] for v0 in value.quality]}
 
 def read_ModelingSamples(value: object) -> ModelingSamples:
     if isinstance(value, ModelingSamples): return value
     r = record(value)
-    return ModelingSamples(version=read_Version(r['version']), parameters=tuple({key1: number(v1) for key1, v1 in record(v0).items()} for v0 in sequence(r['parameters'])), frames=tuple(read_DrawableFrame(v0) for v0 in sequence(r['frames'])), diagnostics=tuple(read_GeometryDiagnostic(v0) for v0 in sequence(r['diagnostics'])))
+    return ModelingSamples(version=read_Version(r['version']), parameters=tuple({key1: number(v1) for key1, v1 in record(v0).items()} for v0 in sequence(r['parameters'])), frames=tuple(read_DrawableFrame(v0) for v0 in sequence(r['frames'])), diagnostics=tuple(read_GeometryDiagnostic(v0) for v0 in sequence(r['diagnostics'])), quality=tuple(tuple(read_MeshQuality(v1) for v1 in sequence(v0)) for v0 in sequence(r['quality'])))
 
 def validate_DrawableFrame(value: DrawableFrame) -> None:
     if not isinstance(value, DrawableFrame):
@@ -16118,6 +16254,104 @@ def encode_GeometryDiagnosticKind(value: GeometryDiagnosticKind) -> object:
 def read_GeometryDiagnosticKind(value: object) -> GeometryDiagnosticKind:
     if isinstance(value, GeometryDiagnosticKind): return value
     return GeometryDiagnosticKind(string(value))
+
+def validate_MeshQuality(value: MeshQuality) -> None:
+    if not isinstance(value, MeshQuality):
+        raise TypeError("Expected MeshQuality")
+    if not isinstance(value.mesh_id, str):
+        raise ValueError("Expected string")
+    if type(value.visible) is not bool:
+        raise ValueError("Expected bool")
+    if type(value.vertex_count) is not int or not 0 <= value.vertex_count < 18446744073709551616:
+        raise ValueError("Expected usize")
+    if not isinstance(value.triangles, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.triangles:
+        validate_TriangleQuality(v0)
+    if value.min_angle_degrees is not None:
+        if isinstance(value.min_angle_degrees, bool) or not isinstance(value.min_angle_degrees, (float, int)) or not math.isfinite(value.min_angle_degrees):
+            raise ValueError("Expected f64")
+    if value.max_aspect_ratio is not None:
+        if isinstance(value.max_aspect_ratio, bool) or not isinstance(value.max_aspect_ratio, (float, int)) or not math.isfinite(value.max_aspect_ratio):
+            raise ValueError("Expected f64")
+    if value.max_edge_stretch is not None:
+        if isinstance(value.max_edge_stretch, bool) or not isinstance(value.max_edge_stretch, (float, int)) or not math.isfinite(value.max_edge_stretch):
+            raise ValueError("Expected f64")
+    if type(value.degenerate_triangles) is not int or not 0 <= value.degenerate_triangles < 18446744073709551616:
+        raise ValueError("Expected usize")
+    if type(value.flipped_triangles) is not int or not 0 <= value.flipped_triangles < 18446744073709551616:
+        raise ValueError("Expected usize")
+    if value.texture_coverage is not None:
+        validate_TextureCoverage(value.texture_coverage)
+
+def encode_MeshQuality(value: MeshQuality) -> object:
+    return {'mesh_id': value.mesh_id, 'visible': value.visible, 'vertex_count': value.vertex_count, 'triangles': [encode_TriangleQuality(v0) for v0 in value.triangles], 'min_angle_degrees': None if value.min_angle_degrees is None else value.min_angle_degrees, 'max_aspect_ratio': None if value.max_aspect_ratio is None else value.max_aspect_ratio, 'max_edge_stretch': None if value.max_edge_stretch is None else value.max_edge_stretch, 'degenerate_triangles': value.degenerate_triangles, 'flipped_triangles': value.flipped_triangles, 'texture_coverage': None if value.texture_coverage is None else encode_TextureCoverage(value.texture_coverage)}
+
+def read_MeshQuality(value: object) -> MeshQuality:
+    if isinstance(value, MeshQuality): return value
+    r = record(value)
+    return MeshQuality(mesh_id=string(r['mesh_id']), visible=_boolean(r['visible']), vertex_count=integer(r['vertex_count']), triangles=tuple(read_TriangleQuality(v0) for v0 in sequence(r['triangles'])), min_angle_degrees=None if r.get('min_angle_degrees', None) is None else number(r.get('min_angle_degrees', None)), max_aspect_ratio=None if r.get('max_aspect_ratio', None) is None else number(r.get('max_aspect_ratio', None)), max_edge_stretch=None if r.get('max_edge_stretch', None) is None else number(r.get('max_edge_stretch', None)), degenerate_triangles=integer(r['degenerate_triangles']), flipped_triangles=integer(r['flipped_triangles']), texture_coverage=None if r.get('texture_coverage', None) is None else read_TextureCoverage(r.get('texture_coverage', None)))
+
+def validate_TriangleQuality(value: TriangleQuality) -> None:
+    if not isinstance(value, TriangleQuality):
+        raise TypeError("Expected TriangleQuality")
+    if type(value.triangle_index) is not int or not 0 <= value.triangle_index < 18446744073709551616:
+        raise ValueError("Expected usize")
+    if isinstance(value.area, bool) or not isinstance(value.area, (float, int)) or not math.isfinite(value.area):
+        raise ValueError("Expected f64")
+    if isinstance(value.min_angle_degrees, bool) or not isinstance(value.min_angle_degrees, (float, int)) or not math.isfinite(value.min_angle_degrees):
+        raise ValueError("Expected f64")
+    if value.aspect_ratio is not None:
+        if isinstance(value.aspect_ratio, bool) or not isinstance(value.aspect_ratio, (float, int)) or not math.isfinite(value.aspect_ratio):
+            raise ValueError("Expected f64")
+    if value.relative_area is not None:
+        if isinstance(value.relative_area, bool) or not isinstance(value.relative_area, (float, int)) or not math.isfinite(value.relative_area):
+            raise ValueError("Expected f64")
+    if value.edge_stretch is not None:
+        if isinstance(value.edge_stretch, bool) or not isinstance(value.edge_stretch, (float, int)) or not math.isfinite(value.edge_stretch):
+            raise ValueError("Expected f64")
+
+def encode_TriangleQuality(value: TriangleQuality) -> object:
+    return {'triangle_index': value.triangle_index, 'area': value.area, 'min_angle_degrees': value.min_angle_degrees, 'aspect_ratio': None if value.aspect_ratio is None else value.aspect_ratio, 'relative_area': None if value.relative_area is None else value.relative_area, 'edge_stretch': None if value.edge_stretch is None else value.edge_stretch}
+
+def read_TriangleQuality(value: object) -> TriangleQuality:
+    if isinstance(value, TriangleQuality): return value
+    r = record(value)
+    return TriangleQuality(triangle_index=integer(r['triangle_index']), area=number(r['area']), min_angle_degrees=number(r['min_angle_degrees']), aspect_ratio=None if r.get('aspect_ratio', None) is None else number(r.get('aspect_ratio', None)), relative_area=None if r.get('relative_area', None) is None else number(r.get('relative_area', None)), edge_stretch=None if r.get('edge_stretch', None) is None else number(r.get('edge_stretch', None)))
+
+def validate_TextureCoverage(value: TextureCoverage) -> None:
+    if not isinstance(value, TextureCoverage):
+        raise TypeError("Expected TextureCoverage")
+    if type(value.alpha_threshold) is not int or not 0 <= value.alpha_threshold < 256:
+        raise ValueError("Expected u8")
+    if type(value.pixel_step) is not int or not 0 <= value.pixel_step < 4294967296:
+        raise ValueError("Expected u32")
+    if type(value.sampled_pixels) is not int or not 0 <= value.sampled_pixels < 18446744073709551616:
+        raise ValueError("Expected usize")
+    if type(value.covered_pixels) is not int or not 0 <= value.covered_pixels < 18446744073709551616:
+        raise ValueError("Expected usize")
+    if type(value.transparent_covered_pixels) is not int or not 0 <= value.transparent_covered_pixels < 18446744073709551616:
+        raise ValueError("Expected usize")
+    if type(value.opaque_pixels) is not int or not 0 <= value.opaque_pixels < 18446744073709551616:
+        raise ValueError("Expected usize")
+    if type(value.uncovered_opaque_pixels) is not int or not 0 <= value.uncovered_opaque_pixels < 18446744073709551616:
+        raise ValueError("Expected usize")
+    if value.transparent_coverage_fraction is not None:
+        if isinstance(value.transparent_coverage_fraction, bool) or not isinstance(value.transparent_coverage_fraction, (float, int)) or not math.isfinite(value.transparent_coverage_fraction):
+            raise ValueError("Expected f64")
+    if value.uncovered_opaque_fraction is not None:
+        if isinstance(value.uncovered_opaque_fraction, bool) or not isinstance(value.uncovered_opaque_fraction, (float, int)) or not math.isfinite(value.uncovered_opaque_fraction):
+            raise ValueError("Expected f64")
+    if type(value.out_of_bounds_triangles) is not int or not 0 <= value.out_of_bounds_triangles < 18446744073709551616:
+        raise ValueError("Expected usize")
+
+def encode_TextureCoverage(value: TextureCoverage) -> object:
+    return {'alpha_threshold': value.alpha_threshold, 'pixel_step': value.pixel_step, 'sampled_pixels': value.sampled_pixels, 'covered_pixels': value.covered_pixels, 'transparent_covered_pixels': value.transparent_covered_pixels, 'opaque_pixels': value.opaque_pixels, 'uncovered_opaque_pixels': value.uncovered_opaque_pixels, 'transparent_coverage_fraction': None if value.transparent_coverage_fraction is None else value.transparent_coverage_fraction, 'uncovered_opaque_fraction': None if value.uncovered_opaque_fraction is None else value.uncovered_opaque_fraction, 'out_of_bounds_triangles': value.out_of_bounds_triangles}
+
+def read_TextureCoverage(value: object) -> TextureCoverage:
+    if isinstance(value, TextureCoverage): return value
+    r = record(value)
+    return TextureCoverage(alpha_threshold=integer(r['alpha_threshold']), pixel_step=integer(r['pixel_step']), sampled_pixels=integer(r['sampled_pixels']), covered_pixels=integer(r['covered_pixels']), transparent_covered_pixels=integer(r['transparent_covered_pixels']), opaque_pixels=integer(r['opaque_pixels']), uncovered_opaque_pixels=integer(r['uncovered_opaque_pixels']), transparent_coverage_fraction=None if r.get('transparent_coverage_fraction', None) is None else number(r.get('transparent_coverage_fraction', None)), uncovered_opaque_fraction=None if r.get('uncovered_opaque_fraction', None) is None else number(r.get('uncovered_opaque_fraction', None)), out_of_bounds_triangles=integer(r['out_of_bounds_triangles']))
 
 def validate_ProjectRequest(value: ProjectRequest) -> None:
     if isinstance(value, ProjectRequestDiagnose):
@@ -16443,14 +16677,105 @@ def validate_ObservationView(value: ObservationView) -> None:
             raise ValueError("Expected f32")
     if isinstance(value.padding_model, bool) or not isinstance(value.padding_model, (float, int)) or not math.isfinite(value.padding_model) or abs(value.padding_model) > 3.4028234663852886e38:
         raise ValueError("Expected f32")
+    if value.topology is not None:
+        validate_TopologyOverlay(value.topology)
+    if type(value.quality) is not bool:
+        raise ValueError("Expected bool")
 
 def encode_ObservationView(value: ObservationView) -> object:
-    return {'width': value.width, 'height': value.height, 'roi': [v0 for v0 in value.roi], 'padding_model': value.padding_model}
+    return {'width': value.width, 'height': value.height, 'roi': [v0 for v0 in value.roi], 'padding_model': value.padding_model, 'topology': None if value.topology is None else encode_TopologyOverlay(value.topology), 'quality': value.quality}
 
 def read_ObservationView(value: object) -> ObservationView:
     if isinstance(value, ObservationView): return value
     r = record(value)
-    return ObservationView(width=integer(r['width']), height=integer(r['height']), roi=cast('tuple[float, float, float, float]', tuple(number(v0) for v0 in sequence(r['roi']))), padding_model=number(r.get('padding_model', 0.0)))
+    return ObservationView(width=integer(r['width']), height=integer(r['height']), roi=cast('tuple[float, float, float, float]', tuple(number(v0) for v0 in sequence(r['roi']))), padding_model=number(r.get('padding_model', 0.0)), topology=None if r.get('topology', None) is None else read_TopologyOverlay(r.get('topology', None)), quality=_boolean(r.get('quality', False)))
+
+def validate_TopologyOverlay(value: TopologyOverlay) -> None:
+    if not isinstance(value, TopologyOverlay):
+        raise TypeError("Expected TopologyOverlay")
+    if value.targets is not None:
+        if not isinstance(value.targets, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.targets:
+            validate_ObjectTarget(v0)
+    if type(value.wireframe) is not bool:
+        raise ValueError("Expected bool")
+    if type(value.vertices) is not bool:
+        raise ValueError("Expected bool")
+    if type(value.vertex_ids) is not bool:
+        raise ValueError("Expected bool")
+    if type(value.constraints) is not bool:
+        raise ValueError("Expected bool")
+    if type(value.strain) is not bool:
+        raise ValueError("Expected bool")
+    if type(value.include_hidden) is not bool:
+        raise ValueError("Expected bool")
+    if type(value.topology_only) is not bool:
+        raise ValueError("Expected bool")
+    if isinstance(value.heat_opacity, bool) or not isinstance(value.heat_opacity, (float, int)) or not math.isfinite(value.heat_opacity) or abs(value.heat_opacity) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+    if type(value.anomalies_only) is not bool:
+        raise ValueError("Expected bool")
+    validate_TopologyThresholds(value.thresholds)
+    if type(value.label_scale) is not int or not 0 <= value.label_scale < 4294967296:
+        raise ValueError("Expected u32")
+    if type(value.label_spacing) is not int or not 0 <= value.label_spacing < 4294967296:
+        raise ValueError("Expected u32")
+    if type(value.max_labels) is not int or not 0 <= value.max_labels < 18446744073709551616:
+        raise ValueError("Expected usize")
+
+def encode_TopologyOverlay(value: TopologyOverlay) -> object:
+    return {'targets': None if value.targets is None else [encode_ObjectTarget(v0) for v0 in value.targets], 'wireframe': value.wireframe, 'vertices': value.vertices, 'vertex_ids': value.vertex_ids, 'constraints': value.constraints, 'strain': value.strain, 'include_hidden': value.include_hidden, 'topology_only': value.topology_only, 'heat_opacity': value.heat_opacity, 'anomalies_only': value.anomalies_only, 'thresholds': encode_TopologyThresholds(value.thresholds), 'label_scale': value.label_scale, 'label_spacing': value.label_spacing, 'max_labels': value.max_labels}
+
+def read_TopologyOverlay(value: object) -> TopologyOverlay:
+    if isinstance(value, TopologyOverlay): return value
+    r = record(value)
+    return TopologyOverlay(targets=None if r.get('targets', None) is None else tuple(read_ObjectTarget(v0) for v0 in sequence(r.get('targets', None))), wireframe=_boolean(r.get('wireframe', True)), vertices=_boolean(r.get('vertices', False)), vertex_ids=_boolean(r.get('vertex_ids', False)), constraints=_boolean(r.get('constraints', False)), strain=_boolean(r.get('strain', False)), include_hidden=_boolean(r.get('include_hidden', False)), topology_only=_boolean(r.get('topology_only', False)), heat_opacity=number(r.get('heat_opacity', 0.25)), anomalies_only=_boolean(r.get('anomalies_only', False)), thresholds=read_TopologyThresholds(r.get('thresholds', {'max_aspect_ratio': 20.0, 'max_edge_stretch': 2.0, 'min_angle_degrees': 10.0})), label_scale=integer(r.get('label_scale', 2)), label_spacing=integer(r.get('label_spacing', 3)), max_labels=integer(r.get('max_labels', 256)))
+
+def validate_ObjectTarget(value: ObjectTarget) -> None:
+    if isinstance(value, ObjectTargetMesh):
+        if not isinstance(value.value, str):
+            raise ValueError("Expected string")
+    elif isinstance(value, ObjectTargetPart):
+        if not isinstance(value.value, str):
+            raise ValueError("Expected string")
+    else:
+        raise TypeError("Expected ObjectTarget")
+
+def encode_ObjectTarget(value: ObjectTarget) -> object:
+    if isinstance(value, ObjectTargetMesh):
+        return {'kind': 'mesh', 'id': value.value}
+    elif isinstance(value, ObjectTargetPart):
+        return {'kind': 'part', 'id': value.value}
+    raise TypeError("Expected ObjectTarget")
+
+def read_ObjectTarget(value: object) -> ObjectTarget:
+    if isinstance(value, (ObjectTargetMesh, ObjectTargetPart,)): return value
+    r = record(value)
+    tag = string(r['kind'])
+    if tag == 'mesh':
+        return ObjectTargetMesh(value=string(r['id']))
+    elif tag == 'part':
+        return ObjectTargetPart(value=string(r['id']))
+    raise ValueError("Unknown ObjectTarget variant")
+
+def validate_TopologyThresholds(value: TopologyThresholds) -> None:
+    if not isinstance(value, TopologyThresholds):
+        raise TypeError("Expected TopologyThresholds")
+    if isinstance(value.min_angle_degrees, bool) or not isinstance(value.min_angle_degrees, (float, int)) or not math.isfinite(value.min_angle_degrees):
+        raise ValueError("Expected f64")
+    if isinstance(value.max_aspect_ratio, bool) or not isinstance(value.max_aspect_ratio, (float, int)) or not math.isfinite(value.max_aspect_ratio):
+        raise ValueError("Expected f64")
+    if isinstance(value.max_edge_stretch, bool) or not isinstance(value.max_edge_stretch, (float, int)) or not math.isfinite(value.max_edge_stretch):
+        raise ValueError("Expected f64")
+
+def encode_TopologyThresholds(value: TopologyThresholds) -> object:
+    return {'min_angle_degrees': value.min_angle_degrees, 'max_aspect_ratio': value.max_aspect_ratio, 'max_edge_stretch': value.max_edge_stretch}
+
+def read_TopologyThresholds(value: object) -> TopologyThresholds:
+    if isinstance(value, TopologyThresholds): return value
+    r = record(value)
+    return TopologyThresholds(min_angle_degrees=number(r.get('min_angle_degrees', 10.0)), max_aspect_ratio=number(r.get('max_aspect_ratio', 20.0)), max_edge_stretch=number(r.get('max_edge_stretch', 2.0)))
 
 def validate_SpatialQuery(value: SpatialQuery) -> None:
     if isinstance(value, SpatialQueryBounds):
@@ -16495,33 +16820,6 @@ def read_SpatialQuery(value: object) -> SpatialQuery:
         f = record(r)
         return SpatialQueryHits(point=cast('tuple[float, float]', tuple(number(v0) for v0 in sequence(f['point']))), include_hidden=_boolean(f.get('include_hidden', False)), details=_boolean(f.get('details', False)), max_candidates=integer(f.get('max_candidates', 32)))
     raise ValueError("Unknown SpatialQuery variant")
-
-def validate_ObjectTarget(value: ObjectTarget) -> None:
-    if isinstance(value, ObjectTargetMesh):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
-    elif isinstance(value, ObjectTargetPart):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
-    else:
-        raise TypeError("Expected ObjectTarget")
-
-def encode_ObjectTarget(value: ObjectTarget) -> object:
-    if isinstance(value, ObjectTargetMesh):
-        return {'kind': 'mesh', 'id': value.value}
-    elif isinstance(value, ObjectTargetPart):
-        return {'kind': 'part', 'id': value.value}
-    raise TypeError("Expected ObjectTarget")
-
-def read_ObjectTarget(value: object) -> ObjectTarget:
-    if isinstance(value, (ObjectTargetMesh, ObjectTargetPart,)): return value
-    r = record(value)
-    tag = string(r['kind'])
-    if tag == 'mesh':
-        return ObjectTargetMesh(value=string(r['id']))
-    elif tag == 'part':
-        return ObjectTargetPart(value=string(r['id']))
-    raise ValueError("Unknown ObjectTarget variant")
 
 def validate_PreviewFrame(value: PreviewFrame) -> None:
     if not isinstance(value, PreviewFrame):
@@ -16606,14 +16904,18 @@ def validate_ObservationImage(value: ObservationImage) -> None:
         raise TypeError("Expected an immutable tuple")
     for v0 in value.drawable_bounds:
         validate_ObservedBounds(v0)
+    if not isinstance(value.quality, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.quality:
+        validate_MeshQuality(v0)
 
 def encode_ObservationImage(value: ObservationImage) -> object:
-    return {'width': value.width, 'height': value.height, 'rgba': [v0 for v0 in value.rgba], 'png': [v0 for v0 in value.png], 'document_id': value.document_id, 'evaluation_revision': value.evaluation_revision, 'capture_id': value.capture_id, 'scene_digest': value.scene_digest, 'render_digest': value.render_digest, 'input_sha256': value.input_sha256, 'adapter_name': value.adapter_name, 'adapter_backend': value.adapter_backend, 'parameters': {str(key0): v0 for key0, v0 in value.parameters.items()}, 'visible_roi': [v0 for v0 in value.visible_roi], 'scale': value.scale, 'offset': [v0 for v0 in value.offset], 'textures': [encode_ObservedTexture(v0) for v0 in value.textures], 'drawable_bounds': [encode_ObservedBounds(v0) for v0 in value.drawable_bounds]}
+    return {'width': value.width, 'height': value.height, 'rgba': [v0 for v0 in value.rgba], 'png': [v0 for v0 in value.png], 'document_id': value.document_id, 'evaluation_revision': value.evaluation_revision, 'capture_id': value.capture_id, 'scene_digest': value.scene_digest, 'render_digest': value.render_digest, 'input_sha256': value.input_sha256, 'adapter_name': value.adapter_name, 'adapter_backend': value.adapter_backend, 'parameters': {str(key0): v0 for key0, v0 in value.parameters.items()}, 'visible_roi': [v0 for v0 in value.visible_roi], 'scale': value.scale, 'offset': [v0 for v0 in value.offset], 'textures': [encode_ObservedTexture(v0) for v0 in value.textures], 'drawable_bounds': [encode_ObservedBounds(v0) for v0 in value.drawable_bounds], 'quality': [encode_MeshQuality(v0) for v0 in value.quality]}
 
 def read_ObservationImage(value: object) -> ObservationImage:
     if isinstance(value, ObservationImage): return value
     r = record(value)
-    return ObservationImage(width=integer(r['width']), height=integer(r['height']), rgba=_bytes(r['rgba']), png=_bytes(r['png']), document_id=string(r['document_id']), evaluation_revision=integer(r['evaluation_revision']), capture_id=string(r['capture_id']), scene_digest=string(r['scene_digest']), render_digest=string(r['render_digest']), input_sha256=string(r['input_sha256']), adapter_name=string(r['adapter_name']), adapter_backend=string(r['adapter_backend']), parameters={key0: number(v0) for key0, v0 in record(r['parameters']).items()}, visible_roi=cast('tuple[float, float, float, float]', tuple(number(v0) for v0 in sequence(r['visible_roi']))), scale=number(r['scale']), offset=cast('tuple[float, float]', tuple(number(v0) for v0 in sequence(r['offset']))), textures=tuple(read_ObservedTexture(v0) for v0 in sequence(r['textures'])), drawable_bounds=tuple(read_ObservedBounds(v0) for v0 in sequence(r['drawable_bounds'])))
+    return ObservationImage(width=integer(r['width']), height=integer(r['height']), rgba=_bytes(r['rgba']), png=_bytes(r['png']), document_id=string(r['document_id']), evaluation_revision=integer(r['evaluation_revision']), capture_id=string(r['capture_id']), scene_digest=string(r['scene_digest']), render_digest=string(r['render_digest']), input_sha256=string(r['input_sha256']), adapter_name=string(r['adapter_name']), adapter_backend=string(r['adapter_backend']), parameters={key0: number(v0) for key0, v0 in record(r['parameters']).items()}, visible_roi=cast('tuple[float, float, float, float]', tuple(number(v0) for v0 in sequence(r['visible_roi']))), scale=number(r['scale']), offset=cast('tuple[float, float]', tuple(number(v0) for v0 in sequence(r['offset']))), textures=tuple(read_ObservedTexture(v0) for v0 in sequence(r['textures'])), drawable_bounds=tuple(read_ObservedBounds(v0) for v0 in sequence(r['drawable_bounds'])), quality=tuple(read_MeshQuality(v0) for v0 in sequence(r['quality'])))
 
 def validate_ObservedTexture(value: ObservedTexture) -> None:
     if not isinstance(value, ObservedTexture):
@@ -17110,4 +17412,4 @@ def read_ConversionCost(value: object) -> ConversionCost:
 
 OPERATION_TYPES = (ModelingCommandCreateAsset, ModelingCommandReplaceAsset, ModelingCommandCreateMesh, ModelingCommandReplaceMesh, ModelingCommandCreateParameter, ModelingCommandReplaceParameter, ModelingCommandCreatePart, ModelingCommandReplacePart, ModelingCommandCreateTransform, ModelingCommandReplaceTransform, ModelingCommandCreateBinding, ModelingCommandReplaceBinding, ModelingCommandCreateSceneBinding, ModelingCommandReplaceSceneBinding, ModelingCommandCreateBlendKeyTable, ModelingCommandReplaceBlendKeyTable, ModelingCommandCreateBlendConstraint, ModelingCommandReplaceBlendConstraint, ModelingCommandCreateBlendBinding, ModelingCommandReplaceBlendBinding, ModelingCommandCreateGlue, ModelingCommandReplaceGlue, ModelingCommandCreateOffscreen, ModelingCommandReplaceOffscreen, ModelingCommandScene, ModelingCommandOrganization, ModelingCommandBinding, ModelingCommandContent, ModelingCommandReferences, ModelingCommandResource, ModelingCommandDocument, ModelingCommandAttachment, ModelingCommandMotion, ModelingCommandExpression, ModelingCommandPhysics, ModelingCommandPose, ModelingCommandCreateMotion, ModelingCommandReplaceMotion, ModelingCommandCreateExpression, ModelingCommandReplaceExpression, ModelingCommandSetPhysics, ModelingCommandSetPose, ModelingCommandReplaceModelSetup, ModelingCommandReplaceHierarchyOrder, ModelingCommandReplaceEditorState, ModelingCommandReplaceDrawOrderGroups, ModelingCommandEraseObject, ModelingCommandRenameMesh, ModelingCommandUpdatePositions, ModelingCommandSetMeshKeyform, ModelingCommandSetSceneKeyform, ModelingCommandRemeshRectangleGrid, ModelingCommandReplaceTopology, ModelingCommandManualMesh,)
 
-__all__ = ['ModelingCommandCreateAsset', 'ModelingCommandReplaceAsset', 'ModelingCommandCreateMesh', 'ModelingCommandReplaceMesh', 'ModelingCommandCreateParameter', 'ModelingCommandReplaceParameter', 'ModelingCommandCreatePart', 'ModelingCommandReplacePart', 'ModelingCommandCreateTransform', 'ModelingCommandReplaceTransform', 'ModelingCommandCreateBinding', 'ModelingCommandReplaceBinding', 'ModelingCommandCreateSceneBinding', 'ModelingCommandReplaceSceneBinding', 'ModelingCommandCreateBlendKeyTable', 'ModelingCommandReplaceBlendKeyTable', 'ModelingCommandCreateBlendConstraint', 'ModelingCommandReplaceBlendConstraint', 'ModelingCommandCreateBlendBinding', 'ModelingCommandReplaceBlendBinding', 'ModelingCommandCreateGlue', 'ModelingCommandReplaceGlue', 'ModelingCommandCreateOffscreen', 'ModelingCommandReplaceOffscreen', 'ModelingCommandScene', 'ModelingCommandOrganization', 'ModelingCommandBinding', 'ModelingCommandContent', 'ModelingCommandReferences', 'ModelingCommandResource', 'ModelingCommandDocument', 'ModelingCommandAttachment', 'ModelingCommandMotion', 'ModelingCommandExpression', 'ModelingCommandPhysics', 'ModelingCommandPose', 'ModelingCommandCreateMotion', 'ModelingCommandReplaceMotion', 'ModelingCommandCreateExpression', 'ModelingCommandReplaceExpression', 'ModelingCommandSetPhysics', 'ModelingCommandSetPose', 'ModelingCommandReplaceModelSetup', 'ModelingCommandReplaceHierarchyOrder', 'ModelingCommandReplaceEditorState', 'ModelingCommandReplaceDrawOrderGroups', 'ModelingCommandEraseObject', 'ModelingCommandRenameMesh', 'ModelingCommandUpdatePositions', 'ModelingCommandSetMeshKeyform', 'ModelingCommandSetSceneKeyform', 'ModelingCommandRemeshRectangleGrid', 'ModelingCommandReplaceTopology', 'ModelingCommandManualMesh', 'ImageAsset', 'ImageContent', 'Mesh', 'SceneReferenceUnspecified', 'SceneReferenceResolved', 'SceneReferenceUnresolved', 'Vec2', 'MeshMeshing', 'MeshConstraint', 'MeshConstraintKind', 'Appearance', 'BlendMode', 'Parameter', 'ParameterKind', 'Part', 'Transform', 'PartId', 'TransformId', 'TransformDataWarp', 'TransformDataRotation', 'WarpTransform', 'WarpBezier', 'WarpBezierNode', 'RotationTransform', 'RotationPose', 'PreciseVec2', 'MeshBinding', 'BindingAxis', 'BindingSample', 'MeshKeyform', 'SceneBinding', 'SceneTrackWarp', 'SceneTrackRotation', 'SceneTrackPart', 'WarpKeyform', 'RotationKeyform', 'PartKeyform', 'BlendShapeKeyTable', 'BlendShapeConstraint', 'ConstraintSample', 'BlendShapeBinding', 'BlendShapeTargetKind', 'DeltaKeyformsMesh', 'DeltaKeyformsWarp', 'DeltaKeyformsRotation', 'DeltaKeyformsPart', 'DeltaKeyformsGlue', 'DeltaKeyformsOffscreen', 'DeltaMeshKeyform', 'DeltaWarpKeyform', 'DeltaRotationKeyform', 'DeltaPartKeyform', 'DeltaGlueKeyform', 'DeltaOffscreenKeyform', 'Glue', 'GlueVertexPair', 'GlueBinding', 'GlueKeyform', 'Offscreen', 'OffscreenKeyform', 'SceneEditCreate', 'SceneEditPatch', 'SceneEditMove', 'SceneEditReparent', 'SceneEditDuplicate', 'SceneEditDelete', 'SceneEditTransferOffscreen', 'SceneEditEnsureDrawingGroup', 'SceneEditSetDrawingRange', 'SceneEditDissolveDrawingGroup', 'SceneEditDuplicateDrawingGroup', 'SceneCreateMesh', 'SceneCreateWarp', 'SceneCreateRotation', 'SceneCreateOffscreen', 'SceneCreateGlue', 'SceneFieldValueLabel', 'SceneFieldValueRuntimeId', 'SceneFieldValueEnabled', 'SceneFieldValueAppearance', 'SceneFieldValueTexture', 'SceneFieldValueMasks', 'SceneFieldValueMeshDrawing', 'SceneFieldValueWarp', 'SceneFieldValueRotation', 'SceneFieldValueGlueEndpoints', 'SceneFieldValueGlueIntensity', 'SceneFieldValueOffscreen', 'SceneFieldValueContext', 'SceneCollectionOrganization', 'SceneCollectionDeformation', 'SceneCollectionGlues', 'SceneCollectionDrawingGroups', 'SceneCollectionDrawing', 'ReparentEdit', 'ReparentStrategy', 'ReparentPlacement', 'ReparentContext', 'ConversionDomain', 'SceneCopyScope', 'OrganizationCollectionParameters', 'OrganizationCollectionParameterGroups', 'OrganizationCollectionPartMembers', 'OrganizationEditCreateParameter', 'OrganizationEditCreateGroup', 'OrganizationEditCreatePart', 'OrganizationEditSetParameterGroup', 'OrganizationEditPatchGroup', 'OrganizationEditMove', 'OrganizationEditDuplicate', 'OrganizationEditDelete', 'CdiParameterGroup', 'OrganizationDeletePolicy', 'BindingAuthoringEditGrid', 'BindingAuthoringEditBlend', 'BindingAuthoringEditMeshGrid', 'BindingAuthoringEditParameterRange', 'BindingAuthoringEditReparent', 'BindingGridEditDelete', 'BindingGridEditCreate', 'BindingGridEditEdit', 'BindingGridTargetMesh', 'BindingGridTargetScene', 'BindingGridTargetGlue', 'GridOperationAddAxis', 'GridOperationRemapParameter', 'GridOperationSetParameter', 'GridOperationReorderAxes', 'GridOperationInsertSample', 'GridOperationMoveSample', 'GridOperationDeleteSample', 'GridOperationRemoveAxis', 'ParameterRangePolicy', 'AxisReductionSlice', 'AxisReductionResample', 'BlendAuthoringEditCreateTable', 'BlendAuthoringEditCreateConstraint', 'BlendAuthoringEditCreateBinding', 'BlendAuthoringEditTable', 'BlendAuthoringEditConstraint', 'BlendAuthoringEditSetBindingTable', 'BlendTableOperationInsert', 'BlendTableOperationMove', 'BlendTableOperationDelete', 'BlendTableOperationSetBase', 'BlendTableOperationSetParameter', 'BlendTableOperationRemapParameter', 'MeshGridEditCreate', 'MeshGridEditAddAxis', 'MeshGridEditReorderAxes', 'MeshGridEditInsertSample', 'MeshGridEditMoveSample', 'MeshGridEditDeleteSample', 'MeshGridEditRemoveAxis', 'ParameterRangeEdit', 'SceneContentEditMeshVertices', 'SceneContentEditInsertMeshVertices', 'SceneContentEditDeleteMeshVertices', 'SceneContentEditReorderMeshVertices', 'SceneContentEditInsertTriangle', 'SceneContentEditPatchTriangle', 'SceneContentEditDeleteTriangles', 'SceneContentEditReplaceTriangles', 'SceneContentEditWarpPoints', 'SceneContentEditWarpBezier', 'SceneContentEditResizeWarp', 'SceneContentEditInsertGluePair', 'SceneContentEditPatchGluePair', 'SceneContentEditMoveGluePairs', 'SceneContentEditTransferGluePairs', 'SceneContentEditDuplicateGluePairs', 'SceneContentEditDeleteGluePairs', 'SceneContentEditInsertOffscreenKeyform', 'SceneContentEditPatchOffscreenKeyform', 'SceneContentEditDuplicateOffscreenKeyforms', 'SceneContentEditReorderOffscreenKeyforms', 'SceneContentEditDeleteOffscreenKeyforms', 'SceneContentEditSetOffscreenMapping', 'ShapeTargetBase', 'ShapeTargetOrdinary', 'ShapeTargetBlend', 'VertexContentPatch', 'NewMeshVertex', 'VertexSeedBase', 'VertexSeedInterpolate', 'VertexWeight', 'VertexDeletePolicy', 'WarpPointPatch', 'OffscreenDeletePolicyRejectReferences', 'OffscreenDeletePolicyNeutral', 'OffscreenDeletePolicyRemap', 'OffscreenMappingPatch', 'PartKeyformSlotStatic', 'PartKeyformSlotSamples', 'ReferenceEditCreateModelParameterGroup', 'ReferenceEditCreateModelHitArea', 'ReferenceEditCreateCdiCombinedSet', 'ReferenceEditCreateMember', 'ReferenceEditPatch', 'ReferenceEditMove', 'ReferenceEditDuplicate', 'ReferenceEditDelete', 'ReferenceEditDissolve', 'ReferenceEditReplaceSelection', 'ReferenceCollectionModelParameterGroups', 'ReferenceCollectionModelHitAreas', 'ReferenceCollectionCdiCombinedSets', 'ReferenceCollectionModelParameterMembers', 'ReferenceCollectionCdiCombinedMembers', 'ReferenceFieldsModelParameterGroup', 'ReferenceFieldsModelHitArea', 'ReferenceFieldsModelParameterMember', 'ReferenceFieldsCdiCombinedMember', 'ModelTargetRefUnspecified', 'ModelTargetRefResolved', 'ModelTargetRefUnresolved', 'CdiParameterRefUnspecified', 'CdiParameterRefResolved', 'CdiParameterRefUnresolved', 'ReferenceSelectionField', 'ResourceEditCreate', 'ResourceEditPatchName', 'ResourceEditSetContent', 'ResourceEditReorder', 'ResourceEditDuplicate', 'ResourceEditDelete', 'DocumentAuthoringEditPatch', 'DocumentAuthoringEditRepairMissingAttachment', 'DocumentAuthoringEditRepairCdiParameter', 'DocumentAuthoringEditRepairCdiPart', 'DocumentValueLayout', 'DocumentValueExportSettings', 'DocumentValueSourceCanvas', 'ExportSettings', 'Canvas', 'AttachmentEditCreate', 'AttachmentEditReplace', 'AttachmentEditDuplicate', 'AttachmentEditDelete', 'AttachmentEditDeleteWithReplacement', 'AttachmentEditReorder', 'AttachmentEditSetSound', 'AttachmentEditSetUserData', 'PackageAttachment', 'AttachmentRefResolved', 'AttachmentRefUnresolved', 'MotionEditCreate', 'MotionEditCreateGroup', 'MotionEditRenameGroup', 'MotionEditReorderGroups', 'MotionEditRegister', 'MotionEditPatchRegistration', 'MotionEditMoveRegistrations', 'MotionEditDuplicateRegistrations', 'MotionEditDeleteRegistrations', 'MotionEditDissolveGroup', 'MotionEditDeleteGroup', 'MotionEditDuplicateGroup', 'MotionEditDuplicateClip', 'MotionEditDeleteClip', 'MotionEditReorderTracks', 'MotionEditCreateTrack', 'MotionEditSetTrackTarget', 'MotionEditMoveTracks', 'MotionEditDeleteTracks', 'MotionEditTransferKeys', 'MotionEditSetEvent', 'MotionEditDeleteEvents', 'MotionEditMoveEvents', 'MotionContainerRoot', 'MotionContainerGroup', 'MotionRegistration', 'MotionTrackTargetUnspecified', 'MotionTrackTargetModel', 'MotionTrackTargetParameter', 'MotionTrackTargetPartOpacity', 'MotionTrackTargetUnresolved', 'MotionEvent', 'ExpressionEditCreate', 'ExpressionEditCreateEntry', 'ExpressionEditPatchEntry', 'ExpressionEditMoveEntries', 'ExpressionEditDuplicateEntries', 'ExpressionEditDeleteEntries', 'ExpressionEditDuplicate', 'ExpressionEditDelete', 'ExpressionEditReorder', 'ExpressionEntryFields', 'ExpressionTargetUnspecified', 'ExpressionTargetResolved', 'ExpressionTargetUnresolved', 'ExpressionBlend', 'PhysicsEditCreateGroup', 'PhysicsEditCreateInput', 'PhysicsEditCreateOutput', 'PhysicsEditInsertNode', 'PhysicsEditMoveNode', 'PhysicsEditDuplicateNode', 'PhysicsEditPatch', 'PhysicsEditMoveInputs', 'PhysicsEditMoveOutputs', 'PhysicsEditReorderGroups', 'PhysicsEditDuplicate', 'PhysicsEditDelete', 'PhysicsNode', 'PhysicsVector', 'PhysicsPatch', 'PhysicsAssetPropertyFps', 'PhysicsRigPatch', 'PhysicsPropertyName', 'PhysicsPropertyInputWeight', 'PhysicsPropertyInputAxis', 'PhysicsPropertyInputReflect', 'PhysicsPropertyInputParameter', 'PhysicsPropertyOutputWeight', 'PhysicsPropertyOutputScale', 'PhysicsPropertyOutputAxis', 'PhysicsPropertyOutputReflect', 'PhysicsPropertyOutputParameter', 'PhysicsPropertyOutputNode', 'PhysicsPropertyVertexPosition', 'PhysicsPropertyVertexRadius', 'PhysicsPropertyVertexMobility', 'PhysicsPropertyVertexDelay', 'PhysicsPropertyVertexAcceleration', 'PhysicsPropertyPositionNormalization', 'PhysicsPropertyAngleNormalization', 'PhysicsAxis', 'PhysicsTargetUnspecified', 'PhysicsTargetResolved', 'PhysicsTargetUnresolved', 'PhysicsRange', 'PoseEditCreate', 'PoseEditCreateGroup', 'PoseEditCreateEntry', 'PoseEditCreateLink', 'PoseEditPatch', 'PoseEditMove', 'PoseEditDuplicate', 'PoseEditDelete', 'PoseEditDissolveGroup', 'PoseFieldsAsset', 'PoseFieldsGroup', 'PoseFieldsEntry', 'PoseFieldsLink', 'PosePartRefUnspecified', 'PosePartRefResolved', 'PosePartRefUnresolved', 'PoseCollectionGroups', 'PoseCollectionEntries', 'PoseCollectionLinks', 'MotionClip', 'MotionTrack', 'MotionKey', 'MotionSegmentLinear', 'MotionSegmentBezier', 'MotionSegmentStepped', 'MotionSegmentInverseStepped', 'MotionPoint', 'ExpressionAsset', 'ExpressionEntry', 'PhysicsAsset', 'PhysicsDefinition', 'PhysicsMeta', 'PhysicsForces', 'PhysicsDictionaryEntry', 'PhysicsSetting', 'PhysicsInput', 'PhysicsOutput', 'PhysicsNormalization', 'PoseAsset', 'PoseGroup', 'PoseEntry', 'PoseLink', 'ModelSetup', 'HierarchyOrder', 'EditorState', 'ObjectEditorState', 'DrawOrderGroup', 'SceneKeyformWarp', 'SceneKeyformRotation', 'SceneKeyformPart', 'GeometrySnapshot', 'GeometrySpaceModel', 'GeometrySpaceRotationLocal', 'GeometrySpaceWarpParameter', 'TopologyReplacement', 'ManualMeshOperationInsertVertex', 'ManualMeshOperationInsertConnectedVertex', 'ManualMeshOperationDeleteEdge', 'ManualMeshOperationMoveVertices', 'ManualMeshOperationDeleteVertices', 'ManualMeshOperationConstrainEdge', 'ManualMeshOperationReleaseConstraint', 'ManualMeshOperationReconnect', 'ManualVertexTarget', 'ModelingQuery', 'OwnedModelingRecords', 'DisplayInfo', 'DisplayInfoOrigin', 'CdiParameterEntryResolved', 'CdiParameterEntryUnresolved', 'CdiPartEntryResolved', 'CdiPartEntryUnresolved', 'CdiCombinedSet', 'ReferenceEntryCdiParameterRef', 'CdiNamespaceIds', 'Model3Settings', 'ModelParameterGroup', 'ReferenceEntryModelTargetRef', 'ModelHitArea', 'MotionGroup', 'AddressSelectorScene', 'AddressSelectorDrawingGroup', 'AddressSelectorBinding', 'AddressSelectorOrganization', 'AddressSelectorContent', 'AddressSelectorReference', 'AddressSelectorSelection', 'AddressSelectorResourceName', 'AddressSelectorAttachmentPath', 'AddressSelectorDocument', 'AddressSelectorMotionRegistration', 'AddressSelectorExpressionEntry', 'AddressSelectorPhysics', 'AddressSelectorPose', 'SceneField', 'SceneContentTargetVertexPosition', 'SceneContentTargetVertexUv', 'SceneContentTargetTriangle', 'SceneContentTargetWarpPoint', 'SceneContentTargetWarpBezierControl', 'SceneContentTargetGluePair', 'SceneContentTargetOffscreenKeyform', 'SceneContentTargetOffscreenMapping', 'DocumentField', 'AddressPatchScene', 'AddressPatchDrawingRange', 'AddressPatchBinding', 'AddressPatchOrganization', 'AddressPatchContent', 'AddressPatchReference', 'AddressPatchSelection', 'AddressPatchResourceName', 'AddressPatchAttachmentPath', 'AddressPatchDocument', 'AddressPatchMotionRegistration', 'AddressPatchExpressionEntry', 'AddressPatchPhysics', 'AddressPatchPose', 'BindingFieldPatchSampleValue', 'BindingFieldPatchConstraintSample', 'BindingFieldPatchAxisParameter', 'SceneContentValuePoint', 'SceneContentValueTriangle', 'SceneContentValueGluePair', 'SceneContentValueOffscreenKeyform', 'SceneContentValueMapping', 'CapabilityDomain', 'CollectionQueryScene', 'CollectionQueryOrganization', 'CollectionQueryReferences', 'CollectionQueryResources', 'CollectionQueryAttachments', 'CollectionQueryDocument', 'CollectionQueryMotion', 'CollectionQueryMotionGroups', 'CollectionQueryClips', 'CollectionQueryExpressions', 'CollectionQueryExpressionEntries', 'CollectionQueryPhysics', 'CollectionQueryPose', 'PhysicsCollectionGroups', 'PhysicsCollectionInputs', 'PhysicsCollectionOutputs', 'PhysicsCollectionNodes', 'CapabilitiesScene', 'CapabilitiesOrganization', 'CapabilitiesBinding', 'CapabilitiesContent', 'CapabilitiesReferences', 'CapabilitiesResource', 'CapabilitiesAttachment', 'CapabilitiesCollection', 'CapabilitiesDocument', 'CapabilitiesMotion', 'CapabilitiesExpression', 'CapabilitiesPhysics', 'CapabilitiesPose', 'SceneCapabilities', 'CapabilityStateAvailable', 'CapabilityStateUnsupported', 'CapabilityStateUnavailable', 'OrganizationCapabilities', 'BindingCapabilities', 'SceneContentCapabilities', 'ReferenceCapabilities', 'ResourceCapabilities', 'AttachmentCapabilities', 'CollectionCapabilities', 'MotionCapabilities', 'ExpressionCapabilities', 'PhysicsCapabilities', 'PoseCapabilities', 'ObjectKind', 'ModelingSamples', 'DrawableFrame', 'EvaluatedParameter', 'Drawable', 'OffscreenFrame', 'RenderCommandBeginOffscreen', 'RenderCommandDrawMesh', 'RenderCommandEndOffscreen', 'EvaluatedDeformer', 'GeometryDiagnostic', 'GeometryDiagnosticKind', 'ProjectRequestDiagnose', 'ProjectRequestImport', 'ProjectRequestOpen', 'ProjectRequestNew', 'ProjectRequestExport', 'ImportFormat', 'TextureSlot', 'ExportFormat', 'ProjectReport', 'ProjectDiagnostic', 'EditorContext', 'PreviewCommandSetParameter', 'PreviewCommandScheduleMotion', 'PreviewCommandScheduleRegistration', 'PreviewCommandScheduleExpression', 'PreviewCommandScheduleParameter', 'PreviewCommandSetPhysics', 'PreviewCommandReset', 'PreviewState', 'PreviewBatch', 'ObservationView', 'SpatialQueryBounds', 'SpatialQueryHits', 'ObjectTargetMesh', 'ObjectTargetPart', 'PreviewFrame', 'ObservationImage', 'ObservedTexture', 'ObservedBounds', 'SpatialResultBounds', 'SpatialResultHits', 'ObjectBounds', 'GeometryQuery', 'GeometryHit', 'TriangleHit', 'MotionSnapshot', 'PhysicsRigSnapshot', 'PhysicsOutputSnapshot', 'MotionEventFired', 'MotionPlaybackPosition', 'SpatialSamples', 'SpatialFrame', 'ObservationBatch', 'ManualMeshTransferReport', 'ConversionCost', 'ModelingCommand', 'SceneReference', 'TransformData', 'SceneTrack', 'DeltaKeyforms', 'SceneEdit', 'SceneCreate', 'SceneFieldValue', 'SceneCollection', 'OrganizationCollection', 'OrganizationEdit', 'BindingAuthoringEdit', 'BindingGridEdit', 'BindingGridTarget', 'GridOperation', 'AxisReduction', 'BlendAuthoringEdit', 'BlendTableOperation', 'MeshGridEdit', 'SceneContentEdit', 'ShapeTarget', 'VertexSeed', 'OffscreenDeletePolicy', 'PartKeyformSlot', 'ReferenceEdit', 'ReferenceCollection', 'ReferenceFields', 'ModelTargetRef', 'CdiParameterRef', 'ResourceEdit', 'DocumentAuthoringEdit', 'DocumentValue', 'AttachmentEdit', 'AttachmentRef', 'MotionEdit', 'MotionContainer', 'MotionTrackTarget', 'ExpressionEdit', 'ExpressionTarget', 'PhysicsEdit', 'PhysicsAssetProperty', 'PhysicsProperty', 'PhysicsTarget', 'PoseEdit', 'PoseFields', 'PosePartRef', 'PoseCollection', 'MotionSegment', 'SceneKeyform', 'GeometrySpace', 'ManualMeshOperation', 'CdiParameterEntry', 'CdiPartEntry', 'AddressSelector', 'SceneContentTarget', 'AddressPatch', 'BindingFieldPatch', 'SceneContentValue', 'CollectionQuery', 'PhysicsCollection', 'Capabilities', 'CapabilityState', 'RenderCommand', 'ProjectRequest', 'PreviewCommand', 'SpatialQuery', 'ObjectTarget', 'SpatialResult', 'ExtensionValue']
+__all__ = ['ModelingCommandCreateAsset', 'ModelingCommandReplaceAsset', 'ModelingCommandCreateMesh', 'ModelingCommandReplaceMesh', 'ModelingCommandCreateParameter', 'ModelingCommandReplaceParameter', 'ModelingCommandCreatePart', 'ModelingCommandReplacePart', 'ModelingCommandCreateTransform', 'ModelingCommandReplaceTransform', 'ModelingCommandCreateBinding', 'ModelingCommandReplaceBinding', 'ModelingCommandCreateSceneBinding', 'ModelingCommandReplaceSceneBinding', 'ModelingCommandCreateBlendKeyTable', 'ModelingCommandReplaceBlendKeyTable', 'ModelingCommandCreateBlendConstraint', 'ModelingCommandReplaceBlendConstraint', 'ModelingCommandCreateBlendBinding', 'ModelingCommandReplaceBlendBinding', 'ModelingCommandCreateGlue', 'ModelingCommandReplaceGlue', 'ModelingCommandCreateOffscreen', 'ModelingCommandReplaceOffscreen', 'ModelingCommandScene', 'ModelingCommandOrganization', 'ModelingCommandBinding', 'ModelingCommandContent', 'ModelingCommandReferences', 'ModelingCommandResource', 'ModelingCommandDocument', 'ModelingCommandAttachment', 'ModelingCommandMotion', 'ModelingCommandExpression', 'ModelingCommandPhysics', 'ModelingCommandPose', 'ModelingCommandCreateMotion', 'ModelingCommandReplaceMotion', 'ModelingCommandCreateExpression', 'ModelingCommandReplaceExpression', 'ModelingCommandSetPhysics', 'ModelingCommandSetPose', 'ModelingCommandReplaceModelSetup', 'ModelingCommandReplaceHierarchyOrder', 'ModelingCommandReplaceEditorState', 'ModelingCommandReplaceDrawOrderGroups', 'ModelingCommandEraseObject', 'ModelingCommandRenameMesh', 'ModelingCommandUpdatePositions', 'ModelingCommandSetMeshKeyform', 'ModelingCommandSetSceneKeyform', 'ModelingCommandRemeshRectangleGrid', 'ModelingCommandReplaceTopology', 'ModelingCommandManualMesh', 'ImageAsset', 'ImageContent', 'Mesh', 'SceneReferenceUnspecified', 'SceneReferenceResolved', 'SceneReferenceUnresolved', 'Vec2', 'MeshMeshing', 'MeshConstraint', 'MeshConstraintKind', 'Appearance', 'BlendMode', 'Parameter', 'ParameterKind', 'Part', 'Transform', 'PartId', 'TransformId', 'TransformDataWarp', 'TransformDataRotation', 'WarpTransform', 'WarpBezier', 'WarpBezierNode', 'RotationTransform', 'RotationPose', 'PreciseVec2', 'MeshBinding', 'BindingAxis', 'BindingSample', 'MeshKeyform', 'SceneBinding', 'SceneTrackWarp', 'SceneTrackRotation', 'SceneTrackPart', 'WarpKeyform', 'RotationKeyform', 'PartKeyform', 'BlendShapeKeyTable', 'BlendShapeConstraint', 'ConstraintSample', 'BlendShapeBinding', 'BlendShapeTargetKind', 'DeltaKeyformsMesh', 'DeltaKeyformsWarp', 'DeltaKeyformsRotation', 'DeltaKeyformsPart', 'DeltaKeyformsGlue', 'DeltaKeyformsOffscreen', 'DeltaMeshKeyform', 'DeltaWarpKeyform', 'DeltaRotationKeyform', 'DeltaPartKeyform', 'DeltaGlueKeyform', 'DeltaOffscreenKeyform', 'Glue', 'GlueVertexPair', 'GlueBinding', 'GlueKeyform', 'Offscreen', 'OffscreenKeyform', 'SceneEditCreate', 'SceneEditPatch', 'SceneEditMove', 'SceneEditReparent', 'SceneEditDuplicate', 'SceneEditDelete', 'SceneEditTransferOffscreen', 'SceneEditEnsureDrawingGroup', 'SceneEditSetDrawingRange', 'SceneEditDissolveDrawingGroup', 'SceneEditDuplicateDrawingGroup', 'SceneCreateMesh', 'SceneCreateWarp', 'SceneCreateRotation', 'SceneCreateOffscreen', 'SceneCreateGlue', 'SceneFieldValueLabel', 'SceneFieldValueRuntimeId', 'SceneFieldValueEnabled', 'SceneFieldValueAppearance', 'SceneFieldValueTexture', 'SceneFieldValueMasks', 'SceneFieldValueMeshDrawing', 'SceneFieldValueWarp', 'SceneFieldValueRotation', 'SceneFieldValueGlueEndpoints', 'SceneFieldValueGlueIntensity', 'SceneFieldValueOffscreen', 'SceneFieldValueContext', 'SceneCollectionOrganization', 'SceneCollectionDeformation', 'SceneCollectionGlues', 'SceneCollectionDrawingGroups', 'SceneCollectionDrawing', 'ReparentEdit', 'ReparentStrategy', 'ReparentPlacement', 'ReparentContext', 'ConversionDomain', 'SceneCopyScope', 'OrganizationCollectionParameters', 'OrganizationCollectionParameterGroups', 'OrganizationCollectionPartMembers', 'OrganizationEditCreateParameter', 'OrganizationEditCreateGroup', 'OrganizationEditCreatePart', 'OrganizationEditSetParameterGroup', 'OrganizationEditPatchGroup', 'OrganizationEditMove', 'OrganizationEditDuplicate', 'OrganizationEditDelete', 'CdiParameterGroup', 'OrganizationDeletePolicy', 'BindingAuthoringEditGrid', 'BindingAuthoringEditBlend', 'BindingAuthoringEditMeshGrid', 'BindingAuthoringEditParameterRange', 'BindingAuthoringEditReparent', 'BindingGridEditDelete', 'BindingGridEditCreate', 'BindingGridEditEdit', 'BindingGridTargetMesh', 'BindingGridTargetScene', 'BindingGridTargetGlue', 'GridOperationAddAxis', 'GridOperationRemapParameter', 'GridOperationSetParameter', 'GridOperationReorderAxes', 'GridOperationInsertSample', 'GridOperationMoveSample', 'GridOperationDeleteSample', 'GridOperationRemoveAxis', 'ParameterRangePolicy', 'AxisReductionSlice', 'AxisReductionResample', 'BlendAuthoringEditCreateTable', 'BlendAuthoringEditCreateConstraint', 'BlendAuthoringEditCreateBinding', 'BlendAuthoringEditTable', 'BlendAuthoringEditConstraint', 'BlendAuthoringEditSetBindingTable', 'BlendTableOperationInsert', 'BlendTableOperationMove', 'BlendTableOperationDelete', 'BlendTableOperationSetBase', 'BlendTableOperationSetParameter', 'BlendTableOperationRemapParameter', 'MeshGridEditCreate', 'MeshGridEditAddAxis', 'MeshGridEditReorderAxes', 'MeshGridEditInsertSample', 'MeshGridEditMoveSample', 'MeshGridEditDeleteSample', 'MeshGridEditRemoveAxis', 'ParameterRangeEdit', 'SceneContentEditMeshVertices', 'SceneContentEditInsertMeshVertices', 'SceneContentEditDeleteMeshVertices', 'SceneContentEditReorderMeshVertices', 'SceneContentEditInsertTriangle', 'SceneContentEditPatchTriangle', 'SceneContentEditDeleteTriangles', 'SceneContentEditReplaceTriangles', 'SceneContentEditWarpPoints', 'SceneContentEditWarpBezier', 'SceneContentEditResizeWarp', 'SceneContentEditInsertGluePair', 'SceneContentEditPatchGluePair', 'SceneContentEditMoveGluePairs', 'SceneContentEditTransferGluePairs', 'SceneContentEditDuplicateGluePairs', 'SceneContentEditDeleteGluePairs', 'SceneContentEditInsertOffscreenKeyform', 'SceneContentEditPatchOffscreenKeyform', 'SceneContentEditDuplicateOffscreenKeyforms', 'SceneContentEditReorderOffscreenKeyforms', 'SceneContentEditDeleteOffscreenKeyforms', 'SceneContentEditSetOffscreenMapping', 'ShapeTargetBase', 'ShapeTargetOrdinary', 'ShapeTargetBlend', 'VertexContentPatch', 'NewMeshVertex', 'VertexSeedBase', 'VertexSeedInterpolate', 'VertexWeight', 'VertexDeletePolicy', 'WarpPointPatch', 'OffscreenDeletePolicyRejectReferences', 'OffscreenDeletePolicyNeutral', 'OffscreenDeletePolicyRemap', 'OffscreenMappingPatch', 'PartKeyformSlotStatic', 'PartKeyformSlotSamples', 'ReferenceEditCreateModelParameterGroup', 'ReferenceEditCreateModelHitArea', 'ReferenceEditCreateCdiCombinedSet', 'ReferenceEditCreateMember', 'ReferenceEditPatch', 'ReferenceEditMove', 'ReferenceEditDuplicate', 'ReferenceEditDelete', 'ReferenceEditDissolve', 'ReferenceEditReplaceSelection', 'ReferenceCollectionModelParameterGroups', 'ReferenceCollectionModelHitAreas', 'ReferenceCollectionCdiCombinedSets', 'ReferenceCollectionModelParameterMembers', 'ReferenceCollectionCdiCombinedMembers', 'ReferenceFieldsModelParameterGroup', 'ReferenceFieldsModelHitArea', 'ReferenceFieldsModelParameterMember', 'ReferenceFieldsCdiCombinedMember', 'ModelTargetRefUnspecified', 'ModelTargetRefResolved', 'ModelTargetRefUnresolved', 'CdiParameterRefUnspecified', 'CdiParameterRefResolved', 'CdiParameterRefUnresolved', 'ReferenceSelectionField', 'ResourceEditCreate', 'ResourceEditPatchName', 'ResourceEditSetContent', 'ResourceEditReorder', 'ResourceEditDuplicate', 'ResourceEditDelete', 'DocumentAuthoringEditPatch', 'DocumentAuthoringEditRepairMissingAttachment', 'DocumentAuthoringEditRepairCdiParameter', 'DocumentAuthoringEditRepairCdiPart', 'DocumentValueLayout', 'DocumentValueExportSettings', 'DocumentValueSourceCanvas', 'ExportSettings', 'Canvas', 'AttachmentEditCreate', 'AttachmentEditReplace', 'AttachmentEditDuplicate', 'AttachmentEditDelete', 'AttachmentEditDeleteWithReplacement', 'AttachmentEditReorder', 'AttachmentEditSetSound', 'AttachmentEditSetUserData', 'PackageAttachment', 'AttachmentRefResolved', 'AttachmentRefUnresolved', 'MotionEditCreate', 'MotionEditCreateGroup', 'MotionEditRenameGroup', 'MotionEditReorderGroups', 'MotionEditRegister', 'MotionEditPatchRegistration', 'MotionEditMoveRegistrations', 'MotionEditDuplicateRegistrations', 'MotionEditDeleteRegistrations', 'MotionEditDissolveGroup', 'MotionEditDeleteGroup', 'MotionEditDuplicateGroup', 'MotionEditDuplicateClip', 'MotionEditDeleteClip', 'MotionEditReorderTracks', 'MotionEditCreateTrack', 'MotionEditSetTrackTarget', 'MotionEditMoveTracks', 'MotionEditDeleteTracks', 'MotionEditTransferKeys', 'MotionEditSetEvent', 'MotionEditDeleteEvents', 'MotionEditMoveEvents', 'MotionContainerRoot', 'MotionContainerGroup', 'MotionRegistration', 'MotionTrackTargetUnspecified', 'MotionTrackTargetModel', 'MotionTrackTargetParameter', 'MotionTrackTargetPartOpacity', 'MotionTrackTargetUnresolved', 'MotionEvent', 'ExpressionEditCreate', 'ExpressionEditCreateEntry', 'ExpressionEditPatchEntry', 'ExpressionEditMoveEntries', 'ExpressionEditDuplicateEntries', 'ExpressionEditDeleteEntries', 'ExpressionEditDuplicate', 'ExpressionEditDelete', 'ExpressionEditReorder', 'ExpressionEntryFields', 'ExpressionTargetUnspecified', 'ExpressionTargetResolved', 'ExpressionTargetUnresolved', 'ExpressionBlend', 'PhysicsEditCreateGroup', 'PhysicsEditCreateInput', 'PhysicsEditCreateOutput', 'PhysicsEditInsertNode', 'PhysicsEditMoveNode', 'PhysicsEditDuplicateNode', 'PhysicsEditPatch', 'PhysicsEditMoveInputs', 'PhysicsEditMoveOutputs', 'PhysicsEditReorderGroups', 'PhysicsEditDuplicate', 'PhysicsEditDelete', 'PhysicsNode', 'PhysicsVector', 'PhysicsPatch', 'PhysicsAssetPropertyFps', 'PhysicsRigPatch', 'PhysicsPropertyName', 'PhysicsPropertyInputWeight', 'PhysicsPropertyInputAxis', 'PhysicsPropertyInputReflect', 'PhysicsPropertyInputParameter', 'PhysicsPropertyOutputWeight', 'PhysicsPropertyOutputScale', 'PhysicsPropertyOutputAxis', 'PhysicsPropertyOutputReflect', 'PhysicsPropertyOutputParameter', 'PhysicsPropertyOutputNode', 'PhysicsPropertyVertexPosition', 'PhysicsPropertyVertexRadius', 'PhysicsPropertyVertexMobility', 'PhysicsPropertyVertexDelay', 'PhysicsPropertyVertexAcceleration', 'PhysicsPropertyPositionNormalization', 'PhysicsPropertyAngleNormalization', 'PhysicsAxis', 'PhysicsTargetUnspecified', 'PhysicsTargetResolved', 'PhysicsTargetUnresolved', 'PhysicsRange', 'PoseEditCreate', 'PoseEditCreateGroup', 'PoseEditCreateEntry', 'PoseEditCreateLink', 'PoseEditPatch', 'PoseEditMove', 'PoseEditDuplicate', 'PoseEditDelete', 'PoseEditDissolveGroup', 'PoseFieldsAsset', 'PoseFieldsGroup', 'PoseFieldsEntry', 'PoseFieldsLink', 'PosePartRefUnspecified', 'PosePartRefResolved', 'PosePartRefUnresolved', 'PoseCollectionGroups', 'PoseCollectionEntries', 'PoseCollectionLinks', 'MotionClip', 'MotionTrack', 'MotionKey', 'MotionSegmentLinear', 'MotionSegmentBezier', 'MotionSegmentStepped', 'MotionSegmentInverseStepped', 'MotionPoint', 'ExpressionAsset', 'ExpressionEntry', 'PhysicsAsset', 'PhysicsDefinition', 'PhysicsMeta', 'PhysicsForces', 'PhysicsDictionaryEntry', 'PhysicsSetting', 'PhysicsInput', 'PhysicsOutput', 'PhysicsNormalization', 'PoseAsset', 'PoseGroup', 'PoseEntry', 'PoseLink', 'ModelSetup', 'HierarchyOrder', 'EditorState', 'ObjectEditorState', 'DrawOrderGroup', 'SceneKeyformWarp', 'SceneKeyformRotation', 'SceneKeyformPart', 'GeometrySnapshot', 'GeometrySpaceModel', 'GeometrySpaceRotationLocal', 'GeometrySpaceWarpParameter', 'TopologyReplacement', 'ManualMeshOperationInsertVertex', 'ManualMeshOperationInsertConnectedVertex', 'ManualMeshOperationDeleteEdge', 'ManualMeshOperationMoveVertices', 'ManualMeshOperationDeleteVertices', 'ManualMeshOperationConstrainEdge', 'ManualMeshOperationReleaseConstraint', 'ManualMeshOperationReconnect', 'ManualVertexTarget', 'ModelingQuery', 'OwnedModelingRecords', 'DisplayInfo', 'DisplayInfoOrigin', 'CdiParameterEntryResolved', 'CdiParameterEntryUnresolved', 'CdiPartEntryResolved', 'CdiPartEntryUnresolved', 'CdiCombinedSet', 'ReferenceEntryCdiParameterRef', 'CdiNamespaceIds', 'Model3Settings', 'ModelParameterGroup', 'ReferenceEntryModelTargetRef', 'ModelHitArea', 'MotionGroup', 'AddressSelectorScene', 'AddressSelectorDrawingGroup', 'AddressSelectorBinding', 'AddressSelectorOrganization', 'AddressSelectorContent', 'AddressSelectorReference', 'AddressSelectorSelection', 'AddressSelectorResourceName', 'AddressSelectorAttachmentPath', 'AddressSelectorDocument', 'AddressSelectorMotionRegistration', 'AddressSelectorExpressionEntry', 'AddressSelectorPhysics', 'AddressSelectorPose', 'SceneField', 'SceneContentTargetVertexPosition', 'SceneContentTargetVertexUv', 'SceneContentTargetTriangle', 'SceneContentTargetWarpPoint', 'SceneContentTargetWarpBezierControl', 'SceneContentTargetGluePair', 'SceneContentTargetOffscreenKeyform', 'SceneContentTargetOffscreenMapping', 'DocumentField', 'AddressPatchScene', 'AddressPatchDrawingRange', 'AddressPatchBinding', 'AddressPatchOrganization', 'AddressPatchContent', 'AddressPatchReference', 'AddressPatchSelection', 'AddressPatchResourceName', 'AddressPatchAttachmentPath', 'AddressPatchDocument', 'AddressPatchMotionRegistration', 'AddressPatchExpressionEntry', 'AddressPatchPhysics', 'AddressPatchPose', 'BindingFieldPatchSampleValue', 'BindingFieldPatchConstraintSample', 'BindingFieldPatchAxisParameter', 'SceneContentValuePoint', 'SceneContentValueTriangle', 'SceneContentValueGluePair', 'SceneContentValueOffscreenKeyform', 'SceneContentValueMapping', 'CapabilityDomain', 'CollectionQueryScene', 'CollectionQueryOrganization', 'CollectionQueryReferences', 'CollectionQueryResources', 'CollectionQueryAttachments', 'CollectionQueryDocument', 'CollectionQueryMotion', 'CollectionQueryMotionGroups', 'CollectionQueryClips', 'CollectionQueryExpressions', 'CollectionQueryExpressionEntries', 'CollectionQueryPhysics', 'CollectionQueryPose', 'PhysicsCollectionGroups', 'PhysicsCollectionInputs', 'PhysicsCollectionOutputs', 'PhysicsCollectionNodes', 'CapabilitiesScene', 'CapabilitiesOrganization', 'CapabilitiesBinding', 'CapabilitiesContent', 'CapabilitiesReferences', 'CapabilitiesResource', 'CapabilitiesAttachment', 'CapabilitiesCollection', 'CapabilitiesDocument', 'CapabilitiesMotion', 'CapabilitiesExpression', 'CapabilitiesPhysics', 'CapabilitiesPose', 'SceneCapabilities', 'CapabilityStateAvailable', 'CapabilityStateUnsupported', 'CapabilityStateUnavailable', 'OrganizationCapabilities', 'BindingCapabilities', 'SceneContentCapabilities', 'ReferenceCapabilities', 'ResourceCapabilities', 'AttachmentCapabilities', 'CollectionCapabilities', 'MotionCapabilities', 'ExpressionCapabilities', 'PhysicsCapabilities', 'PoseCapabilities', 'ObjectKind', 'ModelingSamples', 'DrawableFrame', 'EvaluatedParameter', 'Drawable', 'OffscreenFrame', 'RenderCommandBeginOffscreen', 'RenderCommandDrawMesh', 'RenderCommandEndOffscreen', 'EvaluatedDeformer', 'GeometryDiagnostic', 'GeometryDiagnosticKind', 'MeshQuality', 'TriangleQuality', 'TextureCoverage', 'ProjectRequestDiagnose', 'ProjectRequestImport', 'ProjectRequestOpen', 'ProjectRequestNew', 'ProjectRequestExport', 'ImportFormat', 'TextureSlot', 'ExportFormat', 'ProjectReport', 'ProjectDiagnostic', 'EditorContext', 'PreviewCommandSetParameter', 'PreviewCommandScheduleMotion', 'PreviewCommandScheduleRegistration', 'PreviewCommandScheduleExpression', 'PreviewCommandScheduleParameter', 'PreviewCommandSetPhysics', 'PreviewCommandReset', 'PreviewState', 'PreviewBatch', 'ObservationView', 'TopologyOverlay', 'ObjectTargetMesh', 'ObjectTargetPart', 'TopologyThresholds', 'SpatialQueryBounds', 'SpatialQueryHits', 'PreviewFrame', 'ObservationImage', 'ObservedTexture', 'ObservedBounds', 'SpatialResultBounds', 'SpatialResultHits', 'ObjectBounds', 'GeometryQuery', 'GeometryHit', 'TriangleHit', 'MotionSnapshot', 'PhysicsRigSnapshot', 'PhysicsOutputSnapshot', 'MotionEventFired', 'MotionPlaybackPosition', 'SpatialSamples', 'SpatialFrame', 'ObservationBatch', 'ManualMeshTransferReport', 'ConversionCost', 'ModelingCommand', 'SceneReference', 'TransformData', 'SceneTrack', 'DeltaKeyforms', 'SceneEdit', 'SceneCreate', 'SceneFieldValue', 'SceneCollection', 'OrganizationCollection', 'OrganizationEdit', 'BindingAuthoringEdit', 'BindingGridEdit', 'BindingGridTarget', 'GridOperation', 'AxisReduction', 'BlendAuthoringEdit', 'BlendTableOperation', 'MeshGridEdit', 'SceneContentEdit', 'ShapeTarget', 'VertexSeed', 'OffscreenDeletePolicy', 'PartKeyformSlot', 'ReferenceEdit', 'ReferenceCollection', 'ReferenceFields', 'ModelTargetRef', 'CdiParameterRef', 'ResourceEdit', 'DocumentAuthoringEdit', 'DocumentValue', 'AttachmentEdit', 'AttachmentRef', 'MotionEdit', 'MotionContainer', 'MotionTrackTarget', 'ExpressionEdit', 'ExpressionTarget', 'PhysicsEdit', 'PhysicsAssetProperty', 'PhysicsProperty', 'PhysicsTarget', 'PoseEdit', 'PoseFields', 'PosePartRef', 'PoseCollection', 'MotionSegment', 'SceneKeyform', 'GeometrySpace', 'ManualMeshOperation', 'CdiParameterEntry', 'CdiPartEntry', 'AddressSelector', 'SceneContentTarget', 'AddressPatch', 'BindingFieldPatch', 'SceneContentValue', 'CollectionQuery', 'PhysicsCollection', 'Capabilities', 'CapabilityState', 'RenderCommand', 'ProjectRequest', 'PreviewCommand', 'ObjectTarget', 'SpatialQuery', 'SpatialResult', 'ExtensionValue']

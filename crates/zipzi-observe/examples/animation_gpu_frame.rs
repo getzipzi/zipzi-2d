@@ -68,6 +68,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             y1: center.1 + side * 0.5,
         },
         padding_model: 0.,
+        topology: None,
+        quality: false,
     };
     let mut observer = Observer::new(ObserverConfig {
         width: 128,

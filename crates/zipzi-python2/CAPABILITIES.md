@@ -43,6 +43,8 @@ and the [guide](client/python/zipzi/docs/guide.md),
 | Animation preview | `session/edit.preview()` | Independent frozen playback supports controls and sample, seek and advance jobs. It does not change the Editor's playback state. |
 | Spatial queries | `session/edit.modeling.spatial()`, Preview `queries` | Bounds and hit queries use frozen poses or animation frames. |
 | GPU observation | `modeling.observe()`, Preview `view`, `inspection.save()` | Requires a host with GPU observation and a usable device. Inspection saves PNG/JSON output locally. |
+| Mesh quality | `sampling.Checks(quality=True)`, `observation.View(quality=True)` | Per-pose model-space angle, aspect, flip, area and edge-stretch metrics. GPU observations add bounded source-alpha coverage; reports cover requested poses only. |
+| Topology inspection | `observation.Overlay`, `View.topology`, `observation.Thresholds` | Mesh/Part selection, label collision avoidance, bounded heat opacity and anomaly-only layers, including Preview. Full textured context is retained; masks and occlusion do not hide diagnostics. |
 | Editor mesh generation | `zipzi.mesh_generation.generate()` | Connected Editor hosts may offer this synchronous, bounded service. Local hosts do not provide it; generation returns geometry without modifying the document. |
 
 The packages target CPython 3.14. Native wheels are prepared for macOS arm64

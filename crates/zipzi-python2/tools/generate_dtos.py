@@ -16,7 +16,7 @@ from .._values import Version, SessionId, Receipt, SaveReceipt, SessionInfo
 NAMES = {
  'parameters': {'ParameterCreateSpec':'ParameterSpec','ParameterPatch':'ParameterPatch','ParameterKind':'Kind','Parameter':'Parameter','ParameterOperation':'Operation'},
  'bindings': {'MeshBindingAxisSpec':'Axis','MeshKeyformSpec':'Keyform','MeshBindingCreateSpec':'MeshBindingSpec','MeshBinding':'MeshBinding','BindingAxis':'AxisSnapshot','BindingSample':'Sample','MeshKeyform':'KeyformSnapshot','Appearance':'Appearance','MeshBindingOperation':'Operation','Vec2':'Point'},
- 'sampling': {'GeometryChecks':'Checks','GeometryBounds':'Bounds','ModelingSamples':'Result','DrawableFrame':'Frame','EvaluatedParameter':'Parameter','Drawable':'Drawable','OffscreenFrame':'Offscreen','EvaluatedDeformer':'Deformer','RenderCommand':'RenderCommand','GeometryDiagnostic':'Diagnostic','GeometryDiagnosticKind':'DiagnosticKind','BlendMode':'BlendMode','Vec2':'Point','Version':'Version'},
+ 'sampling': {'GeometryChecks':'Checks','GeometryBounds':'Bounds','ModelingSamples':'Result','DrawableFrame':'Frame','EvaluatedParameter':'Parameter','Drawable':'Drawable','OffscreenFrame':'Offscreen','EvaluatedDeformer':'Deformer','RenderCommand':'RenderCommand','GeometryDiagnostic':'Diagnostic','GeometryDiagnosticKind':'DiagnosticKind','BlendMode':'BlendMode','Vec2':'Point','Version':'Version','MeshQuality':'MeshQuality','TriangleQuality':'TriangleQuality','TextureCoverage':'TextureCoverage'},
  'references': {'SceneCapabilities':'SceneCapabilities','CapabilityState':'Capability','ObjectKind':'ObjectKind'},
  'events': {'EventCursor':'Cursor','ClientId':'Origin'},
 }
@@ -106,6 +106,8 @@ def render_dtos(contract, header):
             n=name(s)
             if n=='Point':return '_point('+e+')'
             if n=='Bounds':return '('+', '.join(read(f['shape'],'_get('+e+', '+repr(f['name'])+')') for f in fields(s))+')'
+            if domain=='sampling' and n in {'MeshQuality','TriangleQuality','TextureCoverage'}:
+                return 'read_'+n+'('+e+')'
             if unit(s):return n+'(_text('+e+'))'
             if n=='Capability':return 'Capability.read('+e+')'
             return n+'.read('+e+')' if s['kind'] in {'record','serde_record'} else 'read_'+n+'('+e+')'
@@ -189,6 +191,9 @@ def render_dtos(contract, header):
         for rust,s in shapes.items():
             n=name(s)
             if n in {'Point','Bounds'}:continue
+            if domain=='sampling' and n in {'MeshQuality','TriangleQuality','TextureCoverage'}:
+                lines += ['from .modeling import '+n+' as '+n+', read_'+n+' as read_'+n, '']
+                continue
             if n=='ObjectKind':
                 tags=[v['name'] for v in variants(s)]
                 lines+=['from .modeling import ObjectKind as _ObjectKind','ObjectKind: TypeAlias = Literal['+', '.join(repr(tag) for tag in tags)+'] | _ObjectKind','OBJECT_KINDS = frozenset('+repr(tags)+')',''];continue

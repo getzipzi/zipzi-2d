@@ -137,6 +137,8 @@ impl ResolvedObservation {
             "height": request.height,
             "roi": [request.roi.x0, request.roi.y0, request.roi.x1, request.roi.y1],
             "padding_model": request.padding_model,
+            "topology": request.topology,
+            "quality": request.quality,
             "mode": "context",
             "output": "raw_rgba8_renderer_default",
             "sample_policy": "single_evaluated_frame",

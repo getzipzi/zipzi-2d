@@ -32,6 +32,8 @@ mod tests {
             height: 8,
             roi: [0., 0., 1., 1.],
             padding_model: 0.,
+            topology: None,
+            quality: false,
         };
         let j = rt
             .request_observation(c, s, None, vec![Default::default()], view, None)
@@ -76,7 +78,7 @@ impl Runtime {
     pub(super) fn observation_bytes(
         doc: &Document,
         frames: usize,
-        view: ObservationView,
+        view: &ObservationView,
     ) -> Result<usize> {
         view.validate()?;
         if frames == 0 || frames > 64 {
@@ -86,6 +88,23 @@ impl Runtime {
             .saturating_mul(view.height as usize)
             .saturating_mul(8)
             .saturating_mul(frames);
+        let overlay_workspace = view.topology.as_ref().map_or(0, |overlay| {
+            (view.width as usize)
+                .saturating_mul(view.height as usize)
+                .saturating_mul(if overlay.strain && overlay.heat_opacity > 0. {
+                    8
+                } else {
+                    0
+                })
+                .saturating_add(overlay.max_labels.saturating_mul(1024))
+                .saturating_add(
+                    overlay
+                        .targets
+                        .as_ref()
+                        .map_or(0, |targets| targets.len())
+                        .saturating_mul(256),
+                )
+        });
         if output > 128 << 20 {
             return Err(RuntimeError::Budget("observation output"));
         }
@@ -104,6 +123,12 @@ impl Runtime {
             return Err(RuntimeError::Budget("observation textures"));
         }
         Ok(Self::sample_bytes(doc, frames)
+            .saturating_add(overlay_workspace)
+            .saturating_add(if view.needs_quality() {
+                Self::quality_bytes(doc, frames)
+            } else {
+                0
+            })
             .saturating_mul(4)
             .saturating_add(
                 doc.estimated_content_bytes()
@@ -149,7 +174,7 @@ impl Runtime {
                 }
                 Ok((
                     doc.estimated_content_bytes(),
-                    Self::observation_bytes(doc, parameters.len(), view)?,
+                    Self::observation_bytes(doc, parameters.len(), &view)?,
                 ))
             })?;
         self.check_bytes(bytes.saturating_add(document), 0, document)?;

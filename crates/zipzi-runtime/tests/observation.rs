@@ -19,6 +19,8 @@ fn view() -> ObservationView {
         height: 16,
         roi: [0., 0., 1., 1.],
         padding_model: 0.,
+        topology: None,
+        quality: false,
     }
 }
 fn fixture() -> (Runtime, ClientId, SessionId) {

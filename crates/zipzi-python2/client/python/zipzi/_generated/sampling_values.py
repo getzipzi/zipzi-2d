@@ -25,19 +25,21 @@ class Pose(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class Checks(CompactValue):
-    'Owned sampling Checks value; reading fields, repr and summary performs no IO.\n\nFields:\nmin_triangle_area: Area in authored coordinates: model units squared at the root, or\nthe appropriate rotation-local / Warp-parameter units under a parent.\nmodel_bounds: Optional expected model bounds for root meshes only.'
+    'Owned sampling Checks value; reading fields, repr and summary performs no IO.\n\nFields:\nmin_triangle_area: Area in authored coordinates: model units squared at the root, or\nthe appropriate rotation-local / Warp-parameter units under a parent.\nmodel_bounds: Optional expected model bounds for root meshes only.\nquality: Include per-pose mesh quality in evaluated Y-up model space, relative to this\nsnapshot evaluated with default parameters. Only the requested poses are checked.'
     __module__ = "zipzi.sampling"
     min_triangle_area: float
     model_bounds: tuple[Point, Point] | None
+    quality: bool
 
-    def __init__(self, min_triangle_area: float = 0.0, model_bounds: tuple[Point, Point] | None = None) -> None:
+    def __init__(self, min_triangle_area: float = 0.0, model_bounds: tuple[Point, Point] | None = None, quality: bool = False) -> None:
         object.__setattr__(self, 'min_triangle_area', min_triangle_area)
         object.__setattr__(self, 'model_bounds', None if model_bounds is None else tuple(tuple(item) for item in model_bounds))
+        object.__setattr__(self, 'quality', quality)
 
     @classmethod
     def _read(cls, value: object) -> "Checks":
         if isinstance(value, cls): return value
-        return cls(min_triangle_area=_numeric(_get(value, 'min_triangle_area'), 'f64'), model_bounds=None if _get(value, 'model_bounds') is None else (_point(_get(_get(value, 'model_bounds'), 'min')), _point(_get(_get(value, 'model_bounds'), 'max'))))
+        return cls(min_triangle_area=_numeric(_get(value, 'min_triangle_area'), 'f64'), model_bounds=None if _get(value, 'model_bounds') is None else (_point(_get(_get(value, 'model_bounds'), 'min')), _point(_get(_get(value, 'model_bounds'), 'max'))), quality=_flag(_get(value, 'quality')))
 
     def _wire(self) -> dict[str, object]:
         return encode_Checks(self)
@@ -50,9 +52,10 @@ def validate_Checks(value: Checks) -> None:
         _array(value.model_bounds, 2)
         _point(value.model_bounds[0])
         _point(value.model_bounds[1])
+    _flag(value.quality)
 
 def encode_Checks(value: Checks) -> dict[str, object]:
-    return {'min_triangle_area': value.min_triangle_area, 'model_bounds': None if value.model_bounds is None else {'min': {"x": value.model_bounds[0][0], "y": value.model_bounds[0][1]}, 'max': {"x": value.model_bounds[1][0], "y": value.model_bounds[1][1]}}}
+    return {'min_triangle_area': value.min_triangle_area, 'model_bounds': None if value.model_bounds is None else {'min': {"x": value.model_bounds[0][0], "y": value.model_bounds[0][1]}, 'max': {"x": value.model_bounds[1][0], "y": value.model_bounds[1][1]}}, 'quality': value.quality}
 
 @dataclass(frozen=True, init=False, repr=False)
 class Parameter(CompactValue):
@@ -263,27 +266,35 @@ class Diagnostic(CompactValue):
         if isinstance(value, cls): return value
         return cls(kind=DiagnosticKind(_text(_get(value, 'kind'))), mesh_id=_text(_get(value, 'mesh_id')), triangle_index=None if _get(value, 'triangle_index') is None else _whole(_get(value, 'triangle_index'), 'usize'))
 
+from .modeling import TriangleQuality as TriangleQuality, read_TriangleQuality as read_TriangleQuality
+
+from .modeling import TextureCoverage as TextureCoverage, read_TextureCoverage as read_TextureCoverage
+
+from .modeling import MeshQuality as MeshQuality, read_MeshQuality as read_MeshQuality
+
 @dataclass(frozen=True, init=False, repr=False)
 class Result(CompactValue):
-    'Owned sampling Result value; reading fields, repr and summary performs no IO.\n\nFields:\nstate: Captured sampling source state, distinguishing formal content from an Edit candidate.\nversion: Exact SDK version captured for this value; not a best-effort latest-version marker.\nparameters: Effective parameter maps in the same order as requested poses; each map is keyed by\ndocument parameter ID.\nframes: CPU-evaluated frames in the same order as requested parameter maps.\ndiagnostics: Structured diagnostics from this query or operation; an empty list means none were reported.'
+    'Owned sampling Result value; reading fields, repr and summary performs no IO.\n\nFields:\nstate: Captured sampling source state, distinguishing formal content from an Edit candidate.\nversion: Exact SDK version captured for this value; not a best-effort latest-version marker.\nparameters: Effective parameter maps in the same order as requested poses; each map is keyed by\ndocument parameter ID.\nframes: CPU-evaluated frames in the same order as requested parameter maps.\ndiagnostics: Structured diagnostics from this query or operation; an empty list means none were reported.\nquality: Per-pose evaluated mesh quality in frame order when Checks.quality is true; empty otherwise.\nUses default parameters of this same frozen source as the reference, without image coverage.'
     __module__ = "zipzi.sampling"
     state: str
     version: Version
     parameters: tuple[Pose, ...]
     frames: tuple[Frame, ...]
     diagnostics: tuple[Diagnostic, ...]
+    quality: tuple[tuple[MeshQuality, ...], ...]
 
-    def __init__(self, state: str, version: Version, parameters: tuple[Pose, ...], frames: Sequence[Frame], diagnostics: Sequence[Diagnostic]) -> None:
+    def __init__(self, state: str, version: Version, parameters: tuple[Pose, ...], frames: Sequence[Frame], diagnostics: Sequence[Diagnostic], quality: Sequence[Sequence[MeshQuality]]) -> None:
         object.__setattr__(self, 'state', state)
         object.__setattr__(self, 'version', version)
         object.__setattr__(self, 'parameters', tuple(item for item in parameters))
         object.__setattr__(self, 'frames', tuple(item for item in frames))
         object.__setattr__(self, 'diagnostics', tuple(item for item in diagnostics))
+        object.__setattr__(self, 'quality', tuple(tuple(item for item in item) for item in quality))
 
     @classmethod
     def _read(cls, value: object) -> "Result":
         if isinstance(value, cls): return value
-        return cls(state=_text(_get(value, 'state')), version=_external(_get(_get(value, "samples"), 'version'), Version, Version._read), parameters=tuple(Pose._read(item) for item in _items(_get(_get(value, "samples"), 'parameters'))), frames=tuple(Frame._read(item) for item in _items(_get(_get(value, "samples"), 'frames'))), diagnostics=tuple(Diagnostic._read(item) for item in _items(_get(_get(value, "samples"), 'diagnostics'))))
+        return cls(state=_text(_get(value, 'state')), version=_external(_get(_get(value, "samples"), 'version'), Version, Version._read), parameters=tuple(Pose._read(item) for item in _items(_get(_get(value, "samples"), 'parameters'))), frames=tuple(Frame._read(item) for item in _items(_get(_get(value, "samples"), 'frames'))), diagnostics=tuple(Diagnostic._read(item) for item in _items(_get(_get(value, "samples"), 'diagnostics'))), quality=tuple(tuple(read_MeshQuality(item) for item in _items(item)) for item in _items(_get(_get(value, "samples"), 'quality'))))
 
 def _variant(value: object) -> tuple[str, object]:
     if isinstance(value, str): return value, {}

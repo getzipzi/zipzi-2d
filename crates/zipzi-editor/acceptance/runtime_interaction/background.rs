@@ -125,6 +125,8 @@ impl Background {
                     height: 96,
                     roi: [-4., -4., 4., 4.],
                     padding_model: 0.,
+                    topology: None,
+                    quality: false,
                 },
                 None,
             ),
