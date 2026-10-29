@@ -832,6 +832,22 @@ pub(crate) fn edit_manual_uv_topology(
     source: &MeshGeometry,
     operation: ManualMeshOperation,
 ) -> Result<ManualMeshResult, SdkError> {
+    let original = extract_manual_meshing(source)?;
+    let result = edit_manual_uv_candidate(source, original.clone(), operation)?;
+    validate(
+        &result.geometry,
+        result.geometry.meshing.as_ref().unwrap_or(&original),
+    )?;
+    Ok(result)
+}
+
+/// A frozen source has already been validated. The transfer builder validates
+/// the complete candidate (including all shapes and Glue) before exposing it.
+pub(crate) fn edit_manual_uv_candidate(
+    source: &MeshGeometry,
+    original: MeshMeshing,
+    operation: ManualMeshOperation,
+) -> Result<ManualMeshResult, SdkError> {
     if let ManualMeshOperation::InsertConnectedVertex { from, id, uv } = operation {
         let mut inserted =
             edit_manual_uv_topology(source, ManualMeshOperation::InsertVertex { id, uv })?;
@@ -845,7 +861,6 @@ pub(crate) fn edit_manual_uv_topology(
         inserted.affected_edges.dedup();
         return Ok(inserted);
     }
-    let original = extract_manual_meshing(source)?;
     let winding = uv_winding(source);
     let mut g = source.clone();
     g.meshing = Some(original.clone());
@@ -1144,7 +1159,6 @@ pub(crate) fn edit_manual_uv_topology(
         g.triangles = triangulate(&g, &m, &preserved, winding)?;
     }
     g.meshing = Some(m.clone());
-    validate(&g, &m)?;
     if m == original
         && g.vertex_ids == source.vertex_ids
         && g.positions == source.positions

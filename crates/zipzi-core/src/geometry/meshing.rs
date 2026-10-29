@@ -61,6 +61,8 @@ pub fn validate_mesh_meshing(
     triangles: &[[VertexId; 3]],
     meshing: &MeshMeshing,
 ) -> Status {
+    #[cfg(feature = "bench-instrumentation")]
+    let _span = crate::benchmark::span("core.validate_mesh_meshing");
     if vertex_ids.len() != uvs.len() || uvs.iter().any(|p| !p.x.is_finite() || !p.y.is_finite()) {
         return invalid("meshing requires matching vertex IDs and finite UVs");
     }

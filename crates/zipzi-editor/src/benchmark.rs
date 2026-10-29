@@ -47,6 +47,7 @@ struct Config {
     hz: u32,
     parameters_only: bool,
     deformations: bool,
+    manual_mesh: bool,
     animation: bool,
     properties: bool,
     ui_only: bool,
@@ -133,6 +134,7 @@ pub fn init() -> anyhow::Result<()> {
         .canonicalize()?;
         let parameters_only = std::env::var("ZIPZI_BENCH_PARAMETERS").is_ok_and(|s| s == "1");
         let deformations = std::env::var("ZIPZI_BENCH_DEFORMATIONS").is_ok_and(|s| s == "1");
+        let manual_mesh = std::env::var("ZIPZI_BENCH_MANUAL_MESH").is_ok_and(|s| s == "1");
         let animation = std::env::var("ZIPZI_BENCH_ANIMATION").is_ok_and(|s| s == "1");
         let properties = std::env::var("ZIPZI_BENCH_PROPERTIES").is_ok_and(|s| s == "1");
         #[cfg(feature = "test-support")]
@@ -164,6 +166,7 @@ pub fn init() -> anyhow::Result<()> {
         ensure!(
             (parameters_only as u8
                 + deformations as u8
+                + manual_mesh as u8
                 + animation as u8
                 + properties as u8
                 + ui_only as u8)
@@ -189,6 +192,7 @@ pub fn init() -> anyhow::Result<()> {
                 hz: hz as u32,
                 parameters_only,
                 deformations,
+                manual_mesh,
                 animation,
                 properties,
                 ui_only,
@@ -250,11 +254,12 @@ pub fn init() -> anyhow::Result<()> {
                 "parameters_only": config.map(|c| c.parameters_only),
                 "ui_only": config.map(|c| c.ui_only),
                 "parameter_overlay": parameter_overlay::metadata(),
+                "manual_mesh": config.is_some_and(|c| c.manual_mesh),
                 "animation_drag": std::env::var("ZIPZI_BENCH_ANIMATION_DRAG").ok(),
                 "properties": config.map(|c| c.properties),
                 "property_cases": property_cases,
                 "property_case": std::env::var("ZIPZI_BENCH_PROPERTY_CASE").ok(),
-                "workloads": config.map(|c| if c.ui_only { vec![0] } else if c.properties { property_workloads.clone() } else if c.animation { vec![9] } else if c.deformations { vec![5, 6, 7, 8] }
+                "workloads": config.map(|c| if c.ui_only { vec![0] } else if c.properties { property_workloads.clone() } else if c.animation { vec![9] } else if c.manual_mesh { vec![5] } else if c.deformations { vec![5, 6, 7, 8] }
                     else if c.parameters_only { vec![4] } else { vec![1, 2, 3] }),
                 "multi_vertices": config.map(|c| c.vertices),
                 "input_hz": config.map(|c| c.hz), "pid": std::process::id(),
@@ -390,6 +395,8 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
     };
     let request = if config.model.to_string_lossy().ends_with(".model3.json") {
         LoadRequest::Model3(config.model.clone())
+    } else if config.model.extension().is_some_and(|s| s == "cmo3") {
+        LoadRequest::Cubism(config.model.clone())
     } else {
         LoadRequest::Open(config.model.clone())
     };
@@ -465,6 +472,8 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
             } else if config.animation {
                 animation::run(&view, cx, config).await?;
                 1..=0u64
+            } else if config.manual_mesh {
+                5..=5u64
             } else if config.deformations {
                 5..=8u64
             } else if config.parameters_only {
@@ -728,7 +737,7 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                                 view.editor.gesture_active()
                                     && view.editor.document().is_some_and(|d| d.has_pending_edit())
                                     && view.editor.evaluation_count() > evaluations,
-                                "mode {mode} sample {sample}: drag produced no model evaluation"
+                                "mode {mode} sample {sample}: drag produced no model evaluation: {:?}", view.editor.canvas_notice()
                             );
                             Ok(())
                         })??;

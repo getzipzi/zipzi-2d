@@ -171,19 +171,47 @@ impl Document {
             .unwrap()
             .edit
             .apply_manual_mesh(&target.object.id, operation);
-        let report = match result {
-            Ok(report) => report,
-            Err(error) => {
-                if self.manual_pending.as_ref().is_some_and(|p| !p.changed) {
-                    self.manual_pending.take();
-                }
-                return Err(error.into());
+        if let Err(error) = result {
+            if self.manual_pending.as_ref().is_some_and(|p| !p.changed) {
+                self.manual_pending.take();
             }
-        };
+            return Err(error.into());
+        }
         let pending = self.manual_pending.as_mut().unwrap();
         pending.changed = true;
+        let previous_revision = self.projection_revision;
         self.invalidate_projection(false);
-        if report.reconnected || report.added > 0 || report.removed > 0 {
+        let topology_changed = {
+            let model = self.model();
+            let mesh = model.get_mesh(&target.object.id).unwrap();
+            let mut cache = self.object_index.lock().unwrap();
+            if let Some((revision, index)) = cache.as_mut().filter(|(r, _)| *r == previous_revision)
+            {
+                let unchanged = index.get(&target.object).is_some_and(|object| {
+                    object.properties["vertices"].as_u64() == Some(mesh.vertex_ids.len() as u64)
+                        && object.properties["triangles"].as_u64()
+                            == Some(mesh.triangles.len() as u64)
+                });
+                let refreshed = unchanged
+                    || std::sync::Arc::make_mut(index).refresh_mesh_geometry_counts(
+                        &target.object,
+                        mesh.vertex_ids.len(),
+                        mesh.triangles.len(),
+                    );
+                if refreshed {
+                    *revision = self.projection_revision;
+                }
+            }
+            self.canvas_topology
+                .lock()
+                .unwrap()
+                .as_ref()
+                .and_then(|topology| topology.meshes.get(&target.object.id))
+                .is_none_or(|topology| !topology.matches(mesh))
+        };
+        // Compare the displayed candidate, rather than repeatedly invalidating
+        // against the drag's frozen source after its first reconnection.
+        if topology_changed {
             self.invalidate_canvas_topology(Some(std::collections::HashSet::from([target
                 .object
                 .id

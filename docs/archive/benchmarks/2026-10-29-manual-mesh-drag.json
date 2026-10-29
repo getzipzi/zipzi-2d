@@ -1,0 +1,560 @@
+{
+  "date": "2026-10-29",
+  "baseline_commit": "042ea6a9",
+  "environment": {
+    "cpu": "Apple M4",
+    "memory_bytes": 17179869184,
+    "macos": "27.0.1",
+    "architecture": "arm64"
+  },
+  "model": "models/local/mao/runtime/mao_pro.model3.json",
+  "model_json_sha256": "27b71a0e5476d870ba69d1b52f5bd068ed5a03113739b4f5337e579e954b7e2a",
+  "cpu_binary_sha256": {
+    "sdk-before": "ee39326375d6ae18b7fbe57b0d674d222d49dc055a534a39b012ed45a91acde4",
+    "sdk-after": "97cc07b2e3514b389d533fc517f151c65bccc9d7d91e902107c56948e6dd9f5f",
+    "core-before": "35998e29ddf6d362ee2c05cc51154c39ff415379c5bba9202baf0318f50406f6",
+    "core-after": "bc9d700b44c0fe317b727a86977d9cdf75e00cf1cfb47321eefa32b987da18db"
+  },
+  "cpu_rounds": [
+    {
+      "round": 1,
+      "case": "sdk",
+      "version": "before",
+      "result": {
+        "allocated_bytes_per_plan": 19903905,
+        "allocations_per_plan": 28186,
+        "cost": {
+          "history_bytes": 3038614,
+          "payload_bytes": 972368,
+          "sample_combinations": 58,
+          "temporary_bytes": 8143474
+        },
+        "median_us": 23138,
+        "p95_us": 24170,
+        "plans": 100,
+        "stored_shapes": 58,
+        "triangles": 2048,
+        "vertices": 1089
+      }
+    },
+    {
+      "round": 1,
+      "case": "core",
+      "version": "before",
+      "result": {
+        "input": {
+          "count": 60,
+          "p50_ms": 9.402333,
+          "p95_ms": 11.411707999999999
+        },
+        "mesh": "dab3e07e-c588-4d0b-a8ff-de896174d04d",
+        "model": "models/local/mao/runtime/mao_pro.model3.json",
+        "preview": {
+          "count": 60,
+          "p50_ms": 15.206166999999999,
+          "p95_ms": 17.48875
+        },
+        "runtime_id": "ArtMesh215",
+        "self_ns": {},
+        "vertex": 31,
+        "vertices": 158
+      }
+    },
+    {
+      "round": 1,
+      "case": "sdk",
+      "version": "after",
+      "result": {
+        "allocated_bytes_per_plan": 7057168,
+        "allocations_per_plan": 7733,
+        "cost": {
+          "history_bytes": 3039638,
+          "payload_bytes": 972368,
+          "sample_combinations": 58,
+          "temporary_bytes": 8146546
+        },
+        "median_us": 10836,
+        "p95_us": 11481,
+        "plans": 100,
+        "stored_shapes": 58,
+        "triangles": 2048,
+        "vertices": 1089
+      }
+    },
+    {
+      "round": 1,
+      "case": "core",
+      "version": "after",
+      "result": {
+        "input": {
+          "count": 60,
+          "p50_ms": 4.417624999999999,
+          "p95_ms": 5.552333
+        },
+        "mesh": "dab3e07e-c588-4d0b-a8ff-de896174d04d",
+        "model": "models/local/mao/runtime/mao_pro.model3.json",
+        "preview": {
+          "count": 60,
+          "p50_ms": 1.0458749999999999,
+          "p95_ms": 1.370708
+        },
+        "runtime_id": "ArtMesh215",
+        "self_ns": {},
+        "vertex": 31,
+        "vertices": 158
+      }
+    },
+    {
+      "round": 2,
+      "case": "sdk",
+      "version": "after",
+      "result": {
+        "allocated_bytes_per_plan": 7057168,
+        "allocations_per_plan": 7733,
+        "cost": {
+          "history_bytes": 3039638,
+          "payload_bytes": 972368,
+          "sample_combinations": 58,
+          "temporary_bytes": 8146546
+        },
+        "median_us": 10795,
+        "p95_us": 11244,
+        "plans": 100,
+        "stored_shapes": 58,
+        "triangles": 2048,
+        "vertices": 1089
+      }
+    },
+    {
+      "round": 2,
+      "case": "core",
+      "version": "after",
+      "result": {
+        "input": {
+          "count": 60,
+          "p50_ms": 4.293916,
+          "p95_ms": 5.083333
+        },
+        "mesh": "dab3e07e-c588-4d0b-a8ff-de896174d04d",
+        "model": "models/local/mao/runtime/mao_pro.model3.json",
+        "preview": {
+          "count": 60,
+          "p50_ms": 1.009,
+          "p95_ms": 1.245209
+        },
+        "runtime_id": "ArtMesh215",
+        "self_ns": {},
+        "vertex": 31,
+        "vertices": 158
+      }
+    },
+    {
+      "round": 2,
+      "case": "sdk",
+      "version": "before",
+      "result": {
+        "allocated_bytes_per_plan": 19903905,
+        "allocations_per_plan": 28186,
+        "cost": {
+          "history_bytes": 3038614,
+          "payload_bytes": 972368,
+          "sample_combinations": 58,
+          "temporary_bytes": 8143474
+        },
+        "median_us": 23027,
+        "p95_us": 23581,
+        "plans": 100,
+        "stored_shapes": 58,
+        "triangles": 2048,
+        "vertices": 1089
+      }
+    },
+    {
+      "round": 2,
+      "case": "core",
+      "version": "before",
+      "result": {
+        "input": {
+          "count": 60,
+          "p50_ms": 9.358125,
+          "p95_ms": 10.37975
+        },
+        "mesh": "dab3e07e-c588-4d0b-a8ff-de896174d04d",
+        "model": "models/local/mao/runtime/mao_pro.model3.json",
+        "preview": {
+          "count": 60,
+          "p50_ms": 15.231791,
+          "p95_ms": 17.030416
+        },
+        "runtime_id": "ArtMesh215",
+        "self_ns": {},
+        "vertex": 31,
+        "vertices": 158
+      }
+    },
+    {
+      "round": 3,
+      "case": "sdk",
+      "version": "before",
+      "result": {
+        "allocated_bytes_per_plan": 19903905,
+        "allocations_per_plan": 28186,
+        "cost": {
+          "history_bytes": 3038614,
+          "payload_bytes": 972368,
+          "sample_combinations": 58,
+          "temporary_bytes": 8143474
+        },
+        "median_us": 23857,
+        "p95_us": 43498,
+        "plans": 100,
+        "stored_shapes": 58,
+        "triangles": 2048,
+        "vertices": 1089
+      }
+    },
+    {
+      "round": 3,
+      "case": "core",
+      "version": "before",
+      "result": {
+        "input": {
+          "count": 60,
+          "p50_ms": 8.952166,
+          "p95_ms": 10.160458
+        },
+        "mesh": "dab3e07e-c588-4d0b-a8ff-de896174d04d",
+        "model": "models/local/mao/runtime/mao_pro.model3.json",
+        "preview": {
+          "count": 60,
+          "p50_ms": 14.717708,
+          "p95_ms": 17.322459
+        },
+        "runtime_id": "ArtMesh215",
+        "self_ns": {},
+        "vertex": 31,
+        "vertices": 158
+      }
+    },
+    {
+      "round": 3,
+      "case": "sdk",
+      "version": "after",
+      "result": {
+        "allocated_bytes_per_plan": 7057168,
+        "allocations_per_plan": 7733,
+        "cost": {
+          "history_bytes": 3039638,
+          "payload_bytes": 972368,
+          "sample_combinations": 58,
+          "temporary_bytes": 8146546
+        },
+        "median_us": 10605,
+        "p95_us": 11266,
+        "plans": 100,
+        "stored_shapes": 58,
+        "triangles": 2048,
+        "vertices": 1089
+      }
+    },
+    {
+      "round": 3,
+      "case": "core",
+      "version": "after",
+      "result": {
+        "input": {
+          "count": 60,
+          "p50_ms": 4.13,
+          "p95_ms": 4.557625
+        },
+        "mesh": "dab3e07e-c588-4d0b-a8ff-de896174d04d",
+        "model": "models/local/mao/runtime/mao_pro.model3.json",
+        "preview": {
+          "count": 60,
+          "p50_ms": 0.9756250000000001,
+          "p95_ms": 1.064792
+        },
+        "runtime_id": "ArtMesh215",
+        "self_ns": {},
+        "vertex": 31,
+        "vertices": 158
+      }
+    }
+  ],
+  "native": {
+    "before": {
+      "trace": "target/mesh-drag-native/before-repeat/trace.jsonl",
+      "issues": [],
+      "samples": 120,
+      "warmup": 20,
+      "requested_input_hz": 120,
+      "fixture": [
+        {
+          "mode": 5,
+          "object": "675b9256-7a34-4235-96e8-c0842c351987",
+          "component_ids": [
+            66
+          ],
+          "affected_vertices": 90
+        }
+      ],
+      "binary_sha256": "72e9f26bb21098e6336a5359392fb7f7557e80b94cb35805a7d7f314aa175ace",
+      "new_preview_present_fps": 43.974704612527226,
+      "actual_input_interval_ms": {
+        "count": 119,
+        "p50": 20.76175,
+        "p95": 31.357208,
+        "p99": 36.1495,
+        "max": 37.281958
+      },
+      "metrics_ms": {
+        "input_handler_ms": {
+          "count": 120,
+          "p50": 11.115333,
+          "p95": 12.018875,
+          "p99": 13.026166,
+          "max": 13.324917
+        },
+        "scene_ms": {
+          "count": 120,
+          "p50": 2.051542,
+          "p95": 2.298959,
+          "p99": 2.423499,
+          "max": 2.43375
+        },
+        "ui_draw_ms": {
+          "count": 119,
+          "p50": 1.896708,
+          "p95": 19.508916,
+          "p99": 20.150708,
+          "max": 20.225583
+        },
+        "input_to_present_ms": {
+          "count": 119,
+          "p50": 47.049833,
+          "p95": 80.249667,
+          "p99": 87.521041,
+          "max": 92.837959
+        },
+        "preview_gpu_ms": {
+          "count": 120,
+          "p50": 0.849001,
+          "p95": 3.830125,
+          "p99": 4.3895,
+          "max": 5.009625
+        }
+      }
+    },
+    "after": {
+      "trace": "target/mesh-drag-native/after-verified/trace.jsonl",
+      "issues": [],
+      "samples": 120,
+      "warmup": 20,
+      "requested_input_hz": 120,
+      "fixture": [
+        {
+          "mode": 5,
+          "object": "675b9256-7a34-4235-96e8-c0842c351987",
+          "component_ids": [
+            66
+          ],
+          "affected_vertices": 90
+        }
+      ],
+      "binary_sha256": "24b67766c2ced30698f7f3664cc74456d5c008cf7efbad9f76f148bdb4512634",
+      "new_preview_present_fps": 81.84881444954087,
+      "actual_input_interval_ms": {
+        "count": 119,
+        "p50": 9.652292,
+        "p95": 18.585,
+        "p99": 20.527667,
+        "max": 22.584083
+      },
+      "metrics_ms": {
+        "input_handler_ms": {
+          "count": 120,
+          "p50": 6.282542,
+          "p95": 6.908833,
+          "p99": 10.131124,
+          "max": 12.907834
+        },
+        "scene_ms": {
+          "count": 120,
+          "p50": 1.070417,
+          "p95": 1.262917,
+          "p99": 3.37025,
+          "max": 4.651208
+        },
+        "ui_draw_ms": {
+          "count": 119,
+          "p50": 2.507958,
+          "p95": 3.117375,
+          "p99": 5.152,
+          "max": 5.524501
+        },
+        "input_to_present_ms": {
+          "count": 119,
+          "p50": 46.786459,
+          "p95": 49.159209,
+          "p99": 53.466125,
+          "max": 54.364541
+        },
+        "preview_gpu_ms": {
+          "count": 120,
+          "p50": 0.175625,
+          "p95": 3.792666,
+          "p99": 4.0505,
+          "max": 4.075708
+        }
+      }
+    },
+    "earlier_before": {
+      "trace": "target/mesh-drag-native/before-final/trace.jsonl",
+      "issues": [],
+      "samples": 120,
+      "warmup": 20,
+      "requested_input_hz": 120,
+      "fixture": [
+        {
+          "mode": 5,
+          "object": "675b9256-7a34-4235-96e8-c0842c351987",
+          "component_ids": [
+            66
+          ],
+          "affected_vertices": 90
+        }
+      ],
+      "binary_sha256": "72e9f26bb21098e6336a5359392fb7f7557e80b94cb35805a7d7f314aa175ace",
+      "new_preview_present_fps": 43.974688224612606,
+      "actual_input_interval_ms": {
+        "count": 119,
+        "p50": 20.836791,
+        "p95": 31.912917,
+        "p99": 34.495417,
+        "max": 37.080125
+      },
+      "metrics_ms": {
+        "input_handler_ms": {
+          "count": 120,
+          "p50": 11.202125,
+          "p95": 12.135,
+          "p99": 12.512416,
+          "max": 12.575792
+        },
+        "scene_ms": {
+          "count": 120,
+          "p50": 2.079083,
+          "p95": 2.334792,
+          "p99": 2.431708,
+          "max": 2.495292
+        },
+        "ui_draw_ms": {
+          "count": 119,
+          "p50": 1.969584,
+          "p95": 20.0755,
+          "p99": 20.468374,
+          "max": 22.271833
+        },
+        "input_to_present_ms": {
+          "count": 119,
+          "p50": 46.776708,
+          "p95": 87.785084,
+          "p99": 91.303542,
+          "max": 91.944458
+        },
+        "preview_gpu_ms": {
+          "count": 120,
+          "p50": 0.193125,
+          "p95": 3.814125,
+          "p99": 4.151334,
+          "max": 4.6275
+        }
+      }
+    },
+    "earlier_after": {
+      "trace": "target/mesh-drag-native/after/trace.jsonl",
+      "issues": [],
+      "samples": 120,
+      "warmup": 20,
+      "requested_input_hz": 120,
+      "fixture": [
+        {
+          "mode": 5,
+          "object": "675b9256-7a34-4235-96e8-c0842c351987",
+          "component_ids": [
+            66
+          ],
+          "affected_vertices": 90
+        }
+      ],
+      "binary_sha256": "40c15a7c895f8b1ffe19cdf04764e94a2e7ae17b8c51d03fb7f6e709e6b48da4",
+      "new_preview_present_fps": 72.98934649787167,
+      "actual_input_interval_ms": {
+        "count": 119,
+        "p50": 15.555209,
+        "p95": 20.321126,
+        "p99": 21.301126,
+        "max": 21.603042
+      },
+      "metrics_ms": {
+        "input_handler_ms": {
+          "count": 120,
+          "p50": 6.372875,
+          "p95": 7.140041,
+          "p99": 7.566292,
+          "max": 7.605292
+        },
+        "scene_ms": {
+          "count": 120,
+          "p50": 1.133666,
+          "p95": 1.374042,
+          "p99": 1.58925,
+          "max": 1.613625
+        },
+        "ui_draw_ms": {
+          "count": 119,
+          "p50": 2.498209,
+          "p95": 4.091708,
+          "p99": 5.27725,
+          "max": 5.416
+        },
+        "input_to_present_ms": {
+          "count": 119,
+          "p50": 46.346083,
+          "p95": 49.094875,
+          "p99": 49.118708,
+          "max": 49.131084
+        },
+        "preview_gpu_ms": {
+          "count": 120,
+          "p50": 0.179709,
+          "p95": 3.870416,
+          "p99": 4.151375,
+          "max": 4.1635
+        }
+      }
+    }
+  },
+  "excluded_runs": [
+    {
+      "trace": "target/mesh-drag-native/smoke/trace.jsonl",
+      "reason": "diagnostic driver used an arbitrary direction; first sample refused; no performance claim"
+    },
+    {
+      "trace": "target/mesh-drag-native/before/trace.jsonl",
+      "reason": "early driver metadata declared the wrong workload list; superseded by complete before-final/before-repeat runs"
+    },
+    {
+      "trace": "target/mesh-drag-native/after-final/trace.jsonl",
+      "reason": "Mac was locked; first preview timed out; run incomplete"
+    }
+  ],
+  "limits": [
+    "CPU stage percentiles are independent; do not add their P95s.",
+    "Allocator bytes are cumulative requests, not peak RSS.",
+    "Native timing begins at GPUI dispatch and ends at correlated Metal presentation; excludes OS input and input-to-photon.",
+    "Native runs use the identical driver and same 90-vertex mesh and vertex 66. CPU focus probe uses ArtMesh215 with 158 vertices.",
+    "CPU rounds alternate order; no compiler ran during sampling. SDK before round 3 had a P95 spike and is retained.",
+    "Earlier native optimized data predates cold-path cleanup; after-verified uses the final build."
+  ]
+}

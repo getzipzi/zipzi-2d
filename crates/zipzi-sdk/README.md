@@ -37,6 +37,13 @@ usable. Plans are bound to an exact document snapshot and SDK version; another
 branch with an equal revision is still rejected. Hosts must also guard their edit
 identity and sequence, as Runtime does for `ModelingCommand::ManualMesh`.
 
+A plan owns the fully checked candidate and its Core change receipt. Applying it
+checks the exact publication snapshot and installs that result, without a second
+full topology replacement. Source admission and its memory estimate are reused
+through a drag; unchanged vertex slots are copied once per stored channel and
+only changed samples are patched. Conversion budgets, lock checks and cancellation
+remain part of planning.
+
 Deleting a Glue endpoint (including an incomplete pair or an implicit orphan)
 returns `GLUE_VERTEX_REFERENCED`; a sample outside the old UV coverage returns
 `OUTSIDE_TRANSFER_DOMAIN`. Only a dependency-free mesh with a global affine map

@@ -1,5 +1,5 @@
 //! Source-bound UV sampling and complete, atomic dependency transfer.
-use crate::{manual_mesh::edit_manual_uv_topology, *};
+use crate::{manual_mesh::edit_manual_uv_candidate, *};
 use rstar::{RTree, RTreeObject, AABB};
 use std::{
     collections::{HashMap, HashSet},
@@ -204,6 +204,8 @@ pub struct ManualMeshSource {
     geometry: MeshGeometry,
     slots: HashMap<VertexId, usize>,
     sampler: UvSampler,
+    meshing: zipzi_core::MeshMeshing,
+    estimated_bytes: usize,
     affine_extension: Option<AffineUvMap>,
     pub geometry_space: GeometrySpace,
     pub referenced_vertices: Vec<VertexId>,
@@ -224,7 +226,7 @@ impl ManualMeshSource {
             triangles: mesh.triangles.clone(),
             meshing: mesh.meshing.clone(),
         };
-        extract_manual_meshing(&geometry)?;
+        let meshing = extract_manual_meshing(&geometry)?;
         image_domain(&geometry, mesh_id)?;
         let mut referenced_vertices: Vec<_> = document
             .glue_order()
@@ -266,6 +268,15 @@ impl ManualMeshSource {
             GeometrySpace::RotationLocal(mesh.deformer_id.clone())
         };
         Ok(Self {
+            estimated_bytes: document
+                .estimated_content_bytes()
+                .saturating_add(geometry.vertex_ids.len() * 128)
+                .saturating_add(geometry.triangles.len() * 160)
+                .saturating_add(meshing.boundary.len() * std::mem::size_of::<VertexId>())
+                .saturating_add(
+                    meshing.constraints.len() * std::mem::size_of::<zipzi_core::MeshConstraint>(),
+                ),
+            meshing,
             document: document.clone(),
             mesh_id: mesh_id.into(),
             sampler: UvSampler::new(&geometry),
@@ -290,10 +301,7 @@ impl ManualMeshSource {
         &self.geometry
     }
     pub fn estimated_bytes(&self) -> usize {
-        self.document
-            .estimated_content_bytes()
-            .saturating_add(self.geometry.vertex_ids.len() * 128)
-            .saturating_add(self.geometry.triangles.len() * 160)
+        self.estimated_bytes
     }
     pub fn can_rebuild(&self) -> bool {
         self.referenced_vertices.is_empty()
@@ -368,19 +376,36 @@ impl ManualMeshSource {
         extract_manual_meshing(&final_geometry)?;
         image_domain(&final_geometry, &self.mesh_id)?;
         let mut plan = self.build_geometry(current, version, geometry, limits, control)?;
-        plan.replacement.mesh.uvs = final_geometry.uvs;
-        let r = &plan.replacement;
+        let id = &self.mesh_id;
+        let mut mesh = plan.validated.get_mesh(id).unwrap().clone();
+        mesh.uvs = final_geometry.uvs;
+        let kept: HashSet<_> = mesh.vertex_ids.iter().copied().collect();
+        let mapping = self
+            .geometry
+            .vertex_ids
+            .iter()
+            .map(|&v| (v, kept.contains(&v).then_some(v)))
+            .collect();
+        let binding = plan.validated.binding_for_mesh(id).cloned();
+        let blends = plan
+            .validated
+            .blend_bindings_for_target(id)
+            .into_iter()
+            .cloned()
+            .collect();
+        let glues = plan
+            .validated
+            .glues_for_mesh(id)
+            .into_iter()
+            .cloned()
+            .collect();
         let mut candidate = current.clone();
-        let result = candidate.replace_mesh_topology(
-            r.mesh.clone(),
-            r.binding.clone(),
-            r.blend_bindings.clone(),
-            r.glues.clone(),
-            r.vertex_mapping.clone(),
-        );
+        let result = candidate.replace_mesh_topology(mesh, binding, blends, glues, mapping);
         if !result.status.is_ok() {
             return Err(status(result.status));
         }
+        plan.validated = candidate;
+        plan.changes = result;
         Ok(plan)
     }
     fn build_geometry(
@@ -393,6 +418,17 @@ impl ManualMeshSource {
     ) -> Result<ManualMeshPlan, SdkError> {
         control.check().map_err(status)?;
         extract_manual_meshing(&geometry)?;
+        self.build_replacement(current, version, geometry, limits, control)
+    }
+    fn build_replacement(
+        &self,
+        current: &Document,
+        version: Version,
+        geometry: MeshGeometry,
+        limits: AuthoringLimits,
+        control: &ConversionControl,
+    ) -> Result<ManualMeshPlan, SdkError> {
+        control.check().map_err(status)?;
         let old = &self.geometry;
         let doc = &self.document;
         let id = &self.mesh_id;
@@ -481,31 +517,47 @@ impl ManualMeshSource {
                 return Err(e);
             }
         }
-        let remap = |values: &[Vec2]| -> Result<Vec<Vec2>, SdkError> {
-            provenance
-                .iter()
-                .enumerate()
-                .map(|(i, p)| {
-                    if i % 256 == 0 {
-                        control.check().map_err(status)?;
+        let same_slots = geometry.vertex_ids == old.vertex_ids;
+        let changed_slots: Vec<_> = provenance
+            .iter()
+            .enumerate()
+            .filter(|(_, p)| !matches!(p, VertexProvenance::Retained(_)))
+            .map(|(i, _)| i)
+            .collect();
+        let remap = |values: &mut Vec<Vec2>| -> Result<(), SdkError> {
+            control.check().map_err(status)?;
+            let sample = |i: usize| -> Result<Vec2, SdkError> {
+                if i % 256 == 0 {
+                    control.check().map_err(status)?;
+                }
+                match &provenance[i] {
+                    VertexProvenance::Retained(id) => Ok(values[self.slots[id]]),
+                    VertexProvenance::Sampled { weights, .. } => {
+                        zipzi_core::geometry::sample_vertex_channel(values, weights).map_err(status)
                     }
-                    match p {
-                        VertexProvenance::Retained(id) => Ok(values[self.slots[id]]),
-                        VertexProvenance::Sampled { weights, .. } => {
-                            zipzi_core::geometry::sample_vertex_channel(values, weights)
-                                .map_err(status)
-                        }
-                        VertexProvenance::AffineExtension => Ok(self
-                            .affine_extension
-                            .as_ref()
-                            .unwrap()
-                            .position(geometry.uvs[i])),
-                    }
-                })
-                .collect()
+                    VertexProvenance::AffineExtension => Ok(self
+                        .affine_extension
+                        .as_ref()
+                        .unwrap()
+                        .position(geometry.uvs[i])),
+                }
+            };
+            if same_slots {
+                // The owned channel was already cloned once with its binding.
+                // Compute all samples before writing, then patch only changed slots.
+                let updates: Result<Vec<_>, _> =
+                    changed_slots.iter().map(|&i| Ok((i, sample(i)?))).collect();
+                for (i, value) in updates? {
+                    values[i] = value;
+                }
+            } else {
+                let result: Result<Vec<_>, _> = (0..provenance.len()).map(sample).collect();
+                *values = result?;
+            }
+            Ok(())
         };
         let mut mesh: Mesh = doc.get_mesh(id).unwrap().clone();
-        mesh.base_positions = remap(&old.positions)?;
+        remap(&mut mesh.base_positions)?;
         mesh.vertex_ids = geometry.vertex_ids.clone();
         mesh.uvs = geometry.uvs.clone();
         mesh.triangles = geometry.triangles.clone();
@@ -513,14 +565,14 @@ impl ManualMeshSource {
         let mut binding = ordinary.cloned();
         if let Some(b) = &mut binding {
             for f in &mut b.keyforms {
-                f.positions = remap(&f.positions)?;
+                remap(&mut f.positions)?;
             }
         }
         let mut blend_bindings: Vec<_> = blends.into_iter().cloned().collect();
         for b in &mut blend_bindings {
             if let DeltaKeyforms::Mesh(forms) = &mut b.keyforms {
                 for f in forms {
-                    f.positions = remap(&f.positions)?;
+                    remap(&mut f.positions)?;
                 }
             }
         }
@@ -562,29 +614,18 @@ impl ManualMeshSource {
         if !glues.is_empty() {
             appearance_limits.push("Glue is evaluated after local shape transfer".into());
         }
-        let replacement = TopologyReplacement {
-            mesh,
-            binding,
-            blend_bindings,
-            glues,
-            vertex_mapping: mapping,
-        };
+        let mesh_id = mesh.id.clone();
         let mut candidate = current.clone();
-        let check = candidate.replace_mesh_topology(
-            replacement.mesh.clone(),
-            replacement.binding.clone(),
-            replacement.blend_bindings.clone(),
-            replacement.glues.clone(),
-            replacement.vertex_mapping.clone(),
-        );
+        let check = candidate.replace_mesh_topology(mesh, binding, blend_bindings, glues, mapping);
         if !check.status.is_ok() {
             return Err(status(check.status));
         }
         Ok(ManualMeshPlan {
             version,
             publication_source: current.clone(),
-            geometry_space: self.geometry_space.clone(),
-            replacement,
+            mesh_id,
+            validated: candidate,
+            changes: check,
             provenance,
             report: ManualMeshTransferReport {
                 added,
@@ -640,13 +681,25 @@ impl ManualMeshSource {
                 self.estimated_bytes(),
             )
             .map_err(status)?;
-        let result = edit_manual_uv_topology(&self.geometry, operation).map_err(|mut e| {
-            if e.object_ids.is_empty() {
-                e.object_ids.push(self.mesh_id.clone());
-            }
-            e
-        })?;
-        let mut plan = self.build_geometry(current, version, result.geometry, limits, control)?;
+        let result = edit_manual_uv_candidate(&self.geometry, self.meshing.clone(), operation)
+            .map_err(|mut e| {
+                if e.object_ids.is_empty() {
+                    e.object_ids.push(self.mesh_id.clone());
+                }
+                e
+            })?;
+        let mut plan = self
+            .build_replacement(current, version, result.geometry, limits, control)
+            .map_err(|e| {
+                if e.code.as_ref() == "INVALID_MESH_MESHING" {
+                    let mut error =
+                        SdkError::new("INVALID_MANUAL_MESH", &e.message, "edit_manual_mesh");
+                    error.object_ids.push(self.mesh_id.clone());
+                    error
+                } else {
+                    e
+                }
+            })?;
         plan.affected_edges = result.affected_edges;
         Ok(plan)
     }
@@ -656,8 +709,9 @@ impl ManualMeshSource {
 pub struct ManualMeshPlan {
     version: Version,
     publication_source: Document,
-    geometry_space: GeometrySpace,
-    replacement: TopologyReplacement,
+    mesh_id: String,
+    validated: Document,
+    changes: zipzi_core::EditResult,
     pub provenance: Vec<VertexProvenance>,
     pub report: ManualMeshTransferReport,
     baseline: Option<Arc<ManualMeshSource>>,
@@ -666,7 +720,7 @@ pub struct ManualMeshPlan {
 }
 impl ManualMeshPlan {
     pub fn geometry(&self) -> MeshGeometry {
-        let m = &self.replacement.mesh;
+        let m = self.validated.get_mesh(&self.mesh_id).unwrap();
         MeshGeometry {
             vertex_ids: m.vertex_ids.clone(),
             positions: m.base_positions.clone(),
@@ -787,23 +841,17 @@ impl EditSession<'_> {
             return Err(error(
                 "STALE_MANUAL_MESH_PLAN",
                 "Manual mesh source changed",
-                vec![plan.replacement.mesh.id.clone()],
+                vec![plan.mesh_id.clone()],
             ));
         }
-        let mesh_id = plan.replacement.mesh.id.clone();
-        let current = self.candidate_document().get_mesh(&mesh_id).unwrap();
-        let source = GeometrySnapshot {
-            version: self.base_version(),
-            mesh_id,
-            vertex_ids: current.vertex_ids.clone(),
-            positions: current.base_positions.clone(),
-            uvs: current.uvs.clone(),
-            triangles: current.triangles.clone(),
-            meshing: current.meshing.clone(),
-            space: plan.geometry_space,
-        };
+        // The private plan owns the fully validated Core result, bound to the
+        // exact publication snapshot above. Do not clone/revalidate it on apply.
+        // This transfer retains all object/sample identities; only vertex IDs
+        // and channel arrays can change, so no object-key inventory is retired.
+        self.candidate_content_bytes.take();
+        self.candidate = Some(plan.validated);
         self.binding_cost = Some(plan.report.cost);
-        self.replace_topology(&source, plan.replacement)?;
+        self.record(plan.changes, "apply_manual_mesh_plan", &plan.mesh_id)?;
         self.manual_baseline = plan.baseline.map(|source| ManualMeshBaseline {
             source,
             publication: self.candidate_document().clone(),
@@ -819,23 +867,25 @@ impl EditSession<'_> {
         let plan = self.plan_manual_mesh(mesh_id, operation)?;
         let old = self.candidate_document().get_mesh(mesh_id).unwrap();
         let geometry = plan.geometry();
+        let kept: HashSet<_> = geometry.vertex_ids.iter().copied().collect();
+        let old_ids: HashSet<_> = old.vertex_ids.iter().copied().collect();
         let result = ManualMeshResult {
             added: geometry
                 .vertex_ids
                 .iter()
-                .filter(|id| !old.vertex_ids.contains(id))
+                .filter(|id| !old_ids.contains(id))
                 .copied()
                 .collect(),
             removed: old
                 .vertex_ids
                 .iter()
-                .filter(|id| !geometry.vertex_ids.contains(id))
+                .filter(|id| !kept.contains(id))
                 .copied()
                 .collect(),
             vertex_mapping: old
                 .vertex_ids
                 .iter()
-                .map(|&id| (id, plan.replacement.vertex_mapping[&id]))
+                .map(|&id| (id, kept.contains(&id).then_some(id)))
                 .collect(),
             changed: geometry.vertex_ids != old.vertex_ids
                 || geometry.positions != old.base_positions

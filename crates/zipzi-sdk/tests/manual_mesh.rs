@@ -1538,3 +1538,31 @@ fn transfer_generated_topology_cannot_bypass_the_complete_image_rectangle() {
     assert_eq!(error.code.as_ref(), "UV_OUTSIDE_SOURCE_IMAGE");
     assert!(error.field_path.is_some());
 }
+
+#[cfg(feature = "bench-instrumentation")]
+#[test]
+fn transfer_plan_checks_topology_once_and_applies_the_checked_snapshot() {
+    let id = dependencies::id;
+    let s = mixed();
+    let mut edit = s.begin_owned_edit("checked plan", None).unwrap();
+    let movement = |x, y| ManualMeshOperation::MoveVertices {
+        targets: vec![target(120, Vec2::new(x, y))],
+        motion_from: None,
+    };
+    // Source admission is separate from the repeated-frame cost.
+    let first = edit.plan_manual_mesh(&id(2), movement(0.45, 0.4)).unwrap();
+    edit.apply_manual_mesh_plan(first).unwrap();
+    let capture = zipzi_core::benchmark::Capture::start();
+    let plan = edit.plan_manual_mesh(&id(2), movement(0.47, 0.41)).unwrap();
+    let geometry = plan.geometry();
+    let stages = capture.finish();
+    assert_eq!(stages["core.validate_mesh_meshing"].calls, 1);
+    let capture = zipzi_core::benchmark::Capture::start();
+    edit.apply_manual_mesh_plan(plan).unwrap();
+    assert!(!capture.finish().contains_key("core.validate_mesh_meshing"));
+    let actual = edit.candidate_document().get_mesh(&id(2)).unwrap();
+    assert_eq!(actual.uvs, geometry.uvs);
+    assert_eq!(actual.triangles, geometry.triangles);
+    assert_eq!(actual.base_positions, geometry.positions);
+    assert!(!edit.is_aborted());
+}

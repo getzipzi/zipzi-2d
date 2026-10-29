@@ -43,6 +43,22 @@ struct ObjectStructure {
     parameters: HashMap<String, ParameterBindings>,
 }
 impl ObjectIndex {
+    /// A manual topology transfer preserves objects, bindings and relationships.
+    /// Only these inspector counts can change; positions/UVs are not stored here.
+    pub(crate) fn refresh_mesh_geometry_counts(
+        &mut self,
+        object: &ObjectRef,
+        vertices: usize,
+        triangles: usize,
+    ) -> bool {
+        if let Some(&slot) = self.structure.slots.get(object) {
+            let properties = &mut self.objects[slot].properties;
+            properties["vertices"] = vertices.into();
+            properties["triangles"] = triangles.into();
+            return true;
+        }
+        false
+    }
     pub fn get(&self, r: &ObjectRef) -> Option<&ObjectInfo> {
         self.structure.slots.get(r).map(|&i| &self.objects[i])
     }

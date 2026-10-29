@@ -2462,3 +2462,133 @@ fn manual_mesh_folded_pose_refuses_ambiguous_click_and_source_view_recovers() ->
     );
     Ok(())
 }
+
+#[test]
+fn manual_mesh_drag_reuses_panel_records_and_unchanged_connectivity() -> anyhow::Result<()> {
+    use std::sync::Arc;
+    let id = dependency_fixture::id;
+    let (mut editor, _dir) = pose_editor()?;
+    let original = model_mesh_document(&editor);
+    let index = editor.document().unwrap().object_index();
+    let object = ObjectRef::new(ObjectKind::Mesh, id(2));
+    let peer = ObjectRef::new(ObjectKind::Mesh, id(4));
+    let mut frame = crate::support::present_canvas(&mut editor)?;
+    let shown = frame.geometry.mesh(&id(2)).unwrap();
+    let start = frame.transform.to_viewport(shown.vertices[4].1);
+    let towards = frame.transform.to_viewport(shown.vertices[1].1);
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: start,
+            shift: false,
+            alt: false,
+            primary: false,
+        },
+    )?;
+    let mut retained_connectivity = 0;
+    for sample in 0..8 {
+        let amount = 0.3 + sample as f32 * 0.02;
+        let point = ViewportPoint {
+            x: start.x + (towards.x - start.x) * amount,
+            y: start.y + (towards.y - start.y) * amount,
+        };
+        let before_uvs = frame
+            .geometry
+            .source
+            .runtime_frame
+            .drawables
+            .iter()
+            .find(|d| d.id == id(2))
+            .unwrap()
+            .uvs
+            .clone();
+        let topology = frame.geometry.mesh(&id(2)).unwrap().triangles.clone();
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Move {
+                point,
+                left_down: true,
+            },
+        )?;
+        let current = editor.document().unwrap().object_index();
+        assert!(
+            Arc::ptr_eq(&index, &current),
+            "a coordinate-only drag rebuilt the panel index"
+        );
+        assert!(std::ptr::eq(
+            index.get(&peer).unwrap(),
+            current.get(&peer).unwrap()
+        ));
+        frame = crate::support::present_canvas(&mut editor)?;
+        let after = frame
+            .geometry
+            .source
+            .runtime_frame
+            .drawables
+            .iter()
+            .find(|d| d.id == id(2))
+            .unwrap();
+        assert_ne!(before_uvs, after.uvs, "drag must update actual data");
+        let actual_mesh = frame.geometry.mesh(&id(2)).unwrap();
+        let rendered_triangles: Vec<_> = after
+            .indices
+            .chunks_exact(3)
+            .map(|t| {
+                [
+                    actual_mesh.vertices[t[0] as usize].0,
+                    actual_mesh.vertices[t[1] as usize].0,
+                    actual_mesh.vertices[t[2] as usize].0,
+                ]
+            })
+            .collect();
+        assert_eq!(
+            actual_mesh.triangles.as_ref(),
+            rendered_triangles.as_slice()
+        );
+        if sample > 0 && topology.as_ref() == rendered_triangles.as_slice() {
+            assert!(Arc::ptr_eq(
+                &topology,
+                &frame.geometry.mesh(&id(2)).unwrap().triangles
+            ));
+            retained_connectivity += 1;
+        }
+        assert_eq!(
+            current.get(&object).unwrap().properties["triangles"].as_u64(),
+            Some(rendered_triangles.len() as u64)
+        );
+    }
+    assert!(
+        retained_connectivity > 0,
+        "fixture did not exercise topology reuse"
+    );
+    editor.cancel_gesture();
+    assert_eq!(
+        model_mesh_document(&editor).get_mesh(&id(2)),
+        original.get_mesh(&id(2))
+    );
+    // Inspect the candidate before commit, when retained panels must stay shared.
+    let (mut document, _assets) = mixed_dependency_document()?;
+    let before = document.object_index();
+    let target = document.manual_mesh_target()?;
+    document.preview_manual_mesh(
+        &target,
+        zipzi_sdk::ManualMeshOperation::InsertVertex {
+            id: 200,
+            uv: Vec2::new(0.3, 0.25),
+        },
+    )?;
+    let after = document.object_index();
+    assert_eq!(before.get(&object).unwrap().properties["vertices"], 5);
+    assert_eq!(after.get(&object).unwrap().properties["vertices"], 6);
+    assert!(std::ptr::eq(
+        before.get(&peer).unwrap(),
+        after.get(&peer).unwrap()
+    ));
+    assert_eq!(before.bindings.as_ptr(), after.bindings.as_ptr());
+    document.cancel_manual_mesh_gesture();
+    assert_eq!(
+        document.object_index().get(&object).unwrap().properties["vertices"],
+        5
+    );
+    Ok(())
+}

@@ -371,6 +371,14 @@ SKIP：该 worktree 没有带入 `models/local` 的本地授权模型，真实�
 - `env -u ZIPZI_DEV_SESSION_DIR ZIPZI_SCREENSHOT_SCENE=manual-mesh ZIPZI_SCREENSHOT_SAVE=1 ZIPZI_SCREENSHOT_DIR="$PWD/target/model-mesh-screenshots" cargo test --locked -p zipzi-editor --features test-support --test headless_screenshot`：14 张 Metal 交互截图通过并检查。第 12／13 张保留可见的其他网格作为上下文，第 14 张显式切换源图。
 - `git diff --check`：通过。此轮没有修改 SDK／Runtime 或 Python 契约，未重复完整套件。
 
+## 连续拖动性能迭代（2026-10-29）
+
+针对模型内拖动持续卡顿，复用冻结来源的拓扑校验及内存估算；计划持有完整校验后的 candidate，应用时验证精确来源并发布该结果。形态数组在槽位不变时只复制一次并修补采样点；Editor 复用未改变的面板索引和拓扑，真实连线变化仍会使缓存失效。
+
+Mao 三轮 CPU 对照中，输入阶段 P50 中位数从 9.358 ms 降到 4.294 ms，索引／预览阶段从 15.206 ms 降到 1.009 ms（两个阶段分别统计）。最终原生窗口对照从 43.975 提升至 81.849 个新预览／秒，输入至呈现 P95 从 80.250 ms 降到 49.159 ms。1,089 点／58 形态的 SDK 更新从 23.138 ms 降到 10.795 ms，累计分配从 19.90 MB 降到 7.06 MB／次。此处不是其他模型的 FPS 承诺。
+
+功能与缓存工作量回归：SDK 62、Core 42、Runtime 15、原生 UI 16 及附带 Core 1 项通过。完整逐轮数据、二进制哈希、失败样本排除原因和阶段局限见[测量记录](../archive/benchmarks/2026-10-29-manual-mesh-drag.md)。
+
 ## 外部行为参考
 
 - [Spine Mesh attachments](https://esotericsoftware.com/spine-meshes)：区分 UV 与变形展示；部分重建操作会清除权重和变形关键帧。本方案独立定义保留依赖的转移语义。

@@ -6,6 +6,7 @@ and how to interpret their output; measured results belong in
 
 | Guide | Use it for |
 | --- | --- |
+| [Manual Mesh drag](#manual-mesh-drag) | Continuous model-space topology dragging, CPU cost and native presentation |
 | [Native Properties: Mesh and Physics](#properties-native-window-benchmark) | Real-window input, UI/Metal work and presentation correlation |
 | [Property editing chain](#property-editing-chain-benchmark) | Synchronous CPU editing cost, stage attribution and ownership controls |
 | [Whole-model parameter overlays](#whole-model-parameter-overlays) | Parameter dragging with every visible Mesh selected, rendering ablations and CPU/GPU attribution |
@@ -15,6 +16,41 @@ See the [tool index](../README.md#benchmarks-and-research-tools) for Timeline,
 window and offscreen benchmark commands. Native window harnesses require macOS,
 Metal and the documented local model; CPU chain measurements do not measure
 window or GPU latency.
+
+## Manual Mesh drag
+
+The CPU probe uses the normal Editor gesture, candidate, panel-index and preview
+paths. It validates changed inputs and cancellation without saving the model:
+
+```sh
+env -u ZIPZI_DEV_SESSION_DIR cargo run --locked --release -p zipzi-editor-core \
+  --example manual_mesh_drag_benchmark -- models/local/mao/runtime/mao_pro.model3.json ArtMesh215 60
+cargo run --locked --release -p zipzi-sdk --example manual_mesh_benchmark
+```
+
+The Editor probe accepts `MODEL [MESH_ID_OR_RUNTIME_ID] [SAMPLES]`. It focuses an
+editable mesh and moves one interior vertex towards an incident triangle's center,
+using the same frozen pose and UV transfer as ordinary input. The SDK probe uses
+1,089 vertices and 58 stored channels and counts cumulative allocator requests;
+those bytes are not peak RSS. CPU probes do not measure presentation or FPS.
+
+For the native window, enable the manual workload (exclusive with other workloads):
+
+```sh
+env -u ZIPZI_DEV_SESSION_DIR ZIPZI_BENCH_MANUAL_MESH=1 ZIPZI_BENCH_WARMUP=20 \
+  ./tools/benchmarks/window-benchmark.sh \
+  models/local/mao/runtime/mao_pro.model3.json target/manual-mesh-window 120 120
+```
+
+It uses the production pointer path, verifies every input produces a model
+candidate/evaluation, and commits then undoes the gesture without saving. Fixture
+selection records the mesh ID, vertex ID and vertex count. A vertex moves along an
+interior triangle direction instead of an arbitrary circle crossing the outline.
+The trace identifies this as `manual_mesh: true`, workload 5. Preserve raw traces,
+binary hashes and reports. Keep the same chosen mesh, vertex, viewport and input
+trajectory across before/after runs; discard failed or incomplete runs. Build
+outside sampling intervals. Frame reports measure from GPUI dispatch through
+correlated Metal presentation, excluding OS input delivery and input-to-photon.
 
 ## Windows GPUI CPU and image-upload diagnosis
 

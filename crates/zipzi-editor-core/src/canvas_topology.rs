@@ -76,7 +76,7 @@ pub(crate) struct MeshTopology {
     slots: HashMap<u32, usize>,
 }
 impl MeshTopology {
-    fn matches(&self, mesh: &zipzi_core::Mesh) -> bool {
+    pub(crate) fn matches(&self, mesh: &zipzi_core::Mesh) -> bool {
         self.vertex_ids.as_ref() == mesh.vertex_ids
             && self.triangles.as_ref() == mesh.triangles
             && self.meshing == mesh.meshing
