@@ -1,4 +1,6 @@
 //! Desktop lifetime is independent of window entities and background callers.
+pub(crate) mod external_status;
+
 use super::*;
 use std::{
     cell::{Cell, RefCell},
@@ -10,6 +12,7 @@ use zipzi_editor_core::RuntimeHost;
 pub(super) struct DesktopHost {
     pub(super) runtime: RuntimeHost,
     pub(super) protocol: Rc<RefCell<zipzi_runtime::protocol::Protocol>>,
+    pub(super) external_status: Entity<external_status::ExternalStatus>,
     resident: bool,
     parked: Rc<RefCell<Option<Editor>>>,
     pub(super) pending_quit: Rc<Cell<bool>>,
@@ -18,10 +21,11 @@ pub(super) struct DesktopHost {
 }
 impl Global for DesktopHost {}
 impl DesktopHost {
-    pub(super) fn new(resident: bool) -> Self {
+    pub(super) fn new(resident: bool, cx: &mut App) -> Self {
         let runtime = RuntimeHost::new();
         let editor = Editor::with_runtime(runtime.clone());
         Self {
+            external_status: external_status::ExternalStatus::new(runtime.clone(), cx),
             runtime,
             protocol: Rc::new(RefCell::new(
                 zipzi_runtime::protocol::Protocol::default()

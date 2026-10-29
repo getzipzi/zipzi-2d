@@ -561,7 +561,7 @@ pub(super) fn setup(
     use std::os::unix::fs::PermissionsExt;
     std::fs::set_permissions(endpoint.path(), std::fs::Permissions::from_mode(0o700))?;
     let mut h = Harness::new()?;
-    let host = crate::host::DesktopHost::new(false);
+    let host = h.cx.update(|cx| crate::host::DesktopHost::new(false, cx));
     h.cx.update(|cx| {
         cx.set_global(host.clone());
         let owner = zipzi_runtime::local::Endpoint::new(endpoint.path(), "test")?

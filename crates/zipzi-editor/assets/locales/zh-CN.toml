@@ -709,6 +709,10 @@ canvas = "画布"
 finish_composition = "请先完成输入法组词，再保存或关闭。"
 
 [status]
+external_applied = "外部修改已应用"
+external_applied_project = "%{project} · 外部修改已应用"
+external_untitled_project = "未命名项目 #%{id}"
+external_project_count = "%{count} 个项目"
 hint_lmb = "左键"
 hint_drag = "拖动"
 hint_pan = "平移"

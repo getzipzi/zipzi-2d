@@ -710,6 +710,10 @@ canvas = "Canvas"
 finish_composition = "Finish text composition before saving or closing."
 
 [status]
+external_applied = "External changes applied"
+external_applied_project = "%{project} · External changes applied"
+external_untitled_project = "Untitled project #%{id}"
+external_project_count = "%{count} projects"
 hint_lmb = "LMB"
 hint_drag = "Drag"
 hint_pan = "Pan"

@@ -8,6 +8,7 @@ use super::harness::Harness;
 mod animation_scene;
 mod common;
 mod dock_and_layout;
+mod external_status_scene;
 mod manual_mesh_scene;
 mod mesh_generation_scene;
 mod modeling_scene;
@@ -32,6 +33,10 @@ pub(super) fn run() -> anyhow::Result<()> {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
+    if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("external-status") {
+        external_status_scene::run(&directory)?;
+        return Ok(());
+    }
     if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("mesh-generation") {
         let mut harness = Harness::new()?;
         mesh_generation_scene::mesh_generation_screenshots(&mut harness, &directory)?;

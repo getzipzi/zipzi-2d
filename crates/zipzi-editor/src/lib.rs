@@ -448,7 +448,8 @@ pub fn run() {
         cx.set_global(settings);
         actions::init(cx);
         theme::init(cx);
-        cx.set_global(host::DesktopHost::new(no_window));
+        let host = host::DesktopHost::new(no_window, cx);
+        cx.set_global(host);
         #[cfg(windows)]
         dev_control::start(cx);
         ipc::start(owner, cx).expect("start local Runtime listener");

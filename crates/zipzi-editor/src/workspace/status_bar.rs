@@ -9,6 +9,7 @@ pub(crate) type HintContext = &'static [InteractionHint];
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct StatusBarState {
+    active_session: Option<zipzi_runtime::SessionId>,
     hint_context: HintContext,
     error: Option<String>,
     message: String,
@@ -119,6 +120,23 @@ impl Render for StatusBar {
             .state
             .get_or_insert_with(|| snapshot_state(owner.read(cx), cx))
             .clone();
+        if let Some(host) = cx.try_global::<crate::host::DesktopHost>().cloned() {
+            let titles = owner
+                .read(cx)
+                .editor
+                .documents()
+                .into_iter()
+                .filter_map(|doc| {
+                    Some((
+                        owner.read(cx).editor.runtime_session_id(doc.id)?,
+                        doc.title?,
+                    ))
+                })
+                .collect();
+            host.external_status.update(cx, |status, cx| {
+                status.set_project_context(state.active_session, titles, cx);
+            });
+        }
         render_status_bar(&state, cx).into_any_element()
     }
 }
@@ -167,6 +185,10 @@ fn snapshot_state(view: &EditorView, cx: &App) -> StatusBarState {
         .map(|b| (b.command, b.key.clone()))
         .collect();
     StatusBarState {
+        active_session: view
+            .editor
+            .active_id()
+            .and_then(|id| view.editor.runtime_session_id(id)),
         hint_context,
         error,
         message,
@@ -307,6 +329,9 @@ fn render_status_bar(state: &StatusBarState, cx: &App) -> impl IntoElement {
         .px(compact::chrome_inset(cx))
         .text_size(compact::rem(compact::CAPTION))
         .line_height(compact::rem(STATUS_LINE_HEIGHT))
+        // Equal flexible side lanes keep interaction hints centered. The external
+        // indicator truncates within spare space instead of moving those hints.
+        .child(div().flex_1().min_w_0())
         // Center section: Transient status / error message (shortcut hints hidden while keeping mechanism)
         .child(
             div()
@@ -334,5 +359,15 @@ fn render_status_bar(state: &StatusBarState, cx: &App) -> impl IntoElement {
                         .text_ellipsis()
                         .child(state.message.clone()),
                 ),
+        )
+        .child(
+            div()
+                .flex_1()
+                .min_w_0()
+                .h(compact::rem(STATUS_LINE_HEIGHT))
+                .overflow_hidden()
+                .when_some(cx.try_global::<crate::host::DesktopHost>(), |e, host| {
+                    e.child(host.external_status.clone())
+                }),
         )
 }
