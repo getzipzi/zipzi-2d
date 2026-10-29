@@ -4,6 +4,9 @@
 //! publish every [`PngAsset::source`] with its bytes. [`import_psd_pixels`] leaves
 //! PNG encoding and publication to the project store.
 
+mod bitmap_mask;
+mod mask_preflight;
+
 use ag_psd::psd::{BlendMode as PsdBlendMode, ColorMode, Layer, ReadOptions};
 use ag_psd::{read_psd, PixelData};
 use sha2::{Digest, Sha256};
@@ -129,6 +132,7 @@ fn parse_psd_limited(
     decoded_limit: Option<usize>,
 ) -> Result<Builder, ImportError> {
     preflight(bytes)?;
+    mask_preflight::check(bytes)?;
     let options = ReadOptions {
         skip_composite_image_data: Some(true),
         use_image_data: Some(true),
@@ -428,10 +432,20 @@ impl Builder {
             return Err(ImportError::new("PSD_LIMIT", "PSD exceeds 8192 layers"));
         }
         let name = layer.additional_info.name.as_deref().unwrap_or("Untitled");
-        if layer.additional_info.mask.is_some()
-            || layer.additional_info.real_mask.is_some()
+        if layer.additional_info.real_mask.is_some()
             || layer.additional_info.vector_mask.is_some()
-            || layer.additional_info.effects.is_some()
+            || layer
+                .additional_info
+                .mask
+                .as_ref()
+                .is_some_and(|mask| mask.from_vector_data == Some(true))
+        {
+            return Err(ImportError::new(
+                "UNSUPPORTED_LAYER",
+                format!("{name}: vector and combined masks cannot be represented"),
+            ));
+        }
+        if layer.additional_info.effects.is_some()
             || layer.additional_info.adjustment.is_some()
             || layer.additional_info.filter_mask.is_some()
             || layer.additional_info.filter_effects_masks.is_some()
@@ -442,10 +456,18 @@ impl Builder {
         {
             return Err(ImportError::new(
                 "UNSUPPORTED_LAYER",
-                format!("{name}: masks, adjustments, and layer effects cannot be represented"),
+                format!(
+                    "{name}: adjustments, layer effects, and fill opacity cannot be represented"
+                ),
             ));
         }
         if let Some(children) = &mut layer.children {
+            if layer.additional_info.mask.is_some() {
+                return Err(ImportError::new(
+                    "UNSUPPORTED_LAYER",
+                    format!("{name}: group masks cannot be represented"),
+                ));
+            }
             if layer.clipping == Some(true) {
                 return Err(ImportError::new(
                     "UNSUPPORTED_LAYER",
@@ -494,7 +516,7 @@ impl Builder {
             ));
         }
 
-        let Some(image) = layer.image_data.take().or_else(|| layer.canvas.take()) else {
+        let Some(mut image) = layer.image_data.take().or_else(|| layer.canvas.take()) else {
             return Err(ImportError::new(
                 "UNSUPPORTED_LAYER",
                 format!("{name}: layer has no raster pixels"),
@@ -521,6 +543,16 @@ impl Builder {
                 "INVALID_PSD",
                 format!("{name}: invalid RGBA pixel count"),
             ));
+        }
+        if let Some(mask) = &layer.additional_info.mask {
+            if bitmap_mask::apply(&mut image, mask, left, top, name)? {
+                self.report.warnings.push(format!(
+                    "{name}: bitmap layer mask is baked into texture alpha and is no longer independently editable"
+                ));
+            }
+            if let Some(pixels) = mask.image_data.as_ref().or(mask.canvas.as_ref()) {
+                self.decoded_bytes = self.decoded_bytes.saturating_add(pixels.data.len());
+            }
         }
         if self.report.raster_layers >= MAX_LAYERS {
             return Err(ImportError::new(
@@ -667,6 +699,40 @@ fn encode_png(image: &PixelData) -> Result<Vec<u8>, ImportError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn decoded_budget_counts_bitmap_masks_in_both_import_formats() {
+        use ag_psd::psd::{LayerMaskData, Psd, WriteOptions};
+
+        let image = PixelData {
+            width: 2,
+            height: 2,
+            data: vec![128; 16],
+        };
+        let mut layer = Layer::default();
+        layer.image_data = Some(image.clone());
+        layer.additional_info.mask = Some(LayerMaskData {
+            image_data: Some(image),
+            ..Default::default()
+        });
+        let bytes = ag_psd::write_psd(
+            &Psd {
+                width: 8.0,
+                height: 8.0,
+                children: Some(vec![layer]),
+                ..Default::default()
+            },
+            &WriteOptions::default(),
+        );
+        for encode_pngs in [false, true] {
+            let at_budget = parse_psd(&bytes, encode_pngs, 32).unwrap();
+            let over_budget = parse_psd(&bytes, encode_pngs, 31).unwrap();
+            assert_eq!(at_budget.decoded_bytes, 32);
+            assert_eq!(at_budget.report.warnings.len(), 1); // Mask baking notice.
+            assert_eq!(over_budget.report.warnings.len(), 2);
+            assert!(over_budget.report.warnings[1].contains("import continued"));
+        }
+    }
 
     #[test]
     fn decoded_budget_is_advisory_for_both_import_formats() {

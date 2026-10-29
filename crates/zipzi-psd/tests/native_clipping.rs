@@ -1,6 +1,6 @@
 #![cfg(target_os = "macos")]
 
-use ag_psd::psd::{BlendMode, ColorMode, Layer, PixelData, Psd, WriteOptions};
+use ag_psd::psd::{BlendMode, ColorMode, Layer, LayerMaskData, PixelData, Psd, WriteOptions};
 use zipzi_core::{image::decode_png, DrawableFrame, Vec2};
 use zipzi_psd::{import_psd, ImportBundle};
 use zipzi_render::{Affine2, ViewportConfig};
@@ -126,6 +126,34 @@ fn clipping_preserves_base_opacity_pixel_alpha_and_visibility() {
         clipped.clipping = Some(true);
         assert_pixel(&render(&import(vec![base, clipped])), 4, expected);
     }
+}
+
+#[test]
+fn bitmap_masks_on_base_and_clipped_layers_render_with_opacity_applied_once() {
+    let mut base = raster("base", [255, 0, 0, 128]);
+    base.opacity = Some(0.5);
+    base.additional_info.mask = Some(LayerMaskData {
+        image_data: Some(PixelData {
+            width: 4,
+            height: 8,
+            data: [128, 128, 128, 255].repeat(32),
+        }),
+        default_color: Some(0.0),
+        ..Default::default()
+    });
+    let mut clipped = raster("clipped", [0, 255, 0, 255]);
+    clipped.clipping = Some(true);
+    clipped.additional_info.mask = Some(LayerMaskData {
+        image_data: Some(PixelData {
+            width: 8,
+            height: 8,
+            data: [128, 128, 128, 255].repeat(64),
+        }),
+        ..Default::default()
+    });
+    let pixels = render(&import(vec![base, clipped]));
+    assert_pixel(&pixels, 2, [16, 16, 0, 32]);
+    assert_pixel(&pixels, 6, [0; 4]);
 }
 
 #[test]
