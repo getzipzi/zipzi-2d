@@ -33,6 +33,34 @@ GEOMETRY = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
     ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
 
 class PythonSdk(unittest.TestCase):
+    def test_sampling_preserves_untranslated_rotation_basis_on_both_backends(self):
+        frames = []
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                runtime = self.runtime(mode)
+                session = runtime.sessions.create(uid(1))
+                with session.edit("Tiny rotation at large origin") as edit:
+                    edit.apply(m.ModelingCommandCreateTransform(transform=m.Transform(
+                        id=uid(2), runtime_id="Tiny", name="Parent", enabled=True,
+                        appearance=m.Appearance(opacity=1., multiply=(1., 1., 1.), screen=(0., 0., 0.)),
+                        data=m.TransformDataRotation(value=m.RotationTransform(base_angle=0.,
+                            pose=m.RotationPose(origin=m.PreciseVec2(10000., 10000.),
+                                angle=0., scale=0.0001, reflect_x=True, reflect_y=False))))))
+                frame = session.modeling.sample(({},)).value.frames[0]
+                deformer = frame.deformers[0]
+                # World-space unit endpoints coincide, but the binary/native
+                # sampling values must retain both nonzero linear axes.
+                self.assertEqual(deformer.points[0], deformer.points[1])
+                assert deformer.rotation_basis is not None
+                x, y = deformer.rotation_basis
+                self.assertAlmostEqual(x[0], -0.0001, places=10)
+                self.assertEqual(x[1], 0.)
+                self.assertEqual(y[0], 0.)
+                self.assertAlmostEqual(y[1], 0.0001, places=10)
+                self.assertEqual(session.modeling.sample_async(({},)).wait().value.frames[0], frame)
+                frames.append(frame)
+        self.assertEqual(frames[0], frames[1])
+
     def test_manual_mesh_preserves_mixed_dependencies_and_invalid_candidate_recovers(self):
         results=[]
         for mode in ("local", "connected"):

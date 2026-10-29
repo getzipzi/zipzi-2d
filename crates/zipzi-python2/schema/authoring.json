@@ -39276,6 +39276,42 @@
                                     "kind": "optional"
                                   },
                                   "skip": false
+                                },
+                                {
+                                  "default": null,
+                                  "doc": "Local X/Y basis vectors with evaluated scale and reflections, before\ntranslation. Unlike subtracting points, these retain small rotation\ncoefficients at large model origins.",
+                                  "name": "rotation_basis",
+                                  "rust_name": "rotation_basis",
+                                  "shape": {
+                                    "item": {
+                                      "item": {
+                                        "fields": [
+                                          {
+                                            "default": null,
+                                            "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                            "name": "x",
+                                            "shape": {
+                                              "kind": "f32"
+                                            }
+                                          },
+                                          {
+                                            "default": null,
+                                            "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                            "name": "y",
+                                            "shape": {
+                                              "kind": "f32"
+                                            }
+                                          }
+                                        ],
+                                        "kind": "record",
+                                        "name": "zipzi_core::types::Vec2"
+                                      },
+                                      "kind": "array",
+                                      "length": 2
+                                    },
+                                    "kind": "optional"
+                                  },
+                                  "skip": false
                                 }
                               ],
                               "kind": "serde_record",
@@ -39313,8 +39349,8 @@
       "transparent": false,
       "tuple": false
     },
-    "preview_signature": "06c25ac3ad39aea68174b152489be38a",
-    "sample_signature": "33cfb73ff96616c25d9d5f06db944d7e",
+    "preview_signature": "de420995072f1a30cdaff1c3207de078",
+    "sample_signature": "a87f0d0900f9d79e2b3712201e0ee16a",
     "samples": {
       "fields": [
         {
@@ -40007,6 +40043,42 @@
                               ],
                               "kind": "record",
                               "name": "zipzi_core::types::Vec2"
+                            },
+                            "kind": "optional"
+                          },
+                          "skip": false
+                        },
+                        {
+                          "default": null,
+                          "doc": "Local X/Y basis vectors with evaluated scale and reflections, before\ntranslation. Unlike subtracting points, these retain small rotation\ncoefficients at large model origins.",
+                          "name": "rotation_basis",
+                          "rust_name": "rotation_basis",
+                          "shape": {
+                            "item": {
+                              "item": {
+                                "fields": [
+                                  {
+                                    "default": null,
+                                    "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                    "name": "x",
+                                    "shape": {
+                                      "kind": "f32"
+                                    }
+                                  },
+                                  {
+                                    "default": null,
+                                    "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                    "name": "y",
+                                    "shape": {
+                                      "kind": "f32"
+                                    }
+                                  }
+                                ],
+                                "kind": "record",
+                                "name": "zipzi_core::types::Vec2"
+                              },
+                              "kind": "array",
+                              "length": 2
                             },
                             "kind": "optional"
                           },
@@ -56610,6 +56682,42 @@
                                 ],
                                 "kind": "record",
                                 "name": "zipzi_core::types::Vec2"
+                              },
+                              "kind": "optional"
+                            },
+                            "skip": false
+                          },
+                          {
+                            "default": null,
+                            "doc": "Local X/Y basis vectors with evaluated scale and reflections, before\ntranslation. Unlike subtracting points, these retain small rotation\ncoefficients at large model origins.",
+                            "name": "rotation_basis",
+                            "rust_name": "rotation_basis",
+                            "shape": {
+                              "item": {
+                                "item": {
+                                  "fields": [
+                                    {
+                                      "default": null,
+                                      "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                      "name": "x",
+                                      "shape": {
+                                        "kind": "f32"
+                                      }
+                                    },
+                                    {
+                                      "default": null,
+                                      "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                      "name": "y",
+                                      "shape": {
+                                        "kind": "f32"
+                                      }
+                                    }
+                                  ],
+                                  "kind": "record",
+                                  "name": "zipzi_core::types::Vec2"
+                                },
+                                "kind": "array",
+                                "length": 2
                               },
                               "kind": "optional"
                             },
@@ -115863,6 +115971,42 @@
                               "kind": "optional"
                             },
                             "skip": false
+                          },
+                          {
+                            "default": null,
+                            "doc": "Local X/Y basis vectors with evaluated scale and reflections, before\ntranslation. Unlike subtracting points, these retain small rotation\ncoefficients at large model origins.",
+                            "name": "rotation_basis",
+                            "rust_name": "rotation_basis",
+                            "shape": {
+                              "item": {
+                                "item": {
+                                  "fields": [
+                                    {
+                                      "default": null,
+                                      "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                      "name": "x",
+                                      "shape": {
+                                        "kind": "f32"
+                                      }
+                                    },
+                                    {
+                                      "default": null,
+                                      "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                      "name": "y",
+                                      "shape": {
+                                        "kind": "f32"
+                                      }
+                                    }
+                                  ],
+                                  "kind": "record",
+                                  "name": "zipzi_core::types::Vec2"
+                                },
+                                "kind": "array",
+                                "length": 2
+                              },
+                              "kind": "optional"
+                            },
+                            "skip": false
                           }
                         ],
                         "kind": "serde_record",
@@ -118625,6 +118769,42 @@
                                         ],
                                         "kind": "record",
                                         "name": "zipzi_core::types::Vec2"
+                                      },
+                                      "kind": "optional"
+                                    },
+                                    "skip": false
+                                  },
+                                  {
+                                    "default": null,
+                                    "doc": "Local X/Y basis vectors with evaluated scale and reflections, before\ntranslation. Unlike subtracting points, these retain small rotation\ncoefficients at large model origins.",
+                                    "name": "rotation_basis",
+                                    "rust_name": "rotation_basis",
+                                    "shape": {
+                                      "item": {
+                                        "item": {
+                                          "fields": [
+                                            {
+                                              "default": null,
+                                              "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+                                              "name": "x",
+                                              "shape": {
+                                                "kind": "f32"
+                                              }
+                                            },
+                                            {
+                                              "default": null,
+                                              "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+                                              "name": "y",
+                                              "shape": {
+                                                "kind": "f32"
+                                              }
+                                            }
+                                          ],
+                                          "kind": "record",
+                                          "name": "zipzi_core::types::Vec2"
+                                        },
+                                        "kind": "array",
+                                        "length": 2
                                       },
                                       "kind": "optional"
                                     },

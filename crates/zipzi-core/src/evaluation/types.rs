@@ -252,6 +252,11 @@ pub struct EvaluatedDeformer {
     /// without translation or scale so tiny imported scales retain their angle.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rotation_axis: Option<Vec2>,
+    /// Local X/Y basis vectors with evaluated scale and reflections, before
+    /// translation. Unlike subtracting points, these retain small rotation
+    /// coefficients at large model origins.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rotation_basis: Option<[Vec2; 2]>,
 }
 
 pub fn parent_positions<'a>(

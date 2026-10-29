@@ -120,7 +120,7 @@ class Reader:
 INPUT_SIGNATURE = 'b252887103a2a321a726745f003bae57'
 MESH_SIGNATURE = '6f011cf86dfd4d3f0ee05751e6a6cc13'
 BINDING_SIGNATURE = '7e7f1d80974a2ca6fa5fe1ddac9f1ebf'
-SAMPLE_SIGNATURE = '33cfb73ff96616c25d9d5f06db944d7e'
+SAMPLE_SIGNATURE = 'a87f0d0900f9d79e2b3712201e0ee16a'
 OUTPUT_SIGNATURE = '8cd0ae2d11ab948c6e8eb66fa80e5210'
 
 def _point(value: object) -> tuple[object, object]:
@@ -4689,7 +4689,7 @@ def _read_rendercommand(r: Reader) -> m.RenderCommand:
     raise ValueError("Unknown binary RenderCommand variant")
 
 def _read_evaluateddeformer(r: Reader) -> m.EvaluatedDeformer:
-    return m.EvaluatedDeformer(id=r.text(), enabled=r.boolean(), points=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), rotation_axis=(_read_vec2(r) if r.optional() else None))
+    return m.EvaluatedDeformer(id=r.text(), enabled=r.boolean(), points=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), rotation_axis=(_read_vec2(r) if r.optional() else None), rotation_basis=(cast('tuple[m.Vec2, m.Vec2]', tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', 2))) if r.optional() else None))
 
 def _read_geometrydiagnostic(r: Reader) -> m.GeometryDiagnostic:
     return m.GeometryDiagnostic(kind=_read_geometrydiagnostickind(r), mesh_id=r.text(), triangle_index=(integer(r.scalar('Q')) if r.optional() else None))
@@ -4862,7 +4862,7 @@ def decode_spatial(value: bytes, signature: str) -> m.SpatialSamples:
     return result
 
 def decode_preview(value: bytes, signature: str) -> m.PreviewBatch:
-    if signature!='06c25ac3ad39aea68174b152489be38a': raise ValueError("Binary preview contract differs")
+    if signature!='de420995072f1a30cdaff1c3207de078': raise ValueError("Binary preview contract differs")
     r=Reader(value)
     result=_read_previewbatch(r)
     r.finish()

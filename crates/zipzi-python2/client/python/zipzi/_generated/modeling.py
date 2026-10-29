@@ -7183,17 +7183,19 @@ RenderCommand: TypeAlias = RenderCommandBeginOffscreen | RenderCommandDrawMesh |
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class EvaluatedDeformer(CompactValue):
-    "Immutable owned EvaluatedDeformer value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\npoints: Final model coordinates (X-right/Y-up), matching\nDrawable::positions. Warp points are row-major; rotation points are the\ntransformed origin and unit X/Y axes.\nrotation_axis: Unit direction of the rotation's local X axis in model space, evaluated\nwithout translation or scale so tiny imported scales retain their angle."
+    "Immutable owned EvaluatedDeformer value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\npoints: Final model coordinates (X-right/Y-up), matching\nDrawable::positions. Warp points are row-major; rotation points are the\ntransformed origin and unit X/Y axes.\nrotation_axis: Unit direction of the rotation's local X axis in model space, evaluated\nwithout translation or scale so tiny imported scales retain their angle.\nrotation_basis: Local X/Y basis vectors with evaluated scale and reflections, before\ntranslation. Unlike subtracting points, these retain small rotation\ncoefficients at large model origins."
     id: str
     enabled: bool
     points: tuple[Vec2, ...]
     rotation_axis: (Vec2 | None) = None
+    rotation_basis: (tuple[Vec2, Vec2] | None) = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'enabled', self.enabled)
         object.__setattr__(self, 'points', tuple(self.points))
         object.__setattr__(self, 'rotation_axis', None if self.rotation_axis is None else self.rotation_axis)
+        object.__setattr__(self, 'rotation_basis', None if self.rotation_basis is None else tuple(self.rotation_basis))
 EvaluatedDeformer.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -16072,14 +16074,21 @@ def validate_EvaluatedDeformer(value: EvaluatedDeformer) -> None:
         validate_Vec2(v0)
     if value.rotation_axis is not None:
         validate_Vec2(value.rotation_axis)
+    if value.rotation_basis is not None:
+        if not isinstance(value.rotation_basis, tuple):
+            raise TypeError("Expected an immutable tuple")
+        if len(value.rotation_basis) != 2:
+            raise ValueError("Invalid fixed array length")
+        for v0 in value.rotation_basis:
+            validate_Vec2(v0)
 
 def encode_EvaluatedDeformer(value: EvaluatedDeformer) -> object:
-    return {'id': value.id, 'enabled': value.enabled, 'points': [encode_Vec2(v0) for v0 in value.points], 'rotation_axis': None if value.rotation_axis is None else encode_Vec2(value.rotation_axis)}
+    return {'id': value.id, 'enabled': value.enabled, 'points': [encode_Vec2(v0) for v0 in value.points], 'rotation_axis': None if value.rotation_axis is None else encode_Vec2(value.rotation_axis), 'rotation_basis': None if value.rotation_basis is None else [encode_Vec2(v0) for v0 in value.rotation_basis]}
 
 def read_EvaluatedDeformer(value: object) -> EvaluatedDeformer:
     if isinstance(value, EvaluatedDeformer): return value
     r = record(value)
-    return EvaluatedDeformer(id=string(r['id']), enabled=_boolean(r['enabled']), points=tuple(read_Vec2(v0) for v0 in sequence(r['points'])), rotation_axis=None if r.get('rotation_axis', None) is None else read_Vec2(r.get('rotation_axis', None)))
+    return EvaluatedDeformer(id=string(r['id']), enabled=_boolean(r['enabled']), points=tuple(read_Vec2(v0) for v0 in sequence(r['points'])), rotation_axis=None if r.get('rotation_axis', None) is None else read_Vec2(r.get('rotation_axis', None)), rotation_basis=None if r.get('rotation_basis', None) is None else cast('tuple[Vec2, Vec2]', tuple(read_Vec2(v0) for v0 in sequence(r.get('rotation_basis', None)))))
 
 def validate_GeometryDiagnostic(value: GeometryDiagnostic) -> None:
     if not isinstance(value, GeometryDiagnostic):

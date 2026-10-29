@@ -20149,6 +20149,18 @@ fn write_evaluateddeformer_in(
             None => py.None(),
         }
     })?;
+    out.set_item("rotation_basis", {
+        match (&value.rotation_basis).as_ref() {
+            Some(item) => {
+                let out = PyList::empty(py);
+                for item1 in (item) {
+                    out.append(write_vec2_in(py, (item1), classes)?)?;
+                }
+                out.into_any().unbind()
+            }
+            None => py.None(),
+        }
+    })?;
     Ok(classes
         .getattr("EvaluatedDeformer")?
         .call((), Some(&out))?

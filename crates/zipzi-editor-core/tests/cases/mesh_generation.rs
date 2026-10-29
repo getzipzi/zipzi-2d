@@ -2080,6 +2080,143 @@ fn pose_editor() -> anyhow::Result<(Editor, tempfile::TempDir)> {
 }
 
 #[test]
+fn manual_mesh_model_edits_invert_small_rotations_at_large_origins() -> anyhow::Result<()> {
+    for (angle, reflect_x, reflect_y) in [
+        (0., false, false),
+        (27., false, false),
+        (27., true, false),
+        (27., false, true),
+        (27., true, true),
+    ] {
+        let (doc, _dir) = support::alpha_document()?;
+        let mut editor = crate::support::editor_from_document(doc);
+        support::attach_viewports(&mut editor);
+        editor.set_canvas_metrics(ViewportMetrics {
+            width: 800.,
+            height: 600.,
+            scale_factor: 1.,
+        });
+        let host = editor.runtime_host();
+        let sid = editor.document().unwrap().runtime_session_id();
+        let client = host.write().register_client()?;
+        let edit = host
+            .write()
+            .begin_edit(client, sid, "Small rotation", None)?;
+        host.write().apply_edit(client, edit, |e| {
+            e.create_transform(zipzi_core::Transform {
+                id: id(990),
+                data: zipzi_core::TransformData::Rotation(zipzi_core::RotationTransform {
+                    pose: zipzi_core::RotationPose {
+                        origin: Vec2::new(10_000., 10_000.).into(),
+                        angle,
+                        scale: 0.1,
+                        reflect_x,
+                        reflect_y,
+                    },
+                    ..Default::default()
+                }),
+                ..Default::default()
+            })?;
+            let mut m = e.candidate_document().get_mesh(&mesh().id).unwrap().clone();
+            m.deformer_id = id(990);
+            e.replace_mesh(m)
+        })?;
+        host.write().commit_edit(client, edit)?;
+        editor.sync_runtime()?;
+        editor.enter_manual_mesh(editor.active_id().unwrap())?;
+        let original = model_mesh_document(&editor)
+            .get_mesh(&mesh().id)
+            .unwrap()
+            .clone();
+        let history = editor.document().unwrap().history_lengths();
+        let frame = crate::support::present_canvas(&mut editor)?;
+        let vertices = &frame.geometry.mesh(&mesh().id).unwrap().vertices;
+        let start = frame.transform.to_viewport(vertices[0].1);
+        let target = ModelPoint {
+            x: vertices[0].1.x + (vertices[2].1.x - vertices[0].1.x) * 0.2,
+            y: vertices[0].1.y + (vertices[2].1.y - vertices[0].1.y) * 0.2,
+        };
+        let end = frame.transform.to_viewport(target);
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Down {
+                point: start,
+                shift: false,
+                alt: false,
+                primary: false,
+            },
+        )?;
+        assert!(
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: end,
+                    left_down: true,
+                }
+            )?,
+            "{:?}",
+            editor.canvas_notice()
+        );
+        let frame = crate::support::present_canvas(&mut editor)?;
+        let actual = frame.geometry.mesh(&mesh().id).unwrap().vertices[0].1;
+        assert!(
+            (actual.x - target.x).hypot(actual.y - target.y) < 0.003,
+            "{actual:?} vs {target:?}"
+        );
+        crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
+        let dragged = model_mesh_document(&editor)
+            .get_mesh(&mesh().id)
+            .unwrap()
+            .clone();
+        assert!((dragged.uvs[0].x - 0.2).hypot(dragged.uvs[0].y - 0.2) < 1e-4);
+        assert_eq!(
+            editor.document().unwrap().history_lengths(),
+            (history.0 + 1, 0)
+        );
+
+        let frame = crate::support::present_canvas(&mut editor)?;
+        let vertices = &frame.geometry.mesh(&mesh().id).unwrap().vertices;
+        let target = ModelPoint {
+            x: vertices[0].1.x * 0.2 + vertices[1].1.x * 0.5 + vertices[2].1.x * 0.3,
+            y: vertices[0].1.y * 0.2 + vertices[1].1.y * 0.5 + vertices[2].1.y * 0.3,
+        };
+        manual_click(&mut editor, frame.transform.to_viewport(target))?;
+        let inserted = model_mesh_document(&editor)
+            .get_mesh(&mesh().id)
+            .unwrap()
+            .clone();
+        assert_eq!(inserted.vertex_ids.len(), 5, "{:?}", editor.canvas_notice());
+        let expected_uv = Vec2::new(0.84, 0.34);
+        assert!(
+            (inserted.uvs[4].x - expected_uv.x).hypot(inserted.uvs[4].y - expected_uv.y) < 2e-4
+        );
+        let frame = crate::support::present_canvas(&mut editor)?;
+        let actual = frame.geometry.mesh(&mesh().id).unwrap().vertices[4].1;
+        assert!((actual.x - target.x).hypot(actual.y - target.y) < 0.003);
+        assert!(editor.canvas_notice().is_none());
+        assert_eq!(
+            editor.document().unwrap().history_lengths(),
+            (history.0 + 2, 0)
+        );
+        for expected in [&dragged, &original] {
+            editor.execute(EditorCommand::Undo)?;
+            assert_eq!(
+                model_mesh_document(&editor).get_mesh(&mesh().id),
+                Some(expected)
+            );
+        }
+        for expected in [&dragged, &inserted] {
+            editor.execute(EditorCommand::Redo)?;
+            assert_eq!(
+                model_mesh_document(&editor).get_mesh(&mesh().id),
+                Some(expected)
+            );
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn manual_mesh_model_drag_inverts_mixed_pose_and_glue_from_one_frozen_source() -> anyhow::Result<()>
 {
     let id = dependency_fixture::id;

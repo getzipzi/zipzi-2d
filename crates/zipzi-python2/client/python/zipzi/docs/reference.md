@@ -7,7 +7,7 @@ Generated from the compiled authoring contract, the finite binding directory and
 
 ``
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a2; protocol zipzi-runtime-r7-manual-mesh-1; client source SHA-256 b66e6f58fedc4634f1ef2e193e46ab6043cf1344b0805a94284bcf578f6347e2.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a2; protocol zipzi-runtime-r7-manual-mesh-1; client source SHA-256 51723788d3faea90c426ce19b547f1da613af53f5a7da895ffca22e20599a796.
 
 
 ## zipzi.ApiDescription
@@ -8373,7 +8373,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.modeling.EvaluatedDeformer
 
-`(id: str, enabled: bool, points: tuple[Vec2, ...], rotation_axis: Vec2 | None = None)`
+`(id: str, enabled: bool, points: tuple[Vec2, ...], rotation_axis: Vec2 | None = None, rotation_basis: tuple[Vec2, Vec2] | None = None)`
 
 Immutable owned EvaluatedDeformer value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -8385,6 +8385,9 @@ Drawable::positions. Warp points are row-major; rotation points are the
 transformed origin and unit X/Y axes.
 rotation_axis: Unit direction of the rotation's local X axis in model space, evaluated
 without translation or scale so tiny imported scales retain their angle.
+rotation_basis: Local X/Y basis vectors with evaluated scale and reflections, before
+translation. Unlike subtracting points, these retain small rotation
+coefficients at large model origins.
 
 - `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
 - `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
@@ -8393,6 +8396,9 @@ Drawable::positions. Warp points are row-major; rotation points are the
 transformed origin and unit X/Y axes.
 - `rotation_axis`: Unit direction of the rotation's local X axis in model space, evaluated
 without translation or scale so tiny imported scales retain their angle.
+- `rotation_basis`: Local X/Y basis vectors with evaluated scale and reflections, before
+translation. Unlike subtracting points, these retain small rotation
+coefficients at large model origins.
 
 ## zipzi.modeling.EvaluatedDeformer.__repr__
 
@@ -24856,7 +24862,7 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.sampling.Deformer
 
-`(id: str, enabled: bool, points: Sequence[Point], rotation_axis: Point | None) -> None`
+`(id: str, enabled: bool, points: Sequence[Point], rotation_axis: Point | None, rotation_basis: Sequence[Point] | None) -> None`
 
 Owned sampling Deformer value; reading fields, repr and summary performs no IO.
 
@@ -24868,6 +24874,9 @@ Drawable::positions. Warp points are row-major; rotation points are the
 transformed origin and unit X/Y axes.
 rotation_axis: Unit direction of the rotation's local X axis in model space, evaluated
 without translation or scale so tiny imported scales retain their angle.
+rotation_basis: Local X/Y basis vectors with evaluated scale and reflections, before
+translation. Unlike subtracting points, these retain small rotation
+coefficients at large model origins.
 
 - `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
 - `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
@@ -24876,6 +24885,9 @@ Drawable::positions. Warp points are row-major; rotation points are the
 transformed origin and unit X/Y axes.
 - `rotation_axis`: Unit direction of the rotation's local X axis in model space, evaluated
 without translation or scale so tiny imported scales retain their angle.
+- `rotation_basis`: Local X/Y basis vectors with evaluated scale and reflections, before
+translation. Unlike subtracting points, these retain small rotation
+coefficients at large model origins.
 
 ## zipzi.sampling.Deformer.__repr__
 

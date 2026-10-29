@@ -11,8 +11,8 @@ class _Entry(TypedDict):
     example: NotRequired[str]
 CONTRACT = 'zipzi-runtime-r7-manual-mesh-1'
 PACKAGE_VERSION = '0.1.0a2'
-CLIENT_SOURCE_SHA256 = 'b66e6f58fedc4634f1ef2e193e46ab6043cf1344b0805a94284bcf578f6347e2'
-CONTRACT_SHA256 = '109dee2c49068114d98f6b1584daa114c23adf4702ea9a999ac9c7a92d7fca47'
+CLIENT_SOURCE_SHA256 = '51723788d3faea90c426ce19b547f1da613af53f5a7da895ffca22e20599a796'
+CONTRACT_SHA256 = '2b96cff305dbb7ef4c3872796a24ec486cc68064bd74181a4023c6eaf3baf9c1'
 CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                         'zipzi.Batch',
                         'zipzi.Buffer',
@@ -68,7 +68,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
            'documentation': 'Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or '
                             'connect(), explicitly select sessions, read before editing, verify confirmed results, '
                             'then save and release. Package 0.1.0a2; protocol zipzi-runtime-r7-manual-mesh-1; client '
-                            'source SHA-256 b66e6f58fedc4634f1ef2e193e46ab6043cf1344b0805a94284bcf578f6347e2.',
+                            'source SHA-256 51723788d3faea90c426ce19b547f1da613af53f5a7da895ffca22e20599a796.',
            'example': 'docs/recipes.py',
            'kind': 'module',
            'signature': ''},
@@ -11733,7 +11733,12 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                        "rotation_axis: Unit direction of the rotation's local X axis "
                                                        'in model space, evaluated\n'
                                                        'without translation or scale so tiny imported scales retain '
-                                                       'their angle.',
+                                                       'their angle.\n'
+                                                       'rotation_basis: Local X/Y basis vectors with evaluated scale '
+                                                       'and reflections, before\n'
+                                                       'translation. Unlike subtracting points, these retain small '
+                                                       'rotation\n'
+                                                       'coefficients at large model origins.',
                                       'example': 'docs/recipes.py',
                                       'fields': [('id',
                                                   'Stable document object ID used by references; it is distinct from '
@@ -11750,10 +11755,17 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                   "Unit direction of the rotation's local X axis in model space, "
                                                   'evaluated\n'
                                                   'without translation or scale so tiny imported scales retain their '
-                                                  'angle.')],
+                                                  'angle.'),
+                                                 ('rotation_basis',
+                                                  'Local X/Y basis vectors with evaluated scale and reflections, '
+                                                  'before\n'
+                                                  'translation. Unlike subtracting points, these retain small '
+                                                  'rotation\n'
+                                                  'coefficients at large model origins.')],
                                       'kind': 'type',
                                       'signature': '(id: str, enabled: bool, points: tuple[Vec2, ...], rotation_axis: '
-                                                   'Vec2 | None = None)'},
+                                                   'Vec2 | None = None, rotation_basis: tuple[Vec2, Vec2] | None = '
+                                                   'None)'},
  'zipzi.modeling.EvaluatedDeformer.__repr__': {'children': (),
                                                'documentation': 'Return a local summary capped at 1,024 characters, '
                                                                 'with no RPC/full scan.\n'
@@ -33858,7 +33870,11 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                               "rotation_axis: Unit direction of the rotation's local X axis in model "
                                               'space, evaluated\n'
                                               'without translation or scale so tiny imported scales retain their '
-                                              'angle.',
+                                              'angle.\n'
+                                              'rotation_basis: Local X/Y basis vectors with evaluated scale and '
+                                              'reflections, before\n'
+                                              'translation. Unlike subtracting points, these retain small rotation\n'
+                                              'coefficients at large model origins.',
                              'example': 'docs/recipes.py',
                              'fields': [('id',
                                          'Stable document object ID used by references; it is distinct from the '
@@ -33872,10 +33888,14 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                          'transformed origin and unit X/Y axes.'),
                                         ('rotation_axis',
                                          "Unit direction of the rotation's local X axis in model space, evaluated\n"
-                                         'without translation or scale so tiny imported scales retain their angle.')],
+                                         'without translation or scale so tiny imported scales retain their angle.'),
+                                        ('rotation_basis',
+                                         'Local X/Y basis vectors with evaluated scale and reflections, before\n'
+                                         'translation. Unlike subtracting points, these retain small rotation\n'
+                                         'coefficients at large model origins.')],
                              'kind': 'type',
                              'signature': '(id: str, enabled: bool, points: Sequence[Point], rotation_axis: Point | '
-                                          'None) -> None'},
+                                          'None, rotation_basis: Sequence[Point] | None) -> None'},
  'zipzi.sampling.Deformer.__repr__': {'children': (),
                                       'documentation': 'Return a local summary capped at 1,024 characters, with no '
                                                        'RPC/full scan.\n'

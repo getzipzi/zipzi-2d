@@ -238,6 +238,16 @@ fn rotation_display_axes_preserve_direction_for_tiny_nested_scales_and_large_ori
             let axis = deformer.rotation_axis.unwrap();
             assert!((axis.x - sign * angle.to_radians().cos()).abs() < 1e-6);
             assert!((axis.y - sign * angle.to_radians().sin()).abs() < 1e-6);
+            let [x, y] = deformer.rotation_basis.unwrap();
+            let scale = if number == 81 {
+                0.0001
+            } else {
+                0.0001 * 0.0001
+            };
+            assert!((x.x / scale - sign * angle.to_radians().cos()).abs() < 1e-6);
+            assert!((x.y / scale - sign * angle.to_radians().sin()).abs() < 1e-6);
+            assert!((y.x / scale + angle.to_radians().sin()).abs() < 1e-6);
+            assert!((y.y / scale - angle.to_radians().cos()).abs() < 1e-6);
             // The old world-space endpoints coincide at this precision.
             assert_eq!(deformer.points[0], deformer.points[1]);
         }

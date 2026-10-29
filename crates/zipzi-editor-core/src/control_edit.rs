@@ -216,6 +216,7 @@ pub(crate) struct ControlSpace {
     pub parent: Option<ControlGeometry>,
     pub parent_shape: Option<(usize, usize, bool)>,
     parent_points: Vec<f32>,
+    rotation_basis: Option<[Vec2; 2]>,
 }
 
 /// Prefer the focused parameter or opened binding. Without either, one
@@ -912,10 +913,25 @@ impl ControlSpace {
         let parent_points = parent.as_ref().map_or_else(Vec::new, |p| {
             p.points.iter().flat_map(|p| [p.x, p.y]).collect()
         });
+        let rotation_basis = parent
+            .as_ref()
+            .filter(|p| p.kind == ControlKind::Rotation)
+            .map(|p| {
+                scene
+                    .source
+                    .viewport_frame
+                    .deformers
+                    .iter()
+                    .find(|d| d.id == p.object.id)
+                    .and_then(|d| d.rotation_basis)
+                    .ok_or_else(|| anyhow::anyhow!("Parent rotation mapping is unavailable"))
+            })
+            .transpose()?;
         Ok(Self {
             parent,
             parent_shape,
             parent_points,
+            rotation_basis,
         })
     }
     pub fn to_model(&self, p: Vec2) -> ModelPoint {
@@ -923,15 +939,16 @@ impl ControlSpace {
             return ModelPoint { x: p.x, y: p.y };
         };
         if parent.kind == ControlKind::Rotation {
-            let [o, x, y, ..] = parent.points.as_slice() else {
+            let [o, ..] = parent.points.as_slice() else {
                 return ModelPoint {
                     x: f32::NAN,
                     y: f32::NAN,
                 };
             };
+            let [x, y] = self.rotation_basis.unwrap();
             ModelPoint {
-                x: o.x + p.x * (x.x - o.x) + p.y * (y.x - o.x),
-                y: o.y + p.x * (x.y - o.y) + p.y * (y.y - o.y),
+                x: x.x.mul_add(p.x, y.x * p.y) + o.x,
+                y: x.y.mul_add(p.x, y.y * p.y) + o.y,
             }
         } else {
             let (rows, columns, quad) = self.parent_shape.unwrap();
@@ -965,6 +982,39 @@ impl ControlSpace {
     ) -> Result<Vec2> {
         if self.parent.is_none() {
             return Ok(Vec2::new(desired.x, desired.y));
+        }
+        if let Some([x, y]) = self.rotation_basis {
+            let before = self.to_model(initial);
+            if (desired.x - before.x).hypot(desired.y - before.y) < tolerance {
+                return Ok(initial);
+            }
+            // Invert the untranslated coefficients in f64. A model-space
+            // finite difference can round to zero even for a valid rotation.
+            let origin = self.parent.as_ref().unwrap().points[0];
+            let (dx, dy) = (
+                f64::from(desired.x) - f64::from(origin.x),
+                f64::from(desired.y) - f64::from(origin.y),
+            );
+            let (xx, xy, yx, yy) = (
+                f64::from(x.x),
+                f64::from(x.y),
+                f64::from(y.x),
+                f64::from(y.y),
+            );
+            let det = xx * yy - xy * yx;
+            ensure!(
+                det.is_finite() && det != 0.,
+                "The parent deformation is singular at this point"
+            );
+            let local = Vec2::new(
+                ((dx * yy - dy * yx) / det) as f32,
+                ((dy * xx - dx * xy) / det) as f32,
+            );
+            ensure!(
+                local.x.is_finite() && local.y.is_finite(),
+                "Invalid local position"
+            );
+            return Ok(local);
         }
         let mut p = initial;
         for _ in 0..24 {

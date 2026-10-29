@@ -195,23 +195,25 @@ def read_RenderCommand(value: object) -> RenderCommand:
 
 @dataclass(frozen=True, init=False, repr=False)
 class Deformer(CompactValue):
-    "Owned sampling Deformer value; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\npoints: Final model coordinates (X-right/Y-up), matching\nDrawable::positions. Warp points are row-major; rotation points are the\ntransformed origin and unit X/Y axes.\nrotation_axis: Unit direction of the rotation's local X axis in model space, evaluated\nwithout translation or scale so tiny imported scales retain their angle."
+    "Owned sampling Deformer value; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\npoints: Final model coordinates (X-right/Y-up), matching\nDrawable::positions. Warp points are row-major; rotation points are the\ntransformed origin and unit X/Y axes.\nrotation_axis: Unit direction of the rotation's local X axis in model space, evaluated\nwithout translation or scale so tiny imported scales retain their angle.\nrotation_basis: Local X/Y basis vectors with evaluated scale and reflections, before\ntranslation. Unlike subtracting points, these retain small rotation\ncoefficients at large model origins."
     __module__ = "zipzi.sampling"
     id: str
     enabled: bool
     points: tuple[Point, ...]
     rotation_axis: Point | None
+    rotation_basis: tuple[Point, Point] | None
 
-    def __init__(self, id: str, enabled: bool, points: Sequence[Point], rotation_axis: Point | None) -> None:
+    def __init__(self, id: str, enabled: bool, points: Sequence[Point], rotation_axis: Point | None, rotation_basis: Sequence[Point] | None) -> None:
         object.__setattr__(self, 'id', id)
         object.__setattr__(self, 'enabled', enabled)
         object.__setattr__(self, 'points', tuple(tuple(item) for item in points))
         object.__setattr__(self, 'rotation_axis', None if rotation_axis is None else tuple(rotation_axis))
+        object.__setattr__(self, 'rotation_basis', None if rotation_basis is None else tuple(tuple(item) for item in rotation_basis))
 
     @classmethod
     def _read(cls, value: object) -> "Deformer":
         if isinstance(value, cls): return value
-        return cls(id=_text(_get(value, 'id')), enabled=_flag(_get(value, 'enabled')), points=tuple(_point(item) for item in _items(_get(value, 'points'))), rotation_axis=None if _get(value, 'rotation_axis') is None else _point(_get(value, 'rotation_axis')))
+        return cls(id=_text(_get(value, 'id')), enabled=_flag(_get(value, 'enabled')), points=tuple(_point(item) for item in _items(_get(value, 'points'))), rotation_axis=None if _get(value, 'rotation_axis') is None else _point(_get(value, 'rotation_axis')), rotation_basis=None if _get(value, 'rotation_basis') is None else cast('tuple[Point, Point]', _array(tuple(_point(item) for item in _items(_get(value, 'rotation_basis'))), 2)))
 
 @dataclass(frozen=True, init=False, repr=False)
 class Frame(CompactValue):
