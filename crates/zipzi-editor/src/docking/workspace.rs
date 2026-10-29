@@ -97,7 +97,7 @@ impl EditorView {
         })
         .detach();
         if let Err(error) = dock.restore(window, cx) {
-            self.message = error.to_string();
+            self.set_status_message(error.to_string(), cx);
             dock.reset(window, cx);
         }
         self.ui_subscriptions.push(cx.subscribe_in(

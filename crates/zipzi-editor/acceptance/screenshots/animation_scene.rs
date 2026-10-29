@@ -238,7 +238,7 @@ pub(crate) fn animation_playback_screenshots(
         i18n::activate(Some("en"));
         harness.view.update(cx, |view, cx| {
             view.replace_editor(Editor::from_document(document), cx);
-            view.edit_error = None;
+            view.clear_edit_error(cx);
             view.redraw(cx);
         });
         window.render_frame(cx);

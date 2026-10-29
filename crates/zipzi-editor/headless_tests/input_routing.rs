@@ -765,10 +765,7 @@ fn status_bar_hints_stay_quiet_until_modal_tools_or_active_captures(cx: &mut Tes
         h.view.update(cx, |view, cx| {
             view.clear_edit_error(cx);
         });
-        assert_eq!(
-            status_bar.read(cx).displayed_message(),
-            Some(("Saved snapshot", false))
-        );
+        assert_eq!(status_bar.read(cx).displayed_message(), None);
     })
     .unwrap();
 }

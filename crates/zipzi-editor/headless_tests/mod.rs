@@ -36,6 +36,8 @@ mod scene_creation_commands;
 mod scrollbars;
 mod slide_number_input;
 mod sorting;
+mod status_feedback;
+mod status_problems;
 mod texture;
 mod themes;
 mod timeline;

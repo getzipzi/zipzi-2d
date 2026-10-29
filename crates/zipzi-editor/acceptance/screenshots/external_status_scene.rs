@@ -1,9 +1,8 @@
-//! Actual socket admission and Metal pixels for the quiet external activity indicator.
+//! Actual socket admission and Metal pixels for ordinary external-change feedback.
 use super::{
     super::{fixture, runtime_ipc},
     common::save,
 };
-use crate::host::external_status::ExternalStatus;
 use gpui_kit::test::TestWindowExt;
 use std::time::{Duration, Instant};
 
@@ -25,8 +24,7 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
         );
         view.redraw(cx);
     });
-    // Paint the initially empty entity before the first connection. This checks
-    // that socket admission alone stays quiet in an idle window.
+    // Socket admission alone must not produce an external-change message.
     h.capture()?;
     let address = zipzi_runtime::local::Endpoint::new(endpoint.path(), "test")?;
     let (auth_tx, auth_rx) = std::sync::mpsc::channel();
@@ -86,13 +84,13 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
     let frame = h.capture()?;
     save(&frame, directory, "external-other-project-applied.png")?;
     anyhow::ensure!(
-        host.external_status.read_with(&h.cx, |s, _| s.label())
+        h.view.read_with(&h.cx, |view, _| view.message.clone())
             == "Background-rig · External changes applied"
     );
     h.cx.update_window(h.window, |_, window, _| {
         anyhow::ensure!(
-            window.try_find("app-external-connected-dot").is_none(),
-            "connection dot must not be rendered"
+            window.try_find("app-external-status").is_none(),
+            "external changes must use ordinary feedback"
         );
         Ok::<_, anyhow::Error>(())
     })??;
@@ -102,19 +100,17 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
     peer.join().unwrap()?;
     h.cx.run_until_parked();
     anyhow::ensure!(
-        !host
-            .external_status
-            .read_with(&h.cx, |s, _| s.label())
-            .is_empty(),
+        !h.view.read_with(&h.cx, |view, _| view.message.is_empty()),
         "disconnect must not erase a commit notice"
     );
-    h.cx.advance_clock(ExternalStatus::NOTICE_DURATION);
+    h.cx.advance_clock(crate::EditorView::STATUS_MESSAGE_TIMEOUT);
     h.cx.run_until_parked();
     h.capture()?;
+    anyhow::ensure!(h.view.read_with(&h.cx, |view, _| view.message.is_empty()));
     h.cx.update_window(h.window, |_, window, _| {
         anyhow::ensure!(
             window.try_find("app-external-status").is_none(),
-            "commit notice must disappear without a disconnect message"
+            "no separate external-change indicator should exist"
         );
         Ok::<_, anyhow::Error>(())
     })??;

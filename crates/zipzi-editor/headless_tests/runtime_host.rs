@@ -1,33 +1,50 @@
 //! Window-independent host completion and native attach/detach regressions.
 use super::{Harness, setup};
 use crate::host::DesktopHost;
-use crate::host::external_status::ExternalStatus;
 use gpui_kit::{AppContext as _, TestAppContext, test::TestWindowExt};
+
+fn external_feedback_hosted(cx: &mut TestAppContext) -> (Harness, DesktopHost) {
+    let (h, host) = hosted(cx);
+    h.view.update(cx, |view, cx| {
+        view._frames = None;
+        view.requests = Some(crate::preview::RequestSender::deferred());
+        view.reset_viewport_images();
+        view.clear_edit_error(cx);
+        view.status_bar
+            .read(cx)
+            .problems
+            .clone()
+            .update(cx, |problems, cx| problems.dismiss_all(cx));
+        view.set_status_message("Ready", cx);
+    });
+    (h, host)
+}
+
+fn external_feedback(h: &Harness, cx: &TestAppContext) -> Option<(String, bool)> {
+    h.view.read_with(cx, |view, cx| {
+        view.status_bar
+            .read(cx)
+            .displayed_message()
+            .map(|(message, error)| (message.to_owned(), error))
+    })
+}
 
 #[gpui_kit::test]
 fn external_status_connections_and_disconnects_stay_quiet(cx: &mut TestAppContext) {
-    let (harness, host) = hosted(cx);
+    let (h, host) = external_feedback_hosted(cx);
     let (client, connection) = connect_peer(&host);
     cx.run_until_parked();
-    assert!(
-        host.external_status
-            .read_with(cx, |s, _| s.label())
-            .is_empty()
-    );
+    assert_eq!(external_feedback(&h, cx), Some(("Ready".into(), false)));
     host.protocol
         .borrow_mut()
         .disconnect(client, connection, std::time::Instant::now());
     cx.run_until_parked();
-    cx.update_window(harness.window, |_, window, cx| {
+    assert_eq!(external_feedback(&h, cx), Some(("Ready".into(), false)));
+    cx.update_window(h.window, |_, window, cx| {
         window.render_frame(cx);
         assert!(window.try_find("app-external-status").is_none());
     })
     .unwrap();
-    assert!(
-        host.external_status
-            .read_with(cx, |s, _| s.label())
-            .is_empty()
-    );
 }
 
 fn external_status_rename(
@@ -53,17 +70,18 @@ fn external_status_rename(
 }
 
 #[gpui_kit::test]
-fn external_status_only_reports_changed_foreign_publications_and_coalesces_them(
+fn external_status_only_reports_changed_foreign_publications_as_ordinary_feedback(
     cx: &mut TestAppContext,
 ) {
-    let (harness, host) = hosted(cx);
-    let status = host.external_status.clone();
+    use std::time::Duration;
+    let (h, host) = external_feedback_hosted(cx);
     let (client, connection) = connect_peer(&host);
-    let (session, mesh) = harness.view.read_with(cx, |view, _| {
-        let doc = view.editor.document().unwrap();
-        (doc.runtime_session_id(), doc.layers()[0].id.clone())
+    let (session, mesh) = h.view.read_with(cx, |view, _| {
+        (
+            view.editor.document().unwrap().runtime_session_id(),
+            view.editor.layers()[0].id.clone(),
+        )
     });
-    // Human edits, successful no-ops and cancelled candidates stay quiet.
     external_status_rename(
         &host,
         session,
@@ -83,111 +101,122 @@ fn external_status_only_reports_changed_foreign_publications_and_coalesces_them(
         .unwrap();
     host.runtime.write().release_edit(client, edit).unwrap();
     cx.run_until_parked();
-    assert!(status.read_with(cx, |s, _| s.label()).is_empty());
+    assert_eq!(external_feedback(&h, cx), Some(("Ready".into(), false)));
     external_status_rename(&host, session, client, &mesh, "Script edit");
     cx.run_until_parked();
-    assert!(!status.read_with(cx, |s, _| s.label()).is_empty());
-    cx.background_executor
-        .advance_clock(std::time::Duration::from_secs(2));
+    assert_eq!(
+        external_feedback(&h, cx),
+        Some(("External changes applied".into(), false))
+    );
+    cx.background_executor.advance_clock(Duration::from_secs(2));
     external_status_rename(&host, session, client, &mesh, "Another script edit");
     cx.run_until_parked();
-    cx.background_executor
-        .advance_clock(std::time::Duration::from_secs(1));
+    cx.background_executor.advance_clock(Duration::from_secs(2));
     cx.run_until_parked();
-    assert!(!status.read_with(cx, |s, _| s.label()).is_empty());
-    cx.background_executor
-        .advance_clock(std::time::Duration::from_secs(2));
+    assert_eq!(
+        external_feedback(&h, cx),
+        Some(("External changes applied".into(), false))
+    );
+    cx.background_executor.advance_clock(Duration::from_secs(2));
     cx.run_until_parked();
-    assert!(status.read_with(cx, |s, _| s.label()).is_empty());
-    // A short script's disconnect must not immediately erase its successful result.
+    assert_eq!(external_feedback(&h, cx), None);
     external_status_rename(&host, session, client, &mesh, "Final script edit");
     cx.run_until_parked();
     host.protocol
         .borrow_mut()
         .disconnect(client, connection, std::time::Instant::now());
-    assert!(!status.read_with(cx, |s, _| s.label()).is_empty());
     cx.run_until_parked();
+    assert_eq!(
+        external_feedback(&h, cx),
+        Some(("External changes applied".into(), false))
+    );
     cx.background_executor
-        .advance_clock(ExternalStatus::NOTICE_DURATION);
+        .advance_clock(crate::EditorView::STATUS_MESSAGE_TIMEOUT);
     cx.run_until_parked();
-    assert!(status.read_with(cx, |s, _| s.label()).is_empty());
+    assert_eq!(external_feedback(&h, cx), None);
 }
 
 #[gpui_kit::test]
-fn external_status_keeps_operation_hints_centered_and_error_timeout_independent(
+fn external_status_uses_normal_feedback_without_disrupting_tasks_or_retained_problems(
     cx: &mut TestAppContext,
 ) {
     use gpui_kit::{px, size};
-    let (harness, host) = hosted(cx);
+    let (h, host) = external_feedback_hosted(cx);
     let (client, _) = connect_peer(&host);
-    let (session, mesh) = harness.view.read_with(cx, |view, _| {
-        let doc = view.editor.document().unwrap();
-        (doc.runtime_session_id(), doc.layers()[0].id.clone())
+    let (session, mesh) = h.view.read_with(cx, |view, _| {
+        (
+            view.editor.document().unwrap().runtime_session_id(),
+            view.editor.layers()[0].id.clone(),
+        )
     });
+    let task = h.view.update(cx, |view, cx| {
+        view.set_edit_error("Keep this problem available", cx);
+        view.begin_operation_status(
+            "Importing".into(),
+            h._config_dir.path().join("character.psd"),
+            cx,
+        )
+    });
+    external_status_rename(&host, session, client, &mesh, "Background update");
     cx.run_until_parked();
-    external_status_rename(&host, session, client, &mesh, "Initial background update");
-    cx.run_until_parked();
+    assert_eq!(external_feedback(&h, cx), None);
+    assert_eq!(
+        h.view.read_with(cx, |view, _| view.message.clone()),
+        "External changes applied"
+    );
+    let problems = h
+        .view
+        .read_with(cx, |view, cx| view.status_bar.read(cx).problems.clone());
+    assert_eq!(problems.read_with(cx, |p, _| p.counts()), (1, 0));
     for width in [800., 1100.] {
-        cx.simulate_window_resize(harness.window, size(px(width), px(740.)));
-        cx.update_window(harness.window, |_, window, cx| {
-            harness.view.update(cx, |view, cx| {
-                view.set_edit_error("Keep this operation error visible", cx)
-            });
+        cx.simulate_window_resize(h.window, size(px(width), px(740.)));
+        cx.update_window(h.window, |_, window, cx| {
             window.render_frame(cx);
+            assert!(window.try_find("app-status-message").is_none());
+            let task = window.find("app-status-tasks").bounds();
+            let problems = window.find("app-status-problems").bounds();
+            let center = window.find("app-status-center").bounds();
             let bar = window.find("app-status-bar").bounds();
-            let hint = window.find("app-status-message").bounds();
-            let external = window.find("app-external-status").bounds();
-            assert!((hint.center().x - bar.center().x).abs() <= px(0.5));
-            assert!(hint.right() <= external.left());
-            assert!(external.right() <= bar.right());
-            assert!(window.try_find("app-external-connected-dot").is_none());
+            assert!((center.center().x - bar.center().x).abs() <= px(0.5));
+            assert!((task.center().x - bar.center().x).abs() <= px(0.5));
+            assert!(task.right() <= problems.left());
+            assert!(window.try_find("app-external-status").is_none());
         })
         .unwrap();
     }
-    external_status_rename(&host, session, client, &mesh, "Background update");
+    h.view
+        .update(cx, |view, cx| view.set_status_message("Saved", cx));
+    assert_eq!(external_feedback(&h, cx), None);
     cx.run_until_parked();
-    cx.update_window(harness.window, |_, window, cx| {
-        window.render_frame(cx);
-        let bar = window.find("app-status-bar").bounds();
-        let hint = window.find("app-status-message").bounds();
-        let external = window.find("app-external-status").bounds();
-        assert!((hint.center().x - bar.center().x).abs() <= px(0.5));
-        assert!(hint.right() <= external.left());
-        assert!(window.try_find("app-external-connected-dot").is_none());
-        let label = window.find("app-external-status-label").bounds();
-        assert!(bar.right() - label.right() >= crate::ui::compact::scaled(12., cx));
-        let view = harness.view.read(cx);
-        assert_eq!(
-            view.status_bar.read(cx).displayed_message(),
-            Some(("Keep this operation error visible", true))
-        );
-    })
-    .unwrap();
     cx.background_executor
-        .advance_clock(ExternalStatus::NOTICE_DURATION);
+        .advance_clock(crate::EditorView::STATUS_MESSAGE_TIMEOUT);
     cx.run_until_parked();
-    harness.view.read_with(cx, |view, cx| {
-        assert_eq!(
-            view.status_bar.read(cx).displayed_message(),
-            Some(("Keep this operation error visible", true))
-        );
-    });
+    assert_eq!(external_feedback(&h, cx), None);
+    assert_eq!(problems.read_with(cx, |p, _| p.counts()), (1, 0));
+    h.view
+        .update(cx, |view, cx| view.finish_load_status(task, cx));
+    assert_eq!(external_feedback(&h, cx), Some(("Saved".into(), false)));
+    cx.run_until_parked();
+    cx.background_executor
+        .advance_clock(crate::EditorView::STATUS_MESSAGE_TIMEOUT);
+    cx.run_until_parked();
+    assert_eq!(external_feedback(&h, cx), None);
 }
 
 #[gpui_kit::test]
-fn external_status_identifies_background_project_and_tracks_project_switches(
+fn external_status_identifies_background_projects_at_the_time_of_publication(
     cx: &mut TestAppContext,
 ) {
-    let (harness, host) = hosted(cx);
+    let (h, host) = external_feedback_hosted(cx);
     let (client, _) = connect_peer(&host);
-    let (original, session, mesh) = harness.view.read_with(cx, |view, _| {
+    let (original, session, mesh) = h.view.read_with(cx, |view, _| {
         (
             view.editor.active_id().unwrap(),
             view.editor.document().unwrap().runtime_session_id(),
             view.editor.layers()[0].id.clone(),
         )
     });
-    let project_path = harness._config_dir.path().join("Background-rig");
+    let project_path = h._config_dir.path().join("Background-rig");
     let job = host
         .runtime
         .write()
@@ -196,7 +225,7 @@ fn external_status_identifies_background_project_and_tracks_project_switches(
     let work = host.runtime.write().take_work(job).unwrap();
     assert!(host.runtime.write().complete(work.run()));
     host.runtime.write().release_job(client, job).unwrap();
-    let current = harness.view.update(cx, |view, cx| {
+    let current = h.view.update(cx, |view, cx| {
         let id = view.editor.new_document().unwrap();
         view.redraw(cx);
         id
@@ -205,34 +234,30 @@ fn external_status_identifies_background_project_and_tracks_project_switches(
     external_status_rename(&host, session, client, &mesh, "Changed in background");
     cx.run_until_parked();
     assert_eq!(
-        host.external_status.read_with(cx, |s, _| s.label()),
-        "Background-rig · External changes applied"
+        external_feedback(&h, cx),
+        Some(("Background-rig · External changes applied".into(), false))
     );
     assert_eq!(
-        harness
-            .view
-            .read_with(cx, |view, _| view.editor.active_id()),
+        h.view.read_with(cx, |view, _| view.editor.active_id()),
         Some(current)
     );
-    cx.update_window(harness.window, |_, window, cx| {
-        harness
-            .view
+    cx.update_window(h.window, |_, window, cx| {
+        h.view
             .update(cx, |view, cx| view.activate_document(original, window, cx));
         window.render_frame(cx);
-        assert_eq!(
-            host.external_status.read(cx).label(),
-            "External changes applied"
-        );
-        harness
-            .view
-            .update(cx, |view, cx| view.activate_document(current, window, cx));
-        window.render_frame(cx);
-        assert_eq!(
-            host.external_status.read(cx).label(),
-            "Background-rig · External changes applied"
-        );
     })
     .unwrap();
+    // An ordinary message records what happened; changing tabs does not rewrite it.
+    assert_eq!(
+        external_feedback(&h, cx),
+        Some(("Background-rig · External changes applied".into(), false))
+    );
+    external_status_rename(&host, session, client, &mesh, "Changed in active project");
+    cx.run_until_parked();
+    assert_eq!(
+        external_feedback(&h, cx),
+        Some(("External changes applied".into(), false))
+    );
 }
 
 fn hosted(cx: &mut TestAppContext) -> (Harness, DesktopHost) {

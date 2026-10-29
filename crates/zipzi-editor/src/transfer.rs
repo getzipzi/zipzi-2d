@@ -79,10 +79,17 @@ impl EditorView {
                     return;
                 }
             };
-            let _ = this.update(cx, |view, cx| {
-                view.modal = false;
-                view.set_status_message(t!("transfer.exporting").into_owned(), cx);
-            });
+            let activity = this
+                .update(cx, |view, cx| {
+                    view.modal = false;
+                    view.begin_operation_status(
+                        t!("transfer.exporting").into_owned(),
+                        destination.clone(),
+                        cx,
+                    )
+                })
+                .ok();
+            let output = destination.clone();
             let result = cx
                 .background_executor()
                 .spawn(async move {
@@ -99,23 +106,40 @@ impl EditorView {
                         })
                 })
                 .await;
-            let _ = this.update(cx, |view, cx| match result {
-                Ok(publication) => {
-                    if publication.warnings.is_empty() && publication.notices.is_empty() {
-                        view.set_status_message(t!("transfer.complete").into_owned(), cx);
-                    } else {
-                        view.set_status_message(
-                            publication
+            let _ = this.update(cx, |view, cx| {
+                if let Some(activity) = activity {
+                    view.finish_load_status(activity, cx);
+                }
+                match result {
+                    Ok(publication) => {
+                        if publication.warnings.is_empty() && publication.notices.is_empty() {
+                            view.set_status_message(t!("transfer.complete").into_owned(), cx);
+                        } else {
+                            let warnings = publication
                                 .notices
                                 .into_iter()
                                 .chain(publication.warnings)
-                                .collect::<Vec<_>>()
-                                .join("\n"),
-                            cx,
-                        );
+                                .collect::<Vec<_>>();
+                            let count = warnings.len();
+                            view.record_operation_warnings(
+                                Some(id),
+                                &t!("status.export_warnings"),
+                                Some(output),
+                                warnings,
+                                cx,
+                            );
+                            view.set_status_message(
+                                format!(
+                                    "{} · {}",
+                                    t!("transfer.complete"),
+                                    t!("status.warning_summary", count = count)
+                                ),
+                                cx,
+                            );
+                        }
                     }
+                    Err(error) => view.set_operation_error(Some(id), error.to_string(), cx),
                 }
-                Err(error) => view.set_edit_error(error.to_string(), cx),
             });
         })
         .detach();

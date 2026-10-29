@@ -1,12 +1,44 @@
 //! Runtime-owned IO; the view keeps frozen presentation state only.
 use super::*;
+use std::sync::{
+    Arc,
+    atomic::{AtomicU8, Ordering},
+};
 use zipzi_runtime::{Completion, JobId, JobValue, Work};
+
+/// Coarse worker phases, without estimating progress inside a format decoder.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
+pub enum LoadStage {
+    Queued,
+    Reading,
+    PreparingView,
+}
+
+/// Read-only progress that can outlive the task while its completion is published.
+#[derive(Clone)]
+pub struct LoadProgress(Arc<AtomicU8>);
+
+impl LoadProgress {
+    pub fn stage(&self) -> LoadStage {
+        match self.0.load(Ordering::Relaxed) {
+            0 => LoadStage::Queued,
+            1 => LoadStage::Reading,
+            _ => LoadStage::PreparingView,
+        }
+    }
+
+    fn set_stage(&self, stage: LoadStage) {
+        self.0.store(stage as u8, Ordering::Relaxed);
+    }
+}
 
 pub struct LoadTask {
     id: DocumentId,
     operation: OperationId,
     job: JobId,
     work: Work,
+    progress: LoadProgress,
 }
 pub struct LoadCompletion {
     id: DocumentId,
@@ -16,16 +48,23 @@ pub struct LoadCompletion {
     prepared: Option<Result<crate::document::PreparedDocument>>,
 }
 impl LoadTask {
+    pub fn progress(&self) -> LoadProgress {
+        self.progress.clone()
+    }
+
     pub fn run(self) -> LoadCompletion {
         let Self {
             id,
             operation,
             job,
             work,
+            progress,
         } = self;
+        progress.set_stage(LoadStage::Reading);
         // Real model decoders need an explicit stack, independent of GPUI's pool.
         let returned = work.run_on_thread("zipzi-document-load", 8 * 1024 * 1024);
         let prepared = returned.returned_session().map(|session| {
+            progress.set_stage(LoadStage::PreparingView);
             std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 Document::prepare_runtime_view(session)
             }))
@@ -142,6 +181,7 @@ impl Editor {
             operation,
             job,
             work,
+            progress: LoadProgress(Arc::new(AtomicU8::new(LoadStage::Queued as u8))),
         }))
     }
     pub fn finish_load(&mut self, mut completion: LoadCompletion) -> Result<Vec<String>> {

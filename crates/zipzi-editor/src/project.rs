@@ -195,7 +195,7 @@ impl EditorView {
             Ok(task) => task,
             Err(error) => {
                 self.editor.cancel_exit();
-                self.set_edit_error(error.to_string(), cx);
+                self.set_operation_error(Some(id), error.to_string(), cx);
                 return;
             }
         };
@@ -203,6 +203,8 @@ impl EditorView {
             self.frozen_frames.insert(id, self.viewport_frames.clone());
         }
         cx.notify();
+        let activity =
+            self.begin_operation_status(t!("status.saving").into_owned(), path.clone(), cx);
         let runtime = self.editor.runtime_host();
         let host = self.host.clone();
         cx.spawn_in(window, async move |this, cx| {
@@ -215,6 +217,7 @@ impl EditorView {
                 host.completed();
             }
             let _ = this.update_in(cx, |this, window, cx| {
+                this.finish_load_status(activity, cx);
                 this.frozen_frames.remove(&id);
                 if !this
                     .editor
@@ -238,16 +241,28 @@ impl EditorView {
                         if !receipt.durable {
                             notices.push(t!("project.durability_warning").into_owned());
                         }
+                        if !notices.is_empty() {
+                            this.record_operation_warnings(
+                                Some(id),
+                                &t!("status.save_warnings"),
+                                Some(path.clone()),
+                                notices.clone(),
+                                cx,
+                            );
+                        }
                         let msg = if notices.is_empty() {
                             t!("project.saved", path = receipt.manifest.display()).into_owned()
                         } else {
-                            t!("project.saved_with_warnings", warnings = notices.join("; "))
-                                .into_owned()
+                            format!(
+                                "{} · {}",
+                                t!("project.saved", path = receipt.manifest.display()),
+                                t!("status.warning_summary", count = notices.len())
+                            )
                         };
                         this.set_status_message(msg, cx);
                         this.record_recent_file(path.clone(), cx);
                     }
-                    Err(error) => this.set_edit_error(error.to_string(), cx),
+                    Err(error) => this.set_operation_error(Some(id), error.to_string(), cx),
                 }
                 // A background save must not blur or rewrite another document's input.
                 if active_before == Some(id) || active_before != this.editor.active_id() {
@@ -278,7 +293,7 @@ impl EditorView {
         if !path.exists() {
             let error = t!("project.file_not_found", path = path.display()).into_owned();
             self.remove_recent_file(path, cx);
-            self.set_edit_error(error, cx);
+            self.set_load_error(path, error, cx);
             return;
         }
         self.execute_load(LoadRequest::Open(path.to_path_buf()), None, window, cx);
@@ -392,6 +407,12 @@ impl EditorView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        let (source, importing) = match &request {
+            LoadRequest::Open(path) => (path.clone(), false),
+            LoadRequest::Model3(path) | LoadRequest::Psd(path) | LoadRequest::Cubism(path) => {
+                (path.clone(), true)
+            }
+        };
         let task = match self.editor.prepare_load(request) {
             Ok(None) => {
                 if let Some(path) = self
@@ -410,10 +431,11 @@ impl EditorView {
                 task
             }
             Err(error) => {
-                self.set_edit_error(error.to_string(), cx);
+                self.set_load_error(&source, error.to_string(), cx);
                 return;
             }
         };
+        let activity = self.begin_load_status(source.clone(), importing, task.progress(), cx);
         let runtime = self.editor.runtime_host();
         let host = self.host.clone();
         cx.spawn_in(window, async move |this, cx| {
@@ -426,22 +448,18 @@ impl EditorView {
                 host.completed();
             }
             let _ = this.update_in(cx, |this, window, cx| {
+                this.finish_load_status(activity, cx);
                 match this.editor.finish_load(completion) {
                     Ok(warnings) => {
                         // Commit/blur the previous property input before displaying the new tab.
                         window.focus(&this.focus, cx);
-                        let msg = if kind.is_none() {
+                        let count = this.record_load_warnings(&source, importing, warnings, cx);
+                        let msg = if count > 0 {
+                            t!("project.load_warning_count", count = count).into_owned()
+                        } else if kind.is_none() {
                             t!("project.opened").into_owned()
-                        } else if warnings.is_empty() {
-                            t!("project.import_complete").into_owned()
                         } else {
-                            let details = warnings.join("\n");
-                            window.open_dialog(cx, move |dialog, _, _| {
-                                dialog
-                                    .title(t!("project.import_warnings_title"))
-                                    .child(details.clone())
-                            });
-                            t!("project.import_warning_count", count = warnings.len()).into_owned()
+                            t!("project.import_complete").into_owned()
                         };
                         this.set_status_message(msg, cx);
                         if let Some(path) = this
@@ -454,7 +472,7 @@ impl EditorView {
                         }
                         this.refresh_document(window, cx);
                     }
-                    Err(error) => this.set_edit_error(error.to_string(), cx),
+                    Err(error) => this.set_load_error(&source, error.to_string(), cx),
                 }
                 cx.notify();
             });

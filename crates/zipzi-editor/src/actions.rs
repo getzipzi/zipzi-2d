@@ -124,12 +124,14 @@ impl EditorView {
                     }
                     match settings.set_language(action.language.clone()) {
                         Ok(()) => {
-                            let welcome_message = this.message == t!("editor.welcome");
+                            let welcome_message = t!("editor.welcome").into_owned();
                             i18n::activate(settings.language.as_deref());
                             cx.set_global(settings);
-                            if welcome_message {
-                                this.message = t!("editor.welcome").into_owned();
-                            }
+                            this.replace_status_message(
+                                &welcome_message,
+                                &t!("editor.welcome"),
+                                cx,
+                            );
                             window.set_window_title(&t!("app.title"));
                             this.menu_state = menus::MenuState::default();
                             workspace::status_bar::StatusBar::sync(&this.status_bar, this, cx);

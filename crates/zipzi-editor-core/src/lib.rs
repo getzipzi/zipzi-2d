@@ -60,7 +60,7 @@ pub use tree::{TreeNode, TreeNodeKind};
 use session::DocumentSession;
 pub use workspace::{
     DocumentId, DocumentSummary, EditingContextToken, EditingLifecycle, Editor, LoadCompletion,
-    LoadTask, OperationId, SaveCompletion, SaveTask,
+    LoadProgress, LoadStage, LoadTask, OperationId, SaveCompletion, SaveTask,
 };
 
 mod panels;

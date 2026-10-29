@@ -65,7 +65,7 @@ impl EditorView {
         if end {
             if let Some(document) = self.editor.active_id() {
                 if let Err(error) = self.editor.end_editing(document, reason) {
-                    self.edit_error = Some(error.to_string());
+                    self.set_edit_error(error.to_string(), cx);
                 }
             }
         }

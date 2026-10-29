@@ -32,6 +32,7 @@ mod preview;
 mod project;
 mod properties;
 mod settings;
+mod status;
 #[cfg(any(test, feature = "test-support"))]
 #[path = "../../zipzi-editor-core/tests/support/mod.rs"]
 pub(crate) mod test_fixture;
@@ -81,7 +82,7 @@ struct EditorView {
     scene_creation_menus: menus::SceneCreationMenuCache,
     edit_error: Option<String>,
     message: String,
-    status_message_task: Option<Task<()>>,
+    feedback: Option<status::Feedback>,
     viewport_notice: Option<(zipzi_editor_core::DocumentId, String)>,
     requests: Option<preview::RequestSender>,
     gpu_device: Option<preview::Device>,
@@ -133,12 +134,8 @@ impl EditorView {
             menu_state: menus::MenuState::default(),
             scene_creation_menus: Default::default(),
             edit_error: None,
-            message: if cx.global::<settings::Settings>().notices.is_empty() {
-                t!("editor.welcome").into_owned()
-            } else {
-                cx.global::<settings::Settings>().notices.join("; ")
-            },
-            status_message_task: None,
+            message: String::new(),
+            feedback: None,
             viewport_notice: None,
             requests: None,
             gpu_device: None,
@@ -146,6 +143,12 @@ impl EditorView {
             status_bar: workspace::status_bar::StatusBar::new(cx.weak_entity(), cx),
             dev_session: dev_session::DevSession::from_env(),
         };
+        let message = if cx.global::<settings::Settings>().notices.is_empty() {
+            t!("editor.welcome").into_owned()
+        } else {
+            cx.global::<settings::Settings>().notices.join("; ")
+        };
+        editor.set_status_message(message, cx);
         let entity = cx.weak_entity();
         window.on_window_should_close(cx, move |window, cx| {
             entity
@@ -158,15 +161,14 @@ impl EditorView {
         if editor.editor.document_count() == 0 {
             if let Some(session) = &mut editor.dev_session {
                 if let Err(error) = session.restore(&mut editor.editor) {
-                    editor.edit_error = Some(error.to_string());
+                    editor.set_edit_error(error.to_string(), cx);
                 }
             }
         }
         if !runtime_notices.is_empty() {
-            editor.edit_error = Some(runtime_notices.join("; "));
+            editor.set_edit_error(runtime_notices.join("; "), cx);
         }
         editor.connect_runtime_events(cx);
-        editor.schedule_status_clear(cx);
         editor.connect_preview(window, cx);
         benchmark::start(&mut editor, window, cx);
         if editor
@@ -180,7 +182,9 @@ impl EditorView {
     }
 
     fn connect_runtime_events(&mut self, cx: &mut Context<Self>) {
-        let changes = self.editor.runtime_host().subscribe_changes();
+        let runtime = self.editor.runtime_host();
+        let changes = runtime.subscribe_changes();
+        let mut external_changes = host::external_status::ExternalChanges::new(&runtime);
         // Catch publications between taking the parked workspace and subscribing.
         match self.editor.sync_runtime() {
             Ok(true) => self.redraw(cx),
@@ -202,6 +206,9 @@ impl EditorView {
                             Ok(_) => {}
                             Err(error) => this.set_edit_error(error.to_string(), cx),
                         }
+                        if let Some(message) = external_changes.poll(&this.editor) {
+                            this.set_status_message(message, cx);
+                        }
                     })
                     .is_err()
                 {
@@ -218,35 +225,6 @@ impl EditorView {
         self.editor = editor;
         self.connect_runtime_events(cx);
     }
-    pub(crate) fn set_edit_error(&mut self, error: impl Into<String>, cx: &mut Context<Self>) {
-        self.edit_error = Some(error.into());
-        self.schedule_status_clear(cx);
-        workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
-        cx.notify();
-    }
-
-    pub(crate) fn clear_edit_error(&mut self, cx: &mut Context<Self>) {
-        if self.edit_error.take().is_some() {
-            if self.message.is_empty() {
-                self.status_message_task = None;
-            }
-            workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
-            cx.notify();
-        }
-    }
-
-    pub(crate) fn set_status_message(
-        &mut self,
-        message: impl Into<String>,
-        cx: &mut Context<Self>,
-    ) {
-        self.edit_error = None;
-        self.message = message.into();
-        self.schedule_status_clear(cx);
-        workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
-        cx.notify();
-    }
-
     /// Show a changed editing restriction once, through the timed status channel.
     /// Retaining its identity after timeout prevents pointer redraws from reviving it.
     fn sync_viewport_notice(&mut self, cx: &mut Context<Self>) {
@@ -264,31 +242,9 @@ impl EditorView {
             if self.edit_error.is_none() {
                 self.set_status_message(reason, cx);
             }
-        } else if previous.is_some_and(|(_, reason)| self.message == reason) {
-            self.message.clear();
-            if self.edit_error.is_none() {
-                self.status_message_task = None;
-            }
+        } else if let Some((_, reason)) = previous {
+            self.clear_status_message(&reason, cx);
         }
-    }
-
-    fn schedule_status_clear(&mut self, cx: &mut Context<Self>) {
-        if self.edit_error.is_none() && self.message.is_empty() {
-            self.status_message_task = None;
-            return;
-        }
-        self.status_message_task = Some(cx.spawn(async move |this, cx| {
-            cx.background_executor()
-                .timer(Self::STATUS_MESSAGE_TIMEOUT)
-                .await;
-            _ = this.update(cx, |this, cx| {
-                this.edit_error = None;
-                this.message.clear();
-                this.status_message_task = None;
-                workspace::status_bar::StatusBar::sync(&this.status_bar, this, cx);
-                cx.notify();
-            });
-        }));
     }
 
     fn complete_edit(&mut self, result: anyhow::Result<()>, cx: &mut Context<Self>) {

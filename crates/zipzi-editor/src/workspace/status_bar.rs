@@ -1,7 +1,10 @@
-use crate::{EditorView, settings::Settings, t, ui::compact};
+use crate::{EditorView, settings::Settings, status::Problems, t, ui::compact};
 use gpui_kit::component::{ActiveTheme, Icon, IconName, Sizable, kbd::Kbd};
 use gpui_kit::{prelude::*, *};
 use zipzi_editor_core::{CommandId, EditingContext, HintAction, InteractionHint};
+
+mod task_activity;
+use task_activity::{TaskActivity, render_task_activity};
 
 const STATUS_LINE_HEIGHT: f32 = compact::CAPTION * 1.5;
 
@@ -9,7 +12,6 @@ pub(crate) type HintContext = &'static [InteractionHint];
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct StatusBarState {
-    active_session: Option<zipzi_runtime::SessionId>,
     hint_context: HintContext,
     error: Option<String>,
     message: String,
@@ -26,12 +28,18 @@ pub(crate) struct ShortcutHint {
 pub struct StatusBar {
     owner: WeakEntity<EditorView>,
     state: Option<StatusBarState>,
+    tasks: Vec<TaskActivity>,
+    pub(crate) problems: Entity<Problems>,
     #[cfg(any(test, feature = "test-support"))]
     renders: u64,
     _observe: Subscription,
 }
 
 impl StatusBar {
+    pub(crate) fn has_tasks(&self) -> bool {
+        !self.tasks.is_empty()
+    }
+
     pub fn new(owner: WeakEntity<EditorView>, cx: &mut App) -> Entity<Self> {
         cx.new(|cx| {
             let upgraded = owner.upgrade().unwrap();
@@ -42,6 +50,8 @@ impl StatusBar {
                 }),
                 owner,
                 state: None,
+                tasks: Vec::new(),
+                problems: Problems::new(cx),
                 #[cfg(any(test, feature = "test-support"))]
                 renders: 0,
             }
@@ -102,6 +112,9 @@ impl StatusBar {
 
     #[cfg(test)]
     pub(crate) fn displayed_message(&self) -> Option<(&str, bool)> {
+        if self.has_tasks() {
+            return None;
+        }
         let state = self.state.as_ref()?;
         (!state.message.is_empty()).then_some((state.message.as_str(), state.error.is_some()))
     }
@@ -120,24 +133,14 @@ impl Render for StatusBar {
             .state
             .get_or_insert_with(|| snapshot_state(owner.read(cx), cx))
             .clone();
-        if let Some(host) = cx.try_global::<crate::host::DesktopHost>().cloned() {
-            let titles = owner
-                .read(cx)
-                .editor
-                .documents()
-                .into_iter()
-                .filter_map(|doc| {
-                    Some((
-                        owner.read(cx).editor.runtime_session_id(doc.id)?,
-                        doc.title?,
-                    ))
-                })
-                .collect();
-            host.external_status.update(cx, |status, cx| {
-                status.set_project_context(state.active_session, titles, cx);
-            });
-        }
-        render_status_bar(&state, cx).into_any_element()
+        let (document, fault) = {
+            let view = owner.read(cx);
+            (view.editor.active_id(), view.render_error())
+        };
+        self.problems.update(cx, |problems, cx| {
+            problems.sync_renderer(document, fault, cx)
+        });
+        render_status_bar(&state, &self.tasks, self.problems.clone(), cx).into_any_element()
     }
 }
 
@@ -185,10 +188,6 @@ fn snapshot_state(view: &EditorView, cx: &App) -> StatusBarState {
         .map(|b| (b.command, b.key.clone()))
         .collect();
     StatusBarState {
-        active_session: view
-            .editor
-            .active_id()
-            .and_then(|id| view.editor.runtime_session_id(id)),
         hint_context,
         error,
         message,
@@ -309,9 +308,43 @@ fn render_hint_item(index: usize, hint: ShortcutHint, cx: &App) -> impl IntoElem
         .child(div().text_color(theme.muted_foreground).child(hint.label))
 }
 
-fn render_status_bar(state: &StatusBarState, cx: &App) -> impl IntoElement {
+fn render_status_bar(
+    state: &StatusBarState,
+    tasks: &[TaskActivity],
+    problems: Entity<Problems>,
+    cx: &App,
+) -> impl IntoElement {
     let theme = cx.theme();
     let is_error = state.error.is_some();
+    let content = div()
+        .id("app-status-center")
+        .test_support()
+        .min_w_0()
+        .flex()
+        .items_center()
+        .child(if tasks.is_empty() {
+            div()
+                .id("app-status-message")
+                .test_support()
+                .h(compact::rem(STATUS_LINE_HEIGHT))
+                .min_w_0()
+                .flex()
+                .items_center()
+                .gap_1p5()
+                .overflow_hidden()
+                .text_color(if is_error {
+                    theme.danger
+                } else {
+                    theme.muted_foreground
+                })
+                .when(is_error, |message| {
+                    message.child(Icon::new(IconName::CircleAlert).small())
+                })
+                .child(div().min_w_0().truncate().child(state.message.clone()))
+                .into_any_element()
+        } else {
+            render_task_activity(tasks, cx)
+        });
 
     div()
         .id("app-status-bar")
@@ -325,49 +358,18 @@ fn render_status_bar(state: &StatusBarState, cx: &App) -> impl IntoElement {
         .bg(compact::workspace(cx))
         .flex()
         .items_center()
-        .justify_center()
         .px(compact::chrome_inset(cx))
         .text_size(compact::rem(compact::CAPTION))
         .line_height(compact::rem(STATUS_LINE_HEIGHT))
-        // Equal flexible side lanes keep interaction hints centered. The external
-        // indicator truncates within spare space instead of moving those hints.
-        .child(div().flex_1().min_w_0())
-        // Center section: Transient status / error message (shortcut hints hidden while keeping mechanism)
-        .child(
-            div()
-                .id("app-status-message")
-                .test_support()
-                .h(compact::rem(STATUS_LINE_HEIGHT))
-                .flex()
-                .max_w(px(520.))
-                .min_w_0()
-                .items_center()
-                .justify_center()
-                .gap_1p5()
-                .text_color(if is_error {
-                    theme.danger
-                } else {
-                    theme.muted_foreground
-                })
-                .when(is_error, |e| {
-                    e.child(Icon::new(IconName::CircleAlert).small())
-                })
-                .child(
-                    div()
-                        .min_w_0()
-                        .overflow_hidden()
-                        .text_ellipsis()
-                        .child(state.message.clone()),
-                ),
-        )
+        // Equal side lanes center feedback and progress independently of the problem badge.
+        .child(div().flex_1().min_w(compact::rem(80.)))
+        .child(content)
         .child(
             div()
                 .flex_1()
-                .min_w_0()
-                .h(compact::rem(STATUS_LINE_HEIGHT))
-                .overflow_hidden()
-                .when_some(cx.try_global::<crate::host::DesktopHost>(), |e, host| {
-                    e.child(host.external_status.clone())
-                }),
+                .min_w(compact::rem(80.))
+                .flex()
+                .justify_end()
+                .child(problems),
         )
 }

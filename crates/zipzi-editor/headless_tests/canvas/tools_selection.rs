@@ -382,10 +382,7 @@ fn viewport_transform_delta_updates_status_bar_and_clears_on_finish_or_cancel(
                 )
                 .unwrap();
             crate::workspace::status_bar::StatusBar::sync(&view.status_bar, view, cx);
-            assert_eq!(
-                view.status_bar.read(cx).displayed_message(),
-                Some(("Ready", false))
-            );
+            assert_eq!(view.status_bar.read(cx).displayed_message(), None);
         });
     }
 }

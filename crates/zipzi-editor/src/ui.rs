@@ -97,7 +97,10 @@ impl Render for EditorView {
         }
         if let Some(session) = &mut self.dev_session {
             if let Err(error) = session.sync(&self.editor) {
-                self.edit_error = Some(error.to_string());
+                let message = error.to_string();
+                if self.edit_error.as_deref() != Some(message.as_str()) {
+                    self.set_edit_error(message, cx);
+                }
             }
         }
         if preview::device_changed(window, self.gpu_device.as_ref()) {

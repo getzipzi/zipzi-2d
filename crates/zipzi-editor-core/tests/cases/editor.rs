@@ -1,6 +1,8 @@
 use super::support;
 use support::sample_document;
-use zipzi_editor_core::{CloseDisposition, CommandId, Editor, EditorCommand, LoadRequest};
+use zipzi_editor_core::{
+    CloseDisposition, CommandId, Editor, EditorCommand, LoadRequest, LoadStage,
+};
 
 #[test]
 fn parameter_preview_is_transient_and_survives_document_switch() -> anyhow::Result<()> {
@@ -70,7 +72,10 @@ fn model3_background_import_resolves_selected_moc3() -> anyhow::Result<()> {
     let task = editor
         .prepare_load(LoadRequest::Model3(moc.clone()))?
         .unwrap();
+    let progress = task.progress();
+    assert_eq!(progress.stage(), LoadStage::Queued);
     editor.finish_load(task.run())?;
+    assert_eq!(progress.stage(), LoadStage::PreparingView);
     assert_eq!(editor.document_count(), 2);
     assert_ne!(editor.active_id(), original);
     assert!(!editor.document().unwrap().layers().is_empty());
@@ -163,7 +168,10 @@ fn failed_and_duplicate_opens_preserve_the_existing_session() -> anyhow::Result<
     let task = editor
         .prepare_load(LoadRequest::Open(source.path().join("missing")))?
         .unwrap();
+    let progress = task.progress();
+    assert_eq!(progress.stage(), LoadStage::Queued);
     assert!(editor.finish_load(task.run()).is_err());
+    assert_eq!(progress.stage(), LoadStage::Reading);
     assert_eq!(editor.active_id(), id);
     assert_eq!(editor.view().zoom, 1.75);
     assert_eq!(
