@@ -1,25 +1,25 @@
 # Runtime implementation evidence
 
 This directory records implementation evidence for the paired
-[Editor Runtime design](../archive/plans/sdk-runtime-design.md) and
-[implementation plan](../archive/plans/sdk-runtime-implementation-plan.md).
+[Editor Runtime design](../sdk-runtime-design.md) and
+[implementation plan](../sdk-runtime-implementation-plan.md).
 R0 records the baseline. R1 now provides the CPU-only
-[`zipzi-runtime`](../../crates/zipzi-runtime/README.md) core; see
-[R1 implementation and checks](../archive/plans/sdk-runtime/r1-core.md).
+[`zipzi-runtime`](../../../../crates/zipzi-runtime/README.md) core; see
+[R1 implementation and checks](../sdk-runtime/r1-core.md).
 R2 migrates Editor ownership and window lifetime; see
-[R2 implementation and checks](../archive/plans/sdk-runtime/r2-editor.md). Its interaction
+[R2 implementation and checks](../sdk-runtime/r2-editor.md). Its interaction
 performance gates passed ten alternating process pairs across 145 measurements. R3 adds the local protocol and an independently installable pure Python client;
-see [R3 evidence](../archive/plans/sdk-runtime/r3-ipc.md) and the explicit
+see [R3 evidence](../sdk-runtime/r3-ipc.md) and the explicit
 [implemented connection slice](r3-coverage.json). The source inventory below
 remains a classification catalog; `not-connected` there is not a claim that all
 entries are unimplemented. R3's coverage manifest records the verified routes.
 Python targets CPython 3.14; connection imports work without `_native`.
-R4 completed its [final recheck](../archive/plans/sdk-runtime/python2-r4-complete.md#2026-10-26-r4-最终复验)
+R4 completed its [final recheck](../sdk-runtime/python2-r4-complete.md#2026-10-26-r4-最终复验)
 on 2026-10-26. The [R4 coverage](r4-coverage.json) retains that pairing and scope.
-R5/P5 is now in progress: [typed animation authoring](../archive/plans/sdk-runtime/python2-r5-authoring.md)
-and [independent CPU Preview](../archive/plans/sdk-runtime/python2-r5-preview.md),
-[CPU spatial queries](../archive/plans/sdk-runtime/python2-r5-spatial.md), and
-[GPU observation / inspection export](../archive/plans/sdk-runtime/python2-r5-observation.md) are connected,
+R5/P5 is now in progress: [typed animation authoring](../sdk-runtime/python2-r5-authoring.md)
+and [independent CPU Preview](../sdk-runtime/python2-r5-preview.md),
+[CPU spatial queries](../sdk-runtime/python2-r5-spatial.md), and
+[GPU observation / inspection export](../sdk-runtime/python2-r5-observation.md) are connected,
 while fair scheduling and Editor playback acceptance
 remain pending. The active IPC protocol is `zipzi-runtime-r5-observation-1`, paired
 with native `zipzi-python2-18`; earlier records retain their historical contracts.
@@ -27,16 +27,16 @@ with native `zipzi-python2-18`; earlier records retain their historical contract
 ## Active Python implementation
 
 The current Python work uses the independent `crates/zipzi-python2` package.
-See the [R0–R4 reconnection record](../archive/plans/sdk-runtime/python2-r0-r4.md) and
+See the [R0–R4 reconnection record](../sdk-runtime/python2-r0-r4.md) and
 [new-client coverage](python2-coverage.json). Host discovery, session binding and
 the selected real Editor publication recipe have new installed-client evidence.
 Typed event subscriptions, parameter creation/patching and mesh/parameter batch
-reads now have [new-client R3 evidence](../archive/plans/sdk-runtime/python2-r3-events.md),
+reads now have [new-client R3 evidence](../sdk-runtime/python2-r3-events.md),
 including installed response-loss cases, real Editor projection/Undo events and
-production killed-client expiry. The next [R4 mesh-binding/CPU slice](../archive/plans/sdk-runtime/python2-r4-bindings.md)
+production killed-client expiry. The next [R4 mesh-binding/CPU slice](../sdk-runtime/python2-r4-bindings.md)
 adds canonical binding authoring/reads and shared explicit formal/candidate CPU
 samples, including real Editor human Preview isolation. Cross-domain Modeling
-dispatch now belongs to Runtime. The [P3 scene/identity slice](../archive/plans/sdk-runtime/python2-p3-scene-identity.md)
+dispatch now belongs to Runtime. The [P3 scene/identity slice](../sdk-runtime/python2-p3-scene-identity.md)
 adds generated scene/group operations, mesh BlendShape/bound topology recipes,
 SDK references and scene label addresses, with installed and native Editor checks.
 Full R4 was subsequently accepted in the final recheck linked above. The new
@@ -165,7 +165,7 @@ images retain 51 entries/204 RGBA bytes; an extra pinned snapshot is separately
 charged and reclaimed on close. Binary response recovery has a declared cache:
 256 MiB/client, 512 MiB total, 300 seconds. Allocator RSS is measured separately.
 Preview/Proposal integration continues in R5/R6. See the
-[full R4 record](../archive/plans/sdk-runtime/python2-r4-complete.md) and
+[full R4 record](../sdk-runtime/python2-r4-complete.md) and
 [active coverage](r4-coverage.json).
 
 ## Reproducible CPU fixture and measurements

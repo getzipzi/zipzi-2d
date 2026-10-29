@@ -14,7 +14,7 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parents[2]
-OUTPUT = ROOT / "docs/runtime/api-inventory.json"
+OUTPUT = ROOT / "docs/archive/plans/runtime/api-inventory.json"
 RAW_STRING = re.compile(r'(?:br|r)(#+)?"')
 CHAR_LITERAL = re.compile(r"'(?:\\.|[^'\\\n])'")
 

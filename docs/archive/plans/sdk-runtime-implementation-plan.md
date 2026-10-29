@@ -28,7 +28,7 @@
 原 R0–R3 交付记录保留为历史；新包涉及的 Python/安装/真实宿主证据独立补齐，
 不直接沿用旧客户端的通过结论。接回差距与本批宿主/会话验收见
 [新包 R0–R4 记录](sdk-runtime/python2-r0-r4.md)及
-[逐能力状态](../../runtime/python2-coverage.json)。`acc54907` 已保存宿主/会话切片；
+[逐能力状态](runtime/python2-coverage.json)。`acc54907` 已保存宿主/会话切片；
 其后工作区的[事件、参数及批量查询](sdk-runtime/python2-r3-events.md)已通过新包
 R3 最小链路验收，并已提交为 `c0e186b`。其后[网格绑定/CPU 采样切片](sdk-runtime/python2-r4-bindings.md)
 已接通共享处理器、数值 recipe 与人工 Preview 隔离；完整 R4 Modeling、身份/地址、

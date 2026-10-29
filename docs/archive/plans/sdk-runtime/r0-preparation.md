@@ -42,8 +42,8 @@ SHA-256、工作区状态和每进程原始数据由采集工具保存，不记�
 
 ## A01 接口清单
 
-SDK 仓库的 `docs/runtime/api-inventory.json` 为逐方法/类型/意图清单，
-`docs/runtime/README.md` 解释来源、生命周期、批量形式、历史效果、后台执行和验收。
+SDK 仓库的 `docs/archive/plans/runtime/api-inventory.json` 为逐方法/类型/意图清单，
+`docs/archive/plans/runtime/README.md` 解释来源、生命周期、批量形式、历史效果、后台执行和验收。
 其输入包括全部 SDK 分模块实现、SDK 重导出的动画实现、Python facade、原生 stub、
 当前公共导出和旧 Python 清单。每条 API 均有分类，没有把未绑定的方法排除出创作范围。
 
@@ -88,7 +88,7 @@ IO/生命周期引用，包括读操作、测试和注释；它是保守源索�
 
 ## 默认预算与执行边界
 
-可机读默认配置在 SDK `docs/runtime/defaults.json`；尚无 Runtime 代码执行这些限制。
+可机读默认配置在 SDK `docs/archive/plans/runtime/defaults.json`；尚无 Runtime 代码执行这些限制。
 选择依据为本机 16 GiB、合成/真实 fixture 的内容/快照/候选/图片负载，以及已有 SDK
 每会话 50 步/256 MiB 历史限制；这是可配置的首期保守上限，不是吞吐量承诺。
 

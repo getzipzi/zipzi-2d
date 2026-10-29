@@ -244,7 +244,7 @@ ZIPZI_BENCH_ANIMATION=1 ZIPZI_BENCH_ANIMATION_DRAG=number ./tools/benchmarks/win
 ```
 
 `runtime/runtime_inventory.py`, `runtime/runtime_baseline.py` and `runtime/runtime-migration-inventory.py`
-support [Runtime preparation](../docs/runtime/README.md).
+support [Runtime preparation](../docs/archive/plans/runtime/README.md).
 The independent [zipzi-python2 package](../crates/zipzi-python2/README.md) owns its
 P0/P1 tools under `crates/zipzi-python2/tools/`. `test.py` builds its native adapter
 and validates Local/Connected behavior and public static types; `baseline.py`

@@ -25,7 +25,7 @@ PyO3 调用 LocalHost；Connected 进入 Editor 应用级 Runtime。窗口、脚
 
 以下是接回顺序和逐能力差距清单，尚不是完整 SDK 方法级 R0 清单或 R4 验收。
 旧客户端通过的案例不直接换名计入新包。机器可读状态见
-[python2-coverage.json](../../../runtime/python2-coverage.json)。
+[python2-coverage.json](../runtime/python2-coverage.json)。
 
 | 阶段/能力 | 可复用的共享层 | 新包已有证据 | 剩余工作 |
 | --- | --- | --- | --- |

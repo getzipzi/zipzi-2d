@@ -680,8 +680,10 @@ fn save_is_exclusive_with_candidates_and_success_switches_path_without_content_r
 
 #[test]
 fn r0_enabled_defaults_match_frozen_configuration() {
-    let defaults: serde_json::Value =
-        serde_json::from_str(include_str!("../../../docs/runtime/defaults.json")).unwrap();
+    let defaults: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../docs/archive/plans/runtime/defaults.json"
+    ))
+    .unwrap();
     let limits = RuntimeLimits::default();
     for (actual, expected) in [
         (

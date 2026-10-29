@@ -7,7 +7,7 @@
 - [Source, wheel and app artifacts](../tools/README.md#local-distribution-artifacts)
 - [Versioning, Alpha releases and package publication preparation](RELEASING.md)
 - [Tool guide](../tools/README.md) and [model inventory](../models/README.md)
-- [Runtime evidence](runtime/README.md) and [Runtime plan](archive/plans/sdk-runtime-implementation-plan.md), [R2 Editor migration](archive/plans/sdk-runtime/r2-editor.md)
+- [Runtime evidence](archive/plans/runtime/README.md) and [Runtime plan](archive/plans/sdk-runtime-implementation-plan.md), [R2 Editor migration](archive/plans/sdk-runtime/r2-editor.md)
 - [zipzi-python2 construction plan](archive/plans/python-sdk-rewrite-plan.md): independent package, typed API, shared Runtime execution and bounded generation
 - [Python P7 closeout](archive/plans/python-sdk-rewrite/p7.md): current macOS/CPython 3.14 scope complete; capability/contract evidence, generated/manual responsibilities, costs, agent results and final artifact identity
 - [zipzi-python2 P3A refactor](archive/plans/python-sdk-rewrite/p3a-api-agent-contract.md): final API, generation boundaries, agent documentation and acceptance gates
