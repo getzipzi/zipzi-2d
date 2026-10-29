@@ -25,8 +25,31 @@ geometry without a renderer or textures.
 `MeshMeshing` optionally records a UV boundary and internal constraints.
 `extract_manual_meshing` validates existing triangulation; `edit_manual_mesh`
 returns edited geometry and stable ID mappings. Use a persistent
-`ManualVertexIdAllocator` for insertions. Topology replacement requires an
-explicit dependency policy; invalid edits leave the input unchanged.
+`ManualVertexIdAllocator` for insertions. For document edits, use
+`EditSession::plan_manual_mesh` and `apply_manual_mesh_plan`, or
+`EditSession::edit_manual_mesh`. The complete plan transfers base positions,
+ordinary keyforms and every Mesh BlendShape with the same frozen UV weights,
+retaining local authoring space, parent references, non-position channels and Glue.
+
+Repeated moves of the same vertex set in one candidate sample the first accepted move's source, while
+swept checks start at the latest accepted UVs. A rejected plan leaves that preview
+usable. Plans are bound to an exact document snapshot and SDK version; another
+branch with an equal revision is still rejected. Hosts must also guard their edit
+identity and sequence, as Runtime does for `ModelingCommand::ManualMesh`.
+
+Deleting a Glue endpoint (including an incomplete pair or an implicit orphan)
+returns `GLUE_VERTEX_REFERENCED`; a sample outside the old UV coverage returns
+`OUTSIDE_TRANSFER_DOMAIN`. Only a dependency-free mesh with a global affine map
+can extend outside that coverage. Non-affine and collapsed base positions remain
+editable inside a valid UV domain. Full generation uses fresh persistent IDs and
+is disabled when old Glue endpoints would be retired; interior fill retains them.
+
+`ManualMeshSource` supports generated UV topology through the same plan builder.
+`ManualMeshTransferReport` describes channel count, affected vertices, Glue and
+nonlinear parents, appearance limitations and finite conversion/history costs.
+The report promises stored sampling semantics, not identical pixels for arbitrary
+reconnections, nonlinear parents or Glue. Unchanged dependencies carried through
+a complete replacement do not require write access; equality is checked in Core.
 
 `alpha_mesh_geometry` generates CPU mesh geometry from a top-down alpha mask.
 Options control spacing, margins, threshold, holes and image clipping; distances

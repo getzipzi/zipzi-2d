@@ -216,3 +216,13 @@ def animation_preview(session: zipzi.Session, edit: zipzi.Edit) -> zipzi.Snapsho
         assert_type(zipzi.recover_call(preview.seek,.5),zipzi.Job[zipzi.Snapshot[animation.Batch]])
         assert_type(preview.advance_to(.5),zipzi.Job[zipzi.Snapshot[animation.Batch]])
         return preview.sample((0.,.5),geometry=True).wait()
+
+
+def manual_mesh_transfer_report(result: zipzi.WriteResult) -> int:
+    report=result.mesh_transfer
+    if report is None:
+        return 0
+    assert_type(report, modeling.ManualMeshTransferReport)
+    assert_type(report.shape_count, int)
+    assert_type(report.cost.temporary_bytes, int)
+    return report.added+report.moved+report.removed

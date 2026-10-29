@@ -320,6 +320,11 @@ impl MeshGenerationPanel {
                     cx.notify();
                 }
             }));
+            let stage = if source.manual_rebuild_available() {
+                Stage::Edges
+            } else {
+                Stage::Interior
+            };
             Self {
                 owner,
                 document,
@@ -327,7 +332,7 @@ impl MeshGenerationPanel {
                 context,
                 source: Arc::new(source),
                 contour: None,
-                stage: Stage::Edges,
+                stage,
                 columns,
                 edge,
                 fill,
@@ -757,7 +762,18 @@ impl Render for MeshGenerationPanel {
                 .enumerate()
                 .map(|(index, (stage, id, label))| {
                     let selected = self.stage == stage;
+                    let rebuild_blocked =
+                        stage == Stage::Edges && !self.source.manual_rebuild_available();
                     Tab::new(id)
+                        .disabled(rebuild_blocked)
+                        .when(rebuild_blocked, |tab| {
+                            tab.tooltip(|window, cx| {
+                                gpui_kit::component::tooltip::Tooltip::new(
+                                    t!("mesh_generation.glue_rebuild_unavailable").into_owned(),
+                                )
+                                .build(window, cx)
+                            })
+                        })
                         .h_full()
                         .px(compact::rem(4.))
                         .border_b_2()

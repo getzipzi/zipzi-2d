@@ -342,6 +342,7 @@ export_existing_warning = "Existing export limitation"
 top_level_destination = "top level (parameters become ungrouped)"
 
 [mesh_generation]
+glue_rebuild_unavailable = "This mesh has Glue endpoints. Use Interior or release the pairs before rebuilding edges."
 edge_spacing_compact = "Spacing"
 interior_spacing_compact = "Spacing"
 outer_margin_compact = "Margin"

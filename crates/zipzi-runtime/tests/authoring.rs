@@ -838,3 +838,72 @@ fn selected_mesh_query_checks_exact_session_and_admits_before_copy_without_poiso
     );
     assert_eq!(rt.session(session).unwrap().history_lengths(), (1, 0));
 }
+
+#[path = "../../../fixtures/mesh-edit-dependencies.rs"]
+mod mesh_dependencies;
+#[test]
+fn manual_mesh_mixed_candidate_rejection_preserves_sequence_baseline_and_history() {
+    use zipzi_runtime::modeling::ModelingCommand;
+    use zipzi_sdk::{ManualMeshOperation as Op, ManualVertexTarget};
+    let mut rt = Runtime::default();
+    let c = rt.register_client().unwrap();
+    let id = mesh_dependencies::id;
+    let s = rt.create_session(c, &id(1), ModelSetup::default()).unwrap();
+    let e = rt.begin_edit(c, s, "fixture", None).unwrap();
+    rt.apply_edit(c, e, mesh_dependencies::install).unwrap();
+    rt.commit_edit(c, e).unwrap();
+    let history = rt.session(s).unwrap().history_lengths();
+    let e = rt.begin_edit(c, s, "drag", None).unwrap();
+    for (uv, ok) in [
+        (Vec2::new(0.3, 0.4), true),
+        (Vec2::new(1., 0.5), false),
+        (Vec2::new(0.7, 0.6), true),
+    ] {
+        let source = rt.edit_snapshot(c, e).unwrap().source;
+        let sequence = rt.edit_sequence(c, e).unwrap();
+        let result = rt.apply_authoring(
+            c,
+            e,
+            vec![EditOperation::Modeling {
+                operation: Box::new(ModelingCommand::ManualMesh {
+                    mesh_id: id(2),
+                    expected: source,
+                    operation: Op::MoveVertices {
+                        targets: vec![ManualVertexTarget { id: 120, uv }],
+                        motion_from: None,
+                    },
+                }),
+            }],
+        );
+        assert_eq!(result.is_ok(), ok);
+        if let Ok(r) = result {
+            assert_eq!(r.mesh_transfer.unwrap().shape_count, 7);
+        } else {
+            assert_eq!(rt.edit_sequence(c, e).unwrap(), sequence);
+        }
+    }
+    let candidate = rt.edit_snapshot(c, e).unwrap();
+    let mut expected = rt
+        .session(s)
+        .unwrap()
+        .begin_owned_edit("direct", None)
+        .unwrap();
+    expected
+        .edit_manual_mesh(
+            &id(2),
+            Op::MoveVertices {
+                targets: vec![ManualVertexTarget {
+                    id: 120,
+                    uv: Vec2::new(0.7, 0.6),
+                }],
+                motion_from: None,
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        candidate.snapshot.document().get_binding(&id(6)),
+        expected.candidate_document().get_binding(&id(6))
+    );
+    rt.commit_edit(c, e).unwrap();
+    assert_eq!(rt.session(s).unwrap().history_lengths(), (history.0 + 1, 0));
+}

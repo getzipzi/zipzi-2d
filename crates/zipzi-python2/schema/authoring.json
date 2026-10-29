@@ -119676,6 +119676,142 @@
         "name": "zipzi_runtime::observation::ObservationBatch",
         "transparent": false,
         "tuple": false
+      },
+      {
+        "fields": [
+          {
+            "doc": "Number of newly allocated vertices.",
+            "name": "added",
+            "rust_name": "added",
+            "shape": {
+              "kind": "usize"
+            },
+            "skip": false
+          },
+          {
+            "doc": "Retained identities whose UV sampling location changed.",
+            "name": "moved",
+            "rust_name": "moved",
+            "shape": {
+              "kind": "usize"
+            },
+            "skip": false
+          },
+          {
+            "doc": "Retired identities, including isolated vertices removed by edge deletion.",
+            "name": "removed",
+            "rust_name": "removed",
+            "shape": {
+              "kind": "usize"
+            },
+            "skip": false
+          },
+          {
+            "doc": "Stored base, ordinary and BlendShape channels processed; no Cartesian expansion.",
+            "name": "shape_count",
+            "rust_name": "shape_count",
+            "shape": {
+              "kind": "usize"
+            },
+            "skip": false
+          },
+          {
+            "doc": "Whether triangle connectivity changed.",
+            "name": "reconnected",
+            "rust_name": "reconnected",
+            "shape": {
+              "kind": "bool"
+            },
+            "skip": false
+          },
+          {
+            "doc": "Whether a referenced Glue endpoint was resampled.",
+            "name": "glue_endpoints",
+            "rust_name": "glue_endpoints",
+            "shape": {
+              "kind": "bool"
+            },
+            "skip": false
+          },
+          {
+            "doc": "A Warp occurs anywhere in the actual parent chain.",
+            "name": "non_affine_parent",
+            "rust_name": "non_affine_parent",
+            "shape": {
+              "kind": "bool"
+            },
+            "skip": false
+          },
+          {
+            "doc": "Dependency-free affine extension outside the previous UV coverage.",
+            "name": "affine_extension",
+            "rust_name": "affine_extension",
+            "shape": {
+              "kind": "bool"
+            },
+            "skip": false
+          },
+          {
+            "doc": "Reasons the plan does not promise identical appearance in every pose.",
+            "name": "appearance_limits",
+            "rust_name": "appearance_limits",
+            "shape": {
+              "item": {
+                "kind": "string"
+              },
+              "kind": "sequence"
+            },
+            "skip": false
+          },
+          {
+            "doc": "Conservative result, workspace and history accounting.",
+            "name": "cost",
+            "rust_name": "cost",
+            "shape": {
+              "fields": [
+                {
+                  "default": null,
+                  "doc": "Number of shape-sample combinations the conversion must process.",
+                  "name": "sample_combinations",
+                  "shape": {
+                    "kind": "usize"
+                  }
+                },
+                {
+                  "default": null,
+                  "doc": "Estimated owned result payload in bytes; not total process RSS.",
+                  "name": "payload_bytes",
+                  "shape": {
+                    "kind": "usize"
+                  }
+                },
+                {
+                  "default": null,
+                  "doc": "Estimated temporary working storage in bytes; not total process RSS.",
+                  "name": "temporary_bytes",
+                  "shape": {
+                    "kind": "usize"
+                  }
+                },
+                {
+                  "default": null,
+                  "doc": "Includes the SDK's complete previous checkpoint and new candidate.",
+                  "name": "history_bytes",
+                  "shape": {
+                    "kind": "usize"
+                  }
+                }
+              ],
+              "kind": "record",
+              "name": "zipzi_core::document::binding_authoring::ConversionCost"
+            },
+            "skip": false
+          }
+        ],
+        "kind": "serde_record",
+        "name": "zipzi_sdk::manual_mesh_transfer::ManualMeshTransferReport",
+        "transparent": false,
+        "tuple": false
       }
     ],
     "version": 1

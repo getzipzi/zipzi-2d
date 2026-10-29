@@ -987,7 +987,7 @@ impl Editor {
                     && !self.exiting()
                     && !self.gesture_active()
                     && if self.manual_active() {
-                        self.manual_editable()
+                        self.manual_editable() && matches!(command.target,CommandTarget::Viewport(b) if self.manual_for_viewport(b.viewport))
                     } else {
                         self.document().is_some_and(|d| d.mesh_generation_target().is_ok())
                     }
@@ -1007,7 +1007,8 @@ impl Editor {
             | ManualDelete
             | ManualReconnect
             | ManualRemoveSelection
-            | ManualPreviewResult => modeling && target && !self.is_busy() && self.manual_editable(),
+            | ManualPreviewResult => modeling && target && !self.is_busy() && self.manual_editable()
+                && matches!(command.target,CommandTarget::Viewport(b) if self.manual_for_viewport(b.viewport)),
             PaletteMoveUp | PaletteMoveDown | PaletteMoveTo => {
                 target && !self.is_busy() && !self.exiting()
             }
@@ -1197,6 +1198,10 @@ impl Editor {
             }
             ManualPreviewResult => {
                 let session = self.active_session_mut().unwrap();
+                session
+                    .modeling
+                    .tools
+                    .settle_manual(&mut session.document)?;
                 session.modeling.tools.toggle_manual_preview_result();
                 session.invalidate_scene();
             }

@@ -3,7 +3,9 @@ from collections.abc import Mapping, Sequence
 from ._presentation import CompactValue
 from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
+from typing import cast, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .modeling import ManualMeshTransferReport
 from uuid import UUID
 
 Record = Mapping[str, object]
@@ -185,11 +187,16 @@ class SessionInfo(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class WriteResult(CompactValue):
-    'Confirmed candidate write result; it is not a formal commit receipt.\n\nFields:\nsource: Exact candidate source after the accepted write call.\nids: Operation result IDs in operation order; may name newly created or existing objects.'
+    'Confirmed candidate write result; it is not a formal commit receipt.\n\nFields:\nsource: Exact candidate source after the accepted write call.\nids: Operation result IDs in operation order; may name newly created or existing objects.\nmesh_transfer: UV sampling, dependency and finite-cost report for a manual mesh write; otherwise None.'
     source: Source
     ids: tuple[str, ...]
+    mesh_transfer: "ManualMeshTransferReport | None" = None
 
     @classmethod
     def _read(cls, value: object) -> "WriteResult":
         r = record(value)
-        return cls(Source._read(r["source"]), tuple(string(v) for v in sequence(r["ids"])))
+        from ._generated.modeling import read_ManualMeshTransferReport
+        from ._generated.modeling import ManualMeshTransferReport
+        transfer = r.get("mesh_transfer")
+        report = transfer if isinstance(transfer, ManualMeshTransferReport) else None if transfer is None else read_ManualMeshTransferReport(transfer)
+        return cls(Source._read(r["source"]), tuple(string(v) for v in sequence(r["ids"])), report)

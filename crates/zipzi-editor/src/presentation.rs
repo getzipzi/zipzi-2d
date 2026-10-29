@@ -128,7 +128,13 @@ impl EditorView {
         self.editor.invalidate_preview();
         #[cfg(any(test, feature = "test-support"))]
         if cx.is_test() {
-            // Logic-test windows use manually delivered frames, not native GPUs.
+            // Logic tests deliver frames manually. Native acceptance windows
+            // provide a real Metal context and must run the preview worker.
+            #[cfg(target_os = "macos")]
+            if window.metal_context().is_none() {
+                return;
+            }
+            #[cfg(not(target_os = "macos"))]
             return;
         }
         let (requests, frames, device) = match preview::start(window) {

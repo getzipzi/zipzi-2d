@@ -139,14 +139,24 @@ impl Editor {
         let session = self.active_session_mut().unwrap();
         session.fit_default_view(binding.viewport, metrics)?;
         let (mut scene, mut geometry) = session.scene()?;
-        if session.modeling.tools.original_points {
+        let uv_plane = session.modeling.tools.manual_uv_plane(binding.viewport);
+        if uv_plane {
+            let target = session.modeling.tools.manual_target().unwrap();
+            scene = scene.with_manual_reference(target, false);
+            geometry = std::sync::Arc::new(geometry.with_manual_uv(
+                &session.document,
+                target,
+                scene.clone(),
+            ));
+        } else if session.modeling.tools.original_points {
             geometry = std::sync::Arc::new(geometry.with_original_points(&session.document)?);
         }
         let view_state = session.view_state(binding.viewport);
         let scene_revision = session.scene_revision;
         let presentation = self.viewport_presentation_mut(binding.viewport).unwrap();
-        if let Some((isolated_scene, isolated_geometry)) =
-            presentation.isolation.project(&scene, &geometry)
+        if !uv_plane
+            && let Some((isolated_scene, isolated_geometry)) =
+                presentation.isolation.project(&scene, &geometry)
         {
             scene = isolated_scene;
             geometry = isolated_geometry;

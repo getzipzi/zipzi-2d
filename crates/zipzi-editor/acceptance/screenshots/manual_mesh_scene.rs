@@ -4,6 +4,12 @@ use super::common::save;
 use gpui_kit::{point, px, test::TestWindowExt};
 use zipzi_editor_core::{Editor, ModelPoint};
 
+fn source_point(p: ModelPoint) -> ModelPoint {
+    ModelPoint {
+        x: (p.x - 24.) / 208. * 96.,
+        y: (p.y - 24.) / 208. * 64.,
+    }
+}
 fn click_model(h: &mut Harness, p: ModelPoint) -> anyhow::Result<()> {
     h.cx.update_window(h.window, |_, window, cx| {
         let p = h
@@ -13,7 +19,7 @@ fn click_model(h: &mut Harness, p: ModelPoint) -> anyhow::Result<()> {
             .unwrap()
             .canvas
             .transform
-            .to_viewport(p);
+            .to_viewport(source_point(p));
         // Keyboard helpers retain modifier state after Undo/Redo. This is a
         // plain click, so explicitly release those modifiers for the event.
         window.click_with_options(
@@ -35,7 +41,7 @@ fn gesture_model(
         let t = h.view.read(cx).modeling_frame().unwrap().canvas.transform;
         let origin = window.find("canvas-body").bounds().origin;
         let screen = |p| {
-            let p = t.to_viewport(p);
+            let p = t.to_viewport(source_point(p));
             origin + point(px(p.x), px(p.y))
         };
         let a = screen(a);
@@ -248,5 +254,56 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
         expected_meshes,
         "Save and reopen preserve exact geometry and constraints"
     );
+    let (document, assets) = fixture::mixed_document()?;
+    h._assets = assets;
+    h.cx.update_window(h.window, |_, _, cx| {
+        h.view.update(cx, |v, cx| {
+            v.replace_editor(Editor::from_document(document), cx);
+            v.editor
+                .enter_manual_mesh(v.editor.active_id().unwrap())
+                .unwrap();
+            v.redraw(cx);
+        });
+    })?;
+    save(&h.capture()?, directory, "manual-mesh-12-mixed-uv.png")?;
+    click_model(
+        &mut h,
+        ModelPoint {
+            x: 24. + 208. * 0.35,
+            y: 24. + 208. * 0.25,
+        },
+    )?;
+    save(&h.capture()?, directory, "manual-mesh-13-mixed-insert.png")?;
+    h.view.read_with(&h.cx, |v, _| {
+        let d = v.editor.document().unwrap();
+        let host = d.runtime_host();
+        let rt = host.read();
+        let model = rt.document(d.runtime_session_id()).unwrap();
+        assert_eq!(d.history_lengths(), (1, 0));
+        assert_eq!(
+            model
+                .get_mesh("a8210000-0000-4000-8000-000000000002")
+                .unwrap()
+                .vertex_ids
+                .len(),
+            6
+        );
+        assert_eq!(
+            model
+                .get_glue("a8210000-0000-4000-8000-000000000020")
+                .unwrap()
+                .pairs[0]
+                .vertex_b,
+            None
+        );
+    });
+    click(&mut h, "tool_manual_preview")?;
+    h.cx.update_window(h.window, |_, _, cx| {
+        h.view.update(cx, |v, cx| {
+            v.editor.fit_view();
+            v.redraw(cx);
+        });
+    })?;
+    save(&h.capture()?, directory, "manual-mesh-14-mixed-result.png")?;
     Ok(())
 }

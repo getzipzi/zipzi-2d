@@ -198,3 +198,32 @@ mod export_tests {
         assert_eq!(frame.model_bounds(true), Some([-4., 2., 8., 9.]));
     }
 }
+
+/// Sample a stored vertex channel with nonnegative, normalized weights. All
+/// authoring shape transfers use f64 intermediates, including delta channels.
+pub fn sample_vertex_channel(values: &[Vec2], weights: &[(usize, f64)]) -> Result<Vec2, Status> {
+    if weights.is_empty()
+        || weights
+            .iter()
+            .any(|&(i, w)| i >= values.len() || !w.is_finite() || w < 0.)
+        || (weights.iter().map(|v| v.1).sum::<f64>() - 1.).abs() > 1e-5
+    {
+        return Err(Status::error(
+            "INVALID_VERTEX_SOURCE",
+            "Expected normalized nonnegative vertex weights",
+        ));
+    }
+    let (mut x, mut y) = (0., 0.);
+    for &(i, w) in weights {
+        x += f64::from(values[i].x) * w;
+        y += f64::from(values[i].y) * w;
+    }
+    let p = Vec2::new(x as f32, y as f32);
+    if !p.x.is_finite() || !p.y.is_finite() {
+        return Err(Status::error(
+            "NON_FINITE",
+            "Sampled channel exceeds finite float32 coordinates",
+        ));
+    }
+    Ok(p)
+}

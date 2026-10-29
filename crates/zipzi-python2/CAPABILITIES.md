@@ -68,3 +68,24 @@ For Editor mesh generation, run the focused test against a production host:
 ```sh
 ./tools/dev-python crates/zipzi-python2/tests/editor_mesh_generation.py --host /absolute/path/to/zipzi-editor
 ```
+
+## Manual UV mesh editing
+
+`ModelingCommandManualMesh` supports ordinary bindings, multiple Mesh BlendShapes,
+parent deformers and Glue together. Capture `edit.meshes.get(mesh_id).source` for
+`expected` before each operation and submit the command alone. Runtime guards the
+session, edit, base version and candidate sequence. Repeated move commands keep a
+frozen sampling baseline and check motion against the last accepted candidate.
+
+`WriteResult.mesh_transfer` contains a typed `ManualMeshTransferReport` for these
+writes, including finite costs. Base and ordinary positions and BlendShape deltas
+share the same UV sample weights; sample/table/pair identities and non-position
+channels remain intact. Local and Connected use the same implementation, including
+binary upload. `GLUE_VERTEX_REFERENCED` identifies a pair that must be released
+before deleting its endpoint. `OUTSIDE_TRANSFER_DOMAIN` rejects sampling outside
+the old UV coverage, except for dependency-free affine extension.
+
+A host-confirmed manual refusal with `SdkFailure.edit_state == "editing"` keeps
+the candidate available, so a pointer gesture may continue from its last valid
+preview. Other transaction failures keep their normal abort semantics. Inspect
+`edit_state`; do not infer candidate liveness from an English error message.

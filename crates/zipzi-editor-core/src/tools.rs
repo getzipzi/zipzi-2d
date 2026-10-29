@@ -169,6 +169,19 @@ impl ToolController {
     ) -> Option<crate::ManualMeshEdge> {
         self.manual.as_ref()?.edge_at(frame, point)
     }
+    pub(crate) fn manual_viewport(&self) -> Option<crate::ViewportId> {
+        self.manual.as_ref().and_then(|m| m.uv_viewport)
+    }
+    pub(crate) fn manual_uv_plane(&self, viewport: crate::ViewportId) -> bool {
+        self.manual
+            .as_ref()
+            .is_some_and(|m| !m.preview_result && m.uv_viewport == Some(viewport))
+    }
+    pub(crate) fn bind_manual_viewport(&mut self, viewport: crate::ViewportId) {
+        if let Some(m) = &mut self.manual {
+            m.uv_viewport.get_or_insert(viewport);
+        }
+    }
     pub fn manual_preview_result(&self) -> bool {
         self.manual.as_ref().is_some_and(|mode| mode.preview_result)
     }

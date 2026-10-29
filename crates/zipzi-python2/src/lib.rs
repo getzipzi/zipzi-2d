@@ -469,6 +469,15 @@ impl NativeRuntime {
             let d = PyDict::new(py);
             d.set_item("source", source(py, r.source)?)?;
             d.set_item("ids", r.ids)?;
+            d.set_item(
+                "mesh_transfer",
+                match r.mesh_transfer {
+                    Some(ref report) => {
+                        generated::modeling::write_manualmeshtransferreport(py, report)?
+                    }
+                    None => py.None(),
+                },
+            )?;
             Ok(d.into_any())
         })?;
         if let Some(e) = result.bind(py).get_item("error")? {

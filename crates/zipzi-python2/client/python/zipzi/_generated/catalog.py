@@ -11,8 +11,8 @@ class _Entry(TypedDict):
     example: NotRequired[str]
 CONTRACT = 'zipzi-runtime-r7-manual-mesh-1'
 PACKAGE_VERSION = '0.1.0a2'
-CLIENT_SOURCE_SHA256 = '1cdeb23d87fa6476f626d4c7ebf1dca87fcb054f1f7a32d10ad18c85e6574a87'
-CONTRACT_SHA256 = '544b83dd122e08a3270d0e38d2d915bb4a27c66b111257a43cc334d9a19178b9'
+CLIENT_SOURCE_SHA256 = 'b66e6f58fedc4634f1ef2e193e46ab6043cf1344b0805a94284bcf578f6347e2'
+CONTRACT_SHA256 = '109dee2c49068114d98f6b1584daa114c23adf4702ea9a999ac9c7a92d7fca47'
 CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                         'zipzi.Batch',
                         'zipzi.Buffer',
@@ -68,7 +68,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
            'documentation': 'Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or '
                             'connect(), explicitly select sessions, read before editing, verify confirmed results, '
                             'then save and release. Package 0.1.0a2; protocol zipzi-runtime-r7-manual-mesh-1; client '
-                            'source SHA-256 1cdeb23d87fa6476f626d4c7ebf1dca87fcb054f1f7a32d10ad18c85e6574a87.',
+                            'source SHA-256 b66e6f58fedc4634f1ef2e193e46ab6043cf1344b0805a94284bcf578f6347e2.',
            'example': 'docs/recipes.py',
            'kind': 'module',
            'signature': ''},
@@ -2983,14 +2983,20 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                         'Fields:\n'
                                         'source: Exact candidate source after the accepted write call.\n'
                                         'ids: Operation result IDs in operation order; may name newly created or '
-                                        'existing objects.',
+                                        'existing objects.\n'
+                                        'mesh_transfer: UV sampling, dependency and finite-cost report for a manual '
+                                        'mesh write; otherwise None.',
                        'example': 'docs/recipes.py',
                        'fields': [('source', 'Exact candidate source after the accepted write call.'),
                                   ('ids',
                                    'Operation result IDs in operation order; may name newly created or existing '
-                                   'objects.')],
+                                   'objects.'),
+                                  ('mesh_transfer',
+                                   'UV sampling, dependency and finite-cost report for a manual mesh write; otherwise '
+                                   'None.')],
                        'kind': 'type',
-                       'signature': '(source: Source, ids: tuple[str, ...])'},
+                       'signature': "(source: Source, ids: tuple[str, ...], mesh_transfer: 'ManualMeshTransferReport | "
+                                    "None' = None)"},
  'zipzi.WriteResult.__repr__': {'children': (),
                                 'documentation': 'Return a local summary capped at 1,024 characters, with no RPC/full '
                                                  'scan.\n'
@@ -5249,6 +5255,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'zipzi.modeling.CollectionQueryResources',
                                  'zipzi.modeling.CollectionQueryScene',
                                  'zipzi.modeling.ConstraintSample',
+                                 'zipzi.modeling.ConversionCost',
                                  'zipzi.modeling.ConversionDomain',
                                  'zipzi.modeling.DeltaGlueKeyform',
                                  'zipzi.modeling.DeltaKeyforms',
@@ -5339,6 +5346,7 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'zipzi.modeling.ManualMeshOperationMoveVertices',
                                  'zipzi.modeling.ManualMeshOperationReconnect',
                                  'zipzi.modeling.ManualMeshOperationReleaseConstraint',
+                                 'zipzi.modeling.ManualMeshTransferReport',
                                  'zipzi.modeling.ManualVertexTarget',
                                  'zipzi.modeling.Mesh',
                                  'zipzi.modeling.MeshBinding',
@@ -10365,6 +10373,51 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                              'fields': [],
                                              'kind': 'callable',
                                              'signature': '() -> str'},
+ 'zipzi.modeling.ConversionCost': {'children': ('zipzi.modeling.ConversionCost.__repr__',
+                                                'zipzi.modeling.ConversionCost.summary'),
+                                   'documentation': 'Immutable owned ConversionCost value. Construction owns declared '
+                                                    'collections; reading fields, repr and summary performs no IO.\n'
+                                                    '\n'
+                                                    'Fields:\n'
+                                                    'sample_combinations: Number of shape-sample combinations the '
+                                                    'conversion must process.\n'
+                                                    'payload_bytes: Estimated owned result payload in bytes; not total '
+                                                    'process RSS.\n'
+                                                    'temporary_bytes: Estimated temporary working storage in bytes; '
+                                                    'not total process RSS.\n'
+                                                    "history_bytes: Includes the SDK's complete previous checkpoint "
+                                                    'and new candidate.',
+                                   'example': 'docs/recipes.py',
+                                   'fields': [('sample_combinations',
+                                               'Number of shape-sample combinations the conversion must process.'),
+                                              ('payload_bytes',
+                                               'Estimated owned result payload in bytes; not total process RSS.'),
+                                              ('temporary_bytes',
+                                               'Estimated temporary working storage in bytes; not total process RSS.'),
+                                              ('history_bytes',
+                                               "Includes the SDK's complete previous checkpoint and new candidate.")],
+                                   'kind': 'type',
+                                   'signature': '(sample_combinations: int, payload_bytes: int, temporary_bytes: int, '
+                                                'history_bytes: int)'},
+ 'zipzi.modeling.ConversionCost.__repr__': {'children': (),
+                                            'documentation': 'Return a local summary capped at 1,024 characters, with '
+                                                             'no RPC/full scan.\n'
+                                                             '\n'
+                                                             'Large arrays and bytes show bounded samples/counts. '
+                                                             'Explicit field access\n'
+                                                             'still exposes the owned full value; no host resource is '
+                                                             'created/released.',
+                                            'example': 'docs/recipes.py',
+                                            'fields': [],
+                                            'kind': 'callable',
+                                            'signature': '() -> str'},
+ 'zipzi.modeling.ConversionCost.summary': {'children': (),
+                                           'documentation': 'Return a bounded, local summary; full fields remain '
+                                                            'explicitly accessible.',
+                                           'example': 'docs/recipes.py',
+                                           'fields': [],
+                                           'kind': 'callable',
+                                           'signature': '() -> str'},
  'zipzi.modeling.ConversionDomain': {'children': ('zipzi.modeling.ConversionDomain.__repr__',
                                                   'zipzi.modeling.ConversionDomain.summary'),
                                      'documentation': 'Immutable owned ConversionDomain value. Construction owns '
@@ -13858,6 +13911,78 @@ CATALOG: dict[str,_Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                                  'fields': [],
                                                                  'kind': 'callable',
                                                                  'signature': '() -> str'},
+ 'zipzi.modeling.ManualMeshTransferReport': {'children': ('zipzi.modeling.ManualMeshTransferReport.__repr__',
+                                                          'zipzi.modeling.ManualMeshTransferReport.summary'),
+                                             'documentation': 'Immutable owned ManualMeshTransferReport value. '
+                                                              'Construction owns declared collections; reading fields, '
+                                                              'repr and summary performs no IO.\n'
+                                                              '\n'
+                                                              'Fields:\n'
+                                                              'added: Number of newly allocated vertices.\n'
+                                                              'moved: Retained identities whose UV sampling location '
+                                                              'changed.\n'
+                                                              'removed: Retired identities, including isolated '
+                                                              'vertices removed by edge deletion.\n'
+                                                              'shape_count: Stored base, ordinary and BlendShape '
+                                                              'channels processed; no Cartesian expansion.\n'
+                                                              'reconnected: Whether triangle connectivity changed.\n'
+                                                              'glue_endpoints: Whether a referenced Glue endpoint was '
+                                                              'resampled.\n'
+                                                              'non_affine_parent: A Warp occurs anywhere in the actual '
+                                                              'parent chain.\n'
+                                                              'affine_extension: Dependency-free affine extension '
+                                                              'outside the previous UV coverage.\n'
+                                                              'appearance_limits: Reasons the plan does not promise '
+                                                              'identical appearance in every pose.\n'
+                                                              'cost: Conservative result, workspace and history '
+                                                              'accounting.',
+                                             'example': 'docs/recipes.py',
+                                             'fields': [('added', 'Number of newly allocated vertices.'),
+                                                        ('moved',
+                                                         'Retained identities whose UV sampling location changed.'),
+                                                        ('removed',
+                                                         'Retired identities, including isolated vertices removed by '
+                                                         'edge deletion.'),
+                                                        ('shape_count',
+                                                         'Stored base, ordinary and BlendShape channels processed; no '
+                                                         'Cartesian expansion.'),
+                                                        ('reconnected', 'Whether triangle connectivity changed.'),
+                                                        ('glue_endpoints',
+                                                         'Whether a referenced Glue endpoint was resampled.'),
+                                                        ('non_affine_parent',
+                                                         'A Warp occurs anywhere in the actual parent chain.'),
+                                                        ('affine_extension',
+                                                         'Dependency-free affine extension outside the previous UV '
+                                                         'coverage.'),
+                                                        ('appearance_limits',
+                                                         'Reasons the plan does not promise identical appearance in '
+                                                         'every pose.'),
+                                                        ('cost',
+                                                         'Conservative result, workspace and history accounting.')],
+                                             'kind': 'type',
+                                             'signature': '(added: int, moved: int, removed: int, shape_count: int, '
+                                                          'reconnected: bool, glue_endpoints: bool, non_affine_parent: '
+                                                          'bool, affine_extension: bool, appearance_limits: tuple[str, '
+                                                          '...], cost: ConversionCost)'},
+ 'zipzi.modeling.ManualMeshTransferReport.__repr__': {'children': (),
+                                                      'documentation': 'Return a local summary capped at 1,024 '
+                                                                       'characters, with no RPC/full scan.\n'
+                                                                       '\n'
+                                                                       'Large arrays and bytes show bounded '
+                                                                       'samples/counts. Explicit field access\n'
+                                                                       'still exposes the owned full value; no host '
+                                                                       'resource is created/released.',
+                                                      'example': 'docs/recipes.py',
+                                                      'fields': [],
+                                                      'kind': 'callable',
+                                                      'signature': '() -> str'},
+ 'zipzi.modeling.ManualMeshTransferReport.summary': {'children': (),
+                                                     'documentation': 'Return a bounded, local summary; full fields '
+                                                                      'remain explicitly accessible.',
+                                                     'example': 'docs/recipes.py',
+                                                     'fields': [],
+                                                     'kind': 'callable',
+                                                     'signature': '() -> str'},
  'zipzi.modeling.ManualVertexTarget': {'children': ('zipzi.modeling.ManualVertexTarget.__repr__',
                                                     'zipzi.modeling.ManualVertexTarget.summary'),
                                        'documentation': 'Immutable owned ManualVertexTarget value. Construction owns '

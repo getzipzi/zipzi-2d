@@ -103,6 +103,22 @@ in [`acceptance/screenshots.rs`](acceptance/screenshots.rs). Screenshots go to
 `target/headless-screenshots/` by default; `ZIPZI_SCREENSHOT_DIR` overrides the
 output directory.
 
+## Mesh Edit
+
+Mesh Edit shows the selected mesh on its complete source image in UV coordinates,
+with pixel distances preserving the image aspect ratio. It supports meshes with
+parent deformers, ordinary parameter bindings, multiple BlendShapes and Glue,
+including non-affine base shapes. The UV camera is separate from the model camera;
+exiting restores the model view. The result toggle displays the complete evaluated
+model and pauses topology input. Other Modeling viewports retain model context.
+
+New and moved points resample every stored shape from the operation's frozen UV
+source. Glue endpoint markers remain visible; deleting a referenced endpoint
+requires releasing its pair first. Outside-domain operations explain their refusal
+without closing the mode. Interior generation retains identities and Glue; edge
+and full rebuilds require that no old vertex is referenced. A generation preview
+is applied explicitly; saving only settles an active point drag.
+
 ## Mesh generation controls
 
 The editor's adaptive mesh controls use source pixels. Initial distances and

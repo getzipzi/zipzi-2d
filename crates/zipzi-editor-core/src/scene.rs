@@ -36,20 +36,12 @@ impl SceneSnapshot {
             return self;
         }
         let mut frame = self.viewport_frame.as_ref().clone();
-        let Some(source) = frame
-            .drawables
-            .iter()
-            .find(|drawable| drawable.id == target.object.id)
-        else {
-            return self;
+        let mut reference = zipzi_core::Drawable {
+            id: format!("__manual_mesh_reference_{}", target.object.id),
+            texture_asset_id: target.texture.asset_id.clone(),
+            ..Default::default()
         };
-        let mut reference = source.clone();
-        reference.id = format!("__manual_mesh_reference_{}", source.id);
         reference.runtime_id = reference.id.clone();
-        reference.visible = true;
-        reference.enabled = true;
-        reference.opacity = 1.;
-        reference.masks.clear();
         let corners = [
             zipzi_core::Vec2::new(0., 0.),
             zipzi_core::Vec2::new(1., 0.),
@@ -62,21 +54,12 @@ impl SceneSnapshot {
             .collect();
         reference.uvs = corners.into();
         reference.indices = vec![0, 1, 2, 0, 2, 3].into();
-        if let Some(drawable) = frame
-            .drawables
-            .iter_mut()
-            .find(|drawable| drawable.id == target.object.id)
-        {
-            drawable.visible = false;
-        }
-        if let Some(index) = frame.render_plan.iter().position(|command| {
-            matches!(command, zipzi_core::evaluation::RenderCommand::DrawMesh { mesh_id } if mesh_id == &target.object.id)
-        }) {
-            frame.render_plan.insert(index, zipzi_core::evaluation::RenderCommand::DrawMesh {
-                mesh_id: reference.id.clone(),
-            });
-        }
-        frame.drawables.push(reference);
+        // The edit plane has one image and no model-space compositing stack.
+        frame.render_plan = vec![zipzi_core::evaluation::RenderCommand::DrawMesh {
+            mesh_id: reference.id.clone(),
+        }];
+        frame.drawables = vec![reference];
+        self.model_opacity = 1.;
         self.viewport_frame = Arc::new(frame);
         self
     }

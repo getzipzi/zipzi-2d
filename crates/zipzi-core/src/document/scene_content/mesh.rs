@@ -348,17 +348,19 @@ fn remap(
                         }
                     }
                     VertexSeed::Interpolate { weights } => {
-                        let mut p = Vec2::default();
-                        for w in weights {
-                            let i = old
-                                .vertex_ids
-                                .iter()
-                                .position(|id| *id == w.vertex_id)
-                                .unwrap();
-                            p.x += values[i].x * w.weight;
-                            p.y += values[i].y * w.weight;
-                        }
-                        p
+                        let weights: Vec<_> = weights
+                            .iter()
+                            .map(|w| {
+                                (
+                                    old.vertex_ids
+                                        .iter()
+                                        .position(|id| *id == w.vertex_id)
+                                        .unwrap(),
+                                    f64::from(w.weight),
+                                )
+                            })
+                            .collect();
+                        crate::geometry::sample_vertex_channel(values, &weights)?
                     }
                 }
             }

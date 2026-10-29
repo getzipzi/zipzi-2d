@@ -3,6 +3,7 @@
 Host discovery/start ownership lives in _endpoint; request recovery never launches.
 """
 from .._generated import binary as typed_binary
+from .._generated.modeling import ModelingCommandManualMesh
 import hashlib
 import json
 from pathlib import Path
@@ -213,7 +214,8 @@ class ConnectedBackend(ConnectedBindings):
             return self._request(dict(op="apply_authoring",edit=edit,operations=tuple(ops.wire(op) for op in operations)),owner,"edit.apply")
         payload = typed_binary.encode_operations(operations)
         if len(payload) > 65536:
-            return self._drive_transfer(Transfer(self,owner,"authoring",data=payload,edit=edit))
+            return self._drive_transfer(Transfer(self,owner,"authoring",data=payload,edit=edit,
+                manual_preview=len(operations)==1 and isinstance(operations[0],ModelingCommandManualMesh)))
         return self._request(dict(op="apply_authoring", edit=edit, operations=[ops.wire(op) for op in operations]), owner, "edit.apply")
     def _transport_prepare_image(self, width: int, height: int, rgba: bytes, owner: object) -> object:
         if len(rgba) > 65536:

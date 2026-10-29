@@ -6,7 +6,7 @@ use zipzi_sdk::{AuthoringSession, prepare_png_asset};
 
 mod rectangle;
 #[allow(unused_imports)]
-pub use rectangle::{alpha_document, cropped_alpha_document, rectangle_document};
+pub use rectangle::{alpha_document, cropped_alpha_document, mixed_document, rectangle_document};
 
 /// Drive synchronous pointer scripts through the same explicit gesture API as the UI.
 #[allow(dead_code)]

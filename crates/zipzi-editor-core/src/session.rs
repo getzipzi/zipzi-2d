@@ -12,6 +12,7 @@ pub struct DocumentSession {
     pub(crate) animation: AnimationContext,
     pub(crate) document: Document,
     pub(crate) views: HashMap<ViewportId, ViewportState>,
+    manual_view: Option<(String, u32, u32, ViewportState)>,
     pub scene_revision: u64,
     cache: Option<SceneSnapshot>,
     geometry: Option<Arc<CanvasScene>>,
@@ -29,6 +30,7 @@ impl DocumentSession {
             modeling: Default::default(),
             document,
             views: HashMap::new(),
+            manual_view: None,
             scene_revision: 1,
             cache: None,
             geometry: None,
@@ -70,7 +72,22 @@ impl DocumentSession {
         viewport: ViewportId,
         metrics: ViewportMetrics,
     ) -> Result<()> {
-        if self.views.entry(viewport).or_default().default_fit {
+        self.modeling.tools.bind_manual_viewport(viewport);
+        if self.modeling.tools.manual_uv_plane(viewport) {
+            let target = self.modeling.tools.manual_target().unwrap();
+            let identity = (
+                target.texture.cache_key.clone(),
+                target.texture.width,
+                target.texture.height,
+            );
+            if self.manual_view.as_ref().is_none_or(|v| {
+                (v.0.as_str(), v.1, v.2) != (identity.0.as_str(), identity.1, identity.2)
+            }) {
+                self.manual_view =
+                    Some((identity.0, identity.1, identity.2, ViewportState::default()));
+            }
+        }
+        if self.view_state_mut(viewport).default_fit {
             self.fit_view(viewport, metrics)?;
         }
         Ok(())
@@ -85,12 +102,38 @@ impl DocumentSession {
         }
         // Resolve the current scene before fitting, including the first preview
         // and scenes invalidated by an edit. Never fit stale cached geometry.
-        let bounds = self.scene()?.1.content_bounds();
-        self.views.entry(viewport).or_default().fit(bounds, metrics);
+        let bounds = if self.modeling.tools.manual_uv_plane(viewport) {
+            let t = self.modeling.tools.manual_target().unwrap();
+            Some([0., 0., t.texture.width as f32, t.texture.height as f32])
+        } else {
+            self.scene()?.1.content_bounds()
+        };
+        self.view_state_mut(viewport).fit(bounds, metrics);
         Ok(())
     }
     pub(crate) fn view_state(&self, viewport: ViewportId) -> ViewportState {
+        if self.modeling.tools.manual_uv_plane(viewport) {
+            if let Some(v) = &self.manual_view {
+                return v.3;
+            }
+            return ViewportState::default();
+        }
         self.views[&viewport]
+    }
+    pub(crate) fn view_state_mut(&mut self, viewport: ViewportId) -> &mut ViewportState {
+        if self.modeling.tools.manual_uv_plane(viewport) {
+            if self.manual_view.is_none() {
+                let t = self.modeling.tools.manual_target().unwrap();
+                self.manual_view = Some((
+                    t.texture.cache_key.clone(),
+                    t.texture.width,
+                    t.texture.height,
+                    ViewportState::default(),
+                ));
+            }
+            return &mut self.manual_view.as_mut().unwrap().3;
+        }
+        self.views.entry(viewport).or_default()
     }
     pub fn active_tool(&self) -> crate::ToolId {
         self.modeling.tools.active
@@ -115,6 +158,7 @@ impl DocumentSession {
     pub(crate) fn exit_manual_mesh(&mut self) {
         if self.modeling.tools.manual_active() {
             self.modeling.tools.exit_manual(&mut self.document);
+            self.manual_view = None;
             self.invalidate_scene();
         }
     }
@@ -453,16 +497,7 @@ impl DocumentSession {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = zipzi_core::benchmark::span("editor.scene");
         if self.cache.is_none() {
-            let mut scene = self.document.snapshot()?;
-            if let Some(target) = self
-                .modeling
-                .tools
-                .manual_target()
-                .filter(|_| self.modeling.tools.manual_editable())
-            {
-                scene = scene
-                    .with_manual_reference(target, self.modeling.tools.manual_preview_result());
-            }
+            let scene = self.document.snapshot()?;
             if self.geometry.is_none() {
                 let previous = self.previous_geometry.take();
                 self.geometry = Some(if let Some(previous) = self.appearance_geometry.take() {

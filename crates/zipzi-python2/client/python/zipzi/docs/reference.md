@@ -7,7 +7,7 @@ Generated from the compiled authoring contract, the finite binding directory and
 
 ``
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a2; protocol zipzi-runtime-r7-manual-mesh-1; client source SHA-256 1cdeb23d87fa6476f626d4c7ebf1dca87fcb054f1f7a32d10ad18c85e6574a87.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a2; protocol zipzi-runtime-r7-manual-mesh-1; client source SHA-256 b66e6f58fedc4634f1ef2e193e46ab6043cf1344b0805a94284bcf578f6347e2.
 
 
 ## zipzi.ApiDescription
@@ -2033,16 +2033,18 @@ Return a bounded, local summary; full fields remain explicitly accessible.
 
 ## zipzi.WriteResult
 
-`(source: Source, ids: tuple[str, ...])`
+`(source: Source, ids: tuple[str, ...], mesh_transfer: 'ManualMeshTransferReport | None' = None)`
 
 Confirmed candidate write result; it is not a formal commit receipt.
 
 Fields:
 source: Exact candidate source after the accepted write call.
 ids: Operation result IDs in operation order; may name newly created or existing objects.
+mesh_transfer: UV sampling, dependency and finite-cost report for a manual mesh write; otherwise None.
 
 - `source`: Exact candidate source after the accepted write call.
 - `ids`: Operation result IDs in operation order; may name newly created or existing objects.
+- `mesh_transfer`: UV sampling, dependency and finite-cost report for a manual mesh write; otherwise None.
 
 ## zipzi.WriteResult.__repr__
 
@@ -7384,6 +7386,40 @@ still exposes the owned full value; no host resource is created/released.
 Return a bounded, local summary; full fields remain explicitly accessible.
 
 
+## zipzi.modeling.ConversionCost
+
+`(sample_combinations: int, payload_bytes: int, temporary_bytes: int, history_bytes: int)`
+
+Immutable owned ConversionCost value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+sample_combinations: Number of shape-sample combinations the conversion must process.
+payload_bytes: Estimated owned result payload in bytes; not total process RSS.
+temporary_bytes: Estimated temporary working storage in bytes; not total process RSS.
+history_bytes: Includes the SDK's complete previous checkpoint and new candidate.
+
+- `sample_combinations`: Number of shape-sample combinations the conversion must process.
+- `payload_bytes`: Estimated owned result payload in bytes; not total process RSS.
+- `temporary_bytes`: Estimated temporary working storage in bytes; not total process RSS.
+- `history_bytes`: Includes the SDK's complete previous checkpoint and new candidate.
+
+## zipzi.modeling.ConversionCost.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ConversionCost.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
 ## zipzi.modeling.ConversionDomain
 
 `(parameter_id: str, minimum: float, maximum: float)`
@@ -9991,6 +10027,52 @@ still exposes the owned full value; no host resource is created/released.
 
 
 ## zipzi.modeling.ManualMeshOperationReleaseConstraint.summary
+
+`() -> str`
+
+Return a bounded, local summary; full fields remain explicitly accessible.
+
+
+## zipzi.modeling.ManualMeshTransferReport
+
+`(added: int, moved: int, removed: int, shape_count: int, reconnected: bool, glue_endpoints: bool, non_affine_parent: bool, affine_extension: bool, appearance_limits: tuple[str, ...], cost: ConversionCost)`
+
+Immutable owned ManualMeshTransferReport value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+Fields:
+added: Number of newly allocated vertices.
+moved: Retained identities whose UV sampling location changed.
+removed: Retired identities, including isolated vertices removed by edge deletion.
+shape_count: Stored base, ordinary and BlendShape channels processed; no Cartesian expansion.
+reconnected: Whether triangle connectivity changed.
+glue_endpoints: Whether a referenced Glue endpoint was resampled.
+non_affine_parent: A Warp occurs anywhere in the actual parent chain.
+affine_extension: Dependency-free affine extension outside the previous UV coverage.
+appearance_limits: Reasons the plan does not promise identical appearance in every pose.
+cost: Conservative result, workspace and history accounting.
+
+- `added`: Number of newly allocated vertices.
+- `moved`: Retained identities whose UV sampling location changed.
+- `removed`: Retired identities, including isolated vertices removed by edge deletion.
+- `shape_count`: Stored base, ordinary and BlendShape channels processed; no Cartesian expansion.
+- `reconnected`: Whether triangle connectivity changed.
+- `glue_endpoints`: Whether a referenced Glue endpoint was resampled.
+- `non_affine_parent`: A Warp occurs anywhere in the actual parent chain.
+- `affine_extension`: Dependency-free affine extension outside the previous UV coverage.
+- `appearance_limits`: Reasons the plan does not promise identical appearance in every pose.
+- `cost`: Conservative result, workspace and history accounting.
+
+## zipzi.modeling.ManualMeshTransferReport.__repr__
+
+`() -> str`
+
+Return a local summary capped at 1,024 characters, with no RPC/full scan.
+
+Large arrays and bytes show bounded samples/counts. Explicit field access
+still exposes the owned full value; no host resource is created/released.
+
+
+## zipzi.modeling.ManualMeshTransferReport.summary
 
 `() -> str`
 

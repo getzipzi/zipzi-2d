@@ -178,7 +178,10 @@ impl Entry {
         viewport: crate::ViewportId,
     ) -> Option<crate::ViewportState> {
         match &self.state {
-            EntryState::Ready(session) => session.views.get(&viewport).copied(),
+            EntryState::Ready(session) => session
+                .views
+                .contains_key(&viewport)
+                .then(|| session.view_state(viewport)),
             EntryState::Saving(saving) => saving.frozen.views.get(&viewport).copied(),
         }
     }

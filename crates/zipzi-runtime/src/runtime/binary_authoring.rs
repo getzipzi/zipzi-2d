@@ -59,6 +59,7 @@ impl Runtime {
             self.abort_edit(client, edit)?;
             return Err(RuntimeError::InvalidReference);
         }
+        let mut manual_request = false;
         let result = (|| {
             let data = self.blob(client, blob)?;
             let mut measured = Reader::new(&data).map_err(invalid_wire)?;
@@ -85,12 +86,16 @@ impl Runtime {
             input.take(20).map_err(invalid_wire)?;
             let operations = Vec::<EditOperation>::decode(&mut input).map_err(invalid_wire)?;
             input.finish().map_err(invalid_wire)?;
+            manual_request = operations.len() == 1
+                && matches!(&operations[0], EditOperation::Modeling {operation} if matches!(operation.as_ref(), crate::modeling::ModelingCommand::ManualMesh {..}));
             self.edits.get_mut(&edit).unwrap().pending_upload = None;
             self.blobs.get_mut(&blob).unwrap().attached_edit = None;
             self.apply_authoring(client, edit, operations)
         })();
         if result.is_err() {
-            self.abort_edit(client, edit)?;
+            if !manual_request {
+                self.abort_edit(client, edit)?;
+            }
             self.blobs.remove(&blob);
         }
         result

@@ -341,6 +341,7 @@ export_existing_warning = "已有的导出限制"
 top_level_destination = "顶层（参数进入未分组）"
 
 [mesh_generation]
+glue_rebuild_unavailable = "该网格包含胶水连接点。请使用内部补点，或先解除配对再重建边缘。"
 edge_spacing_compact = "点距"
 interior_spacing_compact = "点距"
 outer_margin_compact = "外扩"

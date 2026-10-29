@@ -2,6 +2,7 @@ use super::*;
 use crate::authoring::{EditOperation, MeshSnapshot, PlanIntent, PlanSnapshot, WriteResult};
 
 enum ReadyOperation {
+    ManualMesh(zipzi_sdk::ManualMeshPlan),
     Scene(zipzi_sdk::SceneOperation),
     Modeling(Box<crate::modeling::ModelingCommand>),
     MeshBinding(zipzi_sdk::MeshBindingOperation),
@@ -116,7 +117,11 @@ impl Runtime {
                         base: entry.base,
                         sequence: entry.sequence,
                     };
-                    if *expected != current || self.ready(entry.session)?.version() != entry.base {
+                    if *expected != current {
+                        return Err(RuntimeError::InvalidReference);
+                    }
+                    if self.ready(entry.session)?.version() != entry.base {
+                        self.abort_edit(client, edit)?;
                         return Err(RuntimeError::InvalidReference);
                     }
                 }
@@ -147,13 +152,34 @@ impl Runtime {
         let workspace = self.reserve_transfer(
             fixed.saturating_add(limits.max_conversion_bytes.saturating_mul(2)),
         )?;
+        let manual_request = operations.iter().any(|op| matches!(op, EditOperation::Modeling {operation} if matches!(operation.as_ref(), crate::modeling::ModelingCommand::ManualMesh {..})));
         let resolved = operations
             .into_iter()
             .enumerate()
             .map(|(index, operation)| {
                 Ok(match operation {
                     EditOperation::Scene { operation } => ReadyOperation::Scene(operation),
-                    EditOperation::Modeling { operation } => ReadyOperation::Modeling(operation),
+                    EditOperation::Modeling { operation } => {
+                        if let crate::modeling::ModelingCommand::ManualMesh {
+                            mesh_id,
+                            operation,
+                            ..
+                        } = *operation
+                        {
+                            // Geometric rejection is isolated from apply_edit's fatal
+                            // transaction error path. Keep the latest valid preview.
+                            let sdk = self
+                                .edit(client, edit)?
+                                .sdk
+                                .as_ref()
+                                .ok_or(RuntimeError::Aborted)?;
+                            ReadyOperation::ManualMesh(
+                                sdk.plan_manual_mesh_with_limits(&mesh_id, operation, limits)?,
+                            )
+                        } else {
+                            ReadyOperation::Modeling(operation)
+                        }
+                    }
                     EditOperation::MeshBinding { operation } => {
                         ReadyOperation::MeshBinding(operation)
                     }
@@ -188,10 +214,16 @@ impl Runtime {
         let resolved = match resolved {
             Ok(operations) => operations,
             Err(error) => {
-                self.abort_edit(client, edit)?;
+                if !manual_request {
+                    self.abort_edit(client, edit)?;
+                }
                 return Err(error);
             }
         };
+        let mesh_transfer = resolved.iter().find_map(|op| match op {
+            ReadyOperation::ManualMesh(p) => Some(p.report.clone()),
+            _ => None,
+        });
         let ids = self.apply_edit(client, edit, |candidate| {
             let workspace = workspace;
             candidate.set_authoring_limits(limits);
@@ -201,6 +233,9 @@ impl Runtime {
                     match operation {
                         ReadyOperation::Scene(op) => ids.extend(op.apply(candidate)?),
                         ReadyOperation::Modeling(op) => op.apply(candidate)?,
+                        ReadyOperation::ManualMesh(plan) => {
+                            candidate.apply_manual_mesh_plan(plan)?;
+                        }
                         ReadyOperation::MeshBinding(op) => ids.push(op.apply(candidate)?),
                         ReadyOperation::Parameter(op) => ids.push(op.apply(candidate)?),
                         ReadyOperation::Mesh(op) => ids.push(op.apply(candidate)?),
@@ -239,6 +274,7 @@ impl Runtime {
         })?;
         let entry = self.edit(client, edit)?;
         Ok(WriteResult {
+            mesh_transfer,
             ids,
             source: SourceRef::Edit {
                 session: entry.session,

@@ -745,6 +745,7 @@ impl AuthoringSession {
         }
         let (base_keys, base_key_bytes) = self.object_keys_with_bytes();
         Ok(EditSession {
+            manual_baseline: None,
             session: None,
             base_keys,
             base_key_bytes,

@@ -1,6 +1,12 @@
 use super::{Harness, document_fixture, setup_with_document};
 use gpui_kit::{AppContext as _, TestAppContext, point, px, test::TestWindowExt};
 
+fn source_point(p: zipzi_editor_core::ModelPoint) -> zipzi_editor_core::ModelPoint {
+    zipzi_editor_core::ModelPoint {
+        x: (p.x - 24.) / 208. * 96.,
+        y: (p.y - 24.) / 208. * 64.,
+    }
+}
 fn present(h: &Harness, cx: &mut TestAppContext) {
     cx.run_until_parked();
     cx.update_window(h.window, |_, window, cx| {
@@ -76,7 +82,10 @@ fn manual_mesh_failed_click_explains_why_and_next_valid_click_recovers(cx: &mut 
     let h = enter(cx);
     cx.update_window(h.window, |_, window, cx| {
         let transform = h.view.read(cx).modeling_frame().unwrap().canvas.transform;
-        let p = transform.to_viewport(zipzi_editor_core::ModelPoint { x: 128., y: 244. });
+        let p = transform.to_viewport(source_point(zipzi_editor_core::ModelPoint {
+            x: 128.,
+            y: 244.,
+        }));
         window.click_at("canvas-body", point(px(p.x), px(p.y)), cx);
         let view = h.view.read(cx);
         assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
@@ -84,7 +93,10 @@ fn manual_mesh_failed_click_explains_why_and_next_valid_click_recovers(cx: &mut 
             view.editor.canvas_notice().is_some(),
             "A rejected create click must show a reason after the mouse is released"
         );
-        let p = transform.to_viewport(zipzi_editor_core::ModelPoint { x: 128., y: 128. });
+        let p = transform.to_viewport(source_point(zipzi_editor_core::ModelPoint {
+            x: 128.,
+            y: 128.,
+        }));
         window.click_at("canvas-body", point(px(p.x), px(p.y)), cx);
         assert_eq!(
             h.view.read(cx).editor.document().unwrap().history_lengths(),
@@ -140,7 +152,7 @@ fn manual_mesh_toolbar_only_shows_relevant_tools(cx: &mut TestAppContext) {
 }
 
 #[gpui_kit::test]
-fn manual_mesh_entry_reports_unsupported_bindings(cx: &mut TestAppContext) {
+fn manual_mesh_entry_reports_shared_source_texture(cx: &mut TestAppContext) {
     let (doc, assets) = document_fixture::rectangle_document(true).unwrap();
     let h = setup_with_document(cx, doc, assets);
     cx.update_window(h.window, |_, window, cx| {
@@ -196,7 +208,7 @@ fn pointer_gesture(
         let transform = h.view.read(cx).modeling_frame().unwrap().canvas.transform;
         let origin = window.find("canvas-body").bounds().origin;
         let screen = |p| {
-            let p = transform.to_viewport(p);
+            let p = transform.to_viewport(source_point(p));
             origin + point(px(p.x), px(p.y))
         };
         let start = screen(from);
@@ -477,7 +489,7 @@ fn manual_mesh_connect_preview_tracks_target_after_cmd_release(cx: &mut TestAppC
         let binding = frame.version.binding;
         let origin = window.find("canvas-body").bounds().origin;
         let screen = |p| {
-            let p = frame.transform.to_viewport(p);
+            let p = frame.transform.to_viewport(source_point(p));
             origin + point(px(p.x), px(p.y))
         };
         let from = screen(ModelPoint { x: 24., y: 24. });
@@ -565,7 +577,7 @@ fn manual_mesh_right_click_opens_menu_without_editing_geometry(cx: &mut TestAppC
             .unwrap()
             .canvas
             .transform
-            .to_viewport(point);
+            .to_viewport(source_point(point));
         window.click_with_options(
             "canvas-body",
             gpui_kit::test::ClickOptions::new()
@@ -752,7 +764,7 @@ fn manual_mesh_context_menu_sets_and_releases_constraints_with_undo(cx: &mut Tes
             .unwrap()
             .canvas
             .transform
-            .to_viewport(ModelPoint { x: 76., y: 76. });
+            .to_viewport(source_point(ModelPoint { x: 76., y: 76. }));
         window.click_with_options(
             "canvas-body",
             gpui_kit::test::ClickOptions::new()
@@ -804,7 +816,7 @@ fn manual_mesh_context_menu_sets_and_releases_constraints_with_undo(cx: &mut Tes
             .unwrap()
             .canvas
             .transform
-            .to_viewport(ModelPoint { x: 76., y: 76. });
+            .to_viewport(source_point(ModelPoint { x: 76., y: 76. }));
         window.click_with_options(
             "canvas-body",
             gpui_kit::test::ClickOptions::new()
@@ -840,4 +852,55 @@ fn manual_mesh_context_menu_sets_and_releases_constraints_with_undo(cx: &mut Tes
     cx.update_window(h.window, |_, window, cx| window.press("cmd-z", cx))
         .unwrap();
     assert_eq!(mesh(cx).meshing, after.meshing);
+}
+
+#[gpui_kit::test]
+fn manual_mesh_mixed_dependencies_enter_edit_and_generate_interior(cx: &mut TestAppContext) {
+    let (doc, assets) = document_fixture::mixed_document().unwrap();
+    let h = setup_with_document(cx, doc, assets);
+    cx.update_window(h.window, |_, window, cx| {
+        window.activate_window();
+        window.render_frame(cx);
+        window.click("tool_manual_mesh", cx);
+    })
+    .unwrap();
+    present(&h, cx);
+    assert!(h.view.read_with(cx, |v, _| v.editor.manual_active()));
+    cx.update_window(h.window, |_, window, cx| {
+        let view = h.view.read(cx);
+        let frame = &view.modeling_frame().unwrap().canvas;
+        let t = view.editor.manual_target().unwrap();
+        let p = frame.transform.to_viewport(zipzi_editor_core::ModelPoint {
+            x: t.texture.width as f32 * 0.35,
+            y: t.texture.height as f32 * 0.25,
+        });
+        window.click_at("canvas-body", point(px(p.x), px(p.y)), cx);
+    })
+    .unwrap();
+    present(&h, cx);
+    h.view.read_with(cx, |v, _| {
+        let doc = v.editor.document().unwrap();
+        assert_eq!(doc.history_lengths(), (1, 0));
+        let host = doc.runtime_host();
+        let rt = host.read();
+        let model = rt.document(doc.runtime_session_id()).unwrap();
+        let id = "a8210000-0000-4000-8000-000000000002";
+        assert_eq!(model.get_mesh(id).unwrap().vertex_ids.len(), 6);
+        assert_eq!(
+            model.binding_for_mesh(id).unwrap().keyforms[0]
+                .positions
+                .len(),
+            6
+        );
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("tool_generate_mesh", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, _| {
+        assert!(window.find("mesh-generation-stage-interior").visible());
+        assert!(window.find("mesh-generation-stage-edges").visible());
+    })
+    .unwrap();
 }

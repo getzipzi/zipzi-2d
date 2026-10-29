@@ -449,18 +449,20 @@ impl HostedEdit {
         &mut self,
         mesh_id: &str,
         operation: zipzi_sdk::ManualMeshOperation,
-    ) -> zipzi_runtime::Result<zipzi_runtime::SourceRef> {
+    ) -> zipzi_runtime::Result<zipzi_sdk::ManualMeshTransferReport> {
         let expected = self.source_ref();
-        self.host.write().apply_modeling(
+        let result = self.host.write().apply_authoring(
             self.client,
             self.id.expect("active candidate"),
-            vec![zipzi_runtime::modeling::ModelingCommand::ManualMesh {
-                mesh_id: mesh_id.into(),
-                expected,
-                operation,
+            vec![zipzi_runtime::authoring::EditOperation::Modeling {
+                operation: Box::new(zipzi_runtime::modeling::ModelingCommand::ManualMesh {
+                    mesh_id: mesh_id.into(),
+                    expected,
+                    operation,
+                }),
             }],
         )?;
-        Ok(self.source_ref())
+        Ok(result.mesh_transfer.expect("manual transfer report"))
     }
 
     pub(crate) fn source_ref(&self) -> zipzi_runtime::SourceRef {
