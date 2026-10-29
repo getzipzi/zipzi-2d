@@ -13,11 +13,11 @@ test-support = []
 bench-instrumentation = ["zipzi-project/bench-instrumentation"]
 
 [dependencies]
-zipzi-api-derive = { version = "=0.1.0-alpha.2", path = "../zipzi-api-derive" }
+zipzi-api-derive = { version = "=0.1.0-alpha.3", path = "../zipzi-api-derive" }
 zipzi-core.workspace = true
 zipzi-sdk.workspace = true
 zipzi-project.workspace = true
-zipzi-observe = { version = "=0.1.0-alpha.2", path = "../zipzi-observe", optional = true }
+zipzi-observe = { version = "=0.1.0-alpha.3", path = "../zipzi-observe", optional = true }
 uuid.workspace = true
 thiserror.workspace = true
 serde.workspace = true

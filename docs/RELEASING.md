@@ -26,10 +26,10 @@ Prepare the next version from the repository root. Regenerate the Python SDK
 catalog and reference so their embedded package version is synchronized:
 
 ```sh
-python3 tools/packaging/release.py set 0.1.0-alpha.2
+python3 tools/packaging/release.py set 0.1.0-alpha.3
 uv run --locked python crates/zipzi-python2/tools/generate.py
 cargo metadata --locked --offline --no-deps --format-version 1 > /dev/null
-python3 tools/packaging/release.py check --tag v0.1.0-alpha.2
+python3 tools/packaging/release.py check --tag v0.1.0-alpha.3
 ```
 
 The tool also supports stable, `beta.N` and `rc.N` versions. Only Alpha tags
@@ -92,8 +92,8 @@ For each release:
    Alpha tag matching the workspace version. For example:
 
    ```sh
-   git tag -a v0.1.0-alpha.2 -m 'Zipzi 0.1.0 Alpha 2'
-   git push origin main refs/tags/v0.1.0-alpha.2
+   git tag -a v0.1.0-alpha.3 -m 'Zipzi 0.1.0 Alpha 3'
+   git push origin main refs/tags/v0.1.0-alpha.3
    ```
 
 4. Follow **Actions → Alpha release**. The tag reuses a successful build of the
@@ -148,7 +148,7 @@ adapter retains its internal `zipzi-python2` name. Equivalent local preparation:
 uv sync --locked
 python3 tools/packaging/release.py check
 uv run --locked python crates/zipzi-python2/tools/distribution.py \
-  --output target/python-release-0.1.0a2
+  --output target/python-release-0.1.0a3
 ```
 
 ## Rust package preparation

@@ -8,7 +8,7 @@ name = "zipzi-native"
 dynamic = ["version"]
 requires-python = ">=3.14,<3.15"
 description = "Optional in-process Runtime backend for zipzi"
-dependencies = ["zipzi==0.1.0a2"]
+dependencies = ["zipzi==0.1.0a3"]
 license = "MIT"
 license-files = ["LICENSE-MIT", "THIRD_PARTY_NOTICES.md"]
 readme = "README.md"

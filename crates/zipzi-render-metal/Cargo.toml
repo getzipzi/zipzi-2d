@@ -11,8 +11,8 @@ benchmark-global-surfaces = []
 
 [dependencies]
 bytemuck = { workspace = true }
-zipzi-core = { version = "=0.1.0-alpha.2", path = "../zipzi-core" }
-zipzi-render = { version = "=0.1.0-alpha.2", path = "../zipzi-render" }
+zipzi-core = { version = "=0.1.0-alpha.3", path = "../zipzi-core" }
+zipzi-render = { version = "=0.1.0-alpha.3", path = "../zipzi-render" }
 thiserror = { workspace = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]

@@ -12,7 +12,7 @@ default = ["purism-validation"]
 purism-validation = []
 
 [dependencies]
-zipzi-core = { version = "=0.1.0-alpha.2", path = "../zipzi-core" }
+zipzi-core = { version = "=0.1.0-alpha.3", path = "../zipzi-core" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
@@ -22,7 +22,7 @@ sha2 = { workspace = true }
 cc = "1.0"
 
 [dev-dependencies]
-zipzi-project = { version = "=0.1.0-alpha.2", path = "../zipzi-project" }
+zipzi-project = { version = "=0.1.0-alpha.3", path = "../zipzi-project" }
 
 [[bench]]
 name = "moc3_benchmark"
