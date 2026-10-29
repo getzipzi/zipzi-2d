@@ -217,8 +217,15 @@ impl EditorView {
             commands: COMMANDS
                 .iter()
                 .map(|s| {
-                    let command =
-                        self.viewport_command(s.id, zipzi_editor_core::CommandSource::NativeMenu);
+                    let command = if s.id == CommandId::DeleteObject {
+                        self.object_deletion_invocation(
+                            zipzi_editor_core::CommandSource::NativeMenu,
+                            window,
+                            cx,
+                        )
+                    } else {
+                        self.viewport_command(s.id, zipzi_editor_core::CommandSource::NativeMenu)
+                    };
                     let state = if let Some(capability) = capabilities.get(&s.id) {
                         self.editor
                             .command_state_with_authoring_capability(command, capability)
@@ -246,8 +253,16 @@ impl EditorView {
             targets: COMMANDS
                 .iter()
                 .map(|spec| {
-                    self.viewport_command(spec.id, zipzi_editor_core::CommandSource::NativeMenu)
-                        .target
+                    if spec.id == CommandId::DeleteObject {
+                        self.object_deletion_invocation(
+                            zipzi_editor_core::CommandSource::NativeMenu,
+                            window,
+                            cx,
+                        )
+                    } else {
+                        self.viewport_command(spec.id, zipzi_editor_core::CommandSource::NativeMenu)
+                    }
+                    .target
                 })
                 .collect(),
             text,
@@ -279,7 +294,15 @@ impl EditorView {
                 .items(items)
         };
         let item = |id: CommandId| {
-            let command = self.viewport_command(id, zipzi_editor_core::CommandSource::NativeMenu);
+            let command = if id == CommandId::DeleteObject {
+                self.object_deletion_invocation(
+                    zipzi_editor_core::CommandSource::NativeMenu,
+                    window,
+                    cx,
+                )
+            } else {
+                self.viewport_command(id, zipzi_editor_core::CommandSource::NativeMenu)
+            };
             let state =
                 self.menu_state.commands[COMMANDS.iter().position(|spec| spec.id == id).unwrap()];
             let mut label = t!(id.spec().label).into_owned();
@@ -292,7 +315,7 @@ impl EditorView {
                 }
             }
             MenuItem::action(label, RunCommand::targeted(command))
-                .disabled(modal || !state.enabled)
+                .disabled(modal || !state.enabled || (text && id == CommandId::DeleteObject))
                 .checked(state.checked)
         };
         let edit = if text {
@@ -369,6 +392,7 @@ impl EditorView {
                         item(CommandId::SelectAll)
                     },
                     item(CommandId::Deselect),
+                    item(CommandId::DeleteObject),
                     item(CommandId::CommitProperty),
                     item(CommandId::CancelProperty),
                     MenuItem::separator(),

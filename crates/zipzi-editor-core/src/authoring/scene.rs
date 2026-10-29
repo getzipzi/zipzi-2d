@@ -5,6 +5,21 @@ use zipzi_sdk::{
     DrawingGroupAddress, SceneCapabilities, SceneEdit, SceneEditPlan, SceneField,
     SceneFieldAddress, SceneFieldValue,
 };
+
+/// A frozen deletion in the hierarchy projection that supplied the selection.
+#[derive(Debug, Clone)]
+pub enum TreeDeletionPlan {
+    Organization(zipzi_sdk::OrganizationEditPlan),
+    Deformation(SceneEditPlan),
+}
+impl TreeDeletionPlan {
+    pub fn removed_ids(&self) -> &[String] {
+        match self {
+            Self::Organization(plan) => plan.affected_ids(),
+            Self::Deformation(plan) => plan.affected_ids(),
+        }
+    }
+}
 #[derive(Debug, Clone)]
 pub struct SceneAuthoringCapabilities {
     pub domain: SceneCapabilities,
@@ -12,6 +27,38 @@ pub struct SceneAuthoringCapabilities {
 }
 
 impl Document {
+    pub fn plan_tree_deletion(
+        &self,
+        projection: PaletteProjection,
+        objects: &[ObjectRef],
+    ) -> Result<TreeDeletionPlan> {
+        for object in objects {
+            anyhow::ensure!(
+                matches!(object.kind, ObjectKind::Mesh | ObjectKind::Deformer)
+                    || (projection == PaletteProjection::Organization
+                        && matches!(object.kind, ObjectKind::Part | ObjectKind::Offscreen)),
+                "Expected hierarchy tree objects"
+            );
+            self.session
+                .handle(object.kind.sdk_kind().unwrap(), &object.id)?;
+        }
+        let ids = objects.iter().map(|object| object.id.clone()).collect();
+        Ok(match projection {
+            PaletteProjection::Organization => TreeDeletionPlan::Organization(
+                self.plan_organization_authoring(zipzi_sdk::OrganizationEdit::Delete {
+                    ids,
+                    policy: zipzi_sdk::OrganizationDeletePolicy::Contents,
+                })?,
+            ),
+            PaletteProjection::Deformation => {
+                TreeDeletionPlan::Deformation(self.plan_scene_authoring(SceneEdit::Delete {
+                    ids,
+                    scope: zipzi_sdk::SceneCopyScope::DeformationSubtree,
+                })?)
+            }
+            PaletteProjection::Parameters => anyhow::bail!("Expected hierarchy tree projection"),
+        })
+    }
     pub fn scene_authoring_capabilities(
         &self,
         object: &ObjectRef,
@@ -75,6 +122,21 @@ impl Document {
     }
 }
 impl crate::Editor {
+    pub fn execute_tree_deletion(
+        &mut self,
+        id: crate::DocumentId,
+        plan: &TreeDeletionPlan,
+    ) -> Result<OperationResult> {
+        self.ensure_authoring_target(id, "Tree deletion")?;
+        anyhow::ensure!(
+            self.editing_context() == Some(crate::EditingContext::Modeling),
+            "Modeling context changed"
+        );
+        match plan {
+            TreeDeletionPlan::Organization(plan) => self.execute_organization_authoring(id, plan),
+            TreeDeletionPlan::Deformation(plan) => self.execute_scene_authoring(id, plan),
+        }
+    }
     pub fn plan_scene_authoring(
         &self,
         id: crate::DocumentId,

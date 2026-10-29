@@ -103,6 +103,24 @@ in [`acceptance/screenshots.rs`](acceptance/screenshots.rs). Screenshots go to
 `target/headless-screenshots/` by default; `ZIPZI_SCREENSHOT_DIR` overrides the
 output directory.
 
+## Object deletion
+
+In Modeling, **Delete Object** is shared by the Edit menu, the Part and Deformer
+row menus, the viewport context menu, and the configurable `edit.delete-object`
+shortcut (Delete and Backspace by default). Shortcuts use keyboard focus before
+pointer hover and leave text editing and timeline deletion to their own controls.
+In Mesh Edit, the same keys delete selected geometry instead of the mesh object.
+Right-clicking a selected row uses the current selection; another row targets
+only that object. Part tree deletion includes organization descendants, while
+Deformer tree and viewport deletion include deformation descendants. Owned
+bindings are removed with their targets. Multiple removals require a review of the frozen
+deletion list, with Cancel focused initially. Each deletion is one undo step.
+Locked objects (including inherited locks and locked descendants) and references
+from outside the deletion set block the operation. Menu labels stay short; clicking
+an unavailable action explains the reason in the status bar without changing the
+document. This feedback is shared by creation and other object context menus.
+Changing the document or workspace expires an open deletion menu or review.
+
 ## Mesh Edit
 
 Mesh Edit retains the complete model and its current camera. The selected mesh's

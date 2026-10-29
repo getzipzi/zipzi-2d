@@ -186,6 +186,7 @@ pub(super) fn menu<const DEFORMER: bool, E: ContextMenuExt + IntoElement + 'stat
             vec![object.clone()]
         };
         let creation_selection = objects.clone();
+        let deletion_selection = objects.clone();
         let objects: Vec<_> = objects.into_iter().filter(|r| locks.contains(r)).collect();
         for (locked, label) in [
             (true, t!("editor.lock_selected")),
@@ -239,7 +240,7 @@ pub(super) fn menu<const DEFORMER: bool, E: ContextMenuExt + IntoElement + 'stat
                 cx,
             );
         }
-        super::sorting::move_menu(
+        let menu = super::sorting::move_menu(
             menu.separator(),
             owner.clone(),
             document,
@@ -249,6 +250,24 @@ pub(super) fn menu<const DEFORMER: bool, E: ContextMenuExt + IntoElement + 'stat
                 zipzi_editor_core::PaletteProjection::Organization
             },
             object.clone(),
+            cx,
+        );
+        crate::authoring::object_deletion::append_menu(
+            menu,
+            owner.clone(),
+            zipzi_editor_core::Command {
+                id: zipzi_editor_core::CommandId::DeleteObject,
+                source: zipzi_editor_core::CommandSource::ContextMenu,
+                target: zipzi_editor_core::CommandTarget::Hierarchy {
+                    document,
+                    projection: if DEFORMER {
+                        zipzi_editor_core::PaletteProjection::Deformation
+                    } else {
+                        zipzi_editor_core::PaletteProjection::Organization
+                    },
+                },
+            },
+            &deletion_selection,
             cx,
         )
     })

@@ -268,3 +268,36 @@ fn duplicate_overrides_are_rejected_per_platform_and_config_keeps_semantic_keys(
     assert_eq!(restored.bindings[0].keys, ["secondary-alt-o"]);
     Ok(())
 }
+
+#[test]
+fn object_deletion_shortcuts_are_configurable_and_disjoint_from_timeline() -> anyhow::Result<()> {
+    for platform in [ShortcutPlatform::Macos, ShortcutPlatform::Windows] {
+        let defaults = resolve(platform, vec![])?;
+        assert_eq!(
+            keys(&defaults, CommandId::DeleteObject),
+            ["backspace", "delete"]
+        );
+        assert_eq!(
+            keys(&defaults, CommandId::TimelineDelete),
+            ["backspace", "delete"]
+        );
+        assert!(keys(&defaults, CommandId::ManualRemoveSelection).is_empty());
+        let custom = resolve(
+            platform,
+            vec![binding(CommandId::DeleteObject, None, &["alt-d"])],
+        )?;
+        assert_eq!(keys(&custom, CommandId::DeleteObject), ["alt-d"]);
+    }
+    assert_eq!(
+        serde_json::to_value(CommandId::DeleteObject)?,
+        "edit.delete-object"
+    );
+    assert!(
+        resolve(
+            ShortcutPlatform::Macos,
+            vec![binding(CommandId::DeleteObject, None, &["secondary-s"])]
+        )
+        .is_err()
+    );
+    Ok(())
+}

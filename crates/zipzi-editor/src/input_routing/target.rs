@@ -25,8 +25,38 @@ impl InputTarget {
     }
 }
 
-pub(super) fn command_at(editor: &Editor, id: CommandId, target: Option<LocalTarget>) -> Command {
+pub(crate) fn command_at(editor: &Editor, id: CommandId, target: Option<LocalTarget>) -> Command {
     match (id.spec().scope, target) {
+        (CommandScope::Objects, Some(LocalTarget::Viewport(binding))) => {
+            editor.command_for_viewport(id, binding, CommandSource::Shortcut)
+        }
+        (CommandScope::Objects, Some(LocalTarget::Panel(panel)))
+            if matches!(
+                panel,
+                zipzi_editor_core::PanelKind::PartsTree | zipzi_editor_core::PanelKind::Deformers
+            ) =>
+        {
+            Command {
+                id,
+                source: CommandSource::Shortcut,
+                target: editor
+                    .active_id()
+                    .map(|document| CommandTarget::Hierarchy {
+                        document,
+                        projection: if panel == zipzi_editor_core::PanelKind::Deformers {
+                            zipzi_editor_core::PaletteProjection::Deformation
+                        } else {
+                            zipzi_editor_core::PaletteProjection::Organization
+                        },
+                    })
+                    .unwrap_or(CommandTarget::Unavailable),
+            }
+        }
+        (CommandScope::Objects, _) => Command {
+            id,
+            source: CommandSource::Shortcut,
+            target: CommandTarget::Unavailable,
+        },
         (CommandScope::Viewport, Some(LocalTarget::Viewport(binding))) => {
             editor.command_for_viewport(id, binding, CommandSource::Shortcut)
         }

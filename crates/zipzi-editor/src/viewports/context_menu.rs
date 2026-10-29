@@ -20,6 +20,16 @@ impl ViewportSurface {
         if window.has_active_dialog(cx) {
             return menu;
         }
+        let Some(document) = owner.read(cx).editor.active_id() else {
+            return menu;
+        };
+        if !owner.read(cx).editor.manual_active()
+            && !owner.update(cx, |view, cx| {
+                view.prepare_property_inputs(document, window, cx)
+            })
+        {
+            return menu;
+        }
         let state = owner.read(cx);
         if state.modal
             || state.editor.is_busy()
@@ -43,6 +53,21 @@ impl ViewportSurface {
                 .modeling_frame_for(canvas.read(cx).viewport)
                 .and_then(|frame| state.editor.manual_edge_at(&frame.canvas, point));
             let target = state.editor.manual_target();
+            let deletion = state.editor.command_for_viewport(
+                CommandId::DeleteObject,
+                binding,
+                zipzi_editor_core::CommandSource::ContextMenu,
+            );
+            let delete_owner = menu_owner.clone();
+            menu = menu.item(
+                PopupMenuItem::new(t!(CommandId::ManualRemoveSelection.spec().label).into_owned())
+                    .action(Box::new(crate::actions::RunCommand::targeted(deletion)))
+                    .disabled(!state.editor.command_available(deletion))
+                    .on_click(move |_, window, cx| {
+                        let _ = delete_owner
+                            .update(cx, |view, cx| view.run_invocation(deletion, window, cx));
+                    }),
+            );
             let command = CommandId::ManualReconnect;
             let invocation = state.editor.command_for_viewport(
                 command,
@@ -202,6 +227,19 @@ impl ViewportSurface {
                             window.defer(cx, move |window, cx| window.focus(&focus, cx));
                         }
                     }),
+            );
+        }
+        if !state.editor.manual_active() {
+            menu = crate::authoring::object_deletion::append_menu(
+                menu,
+                menu_owner.clone(),
+                state.editor.command_for_viewport(
+                    CommandId::DeleteObject,
+                    binding,
+                    zipzi_editor_core::CommandSource::ContextMenu,
+                ),
+                &state.editor.document().unwrap().context().selections,
+                cx,
             );
         }
         menu

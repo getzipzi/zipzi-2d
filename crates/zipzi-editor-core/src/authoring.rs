@@ -80,7 +80,7 @@ pub use organization::OrganizationAuthoringCapabilities;
 
 #[path = "authoring/scene.rs"]
 mod scene;
-pub use scene::SceneAuthoringCapabilities;
+pub use scene::{SceneAuthoringCapabilities, TreeDeletionPlan};
 
 #[path = "authoring/content.rs"]
 mod content;

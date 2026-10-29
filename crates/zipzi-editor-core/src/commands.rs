@@ -69,6 +69,8 @@ pub enum CommandId {
     Undo,
     #[serde(rename = "edit.redo")]
     Redo,
+    #[serde(rename = "edit.delete-object")]
+    DeleteObject,
     #[serde(rename = "edit.deselect")]
     Deselect,
     #[serde(rename = "edit.select-all")]
@@ -210,6 +212,7 @@ pub enum CommandScope {
     Timeline,
     Property,
     Palette,
+    Objects,
 }
 impl CommandScope {
     pub fn overlaps(self, other: Self) -> bool {
@@ -219,8 +222,10 @@ impl CommandScope {
                 (self, other),
                 (Window, _)
                     | (_, Window)
-                    | (Document, Viewport | Timeline | Palette)
-                    | (Viewport | Timeline | Palette, Document)
+                    | (Document, Viewport | Timeline | Palette | Objects)
+                    | (Viewport | Timeline | Palette | Objects, Document)
+                    | (Objects, Viewport | Palette)
+                    | (Viewport | Palette, Objects)
             )
     }
 }
@@ -346,6 +351,13 @@ specs![
     (Next, "menu.next_document", Window, false, ["ctrl-tab"]),
     (Undo, "menu.undo", Document, false, ["secondary-z"]),
     (Redo, "menu.redo", Document, false, ["secondary-shift-z"]),
+    (
+        DeleteObject,
+        "authoring.delete_object",
+        Objects,
+        false,
+        ["backspace", "delete"]
+    ),
     (Deselect, "menu.deselect", Document, false, ["secondary-d"]),
     (
         SelectAll,
@@ -555,7 +567,7 @@ specs![
         "editor.tool_manual_remove_selection",
         Viewport,
         false,
-        ["backspace", "delete"]
+        []
     ),
     (
         ManualSourceView,
@@ -658,6 +670,10 @@ pub enum CommandTarget {
     Unavailable,
     Window,
     Document(DocumentId),
+    Hierarchy {
+        document: DocumentId,
+        projection: crate::PaletteProjection,
+    },
     Viewport(crate::ViewportBinding),
     Timeline(TimelineCommandTarget),
 }
@@ -668,9 +684,18 @@ pub struct Command {
     pub source: CommandSource,
 }
 impl Command {
+    pub fn deletion_projection(self) -> crate::PaletteProjection {
+        match self.target {
+            CommandTarget::Hierarchy { projection, .. } => projection,
+            CommandTarget::Viewport(_) => crate::PaletteProjection::Deformation,
+            _ => crate::PaletteProjection::Organization,
+        }
+    }
     pub fn document(self) -> Option<DocumentId> {
         match self.target {
-            CommandTarget::Document(document) => Some(document),
+            CommandTarget::Document(document) | CommandTarget::Hierarchy { document, .. } => {
+                Some(document)
+            }
             CommandTarget::Viewport(binding) => Some(binding.document),
             CommandTarget::Timeline(target) => Some(target.document),
             _ => None,
@@ -713,7 +738,8 @@ impl Editor {
             CommandScope::Window
             | CommandScope::Document
             | CommandScope::Property
-            | CommandScope::Palette => self
+            | CommandScope::Palette
+            | CommandScope::Objects => self
                 .active_id()
                 .map(CommandTarget::Document)
                 .unwrap_or(CommandTarget::Unavailable),
@@ -791,6 +817,12 @@ impl Editor {
     }
     fn command_target_valid(&self, command: Command) -> bool {
         match (command.id.spec().scope, command.target) {
+            (CommandScope::Objects, CommandTarget::Hierarchy { document, .. }) => {
+                self.active_id() == Some(document)
+            }
+            (CommandScope::Objects, CommandTarget::Viewport(binding)) => {
+                self.viewport_binding_valid(binding)
+            }
             (CommandScope::Viewport, CommandTarget::Viewport(binding)) => {
                 self.viewport_binding_valid(binding)
             }
@@ -809,7 +841,10 @@ impl Editor {
                 self.active_id() == Some(document)
                     && (matches!(
                         scope,
-                        CommandScope::Document | CommandScope::Property | CommandScope::Palette
+                        CommandScope::Document
+                            | CommandScope::Property
+                            | CommandScope::Palette
+                            | CommandScope::Objects
                     ) || matches!(
                         command.id,
                         CommandId::Save | CommandId::SaveAs | CommandId::Close
@@ -1009,6 +1044,15 @@ impl Editor {
             | ManualRemoveSelection
             | ManualSourceView => modeling && target && !self.is_busy() && self.manual_editable()
                 && matches!(command.target,CommandTarget::Viewport(b) if self.manual_for_viewport(b.viewport)),
+            DeleteObject => {
+                modeling && target && !self.is_busy() && !self.exiting() && !self.gesture_active()
+                    && if self.manual_active() {
+                        self.manual_editable() && matches!(command.target, CommandTarget::Viewport(b) if self.manual_for_viewport(b.viewport))
+                    } else {
+                        self.document().is_some_and(|doc| doc.plan_tree_deletion(
+                            command.deletion_projection(), &doc.context().selections).is_ok())
+                    }
+            }
             PaletteMoveUp | PaletteMoveDown | PaletteMoveTo => {
                 target && !self.is_busy() && !self.exiting()
             }
@@ -1172,7 +1216,8 @@ impl Editor {
                     .set_manual_tool(tool, &mut session.document);
                 session.invalidate_scene();
             }
-            ManualRemoveSelection => {
+            DeleteObject if !self.manual_active() => return Ok(CommandEffect::Host(command)),
+            ManualRemoveSelection | DeleteObject => {
                 let session = self.active_session_mut().unwrap();
                 if session
                     .modeling

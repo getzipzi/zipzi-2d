@@ -390,19 +390,18 @@ pub(crate) fn row_menu<E: ContextMenuExt + IntoElement + 'static>(
                 AnimationAction::RemoveEntry(_) | AnimationAction::DeleteAnimation(..) => 3,
                 _ => unreachable!("not a context menu action"),
             };
-            let label = availability
-                .reason
-                .map_or(label.clone(), |reason| format!("{label} · {reason}"));
+            let reason = availability.reason.map(|reason| reason.to_string());
             let owner = owner.clone();
             items.push((
                 section,
-                PopupMenuItem::new(label)
-                    .disabled(!availability.enabled)
-                    .on_click(move |_, window, cx| {
-                        let _ = owner.update(cx, |state, cx| {
-                            state.run_animation_action(context, action.clone(), window, cx)
-                        });
-                    }),
+                PopupMenuItem::new(label).on_click(move |_, window, cx| {
+                    let _ = owner.update(cx, |state, cx| {
+                        if state.authoring_menu_feedback(context, reason.as_deref(), window, cx) {
+                            return;
+                        }
+                        state.run_animation_action(context, action.clone(), window, cx)
+                    });
+                }),
             ));
         }
         items.sort_by_key(|(section, _)| *section);

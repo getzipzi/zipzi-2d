@@ -11,6 +11,7 @@ pub(crate) mod business;
 mod presentation;
 pub(crate) mod texture;
 pub(crate) use availability::{authoring_error, error_code};
+pub(crate) mod object_deletion;
 pub(crate) mod scene_creation;
 pub(crate) use presentation::AuthoringPresentation;
 
@@ -79,6 +80,28 @@ impl ActionAvailability {
 }
 
 impl EditorView {
+    /// Keep menu labels compact; explain unavailable actions through normal feedback.
+    pub(crate) fn authoring_menu_feedback(
+        &mut self,
+        context: AuthoringContext,
+        reason: Option<&str>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        if self.modal || window.has_active_dialog(cx) {
+            return true;
+        }
+        if AuthoringContext::capture(&self.editor) != Some(context) {
+            self.set_status_message(t!("authoring.move_stale").into_owned(), cx);
+            return true;
+        }
+        if let Some(reason) = reason {
+            self.set_status_message(reason, cx);
+            return true;
+        }
+        false
+    }
+
     pub(crate) fn execute_authoring(
         &mut self,
         context: AuthoringContext,

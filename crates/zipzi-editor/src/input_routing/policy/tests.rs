@@ -265,3 +265,44 @@ fn held_nonrepeat_binding_is_consumed_without_falling_through_or_executing() {
         }
     );
 }
+
+#[test]
+fn object_deletion_uses_focus_before_hover_and_leaves_text_and_timeline_alone() {
+    let mut facts = facts();
+    let viewport = targets()[0];
+    let tree = InputTarget::new(LocalTarget::Panel(PanelKind::PartsTree));
+    let bindings = bindings(&[CommandId::DeleteObject, CommandId::TimelineDelete]);
+    facts.focused = Some(tree);
+    facts.hovered = Some(viewport);
+    assert_eq!(
+        decide(&facts, &bindings, |_| true),
+        KeyDecision::Invoke {
+            id: CommandId::DeleteObject,
+            target: Some(tree.local),
+        }
+    );
+    facts.focused = Some(viewport);
+    facts.hovered = Some(tree);
+    assert_eq!(
+        decide(&facts, &bindings, |_| true),
+        KeyDecision::Invoke {
+            id: CommandId::DeleteObject,
+            target: Some(viewport.local),
+        }
+    );
+    set_keyboard(&mut facts, KeyboardOwner::Text);
+    assert_eq!(decide(&facts, &bindings, |_| true), KeyDecision::Ignore);
+    set_keyboard(&mut facts, KeyboardOwner::Editor);
+    facts.focused = Some(targets()[1]);
+    facts.hovered = None;
+    assert_eq!(
+        decide(&facts, &bindings, |_| true),
+        KeyDecision::Invoke {
+            id: CommandId::TimelineDelete,
+            target: facts.focused.map(|t| t.local),
+        }
+    );
+    facts.focused = Some(viewport);
+    facts.held = true;
+    assert_eq!(decide(&facts, &bindings, |_| true), KeyDecision::Consume);
+}

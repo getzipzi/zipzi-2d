@@ -330,27 +330,29 @@ pub(super) fn row_menu<E: ContextMenuExt + IntoElement + 'static>(
             let Some(availability) = action.availability(&owner.read(cx).editor) else {
                 continue;
             };
-            let label = availability.reason.as_ref().map_or_else(
-                || action.label(),
-                |reason| format!("{} · {reason}", action.label()).into(),
-            );
+            let label = action.label();
+            let reason = availability.reason.map(|reason| reason.to_string());
             let panel = panel.clone();
             let action = action.clone();
-            menu = menu.item(
-                PopupMenuItem::new(label)
-                    .disabled(!availability.enabled)
-                    .on_click(move |_, window, cx| {
-                        let _ = panel.update(cx, |p, cx| {
-                            if p.document_id == document
-                                && p.owner.upgrade().is_some_and(|owner| {
-                                    AuthoringContext::capture(&owner.read(cx).editor) == context
-                                })
-                            {
-                                p.open_management(action.clone(), window, cx);
-                            }
-                        });
-                    }),
-            );
+            menu = menu.item(PopupMenuItem::new(label).on_click(move |_, window, cx| {
+                let _ = panel.update(cx, |p, cx| {
+                    let (Some(owner), Some(captured)) = (p.owner.upgrade(), context) else {
+                        return;
+                    };
+                    if owner.update(cx, |view, cx| {
+                        view.authoring_menu_feedback(captured, reason.as_deref(), window, cx)
+                    }) {
+                        return;
+                    }
+                    if p.document_id == document
+                        && p.owner.upgrade().is_some_and(|owner| {
+                            AuthoringContext::capture(&owner.read(cx).editor) == context
+                        })
+                    {
+                        p.open_management(action.clone(), window, cx);
+                    }
+                });
+            }));
         }
         if let Some(object) = actions.iter().find_map(|action| match action {
             ParameterAction::Edit(id) => Some(zipzi_editor_core::ObjectRef::new(

@@ -238,7 +238,7 @@ fn filtered_creation_uses_hidden_sibling_and_reveals_without_changing_query(
 }
 
 #[gpui_kit::test]
-fn locked_destination_explains_rejection_and_stale_menu_cannot_create(cx: &mut TestAppContext) {
+fn menu_feedback_explains_locked_destination_and_stale_menu_cannot_create(cx: &mut TestAppContext) {
     let (h, _, _, _) = fixture(cx, true);
     let history = h.view.read_with(cx, |view, _| {
         view.editor.document().unwrap().history_lengths()
@@ -251,10 +251,10 @@ fn locked_destination_explains_rejection_and_stale_menu_cannot_create(cx: &mut T
     cx.update_window(h.window, |_, window, cx| {
         let i = (0..8usize)
             .find(|&i| {
-                window.within("popup-menu").try_find(i).is_some_and(|e| {
-                    e.label()
-                        .is_some_and(|l| l.starts_with("New Mesh · Unlock"))
-                })
+                window
+                    .within("popup-menu")
+                    .try_find(i)
+                    .is_some_and(|e| e.label().is_some_and(|l| l == "New Mesh"))
             })
             .unwrap();
         window.within("popup-menu").click(i, cx);
@@ -448,4 +448,160 @@ fn native_deformation_submenu_dispatches_the_typed_projection_and_explains_inval
         })
     })
     .unwrap();
+}
+
+#[gpui_kit::test]
+fn deformer_tree_deletion_reviews_and_deletes_deformation_descendants(cx: &mut TestAppContext) {
+    cx.update(|cx| cx.set_reduce_motion(true));
+    let (h, parent, part, meshes) = fixture(cx, false);
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        window.click_with_options(
+            format!("deformer-item-WarpDeformer:{}", parent.id),
+            ClickOptions::new().with_button(MouseButton::Right),
+            cx,
+        );
+    })
+    .unwrap();
+    choose(&h, "Delete Object", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("tree-deletion-dialog").visible());
+        window.click("tree-deletion-submit", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    h.view.read_with(cx, |view, _| {
+        let d = view.editor.document().unwrap();
+        assert!(d.object_index().get(&part).is_some());
+        assert!(d.object_index().get(&parent).is_none());
+        for mesh in &meshes {
+            assert!(d.object_index().get(mesh).is_none());
+        }
+    });
+}
+
+#[gpui_kit::test]
+fn menu_feedback_explains_deletion_locks_and_rejects_changed_document(cx: &mut TestAppContext) {
+    let (h, parent, _, meshes) = fixture(cx, true);
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        window.click_with_options(
+            format!("deformer-item-WarpDeformer:{}", parent.id),
+            ClickOptions::new().with_button(MouseButton::Right),
+            cx,
+        );
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        let item = (0..24usize)
+            .find_map(|i| {
+                let item = window.within("popup-menu").try_find(i)?;
+                item.label()
+                    .is_some_and(|label| label == "Delete Object")
+                    .then_some(i)
+            })
+            .expect("compact deletion action");
+        window.within("popup-menu").click(item, cx);
+        assert!(h.view.read(cx).message.starts_with("Unlock"));
+        assert!(h.view.read(cx).edit_error.is_none());
+        window.render_frame(cx);
+        assert!(window.try_find("tree-deletion-dialog").is_none());
+        assert!(
+            h.view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .object_index()
+                .get(&parent)
+                .is_some()
+        );
+        window.press("escape", cx);
+        h.view.update(cx, |view, cx| {
+            view.editor
+                .execute(EditorCommand::SetObjectsLocked {
+                    objects: vec![parent.clone()],
+                    locked: false,
+                })
+                .unwrap();
+            view.redraw(cx);
+        });
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        window.click_with_options(
+            format!("deformer-item-WarpDeformer:{}", parent.id),
+            ClickOptions::new().with_button(MouseButton::Right),
+            cx,
+        );
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, _, cx| {
+        h.view.update(cx, |view, _| {
+            view.editor
+                .execute(EditorCommand::SetObjectsLocked {
+                    objects: vec![parent.clone()],
+                    locked: true,
+                })
+                .unwrap();
+        });
+    })
+    .unwrap();
+    choose(&h, "Delete Object", cx);
+    h.view.read_with(cx, |view, _| {
+        let d = view.editor.document().unwrap();
+        assert!(d.object_index().get(&parent).is_some());
+        for mesh in &meshes {
+            assert!(d.object_index().get(mesh).is_some());
+        }
+    });
+}
+
+#[gpui_kit::test]
+fn object_deletion_deformer_shortcut_and_edit_menu_use_deformation_scope(cx: &mut TestAppContext) {
+    cx.update(|cx| cx.set_reduce_motion(true));
+    for shortcut in [true, false] {
+        let (h, parent, part, meshes) = fixture(cx, false);
+        cx.update_window(h.window, |_, window, cx| {
+            window.render_frame(cx);
+            window.click(format!("deformer-item-WarpDeformer:{}", parent.id), cx);
+            window.hover("canvas-body", cx);
+            if shortcut {
+                window.press("backspace", cx);
+            } else {
+                h.view.update(cx, |view, cx| {
+                    let command = view.object_deletion_invocation(
+                        zipzi_editor_core::CommandSource::NativeMenu,
+                        window,
+                        cx,
+                    );
+                    assert_eq!(command.deletion_projection(), P::Deformation);
+                    view.run_invocation(command, window, cx);
+                });
+            }
+        })
+        .unwrap();
+        cx.run_until_parked();
+        cx.update_window(h.window, |_, window, cx| {
+            window.render_frame(cx);
+            assert!(window.find("tree-deletion-dialog").visible());
+            window.click("tree-deletion-submit", cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+        h.view.read_with(cx, |view, _| {
+            let d = view.editor.document().unwrap();
+            assert!(d.object_index().get(&part).is_some());
+            assert!(d.object_index().get(&parent).is_none());
+            for mesh in &meshes {
+                assert!(d.object_index().get(mesh).is_none());
+            }
+        });
+    }
 }

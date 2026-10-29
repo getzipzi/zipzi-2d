@@ -287,7 +287,7 @@ fn filtered_creation_reveals_new_item_and_ancestors_without_clearing_conditions(
 }
 
 #[gpui_kit::test]
-fn locked_container_creation_is_disabled_with_reason_and_no_publication(cx: &mut TestAppContext) {
+fn menu_feedback_explains_locked_creation_without_publication(cx: &mut TestAppContext) {
     let (mut document, assets) = document_fixture::sample_document_with_parts().unwrap();
     document
         .set_objects_locked(&[ObjectRef::new(ObjectKind::Part, id(101))], true)
@@ -310,14 +310,13 @@ fn locked_container_creation_is_disabled_with_reason_and_no_publication(cx: &mut
                 window
                     .within("popup-menu")
                     .try_find(*index)
-                    .is_some_and(|item| {
-                        item.label()
-                            .is_some_and(|label| label.starts_with("New Mesh · Unlock"))
-                    })
+                    .is_some_and(|item| item.label().is_some_and(|label| label == "New Mesh"))
             })
             .expect("locked creation reason");
 
         window.within("popup-menu").click(index, cx);
+        assert!(h.view.read(cx).message.starts_with("Unlock"));
+        assert!(h.view.read(cx).edit_error.is_none());
     })
     .unwrap();
     h.view.read_with(cx, |view, _| {
@@ -359,7 +358,7 @@ fn open_creation_menu_cannot_execute_after_document_version_changes(cx: &mut Tes
 }
 
 #[gpui_kit::test]
-fn root_menu_explains_offscreen_owner_and_toolbar_dispatches_each_scene_type(
+fn menu_feedback_explains_offscreen_owner_and_toolbar_dispatches_each_scene_type(
     cx: &mut TestAppContext,
 ) {
     let h = setup_with_document(
@@ -382,16 +381,23 @@ fn root_menu_explains_offscreen_owner_and_toolbar_dispatches_each_scene_type(
                 window
                     .within("popup-menu")
                     .try_find(*index)
-                    .is_some_and(|item| {
-                        item.label()
-                            .is_some_and(|label| label.starts_with("New Offscreen · Select a Part"))
-                    })
+                    .is_some_and(|item| item.label().is_some_and(|label| label == "New Offscreen"))
             })
             .expect("owner reason");
         window.within("popup-menu").click(index, cx);
         assert_eq!(
             h.view.read(cx).editor.document().unwrap().history_lengths(),
             (0, 0)
+        );
+    })
+    .unwrap();
+    cx.update_window(h.window, |_, window, cx| {
+        assert!(h.view.read(cx).message.starts_with("Select a Part"));
+        assert!(h.view.read(cx).edit_error.is_none());
+        window.click_with_options(
+            "parts-tree-root-drop",
+            ClickOptions::new().with_button(MouseButton::Right),
+            cx,
         );
     })
     .unwrap();
@@ -489,4 +495,172 @@ fn parts_header_creates_a_part_directly_and_disables_it_for_a_locked_parent(
         });
     })
     .unwrap();
+}
+
+#[gpui_kit::test]
+fn tree_deletion_uses_captured_multi_selection_and_can_cancel_review(cx: &mut TestAppContext) {
+    cx.update(|cx| cx.set_reduce_motion(true));
+    let mut d = Document::new_blank().unwrap();
+    let mut objects = vec![];
+    for name in ["First", "Second", "Retained"] {
+        let plan = d
+            .plan_scene_object_creation(zipzi_editor_core::SceneObjectType::Mesh, name.into(), &[])
+            .unwrap();
+        objects.push(
+            d.execute_scene_object_creation(&plan)
+                .unwrap()
+                .suggested_selection[0]
+                .clone(),
+        );
+    }
+    d.select_objects(objects[..2].to_vec()).unwrap();
+    let h = setup_with_document(cx, d, tempfile::tempdir().unwrap());
+    for cancel in [true, false] {
+        cx.update_window(h.window, |_, window, cx| {
+            window.render_frame(cx);
+            window.click_with_options(
+                format!("parts-item-Mesh:{}", objects[0].id),
+                ClickOptions::new().with_button(MouseButton::Right),
+                cx,
+            );
+        })
+        .unwrap();
+        cx.run_until_parked();
+        cx.update_window(h.window, |_, _, cx| {
+            h.view.update(cx, |view, _| {
+                view.editor
+                    .execute(EditorCommand::SelectObject(objects[2].clone()))
+                    .unwrap();
+            });
+        })
+        .unwrap();
+        choose(&h, "Delete Object", cx);
+        cx.update_window(h.window, |_, window, cx| {
+            window.render_frame(cx);
+            assert!(window.find("tree-deletion-dialog").visible());
+            window.click(
+                if cancel {
+                    "tree-deletion-cancel"
+                } else {
+                    "tree-deletion-submit"
+                },
+                cx,
+            );
+        })
+        .unwrap();
+        cx.run_until_parked();
+        h.view.read_with(cx, |view, _| {
+            let d = view.editor.document().unwrap();
+            for object in &objects[..2] {
+                assert_eq!(d.object_index().get(object).is_some(), cancel);
+            }
+            assert!(d.object_index().get(&objects[2]).is_some());
+            assert_eq!(d.history_lengths(), (if cancel { 3 } else { 4 }, 0));
+        });
+        if cancel {
+            cx.update_window(h.window, |_, _, cx| {
+                h.view.update(cx, |view, _| {
+                    view.editor
+                        .execute(EditorCommand::SelectObjects(objects[..2].to_vec()))
+                        .unwrap();
+                });
+            })
+            .unwrap();
+        }
+    }
+}
+
+fn deletion_fixture(cx: &mut TestAppContext) -> (Harness, ObjectRef) {
+    let mut d = Document::new_blank().unwrap();
+    let plan = d
+        .plan_scene_object_creation(
+            zipzi_editor_core::SceneObjectType::Mesh,
+            "Delete me".into(),
+            &[],
+        )
+        .unwrap();
+    let mesh = d
+        .execute_scene_object_creation(&plan)
+        .unwrap()
+        .suggested_selection[0]
+        .clone();
+    d.select_object(mesh.clone()).unwrap();
+    (
+        setup_with_document(cx, d, tempfile::tempdir().unwrap()),
+        mesh,
+    )
+}
+
+#[gpui_kit::test]
+fn object_deletion_shortcut_protects_text_and_uses_tree_focus(cx: &mut TestAppContext) {
+    let (h, mesh) = deletion_fixture(cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("parts-tree-search", cx);
+        window.hover("canvas-body", cx);
+        window.press("backspace", cx);
+        assert!(
+            h.view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .object_index()
+                .get(&mesh)
+                .is_some()
+        );
+        window.click(format!("parts-item-Mesh:{}", mesh.id), cx);
+        window.hover("canvas-body", cx);
+        window.press("delete", cx);
+        assert!(
+            h.view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .object_index()
+                .get(&mesh)
+                .is_none()
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn object_deletion_viewport_shortcuts_and_context_menu_share_behavior(cx: &mut TestAppContext) {
+    for key in [Some("backspace"), Some("delete"), None] {
+        let (h, mesh) = deletion_fixture(cx);
+        cx.update_window(h.window, |_, window, cx| {
+            window.click("canvas-body", cx);
+            h.view.update(cx, |view, _| {
+                view.editor
+                    .execute(EditorCommand::SelectObject(mesh.clone()))
+                    .unwrap();
+            });
+            window.render_frame(cx);
+            if let Some(key) = key {
+                window.press(key, cx);
+            } else {
+                window.click_with_options(
+                    "canvas-body",
+                    ClickOptions::new().with_button(MouseButton::Right),
+                    cx,
+                );
+            }
+        })
+        .unwrap();
+        if key.is_none() {
+            choose(&h, "Delete Object", cx);
+        }
+        h.view.read_with(cx, |view, _| {
+            assert!(
+                view.editor
+                    .document()
+                    .unwrap()
+                    .object_index()
+                    .get(&mesh)
+                    .is_none()
+            );
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (2, 0));
+        });
+    }
 }

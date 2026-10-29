@@ -5,6 +5,22 @@ use gpui_kit::component::WindowExt;
 use zipzi_editor_core::{Command, CommandEffect, CommandId};
 
 impl EditorView {
+    pub(crate) fn object_deletion_invocation(
+        &self,
+        source: zipzi_editor_core::CommandSource,
+        window: &Window,
+        cx: &App,
+    ) -> Command {
+        let focused = self.focused_input_target(window, cx);
+        let local = focused.or_else(|| {
+            (source == zipzi_editor_core::CommandSource::NativeMenu)
+                .then(|| self.input_router.menu_target.get())
+                .flatten()
+        });
+        crate::input_routing::command_at(&self.editor, CommandId::DeleteObject, local)
+            .with_source(source)
+    }
+
     pub(crate) fn viewport_command(
         &self,
         id: CommandId,
@@ -69,7 +85,11 @@ impl EditorView {
         cx: &mut Context<Self>,
     ) {
         self.sync_viewports();
-        let command = self.viewport_command(id, zipzi_editor_core::CommandSource::Direct);
+        let command = if id == CommandId::DeleteObject {
+            self.object_deletion_invocation(zipzi_editor_core::CommandSource::Direct, window, cx)
+        } else {
+            self.viewport_command(id, zipzi_editor_core::CommandSource::Direct)
+        };
         self.run_invocation(command, window, cx);
     }
 
@@ -80,6 +100,9 @@ impl EditorView {
         cx: &mut Context<Self>,
     ) {
         let id = command.id;
+        if id == CommandId::DeleteObject && self.has_focused_input(window, cx) {
+            return;
+        }
         if self.mesh_generation.is_some() && id == CommandId::CancelGesture {
             self.cancel_mesh_generation(cx);
             return;
@@ -268,6 +291,7 @@ impl EditorView {
                 | CommandId::DeleteParameterGroup => {
                     self.handle_parameter_command(command, window, cx);
                 }
+                CommandId::DeleteObject => self.handle_object_deletion_command(command, window, cx),
                 CommandId::CreatePart
                 | CommandId::CreateMesh
                 | CommandId::CreateWarp

@@ -276,3 +276,49 @@ fn parameter_type_and_group_are_edited_in_the_common_properties_panel(cx: &mut T
         )
     });
 }
+
+#[gpui_kit::test]
+fn menu_feedback_reports_referenced_parameter_without_opening_a_dialog(cx: &mut TestAppContext) {
+    use gpui_kit::{MouseButton, test::ClickOptions};
+    let (doc, assets) = document_fixture::sample_document_with_binding(true).unwrap();
+    let parameter = doc.parameters()[0].id.clone();
+    let history = doc.history_lengths();
+    let h = setup_with_document(cx, doc, assets);
+    h.view.update(cx, |view, cx| {
+        view._frames = None;
+        view.requests = Some(crate::preview::RequestSender::deferred());
+        view.reset_viewport_images();
+        view.clear_edit_error(cx);
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        window.click_with_options(
+            format!("parameter-name-{parameter}"),
+            ClickOptions::new().with_button(MouseButton::Right),
+            cx,
+        );
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        let i = (0..16usize)
+            .find(|&i| {
+                window
+                    .within("popup-menu")
+                    .try_find(i)
+                    .is_some_and(|item| item.label() == Some("Delete Parameter"))
+            })
+            .unwrap();
+        window.within("popup-menu").click(i, cx);
+        assert!(!window.has_active_dialog(cx));
+        let view = h.view.read(cx);
+        assert_eq!(view.message, crate::t!("authoring.referenced").as_ref());
+        assert!(view.edit_error.is_none());
+        assert_eq!(view.editor.document().unwrap().history_lengths(), history);
+        assert_eq!(
+            view.status_bar.read(cx).displayed_message(),
+            Some((view.message.as_str(), false))
+        );
+    })
+    .unwrap();
+}

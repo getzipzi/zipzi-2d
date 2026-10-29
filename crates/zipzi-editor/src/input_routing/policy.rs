@@ -88,6 +88,11 @@ pub(super) fn decide(
     }
     let target = facts.target();
     let text = keyboard == KeyboardOwner::Text;
+    let object_target = facts
+        .capture
+        .map(|c| InputTarget::new(c.target))
+        .or(facts.focused)
+        .or(facts.hovered);
     // Palette bindings are dispatched by GPUI at list focus. Reserve a matching
     // local key before the hovered viewport can take its disjoint binding.
     if !text
@@ -134,6 +139,17 @@ pub(super) fn decide(
                                 Some(LocalTarget::Timeline(_))
                             )
                     }
+                    CommandScope::Objects => {
+                        !text
+                            && matches!(
+                                object_target.map(|t| t.local),
+                                Some(LocalTarget::Viewport(_))
+                                    | Some(LocalTarget::Panel(
+                                        zipzi_editor_core::PanelKind::PartsTree
+                                            | zipzi_editor_core::PanelKind::Deformers
+                                    ))
+                            )
+                    }
                     CommandScope::Property | CommandScope::Palette => false,
                 };
                 applicable && matches(binding)
@@ -145,7 +161,12 @@ pub(super) fn decide(
         Some(id) if facts.held && !id.spec().repeat => KeyDecision::Consume,
         Some(id) => KeyDecision::Invoke {
             id,
-            target: target.map(|target| target.local),
+            target: if id.spec().scope == CommandScope::Objects {
+                object_target
+            } else {
+                target
+            }
+            .map(|target| target.local),
         },
     }
 }

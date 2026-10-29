@@ -104,7 +104,18 @@ impl EditorView {
                         this.focused_viewport = Some(viewport);
                     }
                     let command = action.invocation.unwrap_or_else(|| {
-                        this.viewport_command(action.id, zipzi_editor_core::CommandSource::Direct)
+                        if action.id == CommandId::DeleteObject {
+                            this.object_deletion_invocation(
+                                zipzi_editor_core::CommandSource::Direct,
+                                window,
+                                cx,
+                            )
+                        } else {
+                            this.viewport_command(
+                                action.id,
+                                zipzi_editor_core::CommandSource::Direct,
+                            )
+                        }
                     });
                     this.run_invocation(command, window, cx)
                 }))

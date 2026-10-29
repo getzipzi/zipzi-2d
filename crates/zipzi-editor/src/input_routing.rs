@@ -9,6 +9,7 @@ use crate::*;
 use policy::{KeyDecision, decide};
 pub(crate) use region::{CaptureCancelKey, CapturedInput, CoreCleanup, InputRegion};
 use std::{cell::Cell, rc::Rc};
+pub(crate) use target::command_at;
 pub(crate) use target::{InputTarget, LocalTarget};
 
 #[derive(Default)]

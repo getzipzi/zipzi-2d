@@ -222,3 +222,112 @@ fn glue_management_changes_keep_active_animation_and_preview_clock() -> anyhow::
     assert_eq!(editor.animation().unwrap().preview_generation, generation);
     Ok(())
 }
+
+#[test]
+fn tree_deletion_uses_projection_closure_and_is_atomic_and_undoable() -> anyhow::Result<()> {
+    use zipzi_editor_core::{PaletteProjection as P, SceneObjectType as T};
+    let mut d = Document::new_blank()?;
+    let mut add = |kind, selection: &[ObjectRef]| -> anyhow::Result<ObjectRef> {
+        let p = d.plan_scene_object_creation(kind, "Object".into(), selection)?;
+        Ok(d.execute_scene_object_creation(&p)?.suggested_selection[0].clone())
+    };
+    let part = add(T::Part, &[])?;
+    let warp = add(T::Warp, std::slice::from_ref(&part))?;
+    let mesh_id = id();
+    run(
+        &mut d,
+        E::Create {
+            id: mesh_id.clone(),
+            name: "Child".into(),
+            object: New::Mesh {
+                texture: Default::default(),
+            },
+            part_id: Some(part.id.clone()),
+            parent_id: Some(warp.id.clone()),
+            before: None,
+            deformation_before: None,
+        },
+    )?;
+    let mesh = ObjectRef::new(ObjectKind::Mesh, &mesh_id);
+    d.select_object(mesh.clone())?;
+    let organization = d.plan_tree_deletion(P::Organization, std::slice::from_ref(&part))?;
+    assert!(organization.removed_ids().contains(&part.id));
+    assert!(organization.removed_ids().contains(&warp.id));
+    assert!(organization.removed_ids().contains(&mesh.id));
+    let deformation = d.plan_tree_deletion(P::Deformation, std::slice::from_ref(&warp))?;
+    assert!(!deformation.removed_ids().contains(&part.id));
+    assert!(deformation.removed_ids().contains(&mesh.id));
+    let mut editor = super::support::editor_from_document(d);
+    let document = editor.active_id().unwrap();
+    let history = editor.document().unwrap().history_lengths();
+    editor.execute_tree_deletion(document, &deformation)?;
+    let d = editor.document().unwrap();
+    assert!(d.object_index().get(&part).is_some());
+    assert!(d.object_index().get(&warp).is_none());
+    assert!(d.object_index().get(&mesh).is_none());
+    assert!(d.context().selections.is_empty());
+    assert_eq!(d.history_lengths(), (history.0 + 1, 0));
+    editor.execute(zipzi_editor_core::EditorCommand::Undo)?;
+    assert!(
+        editor
+            .document()
+            .unwrap()
+            .object_index()
+            .get(&mesh)
+            .is_some()
+    );
+    assert!(
+        editor
+            .execute_tree_deletion(document, &deformation)
+            .is_err()
+    );
+    Ok(())
+}
+
+#[test]
+fn tree_deletion_rejects_locked_descendants_and_external_references() -> anyhow::Result<()> {
+    use zipzi_editor_core::{PaletteProjection as P, SceneObjectType as T};
+    let mut d = Document::new_blank()?;
+    let p = d.plan_scene_object_creation(T::Part, "Owner".into(), &[])?;
+    let part = d.execute_scene_object_creation(&p)?.suggested_selection[0].clone();
+    let p = d.plan_scene_object_creation(T::Mesh, "Mesh".into(), std::slice::from_ref(&part))?;
+    let mesh = d.execute_scene_object_creation(&p)?.suggested_selection[0].clone();
+    d.set_objects_locked(std::slice::from_ref(&mesh), true)?;
+    assert!(
+        d.plan_tree_deletion(P::Organization, std::slice::from_ref(&part))
+            .is_err()
+    );
+    d.set_objects_locked(std::slice::from_ref(&mesh), false)?;
+    let glue = create(
+        &mut d,
+        New::Glue {
+            a: mesh.id.clone().into(),
+            b: Default::default(),
+        },
+    )?;
+    let history = d.history_lengths();
+    let error = d
+        .plan_tree_deletion(P::Organization, std::slice::from_ref(&part))
+        .unwrap_err();
+    assert_eq!(
+        error
+            .downcast_ref::<zipzi_sdk::SdkError>()
+            .unwrap()
+            .code
+            .as_ref(),
+        "OBJECT_REFERENCED"
+    );
+    assert_eq!(d.history_lengths(), history);
+    run(
+        &mut d,
+        E::Delete {
+            ids: vec![glue],
+            scope: Scope::Selected,
+        },
+    )?;
+    assert!(
+        d.plan_tree_deletion(P::Organization, std::slice::from_ref(&part))
+            .is_ok()
+    );
+    Ok(())
+}

@@ -190,9 +190,7 @@ pub(crate) fn menu(
             let Some(availability) = availability(&entity.read(cx).editor, &action) else {
                 continue;
             };
-            let label = availability
-                .reason
-                .map_or(label.to_string(), |r| format!("{label} · {r}"));
+            let reason = availability.reason.map(|reason| reason.to_string());
             let section = match &action {
                 A::Create(..) => 1,
                 A::Copy(_) => 2,
@@ -202,13 +200,14 @@ pub(crate) fn menu(
             let owner = owner.clone();
             items.push((
                 section,
-                PopupMenuItem::new(label)
-                    .disabled(!availability.enabled)
-                    .on_click(move |_, window, cx| {
-                        let _ = owner.update(cx, |v, cx| {
-                            v.run_business_action(context, action.clone(), window, cx)
-                        });
-                    }),
+                PopupMenuItem::new(label).on_click(move |_, window, cx| {
+                    let _ = owner.update(cx, |v, cx| {
+                        if v.authoring_menu_feedback(context, reason.as_deref(), window, cx) {
+                            return;
+                        }
+                        v.run_business_action(context, action.clone(), window, cx)
+                    });
+                }),
             ));
         }
         if matches!(

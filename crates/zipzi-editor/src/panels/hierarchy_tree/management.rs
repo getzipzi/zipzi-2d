@@ -134,21 +134,19 @@ pub(super) fn creation_menu<const DEFORMER: bool>(
             .iter()
             .find(|id| id.scene_creation_type() == Some(kind))
             .unwrap();
-        let label = t!(label_command.spec().label);
-        let label: SharedString = if let Err(error) = &availability {
-            format!("{label} · {}", creation_error(error)).into()
-        } else {
-            label.into()
-        };
+        let label = t!(label_command.spec().label).into_owned();
+        let reason = availability.as_ref().err().map(creation_error);
         let owner = owner.downgrade();
         let selection = selection.clone();
         menu = menu.item(
             PopupMenuItem::new(label)
                 .action(Box::new(crate::actions::RunCommand::new(command)))
-                .disabled(availability.is_err())
                 .on_click(move |_, window, cx| {
                     let Some(owner) = owner.upgrade() else { return };
                     owner.update(cx, |state, cx| {
+                        if state.authoring_menu_feedback(context, reason.as_deref(), window, cx) {
+                            return;
+                        }
                         if AuthoringContext::capture(&state.editor) != Some(context) {
                             state.set_edit_error(t!("authoring.move_stale").into_owned(), cx);
                             return;

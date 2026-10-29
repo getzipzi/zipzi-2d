@@ -1003,3 +1003,44 @@ fn manual_mesh_model_and_source_views_both_edit_and_keep_their_cameras(cx: &mut 
         (2, 0)
     );
 }
+
+#[gpui_kit::test]
+fn object_deletion_mesh_edit_context_menu_deletes_geometry(cx: &mut TestAppContext) {
+    use gpui_kit::{Modifiers, MouseButton, test::ClickOptions};
+    use zipzi_editor_core::ModelPoint;
+    let h = enter(cx);
+    let center = ModelPoint { x: 128., y: 128. };
+    pointer_gesture(&h, cx, center, center, Modifiers::default());
+    assert_eq!(
+        h.view.read_with(cx, |v, _| v.editor.layers()[0].vertices),
+        5
+    );
+    present(&h, cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click_with_options(
+            "canvas-body",
+            ClickOptions::new().with_button(MouseButton::Right),
+            cx,
+        );
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        let i = (0..24usize)
+            .find(|&i| {
+                window.within("popup-menu").try_find(i).is_some_and(|item| {
+                    item.label() == Some("Delete selected mesh points or edges")
+                })
+            })
+            .unwrap();
+        window.within("popup-menu").click(i, cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    h.view.read_with(cx, |v, _| {
+        assert!(v.editor.manual_active());
+        assert_eq!(v.editor.layers()[0].vertices, 4);
+        assert_eq!(v.editor.document().unwrap().history_lengths(), (2, 0));
+    });
+}

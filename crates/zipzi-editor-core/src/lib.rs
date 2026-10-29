@@ -50,7 +50,7 @@ pub use document::{
     ParameterValidationError, ParameterValue, ParameterVisual, PhysicsAuthoringCapabilities,
     PhysicsChannelAction, PoseAuthoringCapabilities, ReferenceAuthoringCapabilities,
     ResourceAuthoringCapabilities, SceneAuthoringCapabilities, SceneContentAuthoringCapabilities,
-    SceneObjectCreationPlan, SceneObjectType, TextureInfo,
+    SceneObjectCreationPlan, SceneObjectType, TextureInfo, TreeDeletionPlan,
 };
 pub use document::{OrganizationDestination, ParameterDestination, ReorderPosition};
 pub use editor::{CloseDisposition, EditorCommand, EditorPreview, LoadRequest};

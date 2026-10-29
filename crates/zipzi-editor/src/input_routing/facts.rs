@@ -11,6 +11,13 @@ pub(super) struct KeySnapshot {
 }
 
 impl EditorView {
+    pub(crate) fn focused_input_target(&self, window: &Window, cx: &App) -> Option<LocalTarget> {
+        self.resolved_regions(window, cx)
+            .into_iter()
+            .find(|(_, region)| region.owns_keyboard(window))
+            .map(|(target, _)| target.local)
+    }
+
     pub(super) fn resolved_regions(
         &self,
         window: &Window,
