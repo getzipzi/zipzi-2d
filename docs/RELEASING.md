@@ -40,14 +40,30 @@ them merely to bump a release version.
 ## Alpha publication
 
 The **Alpha release** workflow (`.github/workflows/release-alpha.yml`) builds
-four independent jobs: the macOS Apple Silicon app and source archive, the
-Windows x86-64 portable app, and Python packages on macOS and Windows. Python
+four jobs in parallel: the Apple Silicon macOS app and source archive, the
+Windows x86-64 portable app, and Python packages on macOS and Windows. Standard
+GitHub-hosted runners use all available CPU cores. App and Python builds cache
+dependencies separately in `target/alpha-app-cargo` and `target/alpha-python-cargo`.
+Relevant pushes to `main` automatically prebuild and warm default-branch caches;
+tag runs can restore these caches. Python's schema exporter and acceptance host are built
+together from the extracted archive with one feature resolution. Generation
+checks use that compiled export, and wheels use the same release profile and a
+stable base interpreter for PyO3. Python
 builds rebuild wheels from their source archives and run isolated installed
 Local/Connected acceptance. A collection job checks both acceptance reports,
 commit identity, wheel tags and file hashes. It selects the macOS copies of the
 source archives and pure wheel and one native wheel per platform, then checks
-the distribution metadata. Only after all builds and collection succeed does a tag run create the GitHub prerelease
-and then publish the tested Python distributions to PyPI.
+the distribution metadata. A build manifest binds all release files to the
+source commit and version. Only tag pushes publish to GitHub and PyPI.
+
+When that exact commit already has a successful default-branch build with all
+required artifacts available, the tag run skips all four native builds. It
+downloads the validated release, verifies the manifest's commit and version,
+every asset hash, and the Python publication bytes, then publishes. It never
+selects PR builds, other commits or incomplete builds. If no eligible build is
+available, or the lookup fails, the tag run performs a complete build. A downloaded
+manifest or hash mismatch fails publication. GitHub and PyPI receive the tested
+bytes without repackaging.
 
 Before the first PyPI publication:
 
@@ -67,10 +83,12 @@ Before the first PyPI publication:
 For each release:
 
 1. Set and check the version, then review and commit all source changes.
-2. Push the workflow changes to the default branch. Run **Actions → Alpha
-   release → Run workflow** on the intended commit as a rehearsal. A manual run
-   builds and uploads seven-day Actions artifacts only; it never publishes.
-3. Inspect the completed artifacts and acceptance reports, then push an annotated
+2. Push the intended release commit to `main`. Relevant source/tool changes
+   automatically start **Alpha release** without publishing. Wait for it to pass
+   to enable the fast tag path. For commits without a matching automatic build,
+   **Actions → Alpha release → Run workflow** on `main` can prepare the same
+   validated artifacts. Manual runs never publish.
+3. Inspect the completed build artifacts and reports, then push an annotated
    Alpha tag matching the workspace version. For example:
 
    ```sh
@@ -78,7 +96,9 @@ For each release:
    git push origin main refs/tags/v0.1.0-alpha.2
    ```
 
-4. Follow **Actions → Alpha release**. Once all builds pass, the workflow creates
+4. Follow **Actions → Alpha release**. The tag reuses a successful build of the
+   exact same commit when its artifacts are still available; otherwise it builds
+   normally. Once verification passes, the workflow creates
    a GitHub prerelease containing the Mac app ZIP and DMG, Windows portable ZIP,
    complete workspace source, Python distributions and `SHA256SUMS`. GitHub
    automatically generates the release notes. Separate PyPI jobs then publish `zipzi` followed by `zipzi-native` using the
@@ -88,7 +108,10 @@ The Windows ZIP contains the executable, licenses/notices and build identity;
 it is unsigned. The macOS app is ad hoc signed, without Developer ID signing
 or notarization. macOS may block the first launch; if you trust the build, open
 System Settings → Privacy & Security → Open Anyway after attempting to launch it.
-Actions artifacts expire after seven days; GitHub Release assets persist.
+Prebuild/manual Actions artifacts expire after one day; tag-run artifacts after
+seven days. GitHub Release assets persist. Tag within the prebuild retention
+window to reuse it; expiry only disables the shortcut and does not permit
+publishing an unverified build.
 Python targets CPython 3.14; native wheels cover macOS arm64 and Windows x86-64.
 Other platforms can use the pure client; native source builds are not covered by
 this matrix. No Rust crates are published by this workflow.
@@ -103,8 +126,9 @@ if the release needs changed artifacts. Do not blindly rerun the entire workflow
 against an existing GitHub release or tag. GitHub Release assets and PyPI
 versions must not be overwritten.
 
-Development gates run for relevant pull requests; SDK CI and Editor CI remain
-manual. The Alpha workflow runs only on a matching tag push or manual dispatch.
+Development gates run for relevant pull requests and `main` pushes; SDK CI and
+Editor CI remain manual. The Alpha workflow prebuilds on relevant `main` pushes
+and manual dispatches; only a matching Alpha tag push publishes.
 Packaging success does not establish native UI/GPU or licensed-model acceptance.
 
 ## Python package identities

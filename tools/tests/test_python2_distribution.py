@@ -1,6 +1,7 @@
 """Native sdist keeps SDK dependencies pinned and excludes desktop-only patches."""
 import importlib.util
 import io
+import json
 import os
 import subprocess
 import tarfile
@@ -47,6 +48,56 @@ distribution=importlib.util.module_from_spec(SPEC);SPEC.loader.exec_module(distr
 from _support import publish_executable
 
 class Distribution(unittest.TestCase):
+    def test_source_examples_share_feature_resolution_and_publish_archived_executables(self):
+        with tempfile.TemporaryDirectory(prefix='source examples 中文 ') as folder:
+            root = Path(folder)
+            source = root / 'source'
+            output = root / 'output'
+            output.mkdir()
+            files = {
+                'Cargo.toml': '[workspace]\nmembers=["python","runtime"]\nresolver="3"\n',
+                'runtime/Cargo.toml': '[package]\nname="zipzi-runtime"\nversion="0.0.0"\nedition="2021"\n[features]\ngpu-observation=[]\n',
+                'runtime/src/lib.rs': '#[cfg(feature="gpu-observation")] pub fn answer() -> u32 { 42 }',
+                'runtime/examples/local_host_fixture.rs': 'fn main() { println!("{}", zipzi_runtime::answer()); }',
+                'python/Cargo.toml': '[package]\nname="zipzi-python2"\nversion="0.0.0"\nedition="2021"\n[dependencies]\nzipzi-runtime={path="../runtime"}\n',
+                'python/examples/authoring_schema.rs': 'fn main() { println!("{{\\"release\\":{},\\"value\\":{}}}", !cfg!(debug_assertions), zipzi_runtime::answer()); }',
+            }
+            for name, text in files.items():
+                path = source / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text)
+            environment = distribution.build_environment(root / 'cargo-cache')
+            subprocess.run(['cargo', 'generate-lockfile', '--offline'], cwd=source,
+                env=environment, check=True, capture_output=True, timeout=60)
+            def run(name, command, cwd):
+                result = subprocess.run([str(arg) for arg in command], cwd=cwd, env=environment,
+                    capture_output=True, text=True, timeout=60)
+                (output / (name + '.log')).write_text(result.stdout + result.stderr, encoding='utf-8')
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            host, contract = distribution.build_source_examples(source, output, run)
+            self.assertEqual(json.loads(contract.read_text()), {'release': True, 'value': 42})
+            self.assertEqual(host.parent, output)
+            result = subprocess.run([str(host)], capture_output=True, text=True, timeout=60)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.strip(), '42')
+
+    def test_build_environment_uses_one_base_interpreter_and_excludes_live_session(self):
+        with tempfile.TemporaryDirectory(prefix='distribution env 中文 ') as folder:
+            root = Path(folder)
+            base = root / 'base-python'
+            base.touch()
+            ambient = dict(PYTHONPATH='live sources', PYTHONHOME='live home',
+                ZIPZI_DEV_SESSION_DIR='live editor', ZIPZI_TEST_BACKEND='mock',
+                PYO3_PYTHON='temporary-build-venv', MATURIN_PEP517_USE_BASE_PYTHON='0',
+                CARGO_TARGET_DIR='development target')
+            with patch.dict(os.environ, ambient), patch.object(sys, '_base_executable', str(base)):
+                environment = distribution.build_environment(root / 'release-cache')
+            self.assertEqual(environment['PYO3_PYTHON'], str(base.resolve()))
+            self.assertEqual(environment['MATURIN_PEP517_USE_BASE_PYTHON'], '1')
+            self.assertEqual(environment['CARGO_TARGET_DIR'], str(root / 'release-cache'))
+            self.assertFalse({'PYTHONPATH', 'PYTHONHOME', 'ZIPZI_DEV_SESSION_DIR',
+                'ZIPZI_TEST_BACKEND'} & environment.keys())
+
     def test_host_publication_keeps_old_version_and_recovers_copy_failure(self):
         with tempfile.TemporaryDirectory(prefix='host 中文 ') as folder:
             root = Path(folder)

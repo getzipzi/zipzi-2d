@@ -52,6 +52,7 @@ arguments and output paths.
 | `build-editor-app.sh` | macOS app bundle construction |
 | `packaging/package_windows.py` | Build and verify a Windows x86-64 portable archive from a compiled Editor |
 | `packaging/collect_python.py` | Verify acceptance reports and collect the Python release distributions |
+| `packaging/reuse_release.py` | Select a successful default-branch build and verify its commit, version and publication hashes before tag promotion |
 | `workspace/workspace.sh`, `workspace/workspace_tools.py` | Shared path and Cargo artifact handling |
 
 See [test coverage](#test-coverage), [CI coverage](#ci-coverage) and
@@ -106,13 +107,35 @@ during iteration and reserve full runs for broad regression acceptance.
 
 ### CI coverage
 
-Development gates run on relevant pull requests on Windows and macOS. They run
-focused SDK, Editor, tooling and Python checks. SDK CI and Editor CI are manual.
-Only an explicitly pushed `vX.Y.Z-alpha.N` tag starts **Alpha release** and its
-GitHub prerelease and PyPI publication. A manual Alpha release run builds and
-validates all deliverables and uploads seven-day Actions artifacts without
-publishing. See [the release guide](../docs/RELEASING.md) for PyPI token
-setup, versioning, tag commands, platform scope and recovery.
+Development gates run on relevant pull requests and pushes to `main`. Linux jobs
+run tooling, focused SDK/Editor-core tests and Python Local/Connected checks in
+parallel. macOS and Windows separately compile the native Editor; Windows also
+checks presentation scheduling. These jobs and the manual SDK/Editor workflows
+cache Rust dependencies in `target/ci-cargo`. SDK CI and Editor CI remain manual.
+
+**Alpha release** prebuilds on relevant `main` pushes and manual dispatches without
+publishing. Mac app, Windows app and Python on each platform build in four
+parallel jobs using the standard GitHub-hosted runners and all available CPU
+cores. App and Python dependency caches use `target/alpha-app-cargo` and
+`target/alpha-python-cargo`, independently per OS. Successful default-branch
+runs save caches for subsequent builds and tag runs to restore.
+
+Only a pushed `vX.Y.Z-alpha.N` tag publishes to GitHub and PyPI. When a successful
+default-branch build for that exact commit still has all its artifacts, the tag
+run skips native compilation and verifies its build manifest, version and every
+publication file hash before publishing those same bytes. Missing, expired,
+failed, PR or other-commit builds cannot be reused; the workflow builds normally.
+Non-tag build artifacts last one day; tag artifacts last seven days. See
+[the release guide](../docs/RELEASING.md) for setup and recovery.
+
+Python still builds from extracted source archives, refreshing materialized
+timestamps so cached workspace crates cannot hide changed source. Its schema
+exporter and acceptance host share one release-profile Cargo invocation and
+feature resolution. Generation checks use the freshly compiled export. Wheel
+builds use a stable base Python interpreter to avoid temporary-venv PyO3
+rebuilds. macOS wheel linker flags still require separate compatible artifacts.
+`commands.json` records command durations for comparison; cache hits always
+depend on Cargo's source, feature and compiler fingerprints.
 
 Use **Actions → SDK CI / Editor CI → Run workflow** for the full checks, or
 `gh workflow run rust.yml --ref <branch>` /
