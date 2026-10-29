@@ -1,10 +1,10 @@
 # Mesh Edit 保留绑定与变形依赖实施方案
 
-状态：待实施。更新日期：2026-10-29。
+状态：已实施。更新日期：2026-10-29。定向验收、性能测量和既有门禁限制见文末“实施记录”。
 
 目标是在源图／UV 平面中编辑单个 Mesh，同时保留父变形器、普通参数绑定、BlendShape 和 Glue。将目前“存在依赖就禁止进入”的策略改为逐操作判定：合法操作更新完整依赖并原子提交；无法推导的外部采样、删除 Glue 端点、锁定依赖或超预算等情况，只阻止对应操作并给出具体原因。
 
-本方案继承[手动网格编辑方案](../archive/plans/manual-mesh-editing.md)的稳定 VertexId、UV 拓扑校验、单次手势提交和唯一文档历史。以下为拟实施契约；文中拟议类型名不代表当前已有 API。项目未正式发布，允许直接调整内部接口和生成协议，不引入旧版本迁移层。
+本方案继承[手动网格编辑方案](../archive/plans/manual-mesh-editing.md)的稳定 VertexId、UV 拓扑校验、单次手势提交和唯一文档历史。以下保留本轮实施契约；示意类型与最终 API 的对应关系见实施记录。项目未正式发布，允许直接调整内部接口和生成协议，不引入旧版本迁移层。
 
 ## 目标与交付边界
 
@@ -307,6 +307,57 @@ env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test int
 Runtime、Python、codegen、项目 codec 和原生截图的具体 target／过滤器，按各 crate README、`tools/README.md` 及测试脚本 `--help` 选择；禁止把零匹配当作通过。SDK 临时实验使用 `./tools/dev-python`，脚本放在临时目录或 `target/python2/scratch/`。
 
 2026-10-29 的可行性基线：SDK `mesh_editing::` 与 `scene_content::` 合计 26 项通过；Editor Core `mesh_edit::tests` 11 项及绑定网格生成集成测试 1 项通过。这些只证明现有基础设施可复用，不是本方案新增能力的交付证据。
+
+## 实施记录（2026-10-29）
+
+实现位于 `codex/mesh-edit-preserve-dependencies`，基于 `2dc75b84` 的独立 worktree。
+
+- P0：共享合成夹具为 `fixtures/mesh-edit-dependencies.rs`，覆盖非连续 ID、非仿射基础形态、Rotation、普通绑定、两个 BlendShape、零强度 Glue 和不完整 self Glue。旧实现对此输入拒绝进入，因此不存在可比较的旧依赖拖动延迟；不将新增能力的测量写成旧版本性能回归比较。
+- P1：SDK 使用 `ManualMeshSource`、`UvSampler` 和 `ManualMeshPlan`。每个受影响点计算一次 f64 权重，基础／普通／Blend 增量共用来源；完整替换保留所有其他字段。Core 对实际变化的依赖检查锁，并保持未变 Glue 的 runtime／pair 身份占用参与联合校验。
+- P2：Runtime 在隔离计划中处理可拒绝的手动输入，发布仍使用唯一 Edit；冻结采样来源与 candidate sequence 分开。JSON、二进制上传和 Python Local／Connected 均保留可继续的候选。`WriteResult.mesh_transfer` 为生成的类型化转移报告。快照守卫可区分 revision 相同的分支。
+- P3：UV 平面按源图像素宽高显示，独立相机和模型相机互不覆盖；输入、命中、框选、连接和 Glue 标记使用同一投影。实际结果关闭拓扑输入，其他 Modeling 视口保持模型上下文。源图 resize 重新 fit，外部修改使旧计划失效。
+- P4：手动及 Alpha 生成均保存并应用同一份完整转移计划，不再提交空依赖。内部补点保留旧 ID；重建使用文档持有的持久分配器；引用端点的重建在生成前拒绝。Grid 沿用 SDK 的完整依赖细分路径。
+- P5：补充 UV 位置场数值比较、非线性父链报告、锁／预算／取消／净无变化、候选来源、二进制错误恢复、源图 resize、多视口、保存重开及 CMO3 运行结果采样比较。旧方案和 SDK／Python／Editor 使用说明已更新。
+
+实际验证命令与匹配数量：
+
+| 命令／入口 | 结果 |
+| --- | --- |
+| `cargo test --locked -p zipzi-sdk --test integration -- manual_mesh:: mesh_editing:: scene_content::` | 61 项通过 |
+| `cargo test --locked -p zipzi-runtime --test authoring --test attached_upload` | 11 + 4 项通过，含手动二进制拒绝后继续 |
+| `env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration mesh_generation::` | 37 项通过 |
+| `env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --lib mesh_edit::tests` | 11 项通过 |
+| `./tools/test-editor.sh ui manual_mesh` | 原生 UI 15 项及 Editor Core 1 项通过；附带 render target 的零匹配不计作通过证据 |
+| `uv run --locked python tools/test_tools.py -p test_python2_codegen.py` | 21 项通过 |
+| Python `PythonSdk.test_manual_mesh_preserves_mixed_dependencies_and_invalid_candidate_recovers`、`test_manual_mesh_source_contract_and_existing_large_writes`、`test_manual_mesh_structure_roundtrips_local_connected_binary_history_and_project` | 3 项通过，每项包含 Local／Connected；混合数据保存重开精确一致 |
+| Python codegen `generate.py --check` | 40 个生成文件一致 |
+| Python 反向类型测试 `tests/type_invalid.py` | 28 个预期诊断逐项一致 |
+| `ZIPZI_SCREENSHOT_SCENE=manual-mesh ZIPZI_SCREENSHOT_SAVE=1 ... --test headless_screenshot` | 原生交互场景通过，14 张 Metal 截图及 PNG 无损重读；12–14 为混合依赖 |
+
+完整 Python 类型门禁仍报告 HEAD 中已有的 73 个 `_transport.py`／Windows ctypes 平台诊断。本次以临时目录导出的 HEAD 源码运行同一 pyright 配置，逐项比较文件、行号、规则和消息：无新增诊断。`tests/type_valid.py` 已加入转移报告的正向类型断言。不能把完整 Python shell 门禁记为全绿；运行时、生成文件和反向类型验证分别按上表记录。
+
+性能探针为 `crates/zipzi-sdk/examples/manual_mesh_benchmark.rs`，入口：
+
+```sh
+cargo run --locked --release -p zipzi-sdk --example manual_mesh_benchmark
+```
+
+Apple M4、16 GiB、macOS，本轮最终测量为 1,089 点、2,048 面、58 个存储形态，
+预热后连续 100 个绝对拖动目标，每目标一次计划和一次应用，中位数 23.579 ms、
+p95 25.178 ms；每计划累计分配约 19.90 MB、28,186 次分配。该分配量是 allocator
+累计请求，不是峰值 RSS。报告的工作集估算为 8,143,474 bytes、历史估算为
+3,038,614 bytes；基线和候选的共享内存按保守 payload 计费。测量期间开发机同时
+运行定向验证，不作为全硬件帧率承诺；源 UV 索引在一次连续拖动内复用，未枚举参数组合。
+取消探针 candidate 后历史保持不变。有限预算与显式取消的失败路径另有定向测试。
+
+合成仿射父链细分用例在相同普通参数与 Blend 权重、相同 UV 样点上比较模型坐标，
+采样误差要求小于 `2e-5`；这不是全参数域上界。一般重连和非线性父链不作严格等价标记。
+外部 CMO3 验收使用完整配置的图片及 Glue，检查采样姿态的运行结果，容差 `1e-3`；
+内部 meshing 的精确保留由原生工程及 Undo／Redo 验证。
+
+SKIP：该 worktree 没有带入 `models/local` 的本地授权模型，真实模型补充验收未运行。
+截图与数值测试使用合成夹具，不依赖该资产，也不以截图替代身份／数组断言。
+本轮不运行昂贵的完整 SDK／Editor 套件；门禁按实际修改模块选择。
 
 ## 外部行为参考
 

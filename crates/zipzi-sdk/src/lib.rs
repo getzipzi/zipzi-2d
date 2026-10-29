@@ -48,9 +48,13 @@ pub use zipzi_project::{
 mod geometry;
 pub use geometry::{rectangle_grid_geometry, MeshGeometry};
 mod manual_mesh;
+mod manual_mesh_transfer;
 pub use manual_mesh::{
     add_manual_interior_sites, edit_manual_mesh, extract_manual_meshing, AffineUvMap,
     ManualMeshOperation, ManualMeshResult, ManualVertexIdAllocator, ManualVertexTarget,
+};
+pub use manual_mesh_transfer::{
+    ManualMeshPlan, ManualMeshSource, ManualMeshTransferReport, VertexProvenance,
 };
 mod mesh_binding_edit;
 mod mesh_edit;

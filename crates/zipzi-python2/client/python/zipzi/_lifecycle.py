@@ -311,13 +311,19 @@ class Edit(RecoveryOwner):
         return self._receipt
 
     def _run(self, action: str, execute: Callable[[], object], decode: Callable[[object], T],
-             inputs: tuple[object, ...] = ()) -> T:
+             inputs: tuple[object, ...] = (), *, manual_preview: bool = False) -> T:
+        def refused(error: BaseException) -> None:
+            if manual_preview and isinstance(error, SdkFailure) and error.edit_state == "editing":
+                self._unknown = None
+                self._state = EditState.editing
+                return
+            self._write_error(action, error)
         def unknown(error: OutcomeUnknown) -> None:
             self._unknown = error
             if self._state != EditState.aborted:
                 self._state = EditState.unknown
         request = Call("edit." + action, execute, decode, resume=lambda: self._backend.recover(self),
-                       inputs=inputs, on_unknown=unknown, on_error=lambda error: self._write_error(action, error))
+                       inputs=inputs, on_unknown=unknown, on_error=refused)
         self._call = request
         return request.run()
 
@@ -428,7 +434,8 @@ class Edit(RecoveryOwner):
             value = WriteResult._read(raw)
             self._state, self._unknown = EditState.editing, None
             return value
-        return self._run("apply", execute, applied, owned)
+        manual_preview = len(owned) == 1 and isinstance(owned[0], modeling.ModelingCommandManualMesh)
+        return self._run("apply", execute, applied, owned, manual_preview=manual_preview)
 
     def _finished(self, success: bool | None) -> None:
         if success is None:

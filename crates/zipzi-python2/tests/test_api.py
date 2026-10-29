@@ -33,6 +33,73 @@ GEOMETRY = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
     ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
 
 class PythonSdk(unittest.TestCase):
+    def test_manual_mesh_preserves_mixed_dependencies_and_invalid_candidate_recovers(self):
+        results=[]
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                runtime=self.runtime(mode)
+                session=runtime.sessions.create(uid(1))
+                with session.edit("mixed fixture") as edit:
+                    edit.meshes.create(meshes.MeshSpec("Mesh",GEOMETRY,id=uid(2)))
+                    edit.meshes.create(meshes.MeshSpec("Other",GEOMETRY,id=uid(3)))
+                    edit.parameters.create(parameters.ParameterSpec("P",0.,1.,0.,id=uid(4)))
+                    edit.bindings.create(bindings.MeshBindingSpec(uid(2),(bindings.Axis(uid(4),(0.,1.)),),(
+                        bindings.Keyform((0.,),GEOMETRY.positions),
+                        bindings.Keyform((1.,),((1.,2.),(3.,4.),(5.,8.)))),id=uid(5)))
+                    edit.apply(scene.CreateRotation("Parent",scene.Placement(),id=uid(6)))
+                    edit.apply(scene.ReparentLocal((uid(2),),uid(6)))
+                    for n in (10,20):
+                        edit.parameters.create(parameters.ParameterSpec("Blend",0.,1.,0.,id=uid(n),kind=parameters.Kind.BLEND_SHAPE))
+                        edit.apply(scene.CreateBlendTable(uid(n),(scene.Sample(uid(n+1),0.),scene.Sample(uid(n+2),1.)),uid(n+1),id=uid(n+3)))
+                        edit.apply(scene.CreateMeshBlend(uid(2),uid(n+3),id=uid(n+4)))
+                        edit.apply(scene.SetMeshBlendVertices(uid(2),uid(n+4),uid(n+2),(
+                            scene.VertexPatch(42,(2.,0.)),scene.VertexPatch(7,(0.,4.)),scene.VertexPatch(99,(6.,8.)))))
+                    edit.apply(scene.CreateGlue("Seam",uid(2),uid(3),id=uid(30)))
+                    edit.apply(scene.InsertGluePair(uid(30),scene.GluePair(.3,.7,id=uid(31),vertex_a=42,vertex_b=None)))
+                query=m.ModelingQuery(meshes=(uid(2),),bindings=(uid(5),),blend_bindings=(uid(14),uid(24)),blend_key_tables=(uid(13),uid(23)),glues=(uid(30),))
+                before=session.modeling.records(query).value
+                with session.edit("insert with dependencies") as edit:
+                    def manual(operation):
+                        return edit.apply(m.ModelingCommandManualMesh(mesh_id=uid(2),expected=edit.meshes.get(uid(2)).source,operation=operation))
+                    # Geometric rejection must not abort this candidate.
+                    with self.assertRaises(zipzi.SdkFailure) as invalid:
+                        manual(m.ManualMeshOperationInsertVertex(id=100,uv=m.Vec2(.9,.9)))
+                    self.assertEqual(invalid.exception.code,"OUTSIDE_TRANSFER_DOMAIN")
+                    # 6,000 vertex targets force Connected binary upload. A
+                    # duplicate-ID refusal must release only the upload buffer.
+                    with self.assertRaises(zipzi.SdkFailure) as binary_invalid:
+                        manual(m.ManualMeshOperationMoveVertices(targets=tuple(
+                            m.ManualVertexTarget(id=42,uv=m.Vec2(.25,.25)) for _ in range(6000))))
+                    self.assertEqual(binary_invalid.exception.code,"INVALID_MANUAL_MESH")
+                    result=manual(m.ManualMeshOperationInsertVertex(id=101,uv=m.Vec2(.25,.25)))
+                    self.assertEqual(result.mesh_transfer.shape_count,7)
+                    self.assertEqual(result.mesh_transfer.added,1)
+                    self.assertGreater(result.mesh_transfer.cost.temporary_bytes,0)
+                    with self.assertRaises(zipzi.SdkFailure) as referenced:
+                        manual(m.ManualMeshOperationDeleteVertices(ids=(42,)))
+                    self.assertEqual(referenced.exception.code,"GLUE_VERTEX_REFERENCED")
+                    current=edit.modeling.records(query).value
+                    self.assertEqual(current.meshes[0].deformer_id,uid(6))
+                    self.assertEqual(current.bindings[0].axes,before.bindings[0].axes)
+                    self.assertEqual(current.bindings[0].keyforms[1].positions[-1],(2.5,4.))
+                    self.assertEqual(current.blend_key_tables,before.blend_key_tables)
+                    self.assertEqual(current.glues,before.glues)
+                    for b in current.blend_bindings:
+                        self.assertIsInstance(b.keyforms,m.DeltaKeyformsMesh)
+                        self.assertEqual(b.keyforms.value[0].positions[-1],(0.,0.))
+                        self.assertEqual(b.keyforms.value[1].positions[-1],(2.5,3.))
+                self.assertEqual(session.info().history,(2,0))
+                session.undo().wait()
+                self.assertEqual(session.modeling.records(query).value,before)
+                session.redo().wait()
+                self.assertEqual(session.modeling.records(query).value,current)
+                saved=session.project.save(self.folder/(mode+"-mixed-manual")).wait()
+                reopened=self.runtime(mode).sessions.open(saved.manifest).wait()
+                self.assertEqual(reopened.modeling.records(query).value,current)
+                results.append((current.meshes[0].base_positions,current.bindings[0].keyforms[1].positions))
+        self.assertEqual(results[0],results[1])
+
+
     def test_manual_mesh_source_contract_and_existing_large_writes(self):
         from zipzi._generated import binary, modeling as wire
         for mode in ("local", "connected"):

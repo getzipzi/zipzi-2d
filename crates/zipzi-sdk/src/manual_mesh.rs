@@ -1,5 +1,5 @@
 //! Pure, atomic edits of a single UV triangulation. No document or UI state lives here.
-use crate::{GeometrySnapshot, GeometrySpace, MeshGeometry, SdkError, TopologyReplacement};
+use crate::{MeshGeometry, SdkError};
 use rstar::{RTree, RTreeObject, AABB};
 use spade::{ConstrainedDelaunayTriangulation, Point2, Triangulation};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -828,13 +828,14 @@ fn triangulate_with_extension(
 }
 
 /// Apply a manual edit to an owned geometry value. Errors leave the source untouched.
-pub fn edit_manual_mesh(
+pub(crate) fn edit_manual_uv_topology(
     source: &MeshGeometry,
     operation: ManualMeshOperation,
 ) -> Result<ManualMeshResult, SdkError> {
     if let ManualMeshOperation::InsertConnectedVertex { from, id, uv } = operation {
-        let mut inserted = edit_manual_mesh(source, ManualMeshOperation::InsertVertex { id, uv })?;
-        let connected = edit_manual_mesh(
+        let mut inserted =
+            edit_manual_uv_topology(source, ManualMeshOperation::InsertVertex { id, uv })?;
+        let connected = edit_manual_uv_topology(
             &inserted.geometry,
             ManualMeshOperation::ConstrainEdge { a: from, b: id },
         )?;
@@ -860,7 +861,6 @@ pub fn edit_manual_mesh(
             if g.vertex_ids.contains(&id) {
                 return Err(bad(format!("vertex {id}: ID already exists")));
             }
-            let map = AffineUvMap::from_geometry(&g)?;
             if !uv.x.is_finite()
                 || !uv.y.is_finite()
                 || !(0.0..=1.0).contains(&uv.x)
@@ -891,7 +891,7 @@ pub fn edit_manual_mesh(
             }
             g.vertex_ids.push(id);
             g.uvs.push(uv);
-            g.positions.push(map.position(uv));
+            g.positions.push(uv);
             added.push(id);
             touched.insert(id);
             if outside {
@@ -968,7 +968,6 @@ pub fn edit_manual_mesh(
             targets,
             motion_from,
         } => {
-            let map = AffineUvMap::from_geometry(&g)?;
             let ids: BTreeSet<_> = targets.iter().map(|v| v.id).collect();
             if ids.len() != targets.len() {
                 return Err(bad("duplicate moved vertex ID"));
@@ -1047,7 +1046,7 @@ pub fn edit_manual_mesh(
                     .ok_or_else(|| bad(format!("vertex {id}: unknown ID")))?;
                 if moved.contains(&id) {
                     g.uvs[i] = to;
-                    g.positions[i] = map.position(to);
+                    g.positions[i] = to;
                 }
             }
             force_rebuild = !moved.is_empty();
@@ -1219,7 +1218,7 @@ pub fn add_manual_interior_sites(
     allocator: &mut ManualVertexIdAllocator,
 ) -> Result<ManualMeshResult, SdkError> {
     let meshing = extract_manual_meshing(source)?;
-    let map = AffineUvMap::from_geometry(source)?;
+    let sampler = crate::manual_mesh_transfer::UvSampler::new(source);
     let old_edges = mesh_edges(&source.triangles);
     let mut geometry = source.clone();
     let mut points = uv_map(&geometry);
@@ -1251,7 +1250,9 @@ pub fn add_manual_interior_sites(
         }
         let id = allocator.allocate(&geometry)?;
         geometry.vertex_ids.push(id);
-        geometry.positions.push(map.position(uv));
+        geometry
+            .positions
+            .push(sampler.sample_position(source, uv)?);
         geometry.uvs.push(uv);
         points.insert(id, point);
         added.push(id);
@@ -1283,80 +1284,31 @@ pub fn add_manual_interior_sites(
     })
 }
 
-impl crate::EditSession<'_> {
-    /// Apply one manual operation to this candidate through the complete topology path.
-    /// A caller commits the candidate once for the corresponding document history step.
-    pub fn edit_manual_mesh(
-        &mut self,
-        mesh_id: &str,
-        operation: ManualMeshOperation,
-    ) -> Result<ManualMeshResult, SdkError> {
-        self.ensure_active("edit_manual_mesh")?;
-        let doc = self.candidate_document();
-        let mesh = doc
-            .get_mesh(mesh_id)
-            .cloned()
-            .ok_or_else(|| bad(format!("mesh {mesh_id}: unknown ID")))?;
-        if !mesh.deformer_id.is_empty()
-            || doc
-                .binding_order()
-                .iter()
-                .filter_map(|id| doc.get_binding(id))
-                .any(|b| b.mesh_id == mesh_id)
-            || doc
-                .blend_binding_order()
-                .iter()
-                .filter_map(|id| doc.get_blend_binding(id))
-                .any(|b| b.target_id == mesh_id)
-            || doc
-                .glue_order()
-                .iter()
-                .filter_map(|id| doc.get_glue(id))
-                .any(|g| g.mesh_a_id == mesh_id || g.mesh_b_id == mesh_id)
+/// Pure geometry convenience API. Document edits use the complete transfer plan.
+pub fn edit_manual_mesh(
+    source: &MeshGeometry,
+    operation: ManualMeshOperation,
+) -> Result<ManualMeshResult, SdkError> {
+    let mut result = edit_manual_uv_topology(source, operation)?;
+    let sampler = crate::manual_mesh_transfer::UvSampler::new(source);
+    for (i, (&id, &uv)) in result
+        .geometry
+        .vertex_ids
+        .iter()
+        .zip(&result.geometry.uvs)
+        .enumerate()
+    {
+        result.geometry.positions[i] = if let Some(slot) = source
+            .vertex_ids
+            .iter()
+            .position(|v| *v == id)
+            .filter(|&s| source.uvs[s] == uv)
         {
-            return Err(bad(format!(
-                "mesh {mesh_id}: manual editing requires no deformation, binding, BlendShape or Glue"
-            )));
-        }
-        let source = GeometrySnapshot {
-            version: self.base_version(),
-            mesh_id: mesh_id.into(),
-            vertex_ids: mesh.vertex_ids.clone(),
-            positions: mesh.base_positions.clone(),
-            uvs: mesh.uvs.clone(),
-            triangles: mesh.triangles.clone(),
-            meshing: mesh.meshing.clone(),
-            space: GeometrySpace::Model,
+            source.positions[slot]
+        } else {
+            sampler.sample_position(source, uv)?
         };
-        let result = edit_manual_mesh(
-            &MeshGeometry {
-                vertex_ids: source.vertex_ids.clone(),
-                positions: source.positions.clone(),
-                uvs: source.uvs.clone(),
-                triangles: source.triangles.clone(),
-                meshing: source.meshing.clone(),
-            },
-            operation,
-        )?;
-        if !result.changed {
-            return Ok(result);
-        }
-        let mut replacement = mesh;
-        replacement.vertex_ids = result.geometry.vertex_ids.clone();
-        replacement.base_positions = result.geometry.positions.clone();
-        replacement.uvs = result.geometry.uvs.clone();
-        replacement.triangles = result.geometry.triangles.clone();
-        replacement.meshing = result.geometry.meshing.clone();
-        self.replace_topology(
-            &source,
-            TopologyReplacement {
-                mesh: replacement,
-                binding: None,
-                blend_bindings: vec![],
-                glues: vec![],
-                vertex_mapping: result.vertex_mapping.iter().copied().collect(),
-            },
-        )?;
-        Ok(result)
     }
+    result.changed = result.geometry != *source;
+    Ok(result)
 }

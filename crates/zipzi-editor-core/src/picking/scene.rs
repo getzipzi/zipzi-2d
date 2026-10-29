@@ -72,6 +72,44 @@ impl CanvasScene {
         Ok(scene)
     }
 
+    pub(crate) fn with_manual_uv(
+        &self,
+        document: &Document,
+        target: &crate::ManualMeshTarget,
+        source: SceneSnapshot,
+    ) -> Self {
+        let mut scene = self.clone();
+        let model = document.model();
+        if let Some(&slot) = self.mesh_slots.get(&target.object.id) {
+            if let Some(mesh) = model.get_mesh(&target.object.id) {
+                let mut meshes = self.meshes.to_vec();
+                let m = Arc::make_mut(&mut meshes[slot]);
+                m.vertices = mesh
+                    .vertex_ids
+                    .iter()
+                    .copied()
+                    .zip(mesh.uvs.iter().map(|&uv| {
+                        let p = target.mapping.position(uv);
+                        ModelPoint { x: p.x, y: p.y }
+                    }))
+                    .collect();
+                m.bounds = bounds(m.vertices.iter().map(|(_, p)| *p));
+                m.boundary = self.topology.meshes[&target.object.id]
+                    .boundary
+                    .iter()
+                    .map(|&(a, b)| (m.vertices[a].1, m.vertices[b].1))
+                    .collect();
+                scene.meshes = meshes.into();
+            }
+        }
+        scene.controls.clear();
+        scene.control_slots = Arc::new(HashMap::new());
+        scene.beziers.clear();
+        scene.visible_meshes = HashSet::from([target.object.id.clone()]);
+        scene.source = source;
+        scene
+    }
+
     pub fn new(document: &Document, source: SceneSnapshot) -> Self {
         Self::build(document, source, None)
     }

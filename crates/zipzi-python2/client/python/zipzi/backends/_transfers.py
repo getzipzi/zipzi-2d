@@ -23,12 +23,14 @@ class Transfer:
     def __init__(self, backend: TransferBackend, owner: object,
         kind: Literal["image", "buffer", "pixels", "snapshot", "read", "authoring", "records", "samples", "meshes", "bindings", "images", "preview", "spatial", "observation"], *, data: bytes = b"",
         width: int = 0, height: int = 0, selector: dict[str, object] | None = None,
-        blob: object = None, offset: int = 0, length: int = 0, edit: object = None):
+        blob: object = None, offset: int = 0, length: int = 0, edit: object = None,
+        manual_preview: bool = False):
         self.backend, self.owner, self.kind = backend, owner, kind
         self.data, self.width, self.height = data, width, height
         self.selector = selector
         self.blob = blob
         self.edit = edit
+        self.manual_preview = manual_preview
         self.offset, self.end = offset, offset + length
         self.parts: list[bytes] = []
         self.value: object = None
@@ -159,7 +161,8 @@ class Transfer:
                             raise
                         self.fault.add_note(f"Buffer cleanup failed: {cleanup}")
                     self.blob = None
-                    if self.fault is not None and self.kind=="authoring":
+                    retain_manual = self.manual_preview and isinstance(self.fault,SdkFailure) and self.fault.edit_state == "editing"
+                    if self.fault is not None and self.kind=="authoring" and not retain_manual:
                         self.phase="release_edit"
                         continue
                     if self.fault is not None:

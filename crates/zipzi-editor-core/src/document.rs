@@ -175,6 +175,12 @@ pub struct Document {
     changed_canvas_meshes: std::sync::Mutex<Option<std::collections::HashSet<String>>>,
     pending: Option<PendingEdit>,
     manual_pending: Option<ManualPending>,
+    manual_vertex_ids: std::cell::RefCell<
+        std::collections::HashMap<
+            String,
+            std::sync::Arc<std::sync::Mutex<zipzi_sdk::ManualVertexIdAllocator>>,
+        >,
+    >,
     generation_pending: Option<ManualPending>,
     generation_texture: Option<SceneTexture>,
     next_property_edit: u64,
@@ -410,6 +416,7 @@ impl Document {
             selected: None,
             pending: None,
             manual_pending: None,
+            manual_vertex_ids: Default::default(),
             generation_pending: None,
             generation_texture: None,
             next_property_edit: 0,

@@ -436,6 +436,10 @@ impl Editor {
         self.active_session()
             .is_some_and(|s| s.modeling.tools.manual_active())
     }
+    pub fn manual_for_viewport(&self, viewport: crate::ViewportId) -> bool {
+        self.active_session()
+            .is_some_and(|s| s.modeling.tools.manual_viewport() == Some(viewport))
+    }
     pub fn manual_editable(&self) -> bool {
         self.active_session()
             .is_some_and(|s| s.modeling.tools.manual_editable())
@@ -469,6 +473,7 @@ impl Editor {
             self.entry(id)?.context == crate::EditingContext::Modeling,
             "Manual mesh editing requires the Modeling workspace"
         );
+        let viewport = self.primary_viewport_id();
         let session = self
             .active_session_mut()
             .ok_or_else(|| anyhow!("No document"))?;
@@ -478,6 +483,9 @@ impl Editor {
             .modeling
             .tools
             .enter_manual(&mut session.document, target);
+        if let Some(viewport) = viewport {
+            session.modeling.tools.bind_manual_viewport(viewport);
+        }
         session.invalidate_scene();
         Ok(())
     }

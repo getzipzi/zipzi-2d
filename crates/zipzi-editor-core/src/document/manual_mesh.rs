@@ -1,18 +1,33 @@
 //! A manual gesture owns one Runtime candidate and one frozen source image.
 use super::*;
-use zipzi_sdk::{
-    AffineUvMap, ManualMeshOperation, MeshGeometry, edit_manual_mesh, extract_manual_meshing,
-};
+use zipzi_sdk::{AffineUvMap, ManualMeshOperation, MeshGeometry, extract_manual_meshing};
 
 #[derive(Clone, Debug)]
 pub struct ManualMeshTarget {
     pub object: crate::ObjectRef,
     pub mapping: AffineUvMap,
     pub texture: SceneTexture,
+    pub glue_vertices: Vec<zipzi_core::VertexId>,
     pub source: zipzi_runtime::SourceRef,
 }
 
 impl Document {
+    pub(crate) fn manual_vertex_allocator(
+        &self,
+        mesh_id: &str,
+        geometry: &MeshGeometry,
+    ) -> std::sync::Arc<std::sync::Mutex<zipzi_sdk::ManualVertexIdAllocator>> {
+        self.manual_vertex_ids
+            .borrow_mut()
+            .entry(mesh_id.into())
+            .or_insert_with(|| {
+                std::sync::Arc::new(std::sync::Mutex::new(
+                    zipzi_sdk::ManualVertexIdAllocator::new(geometry),
+                ))
+            })
+            .clone()
+    }
+
     /// Resolve the editable target and validate its image and geometry.
     /// Imported atlas artwork is normalized by the project import pipeline.
     pub fn manual_mesh_target(&self) -> Result<ManualMeshTarget> {
@@ -41,34 +56,6 @@ impl Document {
                     .is_some_and(|other| other.texture_asset_id == mesh.texture_asset_id)),
             "Mesh Edit requires an independent source image"
         );
-        ensure!(
-            mesh.deformer_id.is_empty(),
-            "Remove the parent deformer first"
-        );
-        ensure!(
-            !model
-                .binding_order()
-                .iter()
-                .filter_map(|id| model.get_binding(id))
-                .any(|binding| binding.mesh_id == object.id),
-            "Mesh Edit requires no ordinary binding"
-        );
-        ensure!(
-            !model
-                .blend_binding_order()
-                .iter()
-                .filter_map(|id| model.get_blend_binding(id))
-                .any(|binding| binding.target_id == object.id),
-            "Mesh Edit requires no BlendShape"
-        );
-        ensure!(
-            !model
-                .glue_order()
-                .iter()
-                .filter_map(|id| model.get_glue(id))
-                .any(|glue| glue.mesh_a_id == object.id || glue.mesh_b_id == object.id),
-            "Mesh Edit requires no Glue"
-        );
         let texture = self
             .textures
             .get(&mesh.texture_asset_id)
@@ -88,11 +75,38 @@ impl Document {
             meshing: mesh.meshing.clone(),
         };
         extract_manual_meshing(&geometry)?;
-        let mapping = AffineUvMap::from_geometry(&geometry)?;
+        ensure!(
+            geometry
+                .uvs
+                .iter()
+                .all(|uv| (0.0..=1.0).contains(&uv.x) && (0.0..=1.0).contains(&uv.y)),
+            "UV mesh extends beyond the complete source image"
+        );
+        // A dedicated source-image plane. Runtime UVs have Y up.
+        let mapping = AffineUvMap {
+            origin: zipzi_core::Vec2::default(),
+            u: zipzi_core::Vec2::new(texture.width as f32, 0.),
+            v: zipzi_core::Vec2::new(0., texture.height as f32),
+        };
         Ok(ManualMeshTarget {
             object: object.clone(),
             mapping,
             texture,
+            glue_vertices: model
+                .glue_order()
+                .iter()
+                .filter_map(|id| model.get_glue(id))
+                .flat_map(|g| {
+                    g.pairs.iter().flat_map(|p| {
+                        [
+                            (g.mesh_a_id == object.id).then_some(p.vertex_a).flatten(),
+                            (g.mesh_b_id == object.id).then_some(p.vertex_b).flatten(),
+                        ]
+                        .into_iter()
+                        .flatten()
+                    })
+                })
+                .collect(),
             source: zipzi_runtime::SourceRef::Formal {
                 session: self.session.id,
                 version: self.session.version(),
@@ -140,26 +154,6 @@ impl Document {
         operation: ManualMeshOperation,
     ) -> Result<bool> {
         self.validate_manual_target(target)?;
-        let source = self
-            .model()
-            .get_mesh(&target.object.id)
-            .cloned()
-            .ok_or_else(|| anyhow!("Mesh no longer exists"))?;
-        let geometry = MeshGeometry {
-            vertex_ids: source.vertex_ids,
-            positions: source.base_positions,
-            uvs: source.uvs,
-            triangles: source.triangles,
-            meshing: source.meshing,
-        };
-        // A rejected drag increment leaves the last accepted candidate intact.
-        let result = edit_manual_mesh(&geometry, operation.clone())?;
-        if !result.changed {
-            return Ok(false);
-        }
-        let topology_changed = geometry.vertex_ids != result.geometry.vertex_ids
-            || geometry.triangles != result.geometry.triangles
-            || geometry.meshing != result.geometry.meshing;
         if self.manual_pending.is_none() {
             self.finish_edit()?;
             self.manual_pending = Some(ManualPending {
@@ -171,13 +165,25 @@ impl Document {
                 changed: false,
             });
         }
-        let pending = self.manual_pending.as_mut().unwrap();
-        pending
+        let result = self
+            .manual_pending
+            .as_mut()
+            .unwrap()
             .edit
-            .apply_manual_mesh(&target.object.id, operation)?;
+            .apply_manual_mesh(&target.object.id, operation);
+        let report = match result {
+            Ok(report) => report,
+            Err(error) => {
+                if self.manual_pending.as_ref().is_some_and(|p| !p.changed) {
+                    self.manual_pending.take();
+                }
+                return Err(error.into());
+            }
+        };
+        let pending = self.manual_pending.as_mut().unwrap();
         pending.changed = true;
         self.invalidate_projection(false);
-        if topology_changed {
+        if report.reconnected || report.added > 0 || report.removed > 0 {
             self.invalidate_canvas_topology(Some(std::collections::HashSet::from([target
                 .object
                 .id

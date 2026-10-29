@@ -21,6 +21,7 @@ pub struct MeshSnapshot {
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WriteResult {
+    pub mesh_transfer: Option<zipzi_sdk::ManualMeshTransferReport>,
     pub source: SourceRef,
     pub ids: Vec<String>,
 }

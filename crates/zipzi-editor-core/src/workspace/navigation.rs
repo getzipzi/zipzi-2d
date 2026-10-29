@@ -43,7 +43,7 @@ impl Editor {
         ensure!(!self.gesture_active(), "A Modeling gesture is active");
         let metrics = self.viewport_metrics(binding.viewport).unwrap();
         let session = self.entry_mut(binding.document)?.session_mut().unwrap();
-        update(session.views.entry(binding.viewport).or_default(), metrics);
+        update(session.view_state_mut(binding.viewport), metrics);
         Ok(())
     }
     pub fn zoom_viewport(

@@ -149,3 +149,25 @@ fn rectangle_with_texture(
     document.select(&mesh.id)?;
     Ok((document, dir))
 }
+
+#[path = "../../../../fixtures/mesh-edit-dependencies.rs"]
+mod dependency_fixture;
+#[allow(dead_code)]
+pub fn mixed_document() -> anyhow::Result<(Document, tempfile::TempDir)> {
+    let dir = tempfile::tempdir()?;
+    let id = dependency_fixture::id;
+    let texture = dir.path().join("mixed.png");
+    std::fs::write(&texture, include_bytes!("../fixtures/alpha-asymmetric.png"))?;
+    let mut sdk = zipzi_sdk::AuthoringSession::new(&id(1), zipzi_core::ModelSetup::default())?;
+    sdk.edit("fixture", None, |e| {
+        dependency_fixture::install(e)?;
+        e.create_asset(zipzi_sdk::prepare_png_asset(&id(40), "Source", &texture)?)?;
+        let mut m = e.candidate_document().get_mesh(&id(2)).unwrap().clone();
+        m.texture_asset_id = id(40).into();
+        e.replace_mesh(m)
+    })?;
+    let saved = sdk.save_project(&dir.path().join("mixed.zipzi"), None)?;
+    let mut doc = Document::open(&saved.manifest)?;
+    doc.select(&id(2))?;
+    Ok((doc, dir))
+}

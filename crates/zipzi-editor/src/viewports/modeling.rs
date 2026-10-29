@@ -77,7 +77,9 @@ impl ModelingViewport {
                         } else {
                             Some(CursorStyle::Arrow)
                         }
-                    } else if let Some(tool) = owner.editor.manual_tool() {
+                    } else if owner.editor.manual_for_viewport(viewport)
+                        && let Some(tool) = owner.editor.manual_tool()
+                    {
                         Some(match tool {
                             zipzi_editor_core::ManualTool::Select
                                 if overlay.vertices.iter().any(|v| v.hovered) =>

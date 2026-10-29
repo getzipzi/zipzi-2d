@@ -442,12 +442,27 @@ impl Document {
         {
             return self.failed(Status::error("INCOMPLETE_DEPENDENCIES", &mesh.id));
         }
+        // Carrying an equal dependency through a complete replacement is a read,
+        // not a write. Prove field equality here, never trust a caller flag.
         let ordinary_id = binding.as_ref().map(|b| b.id.clone());
-        for id in ordinary_id
+        let changed_dependencies: Vec<_> = binding
             .iter()
-            .chain(&expected_blends)
-            .chain(&expected_glues)
-        {
+            .filter(|b| self.get_binding(&b.id) != Some(*b))
+            .map(|b| b.id.clone())
+            .chain(
+                blend_bindings
+                    .iter()
+                    .filter(|b| self.get_blend_binding(&b.id) != Some(*b))
+                    .map(|b| b.id.clone()),
+            )
+            .chain(
+                glues
+                    .iter()
+                    .filter(|g| self.get_glue(&g.id) != Some(*g))
+                    .map(|g| g.id.clone()),
+            )
+            .collect();
+        for id in &changed_dependencies {
             if let Err(status) = self.authoring_unlocked(id) {
                 return self.failed(status);
             }
@@ -460,7 +475,12 @@ impl Document {
             candidate.content.blend_bindings.remove(id);
         }
         for id in &expected_glues {
-            candidate.content.glues.remove(id);
+            // Equal Glues remain in the validation inventory. This also keeps
+            // their runtime IDs and owned pair IDs reserved while changed
+            // dependencies are normalized and validated.
+            if changed_dependencies.contains(id) {
+                candidate.content.glues.remove(id);
+            }
         }
         // Remove only temporary map entries; order arrays are restored on commit.
         candidate
@@ -493,6 +513,14 @@ impl Document {
             candidate.pair_lookup.take();
         }
         for g in glues {
+            if self.get_glue(&g.id) == Some(&g) {
+                // Endpoint validity is still checked against the final mesh.
+                let status = candidate.validate_glue(&g);
+                if !status.is_ok() {
+                    return self.failed(status);
+                }
+                continue;
+            }
             // Reuse replacement validation, including runtime-ID uniqueness.
             candidate
                 .content

@@ -21,7 +21,7 @@ pub fn render_deformer_bar(
     {
         return div().into_any_element();
     }
-    if state.editor.manual_active() {
+    if state.editor.manual_for_viewport(canvas.viewport) {
         return render_mesh_edit_bar(canvas, modal, cx);
     }
     if !state.editor.document().is_some_and(|d| {

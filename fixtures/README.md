@@ -20,3 +20,8 @@ Keep fixtures small and reproducible. Preserve provenance, hashes and capture
 settings when changing render references. Do not copy licensed local models into
 tracked fixtures; those belong in ignored `models/local/`. See
 [model inventory](../models/README.md) and [third-party notices](../THIRD_PARTY_NOTICES.md).
+
+`mesh-edit-dependencies.rs` is a shared synthetic SDK/Runtime/Editor fixture with
+non-contiguous vertex IDs, a non-affine base, a Rotation parent, ordinary shapes,
+two BlendShapes, a zero-strength seam and a half-configured self Glue. It uses no
+licensed model assets.

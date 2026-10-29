@@ -87,8 +87,9 @@ pub(super) struct ManualMeshMode {
     pub blocked: Option<String>,
     hover: Hit,
     gesture: Option<Gesture>,
-    allocator: ManualVertexIdAllocator,
+    allocator: Arc<std::sync::Mutex<ManualVertexIdAllocator>>,
     pub preview_result: bool,
+    pub uv_viewport: Option<crate::ViewportId>,
     projected: RefCell<HashMap<crate::ViewportId, ProjectedEdges>>,
 }
 
@@ -130,13 +131,16 @@ impl ManualMeshMode {
             .get_mesh(&target.object.id)
             .unwrap()
             .clone();
-        let allocator = ManualVertexIdAllocator::new(&MeshGeometry {
-            vertex_ids: mesh.vertex_ids,
-            positions: mesh.base_positions,
-            uvs: mesh.uvs,
-            triangles: mesh.triangles,
-            meshing: mesh.meshing,
-        });
+        let allocator = document.manual_vertex_allocator(
+            &target.object.id,
+            &MeshGeometry {
+                vertex_ids: mesh.vertex_ids,
+                positions: mesh.base_positions,
+                uvs: mesh.uvs,
+                triangles: mesh.triangles,
+                meshing: mesh.meshing,
+            },
+        );
         Self {
             target,
             tool: ManualTool::Select,
@@ -148,6 +152,7 @@ impl ManualMeshMode {
             gesture: None,
             allocator,
             preview_result: false,
+            uv_viewport: None,
             projected: RefCell::new(HashMap::new()),
         }
     }
@@ -196,7 +201,7 @@ impl ManualMeshMode {
     }
 
     pub fn delete_selection(&mut self, document: &mut Document) -> Result<bool> {
-        if self.blocked.is_some() {
+        if self.blocked.is_some() || self.preview_result {
             return Ok(false);
         }
         let operation = if !self.selected.is_empty() {
@@ -295,7 +300,13 @@ impl ManualMeshMode {
         frame: &CanvasFrame,
         event: CanvasInput,
     ) -> Result<bool> {
-        if self.blocked.is_some() && !matches!(event, CanvasInput::Cancel) {
+        if (self.blocked.is_some()
+            || self.preview_result
+            || self
+                .uv_viewport
+                .is_some_and(|id| id != frame.version.binding.viewport))
+            && !matches!(event, CanvasInput::Cancel)
+        {
             return Ok(false);
         }
         match event {
@@ -539,7 +550,7 @@ impl ManualMeshMode {
             let a = mesh.vertex_ids.iter().position(|id| *id == a).unwrap();
             let b = mesh.vertex_ids.iter().position(|id| *id == b).unwrap();
             let project = |slot: usize| {
-                let p = mesh.base_positions[slot];
+                let p = self.target.mapping.position(mesh.uvs[slot]);
                 transform.to_viewport(crate::ModelPoint { x: p.x, y: p.y })
             };
             let pa = project(a);
@@ -566,7 +577,7 @@ impl ManualMeshMode {
             triangles: mesh.triangles,
             meshing: mesh.meshing,
         };
-        let id = self.allocator.allocate(&geometry)?;
+        let id = self.allocator.lock().unwrap().allocate(&geometry)?;
         let operation = match from {
             Some(from) => ManualMeshOperation::InsertConnectedVertex { from, id, uv },
             None => ManualMeshOperation::InsertVertex { id, uv },
@@ -660,6 +671,13 @@ impl ManualMeshMode {
 
     pub fn overlay(&self, frame: &CanvasFrame) -> OverlaySnapshot {
         let mut out = OverlaySnapshot::default();
+        if self.preview_result
+            || self
+                .uv_viewport
+                .is_some_and(|id| id != frame.version.binding.viewport)
+        {
+            return out;
+        }
         if let Some(reason) = &self.blocked {
             out.target_label = Some(self.target.object.id.clone());
             out.interaction_label = Some(reason.clone());
@@ -773,6 +791,23 @@ impl ManualMeshMode {
                 editable: true,
             });
         }
+        let points = mesh
+            .vertices
+            .iter()
+            .filter(|(id, _)| self.target.glue_vertices.contains(id))
+            .map(|(id, p)| crate::OverlayGluePoint {
+                position: frame.transform.to_viewport(*p),
+                state: crate::GluePointState::Editable,
+                selected: self.selected.contains(id),
+                hovered: self.hover == Hit::Vertex(*id),
+            })
+            .collect();
+        out.glues.push(crate::OverlayGlue {
+            points,
+            pairs: vec![],
+            selected: false,
+            hovered: false,
+        });
         out.manual_mesh_feedback = Some(match self.hover {
             Hit::Vertex(_) => ManualMeshFeedback::Vertex,
             Hit::Edge(_, EdgeHitKind::Automatic) => ManualMeshFeedback::AutomaticEdge,

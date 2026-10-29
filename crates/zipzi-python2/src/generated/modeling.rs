@@ -22176,6 +22176,148 @@ fn write_observationbatch_in(
         .unbind())
 }
 
+pub fn write_manualmeshtransferreport(
+    py: Python<'_>,
+    value: &zipzi_sdk::ManualMeshTransferReport,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_manualmeshtransferreport_in(py, value, &classes)
+}
+fn write_manualmeshtransferreport_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::ManualMeshTransferReport,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "added",
+        (&value.added)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "moved",
+        (&value.moved)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "removed",
+        (&value.removed)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "shape_count",
+        (&value.shape_count)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "reconnected",
+        (&value.reconnected)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "glue_endpoints",
+        (&value.glue_endpoints)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "non_affine_parent",
+        (&value.non_affine_parent)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "affine_extension",
+        (&value.affine_extension)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("appearance_limits", {
+        let out = PyList::empty(py);
+        for item0 in (&value.appearance_limits) {
+            out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("cost", write_conversioncost_in(py, (&value.cost), classes)?)?;
+    Ok(classes
+        .getattr("ManualMeshTransferReport")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_conversioncost(
+    py: Python<'_>,
+    value: &zipzi_core::document::ConversionCost,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_conversioncost_in(py, value, &classes)
+}
+fn write_conversioncost_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::ConversionCost,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "sample_combinations",
+        (&value.sample_combinations)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "payload_bytes",
+        (&value.payload_bytes)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "temporary_bytes",
+        (&value.temporary_bytes)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "history_bytes",
+        (&value.history_bytes)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("ConversionCost")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
 pub fn read_parameteroperation(
     value: &Bound<'_, PyAny>,
 ) -> PyResult<zipzi_sdk::ParameterOperation> {

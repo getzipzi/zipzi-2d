@@ -69,15 +69,6 @@ impl HostedSession {
     pub fn expression_entry_address(&self, id: &str) -> Result<ExpressionEntryAddress, SdkError> {
         self.read().expression_entry_address(id)
     }
-    pub fn geometry(&self, id: &str) -> Option<GeometrySnapshot> {
-        self.read().geometry(id)
-    }
-    pub fn glue(&self, id: &str) -> Option<Glue> {
-        self.read().glue(id)
-    }
-    pub fn glue_ids(&self) -> Vec<String> {
-        self.read().glue_ids().to_vec()
-    }
     pub fn handle(&self, kind: ObjectKind, id: &str) -> Result<ObjectHandle, SdkError> {
         self.read().handle(kind, id)
     }

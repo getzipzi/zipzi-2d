@@ -948,3 +948,593 @@ fn connected_insert_is_atomic_and_can_extend_the_outline() {
         .boundary
         .contains(&50));
 }
+
+#[path = "../../../fixtures/mesh-edit-dependencies.rs"]
+mod dependencies;
+fn mixed() -> AuthoringSession {
+    let mut s = AuthoringSession::new(&dependencies::id(1), ModelSetup::default()).unwrap();
+    s.edit("mixed fixture", None, dependencies::install)
+        .unwrap();
+    s
+}
+#[test]
+fn transfer_mixed_shapes_parent_glues_and_identity_in_one_history_step() {
+    use zipzi_core::DeltaKeyforms;
+    let mut s = mixed();
+    let id = dependencies::id;
+    let before = s.document().clone();
+    let history = s.history_lengths();
+    let uv = Vec2::new(0.35, 0.25);
+    let mut edit = s.begin_owned_edit("sample all channels", None).unwrap();
+    let plan = edit
+        .plan_manual_mesh(&id(2), ManualMeshOperation::InsertVertex { id: 200, uv })
+        .unwrap();
+    assert_eq!(plan.report.shape_count, 7);
+    assert!(!plan.report.affine_extension);
+    assert_eq!(plan.report.added, 1);
+    assert!(!plan.report.appearance_limits.is_empty());
+    // Point lies in [10,30,120]; independently solve its barycentric source.
+    let a = before.get_mesh(&id(2)).unwrap().uvs[0];
+    let b = before.get_mesh(&id(2)).unwrap().uvs[1];
+    let c = before.get_mesh(&id(2)).unwrap().uvs[4];
+    let wc = (uv.y - a.y) / (c.y - a.y);
+    let wb = (uv.x - a.x - wc * (c.x - a.x)) / (b.x - a.x);
+    let wa = 1. - wb - wc;
+    let check = |old: &[Vec2], new: &[Vec2]| {
+        assert_eq!(&new[..5], old);
+        let p = Vec2::new(
+            old[0].x * wa + old[1].x * wb + old[4].x * wc,
+            old[0].y * wa + old[1].y * wb + old[4].y * wc,
+        );
+        assert!((new[5].x - p.x).abs() < 2e-5 && (new[5].y - p.y).abs() < 2e-5);
+    };
+    edit.apply_manual_mesh_plan(plan).unwrap();
+    edit.commit_to(&mut s).unwrap();
+    let after = s.document();
+    check(
+        &before.get_mesh(&id(2)).unwrap().base_positions,
+        &after.get_mesh(&id(2)).unwrap().base_positions,
+    );
+    assert_eq!(after.get_mesh(&id(2)).unwrap().deformer_id, id(3));
+    let old = before.get_binding(&id(6)).unwrap();
+    let new = after.get_binding(&id(6)).unwrap();
+    assert_eq!(old.axes, new.axes);
+    for (a, b) in old.keyforms.iter().zip(&new.keyforms) {
+        check(&a.positions, &b.positions);
+        assert_eq!(a.samples, b.samples);
+        assert_eq!(a.appearance, b.appearance);
+    }
+    for n in [12, 22] {
+        let old = before.get_blend_binding(&id(n)).unwrap();
+        let new = after.get_blend_binding(&id(n)).unwrap();
+        let (DeltaKeyforms::Mesh(a), DeltaKeyforms::Mesh(b)) = (&old.keyforms, &new.keyforms)
+        else {
+            panic!()
+        };
+        for (a, b) in a.iter().zip(b) {
+            check(&a.positions, &b.positions);
+            assert_eq!(a.sample_id, b.sample_id);
+            assert_eq!(a.opacity, b.opacity);
+        }
+        assert_eq!(b[0].positions, vec![Vec2::default(); 6]);
+    }
+    for n in [30, 32] {
+        assert_eq!(before.get_glue(&id(n)), after.get_glue(&id(n)));
+    }
+    for n in [11, 21] {
+        assert_eq!(
+            before.get_blend_key_table(&id(n)),
+            after.get_blend_key_table(&id(n))
+        );
+    }
+    let after = after.clone();
+    assert_eq!(s.history_lengths(), (history.0 + 1, 0));
+    s.undo().unwrap();
+    assert_eq!(s.document().get_mesh(&id(2)), before.get_mesh(&id(2)));
+    s.redo().unwrap();
+    assert_eq!(s.document().get_binding(&id(6)), after.get_binding(&id(6)));
+}
+#[test]
+fn transfer_drag_freezes_source_and_recovers_after_invalid_increment() {
+    let id = dependencies::id;
+    let mut s = mixed();
+    let mut direct = s.begin_owned_edit("direct", None).unwrap();
+    let mut drag = s.begin_owned_edit("drag", None).unwrap();
+    let movement = |x, y| ManualMeshOperation::MoveVertices {
+        targets: vec![target(120, Vec2::new(x, y))],
+        motion_from: None,
+    };
+    direct.edit_manual_mesh(&id(2), movement(0.7, 0.6)).unwrap();
+    for (x, y) in [(0.3, 0.4), (0.6, 0.3), (0.7, 0.6)] {
+        drag.edit_manual_mesh(&id(2), movement(x, y)).unwrap();
+    }
+    assert_eq!(
+        drag.candidate_document().get_mesh(&id(2)),
+        direct.candidate_document().get_mesh(&id(2))
+    );
+    assert_eq!(
+        drag.candidate_document().get_binding(&id(6)),
+        direct.candidate_document().get_binding(&id(6))
+    );
+    assert_eq!(
+        drag.plan_manual_mesh(&id(2), movement(1., 0.6))
+            .unwrap_err()
+            .code
+            .as_ref(),
+        "OUTSIDE_TRANSFER_DOMAIN"
+    );
+    assert!(!drag.is_aborted());
+    drag.edit_manual_mesh(&id(2), movement(0.7, 0.6)).unwrap();
+    drag.commit_to(&mut s).unwrap();
+}
+#[test]
+fn transfer_glue_deletion_and_outside_sampling_are_operation_rejections() {
+    let id = dependencies::id;
+    let s = mixed();
+    let mut e = s.begin_owned_edit("check", None).unwrap();
+    for vertex in [10, 70] {
+        let err = e
+            .plan_manual_mesh(
+                &id(2),
+                ManualMeshOperation::DeleteVertices { ids: vec![vertex] },
+            )
+            .unwrap_err();
+        assert_eq!(err.code.as_ref(), "GLUE_VERTEX_REFERENCED");
+        assert!(err.object_ids.len() >= 3);
+        assert!(err.field_path.is_some());
+    }
+    let err = e
+        .plan_manual_mesh(
+            &id(2),
+            ManualMeshOperation::InsertVertex {
+                id: 200,
+                uv: Vec2::new(0.05, 0.3),
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err.code.as_ref(), "OUTSIDE_TRANSFER_DOMAIN");
+    e.edit_manual_mesh(
+        &id(2),
+        ManualMeshOperation::DeleteVertices { ids: vec![120] },
+    )
+    .unwrap();
+    e.edit_manual_mesh(&id(2), ManualMeshOperation::ConstrainEdge { a: 30, b: 90 })
+        .unwrap();
+    let err = e
+        .plan_manual_mesh(&id(2), ManualMeshOperation::DeleteEdge { a: 10, b: 30 })
+        .unwrap_err();
+    assert_eq!(err.code.as_ref(), "GLUE_VERTEX_REFERENCED");
+    let b = e.candidate_document().get_binding(&id(6)).unwrap();
+    assert_eq!(b.keyforms[1].positions.len(), 4);
+}
+#[test]
+fn transfer_locked_equal_dependencies_are_reads_but_resampling_requires_write_access() {
+    let id = dependencies::id;
+    let mut s = mixed();
+    s.edit("lock dependencies", None, |e| {
+        let mut state = e.candidate_document().editor_state().clone();
+        state.objects.entry(id(6)).or_default().locked = true;
+        state.objects.entry(id(30)).or_default().locked = true;
+        e.replace_editor_state(state)
+    })
+    .unwrap();
+    let mut e = s.begin_owned_edit("fixed existing edge", None).unwrap();
+    e.edit_manual_mesh(&id(2), ManualMeshOperation::ConstrainEdge { a: 10, b: 120 })
+        .unwrap();
+    let err = e
+        .plan_manual_mesh(
+            &id(2),
+            ManualMeshOperation::InsertVertex {
+                id: 200,
+                uv: Vec2::new(0.35, 0.25),
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err.code.as_ref(), "OBJECT_LOCKED");
+}
+#[test]
+fn transfer_budget_and_cancellation_reject_before_channel_allocation() {
+    let id = dependencies::id;
+    let s = mixed();
+    let source = zipzi_sdk::ManualMeshSource::new(s.document(), &id(2)).unwrap();
+    let limits = zipzi_core::document::AuthoringLimits {
+        max_conversion_bytes: 1,
+        ..Default::default()
+    };
+    assert!(source
+        .plan(
+            s.document(),
+            s.version(),
+            ManualMeshOperation::Reconnect,
+            limits,
+            &Default::default()
+        )
+        .is_err());
+    let control = zipzi_core::document::ConversionControl::default();
+    control.cancel();
+    assert!(source
+        .plan(
+            s.document(),
+            s.version(),
+            ManualMeshOperation::Reconnect,
+            Default::default(),
+            &control
+        )
+        .is_err());
+}
+
+#[test]
+fn transfer_plans_reject_same_revision_branches_and_changed_dependencies() {
+    let id = dependencies::id;
+    let s = mixed();
+    let mut a = s.begin_owned_edit("a", None).unwrap();
+    let mut b = s.begin_owned_edit("b", None).unwrap();
+    a.rename_mesh(&id(2), "A").unwrap();
+    b.rename_mesh(&id(2), "B").unwrap();
+    assert_eq!(
+        a.candidate_document().revision(),
+        b.candidate_document().revision()
+    );
+    let p = a
+        .plan_manual_mesh(&id(2), ManualMeshOperation::Reconnect)
+        .unwrap();
+    assert_eq!(
+        b.apply_manual_mesh_plan(p).unwrap_err().code.as_ref(),
+        "STALE_MANUAL_MESH_PLAN"
+    );
+    let source = zipzi_sdk::ManualMeshSource::new(s.document(), &id(2)).unwrap();
+    assert_eq!(
+        source
+            .plan(
+                a.candidate_document(),
+                s.version(),
+                ManualMeshOperation::Reconnect,
+                Default::default(),
+                &Default::default()
+            )
+            .unwrap_err()
+            .code
+            .as_ref(),
+        "STALE_MANUAL_MESH_PLAN"
+    );
+}
+
+#[test]
+fn transfer_affine_parent_subdivision_preserves_sampled_uv_position_field() {
+    let id = dependencies::id;
+    let mut s = mixed();
+    let before = s.read_snapshot();
+    s.edit("subdivide", None, |e| {
+        e.edit_manual_mesh(
+            &id(2),
+            ManualMeshOperation::InsertVertex {
+                id: 200,
+                uv: Vec2::new(0.35, 0.25),
+            },
+        )
+        .map(|_| ())
+    })
+    .unwrap();
+    // Independent evaluation comparison uses the same UV coordinates, never
+    // array slots across different topologies. Glue has zero influence here.
+    let sample = |frame: &zipzi_core::DrawableFrame, u: f32, v: f32| {
+        let d = frame.drawables.iter().find(|d| d.id == id(2)).unwrap();
+        for t in d.indices.chunks_exact(3) {
+            let [a, b, c] = [
+                d.uvs[t[0] as usize],
+                d.uvs[t[1] as usize],
+                d.uvs[t[2] as usize],
+            ];
+            let det = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+            let wb = ((u - a.x) * (c.y - a.y) - (v - a.y) * (c.x - a.x)) / det;
+            let wc = ((b.x - a.x) * (v - a.y) - (b.y - a.y) * (u - a.x)) / det;
+            let wa = 1. - wb - wc;
+            if [wa, wb, wc].iter().all(|w| *w >= -1e-6) {
+                let mut p = Vec2::default();
+                for (&i, w) in t.iter().zip([wa, wb, wc]) {
+                    p.x += d.positions[i as usize].x * w;
+                    p.y += d.positions[i as usize].y * w;
+                }
+                return p;
+            }
+        }
+        panic!("missing UV {u},{v}")
+    };
+    let mut maximum = 0_f32;
+    for ordinary in [0., 0.25, 0.5, 0.75, 1.] {
+        for blend in [0., 0.3, 1.] {
+            let values = [(id(5), ordinary), (id(10), blend), (id(20), 1. - blend)]
+                .into_iter()
+                .collect();
+            let a = before.evaluate(&values).unwrap();
+            let b = s.evaluate(&values).unwrap();
+            for (u, v) in [(0.2, 0.2), (0.35, 0.25), (0.7, 0.3), (0.6, 0.75)] {
+                let a = sample(&a, u, v);
+                let b = sample(&b, u, v);
+                maximum = maximum.max((a.x - b.x).hypot(a.y - b.y));
+            }
+        }
+    }
+    assert!(maximum < 2e-5, "UV sample error {maximum}");
+}
+#[test]
+fn transfer_nested_warp_and_rotation_report_nonlinear_parent_chain() {
+    use zipzi_core::{Transform, TransformData, WarpTransform};
+    let id = dependencies::id;
+    let mut s = mixed();
+    s.edit("warp ancestor", None, |e| {
+        e.create_transform(Transform {
+            id: id(50),
+            data: TransformData::Warp(WarpTransform {
+                rows: 1,
+                columns: 1,
+                quad: true,
+                points: vec![
+                    Vec2::new(0., 0.),
+                    Vec2::new(4., 0.),
+                    Vec2::new(0., 4.),
+                    Vec2::new(6., 7.),
+                ],
+                bezier: None,
+            }),
+            ..Default::default()
+        })?;
+        let mut rotation = e
+            .candidate_document()
+            .get_transform(&id(3))
+            .unwrap()
+            .clone();
+        rotation.parent_id = zipzi_core::TransformId::optional(id(50));
+        e.replace_transform(rotation)
+    })
+    .unwrap();
+    let e = s.begin_owned_edit("sample", None).unwrap();
+    let plan = e
+        .plan_manual_mesh(
+            &id(2),
+            ManualMeshOperation::InsertVertex {
+                id: 200,
+                uv: Vec2::new(0.35, 0.25),
+            },
+        )
+        .unwrap();
+    assert!(plan.report.non_affine_parent);
+    assert!(plan
+        .report
+        .appearance_limits
+        .iter()
+        .any(|r| r.contains("Warp")));
+    assert!(matches!(
+        zipzi_sdk::ManualMeshSource::new(s.document(), &id(2))
+            .unwrap()
+            .geometry_space,
+        zipzi_sdk::GeometrySpace::RotationLocal(_)
+    ));
+}
+
+#[test]
+fn transfer_drag_net_noop_and_cancel_preserve_redo() {
+    let id = dependencies::id;
+    let mut s = mixed();
+    s.edit("later", None, |e| e.rename_mesh(&id(2), "later"))
+        .unwrap();
+    s.undo().unwrap();
+    let before = s.history_state();
+    let mut e = s.begin_owned_edit("out and back", None).unwrap();
+    for uv in [Vec2::new(0.6, 0.3), Vec2::new(0.4, 0.45)] {
+        e.edit_manual_mesh(
+            &id(2),
+            ManualMeshOperation::MoveVertices {
+                targets: vec![target(120, uv)],
+                motion_from: None,
+            },
+        )
+        .unwrap();
+    }
+    assert!(!e.commit_to(&mut s).unwrap().changed);
+    assert_eq!(s.history_state(), before);
+    let mut e = s.begin_owned_edit("cancel", None).unwrap();
+    e.edit_manual_mesh(
+        &id(2),
+        ManualMeshOperation::InsertVertex {
+            id: 300,
+            uv: Vec2::new(0.35, 0.25),
+        },
+    )
+    .unwrap();
+    drop(e);
+    assert_eq!(s.history_state(), before);
+}
+
+#[test]
+fn transfer_collapsed_base_still_samples_valid_uv_domain() {
+    let id = dependencies::id;
+    let mut s = mixed();
+    s.edit("collapsed base", None, |e| {
+        let mesh = e.candidate_document().get_mesh(&id(2)).unwrap();
+        let ids = mesh.vertex_ids.clone();
+        e.update_positions(&id(2), &ids, &vec![Vec2::default(); ids.len()])
+    })
+    .unwrap();
+    s.edit("UV insertion", None, |e| {
+        e.edit_manual_mesh(
+            &id(2),
+            ManualMeshOperation::InsertVertex {
+                id: 200,
+                uv: Vec2::new(0.35, 0.25),
+            },
+        )
+        .map(|_| ())
+    })
+    .unwrap();
+    assert_eq!(
+        s.mesh(&id(2)).unwrap().base_positions,
+        vec![Vec2::default(); 6]
+    );
+}
+
+#[test]
+fn transfer_edited_shapes_roundtrip_through_external_export() {
+    let id = dependencies::id;
+    let mut s = mixed();
+    let texture =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/asymmetric-2x2.png");
+    s.edit("configure export", None, |e| {
+        e.create_asset(zipzi_sdk::prepare_png_asset(&id(80), "Texture", &texture)?)?;
+        e.erase_object(&id(32))?; // External acceptance uses fully configured pairs.
+        for n in [2, 4] {
+            let mut m = e.candidate_document().get_mesh(&id(n)).unwrap().clone();
+            m.texture_asset_id = id(80).into();
+            e.replace_mesh(m)?;
+        }
+        e.edit_manual_mesh(
+            &id(2),
+            ManualMeshOperation::InsertVertex {
+                id: 200,
+                uv: Vec2::new(0.35, 0.25),
+            },
+        )
+        .map(|_| ())
+    })
+    .unwrap();
+    let before = s.read_snapshot();
+    let artifact = s.encode_cmo3(&zipzi_sdk::Cmo3Options::default()).unwrap();
+    assert_eq!(&artifact.bytes[..4], b"CAFF");
+    assert!(!artifact.report.has_loss());
+    assert!(s.document().same_content(before.document()));
+    let root = std::env::temp_dir().join(format!("zipzi-manual-export-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&root).unwrap();
+    let path = root.join("model.cmo3");
+    std::fs::write(&path, artifact.bytes).unwrap();
+    let mut imported = AuthoringSession::new(&id(90), ModelSetup::default()).unwrap();
+    imported.import_cubism(&path, None).unwrap();
+    assert_eq!(imported.document().mesh_order().len(), 2);
+    for parameter in [0., 0.5, 1.] {
+        let values: zipzi_core::PreviewValues = [(id(5), parameter), (id(10), 0.3), (id(20), 0.7)]
+            .into_iter()
+            .collect();
+        let remapped = values
+            .iter()
+            .map(|(id, v)| {
+                let p = imported
+                    .document()
+                    .parameter_order()
+                    .iter()
+                    .filter_map(|p| imported.document().get_parameter(p))
+                    .find(|p| p.runtime_id == *id)
+                    .unwrap();
+                (p.id.clone(), *v)
+            })
+            .collect();
+        let a = before.evaluate(&values).unwrap();
+        let b = imported.evaluate(&remapped).unwrap();
+        for mesh in a.drawables {
+            let result = b
+                .drawables
+                .iter()
+                .find(|m| m.runtime_id == mesh.runtime_id)
+                .unwrap();
+            assert_eq!(result.positions.len(), mesh.positions.len());
+            for p in mesh.positions {
+                assert!(result
+                    .positions
+                    .iter()
+                    .any(|q| (p.x - q.x).hypot(p.y - q.y) < 1e-3));
+            }
+        }
+    }
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn transfer_equal_locked_glue_keeps_runtime_and_pair_id_reservations() {
+    let id = dependencies::id;
+    let mut s = mixed();
+    s.edit("lock carried Glue", None, |e| {
+        let mut state = e.candidate_document().editor_state().clone();
+        state.objects.entry(id(32)).or_default().locked = true;
+        e.replace_editor_state(state)
+    })
+    .unwrap();
+    let before = s.read_snapshot();
+    let source = s.geometry(&id(2)).unwrap();
+    let doc = s.document();
+    let replacement = TopologyReplacement {
+        mesh: doc.get_mesh(&id(2)).unwrap().clone(),
+        binding: doc.binding_for_mesh(&id(2)).cloned(),
+        blend_bindings: doc
+            .blend_binding_order()
+            .iter()
+            .filter_map(|id| doc.get_blend_binding(id))
+            .cloned()
+            .collect(),
+        glues: doc
+            .glue_order()
+            .iter()
+            .map(|key| {
+                let mut glue = doc.get_glue(key).unwrap().clone();
+                if glue.id == id(30) {
+                    glue.runtime_id = id(32);
+                }
+                glue
+            })
+            .collect(),
+        vertex_mapping: source.vertex_ids.iter().map(|&v| (v, Some(v))).collect(),
+    };
+    assert_eq!(
+        s.edit("bad complete replacement", None, |e| e
+            .replace_topology(&source, replacement))
+            .unwrap_err()
+            .code
+            .as_ref(),
+        "DUPLICATE_RUNTIME_ID"
+    );
+    assert!(s.document().same_content(before.document()));
+}
+
+#[test]
+fn transfer_new_move_selection_retains_previous_completed_positions() {
+    let id = dependencies::id;
+    let s = mixed();
+    let mut e = s.begin_owned_edit("two selections", None).unwrap();
+    e.edit_manual_mesh(
+        &id(2),
+        ManualMeshOperation::MoveVertices {
+            targets: vec![target(120, Vec2::new(0.6, 0.3))],
+            motion_from: None,
+        },
+    )
+    .unwrap();
+    let accepted = e.candidate_document().get_mesh(&id(2)).unwrap().clone();
+    e.edit_manual_mesh(
+        &id(2),
+        ManualMeshOperation::MoveVertices {
+            targets: vec![target(10, Vec2::new(0.12, 0.12))],
+            motion_from: None,
+        },
+    )
+    .unwrap();
+    let current = e.candidate_document().get_mesh(&id(2)).unwrap();
+    assert_eq!(current.uvs[4], accepted.uvs[4]);
+    assert_eq!(current.base_positions[4], accepted.base_positions[4]);
+}
+
+#[test]
+fn transfer_generated_topology_cannot_bypass_the_complete_image_rectangle() {
+    let id = dependencies::id;
+    let s = mixed();
+    let source = zipzi_sdk::ManualMeshSource::new(s.document(), &id(2)).unwrap();
+    let mut g = source.geometry().clone();
+    g.uvs[0].x = -0.1;
+    let error = source
+        .plan_geometry(
+            s.document(),
+            s.version(),
+            g,
+            Default::default(),
+            &Default::default(),
+        )
+        .unwrap_err();
+    assert_eq!(error.code.as_ref(), "UV_OUTSIDE_SOURCE_IMAGE");
+    assert!(error.field_path.is_some());
+}

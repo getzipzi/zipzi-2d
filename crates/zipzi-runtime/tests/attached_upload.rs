@@ -155,3 +155,41 @@ fn upload_admission_refusal_preserves_the_candidate_and_sequence() {
     assert_eq!(rt.blob_count(), 0);
     assert_eq!(rt.session_info(s).unwrap().history_lengths, (0, 0));
 }
+
+#[path = "../../../fixtures/mesh-edit-dependencies.rs"]
+mod manual_dependencies;
+#[test]
+fn manual_mesh_binary_geometric_rejection_keeps_candidate_and_sequence() {
+    use zipzi_sdk::ManualMeshOperation;
+    let (mut rt, c, s, e) = fixture(Default::default());
+    rt.apply_edit(c, e, manual_dependencies::install).unwrap();
+    rt.commit_edit(c, e).unwrap();
+    let e = rt.begin_edit(c, s, "manual binary", None).unwrap();
+    let before = rt.edit_snapshot(c, e).unwrap().source;
+    for (uv, accepted) in [
+        (zipzi_core::Vec2::new(0.05, 0.3), false),
+        (zipzi_core::Vec2::new(0.35, 0.25), true),
+    ] {
+        let expected = rt.edit_snapshot(c, e).unwrap().source;
+        let operations = vec![EditOperation::Modeling {
+            operation: Box::new(modeling::ModelingCommand::ManualMesh {
+                mesh_id: manual_dependencies::id(2),
+                expected,
+                operation: ManualMeshOperation::InsertVertex { id: 200, uv },
+            }),
+        }];
+        let bytes = payload(&operations);
+        let blob = upload(&mut rt, c, e, &bytes);
+        let result = rt.apply_authoring_blob(c, e, blob);
+        assert_eq!(result.is_ok(), accepted);
+        if !accepted {
+            assert_eq!(rt.edit_snapshot(c, e).unwrap().source, before);
+            assert_eq!(rt.edit_state(c, e).unwrap(), EditState::Editing);
+        } else {
+            assert_eq!(result.unwrap().mesh_transfer.unwrap().shape_count, 7);
+            rt.release_blob(c, blob).unwrap();
+        }
+    }
+    rt.commit_edit(c, e).unwrap();
+    assert_eq!(rt.session(s).unwrap().history_lengths(), (2, 0));
+}

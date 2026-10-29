@@ -171,6 +171,15 @@ impl Harness {
                     view.animation_frame().map(|f| (
                         f.state.snapshot.time,
                         view.editor.can_display_animation_viewport(f.state.viewport)
+                    )),
+                    view.editor.primary_viewport_binding().map(|b| (
+                        b,
+                        view.editor.viewport_metrics(b.viewport),
+                        view.editor.viewport_state(b.document, b.viewport)
+                    )),
+                    view.modeling_frame().map(|f| (
+                        f.canvas.version,
+                        view.editor.accepts_preview(f.canvas.version.request)
                     ))
                 ))
             );
