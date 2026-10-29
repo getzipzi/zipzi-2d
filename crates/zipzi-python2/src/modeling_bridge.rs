@@ -109,6 +109,32 @@ impl NativeRuntime {
 
 #[pymethods]
 impl NativeRuntime {
+    fn deletion_page(
+        &self,
+        py: Python<'_>,
+        plan: &PlanToken,
+        section: &Bound<'_, PyAny>,
+        offset: usize,
+        limit: usize,
+    ) -> PyResult<Py<PyDict>> {
+        let _input = input_lease!(
+            self,
+            py,
+            generated::modeling::measure_deletionsection(section)?,
+            "plan.deletion_page",
+            None
+        );
+        let section = generated::modeling::read_deletionsection(section)?;
+        let client = self.client;
+        let plan = plan.id;
+        let result = py.detach(|| {
+            self.host
+                .call(move |rt| rt.deletion_report_page(client, plan, section, offset, limit))
+        });
+        reply(py, result, "plan.deletion_page", |page| {
+            Ok(generated::modeling::write_deletionpage(py, &page)?.into_bound(py))
+        })
+    }
     fn modeling_records(
         &self,
         py: Python<'_>,

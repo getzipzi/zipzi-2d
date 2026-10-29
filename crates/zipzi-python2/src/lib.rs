@@ -1,5 +1,6 @@
 //! Thin Runtime bridge for zipzi-python2. Public values and errors live in
 //! the pure Python client; native calls own their inputs before releasing GIL.
+#![cfg(not(feature = "schema-export"))]
 use pyo3::{
     prelude::*,
     types::{PyAny, PyBytes, PyDict, PyList, PyModule},
@@ -595,6 +596,7 @@ impl NativeRuntime {
                 history_bytes: 13,
             }),
             losses: vec!["fixed diagnostic".into()],
+            deletion: None,
             no_op: Some(false),
         };
         Ok(generated::resources::write_modelingplanreport(py, report)?.unbind())

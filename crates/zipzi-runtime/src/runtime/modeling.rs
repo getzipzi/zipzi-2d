@@ -7,6 +7,29 @@ pub(super) struct PlanEntry {
     pub bytes: usize,
 }
 impl Runtime {
+    /// Read bounded rows from the owning client's immutable source-bound report.
+    /// A stale source remains inspectable; applying the plan still checks source.
+    pub fn deletion_report_page(
+        &self,
+        client: ClientId,
+        plan: PlanId,
+        section: zipzi_sdk::DeletionSection,
+        offset: usize,
+        limit: usize,
+    ) -> Result<zipzi_sdk::DeletionPage> {
+        self.client(client)?;
+        let entry = self
+            .plans
+            .get(&plan)
+            .ok_or(RuntimeError::InvalidReference)?;
+        if entry.client != client {
+            return Err(RuntimeError::WrongOwner);
+        }
+        let zipzi_sdk::ModelingPlan::Deletion(review) = entry.plan.as_ref() else {
+            return Err(RuntimeError::InvalidReference);
+        };
+        Ok(review.report_page(section, offset, limit)?)
+    }
     /// Shared typed entry for local adapters and wire decoding. Admission is
     /// separate from SDK execution; a rejected batch does not advance source.
     pub fn apply_modeling(

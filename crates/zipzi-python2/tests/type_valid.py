@@ -235,3 +235,17 @@ def manual_mesh_transfer_report(result: zipzi.WriteResult) -> int:
     assert_type(report.shape_count, int)
     assert_type(report.cost.temporary_bytes, int)
     return report.added+report.moved+report.removed
+
+
+def deletion_review(session: zipzi.Session, mesh_id: str) -> modeling.DeletionPage:
+    intent = modeling.ModelingCommandDeletion(intent=modeling.DeletionIntent(
+        request=modeling.DeletionRequest(roots=(modeling.DeletionTargetMesh(value=mesh_id),))))
+    with session.plan_async(intent).wait() as plan:
+        summary = plan.report.deletion
+        if summary is not None:
+            assert_type(summary.state, modeling.DeletionReviewState)
+            assert_type(summary.sections, tuple[modeling.DeletionSectionCount, ...])
+        page = plan.deletion_page(modeling.DeletionSection.REWRITTEN, limit=64)
+        assert_type(page, modeling.DeletionPage)
+        assert_type(page.rows, tuple[modeling.DeletionRow, ...])
+        return page

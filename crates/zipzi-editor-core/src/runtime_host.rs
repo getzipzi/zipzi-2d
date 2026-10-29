@@ -395,6 +395,20 @@ impl HostedSession {
         let receipt = edit.commit_to(self)?;
         Ok((value, receipt))
     }
+    pub(crate) fn execute_modeling_plan(
+        &mut self,
+        plan: zipzi_runtime::PlanId,
+        expected: Version,
+    ) -> zipzi_runtime::Result<EditReceipt> {
+        let edit = self.begin_owned_edit("Delete objects and clean dependencies", Some(expected))?;
+        self.host
+            .write()
+            .promote_edit(self.client, edit.id.unwrap())?;
+        self.host
+            .write()
+            .apply_modeling_plan(self.client, edit.id.unwrap(), plan)?;
+        edit.commit_to(self)
+    }
     pub(crate) fn undo(&mut self) -> zipzi_runtime::Result<EditReceipt> {
         self.host.write().undo(self.client, self.id)
     }

@@ -124,6 +124,10 @@ pub enum ModelingCommand {
         /// identity; this DTO alone does not publish.
         offscreen: zipzi_core::Offscreen,
     },
+    Deletion {
+        /// Dependency-cleaning deletion request; plan first to inspect choices and bounded report pages.
+        intent: zipzi_sdk::DeletionIntent,
+    },
     Scene {
         /// Typed domain edit executed against the candidate; constructing this intent does not
         /// mutate or publish.
@@ -314,6 +318,16 @@ impl ModelingCommand {
             Self::ReplaceGlue { glue } => edit.replace_glue(glue),
             Self::CreateOffscreen { offscreen } => edit.create_offscreen(offscreen),
             Self::ReplaceOffscreen { offscreen } => edit.replace_offscreen(offscreen),
+            Self::Deletion { .. } => Err(zipzi_sdk::SdkError {
+                code: "DELETION_PLAN_REQUIRED".into(),
+                message: "Prepare and review a deletion plan before applying".into(),
+                operation: "deletion",
+                object_ids: vec![],
+                field_path: None,
+                expected_version: None,
+                actual_version: None,
+                referrers: Box::new([]),
+            }),
             Self::Scene { intent } => edit.edit_scene(intent),
             Self::Organization { intent } => edit.edit_organization(intent),
             Self::Binding { intent } => edit.binding_authoring(intent),

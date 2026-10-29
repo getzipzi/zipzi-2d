@@ -152,3 +152,14 @@ cargo test --locked -p zipzi-sdk --test integration mesh_binding_editing::
 
 See [test coverage](../../tools/README.md#test-coverage) for regression and
 stress modes.
+
+Dependency-cleaning scene deletion uses `DeletionRequest` and the source-bound
+`DeletionPlan`; `DeletionTarget::Part` always selects organization contents and
+`Deformer` always selects deformation contents. Known Mask, Glue, Hit Area,
+Part animation/Pose and CDI users are cleaned in one atomic edit. Retained
+cross-tree members require native preservation or an explicit migration choice.
+`ModelingIntent::Deletion` returns a `DeletionReviewPlan`, including unresolved
+or blocked reports. `summary()` and `report_page()` keep business removals,
+owned internal identities, rewrites, proofs, choices, locks and export regressions
+separate. Runtime/Python/Editor use this modeling route for source, budget and
+cancellation management. Raw strict scene deletion remains a separate API.

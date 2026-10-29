@@ -213,6 +213,7 @@ impl AuthoringSession {
                 subtree.clone()
             },
             delete: if supported
+                && h.kind() != ObjectKind::Part
                 && !d
                     .organization_delete_users(&[h.id().into()], OrganizationDeletePolicy::Contents)
                     .unwrap_or_default()

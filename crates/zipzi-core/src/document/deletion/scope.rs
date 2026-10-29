@@ -37,46 +37,37 @@ impl Document {
         };
         // Each explicit root contributes its own scope before union. In particular,
         // an explicitly selected Deformer inside a selected Part is not redundant.
-        for root in &roots {
-            for id in self.scene_organization_order() {
+        let index = self.deletion_index(control)?;
+        for (organization, graph) in [(true, &index.organization), (false, &index.deformation)] {
+            let mut pending: Vec<_> = roots
+                .iter()
+                .filter_map(|root| match (organization, root) {
+                    (true, DeletionTarget::Part(_)) | (false, DeletionTarget::Deformer(_)) => {
+                        Some(root.object())
+                    }
+                    _ => None,
+                })
+                .collect();
+            let mut seen = BTreeSet::new();
+            while let Some(owner) = pending.pop() {
                 control.checkpoint()?;
-                let in_scope = match root {
-                    DeletionTarget::Part(part) => {
-                        let mut parent = self.scene_organization_owner(&id).unwrap_or("");
-                        let mut found = false;
-                        while !parent.is_empty() {
-                            if parent == part {
-                                found = true;
-                                break;
-                            }
-                            parent = &self.get_part(parent).unwrap().parent_id;
-                        }
-                        found
-                    }
-                    DeletionTarget::Deformer(deformer) => {
-                        let mut parent = self.scene_deformer_parent(&id).unwrap_or("");
-                        let mut found = false;
-                        while !parent.is_empty() {
-                            if parent == deformer {
-                                found = true;
-                                break;
-                            }
-                            parent = self.get_transform(parent).unwrap().parent();
-                        }
-                        found
-                    }
-                    _ => false,
-                };
-                if in_scope {
-                    let child = self.deletion_scene_object(&id).unwrap();
+                if !seen.insert(owner.clone()) {
+                    continue;
+                }
+                for child in graph.get(&owner.id).into_iter().flatten() {
                     removed
                         .entry(child.clone())
                         .or_insert(DeletionReason::Scope);
                     report.relations.push(DeletionRelation {
-                        owner: root.object(),
+                        owner: owner.clone(),
                         field: DeletionField::RequestedScope,
-                        target: child,
+                        target: child.clone(),
                     });
+                    if (organization && child.kind == DeletionKind::Part)
+                        || (!organization && child.kind == DeletionKind::Deformer)
+                    {
+                        pending.push(child.clone());
+                    }
                 }
             }
         }

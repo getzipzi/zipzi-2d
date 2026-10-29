@@ -112,6 +112,7 @@ pub struct Document {
     binding_lookup: OnceLock<Arc<binding_authoring::identity::BindingLookup>>,
     reference_projection: OnceLock<Arc<ReferenceProjection>>,
     reference_index: OnceLock<Arc<reference_authoring::ReferenceIndex>>,
+    deletion_index: deletion::index::DeletionIndexCache,
     pair_lookup: OnceLock<Arc<HashMap<String, (String, usize)>>>,
     expression_entries: OnceLock<HashMap<String, (String, usize)>>,
     motion_lookup: OnceLock<Arc<motions::MotionLookup>>,

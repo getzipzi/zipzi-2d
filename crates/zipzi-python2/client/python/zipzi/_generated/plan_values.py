@@ -3,6 +3,8 @@ from .._presentation import CompactValue
 from dataclasses import dataclass
 from .._values import Source, Version, integer, record, sequence, string
 
+from . import modeling
+
 def _boolean(value: object) -> bool:
     if type(value) is not bool:
         raise TypeError("Expected a boolean")
@@ -24,7 +26,7 @@ class PlanCost(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class PlanReport(CompactValue):
-    'Immutable owned PlanReport value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsource: Exact formal or candidate source captured for this result; later host changes do not\nrewrite it.\nversion: Exact SDK version captured for this value; not a best-effort latest-version marker.\naffected_ids: Stable IDs conservatively affected by the planned operation.\ncopied_ids: Mapping from original object IDs to the new IDs allocated for copied objects.\ncost: Native plan cost estimates; inspect losses separately before applying the plan.\nlosses: Explicit semantic losses predicted by conversion; empty means no losses were reported.\nno_op: Whether applying the plan would leave the document unchanged.'
+    'Immutable owned PlanReport value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsource: Exact formal or candidate source captured for this result; later host changes do not\nrewrite it.\nversion: Exact SDK version captured for this value; not a best-effort latest-version marker.\naffected_ids: Stable IDs conservatively affected by the planned operation.\ncopied_ids: Mapping from original object IDs to the new IDs allocated for copied objects.\ncost: Native plan cost estimates; inspect losses separately before applying the plan.\nlosses: Explicit semantic losses predicted by conversion; empty means no losses were reported.\nno_op: Whether applying the plan would leave the document unchanged.\ndeletion: Bounded deletion readiness/count summary; detailed rows use frozen report pages.'
     __module__ = "zipzi"
     source: Source
     version: Version
@@ -33,8 +35,9 @@ class PlanReport(CompactValue):
     cost: PlanCost | None
     losses: tuple[str, ...]
     no_op: bool | None
+    deletion: modeling.DeletionSummary | None
 
     @classmethod
     def _read(cls, source: object, value: object) -> "PlanReport":
         r = record(value)
-        return cls(Source._read(source), Version._read(r["version"]), tuple(string(item) for item in sequence(r["affected_ids"])), tuple((key, string(item)) for key, item in sorted(record(r["copied_ids"]).items())), None if r["cost"] is None else PlanCost._read(r["cost"]), tuple(string(item) for item in sequence(r["losses"])), None if r["no_op"] is None else _boolean(r["no_op"]))
+        return cls(Source._read(source), Version._read(r["version"]), tuple(string(item) for item in sequence(r["affected_ids"])), tuple((key, string(item)) for key, item in sorted(record(r["copied_ids"]).items())), None if r["cost"] is None else PlanCost._read(r["cost"]), tuple(string(item) for item in sequence(r["losses"])), None if r["no_op"] is None else _boolean(r["no_op"]), None if r["deletion"] is None else modeling.read_DeletionSummary(r["deletion"]))

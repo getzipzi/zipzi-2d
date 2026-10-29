@@ -82,6 +82,13 @@ pub(crate) fn write_modelingplanreport(
             .map(|value| -> PyResult<_> { Ok(value) })
             .transpose()?,
     )?;
+    d.set_item(
+        "deletion",
+        value
+            .deletion
+            .map(|value| -> PyResult<_> { Ok(super::modeling::write_deletionsummary(py, &value)?) })
+            .transpose()?,
+    )?;
     Ok(d)
 }
 

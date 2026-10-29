@@ -203,7 +203,7 @@ impl RotationMap {
     }
 }
 impl Document {
-    fn reparent_drivers(&self, id: &str) -> Vec<String> {
+    pub(in crate::document) fn reparent_drivers(&self, id: &str) -> Vec<String> {
         let mut out = Vec::new();
         if let Some(b) = self.binding_for_mesh(id) {
             out.extend(

@@ -611,18 +611,19 @@ fn object_deletion_shortcut_protects_text_and_uses_tree_focus(cx: &mut TestAppCo
         window.click(format!("parts-item-Mesh:{}", mesh.id), cx);
         window.hover("canvas-body", cx);
         window.press("delete", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    h.view.read_with(cx, |view, _| {
         assert!(
-            h.view
-                .read(cx)
-                .editor
+            view.editor
                 .document()
                 .unwrap()
                 .object_index()
                 .get(&mesh)
                 .is_none()
         );
-    })
-    .unwrap();
+    });
 }
 
 #[gpui_kit::test]
@@ -651,6 +652,7 @@ fn object_deletion_viewport_shortcuts_and_context_menu_share_behavior(cx: &mut T
         if key.is_none() {
             choose(&h, "Delete Object", cx);
         }
+        cx.run_until_parked();
         h.view.read_with(cx, |view, _| {
             assert!(
                 view.editor
@@ -663,4 +665,75 @@ fn object_deletion_viewport_shortcuts_and_context_menu_share_behavior(cx: &mut T
             assert_eq!(view.editor.document().unwrap().history_lengths(), (2, 0));
         });
     }
+}
+
+#[gpui_kit::test]
+fn object_deletion_reviews_mask_cleanup_and_undo_restores_the_reference(cx: &mut TestAppContext) {
+    use zipzi_sdk::{SceneField as F, SceneFieldValue as V};
+    let mut document = Document::new_blank().unwrap();
+    let mut objects = vec![];
+    for name in ["Mask source", "Retained consumer"] {
+        let plan = document
+            .plan_scene_object_creation(zipzi_editor_core::SceneObjectType::Mesh, name.into(), &[])
+            .unwrap();
+        objects.push(
+            document
+                .execute_scene_object_creation(&plan)
+                .unwrap()
+                .suggested_selection[0]
+                .clone(),
+        );
+    }
+    let address = document
+        .scene_field_address(&objects[1].id, F::Masks)
+        .unwrap();
+    let plan = document
+        .plan_scene_field_patch(&address, V::Masks(vec![objects[0].id.clone()]), false)
+        .unwrap();
+    document.execute_scene_authoring(&plan).unwrap();
+    let h = setup_with_document(cx, document, tempfile::tempdir().unwrap());
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        window.click_with_options(
+            format!("parts-item-Mesh:{}", objects[0].id),
+            ClickOptions::new().with_button(MouseButton::Right),
+            cx,
+        );
+    })
+    .unwrap();
+    choose(&h, "Delete Object", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("tree-deletion-dialog").visible());
+        assert_ne!(window.find("tree-deletion-submit").disabled(), Some(true));
+        window.click("tree-deletion-submit", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    h.view.read_with(cx, |view, _| {
+        let document = view.editor.document().unwrap();
+        assert!(document.object_index().get(&objects[0]).is_none());
+        assert!(document.object_index().get(&objects[1]).is_some());
+        assert_eq!(
+            document
+                .scene_field_address(&objects[1].id, F::Masks)
+                .unwrap()
+                .expected(),
+            &V::Masks(vec![])
+        );
+        assert_eq!(document.history_lengths(), (4, 0));
+        assert!(view.edit_error.is_none());
+    });
+    h.view.update(cx, |view, cx| {
+        view.editor.execute(EditorCommand::Undo).unwrap();
+        let document = view.editor.document().unwrap();
+        assert_eq!(
+            document
+                .scene_field_address(&objects[1].id, F::Masks)
+                .unwrap()
+                .expected(),
+            &V::Masks(vec![objects[0].id.clone()])
+        );
+        view.redraw(cx);
+    });
 }

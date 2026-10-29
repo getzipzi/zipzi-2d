@@ -170,7 +170,7 @@ fn reparent_edit(
     })
 }
 impl Document {
-    fn preservation_context(&self) -> ReparentContext {
+    pub(super) fn preservation_context(&self) -> ReparentContext {
         let parameters = self.parameters();
         ReparentContext {
             parameter_values: parameters.iter().map(|p| (p.id.clone(), p.value)).collect(),

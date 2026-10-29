@@ -33,6 +33,63 @@ GEOMETRY = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
     ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
 
 class PythonSdk(unittest.TestCase):
+    def test_deletion_review_pages_cleanup_history_and_source_on_both_backends(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode), self.runtime(mode) as runtime:
+                session = runtime.sessions.create(uid(1))
+                with session.edit("Mask fixture") as edit:
+                    a = edit.meshes.create(meshes.MeshSpec("Mask", GEOMETRY, id=uid(2)))
+                    b = edit.meshes.create(meshes.MeshSpec("Consumer", GEOMETRY, id=uid(3)))
+                    consumer = edit.modeling.records(m.ModelingQuery(meshes=(b,))).value.meshes[0]
+                    edit.apply(m.ModelingCommandReplaceMesh(mesh=replace(consumer, masks=(a,), inverted_mask=True)))
+                intent = m.ModelingCommandDeletion(intent=m.DeletionIntent(request=m.DeletionRequest(roots=(m.DeletionTargetMesh(value=a),))))
+                with session.plan_async(intent).wait() as plan:
+                    self.assertEqual(plan.report.deletion.state, m.DeletionReviewState.NEEDS_CONFIRMATION)
+                    self.assertEqual(plan.report.affected_ids, ())
+                    removed = plan.deletion_page(m.DeletionSection.REMOVED, limit=1)
+                    self.assertEqual(removed.rows[0].removal.object.id, a)
+                    rewritten = plan.deletion_page(m.DeletionSection.REWRITTEN, limit=1)
+                    self.assertEqual(rewritten.rows[0].relation.owner.id, b)
+                    self.assertIsNotNone(rewritten.next_offset)
+                    with self.assertRaises(ValueError):
+                        plan.deletion_page(m.DeletionSection.REMOVED, limit=257)
+                    with session.edit("Delete and clean") as edit:
+                        edit.apply(plan)
+                self.assertEqual(session.modeling.records(m.ModelingQuery(meshes=(a,))).value.meshes, (None,))
+                consumer = session.modeling.records(m.ModelingQuery(meshes=(b,))).value.meshes[0]
+                self.assertEqual(consumer.masks, ())
+                self.assertFalse(consumer.inverted_mask)
+                self.assertEqual(session.info().history, (2, 0))
+                session.undo().wait()
+                self.assertEqual(session.modeling.records(m.ModelingQuery(meshes=(b,))).value.meshes[0].masks, (a,))
+                with session.plan(intent) as stale:
+                    page = stale.deletion_page(m.DeletionSection.REMOVED)
+                    with session.edit("Rename") as edit:
+                        edit.apply(meshes.Rename(b, "New"))
+                    self.assertEqual(stale.deletion_page(m.DeletionSection.REMOVED), page)
+                    with self.assertRaises(zipzi.SdkFailure):
+                        with session.edit("stale deletion") as edit:
+                            edit.apply(stale)
+                self.assertIsNotNone(session.modeling.records(m.ModelingQuery(meshes=(a,))).value.meshes[0])
+                with self.assertRaises(zipzi.SdkFailure):
+                    stale.deletion_page(m.DeletionSection.REMOVED)
+
+    def test_deletion_report_page_response_loss_recovers_on_the_original_plan(self):
+        with self.runtime("connected", drop="deletion_report_page") as runtime:
+            session = runtime.sessions.create(uid(1))
+            with session.edit("Fixture") as edit:
+                mesh = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY, id=uid(2)))
+            intent = m.ModelingCommandDeletion(intent=m.DeletionIntent(request=m.DeletionRequest(roots=(m.DeletionTargetMesh(value=mesh),))))
+            with session.plan(intent) as plan:
+                with self.assertRaises(zipzi.OutcomeUnknown) as unknown:
+                    plan.deletion_page(m.DeletionSection.REMOVED)
+                page = unknown.exception.recover()
+                self.assertEqual(page.rows[0].removal.object.id, mesh)
+                self.assertEqual(session.info().history,(1,0))
+                with session.edit("Delete") as edit:
+                    edit.apply(plan)
+            self.assertEqual(session.info().history,(2,0))
+
     def test_mesh_quality_evaluates_disabled_deformation_parent_on_both_backends(self):
         for mode in ("local", "connected"):
             with self.subTest(mode=mode), self.runtime(mode) as runtime:

@@ -1,5 +1,6 @@
 use zipzi_core::{document::*, *};
 mod scene;
+mod review;
 use zipzi_sdk::{
     rectangle_mesh, AuthoringSession, DeletionExportFailure, DeletionOptions, ObjectKind,
 };

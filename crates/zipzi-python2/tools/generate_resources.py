@@ -34,6 +34,7 @@ def render_resources(contract, Model, header, rust_header):
         if k=='sequence': return 'tuple['+typ(s['item'])+', ...]'
         if k=='string_map': return 'tuple[tuple[str, str], ...]'
         b=m.binding(s)
+        if b['form']=='external': return 'modeling.'+b['name']
         if b['form']=='handle': return b['module']+'.'+b['name']
         return b['name']
 
@@ -44,6 +45,7 @@ def render_resources(contract, Model, header, rust_header):
         if k=='optional': return 'None if '+e+' is None else '+read(s['item'],e)
         if k=='sequence': return 'tuple('+read(s['item'],'item')+' for item in sequence('+e+'))'
         if k=='string_map': return 'tuple((key, string(item)) for key, item in sorted(record('+e+').items()))'
+        if m.binding(s)['form']=='external':return 'modeling.read_'+m.binding(s)['name']+'('+e+')'
         return m.binding(s)['name']+'.read('+e+')'
 
     output={}
@@ -53,7 +55,7 @@ def render_resources(contract, Model, header, rust_header):
         if module=='resources':
             lines += ['def _bytes(value: object) -> bytes:', '    return value if isinstance(value, bytes) else bytes(integer(v) for v in sequence(value))','']
         else:
-            lines += ['def _boolean(value: object) -> bool:', '    if type(value) is not bool:', '        raise TypeError("Expected a boolean")','    return value','']
+            lines += ['from . import modeling', '', 'def _boolean(value: object) -> bool:', '    if type(value) is not bool:', '        raise TypeError("Expected a boolean")','    return value','']
         for s in m.records:
             b=m.binding(s)
             if b['module']!=module: continue
@@ -143,6 +145,7 @@ def render_resources(contract, Model, header, rust_header):
         if k=='optional':return e+'.map(|value| -> PyResult<_> { Ok('+native_write(s['item'],'value')+') }).transpose()?'
         if k=='bytes':return 'owned_pixels(py, &'+e+')'
         b=m.binding(s)
+        if b['form']=='external':return 'super::modeling::write_'+rust_name(s)+'(py, &'+e+')?'
         if b['form'] in {'source','version'}:return b['form']+'(py, '+e+')?'
         if b['form']=='handle':return 'Py::new(py, '+('ImageToken' if b['name']=='PreparedImage' else 'PlanToken')+' { id: '+e+' })?'
         return 'write_'+rust_name(s)+'(py, '+e+')?'

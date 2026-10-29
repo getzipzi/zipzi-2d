@@ -80,7 +80,7 @@ class Model:
                 raise ValueError('Unsupported public module')
             if binding["rust"] in self.bindings:
                 raise ValueError("Duplicate type binding")
-            if binding["form"] not in {"point", "record", "owned_record", "snapshot", "union", "enum", "query", "token", "source", "handle", "version"}:
+            if binding["form"] not in {"point", "record", "owned_record", "snapshot", "union", "enum", "query", "token", "source", "handle", "version", "external"}:
                 raise ValueError("Unsupported public projection")
             self.bindings[binding["rust"]] = binding
         self.types = {}
@@ -125,6 +125,8 @@ class Model:
                 raise ValueError("A Rust type has conflicting field descriptions")
             return
         self.types[name] = shape
+        if self.resources and self.bindings[name]["form"] == "external":
+            return
         if kind == "serde_enum":
             if self.bindings[name]['form'] != 'enum' or shape.get('tag') is not None or any(v['fields'] for v in shape['variants']):
                 raise ValueError('Only selected unit enums are supported')
@@ -484,7 +486,7 @@ def render(contract):
 def export():
     environment = dict(os.environ)
     environment.setdefault('PYO3_PYTHON', sys.executable)
-    result = subprocess.run(['cargo', 'run', '--locked', '--quiet', '-p', 'zipzi-python2', '--example', 'authoring_schema'], cwd=ROOT, env=environment, capture_output=True, text=True)
+    result = subprocess.run(['cargo', 'run', '--locked', '--quiet', '-p', 'zipzi-python2', '--features', 'schema-export', '--example', 'authoring_schema'], cwd=ROOT, env=environment, capture_output=True, text=True)
     if result.returncode:
         raise RuntimeError(result.stderr)
     return json.loads(result.stdout)

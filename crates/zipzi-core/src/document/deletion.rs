@@ -4,10 +4,23 @@ use super::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 mod dependents;
+pub(super) mod index;
 mod migration;
 mod scope;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum DeletionKind {
     Mesh,
     Glue,
@@ -34,24 +47,70 @@ pub enum DeletionKind {
     DisplayInfo,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct DeletionObject {
+    /// Native identity domain; Part and its DrawingGroup role remain distinct.
     pub kind: DeletionKind,
+    /// Persistent native ID; embedded identities also require their owner namespace.
     pub id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// Optional owning Expression ID for embedded source-scene track/key identities.
     pub owner_id: Option<String>,
 }
 
 /// Only these root types are implemented. Other domains retain their strict APIs.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum DeletionTarget {
-    Mesh(String),
-    Glue(String),
-    Offscreen(String),
-    Part(String),
-    Deformer(String),
-    DissolvePart(String),
-    RemoveDeformer(String),
+    Mesh(
+        /// Delete this Mesh and its owned identities; shared resources remain.
+        String,
+    ),
+    Glue(
+        /// Delete this Glue connection, pairs and owned bindings; endpoint meshes remain.
+        String,
+    ),
+    Offscreen(
+        /// Delete this Offscreen composite and its own shapes/bindings; its Part remains.
+        String,
+    ),
+    Part(
+        /// Delete this Part organization subtree; external deformation members remain and migrate.
+        String,
+    ),
+    Deformer(
+        /// Delete this deformation subtree, including meshes across organization Parts.
+        String,
+    ),
+    DissolvePart(
+        /// Remove this Part while retaining and migrating its organization members.
+        String,
+    ),
+    RemoveDeformer(
+        /// Remove only this Deformer and retain/migrate its deformation children.
+        String,
+    ),
 }
 impl DeletionTarget {
     pub fn object(&self) -> DeletionObject {
@@ -70,22 +129,47 @@ impl DeletionTarget {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    Default,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct DeletionRequest {
+    /// Explicit typed roots and individual scope choices; order does not change the result.
     pub roots: Vec<DeletionTarget>,
     #[serde(default)]
+    /// Explicit migration strategy by surviving object ID; KeepLocalData on a dissolved Part accepts its state loss.
     pub reparent: BTreeMap<String, ReparentStrategy>,
     #[serde(default)]
+    /// Frozen parameter inputs, finite domains and reference time; None uses document defaults and full declared domains.
     pub conversion_context: Option<ReparentContext>,
     #[serde(default)]
+    /// Explicit retained Part owners and mapping resolutions for surviving Offscreens.
     pub offscreen_placements: BTreeMap<String, DeletionOffscreenPlacement>,
     #[serde(default)]
+    /// Absolute and geometry-scale-relative position error allowed by conversion proofs.
     pub tolerance: DeletionTolerance,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct DeletionTolerance {
+    /// Finite positive absolute error tolerance in model units.
     pub absolute: f64,
+    /// Finite nonnegative tolerance times the original geometry scale.
     pub relative: f64,
 }
 impl Default for DeletionTolerance {
@@ -97,14 +181,33 @@ impl Default for DeletionTolerance {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct DeletionOffscreenPlacement {
+    /// Retained destination Part UUID; it must have an available Offscreen ownership role.
     pub part_id: String,
     /// Exact mapping in the destination Part's keyform order, if rebinding is required.
     pub mapping: Option<Vec<i32>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum DeletionChoice {
     PreserveEditState,
     KeepLocalData,
@@ -113,17 +216,41 @@ pub enum DeletionChoice {
     DeleteSubtree,
     Cancel,
 }
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum DeletionDecisionReason {
-    ConversionUnproven { code: String },
+    ConversionUnproven {
+        /// Native conversion diagnostic code; available resolutions come from typed choices.
+        code: String,
+    },
     OffscreenOwnerUnavailable,
     OffscreenMappingRequired,
     PartStateUnpreserved,
 }
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct DeletionDecision {
+    /// Affected surviving object that needs an explicit resolution.
     pub object: DeletionObject,
+    /// Typed unresolved native condition; it is not an instruction to expand deletion.
     pub reason: DeletionDecisionReason,
+    /// Actually available alternatives; selecting one requires a new source-bound plan.
     pub choices: Vec<DeletionChoice>,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -143,16 +270,34 @@ pub struct DeletionOrganizationMigration {
 
 /// Slots address the frozen source only; applying a plan never reuses them on a
 /// changed document. Owned records use their stable identities instead.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum DeletionField {
     Owned,
-    MeshMask { slot: usize },
+    MeshMask {
+        /// Zero-based address in the frozen source list, never a persistent object ID.
+        slot: usize,
+    },
     MeshInvertedMask,
-    OffscreenMask { slot: usize },
+    OffscreenMask {
+        /// Zero-based address in the frozen source list, never a persistent object ID.
+        slot: usize,
+    },
     GlueMeshA,
     GlueMeshB,
     HitAreaMesh,
-    DrawingItem { slot: usize },
+    DrawingItem {
+        /// Zero-based address in the frozen source list, never a persistent object ID.
+        slot: usize,
+    },
     OrganizationParent,
     DeformationParent,
     ConvertedData,
@@ -160,69 +305,179 @@ pub enum DeletionField {
     PoseLinkPart,
     MotionPart,
     ExpressionSourcePart,
-    CdiPart { slot: usize },
+    CdiPart {
+        /// Zero-based address in the frozen source list, never a persistent object ID.
+        slot: usize,
+    },
     RequestedScope,
 }
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct DeletionRelation {
+    /// Native object or role containing this field in the frozen source.
     pub owner: DeletionObject,
+    /// Typed field/slot address valid only in the frozen source.
     pub field: DeletionField,
+    /// Native target identity explaining this ownership, dependency or rewrite.
     pub target: DeletionObject,
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum DeletionReason {
     Requested,
     Owned,
     Dependency,
     Scope,
 }
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct DeletionRemoval {
+    /// Retired identity, including its native domain and embedded namespace.
     pub object: DeletionObject,
+    /// Whether this is an explicit root, scoped descendant, owned identity or dependency record.
     pub reason: DeletionReason,
 }
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct DeletionLock {
+    /// Actual removed or rewritten object protected by the lock.
     pub object: DeletionObject,
+    /// Persistent ID of the direct or inherited lock source to locate and unlock.
     pub source_id: String,
 }
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub struct DeletionStructuralBlocker {
+    /// Native result identity/address associated with the structural failure.
     pub object_id: String,
+    /// Native structure-validation code; the candidate cannot be installed.
     pub code: String,
+    /// Display diagnostic describing the invalid result; never parsed to decide execution.
     pub reason: String,
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum DeletionChannel {
     Appearance,
     Enabled,
     GluePostprocessing,
     DrawingOrder,
 }
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum DeletionEffect {
-    MaskChanged(DeletionObject),
-    GlueRemoved(DeletionObject),
-    HitAreaRemoved(DeletionObject),
-    CompositionChanged(DeletionObject),
-    PartAnimationRemoved(DeletionObject),
+    MaskChanged(
+        /// Retained Mask consumer whose clipping effect changes.
+        DeletionObject,
+    ),
+    GlueRemoved(
+        /// Deleted connection whose seam or postprocessing contribution disappears.
+        DeletionObject,
+    ),
+    HitAreaRemoved(
+        /// Deleted model3 Hit Area registration.
+        DeletionObject,
+    ),
+    CompositionChanged(
+        /// Affected Offscreen or Part whose compositing can change.
+        DeletionObject,
+    ),
+    PartAnimationRemoved(
+        /// Removed Part animation/Pose record; its container remains.
+        DeletionObject,
+    ),
     DrawingGroupFlattened {
+        /// Removed drawing role being flattened.
         group: DeletionObject,
+        /// Nearest retained drawing role receiving expanded members.
         destination: DeletionObject,
+        /// Original inclusive group order bounds.
         source_range: [i32; 2],
+        /// Retained destination order bounds; clipping and relative order may differ.
         destination_range: [i32; 2],
+        /// Whether parameter or Blend bindings drove the removed group order.
         dynamic_order: bool,
+        /// Original composite whose group scope is lost or migrated.
         offscreen: Option<DeletionObject>,
     },
-    OrganizationChanged(DeletionObject),
-    DeformationChanged(DeletionObject),
+    OrganizationChanged(
+        /// Surviving member whose organization owner changes.
+        DeletionObject,
+    ),
+    DeformationChanged(
+        /// Surviving object whose deformation is not fully preserved.
+        DeletionObject,
+    ),
     UnpreservedChannels {
+        /// Surviving object affected by channels outside the position proof.
         object: DeletionObject,
+        /// Explicit channels not covered by the converter position guarantee.
         channels: Vec<DeletionChannel>,
     },
     PartStateRemoved {
+        /// Dissolved Part whose inherited state is removed.
         part: DeletionObject,
+        /// Original Part enabled state, before dissolution.
         enabled: bool,
+        /// Whether the removed Part had parameter-driven drawing order.
         animated_order: bool,
     },
 }
@@ -241,8 +496,18 @@ pub struct DeletionReport {
     pub decisions: Vec<DeletionDecision>,
 }
 impl DeletionReport {
+    /// Conservative report payload estimate for bounded native plan storage.
+    pub fn estimated_bytes(&self) -> usize {
+        serde_json::to_vec(self)
+            .expect("typed report serializes")
+            .len()
+            .saturating_mul(4)
+    }
+
     pub fn requires_confirmation(&self) -> bool {
-        !self.rewritten.is_empty()
+        self.rewritten
+            .iter()
+            .any(|r| !matches!(r.field, DeletionField::DrawingItem { .. }))
             || self
                 .removed
                 .iter()
@@ -289,8 +554,8 @@ fn object(kind: DeletionKind, id: &str) -> DeletionObject {
 }
 
 impl Document {
-    /// Read-only native analysis. Currently a cancellable full scan;
-    /// hosts must not call it from per-frame command-state queries.
+    /// Read-only native analysis using the snapshot-bound typed relation index.
+    /// Full conversion and candidate construction occur only during preparation.
     pub fn analyze_deletion(
         &self,
         request: &DeletionRequest,
@@ -301,227 +566,7 @@ impl Document {
             return Err(Status::error("INVALID_SELECTION", "Select deletion roots"));
         }
         let (mut removed, mut report) = self.deletion_scope(request, control)?;
-        // Endpoints delete the connection, never its other endpoint. Inspect the
-        // original source once so root order and repeated dependency paths agree.
-        for id in self.glue_order() {
-            control.checkpoint()?;
-            let glue = self.get_glue(id).unwrap();
-            for (endpoint, field) in [
-                (&glue.mesh_a_id, DeletionField::GlueMeshA),
-                (&glue.mesh_b_id, DeletionField::GlueMeshB),
-            ] {
-                let Some(mesh) = endpoint.resolved_id() else {
-                    continue;
-                };
-                let target = object(DeletionKind::Mesh, mesh);
-                if removed.contains_key(&target) {
-                    let owner = object(DeletionKind::Glue, id);
-                    removed
-                        .entry(owner.clone())
-                        .or_insert(DeletionReason::Dependency);
-                    report.relations.push(DeletionRelation {
-                        owner,
-                        field,
-                        target,
-                    });
-                }
-            }
-        }
-        for id in self.binding_order() {
-            control.checkpoint()?;
-            let b = self.get_binding(id).unwrap();
-            let owner = object(DeletionKind::Mesh, &b.mesh_id);
-            if removed.contains_key(&owner) {
-                add_owned(
-                    &mut removed,
-                    &mut report,
-                    owner,
-                    object(DeletionKind::MeshBinding, id),
-                );
-            }
-        }
-        for id in self.scene_binding_order() {
-            control.checkpoint()?;
-            let b = self.get_scene_binding(id).unwrap();
-            if let Some(owner) = [DeletionKind::Part, DeletionKind::Deformer]
-                .into_iter()
-                .map(|kind| object(kind, b.target_id()))
-                .find(|key| removed.contains_key(key))
-            {
-                add_owned(
-                    &mut removed,
-                    &mut report,
-                    owner,
-                    object(DeletionKind::SceneBinding, id),
-                );
-            }
-        }
-        for id in self.blend_binding_order() {
-            control.checkpoint()?;
-            let b = self.get_blend_binding(id).unwrap();
-            let owner = [
-                DeletionKind::Mesh,
-                DeletionKind::Glue,
-                DeletionKind::Offscreen,
-                DeletionKind::Part,
-                DeletionKind::Deformer,
-            ]
-            .into_iter()
-            .map(|kind| object(kind, &b.target_id))
-            .find(|key| removed.contains_key(key));
-            if let Some(owner) = owner {
-                add_owned(
-                    &mut removed,
-                    &mut report,
-                    owner,
-                    object(DeletionKind::BlendBinding, id),
-                );
-            }
-        }
-        let owners: Vec<_> = removed.keys().cloned().collect();
-        for owner in owners {
-            control.checkpoint()?;
-            let axes = self
-                .get_binding(&owner.id)
-                .map(|b| &b.axes)
-                .or_else(|| self.get_scene_binding(&owner.id).map(|b| &b.axes))
-                .or_else(|| {
-                    self.get_glue(&owner.id)
-                        .and_then(|g| g.binding.as_ref())
-                        .map(|b| &b.axes)
-                });
-            if let Some(axes) = axes {
-                for axis in axes {
-                    let key = object(DeletionKind::Axis, &axis.id);
-                    add_owned(&mut removed, &mut report, owner.clone(), key.clone());
-                    for sample in &axis.samples {
-                        control.checkpoint()?;
-                        add_owned(
-                            &mut removed,
-                            &mut report,
-                            key.clone(),
-                            object(DeletionKind::Sample, &sample.id),
-                        );
-                    }
-                }
-            }
-            if let Some(glue) = self.get_glue(&owner.id) {
-                for pair in &glue.pairs {
-                    control.checkpoint()?;
-                    add_owned(
-                        &mut removed,
-                        &mut report,
-                        owner.clone(),
-                        object(DeletionKind::GluePair, &pair.id),
-                    );
-                }
-            }
-        }
-        for id in self.mesh_order() {
-            control.checkpoint()?;
-            let owner = object(DeletionKind::Mesh, id);
-            if removed.contains_key(&owner) {
-                continue;
-            }
-            let mesh = self.get_mesh(id).unwrap();
-            for (slot, mask) in mesh.masks.iter().enumerate() {
-                control.checkpoint()?;
-                let target = object(DeletionKind::Mesh, mask);
-                if removed.contains_key(&target) {
-                    report.rewritten.push(DeletionRelation {
-                        owner: owner.clone(),
-                        field: DeletionField::MeshMask { slot },
-                        target,
-                    });
-                }
-            }
-            if mesh.inverted_mask
-                && !mesh.masks.is_empty()
-                && mesh
-                    .masks
-                    .iter()
-                    .all(|mask| removed.contains_key(&object(DeletionKind::Mesh, mask)))
-            {
-                report.rewritten.push(DeletionRelation {
-                    owner,
-                    field: DeletionField::MeshInvertedMask,
-                    target: object(DeletionKind::Mesh, &mesh.masks[0]),
-                });
-            }
-        }
-        for id in self.offscreen_order() {
-            control.checkpoint()?;
-            let owner = object(DeletionKind::Offscreen, id);
-            if removed.contains_key(&owner) {
-                continue;
-            }
-            for (slot, mask) in self.get_offscreen(id).unwrap().masks.iter().enumerate() {
-                control.checkpoint()?;
-                let target = object(DeletionKind::Mesh, mask);
-                if removed.contains_key(&target) {
-                    report.rewritten.push(DeletionRelation {
-                        owner: owner.clone(),
-                        field: DeletionField::OffscreenMask { slot },
-                        target,
-                    });
-                }
-            }
-        }
-        for area in self.model3_settings().hit_areas.iter().flatten() {
-            control.checkpoint()?;
-            let Some(mesh) = area.mesh.object_id() else {
-                continue;
-            };
-            let target = object(DeletionKind::Mesh, mesh);
-            if removed.contains_key(&target) {
-                let owner = object(DeletionKind::HitArea, &area.id);
-                removed.insert(owner.clone(), DeletionReason::Dependency);
-                report.relations.push(DeletionRelation {
-                    owner,
-                    field: DeletionField::HitAreaMesh,
-                    target,
-                });
-            }
-        }
-        for group in self.draw_order_groups().into_iter().flatten() {
-            control.checkpoint()?;
-            for (slot, id) in group.items.iter().enumerate() {
-                control.checkpoint()?;
-                if let Some(target) = [
-                    DeletionKind::Mesh,
-                    DeletionKind::Offscreen,
-                    DeletionKind::Part,
-                ]
-                .into_iter()
-                .map(|kind| object(kind, id))
-                .find(|key| removed.contains_key(key))
-                {
-                    report.rewritten.push(DeletionRelation {
-                        owner: object(
-                            DeletionKind::DrawingGroup,
-                            if group.owner.is_empty() {
-                                self.id()
-                            } else {
-                                &group.owner
-                            },
-                        ),
-                        field: DeletionField::DrawingItem { slot },
-                        target,
-                    });
-                }
-            }
-        }
-        for group in self.draw_order_groups().into_iter().flatten() {
-            if removed.contains_key(&object(DeletionKind::Part, &group.owner)) {
-                add_owned(
-                    &mut removed,
-                    &mut report,
-                    object(DeletionKind::Part, &group.owner),
-                    object(DeletionKind::DrawingGroup, &group.owner),
-                );
-            }
-        }
-        self.deletion_dependents(&mut removed, &mut report, control)?;
+        self.indexed_deletion_dependencies(&mut removed, &mut report, control)?;
         self.deletion_migrations(request, &removed, &mut report, control)?;
         report.removed = removed
             .into_iter()
@@ -533,12 +578,36 @@ impl Document {
             .map(|r| r.object.clone())
             .chain(report.rewritten.iter().map(|r| r.owner.clone()))
             .collect();
+        let mut lock_checks = BTreeMap::new();
         for key in writes {
             control.checkpoint()?;
-            if let Err(status) = self.deletion_unlocked(&key) {
+            // Whole binding writes protect every owned sample; reuse that check
+            // rather than scanning the entire axis grid once for every sample.
+            let check = if matches!(key.kind, DeletionKind::Axis | DeletionKind::Sample) {
+                self.binding_identity(&key.id)
+                    .map(|i| {
+                        object(
+                            if self.get_binding(&i.owner).is_some() {
+                                DeletionKind::MeshBinding
+                            } else if self.get_scene_binding(&i.owner).is_some() {
+                                DeletionKind::SceneBinding
+                            } else {
+                                DeletionKind::Glue
+                            },
+                            &i.owner,
+                        )
+                    })
+                    .unwrap_or_else(|| key.clone())
+            } else {
+                key.clone()
+            };
+            if let Err(status) = lock_checks
+                .entry(check.clone())
+                .or_insert_with(|| self.deletion_unlocked(&check))
+            {
                 report.blockers.push(DeletionLock {
                     object: key,
-                    source_id: status.message,
+                    source_id: status.message.clone(),
                 });
             }
         }
@@ -779,9 +848,12 @@ fn add_owned(
     owner: DeletionObject,
     child: DeletionObject,
 ) {
-    removed
+    let reason = removed
         .entry(child.clone())
         .or_insert(DeletionReason::Owned);
+    if *reason == DeletionReason::Dependency {
+        *reason = DeletionReason::Owned;
+    }
     report.relations.push(DeletionRelation {
         owner,
         field: DeletionField::Owned,

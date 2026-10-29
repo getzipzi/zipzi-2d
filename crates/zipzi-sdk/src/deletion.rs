@@ -1,10 +1,12 @@
 //! Native dependency cleanup, bound to an exact SDK/Core source. These APIs
-//! are intentionally not exposed in Editor/transport until Runtime admission.
+//! are also coordinated through Runtime-owned modeling plans and report pages.
 use crate::{
     AuthoringSession, AuthoringSnapshot, EditReceipt, EditSession, ObjectHandle, ObjectKind,
     SdkError, Version,
 };
 use std::collections::BTreeSet;
+mod review;
+pub use review::*;
 use zipzi_core::document::{AuthoringLimits, ConversionControl, ConversionCost};
 pub use zipzi_core::document::{
     DeletionChannel, DeletionChoice, DeletionDecision, DeletionDecisionReason, DeletionEffect,
@@ -34,7 +36,7 @@ pub struct DeletionPlan {
     edit_source: Option<(std::sync::Arc<()>, u64)>,
     control: ConversionControl,
     domain: zipzi_core::document::DeletionPlan,
-    analysis: DeletionAnalysis,
+    analysis: std::sync::Arc<DeletionAnalysis>,
 }
 impl DeletionPlan {
     pub fn version(&self) -> Version {
@@ -122,7 +124,7 @@ fn plan(
         edit_source: None,
         control: control.clone(),
         domain,
-        analysis,
+        analysis: std::sync::Arc::new(analysis),
     })
 }
 impl AuthoringSession {

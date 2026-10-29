@@ -613,6 +613,10 @@ impl<S: std::borrow::Borrow<crate::AuthoringSnapshot>> ModelingSampler<S> {
 )]
 #[derive(zipzi_api_derive::ApiShape)]
 pub enum ModelingIntent {
+    Deletion(
+        /// Shared dependency-cleaning deletion request and explicit resolutions.
+        crate::DeletionIntent,
+    ),
     Scene(
         /// Typed intent for scene lifecycle, hierarchy and drawing; apply/plan it against a
         /// Session/Edit source rather than mutating this value.
@@ -676,6 +680,7 @@ pub enum ModelingIntent {
 }
 #[derive(Debug, Clone)]
 pub enum ModelingPlan {
+    Deletion(crate::DeletionReviewPlan),
     Scene(crate::SceneEditPlan),
     Organization(crate::OrganizationEditPlan),
     Binding(crate::BindingEditPlan),
@@ -705,6 +710,8 @@ pub struct ModelingPlanReport {
     pub losses: Vec<String>,
     /// Whether applying the plan would leave the document unchanged.
     pub no_op: Option<bool>,
+    /// Bounded deletion readiness/count summary; detailed rows use frozen report pages.
+    pub deletion: Option<crate::DeletionSummary>,
 }
 }
 impl ModelingPlan {
@@ -718,10 +725,20 @@ impl ModelingPlan {
                     cost: None,
                     losses: vec![],
                     no_op: Some($p.is_noop()),
+                    deletion: None,
                 }
             };
         }
         match self {
+            Self::Deletion(p) => ModelingPlanReport {
+                version: p.version(),
+                affected_ids: vec![],
+                copied_ids: Default::default(),
+                cost: Some(p.cost()),
+                losses: vec![],
+                no_op: Some(false),
+                deletion: Some(p.summary()),
+            },
             Self::Scene(p) => {
                 let mut r = report!(p);
                 r.copied_ids = p.copied_ids().clone();
@@ -744,6 +761,7 @@ impl ModelingPlan {
                 cost: Some(p.cost()),
                 losses: p.losses().to_vec(),
                 no_op: None,
+                deletion: None,
             },
             Self::Content(p) => {
                 let mut r = report!(p);
@@ -773,6 +791,7 @@ impl ModelingPlan {
                 cost: None,
                 losses: vec![],
                 no_op: None,
+                deletion: None,
             },
             Self::Expression(p) => ModelingPlanReport {
                 version: p.version(),
@@ -786,6 +805,7 @@ impl ModelingPlan {
                 cost: None,
                 losses: vec![],
                 no_op: None,
+                deletion: None,
             },
             Self::Physics(p) => ModelingPlanReport {
                 version: p.version(),
@@ -794,6 +814,7 @@ impl ModelingPlan {
                 cost: None,
                 losses: vec![],
                 no_op: None,
+                deletion: None,
             },
             Self::Pose(p) => ModelingPlanReport {
                 version: p.version(),
@@ -802,6 +823,7 @@ impl ModelingPlan {
                 cost: None,
                 losses: vec![],
                 no_op: None,
+                deletion: None,
             },
             Self::Attachment(p) => ModelingPlanReport {
                 version: p.version(),
@@ -810,11 +832,13 @@ impl ModelingPlan {
                 cost: None,
                 losses: vec![],
                 no_op: None,
+                deletion: None,
             },
         }
     }
     pub fn apply(&self, edit: &mut crate::EditSession<'_>) -> Result<(), crate::SdkError> {
         match self {
+            Self::Deletion(p) => p.apply(edit),
             Self::Scene(p) => edit.apply_scene_plan(p),
             Self::Organization(p) => edit.apply_organization_plan(p),
             Self::Binding(p) => edit.apply_binding_plan(p),
@@ -838,6 +862,9 @@ impl crate::AuthoringSnapshot {
         control: &crate::ConversionControl,
     ) -> Result<ModelingPlan, crate::SdkError> {
         Ok(match intent {
+            ModelingIntent::Deletion(i) => {
+                ModelingPlan::Deletion(self.prepare_deletion_review(i, limits, control)?)
+            }
             ModelingIntent::Scene(i) => {
                 ModelingPlan::Scene(self.plan_scene_edit_with_control(i, limits, control)?)
             }

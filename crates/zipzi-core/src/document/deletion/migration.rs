@@ -8,23 +8,41 @@ impl Document {
         parent_id: String,
         strategy: ReparentStrategy,
     ) -> ReparentEdit {
+        let mut required = BTreeSet::new();
+        if strategy != ReparentStrategy::KeepLocalData {
+            let mut pending = vec![object.id.as_str(), parent_id.as_str()];
+            let mut seen = BTreeSet::new();
+            while let Some(id) = pending.pop() {
+                if id.is_empty() || !seen.insert(id) {
+                    continue;
+                }
+                required.extend(self.reparent_drivers(id));
+                if let Some(parent) = self.scene_deformer_parent(id) {
+                    pending.push(parent);
+                }
+            }
+        }
         let context = if strategy == ReparentStrategy::KeepLocalData {
             None
         } else if let Some(context) = &request.conversion_context {
             let mut context = context.clone();
+            context
+                .parameter_values
+                .retain(|id, _| required.contains(id));
+            context
+                .parameter_domain
+                .retain(|d| required.contains(&d.parameter_id));
             if strategy == ReparentStrategy::PreserveEditState {
                 context.parameter_domain.clear();
             }
             Some(context)
         } else if strategy == ReparentStrategy::PreserveParameterDomain {
             Some(ReparentContext {
-                parameter_values: self
-                    .parameter_order()
+                parameter_values: required
                     .iter()
                     .map(|id| (id.clone(), self.get_parameter(id).unwrap().default_value))
                     .collect(),
-                parameter_domain: self
-                    .parameter_order()
+                parameter_domain: required
                     .iter()
                     .map(|id| {
                         let p = self.get_parameter(id).unwrap();

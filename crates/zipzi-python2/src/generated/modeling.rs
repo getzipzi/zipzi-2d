@@ -96,6 +96,9 @@ pub fn read_modelingcommand(
         "replace_offscreen" => Ok(zipzi_runtime::modeling::ModelingCommand::ReplaceOffscreen {
             offscreen: read_offscreen(&value.getattr("offscreen")?)?,
         }),
+        "deletion" => Ok(zipzi_runtime::modeling::ModelingCommand::Deletion {
+            intent: read_deletionintent(&value.getattr("intent")?)?,
+        }),
         "scene" => Ok(zipzi_runtime::modeling::ModelingCommand::Scene {
             intent: read_sceneedit(&value.getattr("intent")?)?,
         }),
@@ -452,6 +455,14 @@ fn write_modelingcommand_in(
             content.set_item("offscreen", write_offscreen_in(py, (field0), classes)?)?;
             Ok(classes
                 .getattr("ModelingCommandReplaceOffscreen")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_runtime::modeling::ModelingCommand::Deletion { intent: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("intent", write_deletionintent_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("ModelingCommandDeletion")?
                 .call((), Some(&content))?
                 .unbind())
         }
@@ -4313,6 +4324,715 @@ fn write_offscreenkeyform_in(
         .unbind())
 }
 
+pub fn read_deletionintent(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::DeletionIntent> {
+    Ok(zipzi_sdk::DeletionIntent {
+        request: read_deletionrequest(&value.getattr("request")?)?,
+        accepted_export_failures: value
+            .getattr("accepted_export_failures")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(read_opaqueexportissue(&item0)?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+    })
+}
+
+pub fn write_deletionintent(
+    py: Python<'_>,
+    value: &zipzi_sdk::DeletionIntent,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionintent_in(py, value, &classes)
+}
+fn write_deletionintent_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::DeletionIntent,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "request",
+        write_deletionrequest_in(py, (&value.request), classes)?,
+    )?;
+    out.set_item("accepted_export_failures", {
+        let out = PyList::empty(py);
+        for item0 in (&value.accepted_export_failures) {
+            out.append(write_opaqueexportissue_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("DeletionIntent")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_deletionrequest(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::DeletionRequest> {
+    Ok(zipzi_core::document::DeletionRequest {
+        roots: value
+            .getattr("roots")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(read_deletiontarget(&item0)?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+        reparent: value
+            .getattr("reparent")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_reparentstrategy(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+        conversion_context: if value.getattr("conversion_context")?.is_none() {
+            None
+        } else {
+            Some(read_reparentcontext(&value.getattr("conversion_context")?)?)
+        },
+        offscreen_placements: value
+            .getattr("offscreen_placements")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((
+                    item0.get_item(0)?.extract()?,
+                    read_deletionoffscreenplacement(&item0.get_item(1)?)?,
+                ))
+            })
+            .collect::<PyResult<_>>()?,
+        tolerance: read_deletiontolerance(&value.getattr("tolerance")?)?,
+    })
+}
+
+pub fn write_deletionrequest(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionRequest,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionrequest_in(py, value, &classes)
+}
+fn write_deletionrequest_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionRequest,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item("roots", {
+        let out = PyList::empty(py);
+        for item0 in (&value.roots) {
+            out.append(write_deletiontarget_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("reparent", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.reparent) {
+            out.set_item(
+                key.to_string(),
+                write_reparentstrategy_in(py, (item0), classes)?,
+            )?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("conversion_context", {
+        match (&value.conversion_context).as_ref() {
+            Some(item) => write_reparentcontext_in(py, (item), classes)?,
+            None => py.None(),
+        }
+    })?;
+    out.set_item("offscreen_placements", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.offscreen_placements) {
+            out.set_item(
+                key.to_string(),
+                write_deletionoffscreenplacement_in(py, (item0), classes)?,
+            )?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item(
+        "tolerance",
+        write_deletiontolerance_in(py, (&value.tolerance), classes)?,
+    )?;
+    Ok(classes
+        .getattr("DeletionRequest")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_deletiontarget(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::DeletionTarget> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "Mesh" => Ok(zipzi_core::document::DeletionTarget::Mesh(
+            value.getattr("value")?.extract()?,
+        )),
+        "Glue" => Ok(zipzi_core::document::DeletionTarget::Glue(
+            value.getattr("value")?.extract()?,
+        )),
+        "Offscreen" => Ok(zipzi_core::document::DeletionTarget::Offscreen(
+            value.getattr("value")?.extract()?,
+        )),
+        "Part" => Ok(zipzi_core::document::DeletionTarget::Part(
+            value.getattr("value")?.extract()?,
+        )),
+        "Deformer" => Ok(zipzi_core::document::DeletionTarget::Deformer(
+            value.getattr("value")?.extract()?,
+        )),
+        "DissolvePart" => Ok(zipzi_core::document::DeletionTarget::DissolvePart(
+            value.getattr("value")?.extract()?,
+        )),
+        "RemoveDeformer" => Ok(zipzi_core::document::DeletionTarget::RemoveDeformer(
+            value.getattr("value")?.extract()?,
+        )),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_deletiontarget(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionTarget,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletiontarget_in(py, value, &classes)
+}
+fn write_deletiontarget_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionTarget,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::document::DeletionTarget::Mesh(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item(
+                "value",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("DeletionTargetMesh")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionTarget::Glue(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item(
+                "value",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("DeletionTargetGlue")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionTarget::Offscreen(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item(
+                "value",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("DeletionTargetOffscreen")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionTarget::Part(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item(
+                "value",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("DeletionTargetPart")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionTarget::Deformer(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item(
+                "value",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("DeletionTargetDeformer")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionTarget::DissolvePart(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item(
+                "value",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("DeletionTargetDissolvePart")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionTarget::RemoveDeformer(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item(
+                "value",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("DeletionTargetRemoveDeformer")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+    }
+}
+
+pub fn read_reparentstrategy(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::ReparentStrategy> {
+    match value.getattr("value")?.extract::<String>()?.as_str() {
+        "KeepLocalData" => Ok(zipzi_core::document::ReparentStrategy::KeepLocalData),
+        "PreserveEditState" => Ok(zipzi_core::document::ReparentStrategy::PreserveEditState),
+        "PreserveParameterDomain" => {
+            Ok(zipzi_core::document::ReparentStrategy::PreserveParameterDomain)
+        }
+        _ => Err(pyo3::exceptions::PyValueError::new_err(
+            "Unknown enum value",
+        )),
+    }
+}
+
+pub fn write_reparentstrategy(
+    py: Python<'_>,
+    value: &zipzi_core::document::ReparentStrategy,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_reparentstrategy_in(py, value, &classes)
+}
+fn write_reparentstrategy_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::ReparentStrategy,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let name = match value {
+        zipzi_core::document::ReparentStrategy::KeepLocalData => "KeepLocalData",
+        zipzi_core::document::ReparentStrategy::PreserveEditState => "PreserveEditState",
+        zipzi_core::document::ReparentStrategy::PreserveParameterDomain => {
+            "PreserveParameterDomain"
+        }
+    };
+    Ok(classes
+        .getattr("ReparentStrategy")?
+        .call1((name,))?
+        .unbind())
+}
+
+pub fn read_reparentcontext(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::ReparentContext> {
+    Ok(zipzi_core::document::ReparentContext {
+        parameter_values: value
+            .getattr("parameter_values")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((item0.get_item(0)?.extract()?, item0.get_item(1)?.extract()?))
+            })
+            .collect::<PyResult<_>>()?,
+        parameter_domain: value
+            .getattr("parameter_domain")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok(read_conversiondomain(&item0)?)
+            })
+            .collect::<PyResult<Vec<_>>>()?
+            .into(),
+        edit_time_seconds: value.getattr("edit_time_seconds")?.extract()?,
+    })
+}
+
+pub fn write_reparentcontext(
+    py: Python<'_>,
+    value: &zipzi_core::document::ReparentContext,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_reparentcontext_in(py, value, &classes)
+}
+fn write_reparentcontext_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::ReparentContext,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item("parameter_values", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.parameter_values) {
+            out.set_item(
+                key.to_string(),
+                (item0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("parameter_domain", {
+        let out = PyList::empty(py);
+        for item0 in (&value.parameter_domain) {
+            out.append(write_conversiondomain_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item(
+        "edit_time_seconds",
+        (&value.edit_time_seconds)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("ReparentContext")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_conversiondomain(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::ConversionDomain> {
+    Ok(zipzi_core::document::ConversionDomain {
+        parameter_id: value.getattr("parameter_id")?.extract()?,
+        minimum: value.getattr("minimum")?.extract()?,
+        maximum: value.getattr("maximum")?.extract()?,
+    })
+}
+
+pub fn write_conversiondomain(
+    py: Python<'_>,
+    value: &zipzi_core::document::ConversionDomain,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_conversiondomain_in(py, value, &classes)
+}
+fn write_conversiondomain_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::ConversionDomain,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "parameter_id",
+        (&value.parameter_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "minimum",
+        (&value.minimum)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "maximum",
+        (&value.maximum)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("ConversionDomain")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_deletionoffscreenplacement(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::DeletionOffscreenPlacement> {
+    Ok(zipzi_core::document::DeletionOffscreenPlacement {
+        part_id: value.getattr("part_id")?.extract()?,
+        mapping: if value.getattr("mapping")?.is_none() {
+            None
+        } else {
+            Some(
+                value
+                    .getattr("mapping")?
+                    .try_iter()?
+                    .map(|item| -> PyResult<_> {
+                        let item0 = item?;
+                        Ok(item0.extract()?)
+                    })
+                    .collect::<PyResult<Vec<_>>>()?
+                    .into(),
+            )
+        },
+    })
+}
+
+pub fn write_deletionoffscreenplacement(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionOffscreenPlacement,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionoffscreenplacement_in(py, value, &classes)
+}
+fn write_deletionoffscreenplacement_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionOffscreenPlacement,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "part_id",
+        (&value.part_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("mapping", {
+        match (&value.mapping).as_ref() {
+            Some(item) => {
+                let out = PyList::empty(py);
+                for item1 in (item) {
+                    out.append((item1).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            }
+            None => py.None(),
+        }
+    })?;
+    Ok(classes
+        .getattr("DeletionOffscreenPlacement")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_deletiontolerance(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::document::DeletionTolerance> {
+    Ok(zipzi_core::document::DeletionTolerance {
+        absolute: value.getattr("absolute")?.extract()?,
+        relative: value.getattr("relative")?.extract()?,
+    })
+}
+
+pub fn write_deletiontolerance(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionTolerance,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletiontolerance_in(py, value, &classes)
+}
+fn write_deletiontolerance_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionTolerance,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "absolute",
+        (&value.absolute)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "relative",
+        (&value.relative)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("DeletionTolerance")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_opaqueexportissue(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_sdk::DeletionExportFailure> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "Model3NamespaceChanged" => Ok(zipzi_sdk::DeletionExportFailure::Model3NamespaceChanged),
+        "Cdi" => Ok(zipzi_sdk::DeletionExportFailure::Cdi {
+            problem: read_opaqueexportproblem(&value.getattr("problem")?)?,
+        }),
+        "Motion" => Ok(zipzi_sdk::DeletionExportFailure::Motion {
+            id: value.getattr("id")?.extract()?,
+            problem: read_opaqueexportproblem(&value.getattr("problem")?)?,
+        }),
+        "Expression" => Ok(zipzi_sdk::DeletionExportFailure::Expression {
+            id: value.getattr("id")?.extract()?,
+            problem: read_opaqueexportproblem(&value.getattr("problem")?)?,
+        }),
+        "Pose" => Ok(zipzi_sdk::DeletionExportFailure::Pose {
+            id: value.getattr("id")?.extract()?,
+            problem: read_opaqueexportproblem(&value.getattr("problem")?)?,
+        }),
+        "Physics" => Ok(zipzi_sdk::DeletionExportFailure::Physics {
+            id: value.getattr("id")?.extract()?,
+            problem: read_opaqueexportproblem(&value.getattr("problem")?)?,
+        }),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn write_opaqueexportissue(
+    py: Python<'_>,
+    value: &zipzi_sdk::DeletionExportFailure,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_opaqueexportissue_in(py, value, &classes)
+}
+fn write_opaqueexportissue_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::DeletionExportFailure,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_sdk::DeletionExportFailure::Model3NamespaceChanged => Ok(classes
+            .getattr("OpaqueExportIssueModel3NamespaceChanged")?
+            .call0()?
+            .unbind()),
+        zipzi_sdk::DeletionExportFailure::Cdi { problem: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "problem",
+                write_opaqueexportproblem_in(py, (field0), classes)?,
+            )?;
+            Ok(classes
+                .getattr("OpaqueExportIssueCdi")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::DeletionExportFailure::Motion {
+            id: field0,
+            problem: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "problem",
+                write_opaqueexportproblem_in(py, (field1), classes)?,
+            )?;
+            Ok(classes
+                .getattr("OpaqueExportIssueMotion")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::DeletionExportFailure::Expression {
+            id: field0,
+            problem: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "problem",
+                write_opaqueexportproblem_in(py, (field1), classes)?,
+            )?;
+            Ok(classes
+                .getattr("OpaqueExportIssueExpression")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::DeletionExportFailure::Pose {
+            id: field0,
+            problem: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "problem",
+                write_opaqueexportproblem_in(py, (field1), classes)?,
+            )?;
+            Ok(classes
+                .getattr("OpaqueExportIssuePose")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::DeletionExportFailure::Physics {
+            id: field0,
+            problem: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "problem",
+                write_opaqueexportproblem_in(py, (field1), classes)?,
+            )?;
+            Ok(classes
+                .getattr("OpaqueExportIssuePhysics")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+    }
+}
+
+pub fn read_opaqueexportproblem(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_sdk::OpaqueExportProblem> {
+    match value.getattr("value")?.extract::<String>()?.as_str() {
+        "NamespaceChanged" => Ok(zipzi_sdk::OpaqueExportProblem::NamespaceChanged),
+        "ContentChanged" => Ok(zipzi_sdk::OpaqueExportProblem::ContentChanged),
+        "ProvenanceMissing" => Ok(zipzi_sdk::OpaqueExportProblem::ProvenanceMissing),
+        _ => Err(pyo3::exceptions::PyValueError::new_err(
+            "Unknown enum value",
+        )),
+    }
+}
+
+pub fn write_opaqueexportproblem(
+    py: Python<'_>,
+    value: &zipzi_sdk::OpaqueExportProblem,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_opaqueexportproblem_in(py, value, &classes)
+}
+fn write_opaqueexportproblem_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::OpaqueExportProblem,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let name = match value {
+        zipzi_sdk::OpaqueExportProblem::NamespaceChanged => "NamespaceChanged",
+        zipzi_sdk::OpaqueExportProblem::ContentChanged => "ContentChanged",
+        zipzi_sdk::OpaqueExportProblem::ProvenanceMissing => "ProvenanceMissing",
+    };
+    Ok(classes
+        .getattr("OpaqueExportProblem")?
+        .call1((name,))?
+        .unbind())
+}
+
 pub fn read_sceneedit(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::document::SceneEdit> {
     match value.getattr("_variant")?.extract::<String>()?.as_str() {
         "create" => Ok(zipzi_core::document::SceneEdit::Create {
@@ -5332,46 +6052,6 @@ fn write_reparentedit_in(
         .unbind())
 }
 
-pub fn read_reparentstrategy(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::document::ReparentStrategy> {
-    match value.getattr("value")?.extract::<String>()?.as_str() {
-        "KeepLocalData" => Ok(zipzi_core::document::ReparentStrategy::KeepLocalData),
-        "PreserveEditState" => Ok(zipzi_core::document::ReparentStrategy::PreserveEditState),
-        "PreserveParameterDomain" => {
-            Ok(zipzi_core::document::ReparentStrategy::PreserveParameterDomain)
-        }
-        _ => Err(pyo3::exceptions::PyValueError::new_err(
-            "Unknown enum value",
-        )),
-    }
-}
-
-pub fn write_reparentstrategy(
-    py: Python<'_>,
-    value: &zipzi_core::document::ReparentStrategy,
-) -> PyResult<Py<PyAny>> {
-    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
-    write_reparentstrategy_in(py, value, &classes)
-}
-fn write_reparentstrategy_in(
-    py: Python<'_>,
-    value: &zipzi_core::document::ReparentStrategy,
-    classes: &Bound<'_, PyModule>,
-) -> PyResult<Py<PyAny>> {
-    let name = match value {
-        zipzi_core::document::ReparentStrategy::KeepLocalData => "KeepLocalData",
-        zipzi_core::document::ReparentStrategy::PreserveEditState => "PreserveEditState",
-        zipzi_core::document::ReparentStrategy::PreserveParameterDomain => {
-            "PreserveParameterDomain"
-        }
-    };
-    Ok(classes
-        .getattr("ReparentStrategy")?
-        .call1((name,))?
-        .unbind())
-}
-
 pub fn read_reparentplacement(
     value: &Bound<'_, PyAny>,
 ) -> PyResult<zipzi_core::document::ReparentPlacement> {
@@ -5405,129 +6085,6 @@ fn write_reparentplacement_in(
     })?;
     Ok(classes
         .getattr("ReparentPlacement")?
-        .call((), Some(&out))?
-        .unbind())
-}
-
-pub fn read_reparentcontext(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::document::ReparentContext> {
-    Ok(zipzi_core::document::ReparentContext {
-        parameter_values: value
-            .getattr("parameter_values")?
-            .call_method0("items")?
-            .try_iter()?
-            .map(|item| -> PyResult<_> {
-                let item0 = item?;
-                Ok((item0.get_item(0)?.extract()?, item0.get_item(1)?.extract()?))
-            })
-            .collect::<PyResult<_>>()?,
-        parameter_domain: value
-            .getattr("parameter_domain")?
-            .try_iter()?
-            .map(|item| -> PyResult<_> {
-                let item0 = item?;
-                Ok(read_conversiondomain(&item0)?)
-            })
-            .collect::<PyResult<Vec<_>>>()?
-            .into(),
-        edit_time_seconds: value.getattr("edit_time_seconds")?.extract()?,
-    })
-}
-
-pub fn write_reparentcontext(
-    py: Python<'_>,
-    value: &zipzi_core::document::ReparentContext,
-) -> PyResult<Py<PyAny>> {
-    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
-    write_reparentcontext_in(py, value, &classes)
-}
-fn write_reparentcontext_in(
-    py: Python<'_>,
-    value: &zipzi_core::document::ReparentContext,
-    classes: &Bound<'_, PyModule>,
-) -> PyResult<Py<PyAny>> {
-    let out = PyDict::new(py);
-    out.set_item("parameter_values", {
-        let out = PyDict::new(py);
-        for (key, item0) in (&value.parameter_values) {
-            out.set_item(
-                key.to_string(),
-                (item0).into_pyobject(py)?.into_bound().into_any().unbind(),
-            )?;
-        }
-        out.into_any().unbind()
-    })?;
-    out.set_item("parameter_domain", {
-        let out = PyList::empty(py);
-        for item0 in (&value.parameter_domain) {
-            out.append(write_conversiondomain_in(py, (item0), classes)?)?;
-        }
-        out.into_any().unbind()
-    })?;
-    out.set_item(
-        "edit_time_seconds",
-        (&value.edit_time_seconds)
-            .into_pyobject(py)?
-            .into_bound()
-            .into_any()
-            .unbind(),
-    )?;
-    Ok(classes
-        .getattr("ReparentContext")?
-        .call((), Some(&out))?
-        .unbind())
-}
-
-pub fn read_conversiondomain(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::document::ConversionDomain> {
-    Ok(zipzi_core::document::ConversionDomain {
-        parameter_id: value.getattr("parameter_id")?.extract()?,
-        minimum: value.getattr("minimum")?.extract()?,
-        maximum: value.getattr("maximum")?.extract()?,
-    })
-}
-
-pub fn write_conversiondomain(
-    py: Python<'_>,
-    value: &zipzi_core::document::ConversionDomain,
-) -> PyResult<Py<PyAny>> {
-    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
-    write_conversiondomain_in(py, value, &classes)
-}
-fn write_conversiondomain_in(
-    py: Python<'_>,
-    value: &zipzi_core::document::ConversionDomain,
-    classes: &Bound<'_, PyModule>,
-) -> PyResult<Py<PyAny>> {
-    let out = PyDict::new(py);
-    out.set_item(
-        "parameter_id",
-        (&value.parameter_id)
-            .into_pyobject(py)?
-            .into_bound()
-            .into_any()
-            .unbind(),
-    )?;
-    out.set_item(
-        "minimum",
-        (&value.minimum)
-            .into_pyobject(py)?
-            .into_bound()
-            .into_any()
-            .unbind(),
-    )?;
-    out.set_item(
-        "maximum",
-        (&value.maximum)
-            .into_pyobject(py)?
-            .into_bound()
-            .into_any()
-            .unbind(),
-    )?;
-    Ok(classes
-        .getattr("ConversionDomain")?
         .call((), Some(&out))?
         .unbind())
 }
@@ -16239,6 +16796,9 @@ fn write_manualvertextarget_in(
 
 pub fn read_modelingintent(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::ModelingIntent> {
     match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "deletion" => Ok(zipzi_sdk::ModelingIntent::Deletion(read_deletionintent(
+            &value.getattr("intent")?,
+        )?)),
         "scene" => Ok(zipzi_sdk::ModelingIntent::Scene(read_sceneedit(
             &value.getattr("intent")?,
         )?)),
@@ -22830,6 +23390,1060 @@ fn write_conversioncost_in(
         .unbind())
 }
 
+pub fn write_deletionsummary(
+    py: Python<'_>,
+    value: &zipzi_sdk::DeletionSummary,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionsummary_in(py, value, &classes)
+}
+fn write_deletionsummary_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::DeletionSummary,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "state",
+        write_deletionreviewstate_in(py, (&value.state), classes)?,
+    )?;
+    out.set_item(
+        "requested",
+        (&value.requested)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("sections", {
+        let out = PyList::empty(py);
+        for item0 in (&value.sections) {
+            out.append(write_deletionsectioncount_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item(
+        "export_analysis_complete",
+        (&value.export_analysis_complete)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("DeletionSummary")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_deletionreviewstate(
+    py: Python<'_>,
+    value: &zipzi_sdk::DeletionReviewState,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionreviewstate_in(py, value, &classes)
+}
+fn write_deletionreviewstate_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::DeletionReviewState,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let name = match value {
+        zipzi_sdk::DeletionReviewState::Ready => "Ready",
+        zipzi_sdk::DeletionReviewState::NeedsConfirmation => "NeedsConfirmation",
+        zipzi_sdk::DeletionReviewState::NeedsChoice => "NeedsChoice",
+        zipzi_sdk::DeletionReviewState::Blocked => "Blocked",
+    };
+    Ok(classes
+        .getattr("DeletionReviewState")?
+        .call1((name,))?
+        .unbind())
+}
+
+pub fn write_deletionsectioncount(
+    py: Python<'_>,
+    value: &zipzi_sdk::DeletionSectionCount,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionsectioncount_in(py, value, &classes)
+}
+fn write_deletionsectioncount_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::DeletionSectionCount,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "section",
+        write_deletionsection_in(py, (&value.section), classes)?,
+    )?;
+    out.set_item(
+        "count",
+        (&value.count)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("DeletionSectionCount")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn read_deletionsection(value: &Bound<'_, PyAny>) -> PyResult<zipzi_sdk::DeletionSection> {
+    match value.getattr("value")?.extract::<String>()?.as_str() {
+        "Removed" => Ok(zipzi_sdk::DeletionSection::Removed),
+        "Owned" => Ok(zipzi_sdk::DeletionSection::Owned),
+        "Rewritten" => Ok(zipzi_sdk::DeletionSection::Rewritten),
+        "Effects" => Ok(zipzi_sdk::DeletionSection::Effects),
+        "Decisions" => Ok(zipzi_sdk::DeletionSection::Decisions),
+        "Locks" => Ok(zipzi_sdk::DeletionSection::Locks),
+        "Structure" => Ok(zipzi_sdk::DeletionSection::Structure),
+        "Deformation" => Ok(zipzi_sdk::DeletionSection::Deformation),
+        "Organization" => Ok(zipzi_sdk::DeletionSection::Organization),
+        "GuaranteeLimits" => Ok(zipzi_sdk::DeletionSection::GuaranteeLimits),
+        "ConversionDomain" => Ok(zipzi_sdk::DeletionSection::ConversionDomain),
+        "Exports" => Ok(zipzi_sdk::DeletionSection::Exports),
+        "Relations" => Ok(zipzi_sdk::DeletionSection::Relations),
+        _ => Err(pyo3::exceptions::PyValueError::new_err(
+            "Unknown enum value",
+        )),
+    }
+}
+
+pub fn write_deletionsection(
+    py: Python<'_>,
+    value: &zipzi_sdk::DeletionSection,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionsection_in(py, value, &classes)
+}
+fn write_deletionsection_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::DeletionSection,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let name = match value {
+        zipzi_sdk::DeletionSection::Removed => "Removed",
+        zipzi_sdk::DeletionSection::Owned => "Owned",
+        zipzi_sdk::DeletionSection::Rewritten => "Rewritten",
+        zipzi_sdk::DeletionSection::Effects => "Effects",
+        zipzi_sdk::DeletionSection::Decisions => "Decisions",
+        zipzi_sdk::DeletionSection::Locks => "Locks",
+        zipzi_sdk::DeletionSection::Structure => "Structure",
+        zipzi_sdk::DeletionSection::Deformation => "Deformation",
+        zipzi_sdk::DeletionSection::Organization => "Organization",
+        zipzi_sdk::DeletionSection::GuaranteeLimits => "GuaranteeLimits",
+        zipzi_sdk::DeletionSection::ConversionDomain => "ConversionDomain",
+        zipzi_sdk::DeletionSection::Exports => "Exports",
+        zipzi_sdk::DeletionSection::Relations => "Relations",
+    };
+    Ok(classes.getattr("DeletionSection")?.call1((name,))?.unbind())
+}
+
+pub fn write_deletionpage(py: Python<'_>, value: &zipzi_sdk::DeletionPage) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionpage_in(py, value, &classes)
+}
+fn write_deletionpage_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::DeletionPage,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "section",
+        write_deletionsection_in(py, (&value.section), classes)?,
+    )?;
+    out.set_item(
+        "offset",
+        (&value.offset)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "total",
+        (&value.total)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("rows", {
+        let out = PyList::empty(py);
+        for item0 in (&value.rows) {
+            out.append(write_deletionrow_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("next_offset", {
+        match (&value.next_offset).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    Ok(classes
+        .getattr("DeletionPage")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_deletionrow(py: Python<'_>, value: &zipzi_sdk::DeletionRow) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionrow_in(py, value, &classes)
+}
+fn write_deletionrow_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::DeletionRow,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_sdk::DeletionRow::Removal { removal: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("removal", write_deletionremoval_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("DeletionRowRemoval")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::DeletionRow::Relation { relation: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "relation",
+                write_deletionrelation_in(py, (field0), classes)?,
+            )?;
+            Ok(classes
+                .getattr("DeletionRowRelation")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::DeletionRow::Effect { effect: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("effect", write_deletioneffect_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("DeletionRowEffect")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::DeletionRow::Decision { decision: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "decision",
+                write_deletiondecision_in(py, (field0), classes)?,
+            )?;
+            Ok(classes
+                .getattr("DeletionRowDecision")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::DeletionRow::Lock { blocker: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("blocker", write_deletionlock_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("DeletionRowLock")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::DeletionRow::Structural { blocker: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "blocker",
+                write_deletionstructuralblocker_in(py, (field0), classes)?,
+            )?;
+            Ok(classes
+                .getattr("DeletionRowStructural")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::DeletionRow::Deformation {
+            object: field0,
+            parent_id: field1,
+            strategy: field2,
+            guarantee: field3,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("object", write_deletionobject_in(py, (field0), classes)?)?;
+            content.set_item(
+                "parent_id",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "strategy",
+                write_reparentstrategy_in(py, (field2), classes)?,
+            )?;
+            content.set_item("guarantee", {
+                match (field3).as_ref() {
+                    Some(item) => write_deletionpositionguarantee_in(py, (item), classes)?,
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("DeletionRowDeformation")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::DeletionRow::Organization {
+            object: field0,
+            parent_id: field1,
+            mapping_slots: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("object", write_deletionobject_in(py, (field0), classes)?)?;
+            content.set_item(
+                "parent_id",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("mapping_slots", {
+                match (field2).as_ref() {
+                    Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("DeletionRowOrganization")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::DeletionRow::GuaranteeLimit {
+            object: field0,
+            ancestor: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("object", write_deletionobject_in(py, (field0), classes)?)?;
+            content.set_item("ancestor", write_deletionobject_in(py, (field1), classes)?)?;
+            Ok(classes
+                .getattr("DeletionRowGuaranteeLimit")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::DeletionRow::Domain {
+            object: field0,
+            parameter_id: field1,
+            minimum: field2,
+            maximum: field3,
+            reference_value: field4,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("object", write_deletionobject_in(py, (field0), classes)?)?;
+            content.set_item(
+                "parameter_id",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "minimum",
+                (field2).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "maximum",
+                (field3).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "reference_value",
+                (field4).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("DeletionRowDomain")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_sdk::DeletionRow::Export {
+            failure: field0,
+            existing: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "failure",
+                write_opaqueexportissue_in(py, (field0), classes)?,
+            )?;
+            content.set_item(
+                "existing",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("DeletionRowExport")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+    }
+}
+
+pub fn write_deletionremoval(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionRemoval,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionremoval_in(py, value, &classes)
+}
+fn write_deletionremoval_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionRemoval,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "object",
+        write_deletionobject_in(py, (&value.object), classes)?,
+    )?;
+    out.set_item(
+        "reason",
+        write_deletionreason_in(py, (&value.reason), classes)?,
+    )?;
+    Ok(classes
+        .getattr("DeletionRemoval")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_deletionobject(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionObject,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionobject_in(py, value, &classes)
+}
+fn write_deletionobject_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionObject,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item("kind", write_deletionkind_in(py, (&value.kind), classes)?)?;
+    out.set_item(
+        "id",
+        (&value.id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("owner_id", {
+        match (&value.owner_id).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    Ok(classes
+        .getattr("DeletionObject")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_deletionkind(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionKind,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionkind_in(py, value, &classes)
+}
+fn write_deletionkind_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionKind,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let name = match value {
+        zipzi_core::document::DeletionKind::Mesh => "Mesh",
+        zipzi_core::document::DeletionKind::Glue => "Glue",
+        zipzi_core::document::DeletionKind::Offscreen => "Offscreen",
+        zipzi_core::document::DeletionKind::MeshBinding => "MeshBinding",
+        zipzi_core::document::DeletionKind::BlendBinding => "BlendBinding",
+        zipzi_core::document::DeletionKind::Axis => "Axis",
+        zipzi_core::document::DeletionKind::Sample => "Sample",
+        zipzi_core::document::DeletionKind::GluePair => "GluePair",
+        zipzi_core::document::DeletionKind::HitArea => "HitArea",
+        zipzi_core::document::DeletionKind::DrawingGroup => "DrawingGroup",
+        zipzi_core::document::DeletionKind::Part => "Part",
+        zipzi_core::document::DeletionKind::Deformer => "Deformer",
+        zipzi_core::document::DeletionKind::SceneBinding => "SceneBinding",
+        zipzi_core::document::DeletionKind::Motion => "Motion",
+        zipzi_core::document::DeletionKind::MotionTrack => "MotionTrack",
+        zipzi_core::document::DeletionKind::MotionKey => "MotionKey",
+        zipzi_core::document::DeletionKind::Expression => "Expression",
+        zipzi_core::document::DeletionKind::ExpressionTrack => "ExpressionTrack",
+        zipzi_core::document::DeletionKind::ExpressionKey => "ExpressionKey",
+        zipzi_core::document::DeletionKind::PoseEntry => "PoseEntry",
+        zipzi_core::document::DeletionKind::PoseLink => "PoseLink",
+        zipzi_core::document::DeletionKind::CdiPart => "CdiPart",
+        zipzi_core::document::DeletionKind::DisplayInfo => "DisplayInfo",
+    };
+    Ok(classes.getattr("DeletionKind")?.call1((name,))?.unbind())
+}
+
+pub fn write_deletionreason(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionReason,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionreason_in(py, value, &classes)
+}
+fn write_deletionreason_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionReason,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let name = match value {
+        zipzi_core::document::DeletionReason::Requested => "Requested",
+        zipzi_core::document::DeletionReason::Owned => "Owned",
+        zipzi_core::document::DeletionReason::Dependency => "Dependency",
+        zipzi_core::document::DeletionReason::Scope => "Scope",
+    };
+    Ok(classes.getattr("DeletionReason")?.call1((name,))?.unbind())
+}
+
+pub fn write_deletionrelation(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionRelation,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionrelation_in(py, value, &classes)
+}
+fn write_deletionrelation_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionRelation,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "owner",
+        write_deletionobject_in(py, (&value.owner), classes)?,
+    )?;
+    out.set_item(
+        "field",
+        write_deletionfield_in(py, (&value.field), classes)?,
+    )?;
+    out.set_item(
+        "target",
+        write_deletionobject_in(py, (&value.target), classes)?,
+    )?;
+    Ok(classes
+        .getattr("DeletionRelation")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_deletionfield(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionField,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionfield_in(py, value, &classes)
+}
+fn write_deletionfield_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionField,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::document::DeletionField::Owned => {
+            Ok(classes.getattr("DeletionFieldOwned")?.call0()?.unbind())
+        }
+        zipzi_core::document::DeletionField::MeshMask { slot: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "slot",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("DeletionFieldMeshMask")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionField::MeshInvertedMask => Ok(classes
+            .getattr("DeletionFieldMeshInvertedMask")?
+            .call0()?
+            .unbind()),
+        zipzi_core::document::DeletionField::OffscreenMask { slot: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "slot",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("DeletionFieldOffscreenMask")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionField::GlueMeshA => {
+            Ok(classes.getattr("DeletionFieldGlueMeshA")?.call0()?.unbind())
+        }
+        zipzi_core::document::DeletionField::GlueMeshB => {
+            Ok(classes.getattr("DeletionFieldGlueMeshB")?.call0()?.unbind())
+        }
+        zipzi_core::document::DeletionField::HitAreaMesh => Ok(classes
+            .getattr("DeletionFieldHitAreaMesh")?
+            .call0()?
+            .unbind()),
+        zipzi_core::document::DeletionField::DrawingItem { slot: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "slot",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("DeletionFieldDrawingItem")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionField::OrganizationParent => Ok(classes
+            .getattr("DeletionFieldOrganizationParent")?
+            .call0()?
+            .unbind()),
+        zipzi_core::document::DeletionField::DeformationParent => Ok(classes
+            .getattr("DeletionFieldDeformationParent")?
+            .call0()?
+            .unbind()),
+        zipzi_core::document::DeletionField::ConvertedData => Ok(classes
+            .getattr("DeletionFieldConvertedData")?
+            .call0()?
+            .unbind()),
+        zipzi_core::document::DeletionField::PosePart => {
+            Ok(classes.getattr("DeletionFieldPosePart")?.call0()?.unbind())
+        }
+        zipzi_core::document::DeletionField::PoseLinkPart => Ok(classes
+            .getattr("DeletionFieldPoseLinkPart")?
+            .call0()?
+            .unbind()),
+        zipzi_core::document::DeletionField::MotionPart => Ok(classes
+            .getattr("DeletionFieldMotionPart")?
+            .call0()?
+            .unbind()),
+        zipzi_core::document::DeletionField::ExpressionSourcePart => Ok(classes
+            .getattr("DeletionFieldExpressionSourcePart")?
+            .call0()?
+            .unbind()),
+        zipzi_core::document::DeletionField::CdiPart { slot: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "slot",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("DeletionFieldCdiPart")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionField::RequestedScope => Ok(classes
+            .getattr("DeletionFieldRequestedScope")?
+            .call0()?
+            .unbind()),
+    }
+}
+
+pub fn write_deletioneffect(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionEffect,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletioneffect_in(py, value, &classes)
+}
+fn write_deletioneffect_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionEffect,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::document::DeletionEffect::MaskChanged(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item("value", write_deletionobject_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("DeletionEffectMaskChanged")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionEffect::GlueRemoved(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item("value", write_deletionobject_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("DeletionEffectGlueRemoved")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionEffect::HitAreaRemoved(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item("value", write_deletionobject_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("DeletionEffectHitAreaRemoved")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionEffect::CompositionChanged(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item("value", write_deletionobject_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("DeletionEffectCompositionChanged")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionEffect::PartAnimationRemoved(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item("value", write_deletionobject_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("DeletionEffectPartAnimationRemoved")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionEffect::DrawingGroupFlattened {
+            group: field0,
+            destination: field1,
+            source_range: field2,
+            destination_range: field3,
+            dynamic_order: field4,
+            offscreen: field5,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("group", write_deletionobject_in(py, (field0), classes)?)?;
+            content.set_item(
+                "destination",
+                write_deletionobject_in(py, (field1), classes)?,
+            )?;
+            content.set_item("source_range", {
+                let out = PyList::empty(py);
+                for item0 in (field2) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item("destination_range", {
+                let out = PyList::empty(py);
+                for item0 in (field3) {
+                    out.append((item0).into_pyobject(py)?.into_bound().into_any().unbind())?;
+                }
+                out.into_any().unbind()
+            })?;
+            content.set_item(
+                "dynamic_order",
+                (field4).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("offscreen", {
+                match (field5).as_ref() {
+                    Some(item) => write_deletionobject_in(py, (item), classes)?,
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("DeletionEffectDrawingGroupFlattened")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionEffect::OrganizationChanged(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item("value", write_deletionobject_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("DeletionEffectOrganizationChanged")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionEffect::DeformationChanged(field0) => {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item("value", write_deletionobject_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("DeletionEffectDeformationChanged")?
+                .call((), Some(&kwargs))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionEffect::UnpreservedChannels {
+            object: field0,
+            channels: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("object", write_deletionobject_in(py, (field0), classes)?)?;
+            content.set_item("channels", {
+                let out = PyList::empty(py);
+                for item0 in (field1) {
+                    out.append(write_deletionchannel_in(py, (item0), classes)?)?;
+                }
+                out.into_any().unbind()
+            })?;
+            Ok(classes
+                .getattr("DeletionEffectUnpreservedChannels")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionEffect::PartStateRemoved {
+            part: field0,
+            enabled: field1,
+            animated_order: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("part", write_deletionobject_in(py, (field0), classes)?)?;
+            content.set_item(
+                "enabled",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "animated_order",
+                (field2).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("DeletionEffectPartStateRemoved")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+    }
+}
+
+pub fn write_deletionchannel(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionChannel,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionchannel_in(py, value, &classes)
+}
+fn write_deletionchannel_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionChannel,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let name = match value {
+        zipzi_core::document::DeletionChannel::Appearance => "Appearance",
+        zipzi_core::document::DeletionChannel::Enabled => "Enabled",
+        zipzi_core::document::DeletionChannel::GluePostprocessing => "GluePostprocessing",
+        zipzi_core::document::DeletionChannel::DrawingOrder => "DrawingOrder",
+    };
+    Ok(classes.getattr("DeletionChannel")?.call1((name,))?.unbind())
+}
+
+pub fn write_deletiondecision(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionDecision,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletiondecision_in(py, value, &classes)
+}
+fn write_deletiondecision_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionDecision,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "object",
+        write_deletionobject_in(py, (&value.object), classes)?,
+    )?;
+    out.set_item(
+        "reason",
+        write_deletiondecisionreason_in(py, (&value.reason), classes)?,
+    )?;
+    out.set_item("choices", {
+        let out = PyList::empty(py);
+        for item0 in (&value.choices) {
+            out.append(write_deletionchoice_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("DeletionDecision")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_deletiondecisionreason(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionDecisionReason,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletiondecisionreason_in(py, value, &classes)
+}
+fn write_deletiondecisionreason_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionDecisionReason,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::document::DeletionDecisionReason::ConversionUnproven { code: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "code",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("DeletionDecisionReasonConversionUnproven")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::DeletionDecisionReason::OffscreenOwnerUnavailable => Ok(classes
+            .getattr("DeletionDecisionReasonOffscreenOwnerUnavailable")?
+            .call0()?
+            .unbind()),
+        zipzi_core::document::DeletionDecisionReason::OffscreenMappingRequired => Ok(classes
+            .getattr("DeletionDecisionReasonOffscreenMappingRequired")?
+            .call0()?
+            .unbind()),
+        zipzi_core::document::DeletionDecisionReason::PartStateUnpreserved => Ok(classes
+            .getattr("DeletionDecisionReasonPartStateUnpreserved")?
+            .call0()?
+            .unbind()),
+    }
+}
+
+pub fn write_deletionchoice(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionChoice,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionchoice_in(py, value, &classes)
+}
+fn write_deletionchoice_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionChoice,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let name = match value {
+        zipzi_core::document::DeletionChoice::PreserveEditState => "PreserveEditState",
+        zipzi_core::document::DeletionChoice::KeepLocalData => "KeepLocalData",
+        zipzi_core::document::DeletionChoice::ChoosePart => "ChoosePart",
+        zipzi_core::document::DeletionChoice::SupplyOffscreenMapping => "SupplyOffscreenMapping",
+        zipzi_core::document::DeletionChoice::DeleteSubtree => "DeleteSubtree",
+        zipzi_core::document::DeletionChoice::Cancel => "Cancel",
+    };
+    Ok(classes.getattr("DeletionChoice")?.call1((name,))?.unbind())
+}
+
+pub fn write_deletionlock(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionLock,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionlock_in(py, value, &classes)
+}
+fn write_deletionlock_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionLock,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "object",
+        write_deletionobject_in(py, (&value.object), classes)?,
+    )?;
+    out.set_item(
+        "source_id",
+        (&value.source_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("DeletionLock")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_deletionstructuralblocker(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionStructuralBlocker,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionstructuralblocker_in(py, value, &classes)
+}
+fn write_deletionstructuralblocker_in(
+    py: Python<'_>,
+    value: &zipzi_core::document::DeletionStructuralBlocker,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "object_id",
+        (&value.object_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "code",
+        (&value.code)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "reason",
+        (&value.reason)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("DeletionStructuralBlocker")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_deletionpositionguarantee(
+    py: Python<'_>,
+    value: &zipzi_sdk::DeletionPositionGuarantee,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.modeling")?;
+    write_deletionpositionguarantee_in(py, value, &classes)
+}
+fn write_deletionpositionguarantee_in(
+    py: Python<'_>,
+    value: &zipzi_sdk::DeletionPositionGuarantee,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "strategy",
+        write_reparentstrategy_in(py, (&value.strategy), classes)?,
+    )?;
+    out.set_item(
+        "tolerance",
+        (&value.tolerance)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "relative_tolerance",
+        (&value.relative_tolerance)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "measured_error",
+        (&value.measured_error)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "error_bound",
+        (&value.error_bound)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "domain_parameters",
+        (&value.domain_parameters)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("edit_time_seconds", {
+        match (&value.edit_time_seconds).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    Ok(classes
+        .getattr("DeletionPositionGuarantee")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
 pub fn read_parameteroperation(
     value: &Bound<'_, PyAny>,
 ) -> PyResult<zipzi_sdk::ParameterOperation> {
@@ -23142,6 +24756,9 @@ pub fn measure_modelingcommand(value: &Bound<'_, PyAny>) -> PyResult<usize> {
         }
         "replace_offscreen" => {
             Ok(256usize.saturating_add(measure_offscreen(&(value.getattr("offscreen")?))?))
+        }
+        "deletion" => {
+            Ok(256usize.saturating_add(measure_deletionintent(&(value.getattr("intent")?))?))
         }
         "scene" => Ok(256usize.saturating_add(measure_sceneedit(&(value.getattr("intent")?))?)),
         "organization" => {
@@ -24472,6 +26089,247 @@ pub fn measure_offscreenkeyform(value: &Bound<'_, PyAny>) -> PyResult<usize> {
         }))
 }
 
+pub fn measure_deletionintent(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(measure_deletionrequest(&(value.getattr("request")?))?)
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("accepted_export_failures")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_opaqueexportissue(&(v0))?);
+            }
+            bytes
+        }))
+}
+
+pub fn measure_deletionrequest(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("roots")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_deletiontarget(&(v0))?);
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("reparent")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(measure_reparentstrategy(&(v0.get_item(1)?))?);
+            }
+            bytes
+        })
+        .saturating_add(if (value.getattr("conversion_context")?).is_none() {
+            0usize
+        } else {
+            measure_reparentcontext(&(value.getattr("conversion_context")?))?
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("offscreen_placements")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(measure_deletionoffscreenplacement(&(v0.get_item(1)?))?);
+            }
+            bytes
+        })
+        .saturating_add(measure_deletiontolerance(&(value.getattr("tolerance")?))?))
+}
+
+pub fn measure_deletiontarget(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "Mesh" => Ok(256usize.saturating_add(
+            (value.getattr("value")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "Glue" => Ok(256usize.saturating_add(
+            (value.getattr("value")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "Offscreen" => Ok(256usize.saturating_add(
+            (value.getattr("value")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "Part" => Ok(256usize.saturating_add(
+            (value.getattr("value")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "Deformer" => Ok(256usize.saturating_add(
+            (value.getattr("value")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "DissolvePart" => Ok(256usize.saturating_add(
+            (value.getattr("value")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        "RemoveDeformer" => Ok(256usize.saturating_add(
+            (value.getattr("value")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_reparentstrategy(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(128usize)
+}
+
+pub fn measure_reparentcontext(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("parameter_values")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(16usize);
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("parameter_domain")?).try_iter()? {
+                let v0 = value?;
+                bytes = bytes.saturating_add(measure_conversiondomain(&(v0))?);
+            }
+            bytes
+        })
+        .saturating_add(16usize))
+}
+
+pub fn measure_conversiondomain(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("parameter_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(16usize)
+        .saturating_add(16usize))
+}
+
+pub fn measure_deletionoffscreenplacement(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(
+            (value.getattr("part_id")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32),
+        )
+        .saturating_add(if (value.getattr("mapping")?).is_none() {
+            0usize
+        } else {
+            {
+                let mut bytes = 64usize;
+                for value in (value.getattr("mapping")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add(16usize);
+                }
+                bytes
+            }
+        }))
+}
+
+pub fn measure_deletiontolerance(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize.saturating_add(16usize).saturating_add(16usize))
+}
+
+pub fn measure_opaqueexportissue(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "Model3NamespaceChanged" => Ok(256usize),
+        "Cdi" => {
+            Ok(256usize.saturating_add(measure_opaqueexportproblem(&(value.getattr("problem")?))?))
+        }
+        "Motion" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_opaqueexportproblem(&(value.getattr("problem")?))?)),
+        "Expression" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_opaqueexportproblem(&(value.getattr("problem")?))?)),
+        "Pose" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_opaqueexportproblem(&(value.getattr("problem")?))?)),
+        "Physics" => Ok(256usize
+            .saturating_add(
+                (value.getattr("id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_opaqueexportproblem(&(value.getattr("problem")?))?)),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_opaqueexportproblem(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(128usize)
+}
+
 pub fn measure_sceneedit(value: &Bound<'_, PyAny>) -> PyResult<usize> {
     match value.getattr("_variant")?.extract::<String>()?.as_str() {
         "create" => Ok(256usize
@@ -24862,10 +26720,6 @@ pub fn measure_reparentedit(value: &Bound<'_, PyAny>) -> PyResult<usize> {
         }))
 }
 
-pub fn measure_reparentstrategy(value: &Bound<'_, PyAny>) -> PyResult<usize> {
-    Ok(128usize)
-}
-
 pub fn measure_reparentplacement(value: &Bound<'_, PyAny>) -> PyResult<usize> {
     Ok(
         256usize.saturating_add(if (value.getattr("before")?).is_none() {
@@ -24877,50 +26731,6 @@ pub fn measure_reparentplacement(value: &Bound<'_, PyAny>) -> PyResult<usize> {
                 .saturating_add(32)
         }),
     )
-}
-
-pub fn measure_reparentcontext(value: &Bound<'_, PyAny>) -> PyResult<usize> {
-    Ok(256usize
-        .saturating_add({
-            let mut bytes = 64usize;
-            for value in (value.getattr("parameter_values")?)
-                .call_method0("items")?
-                .try_iter()?
-            {
-                let v0 = value?;
-                bytes = bytes
-                    .saturating_add(128)
-                    .saturating_add(
-                        (v0.get_item(0)?)
-                            .len()?
-                            .saturating_mul(4)
-                            .saturating_add(32),
-                    )
-                    .saturating_add(16usize);
-            }
-            bytes
-        })
-        .saturating_add({
-            let mut bytes = 64usize;
-            for value in (value.getattr("parameter_domain")?).try_iter()? {
-                let v0 = value?;
-                bytes = bytes.saturating_add(measure_conversiondomain(&(v0))?);
-            }
-            bytes
-        })
-        .saturating_add(16usize))
-}
-
-pub fn measure_conversiondomain(value: &Bound<'_, PyAny>) -> PyResult<usize> {
-    Ok(256usize
-        .saturating_add(
-            (value.getattr("parameter_id")?)
-                .len()?
-                .saturating_mul(4)
-                .saturating_add(32),
-        )
-        .saturating_add(16usize)
-        .saturating_add(16usize))
 }
 
 pub fn measure_scenecopyscope(value: &Bound<'_, PyAny>) -> PyResult<usize> {
@@ -29403,6 +31213,9 @@ pub fn measure_manualvertextarget(value: &Bound<'_, PyAny>) -> PyResult<usize> {
 
 pub fn measure_modelingintent(value: &Bound<'_, PyAny>) -> PyResult<usize> {
     match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "deletion" => {
+            Ok(256usize.saturating_add(measure_deletionintent(&(value.getattr("intent")?))?))
+        }
         "scene" => Ok(256usize.saturating_add(measure_sceneedit(&(value.getattr("intent")?))?)),
         "organization" => {
             Ok(256usize.saturating_add(measure_organizationedit(&(value.getattr("intent")?))?))
@@ -30148,6 +31961,10 @@ pub fn measure_spatialquery(value: &Bound<'_, PyAny>) -> PyResult<usize> {
             "Unexpected modeling variant",
         )),
     }
+}
+
+pub fn measure_deletionsection(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(128usize)
 }
 
 pub fn measure_parameteroperation(value: &Bound<'_, PyAny>) -> PyResult<usize> {

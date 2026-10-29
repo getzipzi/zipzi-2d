@@ -47,6 +47,7 @@ def render_modeling(contract, header, rust_header):
         n=s['name']
         n=re.sub(r'zipzi_core::document::(?:[a-z_0-9]+::)*', 'zipzi_core::document::', n)
         n=re.sub(r'zipzi_sdk::(?:[a-z_0-9]+::)*', 'zipzi_sdk::', n)
+        n=n.replace('zipzi_project::export_preflight::OpaqueExportIssue', 'zipzi_sdk::DeletionExportFailure').replace('zipzi_project::export_preflight::OpaqueExportProblem', 'zipzi_sdk::OpaqueExportProblem')
         n=n.replace('zipzi_core::scene_reference::', 'zipzi_core::').replace('zipzi_core::evaluation::types::','zipzi_core::evaluation::')
         n=re.sub(r'zipzi_animation::(?:motion_preview|physics)::', 'zipzi_sdk::', n)
         return n

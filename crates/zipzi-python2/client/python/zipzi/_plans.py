@@ -8,7 +8,8 @@ if TYPE_CHECKING:
 else:
     Backend = object
 from ._generated.plan_values import PlanCost as PlanCost, PlanReport as PlanReport
-from . import ops
+from . import ops, modeling
+from ._generated import modeling as _codec
 
 class Plan(Owned):
     """Owned native plan returned by Session/Edit/address planning factories.
@@ -40,6 +41,19 @@ class Plan(Owned):
         'Return the immutable cached report, exact Source, SDK version, affected/copied IDs, cost, losses and no-op state. No IO occurs; the report remains readable after Plan close or invalidation.'
         assert self._report is not None
         return self._report
+
+    def deletion_page(self, section: modeling.DeletionSection, *, offset: int = 0, limit: int = 64) -> modeling.DeletionPage:
+        """Read a bounded section of this immutable deletion report.
+
+        Source changes do not change these rows. The live Plan lease and its
+        original recovery owner are required; each page contains 1 to 256 rows.
+        """
+        self._check(self._backend)
+        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+            raise ValueError("offset must be a nonnegative integer")
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 256:
+            raise ValueError("limit must be an integer from 1 to 256")
+        return self._request("deletion_page", lambda: self._backend.deletion_page(self._token, section, offset, limit, self), _codec.read_DeletionPage)
 
     def __enter__(self) -> Plan:
         'Check the owning client/lease locally and return this Plan without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.'

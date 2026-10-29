@@ -494,21 +494,19 @@ fn menu_feedback_explains_deletion_locks_and_rejects_changed_document(cx: &mut T
     })
     .unwrap();
     cx.run_until_parked();
+    choose(&h, "Delete Object", cx);
     cx.update_window(h.window, |_, window, cx| {
         window.render_frame(cx);
-        let item = (0..24usize)
-            .find_map(|i| {
-                let item = window.within("popup-menu").try_find(i)?;
-                item.label()
-                    .is_some_and(|label| label == "Delete Object")
-                    .then_some(i)
-            })
-            .expect("compact deletion action");
-        window.within("popup-menu").click(item, cx);
-        assert!(h.view.read(cx).message.starts_with("Unlock"));
-        assert!(h.view.read(cx).edit_error.is_none());
+        assert!(window.find("tree-deletion-dialog").visible());
+        let history = h.view.read(cx).editor.document().unwrap().history_lengths();
+        window.click("tree-deletion-submit", cx);
         window.render_frame(cx);
-        assert!(window.try_find("tree-deletion-dialog").is_none());
+        assert!(window.find("tree-deletion-dialog").visible());
+        assert_eq!(
+            h.view.read(cx).editor.document().unwrap().history_lengths(),
+            history
+        );
+        assert!(h.view.read(cx).edit_error.is_none());
         assert!(
             h.view
                 .read(cx)
@@ -519,7 +517,7 @@ fn menu_feedback_explains_deletion_locks_and_rejects_changed_document(cx: &mut T
                 .get(&parent)
                 .is_some()
         );
-        window.press("escape", cx);
+        window.click("tree-deletion-cancel", cx);
         h.view.update(cx, |view, cx| {
             view.editor
                 .execute(EditorCommand::SetObjectsLocked {

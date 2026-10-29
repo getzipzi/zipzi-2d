@@ -140,3 +140,37 @@ for source builds and packaging.
 
 The Python client and Runtime components are MIT licensed. Editor-provided
 services run in the GPL-3.0-only Editor; see the [licensing guide](https://github.com/getzipzi/zipzi-2d/blob/main/LICENSING.md).
+
+### Dependency-cleaning deletion
+
+`session.plan` / `plan_async` and their Edit equivalents accept
+`modeling.ModelingCommandDeletion`. The request uses typed Mesh, Part, Deformer,
+Glue or Offscreen roots. Part means its organization subtree; Deformer means its
+deformation subtree regardless of the caller's tree view. `DissolvePart` and
+`RemoveDeformer` retain their children and report required migrations.
+
+```python
+from zipzi import modeling as m
+
+operation = m.ModelingCommandDeletion(intent=m.DeletionIntent(
+    request=m.DeletionRequest(roots=(m.DeletionTargetMesh(value=mesh_id),))))
+with session.plan_async(operation).wait() as plan:
+    summary = plan.report.deletion
+    page = plan.deletion_page(m.DeletionSection.REWRITTEN, limit=64)
+    # Read further pages with offset=page.next_offset, and inspect effects,
+    # decisions, locks and exports as needed. Owned axes/samples/keys have a
+    # separate section; the summary does not copy the model's object inventory.
+    if summary.state in (m.DeletionReviewState.READY,
+                         m.DeletionReviewState.NEEDS_CONFIRMATION):
+        with session.edit("Delete and clean dependencies") as edit:
+            edit.apply(plan)
+```
+
+A blocked or unresolved request still returns an inspectable Plan. Resolve its
+reported choices in a new request and replan. New opaque export failures require
+explicit acceptance of those exact typed resource failures; accepting them keeps
+extensions and provenance and does not make later export succeed. A Plan applies
+only to its exact source, including the Edit identity and sequence when captured
+inside an Edit. Its report pages remain fixed when the live source changes, and
+are readable until the Plan lease closes. Page sizes are 1–256 rows. Directly
+applying a deletion intent returns `DELETION_PLAN_REQUIRED`.

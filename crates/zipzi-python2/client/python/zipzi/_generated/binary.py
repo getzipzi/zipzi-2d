@@ -117,7 +117,7 @@ class Reader:
         if self.offset!=len(self.data): raise ValueError("Trailing binary fields")
 
 
-INPUT_SIGNATURE = 'b252887103a2a321a726745f003bae57'
+INPUT_SIGNATURE = 'e044fca8272c46a083493c68bcae5f80'
 MESH_SIGNATURE = '6f011cf86dfd4d3f0ee05751e6a6cc13'
 BINDING_SIGNATURE = '7e7f1d80974a2ca6fa5fe1ddac9f1ebf'
 SAMPLE_SIGNATURE = 'd439ee6cbc8d0f1feb2c30a437523a21'
@@ -208,84 +208,87 @@ def _write_modelingcommand(value: object, w: Writer) -> None:
     elif tag=='replace_offscreen':
         w.u32(23)
         _write_offscreen(_field(value, 'offscreen'), w)
-    elif tag=='scene':
+    elif tag=='deletion':
         w.u32(24)
+        _write_deletionintent(_field(value, 'intent'), w)
+    elif tag=='scene':
+        w.u32(25)
         _write_sceneedit(_field(value, 'intent'), w)
     elif tag=='organization':
-        w.u32(25)
+        w.u32(26)
         _write_organizationedit(_field(value, 'intent'), w)
     elif tag=='binding':
-        w.u32(26)
+        w.u32(27)
         _write_bindingauthoringedit(_field(value, 'intent'), w)
     elif tag=='content':
-        w.u32(27)
+        w.u32(28)
         _write_scenecontentedit(_field(value, 'intent'), w)
     elif tag=='references':
-        w.u32(28)
+        w.u32(29)
         _write_referenceedit(_field(value, 'intent'), w)
     elif tag=='resource':
-        w.u32(29)
+        w.u32(30)
         _write_resourceedit(_field(value, 'intent'), w)
     elif tag=='document':
-        w.u32(30)
+        w.u32(31)
         _write_documentauthoringedit(_field(value, 'intent'), w)
     elif tag=='attachment':
-        w.u32(31)
+        w.u32(32)
         _write_attachmentedit(_field(value, 'intent'), w)
     elif tag=='motion':
-        w.u32(32)
+        w.u32(33)
         _write_motionedit(_field(value, 'intent'), w)
     elif tag=='expression':
-        w.u32(33)
+        w.u32(34)
         _write_expressionedit(_field(value, 'intent'), w)
     elif tag=='physics':
-        w.u32(34)
+        w.u32(35)
         _write_physicsedit(_field(value, 'intent'), w)
     elif tag=='pose':
-        w.u32(35)
+        w.u32(36)
         _write_poseedit(_field(value, 'intent'), w)
     elif tag=='create_motion':
-        w.u32(36)
-        _write_motionclip(_field(value, 'clip'), w)
-    elif tag=='replace_motion':
         w.u32(37)
         _write_motionclip(_field(value, 'clip'), w)
-    elif tag=='create_expression':
+    elif tag=='replace_motion':
         w.u32(38)
-        _write_expressionasset(_field(value, 'expression'), w)
-    elif tag=='replace_expression':
+        _write_motionclip(_field(value, 'clip'), w)
+    elif tag=='create_expression':
         w.u32(39)
         _write_expressionasset(_field(value, 'expression'), w)
-    elif tag=='set_physics':
+    elif tag=='replace_expression':
         w.u32(40)
+        _write_expressionasset(_field(value, 'expression'), w)
+    elif tag=='set_physics':
+        w.u32(41)
         _write_physicsasset(_field(value, 'physics'), w)
     elif tag=='set_pose':
-        w.u32(41)
+        w.u32(42)
         _write_poseasset(_field(value, 'pose'), w)
     elif tag=='replace_model_setup':
-        w.u32(42)
+        w.u32(43)
         _write_modelsetup(_field(value, 'setup'), w)
     elif tag=='replace_hierarchy_order':
-        w.u32(43)
+        w.u32(44)
         _write_hierarchyorder(_field(value, 'order'), w)
     elif tag=='replace_editor_state':
-        w.u32(44)
+        w.u32(45)
         _write_editorstate(_field(value, 'state'), w)
     elif tag=='replace_draw_order_groups':
-        w.u32(45)
+        w.u32(46)
         items0=sequence(_field(value, 'groups'))
         w.u32(len(items0))
         for item0 in items0:
             _write_drawordergroup(item0, w)
     elif tag=='erase_object':
-        w.u32(46)
+        w.u32(47)
         w.text(_field(value, 'id'))
     elif tag=='rename_mesh':
-        w.u32(47)
+        w.u32(48)
         w.text(_field(value, 'id'))
         w.text(_field(value, 'name'))
     elif tag=='update_positions':
-        w.u32(48)
+        w.u32(49)
         w.text(_field(value, 'id'))
         items0=sequence(_field(value, 'vertex_ids'))
         w.u32(len(items0))
@@ -294,24 +297,24 @@ def _write_modelingcommand(value: object, w: Writer) -> None:
         w.u32(len(items0))
         w.numeric('f', tuple(v for item in items0 for v in _point(item)))
     elif tag=='set_mesh_keyform':
-        w.u32(49)
+        w.u32(50)
         w.text(_field(value, 'id'))
         _write_meshkeyform(_field(value, 'keyform'), w)
     elif tag=='set_scene_keyform':
-        w.u32(50)
+        w.u32(51)
         w.text(_field(value, 'id'))
         _write_scenekeyform(_field(value, 'keyform'), w)
     elif tag=='remesh_rectangle_grid':
-        w.u32(51)
+        w.u32(52)
         w.text(_field(value, 'id'))
         w.scalar('Q', _field(value, 'columns'))
         w.scalar('Q', _field(value, 'rows'))
     elif tag=='replace_topology':
-        w.u32(52)
+        w.u32(53)
         _write_geometrysnapshot(_field(value, 'source'), w)
         _write_topologyreplacement(_field(value, 'replacement'), w)
     elif tag=='manual_mesh':
-        w.u32(53)
+        w.u32(54)
         w.text(_field(value, 'mesh_id'))
         _write_sourceref(_field(value, 'expected'), w)
         _write_manualmeshoperation(_field(value, 'operation'), w)
@@ -1160,6 +1163,140 @@ def _write_offscreenkeyform(value: object, w: Writer) -> None:
 def _read_offscreenkeyform(r: Reader) -> m.OffscreenKeyform:
     return m.OffscreenKeyform(opacity=number(r.scalar('f')), multiply=(cast('tuple[float, float, float]', tuple(v[0] for v in r.numeric('f', 3))) if r.optional() else None), screen=(cast('tuple[float, float, float]', tuple(v[0] for v in r.numeric('f', 3))) if r.optional() else None))
 
+def _write_deletionintent(value: object, w: Writer) -> None:
+    _write_deletionrequest(_field(value, 'request'), w)
+    items0=sequence(_field(value, 'accepted_export_failures'))
+    w.u32(len(items0))
+    for item0 in items0:
+        _write_opaqueexportissue(item0, w)
+
+def _write_deletionrequest(value: object, w: Writer) -> None:
+    items0=sequence(_field(value, 'roots'))
+    w.u32(len(items0))
+    for item0 in items0:
+        _write_deletiontarget(item0, w)
+    items0=_mapping(_field(value, 'reparent'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        _write_reparentstrategy(value0, w)
+    if _field(value, 'conversion_context') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        _write_reparentcontext(_field(value, 'conversion_context'), w)
+    items0=_mapping(_field(value, 'offscreen_placements'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        _write_deletionoffscreenplacement(value0, w)
+    _write_deletiontolerance(_field(value, 'tolerance'), w)
+
+def _write_deletiontarget(value: object, w: Writer) -> None:
+    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
+    if tag=='Mesh':
+        w.u32(0)
+        w.text(_field(value, 'value'))
+    elif tag=='Glue':
+        w.u32(1)
+        w.text(_field(value, 'value'))
+    elif tag=='Offscreen':
+        w.u32(2)
+        w.text(_field(value, 'value'))
+    elif tag=='Part':
+        w.u32(3)
+        w.text(_field(value, 'value'))
+    elif tag=='Deformer':
+        w.u32(4)
+        w.text(_field(value, 'value'))
+    elif tag=='DissolvePart':
+        w.u32(5)
+        w.text(_field(value, 'value'))
+    elif tag=='RemoveDeformer':
+        w.u32(6)
+        w.text(_field(value, 'value'))
+    else:
+        raise TypeError("Unexpected DeletionTarget variant")
+
+def _write_reparentstrategy(value: object, w: Writer) -> None:
+    tag=string(_field(value,"value"))
+    if tag=='KeepLocalData':
+        w.u32(0)
+    elif tag=='PreserveEditState':
+        w.u32(1)
+    elif tag=='PreserveParameterDomain':
+        w.u32(2)
+    else:
+        raise TypeError("Unexpected ReparentStrategy variant")
+
+def _write_reparentcontext(value: object, w: Writer) -> None:
+    items0=_mapping(_field(value, 'parameter_values'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.scalar('f', value0)
+    items0=sequence(_field(value, 'parameter_domain'))
+    w.u32(len(items0))
+    for item0 in items0:
+        _write_conversiondomain(item0, w)
+    w.scalar('d', _field(value, 'edit_time_seconds'))
+
+def _write_conversiondomain(value: object, w: Writer) -> None:
+    w.text(_field(value, 'parameter_id'))
+    w.scalar('f', _field(value, 'minimum'))
+    w.scalar('f', _field(value, 'maximum'))
+
+def _write_deletionoffscreenplacement(value: object, w: Writer) -> None:
+    w.text(_field(value, 'part_id'))
+    if _field(value, 'mapping') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        items0=sequence(_field(value, 'mapping'))
+        w.u32(len(items0))
+        w.numeric('i', tuple(items0))
+
+def _write_deletiontolerance(value: object, w: Writer) -> None:
+    w.scalar('d', _field(value, 'absolute'))
+    w.scalar('d', _field(value, 'relative'))
+
+def _write_opaqueexportissue(value: object, w: Writer) -> None:
+    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
+    if tag=='Model3NamespaceChanged':
+        w.u32(0)
+    elif tag=='Cdi':
+        w.u32(1)
+        _write_opaqueexportproblem(_field(value, 'problem'), w)
+    elif tag=='Motion':
+        w.u32(2)
+        w.text(_field(value, 'id'))
+        _write_opaqueexportproblem(_field(value, 'problem'), w)
+    elif tag=='Expression':
+        w.u32(3)
+        w.text(_field(value, 'id'))
+        _write_opaqueexportproblem(_field(value, 'problem'), w)
+    elif tag=='Pose':
+        w.u32(4)
+        w.text(_field(value, 'id'))
+        _write_opaqueexportproblem(_field(value, 'problem'), w)
+    elif tag=='Physics':
+        w.u32(5)
+        w.text(_field(value, 'id'))
+        _write_opaqueexportproblem(_field(value, 'problem'), w)
+    else:
+        raise TypeError("Unexpected OpaqueExportIssue variant")
+
+def _write_opaqueexportproblem(value: object, w: Writer) -> None:
+    tag=string(_field(value,"value"))
+    if tag=='NamespaceChanged':
+        w.u32(0)
+    elif tag=='ContentChanged':
+        w.u32(1)
+    elif tag=='ProvenanceMissing':
+        w.u32(2)
+    else:
+        raise TypeError("Unexpected OpaqueExportProblem variant")
+
 def _write_sceneedit(value: object, w: Writer) -> None:
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
     if tag=='create':
@@ -1415,40 +1552,12 @@ def _write_reparentedit(value: object, w: Writer) -> None:
         w.raw(b"\1")
         _write_reparentcontext(_field(value, 'context'), w)
 
-def _write_reparentstrategy(value: object, w: Writer) -> None:
-    tag=string(_field(value,"value"))
-    if tag=='KeepLocalData':
-        w.u32(0)
-    elif tag=='PreserveEditState':
-        w.u32(1)
-    elif tag=='PreserveParameterDomain':
-        w.u32(2)
-    else:
-        raise TypeError("Unexpected ReparentStrategy variant")
-
 def _write_reparentplacement(value: object, w: Writer) -> None:
     if _field(value, 'before') is None:
         w.raw(b"\0")
     else:
         w.raw(b"\1")
         w.text(_field(value, 'before'))
-
-def _write_reparentcontext(value: object, w: Writer) -> None:
-    items0=_mapping(_field(value, 'parameter_values'))
-    w.u32(len(items0))
-    for key0, value0 in items0.items():
-        w.text(key0)
-        w.scalar('f', value0)
-    items0=sequence(_field(value, 'parameter_domain'))
-    w.u32(len(items0))
-    for item0 in items0:
-        _write_conversiondomain(item0, w)
-    w.scalar('d', _field(value, 'edit_time_seconds'))
-
-def _write_conversiondomain(value: object, w: Writer) -> None:
-    w.text(_field(value, 'parameter_id'))
-    w.scalar('f', _field(value, 'minimum'))
-    w.scalar('f', _field(value, 'maximum'))
 
 def _write_scenecopyscope(value: object, w: Writer) -> None:
     tag=string(_field(value,"value"))

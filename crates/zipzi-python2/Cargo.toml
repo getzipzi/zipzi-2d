@@ -13,6 +13,8 @@ test = false
 doctest = false
 
 [features]
+# Export source contracts without compiling stale generated adapter matches.
+schema-export = []
 wgpu-backend = ["zipzi-runtime/wgpu-backend"]
 test-support = ["zipzi-runtime/test-support"]
 bench-instrumentation = ["zipzi-runtime/bench-instrumentation"]

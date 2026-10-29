@@ -1049,8 +1049,7 @@ impl Editor {
                     && if self.manual_active() {
                         self.manual_editable() && matches!(command.target, CommandTarget::Viewport(b) if self.manual_for_viewport(b.viewport))
                     } else {
-                        self.document().is_some_and(|doc| doc.plan_tree_deletion(
-                            command.deletion_projection(), &doc.context().selections).is_ok())
+                        self.document().is_some()
                     }
             }
             PaletteMoveUp | PaletteMoveDown | PaletteMoveTo => {

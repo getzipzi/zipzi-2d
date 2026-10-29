@@ -350,6 +350,12 @@ enum Operation {
         edit: EditId,
         plan: PlanId,
     },
+    DeletionReportPage {
+        plan: PlanId,
+        section: zipzi_sdk::DeletionSection,
+        offset: usize,
+        limit: usize,
+    },
     ReleaseModelingPlan {
         plan: PlanId,
     },
@@ -1135,6 +1141,14 @@ impl Protocol {
             Operation::ApplyModelingPlan { edit, plan } => {
                 rt.apply_modeling_plan(client, edit, plan)?;
                 Value::Null
+            }
+            Operation::DeletionReportPage {
+                plan,
+                section,
+                offset,
+                limit,
+            } => {
+                json!(rt.deletion_report_page(client, plan, section, offset, limit)?)
             }
             Operation::ReleaseModelingPlan { plan } => {
                 rt.release_modeling_plan(client, plan)?;

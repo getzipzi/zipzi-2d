@@ -49,16 +49,14 @@ fn pending_scene_objects_remain_visible_inspectable_and_persistent() -> anyhow::
         assert!(object.diagnostic.is_some());
     }
     let tree = d.part_tree();
-    assert!(
-        tree.iter()
-            .flat_map(|n| n.children.iter())
-            .any(|n| n.id == mesh)
-    );
-    assert!(
-        tree.iter()
-            .flat_map(|n| n.children.iter())
-            .any(|n| n.id == warp)
-    );
+    assert!(tree
+        .iter()
+        .flat_map(|n| n.children.iter())
+        .any(|n| n.id == mesh));
+    assert!(tree
+        .iter()
+        .flat_map(|n| n.children.iter())
+        .any(|n| n.id == warp));
     let snapshot = d.snapshot()?;
     assert_eq!(snapshot.viewport_frame.drawables.len(), 1);
     assert!(!snapshot.viewport_frame.drawables[0].renderable);
@@ -67,14 +65,12 @@ fn pending_scene_objects_remain_visible_inspectable_and_persistent() -> anyhow::
     let root = tempfile::tempdir()?;
     let saved = d.save(&root.path().join("pending.zipzi"))?;
     let reopened = Document::open(&saved.manifest)?;
-    assert!(
-        reopened
-            .object_index()
-            .get(&ObjectRef::new(ObjectKind::Glue, glue))
-            .unwrap()
-            .diagnostic
-            .is_some()
-    );
+    assert!(reopened
+        .object_index()
+        .get(&ObjectRef::new(ObjectKind::Glue, glue))
+        .unwrap()
+        .diagnostic
+        .is_some());
     Ok(())
 }
 #[test]
@@ -92,10 +88,9 @@ fn scene_copy_and_delete_refresh_canvas_topology_and_keep_context() -> anyhow::R
     })?;
     let copy = p.copied_ids()[&source].clone();
     let r = d.execute_scene_authoring(&p)?;
-    assert!(
-        r.suggested_selection
-            .contains(&ObjectRef::new(ObjectKind::Mesh, &copy))
-    );
+    assert!(r
+        .suggested_selection
+        .contains(&ObjectRef::new(ObjectKind::Mesh, &copy)));
     assert_eq!(d.context().selections, selected);
     let after = d.snapshot()?;
     let canvas = d.geometry(&after);
@@ -146,10 +141,9 @@ fn scene_label_patch_reuses_relations_and_keeps_retained_canvas_labels() -> anyh
     assert_eq!(current_geometry.index.name(&mesh), "After");
     assert_eq!(geometry.index.name(&mesh), old_name);
     d.undo()?;
-    assert!(
-        d.plan_scene_field_patch(&address, V::Label("Other".into()), false)
-            .is_err()
-    );
+    assert!(d
+        .plan_scene_field_patch(&address, V::Label("Other".into()), false)
+        .is_err());
     assert_eq!(d.object_index().name(&mesh), old_name);
     Ok(())
 }
@@ -167,11 +161,10 @@ fn drawing_roles_are_independent_objects_and_survive_part_organization() -> anyh
         },
     )?;
     assert!(d.object_index().get(&object).is_none());
-    assert!(
-        d.object_index()
-            .get(&ObjectRef::new(ObjectKind::Part, &owner))
-            .is_some()
-    );
+    assert!(d
+        .object_index()
+        .get(&ObjectRef::new(ObjectKind::Part, &owner))
+        .is_some());
     d.undo()?;
     assert!(d.object_index().get(&object).is_some());
     let address = d.drawing_group_address(&owner)?;
@@ -224,7 +217,7 @@ fn glue_management_changes_keep_active_animation_and_preview_clock() -> anyhow::
 }
 
 #[test]
-fn tree_deletion_uses_projection_closure_and_is_atomic_and_undoable() -> anyhow::Result<()> {
+fn tree_deletion_uses_native_scope_and_is_atomic_and_undoable() -> anyhow::Result<()> {
     use zipzi_editor_core::{PaletteProjection as P, SceneObjectType as T};
     let mut d = Document::new_blank()?;
     let mut add = |kind, selection: &[ObjectRef]| -> anyhow::Result<ObjectRef> {
@@ -265,27 +258,23 @@ fn tree_deletion_uses_projection_closure_and_is_atomic_and_undoable() -> anyhow:
     assert!(d.object_index().get(&part).is_some());
     assert!(d.object_index().get(&warp).is_none());
     assert!(d.object_index().get(&mesh).is_none());
-    assert!(d.context().selections.is_empty());
+    assert_eq!(d.context().selections, vec![part.clone()]);
     assert_eq!(d.history_lengths(), (history.0 + 1, 0));
     editor.execute(zipzi_editor_core::EditorCommand::Undo)?;
-    assert!(
-        editor
-            .document()
-            .unwrap()
-            .object_index()
-            .get(&mesh)
-            .is_some()
-    );
-    assert!(
-        editor
-            .execute_tree_deletion(document, &deformation)
-            .is_err()
-    );
+    assert!(editor
+        .document()
+        .unwrap()
+        .object_index()
+        .get(&mesh)
+        .is_some());
+    assert!(editor
+        .execute_tree_deletion(document, &deformation)
+        .is_err());
     Ok(())
 }
 
 #[test]
-fn tree_deletion_rejects_locked_descendants_and_external_references() -> anyhow::Result<()> {
+fn tree_deletion_reviews_locked_descendants_and_cleans_external_references() -> anyhow::Result<()> {
     use zipzi_editor_core::{PaletteProjection as P, SceneObjectType as T};
     let mut d = Document::new_blank()?;
     let p = d.plan_scene_object_creation(T::Part, "Owner".into(), &[])?;
@@ -293,10 +282,12 @@ fn tree_deletion_rejects_locked_descendants_and_external_references() -> anyhow:
     let p = d.plan_scene_object_creation(T::Mesh, "Mesh".into(), std::slice::from_ref(&part))?;
     let mesh = d.execute_scene_object_creation(&p)?.suggested_selection[0].clone();
     d.set_objects_locked(std::slice::from_ref(&mesh), true)?;
-    assert!(
-        d.plan_tree_deletion(P::Organization, std::slice::from_ref(&part))
-            .is_err()
+    let blocked = d.plan_tree_deletion(P::Organization, std::slice::from_ref(&part))?;
+    assert_eq!(
+        blocked.summary().state,
+        zipzi_sdk::DeletionReviewState::Blocked
     );
+    assert!(d.execute_tree_deletion(&blocked).is_err());
     d.set_objects_locked(std::slice::from_ref(&mesh), false)?;
     let glue = create(
         &mut d,
@@ -306,17 +297,12 @@ fn tree_deletion_rejects_locked_descendants_and_external_references() -> anyhow:
         },
     )?;
     let history = d.history_lengths();
-    let error = d
-        .plan_tree_deletion(P::Organization, std::slice::from_ref(&part))
-        .unwrap_err();
+    let plan = d.plan_tree_deletion(P::Organization, std::slice::from_ref(&part))?;
     assert_eq!(
-        error
-            .downcast_ref::<zipzi_sdk::SdkError>()
-            .unwrap()
-            .code
-            .as_ref(),
-        "OBJECT_REFERENCED"
+        plan.summary().state,
+        zipzi_sdk::DeletionReviewState::NeedsConfirmation
     );
+    assert!(plan.removed_ids().contains(&glue));
     assert_eq!(d.history_lengths(), history);
     run(
         &mut d,
@@ -325,9 +311,55 @@ fn tree_deletion_rejects_locked_descendants_and_external_references() -> anyhow:
             scope: Scope::Selected,
         },
     )?;
-    assert!(
-        d.plan_tree_deletion(P::Organization, std::slice::from_ref(&part))
-            .is_ok()
+    assert!(d
+        .plan_tree_deletion(P::Organization, std::slice::from_ref(&part))
+        .is_ok());
+    Ok(())
+}
+
+#[test]
+fn tree_deletion_scope_is_projection_independent_and_preview_context_expires() -> anyhow::Result<()>
+{
+    use zipzi_editor_core::{NewParameter, PaletteProjection as P, SceneObjectType as T};
+    let mut d = Document::new_blank()?;
+    d.create_parameter(NewParameter {
+        name: "Driver".into(),
+        runtime_id: "Driver".into(),
+        minimum: 0.,
+        maximum: 1.,
+        ..Default::default()
+    })?;
+    let parameter = d.parameters()[0].id.clone();
+    let create = d.plan_scene_object_creation(T::Mesh, "Mesh".into(), &[])?;
+    let mesh = d
+        .execute_scene_object_creation(&create)?
+        .suggested_selection[0]
+        .clone();
+    let a = d.plan_tree_deletion(P::Organization, std::slice::from_ref(&mesh))?;
+    let b = d.plan_tree_deletion(P::Deformation, std::slice::from_ref(&mesh))?;
+    assert_eq!(a.removed_ids(), b.removed_ids());
+    d.set_preview_parameter(&parameter, 0.3)?;
+    assert!(a.valid_for(&d));
+    let mut intent = d.deletion_intent(std::slice::from_ref(&mesh))?;
+    intent.request.reparent.insert(
+        mesh.id.clone(),
+        zipzi_sdk::ReparentStrategy::PreserveEditState,
     );
+    let task = d.start_tree_deletion(intent)?;
+    let current = task.run()?;
+    assert!(current.valid_for(&d));
+    d.set_preview_parameter(&parameter, 0.8)?;
+    assert!(!current.valid_for(&d));
+    assert!(d.execute_tree_deletion(&current).is_err());
+    let host = d.runtime_host();
+    let plans = host.read().modeling_plan_count();
+    let task = d.start_tree_deletion(d.deletion_intent(std::slice::from_ref(&mesh))?)?;
+    task.cancellation().cancel();
+    assert!(task.run().is_err());
+    assert_eq!(host.read().modeling_plan_count(), plans);
+    let task = d.start_tree_deletion(d.deletion_intent(std::slice::from_ref(&mesh))?)?;
+    drop(task);
+    assert_eq!(host.read().modeling_plan_count(), plans);
+    assert!(d.object_index().get(&mesh).is_some());
     Ok(())
 }

@@ -74,6 +74,7 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
             bind(file,prefix+variant['rust_name'],dict(name=shape['name']+'::'+variant['rust_name'],fields=fields))
     for section,file in ((contract,'meshes'),(contract['resources'],'resource_values'),(contract['scene'],'scene')):
         for binding in section['bindings']:
+            if binding['form']=='external':continue
             shape=shapes.get(binding['rust'])
             if shape is None:continue
             if binding['form']=='union':
@@ -83,7 +84,7 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
                 destination='plan_values' if binding['name'] in {'PlanCost','PlanReport'} else file
                 bind(destination,binding['name'],shape)
     for rust,shape in shapes.items():
-        if rust in {s['name'] for s in contract['modeling']['roots']} or rust.startswith(('zipzi_core::','zipzi_sdk::','zipzi_runtime::','zipzi_animation::')):
+        if rust in {s['name'] for s in contract['modeling']['roots']} or rust.startswith(('zipzi_core::','zipzi_sdk::','zipzi_runtime::','zipzi_animation::','zipzi_project::')):
             short=modeling_name(rust)
             if shape['kind'] in {'union','serde_enum'}:variants(shape,'modeling',short)
             else:bind('modeling',short,shape)

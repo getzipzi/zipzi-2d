@@ -250,15 +250,6 @@ impl AuthoringSession {
             CapabilityState::Unavailable {
                 code: "DRAWING_GROUP_HAS_OFFSCREEN",
             }
-        } else if !role
-            && !d
-                .scene_delete_users(&[handle.id().into()], SceneCopyScope::Selected)
-                .unwrap_or_default()
-                .is_empty()
-        {
-            CapabilityState::Unavailable {
-                code: "OBJECT_REFERENCED",
-            }
         } else {
             state.clone()
         };

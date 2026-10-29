@@ -4,7 +4,19 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use zipzi_core::{document::ConversionControl, Document, Status};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum OpaqueExportProblem {
     NamespaceChanged,
     ContentChanged,
@@ -19,26 +31,46 @@ impl OpaqueExportProblem {
         }
     }
 }
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
 pub enum OpaqueExportIssue {
     Model3NamespaceChanged,
     Cdi {
+        /// Exact native opaque-field guard violated by this retained resource.
         problem: OpaqueExportProblem,
     },
     Motion {
+        /// Persistent retained resource UUID in the frozen source.
         id: String,
+        /// Exact native opaque-field guard violated by this retained resource.
         problem: OpaqueExportProblem,
     },
     Expression {
+        /// Persistent retained resource UUID in the frozen source.
         id: String,
+        /// Exact native opaque-field guard violated by this retained resource.
         problem: OpaqueExportProblem,
     },
     Pose {
+        /// Persistent retained resource UUID in the frozen source.
         id: String,
+        /// Exact native opaque-field guard violated by this retained resource.
         problem: OpaqueExportProblem,
     },
     Physics {
+        /// Persistent retained resource UUID in the frozen source.
         id: String,
+        /// Exact native opaque-field guard violated by this retained resource.
         problem: OpaqueExportProblem,
     },
 }
