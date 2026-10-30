@@ -16,7 +16,7 @@ jobs:
   editor:
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
           persist-credentials: false
@@ -24,13 +24,14 @@ jobs:
         with:
           components: rustfmt
       - name: Restore native Editor dependencies
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           shared-key: dev-editor
           workspaces: . -> target/ci-cargo
           cache-bin: false
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
+          prune-cache: true
           version: '0.10.7'
           enable-cache: true
       - name: Sync Python environment

@@ -30,10 +30,10 @@ jobs:
       tag: ${{ steps.version.outputs.tag }}
       reuse-run-id: ${{ steps.reuse.outputs.run_id }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.14'
       - name: Validate version before native builds
@@ -72,7 +72,7 @@ jobs:
       CARGO_INCREMENTAL: '0'
       CARGO_TARGET_DIR: ${{ github.workspace }}/target/alpha-app-cargo
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
           persist-credentials: false
@@ -80,13 +80,13 @@ jobs:
         with:
           components: rustfmt
       - name: Restore app Rust build cache
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           shared-key: alpha-app-${{ matrix.platform }}
           workspaces: . -> target/alpha-app-cargo
           cache-bin: false
           save-if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.14'
       # App and Python builders use separate runners and all available CPU cores.
@@ -143,7 +143,7 @@ jobs:
       CARGO_INCREMENTAL: '0'
       CARGO_TARGET_DIR: ${{ github.workspace }}/target/alpha-python-cargo
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
           persist-credentials: false
@@ -151,14 +151,15 @@ jobs:
         with:
           components: rustfmt
       - name: Restore Python Rust build cache
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           shared-key: alpha-python-${{ matrix.platform }}
           workspaces: . -> target/alpha-python-cargo
           cache-bin: false
           save-if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
+          prune-cache: true
           version: '0.10.7'
           enable-cache: true
           cache-dependency-glob: uv.lock
@@ -195,10 +196,10 @@ jobs:
        (needs.app.result == 'success' && needs.python.result == 'success'))
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.14'
       - uses: actions/download-artifact@v8
@@ -244,8 +245,9 @@ jobs:
           cp release/zipzi-* release/zipzi_native-* dist/
           python tools/packaging/reuse_release.py verify --manifest metadata/build.json --assets release --distributions dist --revision "$GITHUB_SHA" --tag "$RELEASE_TAG"
           (cd release && sha256sum --check SHA256SUMS)
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
+          prune-cache: true
           version: '0.10.7'
       - name: Validate PyPI distribution metadata
         run: uvx --from twine==7.0.0 twine check dist/*
@@ -295,14 +297,14 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: actions/download-artifact@v8
         with:
           name: alpha-release-assets
           path: release
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.14'
       - name: Verify and publish GitHub prerelease
