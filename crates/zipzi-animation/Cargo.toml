@@ -8,12 +8,12 @@ description = "Deterministic CPU animation state and scheduling for Zipzi 2D"
 
 [dependencies]
 zipzi-contract.workspace = true
-zipzi-api-derive = { version = "=0.1.0-alpha.3", path = "../zipzi-api-derive" }
-zipzi-core = { version = "=0.1.0-alpha.3", path = "../zipzi-core" }
+zipzi-api-derive = { version = "=0.1.0-alpha.4", path = "../zipzi-api-derive" }
+zipzi-core = { version = "=0.1.0-alpha.4", path = "../zipzi-core" }
 thiserror = { workspace = true }
 serde = { workspace = true }
 uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
-zipzi-project = { version = "=0.1.0-alpha.3", path = "../zipzi-project" }
+zipzi-project = { version = "=0.1.0-alpha.4", path = "../zipzi-project" }
 serde_json = { workspace = true }
