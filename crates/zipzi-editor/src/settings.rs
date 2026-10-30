@@ -100,11 +100,18 @@ impl Settings {
                     })
             }
         };
-        let recent_files = store
+        let mut recent_files = store
             .read::<RecentFiles>("recent-files.json")
             .ok()
             .flatten()
             .unwrap_or_default();
+        let stored_recent_files = recent_files.clone();
+        recent_files.normalize();
+        if recent_files != stored_recent_files {
+            if let Err(error) = store.write("recent-files.json", &recent_files) {
+                notices.push(error.to_string());
+            }
+        }
         let language = match store.read::<LanguagePreference>("language.json") {
             Ok(preference) => preference.and_then(|preference| preference.language),
             Err(error) => {
@@ -245,6 +252,41 @@ mod tests {
     use super::{Settings, normalize_key};
     use gpui_kit::DummyKeyboardMapper;
     use zipzi_editor_core::{CommandId, ConfigStore, ShortcutOverride, ShortcutOverrides};
+    #[test]
+    fn recent_files_load_deduplicates_and_persists_project_directories() -> anyhow::Result<()> {
+        use zipzi_editor_core::RecentFiles;
+        let dir = tempfile::tempdir()?;
+        let store = ConfigStore::new(dir.path());
+        let first = dir.path().join("first.zipzi");
+        let second = dir.path().join("second.zipzi");
+        store.write(
+            "recent-files.json",
+            &RecentFiles {
+                paths: vec![
+                    first.join("project.zipzi.json"),
+                    second.clone(),
+                    first.clone(),
+                ],
+            },
+        )?;
+        let mut settings = Settings::from_store(store.clone(), &DummyKeyboardMapper);
+        assert_eq!(
+            settings.recent_files.paths,
+            vec![first.clone(), second.clone()]
+        );
+        assert_eq!(
+            store.read::<RecentFiles>("recent-files.json")?,
+            Some(settings.recent_files.clone())
+        );
+        settings.push_recent_file(second.join("project.zipzi.json"))?;
+        assert_eq!(settings.recent_files.paths, vec![second, first]);
+        assert_eq!(
+            Settings::from_store(store, &DummyKeyboardMapper).recent_files,
+            settings.recent_files
+        );
+        Ok(())
+    }
+
     #[test]
     fn appearance_preferences_preserve_each_other_and_default_missing_fields() -> anyhow::Result<()>
     {

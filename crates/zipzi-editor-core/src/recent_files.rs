@@ -35,16 +35,44 @@ pub struct RecentFiles {
     pub paths: Vec<PathBuf>,
 }
 
+/// Store the standard manifest alias as its project directory. Custom manifest
+/// filenames stay intact because opening their parent could select another project.
+fn recent_path(path: &Path) -> PathBuf {
+    let normalized = normalize_path(path);
+    if normalized
+        .file_name()
+        .is_some_and(|name| name == "project.zipzi.json")
+    {
+        normalized.parent().unwrap_or(&normalized).to_path_buf()
+    } else {
+        normalized
+    }
+}
+
 impl RecentFiles {
     pub fn new() -> Self {
         Self { paths: Vec::new() }
+    }
+
+    /// Normalize stored aliases and keep the newest occurrence of each project.
+    pub fn normalize(&mut self) {
+        let mut paths = Vec::new();
+        for path in &self.paths {
+            let path = recent_path(path);
+            if !paths.contains(&path) {
+                paths.push(path);
+            }
+        }
+        paths.truncate(MAX_RECENT_FILES);
+        self.paths = paths;
     }
 
     /// Add a path to the recent files list.
     /// If the path is already in the list, it is moved to the front.
     /// The list is truncated to [`MAX_RECENT_FILES`].
     pub fn push(&mut self, path: impl AsRef<Path>) {
-        let normalized = normalize_path(path.as_ref());
+        let normalized = recent_path(path.as_ref());
+        self.normalize();
         self.paths.retain(|p| p != &normalized);
         self.paths.insert(0, normalized);
         if self.paths.len() > MAX_RECENT_FILES {
@@ -54,8 +82,9 @@ impl RecentFiles {
 
     /// Remove a path from the recent files list.
     pub fn remove(&mut self, path: &Path) {
-        let normalized = normalize_path(path);
-        self.paths.retain(|p| p != path && p != &normalized);
+        let normalized = recent_path(path);
+        self.normalize();
+        self.paths.retain(|p| p != &normalized);
     }
 
     /// Clear all recent files.
@@ -136,6 +165,40 @@ mod tests {
         // Clear
         recent.clear();
         assert!(recent.is_empty());
+    }
+
+    #[test]
+    fn recent_files_merge_manifest_aliases_and_preserve_recency() {
+        let root = std::env::temp_dir().join("recent-projects");
+        let first = root.join("first.zipzi");
+        let second = root.join("second.zipzi");
+        let custom = root.join("custom.json");
+        let mut recent = RecentFiles {
+            paths: vec![
+                first.join("project.zipzi.json"),
+                second.clone(),
+                first.clone(),
+                second.join("project.zipzi.json"),
+                custom.clone(),
+            ],
+        };
+        recent.normalize();
+        assert_eq!(
+            recent.paths,
+            vec![first.clone(), second.clone(), custom.clone()]
+        );
+        recent.push(second.join("project.zipzi.json"));
+        assert_eq!(
+            recent.paths,
+            vec![second.clone(), first.clone(), custom.clone()]
+        );
+        recent.push(second.clone());
+        assert_eq!(
+            recent.paths,
+            vec![second.clone(), first.clone(), custom.clone()]
+        );
+        recent.remove(&second.join("project.zipzi.json"));
+        assert_eq!(recent.paths, vec![first, custom]);
     }
 
     #[test]
