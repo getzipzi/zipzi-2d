@@ -58,6 +58,7 @@ def read(path):
             raise ValueError('Invalid schema shard path: '+str(relative))
         parts = PurePosixPath(relative)
         if (parts.as_posix() != relative or len(parts.parts) != 2
+                or '\\' in relative or ':' in relative
                 or parts.parts[0] != 'types' or parts.suffix != '.json'
                 or parts.parts[1] in {'.', '..'} or relative in paths):
             raise ValueError('Invalid schema shard path: '+str(relative))

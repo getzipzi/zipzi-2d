@@ -12,145 +12,60 @@ CPU model-space geometric bounds and hits; textures, masks and occlusion are not
 
 ## zipzi.spatial.Batch
 
-`(version: _Version, requested: tuple[_Mapping[str, float], ...], queries: tuple[SpatialQuery, ...], frames: tuple[SpatialFrame, ...])`
-
-Immutable owned SpatialSamples value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `version`: Exact SDK version of the immutable formal or candidate snapshot.
-- `requested`: Owned requested parameter maps, preserving pose order and duplicates.
-- `queries`: Owned geometric queries shared by every returned frame.
-- `frames`: Effective poses and query results, aligned with requested parameter maps.
+Alias of [zipzi.modeling.spatial.SpatialSamples](modeling_spatial.md#zipzimodelingspatialspatialsamples).
 
 ## zipzi.spatial.Bounds
 
-`(targets: tuple[ObjectTarget, ...], include_hidden: bool = False)`
-
-Immutable owned SpatialQueryBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `targets`: Mesh/Part UUID selectors; an empty selection selects no meshes.
-- `include_hidden`: Include disabled, hidden and zero-opacity geometry in the union.
+Alias of [zipzi.modeling.spatial.SpatialQueryBounds](modeling_spatial.md#zipzimodelingspatialspatialquerybounds).
 
 ## zipzi.spatial.BoundsResult
 
-`(value: ObjectBounds)`
-
-Immutable owned SpatialResultBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `value`: Bounds and resolved mesh IDs for the corresponding selector request.
+Alias of [zipzi.modeling.spatial.SpatialResultBounds](modeling_spatial.md#zipzimodelingspatialspatialresultbounds).
 
 ## zipzi.spatial.Frame
 
-`(parameters: _Mapping[str, float], results: tuple[SpatialResult, ...])`
-
-Immutable owned SpatialFrame value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `parameters`: Effective evaluated parameter values keyed by document UUID, including defaults/clamps.
-- `results`: Query results in input order, including repeated queries and empty results.
+Alias of [zipzi.modeling.spatial.SpatialFrame](modeling_spatial.md#zipzimodelingspatialspatialframe).
 
 ## zipzi.spatial.GeometryQuery
 
-`(hits: tuple[GeometryHit, ...], total: int, truncated: bool)`
-
-Immutable owned GeometryQuery value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `hits`: Candidates retained after applying `max_candidates`.
-- `total`: Number of candidates before applying the limit.
-- `truncated`: Whether any candidates were omitted by the limit.
+Alias of [zipzi.modeling.spatial.GeometryQuery](modeling_spatial.md#zipzimodelingspatialgeometryquery).
 
 ## zipzi.spatial.Hit
 
-`(mesh_id: str, name: str, part_path: tuple[str, ...], part_names: tuple[str, ...], enabled: bool, visible: bool, opacity: float, render_order: int, triangles: tuple[TriangleHit, ...])`
-
-Immutable owned GeometryHit value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `mesh_id`: Stable authoring mesh ID.
-- `name`: Authoring mesh display name.
-- `part_path`: Ancestor Part IDs, from root to leaf.
-- `part_names`: Ancestor Part display names, parallel to `part_path`.
-- `enabled`: Evaluated drawable enabled state.
-- `visible`: Evaluated drawable visibility state.
-- `opacity`: Evaluated drawable opacity.
-- `render_order`: Evaluated draw order, used for stable descending candidate ordering.
-This is not a visibility ranking across offscreen composition groups.
-- `triangles`: Containing triangles; populated only when `details` was requested.
+Alias of [zipzi.modeling.spatial.GeometryHit](modeling_spatial.md#zipzimodelingspatialgeometryhit).
 
 ## zipzi.spatial.Hits
 
-`(point: tuple[float, float], include_hidden: bool = False, details: bool = False, max_candidates: int = 32)`
-
-Immutable owned SpatialQueryHits value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `point`: Finite XY point in evaluated Y-up model coordinates, not screen pixels.
-- `include_hidden`: Include disabled, hidden and zero-opacity geometric candidates.
-- `details`: Include every containing triangle, stable vertex IDs, barycentric weights and UV.
-- `max_candidates`: Maximum mesh candidates retained in descending draw order; total remains untruncated.
+Alias of [zipzi.modeling.spatial.SpatialQueryHits](modeling_spatial.md#zipzimodelingspatialspatialqueryhits).
 
 ## zipzi.spatial.HitsResult
 
-`(value: GeometryQuery)`
-
-Immutable owned SpatialResultHits value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `value`: Geometric candidates in SDK order, including total and truncation metadata.
+Alias of [zipzi.modeling.spatial.SpatialResultHits](modeling_spatial.md#zipzimodelingspatialspatialresulthits).
 
 ## zipzi.spatial.MeshTarget
 
-`(value: str)`
-
-Immutable owned ObjectTargetMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `value`: Persistent authoring mesh UUID.
+Alias of [zipzi.modeling.spatial.ObjectTargetMesh](modeling_spatial.md#zipzimodelingspatialobjecttargetmesh).
 
 ## zipzi.spatial.ObjectBounds
 
-`(mesh_ids: tuple[str, ...], model_bounds: tuple[float, float, float, float] | None = None, empty_reason: str | None = None)`
-
-Immutable owned ObjectBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `mesh_ids`: Resolved mesh IDs in authoring order, including meshes filtered from the bounds.
-- `model_bounds`: `[min_x, min_y, max_x, max_y]`, or `None` when no vertices contribute.
-Evaluated Y-up model units, independent of source canvas or export padding.
-Geometric bounds only: textures, masks and occlusion are not applied.
-- `empty_reason`: Why `model_bounds` is absent: `no_descendant_mesh`, `filtered_out`, or
-`no_evaluated_positions`.
+Alias of [zipzi.modeling.spatial.ObjectBounds](modeling_spatial.md#zipzimodelingspatialobjectbounds).
 
 ## zipzi.spatial.PartTarget
 
-`(value: str)`
-
-Immutable owned ObjectTargetPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `value`: Persistent Part UUID selecting descendant meshes.
+Alias of [zipzi.modeling.spatial.ObjectTargetPart](modeling_spatial.md#zipzimodelingspatialobjecttargetpart).
 
 ## zipzi.spatial.Query
 
-``
-
-Typed public API entry.
-
+Alias of [zipzi.modeling.spatial.SpatialQuery](modeling_spatial.md#zipzimodelingspatialspatialquery).
 
 ## zipzi.spatial.Result
 
-``
-
-Typed public API entry.
-
+Alias of [zipzi.modeling.spatial.SpatialResult](modeling_spatial.md#zipzimodelingspatialspatialresult).
 
 ## zipzi.spatial.Target
 
-``
-
-Typed public API entry.
-
+Alias of [zipzi.modeling.spatial.ObjectTarget](modeling_spatial.md#zipzimodelingspatialobjecttarget).
 
 ## zipzi.spatial.Triangle
 
-`(triangle_index: int, vertex_indices: tuple[int, int, int], vertex_ids: tuple[int, int, int] | None = None, barycentric: tuple[float, float, float], uv: tuple[float, float] | None = None)`
-
-Immutable owned TriangleHit value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `triangle_index`: The triangle's zero-based position in the drawable's index buffer.
-- `vertex_indices`: Offsets into the evaluated drawable's vertex arrays.
-- `vertex_ids`: Stable authoring vertex IDs, when present.
-- `barycentric`: Interpolation weights corresponding to `vertex_indices`.
-- `uv`: UV coordinate interpolated from the triangle's evaluated UVs.
+Alias of [zipzi.modeling.spatial.TriangleHit](modeling_spatial.md#zipzimodelingspatialtrianglehit).

@@ -12,7 +12,7 @@ Typed public API entry.
 
 ## zipzi.modeling.addressing.AddressSelectorAttachmentPath
 
-`(id: str)`
+`(*, id: str)`
 
 Immutable owned AddressSelectorAttachmentPath value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -21,7 +21,7 @@ runtime_id.
 
 ## zipzi.modeling.addressing.AddressSelectorBinding
 
-`(id: str)`
+`(*, id: str)`
 
 Immutable owned AddressSelectorBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -30,7 +30,7 @@ runtime_id.
 
 ## zipzi.modeling.addressing.AddressSelectorContent
 
-`(id: str, target: SceneContentTarget)`
+`(*, id: str, target: SceneContentTarget)`
 
 Immutable owned AddressSelectorContent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -41,7 +41,7 @@ undeformed base shape.
 
 ## zipzi.modeling.addressing.AddressSelectorDocument
 
-`(field: DocumentField)`
+`(*, field: DocumentField)`
 
 Immutable owned AddressSelectorDocument value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -49,7 +49,7 @@ Immutable owned AddressSelectorDocument value. Construction owns declared collec
 
 ## zipzi.modeling.addressing.AddressSelectorDrawingGroup
 
-`(owner: str)`
+`(*, owner: str)`
 
 Immutable owned AddressSelectorDrawingGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -57,7 +57,7 @@ Immutable owned AddressSelectorDrawingGroup value. Construction owns declared co
 
 ## zipzi.modeling.addressing.AddressSelectorExpressionEntry
 
-`(id: str)`
+`(*, id: str)`
 
 Immutable owned AddressSelectorExpressionEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -65,7 +65,7 @@ Immutable owned AddressSelectorExpressionEntry value. Construction owns declared
 
 ## zipzi.modeling.addressing.AddressSelectorMotionRegistration
 
-`(id: str)`
+`(*, id: str)`
 
 Immutable owned AddressSelectorMotionRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -73,7 +73,7 @@ Immutable owned AddressSelectorMotionRegistration value. Construction owns decla
 
 ## zipzi.modeling.addressing.AddressSelectorOrganization
 
-`(id: str)`
+`(*, id: str)`
 
 Immutable owned AddressSelectorOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -82,7 +82,7 @@ runtime_id.
 
 ## zipzi.modeling.addressing.AddressSelectorPhysics
 
-`(id: str)`
+`(*, id: str)`
 
 Immutable owned AddressSelectorPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -90,7 +90,7 @@ Immutable owned AddressSelectorPhysics value. Construction owns declared collect
 
 ## zipzi.modeling.addressing.AddressSelectorPose
 
-`(id: str)`
+`(*, id: str)`
 
 Immutable owned AddressSelectorPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -98,7 +98,7 @@ Immutable owned AddressSelectorPose value. Construction owns declared collection
 
 ## zipzi.modeling.addressing.AddressSelectorReference
 
-`(id: str)`
+`(*, id: str)`
 
 Immutable owned AddressSelectorReference value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -107,7 +107,7 @@ runtime_id.
 
 ## zipzi.modeling.addressing.AddressSelectorResourceName
 
-`(id: str)`
+`(*, id: str)`
 
 Immutable owned AddressSelectorResourceName value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -116,7 +116,7 @@ runtime_id.
 
 ## zipzi.modeling.addressing.AddressSelectorScene
 
-`(id: str, field: SceneField)`
+`(*, id: str, field: SceneField)`
 
 Immutable owned AddressSelectorScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -126,7 +126,7 @@ runtime_id.
 
 ## zipzi.modeling.addressing.AddressSelectorSelection
 
-`(owner: str, field: ReferenceSelectionField)`
+`(*, owner: str, field: ReferenceSelectionField)`
 
 Immutable owned AddressSelectorSelection value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

@@ -272,10 +272,7 @@ Arguments have the semantics of parameters.Patch; inspect that operation and its
 
 ## zipzi.Edit.pending_request
 
-`() -> PendingRequest | None`
-
-Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
-
+Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 
 ## zipzi.Edit.plan
 

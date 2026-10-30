@@ -26,8 +26,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                              'Rendered frames in requested pose order, sharing one '
                                                              'resolved texture acquisition.')],
                                                  'kind': 'type',
-                                                 'signature': '(view: ObservationView, requested: tuple[_Mapping[str, '
-                                                              'float], ...], frames: tuple[ObservationImage, ...])'},
+                                                 'signature': '(*, view: ObservationView, requested: '
+                                                              'tuple[_Mapping[str, float], ...], frames: '
+                                                              'tuple[ObservationImage, ...])'},
  'zipzi.modeling.observation.ObservationBatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.observation.ObservationBatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.ObservationImage': {'children': ('zipzi.modeling.observation.ObservationImage.__repr__',
@@ -92,7 +93,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                              'filtering and UV repeat outside [0,1]. A step above 1 '
                                                              'denotes approximate coverage.')],
                                                  'kind': 'type',
-                                                 'signature': '(width: int, height: int, rgba: _Bytes, png: _Bytes, '
+                                                 'signature': '(*, width: int, height: int, rgba: _Bytes, png: _Bytes, '
                                                               'document_id: str, evaluation_revision: int, capture_id: '
                                                               'str, scene_digest: str, render_digest: str, '
                                                               'input_sha256: str, adapter_name: str, adapter_backend: '
@@ -133,7 +134,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                             'Uses default parameters of the same source as reference; '
                                                             'checks requested frames only.')],
                                                 'kind': 'type',
-                                                'signature': '(width: int, height: int, roi: tuple[float, float, '
+                                                'signature': '(*, width: int, height: int, roi: tuple[float, float, '
                                                              'float, float], padding_model: float = 0.0, topology: '
                                                              'TopologyOverlay | None = None, quality: bool = False)'},
  'zipzi.modeling.observation.ObservationView.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -152,7 +153,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                            'Clipped image bounds [min_x,min_y,max_x,max_y], exclusive '
                                                            'maximum; None if empty.')],
                                                'kind': 'type',
-                                               'signature': '(id: str, visible: bool, bounds: tuple[int, int, int, '
+                                               'signature': '(*, id: str, visible: bool, bounds: tuple[int, int, int, '
                                                             'int] | None = None)'},
  'zipzi.modeling.observation.ObservedBounds.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.observation.ObservedBounds.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -169,7 +170,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                             'SHA256 of the exact immutable texture content uploaded by '
                                                             'this capture.')],
                                                 'kind': 'type',
-                                                'signature': '(asset_id: str, sha256: str)'},
+                                                'signature': '(*, asset_id: str, sha256: str)'},
  'zipzi.modeling.observation.ObservedTexture.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.observation.ObservedTexture.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.TextureCoverage': {'children': ('zipzi.modeling.observation.TextureCoverage.__repr__',
@@ -209,9 +210,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                             'Number of UV triangles with vertices outside [0,1]; '
                                                             'repeat-sampled coverage is not measured.')],
                                                 'kind': 'type',
-                                                'signature': '(alpha_threshold: int, pixel_step: int, sampled_pixels: '
-                                                             'int, covered_pixels: int, transparent_covered_pixels: '
-                                                             'int, opaque_pixels: int, uncovered_opaque_pixels: int, '
+                                                'signature': '(*, alpha_threshold: int, pixel_step: int, '
+                                                             'sampled_pixels: int, covered_pixels: int, '
+                                                             'transparent_covered_pixels: int, opaque_pixels: int, '
+                                                             'uncovered_opaque_pixels: int, '
                                                              'transparent_coverage_fraction: float | None = None, '
                                                              'uncovered_opaque_fraction: float | None = None, '
                                                              'out_of_bounds_triangles: int)'},
@@ -276,17 +278,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                             'Maximum labels per image, 0..4096. Vertex dots remain '
                                                             'independent of this limit.')],
                                                 'kind': 'type',
-                                                'signature': '(targets: tuple[ObjectTarget, ...] | None = None, '
+                                                'signature': '(*, targets: tuple[ObjectTarget, ...] | None = None, '
                                                              'wireframe: bool = True, vertices: bool = False, '
                                                              'vertex_ids: bool = False, constraints: bool = False, '
                                                              'strain: bool = False, include_hidden: bool = False, '
                                                              'topology_only: bool = False, heat_opacity: float = 0.25, '
                                                              'anomalies_only: bool = False, thresholds: '
-                                                             'TopologyThresholds = field(default_factory=lambda: '
-                                                             "read_TopologyThresholds({'max_aspect_ratio': 20.0, "
-                                                             "'max_edge_stretch': 2.0, 'min_angle_degrees': 10.0})), "
-                                                             'label_scale: int = 2, label_spacing: int = 3, '
-                                                             'max_labels: int = 256)'},
+                                                             'TopologyThresholds = <factory>, label_scale: int = 2, '
+                                                             'label_spacing: int = 3, max_labels: int = 256)'},
  'zipzi.modeling.observation.TopologyOverlay.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.observation.TopologyOverlay.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.TopologyThresholds': {'children': ('zipzi.modeling.observation.TopologyThresholds.__repr__',
@@ -305,7 +304,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                                'A symmetric edge-length ratio above this is anomalous; '
                                                                'finite and >= 1. Default 2.')],
                                                    'kind': 'type',
-                                                   'signature': '(min_angle_degrees: float = 10.0, max_aspect_ratio: '
-                                                                'float = 20.0, max_edge_stretch: float = 2.0)'},
+                                                   'signature': '(*, min_angle_degrees: float = 10.0, '
+                                                                'max_aspect_ratio: float = 20.0, max_edge_stretch: '
+                                                                'float = 2.0)'},
  'zipzi.modeling.observation.TopologyThresholds.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.observation.TopologyThresholds.summary': {'alias': 'zipzi.ApiDescription.summary'}}

@@ -40,10 +40,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.parameters': {'children': ('zipzi.mode
                                                      'Whether parameter values repeat across the declared range; '
                                                      'native default is false.')],
                                          'kind': 'type',
-                                         'signature': '(id: str, runtime_id: str, name: str, minimum: float, maximum: '
-                                                      'float, default_value: float, decimal_places: int = 6, kind: '
-                                                      'ParameterKind = field(default_factory=lambda: '
-                                                      "read_ParameterKind('normal')), repeat: bool = False)"},
+                                         'signature': '(*, id: str, runtime_id: str, name: str, minimum: float, '
+                                                      'maximum: float, default_value: float, decimal_places: int = 6, '
+                                                      'kind: ParameterKind = ParameterKind.NORMAL, repeat: bool = '
+                                                      'False)'},
  'zipzi.modeling.parameters.Parameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.parameters.Parameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.parameters.ParameterKind': {'children': (),
@@ -74,7 +74,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.parameters': {'children': ('zipzi.mode
                                                               'Explicit native conflict/conversion policy; no implicit '
                                                               'removal or remapping is requested.')],
                                                   'kind': 'type',
-                                                  'signature': '(parameter_id: str, minimum: float, maximum: float, '
+                                                  'signature': '(*, parameter_id: str, minimum: float, maximum: float, '
                                                                'default_value: float, policy: ParameterRangePolicy)'},
  'zipzi.modeling.parameters.ParameterRangeEdit.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.parameters.ParameterRangeEdit.summary': {'alias': 'zipzi.ApiDescription.summary'},

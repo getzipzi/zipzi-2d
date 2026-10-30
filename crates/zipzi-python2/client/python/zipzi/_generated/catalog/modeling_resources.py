@@ -31,7 +31,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
                                                      'Image content metadata; None explicitly represents an asset with '
                                                      'no loaded image content.')],
                                          'kind': 'type',
-                                         'signature': '(unresolved_source: str | None = None, id: str, name: str, '
+                                         'signature': '(*, unresolved_source: str | None = None, id: str, name: str, '
                                                       'content: ImageContent | None = None)'},
  'zipzi.modeling.resources.ImageAsset.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.resources.ImageAsset.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -55,7 +55,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
                                                        'Hexadecimal SHA-256 of the stored image content; an empty '
                                                        'string means no recorded digest.')],
                                            'kind': 'type',
-                                           'signature': '(source: str, width: int, height: int, sha256: str)'},
+                                           'signature': '(*, source: str, width: int, height: int, sha256: str)'},
  'zipzi.modeling.resources.ImageContent.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.resources.ImageContent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.resources.ResourceEdit': {'children': (),
@@ -81,7 +81,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
                                                              'appends. The anchor must belong to\n'
                                                              'the selected destination.')],
                                                  'kind': 'type',
-                                                 'signature': '(id: str, name: str, before: str | None = None)'},
+                                                 'signature': '(*, id: str, name: str, before: str | None = None)'},
  'zipzi.modeling.resources.ResourceEditCreate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.resources.ResourceEditCreate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.resources.ResourceEditDelete': {'children': ('zipzi.modeling.resources.ResourceEditDelete.__repr__',
@@ -99,7 +99,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
                                                              'redirects users to a\n'
                                                              'resolved target or an unresolved/detached reference.')],
                                                  'kind': 'type',
-                                                 'signature': '(id: str, replacement: SceneReference | None = None)'},
+                                                 'signature': '(*, id: str, replacement: SceneReference | None = '
+                                                              'None)'},
  'zipzi.modeling.resources.ResourceEditDelete.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.resources.ResourceEditDelete.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.resources.ResourceEditDuplicate': {'children': ('zipzi.modeling.resources.ResourceEditDuplicate.__repr__',
@@ -122,8 +123,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
                                                                 'appends. The anchor must belong to\n'
                                                                 'the selected destination.')],
                                                     'kind': 'type',
-                                                    'signature': '(source: str, id: str, name: str, before: str | None '
-                                                                 '= None)'},
+                                                    'signature': '(*, source: str, id: str, name: str, before: str | '
+                                                                 'None = None)'},
  'zipzi.modeling.resources.ResourceEditDuplicate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.resources.ResourceEditDuplicate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.resources.ResourceEditPatchName': {'children': ('zipzi.modeling.resources.ResourceEditPatchName.__repr__',
@@ -144,7 +145,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
                                                                 'Human-readable display name; use the stable ID for '
                                                                 'identity because names can change.')],
                                                     'kind': 'type',
-                                                    'signature': '(id: str, expected: str, name: str)'},
+                                                    'signature': '(*, id: str, expected: str, name: str)'},
  'zipzi.modeling.resources.ResourceEditPatchName.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.resources.ResourceEditPatchName.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.resources.ResourceEditReorder': {'children': ('zipzi.modeling.resources.ResourceEditReorder.__repr__',
@@ -162,7 +163,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
                                                               'appends. The anchor must belong to\n'
                                                               'the selected destination.')],
                                                   'kind': 'type',
-                                                  'signature': '(ids: tuple[str, ...], before: str | None = None)'},
+                                                  'signature': '(*, ids: tuple[str, ...], before: str | None = None)'},
  'zipzi.modeling.resources.ResourceEditReorder.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.resources.ResourceEditReorder.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.resources.ResourceEditSetContent': {'children': ('zipzi.modeling.resources.ResourceEditSetContent.__repr__',
@@ -184,7 +185,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
                                                                  'an asset with no loaded image\n'
                                                                  'content.')],
                                                      'kind': 'type',
-                                                     'signature': '(id: str, expected: ImageContent | None = None, '
+                                                     'signature': '(*, id: str, expected: ImageContent | None = None, '
                                                                   'content: ImageContent | None = None)'},
  'zipzi.modeling.resources.ResourceEditSetContent.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.resources.ResourceEditSetContent.summary': {'alias': 'zipzi.ApiDescription.summary'}}

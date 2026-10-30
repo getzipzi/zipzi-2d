@@ -7,7 +7,7 @@ See [common behavior](common.md) for inherited owned-value methods.
 
 ``
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a3; protocol zipzi-runtime-v2; client source SHA-256 49cd7caa0d6303d1dbd19226e3af6edbdcd60589a0643c35985c0d7e4b8ecc26.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a3; protocol zipzi-runtime-v2; client source SHA-256 3d7ff6f94d97aa61ecefdbb24a1d488ea8564d3e8faa5ddae65e986f3137d632.
 
 
 ## zipzi.ApiDescription
@@ -187,10 +187,7 @@ Wait for the actual outcome and release its Runtime result slot.
 
 ## zipzi.Job.pending_request
 
-`() -> PendingRequest | None`
-
-Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
-
+Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 
 ## zipzi.Job.state
 
@@ -321,22 +318,11 @@ Check the owning client/lease locally and return this Plan without IO. Use with 
 
 ## zipzi.Plan.__exit__
 
-`(kind: object, exception: BaseException | None, traceback: object) -> None`
-
-Close the owned lease on scope exit; never suppress the body exception.
-
-Python supplies the context arguments. Closing can synchronously contact
-the host. On normal exit an unknown release remains recoverable and is
-raised; during an existing exception cleanup failure is added as a note.
-Retain the handle for pending cleanup. No formal document write occurs.
-
+Alias of [zipzi.Buffer.__exit__](runtime.md#zipzibuffer__exit__).
 
 ## zipzi.Plan.close
 
-`() -> None`
-
-Release this owned handle once, without mutating formal model content. A lost release response keeps the original recovery owner; confirmed close is idempotent and later use fails.
-
+Alias of [zipzi.Buffer.close](runtime.md#zipzibufferclose).
 
 ## zipzi.Plan.deletion_page
 
@@ -350,10 +336,7 @@ original recovery owner are required; each page contains 1 to 256 rows.
 
 ## zipzi.Plan.pending_request
 
-`() -> PendingRequest | None`
-
-Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
-
+Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 
 ## zipzi.Plan.report
 
@@ -411,22 +394,11 @@ Check the owning client/lease locally and return this PreparedImage without IO. 
 
 ## zipzi.PreparedImage.__exit__
 
-`(kind: object, exception: BaseException | None, traceback: object) -> None`
-
-Close the owned lease on scope exit; never suppress the body exception.
-
-Python supplies the context arguments. Closing can synchronously contact
-the host. On normal exit an unknown release remains recoverable and is
-raised; during an existing exception cleanup failure is added as a note.
-Retain the handle for pending cleanup. No formal document write occurs.
-
+Alias of [zipzi.Buffer.__exit__](runtime.md#zipzibuffer__exit__).
 
 ## zipzi.PreparedImage.close
 
-`() -> None`
-
-Release this owned handle once, without mutating formal model content. A lost release response keeps the original recovery owner; confirmed close is idempotent and later use fails.
-
+Alias of [zipzi.Buffer.close](runtime.md#zipzibufferclose).
 
 ## zipzi.PreparedImage.height
 
@@ -437,10 +409,7 @@ Cached image height in pixels; no IO.
 
 ## zipzi.PreparedImage.pending_request
 
-`() -> PendingRequest | None`
-
-Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
-
+Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 
 ## zipzi.PreparedImage.pixels
 

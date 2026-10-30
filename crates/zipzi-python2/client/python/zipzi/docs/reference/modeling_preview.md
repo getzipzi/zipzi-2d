@@ -12,7 +12,7 @@ Canonical preview modeling values.
 
 ## zipzi.modeling.preview.PreviewBatch
 
-`(view: ObservationView | None = None, queries: tuple[SpatialQuery, ...], sequence: int, frames: tuple[PreviewFrame, ...])`
+`(*, view: ObservationView | None = None, queries: tuple[SpatialQuery, ...], sequence: int, frames: tuple[PreviewFrame, ...])`
 
 Immutable owned PreviewBatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -37,7 +37,7 @@ Immutable owned PreviewCommandReset value. Construction owns declared collection
 
 ## zipzi.modeling.preview.PreviewCommandScheduleExpression
 
-`(id: str, time: float)`
+`(*, id: str, time: float)`
 
 Immutable owned PreviewCommandScheduleExpression value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -46,7 +46,7 @@ Immutable owned PreviewCommandScheduleExpression value. Construction owns declar
 
 ## zipzi.modeling.preview.PreviewCommandScheduleMotion
 
-`(id: str, time: float)`
+`(*, id: str, time: float)`
 
 Immutable owned PreviewCommandScheduleMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -55,7 +55,7 @@ Immutable owned PreviewCommandScheduleMotion value. Construction owns declared c
 
 ## zipzi.modeling.preview.PreviewCommandScheduleParameter
 
-`(id: str, time: float, value: float)`
+`(*, id: str, time: float, value: float)`
 
 Immutable owned PreviewCommandScheduleParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -65,7 +65,7 @@ Immutable owned PreviewCommandScheduleParameter value. Construction owns declare
 
 ## zipzi.modeling.preview.PreviewCommandScheduleRegistration
 
-`(id: str, time: float)`
+`(*, id: str, time: float)`
 
 Immutable owned PreviewCommandScheduleRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -74,7 +74,7 @@ Immutable owned PreviewCommandScheduleRegistration value. Construction owns decl
 
 ## zipzi.modeling.preview.PreviewCommandSetParameter
 
-`(id: str, value: float)`
+`(*, id: str, value: float)`
 
 Immutable owned PreviewCommandSetParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -83,7 +83,7 @@ Immutable owned PreviewCommandSetParameter value. Construction owns declared col
 
 ## zipzi.modeling.preview.PreviewCommandSetPhysics
 
-`(enabled: bool, stabilized_start: bool)`
+`(*, enabled: bool, stabilized_start: bool)`
 
 Immutable owned PreviewCommandSetPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -92,7 +92,7 @@ Immutable owned PreviewCommandSetPhysics value. Construction owns declared colle
 
 ## zipzi.modeling.preview.PreviewFrame
 
-`(observation: ObservationImage | None = None, spatial: tuple[SpatialResult, ...], preview_id: int, sequence: int, index: int, motion: MotionSnapshot, geometry: DrawableFrame | None = None)`
+`(*, observation: ObservationImage | None = None, spatial: tuple[SpatialResult, ...], preview_id: int, sequence: int, index: int, motion: MotionSnapshot, geometry: DrawableFrame | None = None)`
 
 Immutable owned PreviewFrame value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -106,7 +106,7 @@ Immutable owned PreviewFrame value. Construction owns declared collections; read
 
 ## zipzi.modeling.preview.PreviewState
 
-`(sequence: int, time: float)`
+`(*, sequence: int, time: float)`
 
 Immutable owned PreviewState value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

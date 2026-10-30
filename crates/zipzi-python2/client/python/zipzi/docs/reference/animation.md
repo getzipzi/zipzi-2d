@@ -12,35 +12,15 @@ Independent frozen animation controls and CPU playback results.
 
 ## zipzi.animation.Batch
 
-`(view: ObservationView | None = None, queries: tuple[SpatialQuery, ...], sequence: int, frames: tuple[PreviewFrame, ...])`
-
-Immutable owned PreviewBatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `view`: Explicit image view when GPU observation was requested; None keeps CPU-only behavior.
-- `queries`: Owned geometric query descriptors aligned with every frame.spatial slot.
-- `sequence`: Accepted sample request ordinal shared by these ordered frames.
-- `frames`: Owned frames in requested target order, retaining duplicate and backward targets.
+Alias of [zipzi.modeling.preview.PreviewBatch](modeling_preview.md#zipzimodelingpreviewpreviewbatch).
 
 ## zipzi.animation.Command
 
-``
-
-Typed public API entry.
-
+Alias of [zipzi.modeling.preview.PreviewCommand](modeling_preview.md#zipzimodelingpreviewpreviewcommand).
 
 ## zipzi.animation.Frame
 
-`(observation: ObservationImage | None = None, spatial: tuple[SpatialResult, ...], preview_id: int, sequence: int, index: int, motion: MotionSnapshot, geometry: DrawableFrame | None = None)`
-
-Immutable owned PreviewFrame value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `observation`: Optional GPU image from this exact animation state and once-resolved batch textures.
-- `spatial`: Geometric query results in the corresponding request order, from this exact SDK state.
-- `preview_id`: Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.
-- `sequence`: Accepted sample request ordinal; pair with the outer Source and Preview identity.
-- `index`: Zero-based target slot in the ordered sample request.
-- `motion`: SDK Motion/Expression/Physics/Pose result and actual sample coordinates.
-- `geometry`: Evaluated CPU geometry when requested; model_opacity remains a separate SDK channel.
+Alias of [zipzi.modeling.preview.PreviewFrame](modeling_preview.md#zipzimodelingpreviewpreviewframe).
 
 ## zipzi.animation.Preview
 
@@ -63,15 +43,7 @@ Validate this owned Preview and return it; scope exit closes it and cancels pend
 
 ## zipzi.animation.Preview.__exit__
 
-`(kind: object, exception: BaseException | None, traceback: object) -> None`
-
-Close the owned lease on scope exit; never suppress the body exception.
-
-Python supplies the context arguments. Closing can synchronously contact
-the host. On normal exit an unknown release remains recoverable and is
-raised; during an existing exception cleanup failure is added as a note.
-Retain the handle for pending cleanup. No formal document write occurs.
-
+Alias of [zipzi.Buffer.__exit__](runtime.md#zipzibuffer__exit__).
 
 ## zipzi.animation.Preview.advance_to
 
@@ -89,10 +61,7 @@ Apply one typed animation control in this Preview. SDK validation errors preserv
 
 ## zipzi.animation.Preview.close
 
-`() -> None`
-
-Release this owned handle once, without mutating formal model content. A lost release response keeps the original recovery owner; confirmed close is idempotent and later use fails.
-
+Alias of [zipzi.Buffer.close](runtime.md#zipzibufferclose).
 
 ## zipzi.animation.Preview.id
 
@@ -110,10 +79,7 @@ Read this Preview's accepted ordinal and actual SDK clock. Busy work refuses thi
 
 ## zipzi.animation.Preview.pending_request
 
-`() -> PendingRequest | None`
-
-Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
-
+Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 
 ## zipzi.animation.Preview.sample
 
@@ -149,71 +115,32 @@ Read the cached exact frozen Source without IO or refreshing the model.
 
 ## zipzi.animation.Reset
 
-`()`
-
-Immutable owned PreviewCommandReset value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
+Alias of [zipzi.modeling.preview.PreviewCommandReset](modeling_preview.md#zipzimodelingpreviewpreviewcommandreset).
 
 ## zipzi.animation.ScheduleExpression
 
-`(id: str, time: float)`
-
-Immutable owned PreviewCommandScheduleExpression value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `id`: Native expression asset UUID.
-- `time`: Absolute activation time in seconds on this Preview's clock.
+Alias of [zipzi.modeling.preview.PreviewCommandScheduleExpression](modeling_preview.md#zipzimodelingpreviewpreviewcommandscheduleexpression).
 
 ## zipzi.animation.ScheduleMotion
 
-`(id: str, time: float)`
-
-Immutable owned PreviewCommandScheduleMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `id`: Clip UUID; uses the clip's own fades.
-- `time`: Absolute activation time in seconds on this Preview's clock.
+Alias of [zipzi.modeling.preview.PreviewCommandScheduleMotion](modeling_preview.md#zipzimodelingpreviewpreviewcommandschedulemotion).
 
 ## zipzi.animation.ScheduleParameter
 
-`(id: str, time: float, value: float)`
-
-Immutable owned PreviewCommandScheduleParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `id`: Document parameter UUID for an SDK input activation.
-- `time`: Absolute activation time in seconds on this Preview's clock.
-- `value`: Finite parameter input in the authored parameter domain.
+Alias of [zipzi.modeling.preview.PreviewCommandScheduleParameter](modeling_preview.md#zipzimodelingpreviewpreviewcommandscheduleparameter).
 
 ## zipzi.animation.ScheduleRegistration
 
-`(id: str, time: float)`
-
-Immutable owned PreviewCommandScheduleRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `id`: Registration UUID; uses the registration's SDK fade overrides.
-- `time`: Absolute activation time in seconds on this Preview's clock.
+Alias of [zipzi.modeling.preview.PreviewCommandScheduleRegistration](modeling_preview.md#zipzimodelingpreviewpreviewcommandscheduleregistration).
 
 ## zipzi.animation.SetParameter
 
-`(id: str, value: float)`
-
-Immutable owned PreviewCommandSetParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `id`: Document parameter UUID; the SDK validates existence and domain.
-- `value`: Finite base value in the parameter's authored domain.
+Alias of [zipzi.modeling.preview.PreviewCommandSetParameter](modeling_preview.md#zipzimodelingpreviewpreviewcommandsetparameter).
 
 ## zipzi.animation.SetPhysics
 
-`(enabled: bool, stabilized_start: bool)`
-
-Immutable owned PreviewCommandSetPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `enabled`: Enable the SDK Physics stage in this Preview only.
-- `stabilized_start`: Use the SDK stabilized-start policy on canonical replay.
+Alias of [zipzi.modeling.preview.PreviewCommandSetPhysics](modeling_preview.md#zipzimodelingpreviewpreviewcommandsetphysics).
 
 ## zipzi.animation.State
 
-`(sequence: int, time: float)`
-
-Immutable owned PreviewState value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `sequence`: Monotonic accepted operation ordinal, including cancelled sample requests.
-- `time`: Actual SDK clock after the last completed operation, in seconds.
+Alias of [zipzi.modeling.preview.PreviewState](modeling_preview.md#zipzimodelingpreviewpreviewstate).

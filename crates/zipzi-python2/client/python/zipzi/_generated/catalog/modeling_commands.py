@@ -80,7 +80,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                         "Includes the SDK's complete previous checkpoint and new "
                                                         'candidate.')],
                                             'kind': 'type',
-                                            'signature': '(sample_combinations: int, payload_bytes: int, '
+                                            'signature': '(*, sample_combinations: int, payload_bytes: int, '
                                                          'temporary_bytes: int, history_bytes: int)'},
  'zipzi.modeling.commands.ConversionCost.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ConversionCost.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -100,10 +100,15 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                           'Upper endpoint of the parameter domain, in parameter '
                                                           'units.')],
                                               'kind': 'type',
-                                              'signature': '(parameter_id: str, minimum: float, maximum: float)'},
+                                              'signature': '(*, parameter_id: str, minimum: float, maximum: float)'},
  'zipzi.modeling.commands.ConversionDomain.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ConversionDomain.summary': {'alias': 'zipzi.ApiDescription.summary'},
- 'zipzi.modeling.commands.ModelingCommand': {'alias': 'zipzi.modeling.ModelingCommand'},
+ 'zipzi.modeling.commands.ModelingCommand': {'children': (),
+                                             'documentation': 'Typed public API entry.',
+                                             'example': 'docs/recipes.py',
+                                             'fields': [],
+                                             'kind': 'value',
+                                             'signature': ''},
  'zipzi.modeling.commands.ModelingCommandAttachment': {'children': ('zipzi.modeling.commands.ModelingCommandAttachment.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandAttachment.summary'),
                                                        'documentation': 'Immutable owned ModelingCommandAttachment '
@@ -120,7 +125,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                    'value type; not a constructor argument or a '
                                                                    'mutable object field.')],
                                                        'kind': 'type',
-                                                       'signature': '(intent: AttachmentEdit)'},
+                                                       'signature': '(*, intent: AttachmentEdit)'},
  'zipzi.modeling.commands.ModelingCommandAttachment.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandAttachment.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandBinding': {'children': ('zipzi.modeling.commands.ModelingCommandBinding.__repr__',
@@ -138,7 +143,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                 'type; not a constructor argument or a mutable object '
                                                                 'field.')],
                                                     'kind': 'type',
-                                                    'signature': '(intent: BindingAuthoringEdit)'},
+                                                    'signature': '(*, intent: BindingAuthoringEdit)'},
  'zipzi.modeling.commands.ModelingCommandBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandContent': {'children': ('zipzi.modeling.commands.ModelingCommandContent.__repr__',
@@ -156,7 +161,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                 'type; not a constructor argument or a mutable object '
                                                                 'field.')],
                                                     'kind': 'type',
-                                                    'signature': '(intent: SceneContentEdit)'},
+                                                    'signature': '(*, intent: SceneContentEdit)'},
  'zipzi.modeling.commands.ModelingCommandContent.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandContent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateAsset': {'children': ('zipzi.modeling.commands.ModelingCommandCreateAsset.__repr__',
@@ -175,7 +180,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                     'value type; not a constructor argument or a '
                                                                     'mutable object field.')],
                                                         'kind': 'type',
-                                                        'signature': '(asset: ImageAsset)'},
+                                                        'signature': '(*, asset: ImageAsset)'},
  'zipzi.modeling.commands.ModelingCommandCreateAsset.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateAsset.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateBinding': {'children': ('zipzi.modeling.commands.ModelingCommandCreateBinding.__repr__',
@@ -195,7 +200,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                       'value type; not a constructor argument or a '
                                                                       'mutable object field.')],
                                                           'kind': 'type',
-                                                          'signature': '(binding: MeshBinding)'},
+                                                          'signature': '(*, binding: MeshBinding)'},
  'zipzi.modeling.commands.ModelingCommandCreateBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateBlendBinding': {'children': ('zipzi.modeling.commands.ModelingCommandCreateBlendBinding.__repr__',
@@ -215,7 +220,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                            'this value type; not a constructor '
                                                                            'argument or a mutable object field.')],
                                                                'kind': 'type',
-                                                               'signature': '(binding: BlendShapeBinding)'},
+                                                               'signature': '(*, binding: BlendShapeBinding)'},
  'zipzi.modeling.commands.ModelingCommandCreateBlendBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateBlendBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateBlendConstraint': {'children': ('zipzi.modeling.commands.ModelingCommandCreateBlendConstraint.__repr__',
@@ -236,7 +241,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                               'by this value type; not a constructor '
                                                                               'argument or a mutable object field.')],
                                                                   'kind': 'type',
-                                                                  'signature': '(constraint: BlendShapeConstraint)'},
+                                                                  'signature': '(*, constraint: BlendShapeConstraint)'},
  'zipzi.modeling.commands.ModelingCommandCreateBlendConstraint.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateBlendConstraint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable': {'children': ('zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable.__repr__',
@@ -257,7 +262,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                             'this value type; not a constructor '
                                                                             'argument or a mutable object field.')],
                                                                 'kind': 'type',
-                                                                'signature': '(table: BlendShapeKeyTable)'},
+                                                                'signature': '(*, table: BlendShapeKeyTable)'},
  'zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateExpression': {'children': ('zipzi.modeling.commands.ModelingCommandCreateExpression.__repr__',
@@ -276,7 +281,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                          'this value type; not a constructor argument '
                                                                          'or a mutable object field.')],
                                                              'kind': 'type',
-                                                             'signature': '(expression: ExpressionAsset)'},
+                                                             'signature': '(*, expression: ExpressionAsset)'},
  'zipzi.modeling.commands.ModelingCommandCreateExpression.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateExpression.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateGlue': {'children': ('zipzi.modeling.commands.ModelingCommandCreateGlue.__repr__',
@@ -295,7 +300,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                    'value type; not a constructor argument or a '
                                                                    'mutable object field.')],
                                                        'kind': 'type',
-                                                       'signature': '(glue: Glue)'},
+                                                       'signature': '(*, glue: Glue)'},
  'zipzi.modeling.commands.ModelingCommandCreateGlue.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateGlue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateMesh': {'children': ('zipzi.modeling.commands.ModelingCommandCreateMesh.__repr__',
@@ -314,7 +319,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                    'value type; not a constructor argument or a '
                                                                    'mutable object field.')],
                                                        'kind': 'type',
-                                                       'signature': '(mesh: Mesh)'},
+                                                       'signature': '(*, mesh: Mesh)'},
  'zipzi.modeling.commands.ModelingCommandCreateMesh.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateMotion': {'children': ('zipzi.modeling.commands.ModelingCommandCreateMotion.__repr__',
@@ -332,7 +337,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                      'value type; not a constructor argument or a '
                                                                      'mutable object field.')],
                                                          'kind': 'type',
-                                                         'signature': '(clip: MotionClip)'},
+                                                         'signature': '(*, clip: MotionClip)'},
  'zipzi.modeling.commands.ModelingCommandCreateMotion.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateOffscreen': {'children': ('zipzi.modeling.commands.ModelingCommandCreateOffscreen.__repr__',
@@ -352,7 +357,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                         'this value type; not a constructor argument '
                                                                         'or a mutable object field.')],
                                                             'kind': 'type',
-                                                            'signature': '(offscreen: Offscreen)'},
+                                                            'signature': '(*, offscreen: Offscreen)'},
  'zipzi.modeling.commands.ModelingCommandCreateOffscreen.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateParameter': {'children': ('zipzi.modeling.commands.ModelingCommandCreateParameter.__repr__',
@@ -372,7 +377,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                         'this value type; not a constructor argument '
                                                                         'or a mutable object field.')],
                                                             'kind': 'type',
-                                                            'signature': '(parameter: Parameter)'},
+                                                            'signature': '(*, parameter: Parameter)'},
  'zipzi.modeling.commands.ModelingCommandCreateParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreatePart': {'children': ('zipzi.modeling.commands.ModelingCommandCreatePart.__repr__',
@@ -391,7 +396,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                    'value type; not a constructor argument or a '
                                                                    'mutable object field.')],
                                                        'kind': 'type',
-                                                       'signature': '(part: Part)'},
+                                                       'signature': '(*, part: Part)'},
  'zipzi.modeling.commands.ModelingCommandCreatePart.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreatePart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateSceneBinding': {'children': ('zipzi.modeling.commands.ModelingCommandCreateSceneBinding.__repr__',
@@ -411,7 +416,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                            'this value type; not a constructor '
                                                                            'argument or a mutable object field.')],
                                                                'kind': 'type',
-                                                               'signature': '(binding: SceneBinding)'},
+                                                               'signature': '(*, binding: SceneBinding)'},
  'zipzi.modeling.commands.ModelingCommandCreateSceneBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateSceneBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateTransform': {'children': ('zipzi.modeling.commands.ModelingCommandCreateTransform.__repr__',
@@ -431,7 +436,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                         'this value type; not a constructor argument '
                                                                         'or a mutable object field.')],
                                                             'kind': 'type',
-                                                            'signature': '(transform: Transform)'},
+                                                            'signature': '(*, transform: Transform)'},
  'zipzi.modeling.commands.ModelingCommandCreateTransform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateTransform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandDeletion': {'children': ('zipzi.modeling.commands.ModelingCommandDeletion.__repr__',
@@ -448,7 +453,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                  'type; not a constructor argument or a mutable object '
                                                                  'field.')],
                                                      'kind': 'type',
-                                                     'signature': '(intent: DeletionIntent)'},
+                                                     'signature': '(*, intent: DeletionIntent)'},
  'zipzi.modeling.commands.ModelingCommandDeletion.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandDeletion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandDocument': {'children': ('zipzi.modeling.commands.ModelingCommandDocument.__repr__',
@@ -466,7 +471,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                  'type; not a constructor argument or a mutable object '
                                                                  'field.')],
                                                      'kind': 'type',
-                                                     'signature': '(intent: DocumentAuthoringEdit)'},
+                                                     'signature': '(*, intent: DocumentAuthoringEdit)'},
  'zipzi.modeling.commands.ModelingCommandDocument.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandDocument.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandEraseObject': {'children': ('zipzi.modeling.commands.ModelingCommandEraseObject.__repr__',
@@ -485,7 +490,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                     'value type; not a constructor argument or a '
                                                                     'mutable object field.')],
                                                         'kind': 'type',
-                                                        'signature': '(id: str)'},
+                                                        'signature': '(*, id: str)'},
  'zipzi.modeling.commands.ModelingCommandEraseObject.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandEraseObject.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandExpression': {'children': ('zipzi.modeling.commands.ModelingCommandExpression.__repr__',
@@ -503,7 +508,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                    'value type; not a constructor argument or a '
                                                                    'mutable object field.')],
                                                        'kind': 'type',
-                                                       'signature': '(intent: ExpressionEdit)'},
+                                                       'signature': '(*, intent: ExpressionEdit)'},
  'zipzi.modeling.commands.ModelingCommandExpression.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandExpression.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandManualMesh': {'children': ('zipzi.modeling.commands.ModelingCommandManualMesh.__repr__',
@@ -527,7 +532,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                    'value type; not a constructor argument or a '
                                                                    'mutable object field.')],
                                                        'kind': 'type',
-                                                       'signature': '(mesh_id: str, expected: _Source, operation: '
+                                                       'signature': '(*, mesh_id: str, expected: _Source, operation: '
                                                                     'ManualMeshOperation)'},
  'zipzi.modeling.commands.ModelingCommandManualMesh.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandManualMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -545,7 +550,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                'type; not a constructor argument or a mutable object '
                                                                'field.')],
                                                    'kind': 'type',
-                                                   'signature': '(intent: MotionEdit)'},
+                                                   'signature': '(*, intent: MotionEdit)'},
  'zipzi.modeling.commands.ModelingCommandMotion.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandOrganization': {'children': ('zipzi.modeling.commands.ModelingCommandOrganization.__repr__',
@@ -564,7 +569,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                      'value type; not a constructor argument or a '
                                                                      'mutable object field.')],
                                                          'kind': 'type',
-                                                         'signature': '(intent: OrganizationEdit)'},
+                                                         'signature': '(*, intent: OrganizationEdit)'},
  'zipzi.modeling.commands.ModelingCommandOrganization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandOrganization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandPhysics': {'children': ('zipzi.modeling.commands.ModelingCommandPhysics.__repr__',
@@ -581,7 +586,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                 'type; not a constructor argument or a mutable object '
                                                                 'field.')],
                                                     'kind': 'type',
-                                                    'signature': '(intent: PhysicsEdit)'},
+                                                    'signature': '(*, intent: PhysicsEdit)'},
  'zipzi.modeling.commands.ModelingCommandPhysics.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandPhysics.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandPose': {'children': ('zipzi.modeling.commands.ModelingCommandPose.__repr__',
@@ -598,7 +603,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                              'type; not a constructor argument or a mutable object '
                                                              'field.')],
                                                  'kind': 'type',
-                                                 'signature': '(intent: PoseEdit)'},
+                                                 'signature': '(*, intent: PoseEdit)'},
  'zipzi.modeling.commands.ModelingCommandPose.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandPose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReferences': {'children': ('zipzi.modeling.commands.ModelingCommandReferences.__repr__',
@@ -617,7 +622,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                    'value type; not a constructor argument or a '
                                                                    'mutable object field.')],
                                                        'kind': 'type',
-                                                       'signature': '(intent: ReferenceEdit)'},
+                                                       'signature': '(*, intent: ReferenceEdit)'},
  'zipzi.modeling.commands.ModelingCommandReferences.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReferences.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid': {'children': ('zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid.__repr__',
@@ -648,7 +653,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                             'this value type; not a constructor '
                                                                             'argument or a mutable object field.')],
                                                                 'kind': 'type',
-                                                                'signature': '(id: str, columns: int, rows: int)'},
+                                                                'signature': '(*, id: str, columns: int, rows: int)'},
  'zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandRenameMesh': {'children': ('zipzi.modeling.commands.ModelingCommandRenameMesh.__repr__',
@@ -670,7 +675,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                    'value type; not a constructor argument or a '
                                                                    'mutable object field.')],
                                                        'kind': 'type',
-                                                       'signature': '(id: str, name: str)'},
+                                                       'signature': '(*, id: str, name: str)'},
  'zipzi.modeling.commands.ModelingCommandRenameMesh.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandRenameMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceAsset': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceAsset.__repr__',
@@ -689,7 +694,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                      'value type; not a constructor argument or a '
                                                                      'mutable object field.')],
                                                          'kind': 'type',
-                                                         'signature': '(asset: ImageAsset)'},
+                                                         'signature': '(*, asset: ImageAsset)'},
  'zipzi.modeling.commands.ModelingCommandReplaceAsset.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceAsset.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceBinding': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceBinding.__repr__',
@@ -709,7 +714,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                        'value type; not a constructor argument or a '
                                                                        'mutable object field.')],
                                                            'kind': 'type',
-                                                           'signature': '(binding: MeshBinding)'},
+                                                           'signature': '(*, binding: MeshBinding)'},
  'zipzi.modeling.commands.ModelingCommandReplaceBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendBinding': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceBlendBinding.__repr__',
@@ -730,7 +735,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                             'this value type; not a constructor '
                                                                             'argument or a mutable object field.')],
                                                                 'kind': 'type',
-                                                                'signature': '(binding: BlendShapeBinding)'},
+                                                                'signature': '(*, binding: BlendShapeBinding)'},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint.__repr__',
@@ -752,7 +757,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                                'by this value type; not a constructor '
                                                                                'argument or a mutable object field.')],
                                                                    'kind': 'type',
-                                                                   'signature': '(constraint: BlendShapeConstraint)'},
+                                                                   'signature': '(*, constraint: '
+                                                                                'BlendShapeConstraint)'},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable.__repr__',
@@ -774,7 +780,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                              'by this value type; not a constructor '
                                                                              'argument or a mutable object field.')],
                                                                  'kind': 'type',
-                                                                 'signature': '(table: BlendShapeKeyTable)'},
+                                                                 'signature': '(*, table: BlendShapeKeyTable)'},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups.__repr__',
@@ -796,7 +802,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                                'by this value type; not a constructor '
                                                                                'argument or a mutable object field.')],
                                                                    'kind': 'type',
-                                                                   'signature': '(groups: tuple[DrawOrderGroup, ...])'},
+                                                                   'signature': '(*, groups: tuple[DrawOrderGroup, '
+                                                                                '...])'},
  'zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceEditorState': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceEditorState.__repr__',
@@ -815,7 +822,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                            'this value type; not a constructor '
                                                                            'argument or a mutable object field.')],
                                                                'kind': 'type',
-                                                               'signature': '(state: EditorState)'},
+                                                               'signature': '(*, state: EditorState)'},
  'zipzi.modeling.commands.ModelingCommandReplaceEditorState.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceEditorState.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceExpression': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceExpression.__repr__',
@@ -834,7 +841,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                           'this value type; not a constructor argument '
                                                                           'or a mutable object field.')],
                                                               'kind': 'type',
-                                                              'signature': '(expression: ExpressionAsset)'},
+                                                              'signature': '(*, expression: ExpressionAsset)'},
  'zipzi.modeling.commands.ModelingCommandReplaceExpression.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceExpression.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceGlue': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceGlue.__repr__',
@@ -853,7 +860,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                     'value type; not a constructor argument or a '
                                                                     'mutable object field.')],
                                                         'kind': 'type',
-                                                        'signature': '(glue: Glue)'},
+                                                        'signature': '(*, glue: Glue)'},
  'zipzi.modeling.commands.ModelingCommandReplaceGlue.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceGlue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder.__repr__',
@@ -872,7 +879,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                               'by this value type; not a constructor '
                                                                               'argument or a mutable object field.')],
                                                                   'kind': 'type',
-                                                                  'signature': '(order: HierarchyOrder)'},
+                                                                  'signature': '(*, order: HierarchyOrder)'},
  'zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceMesh': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceMesh.__repr__',
@@ -891,7 +898,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                     'value type; not a constructor argument or a '
                                                                     'mutable object field.')],
                                                         'kind': 'type',
-                                                        'signature': '(mesh: Mesh)'},
+                                                        'signature': '(*, mesh: Mesh)'},
  'zipzi.modeling.commands.ModelingCommandReplaceMesh.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceModelSetup': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceModelSetup.__repr__',
@@ -910,7 +917,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                           'this value type; not a constructor argument '
                                                                           'or a mutable object field.')],
                                                               'kind': 'type',
-                                                              'signature': '(setup: ModelSetup)'},
+                                                              'signature': '(*, setup: ModelSetup)'},
  'zipzi.modeling.commands.ModelingCommandReplaceModelSetup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceModelSetup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceMotion': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceMotion.__repr__',
@@ -929,7 +936,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                       'value type; not a constructor argument or a '
                                                                       'mutable object field.')],
                                                           'kind': 'type',
-                                                          'signature': '(clip: MotionClip)'},
+                                                          'signature': '(*, clip: MotionClip)'},
  'zipzi.modeling.commands.ModelingCommandReplaceMotion.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceOffscreen': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceOffscreen.__repr__',
@@ -949,7 +956,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                          'this value type; not a constructor argument '
                                                                          'or a mutable object field.')],
                                                              'kind': 'type',
-                                                             'signature': '(offscreen: Offscreen)'},
+                                                             'signature': '(*, offscreen: Offscreen)'},
  'zipzi.modeling.commands.ModelingCommandReplaceOffscreen.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceParameter': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceParameter.__repr__',
@@ -969,7 +976,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                          'this value type; not a constructor argument '
                                                                          'or a mutable object field.')],
                                                              'kind': 'type',
-                                                             'signature': '(parameter: Parameter)'},
+                                                             'signature': '(*, parameter: Parameter)'},
  'zipzi.modeling.commands.ModelingCommandReplaceParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplacePart': {'children': ('zipzi.modeling.commands.ModelingCommandReplacePart.__repr__',
@@ -988,7 +995,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                     'value type; not a constructor argument or a '
                                                                     'mutable object field.')],
                                                         'kind': 'type',
-                                                        'signature': '(part: Part)'},
+                                                        'signature': '(*, part: Part)'},
  'zipzi.modeling.commands.ModelingCommandReplacePart.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplacePart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceSceneBinding': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceSceneBinding.__repr__',
@@ -1009,7 +1016,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                             'this value type; not a constructor '
                                                                             'argument or a mutable object field.')],
                                                                 'kind': 'type',
-                                                                'signature': '(binding: SceneBinding)'},
+                                                                'signature': '(*, binding: SceneBinding)'},
  'zipzi.modeling.commands.ModelingCommandReplaceSceneBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceSceneBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceTopology': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceTopology.__repr__',
@@ -1034,7 +1041,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                         'this value type; not a constructor argument '
                                                                         'or a mutable object field.')],
                                                             'kind': 'type',
-                                                            'signature': '(source: GeometrySnapshot, replacement: '
+                                                            'signature': '(*, source: GeometrySnapshot, replacement: '
                                                                          'TopologyReplacement)'},
  'zipzi.modeling.commands.ModelingCommandReplaceTopology.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceTopology.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -1055,7 +1062,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                          'this value type; not a constructor argument '
                                                                          'or a mutable object field.')],
                                                              'kind': 'type',
-                                                             'signature': '(transform: Transform)'},
+                                                             'signature': '(*, transform: Transform)'},
  'zipzi.modeling.commands.ModelingCommandReplaceTransform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceTransform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandResource': {'children': ('zipzi.modeling.commands.ModelingCommandResource.__repr__',
@@ -1073,7 +1080,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                  'type; not a constructor argument or a mutable object '
                                                                  'field.')],
                                                      'kind': 'type',
-                                                     'signature': '(intent: ResourceEdit)'},
+                                                     'signature': '(*, intent: ResourceEdit)'},
  'zipzi.modeling.commands.ModelingCommandResource.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandResource.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandScene': {'children': ('zipzi.modeling.commands.ModelingCommandScene.__repr__',
@@ -1091,7 +1098,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                               'type; not a constructor argument or a mutable object '
                                                               'field.')],
                                                   'kind': 'type',
-                                                  'signature': '(intent: SceneEdit)'},
+                                                  'signature': '(*, intent: SceneEdit)'},
  'zipzi.modeling.commands.ModelingCommandScene.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandScene.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandSetMeshKeyform': {'children': ('zipzi.modeling.commands.ModelingCommandSetMeshKeyform.__repr__',
@@ -1114,7 +1121,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                        'value type; not a constructor argument or a '
                                                                        'mutable object field.')],
                                                            'kind': 'type',
-                                                           'signature': '(id: str, keyform: MeshKeyform)'},
+                                                           'signature': '(*, id: str, keyform: MeshKeyform)'},
  'zipzi.modeling.commands.ModelingCommandSetMeshKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandSetMeshKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandSetPhysics': {'children': ('zipzi.modeling.commands.ModelingCommandSetPhysics.__repr__',
@@ -1131,7 +1138,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                    'value type; not a constructor argument or a '
                                                                    'mutable object field.')],
                                                        'kind': 'type',
-                                                       'signature': '(physics: PhysicsAsset)'},
+                                                       'signature': '(*, physics: PhysicsAsset)'},
  'zipzi.modeling.commands.ModelingCommandSetPhysics.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandSetPhysics.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandSetPose': {'children': ('zipzi.modeling.commands.ModelingCommandSetPose.__repr__',
@@ -1148,7 +1155,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                 'type; not a constructor argument or a mutable object '
                                                                 'field.')],
                                                     'kind': 'type',
-                                                    'signature': '(pose: PoseAsset)'},
+                                                    'signature': '(*, pose: PoseAsset)'},
  'zipzi.modeling.commands.ModelingCommandSetPose.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandSetPose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandSetSceneKeyform': {'children': ('zipzi.modeling.commands.ModelingCommandSetSceneKeyform.__repr__',
@@ -1171,7 +1178,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                         'this value type; not a constructor argument '
                                                                         'or a mutable object field.')],
                                                             'kind': 'type',
-                                                            'signature': '(id: str, keyform: SceneKeyform)'},
+                                                            'signature': '(*, id: str, keyform: SceneKeyform)'},
  'zipzi.modeling.commands.ModelingCommandSetSceneKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandSetSceneKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandUpdatePositions': {'children': ('zipzi.modeling.commands.ModelingCommandUpdatePositions.__repr__',
@@ -1198,7 +1205,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                         'this value type; not a constructor argument '
                                                                         'or a mutable object field.')],
                                                             'kind': 'type',
-                                                            'signature': '(id: str, vertex_ids: tuple[int, ...], '
+                                                            'signature': '(*, id: str, vertex_ids: tuple[int, ...], '
                                                                          'positions: tuple[Vec2, ...])'},
  'zipzi.modeling.commands.ModelingCommandUpdatePositions.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandUpdatePositions.summary': {'alias': 'zipzi.ApiDescription.summary'}}

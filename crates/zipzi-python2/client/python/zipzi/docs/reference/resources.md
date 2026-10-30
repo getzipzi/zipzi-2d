@@ -12,7 +12,7 @@ Prepared images own independent leases; pixel snapshots are immutable values.
 
 ## zipzi.resources.CreateImage
 
-`(name: str, image: resources.PreparedImage, id: str | None = None, kind: Literal['create_image'] = field(default='create_image', init=False))`
+`(name: str, image: resources.PreparedImage, id: str | None = None, kind: Literal['create_image'] = <factory>)`
 
 Immutable owned CreateImage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -51,50 +51,27 @@ Check the owning client/lease locally and return this ImageLease without IO. Use
 
 ## zipzi.resources.ImageLease.__exit__
 
-`(kind: object, exception: BaseException | None, traceback: object) -> None`
-
-Close the owned lease on scope exit; never suppress the body exception.
-
-Python supplies the context arguments. Closing can synchronously contact
-the host. On normal exit an unknown release remains recoverable and is
-raised; during an existing exception cleanup failure is added as a note.
-Retain the handle for pending cleanup. No formal document write occurs.
-
+Alias of [zipzi.Buffer.__exit__](runtime.md#zipzibuffer__exit__).
 
 ## zipzi.resources.ImageLease.close
 
-`() -> None`
-
-Release this owned handle once, without mutating formal model content. A lost release response keeps the original recovery owner; confirmed close is idempotent and later use fails.
-
+Alias of [zipzi.Buffer.close](runtime.md#zipzibufferclose).
 
 ## zipzi.resources.ImageLease.height
 
-`() -> int`
-
-Cached image height in pixels; no IO.
-
+Alias of [zipzi.PreparedImage.height](runtime.md#zipzipreparedimageheight).
 
 ## zipzi.resources.ImageLease.pending_request
 
-`() -> PendingRequest | None`
-
-Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
-
+Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 
 ## zipzi.resources.ImageLease.pixels
 
-`() -> ImagePixels`
-
-Read immutable RGBA8 pixels without joining a document. The result owns bytes; the image lease remains independent. Recover a lost read through its original Call.
-
+Alias of [zipzi.PreparedImage.pixels](runtime.md#zipzipreparedimagepixels).
 
 ## zipzi.resources.ImageLease.width
 
-`() -> int`
-
-Cached image width in pixels; no IO.
-
+Alias of [zipzi.PreparedImage.width](runtime.md#zipzipreparedimagewidth).
 
 ## zipzi.resources.ImagePixels
 
@@ -109,74 +86,39 @@ height * 4 bytes, with straight alpha.
 
 ## zipzi.resources.PreparedImage
 
-`(factory-owned; use the documented public entry)`
-
-Owned prepared-image lease from Runtime.resources preparation/loading.
-
-Preparation owns immutable pixels independently of any Edit. Accept/replace
-through edit.resources, then close this lease or use with; formal/candidate/
-history owners retain their own references. width/height are cached, while
-pixels() synchronously downloads owned bytes. A pending request must recover
-on this original owner. Handles cannot cross Runtime/client boundaries.
-
+Alias of [zipzi.PreparedImage](runtime.md#zipzipreparedimage).
 
 ## zipzi.resources.PreparedImage.__enter__
 
-`() -> PreparedImage`
-
-Check the owning client/lease locally and return this PreparedImage without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.
-
+Alias of [zipzi.PreparedImage.__enter__](runtime.md#zipzipreparedimage__enter__).
 
 ## zipzi.resources.PreparedImage.__exit__
 
-`(kind: object, exception: BaseException | None, traceback: object) -> None`
-
-Close the owned lease on scope exit; never suppress the body exception.
-
-Python supplies the context arguments. Closing can synchronously contact
-the host. On normal exit an unknown release remains recoverable and is
-raised; during an existing exception cleanup failure is added as a note.
-Retain the handle for pending cleanup. No formal document write occurs.
-
+Alias of [zipzi.Buffer.__exit__](runtime.md#zipzibuffer__exit__).
 
 ## zipzi.resources.PreparedImage.close
 
-`() -> None`
-
-Release this owned handle once, without mutating formal model content. A lost release response keeps the original recovery owner; confirmed close is idempotent and later use fails.
-
+Alias of [zipzi.Buffer.close](runtime.md#zipzibufferclose).
 
 ## zipzi.resources.PreparedImage.height
 
-`() -> int`
-
-Cached image height in pixels; no IO.
-
+Alias of [zipzi.PreparedImage.height](runtime.md#zipzipreparedimageheight).
 
 ## zipzi.resources.PreparedImage.pending_request
 
-`() -> PendingRequest | None`
-
-Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
-
+Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 
 ## zipzi.resources.PreparedImage.pixels
 
-`() -> ImagePixels`
-
-Read immutable RGBA8 pixels without joining a document. The result owns bytes; the image lease remains independent. Recover a lost read through its original Call.
-
+Alias of [zipzi.PreparedImage.pixels](runtime.md#zipzipreparedimagepixels).
 
 ## zipzi.resources.PreparedImage.width
 
-`() -> int`
-
-Cached image width in pixels; no IO.
-
+Alias of [zipzi.PreparedImage.width](runtime.md#zipzipreparedimagewidth).
 
 ## zipzi.resources.RenameImage
 
-`(id: str, name: str, expected_name: str | None = field(default=None, kw_only=True), kind: Literal['rename_image'] = field(default='rename_image', init=False))`
+`(id: str, name: str, expected_name: str | None = <factory>, kind: Literal['rename_image'] = <factory>)`
 
 Immutable owned RenameImage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -188,7 +130,7 @@ runtime_id.
 
 ## zipzi.resources.ReplaceImage
 
-`(id: str, image: resources.PreparedImage, kind: Literal['replace_image'] = field(default='replace_image', init=False))`
+`(id: str, image: resources.PreparedImage, kind: Literal['replace_image'] = <factory>)`
 
 Immutable owned ReplaceImage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -200,21 +142,7 @@ ownership.
 
 ## zipzi.resources.Summary
 
-`(id: str, name: str, object_kind: str, runtime_id: str, part_id: str | None, parent_id: str | None, enabled: bool, mesh_id: str | None, width: int | None, height: int | None, vertex_count: int | None)`
-
-Immutable owned ObjectSummary value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `id`: Persistent canonical UUID in the selected document.
-- `name`: Exact, case-sensitive display name; binding names use their mesh name.
-- `object_kind`: Stable SDK kind tag, e.g. mesh, parameter, mesh_binding or image.
-- `runtime_id`: SDK runtime label; empty when this kind has no runtime label.
-- `part_id`: Owning Part UUID when applicable; None means no Part ownership.
-- `parent_id`: Deformation or organization parent UUID when applicable.
-- `enabled`: Whether the scene object is enabled; true for metadata without that field.
-- `mesh_id`: Bound mesh UUID for mesh bindings; None for other collections.
-- `width`: Decoded image width in pixels when known, without reading pixels.
-- `height`: Decoded image height in pixels when known, without reading pixels.
-- `vertex_count`: Number of mesh vertices, without cloning vertex data.
+Alias of [zipzi.ObjectSummary](runtime.md#zipziobjectsummary).
 
 ## zipzi.resources.Usage
 

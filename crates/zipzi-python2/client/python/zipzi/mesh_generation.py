@@ -1,15 +1,23 @@
 """Optional Editor-host mesh generation; no document writes or native dependency."""
 from __future__ import annotations
 from dataclasses import dataclass, asdict, field
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 from .meshes import Geometry
 from ._calls import known
 from ._errors import SdkFailure
-if TYPE_CHECKING:
-    from ._lifecycle import Runtime
+from ._lifecycle import Runtime
 
 @dataclass(frozen=True)
 class FillParameters:
+    """Controls for one interior fill strategy, validated by the Editor host.
+
+    Fields:
+    edge_ratio: Boundary-to-interior spacing ratio, from 1 to 4.
+    gradation: Rate of spacing growth away from the boundary, from 0.25 to 4.
+    jitter: Interior point displacement factor, from 0 to 1.
+    angle: Structured fill orientation in degrees, from 0 to 90.
+    max_rows: Maximum structured boundary rows, from 0 to 24.
+    """
     edge_ratio: float = 2.
     gradation: float = 1.
     jitter: float = .45
@@ -18,6 +26,14 @@ class FillParameters:
 
 @dataclass(frozen=True)
 class FillSettings:
+    """Retained controls for each available interior fill strategy.
+
+    Fields:
+    poisson: Controls shared by graded Poisson and simple triangle fill.
+    quadtree: Controls for adaptive quadtree fill.
+    fractal: Controls for triangle fractal fill; defaults to gradation 2.
+    paving: Controls for contour paving fill.
+    """
     poisson: FillParameters = field(default_factory=FillParameters)
     quadtree: FillParameters = field(default_factory=FillParameters)
     fractal: FillParameters = field(default_factory=lambda: FillParameters(gradation=2.))
@@ -25,6 +41,24 @@ class FillSettings:
 
 @dataclass(frozen=True)
 class MeshSettings:
+    """Editor mesh generation controls; lengths use mesh units unless stated.
+
+    Fields:
+    edge_mode: Number of contour bands: single, double or triple.
+    edge_spacing: Positive spacing between contour vertices.
+    edge_width: Nonnegative width of the contour bands.
+    outer_margin: Nonnegative outward contour margin.
+    fill_algorithm: Interior point placement strategy.
+    interior_spacing: Positive target spacing between interior vertices.
+    fill_parameters: Retained per-strategy interior fill controls.
+    suppress_boundary_diagonals: Whether to suppress diagonals between boundary vertices.
+    alpha_threshold: Alpha cutoff for contour tracing, from 0 to 255.
+    wrap: Nonnegative contour wrapping radius, at most 64.
+    unit_scale: Positive source pixels per mesh unit; 1 uses source pixel units.
+    detail: Positive working pixels per mesh unit, limited by source resolution and tracing budget.
+    clip_to_image: Whether to clip the generated contour to the image bounds.
+    max_vertices: Output vertex limit, from 3 to 65534.
+    """
     edge_mode: Literal['single', 'double', 'triple'] = 'single'
     edge_spacing: float = 6.
     edge_width: float = 10.

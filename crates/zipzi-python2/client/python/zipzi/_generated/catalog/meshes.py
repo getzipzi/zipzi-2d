@@ -28,12 +28,7 @@ DATA: dict[str, Entry] = {'zipzi.meshes': {'children': ('zipzi.meshes.Constraint
                              'signature': '(endpoints: Sequence[int], kind: ConstraintKind) -> None'},
  'zipzi.meshes.Constraint.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.meshes.Constraint.summary': {'alias': 'zipzi.ApiDescription.summary'},
- 'zipzi.meshes.ConstraintKind': {'children': (),
-                                 'documentation': 'Immutable typed value. See field semantics and the linked workflow.',
-                                 'example': 'docs/recipes.py',
-                                 'fields': [],
-                                 'kind': 'type',
-                                 'signature': '()'},
+ 'zipzi.meshes.ConstraintKind': {'alias': 'zipzi.modeling.mesh.MeshConstraintKind'},
  'zipzi.meshes.Create': {'children': ('zipzi.meshes.Create.__repr__', 'zipzi.meshes.Create.summary'),
                          'documentation': 'Immutable owned Create value. Construction owns declared collections; '
                                           'reading fields, repr and summary performs no IO.',
@@ -45,8 +40,7 @@ DATA: dict[str, Entry] = {'zipzi.meshes': {'children': ('zipzi.meshes.Constraint
                                      'Fixed operation discriminator supplied by this value type; not a constructor '
                                      'argument or a mutable object field.')],
                          'kind': 'type',
-                         'signature': "(spec: MeshSpec, kind: Literal['create'] = field(default='create', "
-                                      'init=False))'},
+                         'signature': "(spec: MeshSpec, kind: Literal['create'] = <factory>)"},
  'zipzi.meshes.Create.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.meshes.Create.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.meshes.Geometry': {'children': ('zipzi.meshes.Geometry.__repr__', 'zipzi.meshes.Geometry.summary'),
@@ -147,8 +141,8 @@ DATA: dict[str, Entry] = {'zipzi.meshes': {'children': ('zipzi.meshes.Constraint
                                      'Fixed operation discriminator supplied by this value type; not a constructor '
                                      'argument or a mutable object field.')],
                          'kind': 'type',
-                         'signature': '(id: str, name: str, expected_name: str | None = field(default=None, '
-                                      "kw_only=True), kind: Literal['rename'] = field(default='rename', init=False))"},
+                         'signature': '(id: str, name: str, expected_name: str | None = <factory>, kind: '
+                                      "Literal['rename'] = <factory>)"},
  'zipzi.meshes.Rename.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.meshes.Rename.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.meshes.SetPositions': {'children': ('zipzi.meshes.SetPositions.__repr__', 'zipzi.meshes.SetPositions.summary'),

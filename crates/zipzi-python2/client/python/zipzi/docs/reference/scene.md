@@ -12,7 +12,7 @@ Typed scene/organization intentions and immutable metadata projections.
 
 ## zipzi.scene.CreateBlendTable
 
-`(parameter_id: str, samples: tuple[Sample, ...], base_sample_id: str, id: str | None = None, kind: Literal['scene_create_blend_table'] = field(default='scene_create_blend_table', init=False))`
+`(parameter_id: str, samples: tuple[Sample, ...], base_sample_id: str, id: str | None = None, kind: Literal['scene_create_blend_table'] = <factory>)`
 
 Immutable owned CreateBlendTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -25,7 +25,7 @@ must name one of them.
 
 ## zipzi.scene.CreateGlue
 
-`(name: str, a: str, b: str, part_id: str | None = None, id: str | None = None, kind: Literal['scene_create_glue'] = field(default='scene_create_glue', init=False))`
+`(name: str, a: str, b: str, part_id: str | None = None, id: str | None = None, kind: Literal['scene_create_glue'] = <factory>)`
 
 Immutable owned CreateGlue value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -42,7 +42,7 @@ selects the root/unassigned container.
 
 ## zipzi.scene.CreateMeshBlend
 
-`(mesh_id: str, table_id: str, id: str | None = None, kind: Literal['scene_create_mesh_blend'] = field(default='scene_create_mesh_blend', init=False))`
+`(mesh_id: str, table_id: str, id: str | None = None, kind: Literal['scene_create_mesh_blend'] = <factory>)`
 
 Immutable owned CreateMeshBlend value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -53,7 +53,7 @@ Immutable owned CreateMeshBlend value. Construction owns declared collections; r
 
 ## zipzi.scene.CreateOffscreen
 
-`(name: str, part_id: str, id: str | None = None, kind: Literal['scene_create_offscreen'] = field(default='scene_create_offscreen', init=False))`
+`(name: str, part_id: str, id: str | None = None, kind: Literal['scene_create_offscreen'] = <factory>)`
 
 Immutable owned CreateOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -65,7 +65,7 @@ change.
 
 ## zipzi.scene.CreateParameterGroup
 
-`(spec: ParameterGroupSpec, kind: Literal['scene_create_parameter_group'] = field(default='scene_create_parameter_group', init=False))`
+`(spec: ParameterGroupSpec, kind: Literal['scene_create_parameter_group'] = <factory>)`
 
 Immutable owned CreateParameterGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -75,7 +75,7 @@ rejects invalid input.
 
 ## zipzi.scene.CreatePart
 
-`(spec: PartSpec, kind: Literal['scene_create_part'] = field(default='scene_create_part', init=False))`
+`(spec: PartSpec, kind: Literal['scene_create_part'] = <factory>)`
 
 Immutable owned CreatePart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -85,7 +85,7 @@ rejects invalid input.
 
 ## zipzi.scene.CreateRotation
 
-`(name: str, placement: Placement, id: str | None = None, kind: Literal['scene_create_rotation'] = field(default='scene_create_rotation', init=False))`
+`(name: str, placement: Placement, id: str | None = None, kind: Literal['scene_create_rotation'] = <factory>)`
 
 Immutable owned CreateRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -98,7 +98,7 @@ anchors.
 
 ## zipzi.scene.CreateWarp
 
-`(name: str, placement: Placement, bounds: tuple[float, float, float, float] | None = None, id: str | None = None, kind: Literal['scene_create_warp'] = field(default='scene_create_warp', init=False))`
+`(name: str, placement: Placement, bounds: tuple[float, float, float, float] | None = None, id: str | None = None, kind: Literal['scene_create_warp'] = <factory>)`
 
 Immutable owned CreateWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -113,7 +113,7 @@ requests native defaults.
 
 ## zipzi.scene.DeleteGluePairs
 
-`(glue_id: str, ids: tuple[str, ...], kind: Literal['scene_delete_glue_pairs'] = field(default='scene_delete_glue_pairs', init=False))`
+`(glue_id: str, ids: tuple[str, ...], kind: Literal['scene_delete_glue_pairs'] = <factory>)`
 
 Immutable owned DeleteGluePairs value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -124,7 +124,7 @@ numbers are not identities.
 
 ## zipzi.scene.DeleteMeshVertices
 
-`(mesh_id: str, vertices: tuple[int, ...], remove_dependents: bool, kind: Literal['scene_delete_mesh_vertices'] = field(default='scene_delete_mesh_vertices', init=False))`
+`(mesh_id: str, vertices: tuple[int, ...], remove_dependents: bool, kind: Literal['scene_delete_mesh_vertices'] = <factory>)`
 
 Immutable owned DeleteMeshVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -136,7 +136,7 @@ referenced-vertex deletion.
 
 ## zipzi.scene.DeleteOrganization
 
-`(ids: tuple[str, ...], dissolve: bool, kind: Literal['scene_delete_organization'] = field(default='scene_delete_organization', init=False))`
+`(ids: tuple[str, ...], dissolve: bool, kind: Literal['scene_delete_organization'] = <factory>)`
 
 Immutable owned DeleteOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -148,7 +148,7 @@ deleting its contents.
 
 ## zipzi.scene.DeleteScene
 
-`(ids: tuple[str, ...], subtree: bool, kind: Literal['scene_delete_scene'] = field(default='scene_delete_scene', init=False))`
+`(ids: tuple[str, ...], subtree: bool, kind: Literal['scene_delete_scene'] = <factory>)`
 
 Immutable owned DeleteScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -159,7 +159,7 @@ numbers are not identities.
 
 ## zipzi.scene.DuplicateScene
 
-`(ids: tuple[str, ...], subtree: bool, part_id: str | None = None, before: str | None = None, kind: Literal['scene_duplicate_scene'] = field(default='scene_duplicate_scene', init=False))`
+`(ids: tuple[str, ...], subtree: bool, part_id: str | None = None, before: str | None = None, kind: Literal['scene_duplicate_scene'] = <factory>)`
 
 Immutable owned DuplicateScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -186,7 +186,7 @@ Immutable owned GluePair value. Construction owns declared collections; reading 
 
 ## zipzi.scene.InsertGluePair
 
-`(glue_id: str, pair: GluePair, before: str | None = None, kind: Literal['scene_insert_glue_pair'] = field(default='scene_insert_glue_pair', init=False))`
+`(glue_id: str, pair: GluePair, before: str | None = None, kind: Literal['scene_insert_glue_pair'] = <factory>)`
 
 Immutable owned InsertGluePair value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -199,7 +199,7 @@ to the selected destination.
 
 ## zipzi.scene.InsertMeshVertex
 
-`(mesh_id: str, vertex_id: int, position: tuple[float, float], uv: tuple[float, float], weights: tuple[VertexWeight, ...], before: int | None = None, kind: Literal['scene_insert_mesh_vertex'] = field(default='scene_insert_mesh_vertex', init=False))`
+`(mesh_id: str, vertex_id: int, position: tuple[float, float], uv: tuple[float, float], weights: tuple[VertexWeight, ...], before: int | None = None, kind: Literal['scene_insert_mesh_vertex'] = <factory>)`
 
 Immutable owned InsertMeshVertex value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -214,7 +214,7 @@ This is not a position-array index.
 
 ## zipzi.scene.InsertOffscreenKeyform
 
-`(offscreen_id: str, value: OffscreenForm, before: int | None = None, kind: Literal['scene_insert_offscreen_keyform'] = field(default='scene_insert_offscreen_keyform', init=False))`
+`(offscreen_id: str, value: OffscreenForm, before: int | None = None, kind: Literal['scene_insert_offscreen_keyform'] = <factory>)`
 
 Immutable owned InsertOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -226,7 +226,7 @@ This is not a position-array index.
 
 ## zipzi.scene.MoveDeformation
 
-`(ids: tuple[str, ...], parent_id: str | None = None, before: str | None = None, kind: Literal['scene_move_deformation'] = field(default='scene_move_deformation', init=False))`
+`(ids: tuple[str, ...], parent_id: str | None = None, before: str | None = None, kind: Literal['scene_move_deformation'] = <factory>)`
 
 Immutable owned MoveDeformation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -240,7 +240,7 @@ to the selected destination.
 
 ## zipzi.scene.MoveParameterGroups
 
-`(ids: tuple[str, ...], parent_id: str | None = None, before: str | None = None, kind: Literal['scene_move_parameter_groups'] = field(default='scene_move_parameter_groups', init=False))`
+`(ids: tuple[str, ...], parent_id: str | None = None, before: str | None = None, kind: Literal['scene_move_parameter_groups'] = <factory>)`
 
 Immutable owned MoveParameterGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -254,7 +254,7 @@ to the selected destination.
 
 ## zipzi.scene.MoveParameters
 
-`(ids: tuple[str, ...], group_id: str | None = None, before: str | None = None, kind: Literal['scene_move_parameters'] = field(default='scene_move_parameters', init=False))`
+`(ids: tuple[str, ...], group_id: str | None = None, before: str | None = None, kind: Literal['scene_move_parameters'] = <factory>)`
 
 Immutable owned MoveParameters value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -268,7 +268,7 @@ to the selected destination.
 
 ## zipzi.scene.MoveToPart
 
-`(ids: tuple[str, ...], part_id: str | None = None, before: str | None = None, kind: Literal['scene_move_to_part'] = field(default='scene_move_to_part', init=False))`
+`(ids: tuple[str, ...], part_id: str | None = None, before: str | None = None, kind: Literal['scene_move_to_part'] = <factory>)`
 
 Immutable owned MoveToPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -327,7 +327,7 @@ the selected destination.
 
 ## zipzi.scene.PatchOffscreenKeyform
 
-`(offscreen_id: str, slot: int, value: OffscreenForm, kind: Literal['scene_patch_offscreen_keyform'] = field(default='scene_patch_offscreen_keyform', init=False))`
+`(offscreen_id: str, slot: int, value: OffscreenForm, kind: Literal['scene_patch_offscreen_keyform'] = <factory>)`
 
 Immutable owned PatchOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -352,7 +352,7 @@ collection.
 
 ## zipzi.scene.ReorderMeshVertices
 
-`(mesh_id: str, order: tuple[int, ...], kind: Literal['scene_reorder_mesh_vertices'] = field(default='scene_reorder_mesh_vertices', init=False))`
+`(mesh_id: str, order: tuple[int, ...], kind: Literal['scene_reorder_mesh_vertices'] = <factory>)`
 
 Immutable owned ReorderMeshVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -363,7 +363,7 @@ per-vertex payload.
 
 ## zipzi.scene.ReparentLocal
 
-`(ids: tuple[str, ...], parent_id: str | None = None, before: str | None = None, kind: Literal['scene_reparent_local'] = field(default='scene_reparent_local', init=False))`
+`(ids: tuple[str, ...], parent_id: str | None = None, before: str | None = None, kind: Literal['scene_reparent_local'] = <factory>)`
 
 Immutable owned ReparentLocal value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -377,7 +377,7 @@ to the selected destination.
 
 ## zipzi.scene.ReplaceTriangles
 
-`(mesh_id: str, triangles: tuple[tuple[int, int, int], ...], kind: Literal['scene_replace_triangles'] = field(default='scene_replace_triangles', init=False))`
+`(mesh_id: str, triangles: tuple[tuple[int, int, int], ...], kind: Literal['scene_replace_triangles'] = <factory>)`
 
 Immutable owned ReplaceTriangles value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -397,7 +397,7 @@ Immutable owned Sample value. Construction owns declared collections; reading fi
 
 ## zipzi.scene.SetMeshBlendVertices
 
-`(mesh_id: str, binding_id: str, sample_id: str, updates: tuple[VertexPatch, ...], kind: Literal['scene_set_mesh_blend_vertices'] = field(default='scene_set_mesh_blend_vertices', init=False))`
+`(mesh_id: str, binding_id: str, sample_id: str, updates: tuple[VertexPatch, ...], kind: Literal['scene_set_mesh_blend_vertices'] = <factory>)`
 
 Immutable owned SetMeshBlendVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -410,7 +410,7 @@ parameter value.
 
 ## zipzi.scene.SetOffscreenStaticKeyform
 
-`(offscreen_id: str, keyform: int, kind: Literal['scene_set_offscreen_static_keyform'] = field(default='scene_set_offscreen_static_keyform', init=False))`
+`(offscreen_id: str, keyform: int, kind: Literal['scene_set_offscreen_static_keyform'] = <factory>)`
 
 Immutable owned SetOffscreenStaticKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -420,7 +420,7 @@ Immutable owned SetOffscreenStaticKeyform value. Construction owns declared coll
 
 ## zipzi.scene.SetSceneEnabled
 
-`(id: str, expected: bool, enabled: bool, kind: Literal['scene_set_scene_enabled'] = field(default='scene_set_scene_enabled', init=False))`
+`(id: str, expected: bool, enabled: bool, kind: Literal['scene_set_scene_enabled'] = <factory>)`
 
 Immutable owned SetSceneEnabled value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -433,7 +433,7 @@ reject the edit.
 
 ## zipzi.scene.SetSceneLabel
 
-`(id: str, expected: str, name: str, kind: Literal['scene_set_scene_label'] = field(default='scene_set_scene_label', init=False))`
+`(id: str, expected: str, name: str, kind: Literal['scene_set_scene_label'] = <factory>)`
 
 Immutable owned SetSceneLabel value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

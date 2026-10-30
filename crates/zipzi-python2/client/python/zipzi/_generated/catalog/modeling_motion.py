@@ -100,10 +100,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                   'Original imported-content hash used to detect unsupported changes '
                                                   'to opaque fields.')],
                                       'kind': 'type',
-                                      'signature': '(id: str, name: str, duration: float, fps: float, looping: bool, '
-                                                   'restricted_beziers: bool, fade_in: float | None = None, fade_out: '
-                                                   'float | None = None, track_order: tuple[str, ...], tracks: '
-                                                   'tuple[MotionTrack, ...], events: tuple[MotionEvent, ...], '
+                                      'signature': '(*, id: str, name: str, duration: float, fps: float, looping: '
+                                                   'bool, restricted_beziers: bool, fade_in: float | None = None, '
+                                                   'fade_out: float | None = None, track_order: tuple[str, ...], '
+                                                   'tracks: tuple[MotionTrack, ...], events: tuple[MotionEvent, ...], '
                                                    'extensions: _Mapping[str, ExtensionValue], meta_extensions: '
                                                    '_Mapping[str, ExtensionValue], opaque_source_ids: _Mapping[str, '
                                                    'str] | None = None, opaque_source_content_hash: str | None = '
@@ -126,7 +126,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                             'Destination motion-group identity; Root selects ungrouped '
                                                             'registrations.')],
                                                 'kind': 'type',
-                                                'signature': '(value: str)'},
+                                                'signature': '(*, value: str)'},
  'zipzi.modeling.motion.MotionContainerGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionContainerGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionContainerRoot': {'children': ('zipzi.modeling.motion.MotionContainerRoot.__repr__',
@@ -164,7 +164,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                         'Explicit destination owner/container; order is controlled '
                                                         'separately by before.')],
                                             'kind': 'type',
-                                            'signature': '(id: str, name: str, registration_id: str, destination: '
+                                            'signature': '(*, id: str, name: str, registration_id: str, destination: '
                                                          'MotionContainer)'},
  'zipzi.modeling.motion.MotionEditCreate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditCreate.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -181,7 +181,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                              'Human-readable display or registration name; distinct '
                                                              'from persistent object identity.')],
                                                  'kind': 'type',
-                                                 'signature': '(id: str, name: str)'},
+                                                 'signature': '(*, id: str, name: str)'},
  'zipzi.modeling.motion.MotionEditCreateGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditCreateGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditCreateTrack': {'children': ('zipzi.modeling.motion.MotionEditCreateTrack.__repr__',
@@ -203,7 +203,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                              'Absolute time in seconds within the owning motion '
                                                              'clip.')],
                                                  'kind': 'type',
-                                                 'signature': '(clip: str, id: str, key_id: str, time: float)'},
+                                                 'signature': '(*, clip: str, id: str, key_id: str, time: float)'},
  'zipzi.modeling.motion.MotionEditCreateTrack.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditCreateTrack.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditDeleteClip': {'children': ('zipzi.modeling.motion.MotionEditDeleteClip.__repr__',
@@ -216,7 +216,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                             'Stable identity in the owning authoring domain; exported '
                                                             'metadata IDs retain their source text.')],
                                                 'kind': 'type',
-                                                'signature': '(id: str)'},
+                                                'signature': '(*, id: str)'},
  'zipzi.modeling.motion.MotionEditDeleteClip.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditDeleteClip.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditDeleteEvents': {'children': ('zipzi.modeling.motion.MotionEditDeleteEvents.__repr__',
@@ -229,7 +229,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                               'Ordered stable IDs selected by this operation; names '
                                                               'and row numbers are not identities.')],
                                                   'kind': 'type',
-                                                  'signature': '(ids: tuple[str, ...])'},
+                                                  'signature': '(*, ids: tuple[str, ...])'},
  'zipzi.modeling.motion.MotionEditDeleteEvents.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditDeleteEvents.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditDeleteGroup': {'children': ('zipzi.modeling.motion.MotionEditDeleteGroup.__repr__',
@@ -242,7 +242,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                              'Stable identity in the owning authoring domain; exported '
                                                              'metadata IDs retain their source text.')],
                                                  'kind': 'type',
-                                                 'signature': '(id: str)'},
+                                                 'signature': '(*, id: str)'},
  'zipzi.modeling.motion.MotionEditDeleteGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditDeleteGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditDeleteRegistrations': {'children': ('zipzi.modeling.motion.MotionEditDeleteRegistrations.__repr__',
@@ -257,7 +257,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                      'Ordered stable IDs selected by this operation; '
                                                                      'names and row numbers are not identities.')],
                                                          'kind': 'type',
-                                                         'signature': '(ids: tuple[str, ...])'},
+                                                         'signature': '(*, ids: tuple[str, ...])'},
  'zipzi.modeling.motion.MotionEditDeleteRegistrations.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditDeleteRegistrations.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditDeleteTracks': {'children': ('zipzi.modeling.motion.MotionEditDeleteTracks.__repr__',
@@ -270,7 +270,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                               'Ordered stable IDs selected by this operation; names '
                                                               'and row numbers are not identities.')],
                                                   'kind': 'type',
-                                                  'signature': '(ids: tuple[str, ...])'},
+                                                  'signature': '(*, ids: tuple[str, ...])'},
  'zipzi.modeling.motion.MotionEditDeleteTracks.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditDeleteTracks.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditDissolveGroup': {'children': ('zipzi.modeling.motion.MotionEditDissolveGroup.__repr__',
@@ -283,7 +283,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                'Stable identity in the owning authoring domain; '
                                                                'exported metadata IDs retain their source text.')],
                                                    'kind': 'type',
-                                                   'signature': '(id: str)'},
+                                                   'signature': '(*, id: str)'},
  'zipzi.modeling.motion.MotionEditDissolveGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditDissolveGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditDuplicateClip': {'children': ('zipzi.modeling.motion.MotionEditDuplicateClip.__repr__',
@@ -308,7 +308,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                'Explicit destination owner/container; order is '
                                                                'controlled separately by before.')],
                                                    'kind': 'type',
-                                                   'signature': '(source: str, id: str, name: str, registration_id: '
+                                                   'signature': '(*, source: str, id: str, name: str, registration_id: '
                                                                 'str, destination: MotionContainer)'},
  'zipzi.modeling.motion.MotionEditDuplicateClip.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditDuplicateClip.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -328,7 +328,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                 'Human-readable display or registration name; distinct '
                                                                 'from persistent object identity.')],
                                                     'kind': 'type',
-                                                    'signature': '(source: str, id: str, name: str)'},
+                                                    'signature': '(*, source: str, id: str, name: str)'},
  'zipzi.modeling.motion.MotionEditDuplicateGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditDuplicateGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditDuplicateRegistrations': {'children': ('zipzi.modeling.motion.MotionEditDuplicateRegistrations.__repr__',
@@ -350,7 +350,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                         'Optional stable sibling ID before which to '
                                                                         'insert; None appends.')],
                                                             'kind': 'type',
-                                                            'signature': '(ids: tuple[str, ...], destination: '
+                                                            'signature': '(*, ids: tuple[str, ...], destination: '
                                                                          'MotionContainer, before: str | None = None)'},
  'zipzi.modeling.motion.MotionEditDuplicateRegistrations.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditDuplicateRegistrations.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -373,7 +373,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                             'True allocates copied identities; false transfers the '
                                                             'existing identities.')],
                                                 'kind': 'type',
-                                                'signature': '(ids: tuple[str, ...], destination: str, time_offset: '
+                                                'signature': '(*, ids: tuple[str, ...], destination: str, time_offset: '
                                                              'float, copy: bool)'},
  'zipzi.modeling.motion.MotionEditMoveEvents.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditMoveEvents.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -394,7 +394,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                    'Optional stable sibling ID before which to insert; '
                                                                    'None appends.')],
                                                        'kind': 'type',
-                                                       'signature': '(ids: tuple[str, ...], destination: '
+                                                       'signature': '(*, ids: tuple[str, ...], destination: '
                                                                     'MotionContainer, before: str | None = None)'},
  'zipzi.modeling.motion.MotionEditMoveRegistrations.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditMoveRegistrations.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -417,8 +417,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                             'True allocates copied identities; false transfers the '
                                                             'existing identities.')],
                                                 'kind': 'type',
-                                                'signature': '(ids: tuple[str, ...], destination: str, before: str | '
-                                                             'None = None, copy: bool)'},
+                                                'signature': '(*, ids: tuple[str, ...], destination: str, before: str '
+                                                             '| None = None, copy: bool)'},
  'zipzi.modeling.motion.MotionEditMoveTracks.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditMoveTracks.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditPatchRegistration': {'children': ('zipzi.modeling.motion.MotionEditPatchRegistration.__repr__',
@@ -438,7 +438,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                    'Complete replacement motion registration; its '
                                                                    'owner is selected separately.')],
                                                        'kind': 'type',
-                                                       'signature': '(id: str, expected: MotionRegistration, entry: '
+                                                       'signature': '(*, id: str, expected: MotionRegistration, entry: '
                                                                     'MotionRegistration)'},
  'zipzi.modeling.motion.MotionEditPatchRegistration.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditPatchRegistration.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -458,8 +458,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                           'Optional stable sibling ID before which to insert; None '
                                                           'appends.')],
                                               'kind': 'type',
-                                              'signature': '(entry: MotionRegistration, destination: MotionContainer, '
-                                                           'before: str | None = None)'},
+                                              'signature': '(*, entry: MotionRegistration, destination: '
+                                                           'MotionContainer, before: str | None = None)'},
  'zipzi.modeling.motion.MotionEditRegister.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditRegister.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditRenameGroup': {'children': ('zipzi.modeling.motion.MotionEditRenameGroup.__repr__',
@@ -475,7 +475,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                              'Human-readable display or registration name; distinct '
                                                              'from persistent object identity.')],
                                                  'kind': 'type',
-                                                 'signature': '(id: str, name: str)'},
+                                                 'signature': '(*, id: str, name: str)'},
  'zipzi.modeling.motion.MotionEditRenameGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditRenameGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditReorderGroups': {'children': ('zipzi.modeling.motion.MotionEditReorderGroups.__repr__',
@@ -488,7 +488,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                'Ordered stable IDs selected by this operation; names '
                                                                'and row numbers are not identities.')],
                                                    'kind': 'type',
-                                                   'signature': '(ids: tuple[str, ...])'},
+                                                   'signature': '(*, ids: tuple[str, ...])'},
  'zipzi.modeling.motion.MotionEditReorderGroups.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditReorderGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditReorderTracks': {'children': ('zipzi.modeling.motion.MotionEditReorderTracks.__repr__',
@@ -504,7 +504,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                'Ordered stable IDs selected by this operation; names '
                                                                'and row numbers are not identities.')],
                                                    'kind': 'type',
-                                                   'signature': '(clip: str, ids: tuple[str, ...])'},
+                                                   'signature': '(*, clip: str, ids: tuple[str, ...])'},
  'zipzi.modeling.motion.MotionEditReorderTracks.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditReorderTracks.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditSetEvent': {'children': ('zipzi.modeling.motion.MotionEditSetEvent.__repr__',
@@ -520,7 +520,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                           'Owned motion event with a stable ID, time in seconds and '
                                                           'string payload.')],
                                               'kind': 'type',
-                                              'signature': '(clip: str, event: MotionEvent)'},
+                                              'signature': '(*, clip: str, event: MotionEvent)'},
  'zipzi.modeling.motion.MotionEditSetEvent.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditSetEvent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditSetTrackTarget': {'children': ('zipzi.modeling.motion.MotionEditSetTrackTarget.__repr__',
@@ -536,7 +536,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                 'Typed target reference; unresolved imported runtime '
                                                                 'labels remain explicit.')],
                                                     'kind': 'type',
-                                                    'signature': '(id: str, target: MotionTrackTarget)'},
+                                                    'signature': '(*, id: str, target: MotionTrackTarget)'},
  'zipzi.modeling.motion.MotionEditSetTrackTarget.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditSetTrackTarget.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditTransferKeys': {'children': ('zipzi.modeling.motion.MotionEditTransferKeys.__repr__',
@@ -557,7 +557,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                               'True allocates copied identities; false transfers the '
                                                               'existing identities.')],
                                                   'kind': 'type',
-                                                  'signature': '(ids: tuple[str, ...], destination_track: str, '
+                                                  'signature': '(*, ids: tuple[str, ...], destination_track: str, '
                                                                'time_offset: float, copy: bool)'},
  'zipzi.modeling.motion.MotionEditTransferKeys.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditTransferKeys.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -577,7 +577,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                    'Owned opaque imported fields preserved for format roundtrips; '
                                                    'declared fields cannot be shadowed.')],
                                        'kind': 'type',
-                                       'signature': '(id: str, time: float, value: str, extensions: _Mapping[str, '
+                                       'signature': '(*, id: str, time: float, value: str, extensions: _Mapping[str, '
                                                     'ExtensionValue])'},
  'zipzi.modeling.motion.MotionEvent.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEvent.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -591,7 +591,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                        ('event_id', 'Source event UUID.'),
                                                        ('value', 'User-authored event text.')],
                                             'kind': 'type',
-                                            'signature': '(motion_id: str, event_id: str, value: str)'},
+                                            'signature': '(*, motion_id: str, event_id: str, value: str)'},
  'zipzi.modeling.motion.MotionEventFired.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEventFired.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionGroup': {'children': ('zipzi.modeling.motion.MotionGroup.__repr__',
@@ -609,7 +609,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                    'Ordered owned registrations or expression/Pose entries, with '
                                                    'stable identities.')],
                                        'kind': 'type',
-                                       'signature': '(id: str, name: str, entries: tuple[MotionRegistration, ...])'},
+                                       'signature': '(*, id: str, name: str, entries: tuple[MotionRegistration, ...])'},
  'zipzi.modeling.motion.MotionGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionKey': {'children': ('zipzi.modeling.motion.MotionKey.__repr__',
@@ -625,7 +625,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                  'Channel value or replacement payload in the domain declared by this '
                                                  'field type.')],
                                      'kind': 'type',
-                                     'signature': '(id: str, time: float, value: float)'},
+                                     'signature': '(*, id: str, time: float, value: float)'},
  'zipzi.modeling.motion.MotionKey.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionKey.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionPlaybackPosition': {'children': ('zipzi.modeling.motion.MotionPlaybackPosition.__repr__',
@@ -649,7 +649,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                               'Absolute preview-clock time at the start of this '
                                                               'cycle.')],
                                                   'kind': 'type',
-                                                  'signature': '(motion_id: str, local_time: float, period: float, '
+                                                  'signature': '(*, motion_id: str, local_time: float, period: float, '
                                                                'loop_index: int, cycle_origin: float)'},
  'zipzi.modeling.motion.MotionPlaybackPosition.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionPlaybackPosition.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -663,7 +663,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                    'Channel value or replacement payload in the domain declared by '
                                                    'this field type.')],
                                        'kind': 'type',
-                                       'signature': '(time: float, value: float)'},
+                                       'signature': '(*, time: float, value: float)'},
  'zipzi.modeling.motion.MotionPoint.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionPoint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionRegistration': {'children': ('zipzi.modeling.motion.MotionRegistration.__repr__',
@@ -690,7 +690,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                           'Owned opaque imported fields preserved for format '
                                                           'roundtrips; declared fields cannot be shadowed.')],
                                               'kind': 'type',
-                                              'signature': '(id: str, clip_id: str, fade_in: float | None = None, '
+                                              'signature': '(*, id: str, clip_id: str, fade_in: float | None = None, '
                                                            'fade_out: float | None = None, sound: AttachmentRef | None '
                                                            '= None, extensions: _Mapping[str, ExtensionValue])'},
  'zipzi.modeling.motion.MotionRegistration.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -717,7 +717,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                            'Segment endpoint key or source-range end time, as declared '
                                                            'by the enclosing type.')],
                                                'kind': 'type',
-                                               'signature': '(control1: MotionPoint, control2: MotionPoint, end: '
+                                               'signature': '(*, control1: MotionPoint, control2: MotionPoint, end: '
                                                             'MotionKey)'},
  'zipzi.modeling.motion.MotionSegmentBezier.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionSegmentBezier.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -732,7 +732,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                    'Segment endpoint key or source-range end time, as '
                                                                    'declared by the enclosing type.')],
                                                        'kind': 'type',
-                                                       'signature': '(end: MotionKey)'},
+                                                       'signature': '(*, end: MotionKey)'},
  'zipzi.modeling.motion.MotionSegmentInverseStepped.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionSegmentInverseStepped.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionSegmentLinear': {'children': ('zipzi.modeling.motion.MotionSegmentLinear.__repr__',
@@ -745,7 +745,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                            'Segment endpoint key or source-range end time, as declared '
                                                            'by the enclosing type.')],
                                                'kind': 'type',
-                                               'signature': '(end: MotionKey)'},
+                                               'signature': '(*, end: MotionKey)'},
  'zipzi.modeling.motion.MotionSegmentLinear.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionSegmentLinear.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionSegmentStepped': {'children': ('zipzi.modeling.motion.MotionSegmentStepped.__repr__',
@@ -758,7 +758,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                             'Segment endpoint key or source-range end time, as '
                                                             'declared by the enclosing type.')],
                                                 'kind': 'type',
-                                                'signature': '(end: MotionKey)'},
+                                                'signature': '(*, end: MotionKey)'},
  'zipzi.modeling.motion.MotionSegmentStepped.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionSegmentStepped.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionSnapshot': {'children': ('zipzi.modeling.motion.MotionSnapshot.__repr__',
@@ -801,7 +801,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                       'SDK sampling coordinates, including the duration + 1 / FPS loop '
                                                       'tail.')],
                                           'kind': 'type',
-                                          'signature': '(physics: tuple[PhysicsRigSnapshot, ...] = (), time: float, '
+                                          'signature': '(*, physics: tuple[PhysicsRigSnapshot, ...] = (), time: float, '
                                                        'parameters: _Mapping[str, float], part_opacity_channels: '
                                                        '_Mapping[str, float], part_opacities: _Mapping[str, float], '
                                                        'model_opacity: float, active_motions: tuple[str, ...], '
@@ -837,7 +837,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                    'Owned opaque imported fields preserved for format roundtrips; '
                                                    'declared fields cannot be shadowed.')],
                                        'kind': 'type',
-                                       'signature': '(id: str, target: MotionTrackTarget, initial: MotionKey, '
+                                       'signature': '(*, id: str, target: MotionTrackTarget, initial: MotionKey, '
                                                     'segments: tuple[MotionSegment, ...], fade_in: float | None = '
                                                     'None, fade_out: float | None = None, extensions: _Mapping[str, '
                                                     'ExtensionValue])'},
@@ -859,7 +859,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                               'Imported/exported runtime label, distinct from the '
                                                               'document object UUID.')],
                                                   'kind': 'type',
-                                                  'signature': '(runtime_id: str)'},
+                                                  'signature': '(*, runtime_id: str)'},
  'zipzi.modeling.motion.MotionTrackTargetModel.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionTrackTargetModel.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionTrackTargetParameter': {'children': ('zipzi.modeling.motion.MotionTrackTargetParameter.__repr__',
@@ -873,7 +873,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                   'Stable document parameter UUID; evaluation uses its '
                                                                   'declared range and default.')],
                                                       'kind': 'type',
-                                                      'signature': '(parameter_id: str)'},
+                                                      'signature': '(*, parameter_id: str)'},
  'zipzi.modeling.motion.MotionTrackTargetParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionTrackTargetParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionTrackTargetPartOpacity': {'children': ('zipzi.modeling.motion.MotionTrackTargetPartOpacity.__repr__',
@@ -887,7 +887,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                     'Stable document Part UUID for this opacity or '
                                                                     'visibility reference.')],
                                                         'kind': 'type',
-                                                        'signature': '(part_id: str)'},
+                                                        'signature': '(*, part_id: str)'},
  'zipzi.modeling.motion.MotionTrackTargetPartOpacity.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionTrackTargetPartOpacity.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionTrackTargetUnresolved': {'children': ('zipzi.modeling.motion.MotionTrackTargetUnresolved.__repr__',
@@ -904,7 +904,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                    'Imported/exported runtime label, distinct from the '
                                                                    'document object UUID.')],
                                                        'kind': 'type',
-                                                       'signature': '(category: str, runtime_id: str)'},
+                                                       'signature': '(*, category: str, runtime_id: str)'},
  'zipzi.modeling.motion.MotionTrackTargetUnresolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionTrackTargetUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionTrackTargetUnspecified': {'children': ('zipzi.modeling.motion.MotionTrackTargetUnspecified.__repr__',

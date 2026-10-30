@@ -12,7 +12,7 @@ Canonical runtime modeling values.
 
 ## zipzi.modeling.runtime.EditorContext
 
-`(version: _Version, view_id: str, selected_ids: tuple[str, ...], workspace: str, editing_context: str, active_tool: str, pending_interaction: bool)`
+`(*, version: _Version, view_id: str, selected_ids: tuple[str, ...], workspace: str, editing_context: str, active_tool: str, pending_interaction: bool)`
 
 Immutable owned EditorContext value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

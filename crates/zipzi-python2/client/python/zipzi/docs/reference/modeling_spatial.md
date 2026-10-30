@@ -12,7 +12,7 @@ Canonical spatial modeling values.
 
 ## zipzi.modeling.spatial.GeometryHit
 
-`(mesh_id: str, name: str, part_path: tuple[str, ...], part_names: tuple[str, ...], enabled: bool, visible: bool, opacity: float, render_order: int, triangles: tuple[TriangleHit, ...])`
+`(*, mesh_id: str, name: str, part_path: tuple[str, ...], part_names: tuple[str, ...], enabled: bool, visible: bool, opacity: float, render_order: int, triangles: tuple[TriangleHit, ...])`
 
 Immutable owned GeometryHit value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -29,7 +29,7 @@ This is not a visibility ranking across offscreen composition groups.
 
 ## zipzi.modeling.spatial.GeometryQuery
 
-`(hits: tuple[GeometryHit, ...], total: int, truncated: bool)`
+`(*, hits: tuple[GeometryHit, ...], total: int, truncated: bool)`
 
 Immutable owned GeometryQuery value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -39,7 +39,7 @@ Immutable owned GeometryQuery value. Construction owns declared collections; rea
 
 ## zipzi.modeling.spatial.ObjectBounds
 
-`(mesh_ids: tuple[str, ...], model_bounds: tuple[float, float, float, float] | None = None, empty_reason: str | None = None)`
+`(*, mesh_ids: tuple[str, ...], model_bounds: tuple[float, float, float, float] | None = None, empty_reason: str | None = None)`
 
 Immutable owned ObjectBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -59,7 +59,7 @@ Typed public API entry.
 
 ## zipzi.modeling.spatial.ObjectTargetMesh
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned ObjectTargetMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -67,7 +67,7 @@ Immutable owned ObjectTargetMesh value. Construction owns declared collections; 
 
 ## zipzi.modeling.spatial.ObjectTargetPart
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned ObjectTargetPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -75,7 +75,7 @@ Immutable owned ObjectTargetPart value. Construction owns declared collections; 
 
 ## zipzi.modeling.spatial.SpatialFrame
 
-`(parameters: _Mapping[str, float], results: tuple[SpatialResult, ...])`
+`(*, parameters: _Mapping[str, float], results: tuple[SpatialResult, ...])`
 
 Immutable owned SpatialFrame value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -91,7 +91,7 @@ Typed public API entry.
 
 ## zipzi.modeling.spatial.SpatialQueryBounds
 
-`(targets: tuple[ObjectTarget, ...], include_hidden: bool = False)`
+`(*, targets: tuple[ObjectTarget, ...], include_hidden: bool = False)`
 
 Immutable owned SpatialQueryBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -100,7 +100,7 @@ Immutable owned SpatialQueryBounds value. Construction owns declared collections
 
 ## zipzi.modeling.spatial.SpatialQueryHits
 
-`(point: tuple[float, float], include_hidden: bool = False, details: bool = False, max_candidates: int = 32)`
+`(*, point: tuple[float, float], include_hidden: bool = False, details: bool = False, max_candidates: int = 32)`
 
 Immutable owned SpatialQueryHits value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -118,7 +118,7 @@ Typed public API entry.
 
 ## zipzi.modeling.spatial.SpatialResultBounds
 
-`(value: ObjectBounds)`
+`(*, value: ObjectBounds)`
 
 Immutable owned SpatialResultBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -126,7 +126,7 @@ Immutable owned SpatialResultBounds value. Construction owns declared collection
 
 ## zipzi.modeling.spatial.SpatialResultHits
 
-`(value: GeometryQuery)`
+`(*, value: GeometryQuery)`
 
 Immutable owned SpatialResultHits value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -134,7 +134,7 @@ Immutable owned SpatialResultHits value. Construction owns declared collections;
 
 ## zipzi.modeling.spatial.SpatialSamples
 
-`(version: _Version, requested: tuple[_Mapping[str, float], ...], queries: tuple[SpatialQuery, ...], frames: tuple[SpatialFrame, ...])`
+`(*, version: _Version, requested: tuple[_Mapping[str, float], ...], queries: tuple[SpatialQuery, ...], frames: tuple[SpatialFrame, ...])`
 
 Immutable owned SpatialSamples value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -145,7 +145,7 @@ Immutable owned SpatialSamples value. Construction owns declared collections; re
 
 ## zipzi.modeling.spatial.TriangleHit
 
-`(triangle_index: int, vertex_indices: tuple[int, int, int], vertex_ids: tuple[int, int, int] | None = None, barycentric: tuple[float, float, float], uv: tuple[float, float] | None = None)`
+`(*, triangle_index: int, vertex_indices: tuple[int, int, int], vertex_ids: tuple[int, int, int] | None = None, barycentric: tuple[float, float, float], uv: tuple[float, float] | None = None)`
 
 Immutable owned TriangleHit value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

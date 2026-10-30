@@ -164,7 +164,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                       'Zero-based constraint address in the frozen '
                                                                       'BlendBinding.')],
                                                           'kind': 'type',
-                                                          'signature': '(slot: int)'},
+                                                          'signature': '(*, slot: int)'},
  'zipzi.modeling.deletion.DeletionFieldBlendConstraint.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionFieldBlendConstraint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldBlendConstraintParameter': {'children': ('zipzi.modeling.deletion.DeletionFieldBlendConstraintParameter.__repr__',
@@ -228,7 +228,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                    'Frozen zero-based CDI Parameters record address; '
                                                                    'imported unresolved records remain untouched.')],
                                                        'kind': 'type',
-                                                       'signature': '(slot: int)'},
+                                                       'signature': '(*, slot: int)'},
  'zipzi.modeling.deletion.DeletionFieldCdiParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionFieldCdiParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldCdiPart': {'children': ('zipzi.modeling.deletion.DeletionFieldCdiPart.__repr__',
@@ -241,7 +241,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                               'Zero-based address in the frozen source list, never a '
                                                               'persistent object ID.')],
                                                   'kind': 'type',
-                                                  'signature': '(slot: int)'},
+                                                  'signature': '(*, slot: int)'},
  'zipzi.modeling.deletion.DeletionFieldCdiPart.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionFieldCdiPart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldConvertedData': {'children': ('zipzi.modeling.deletion.DeletionFieldConvertedData.__repr__',
@@ -280,7 +280,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                   'Zero-based address in the frozen source list, never '
                                                                   'a persistent object ID.')],
                                                       'kind': 'type',
-                                                      'signature': '(slot: int)'},
+                                                      'signature': '(*, slot: int)'},
  'zipzi.modeling.deletion.DeletionFieldDrawingItem.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionFieldDrawingItem.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldExpressionParameter': {'children': ('zipzi.modeling.deletion.DeletionFieldExpressionParameter.__repr__',
@@ -380,7 +380,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                'Zero-based address in the frozen source list, never a '
                                                                'persistent object ID.')],
                                                    'kind': 'type',
-                                                   'signature': '(slot: int)'},
+                                                   'signature': '(*, slot: int)'},
  'zipzi.modeling.deletion.DeletionFieldMeshMask.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionFieldMeshMask.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldModelParameter': {'children': ('zipzi.modeling.deletion.DeletionFieldModelParameter.__repr__',
@@ -455,7 +455,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                     'Zero-based address in the frozen source list, '
                                                                     'never a persistent object ID.')],
                                                         'kind': 'type',
-                                                        'signature': '(slot: int)'},
+                                                        'signature': '(*, slot: int)'},
  'zipzi.modeling.deletion.DeletionFieldOffscreenMask.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionFieldOffscreenMask.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldOrganizationParent': {'children': ('zipzi.modeling.deletion.DeletionFieldOrganizationParent.__repr__',
@@ -591,7 +591,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                         'Exact export regressions accepted after reviewing this '
                                                         'source.')],
                                             'kind': 'type',
-                                            'signature': '(request: DeletionRequest, accepted_export_failures: '
+                                            'signature': '(*, request: DeletionRequest, accepted_export_failures: '
                                                          'tuple[OpaqueExportIssue, ...] = ())'},
  'zipzi.modeling.deletion.DeletionIntent.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionIntent.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -614,7 +614,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                       'Persistent ID of the direct or inherited lock source to locate '
                                                       'and unlock.')],
                                           'kind': 'type',
-                                          'signature': '(object: DeletionObject, source_id: str)'},
+                                          'signature': '(*, object: DeletionObject, source_id: str)'},
  'zipzi.modeling.deletion.DeletionLock.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionLock.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionObject': {'children': ('zipzi.modeling.deletion.DeletionObject.__repr__',
@@ -633,7 +633,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                         'Optional owning Expression ID for embedded source-scene '
                                                         'track/key identities.')],
                                             'kind': 'type',
-                                            'signature': '(kind: DeletionKind, id: str, owner_id: str | None = None)'},
+                                            'signature': '(*, kind: DeletionKind, id: str, owner_id: str | None = '
+                                                         'None)'},
  'zipzi.modeling.deletion.DeletionObject.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionObject.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionOffscreenPlacement': {'children': ('zipzi.modeling.deletion.DeletionOffscreenPlacement.__repr__',
@@ -650,8 +651,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                     "Exact mapping in the destination Part's keyform "
                                                                     'order, if rebinding is required.')],
                                                         'kind': 'type',
-                                                        'signature': '(part_id: str, mapping: tuple[int, ...] | None = '
-                                                                     'None)'},
+                                                        'signature': '(*, part_id: str, mapping: tuple[int, ...] | '
+                                                                     'None = None)'},
  'zipzi.modeling.deletion.DeletionOffscreenPlacement.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionOffscreenPlacement.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionPage': {'children': ('zipzi.modeling.deletion.DeletionPage.__repr__',
@@ -670,7 +671,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                       'Next offset in the same immutable section, or None at the '
                                                       'end.')],
                                           'kind': 'type',
-                                          'signature': '(section: DeletionSection, offset: int, total: int, rows: '
+                                          'signature': '(*, section: DeletionSection, offset: int, total: int, rows: '
                                                        'tuple[DeletionRow, ...], next_offset: int | None = None)'},
  'zipzi.modeling.deletion.DeletionPage.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionPage.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -703,7 +704,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                    'Frozen reference-pose time, if the conversion used '
                                                                    'a context.')],
                                                        'kind': 'type',
-                                                       'signature': '(strategy: ReparentStrategy, tolerance: float, '
+                                                       'signature': '(*, strategy: ReparentStrategy, tolerance: float, '
                                                                     'relative_tolerance: float, measured_error: float, '
                                                                     'error_bound: float, domain_parameters: int, '
                                                                     'edit_time_seconds: float | None = None)'},
@@ -724,7 +725,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                           'Native target identity explaining this ownership, '
                                                           'dependency or rewrite.')],
                                               'kind': 'type',
-                                              'signature': '(owner: DeletionObject, field: DeletionField, target: '
+                                              'signature': '(*, owner: DeletionObject, field: DeletionField, target: '
                                                            'DeletionObject)'},
  'zipzi.modeling.deletion.DeletionRelation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRelation.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -741,7 +742,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                          'Whether this is an explicit root, scoped descendant, owned '
                                                          'identity or dependency record.')],
                                              'kind': 'type',
-                                             'signature': '(object: DeletionObject, reason: DeletionReason)'},
+                                             'signature': '(*, object: DeletionObject, reason: DeletionReason)'},
  'zipzi.modeling.deletion.DeletionRemoval.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRemoval.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRequest': {'children': ('zipzi.modeling.deletion.DeletionRequest.__repr__',
@@ -779,27 +780,16 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                          'Explicit retained base sample when deleting a Blend table '
                                                          'base.')],
                                              'kind': 'type',
-                                             'signature': '(roots: tuple[DeletionTarget, ...], reparent: _Mapping[str, '
-                                                          'ReparentStrategy] = field(default_factory=lambda: {key0: '
-                                                          'read_ReparentStrategy(v0) for key0, v0 in '
-                                                          'record({}).items()}), conversion_context: ReparentContext | '
-                                                          'None = None, offscreen_placements: _Mapping[str, '
-                                                          'DeletionOffscreenPlacement] = field(default_factory=lambda: '
-                                                          '{key0: read_DeletionOffscreenPlacement(v0) for key0, v0 in '
-                                                          'record({}).items()}), tolerance: DeletionTolerance = '
-                                                          'field(default_factory=lambda: '
-                                                          "read_DeletionTolerance({'absolute': 0.001, 'relative': "
-                                                          '1e-06})), parameter_slices: _Mapping[str, float] = '
-                                                          'field(default_factory=lambda: {key0: number(v0) for key0, '
-                                                          'v0 in record({}).items()}), texture_replacements: '
-                                                          '_Mapping[str, str | None] = field(default_factory=lambda: '
-                                                          '{key0: None if v0 is None else string(v0) for key0, v0 in '
-                                                          'record({}).items()}), physics_node_replacements: '
-                                                          '_Mapping[str, str] = field(default_factory=lambda: {key0: '
-                                                          'string(v0) for key0, v0 in record({}).items()}), '
-                                                          'blend_base_replacements: _Mapping[str, str] = '
-                                                          'field(default_factory=lambda: {key0: string(v0) for key0, '
-                                                          'v0 in record({}).items()}))'},
+                                             'signature': '(*, roots: tuple[DeletionTarget, ...], reparent: '
+                                                          '_Mapping[str, ReparentStrategy] = <factory>, '
+                                                          'conversion_context: ReparentContext | None = None, '
+                                                          'offscreen_placements: _Mapping[str, '
+                                                          'DeletionOffscreenPlacement] = <factory>, tolerance: '
+                                                          'DeletionTolerance = <factory>, parameter_slices: '
+                                                          '_Mapping[str, float] = <factory>, texture_replacements: '
+                                                          '_Mapping[str, str | None] = <factory>, '
+                                                          'physics_node_replacements: _Mapping[str, str] = <factory>, '
+                                                          'blend_base_replacements: _Mapping[str, str] = <factory>)'},
  'zipzi.modeling.deletion.DeletionRequest.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRequest.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionReviewState': {'children': (),
@@ -825,7 +815,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                              'Outstanding native choice and actually available '
                                                              'alternatives.')],
                                                  'kind': 'type',
-                                                 'signature': '(decision: DeletionDecision)'},
+                                                 'signature': '(*, decision: DeletionDecision)'},
  'zipzi.modeling.deletion.DeletionRowDecision.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowDecision.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRowDeformation': {'children': ('zipzi.modeling.deletion.DeletionRowDeformation.__repr__',
@@ -845,8 +835,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                 'Position proof only, without copying the frozen model '
                                                                 'parameter map.')],
                                                     'kind': 'type',
-                                                    'signature': '(object: DeletionObject, parent_id: str, strategy: '
-                                                                 'ReparentStrategy, guarantee: '
+                                                    'signature': '(*, object: DeletionObject, parent_id: str, '
+                                                                 'strategy: ReparentStrategy, guarantee: '
                                                                  'DeletionPositionGuarantee | None = None)'},
  'zipzi.modeling.deletion.DeletionRowDeformation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowDeformation.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -869,7 +859,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                           ('reference_value',
                                                            'Frozen reference value used by the conversion.')],
                                                'kind': 'type',
-                                               'signature': '(object: DeletionObject, parameter_id: str, minimum: '
+                                               'signature': '(*, object: DeletionObject, parameter_id: str, minimum: '
                                                             'float, maximum: float, reference_value: float)'},
  'zipzi.modeling.deletion.DeletionRowDomain.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowDomain.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -883,7 +873,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                            'Typed appearance, animation, composition or export '
                                                            'consequence.')],
                                                'kind': 'type',
-                                               'signature': '(effect: DeletionEffect)'},
+                                               'signature': '(*, effect: DeletionEffect)'},
  'zipzi.modeling.deletion.DeletionRowEffect.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowEffect.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRowExport': {'children': ('zipzi.modeling.deletion.DeletionRowExport.__repr__',
@@ -898,7 +888,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                            'True for pre-existing export problems; false for new '
                                                            'regressions.')],
                                                'kind': 'type',
-                                               'signature': '(failure: OpaqueExportIssue, existing: bool)'},
+                                               'signature': '(*, failure: OpaqueExportIssue, existing: bool)'},
  'zipzi.modeling.deletion.DeletionRowExport.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowExport.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRowGuaranteeLimit': {'children': ('zipzi.modeling.deletion.DeletionRowGuaranteeLimit.__repr__',
@@ -915,7 +905,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                    'Retained ancestor with an explicitly chosen '
                                                                    'local-data migration.')],
                                                        'kind': 'type',
-                                                       'signature': '(object: DeletionObject, ancestor: '
+                                                       'signature': '(*, object: DeletionObject, ancestor: '
                                                                     'DeletionObject)'},
  'zipzi.modeling.deletion.DeletionRowGuaranteeLimit.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowGuaranteeLimit.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -928,7 +918,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                              'fields': [('blocker',
                                                          'Affected identity and the inherited lock source.')],
                                              'kind': 'type',
-                                             'signature': '(blocker: DeletionLock)'},
+                                             'signature': '(*, blocker: DeletionLock)'},
  'zipzi.modeling.deletion.DeletionRowLock.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowLock.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRowOrganization': {'children': ('zipzi.modeling.deletion.DeletionRowOrganization.__repr__',
@@ -945,7 +935,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                  'Explicit Offscreen mapping slot count, without '
                                                                  'copying its full array.')],
                                                      'kind': 'type',
-                                                     'signature': '(object: DeletionObject, parent_id: str, '
+                                                     'signature': '(*, object: DeletionObject, parent_id: str, '
                                                                   'mapping_slots: int | None = None)'},
  'zipzi.modeling.deletion.DeletionRowOrganization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowOrganization.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -959,7 +949,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                              'Native source field and target explaining a retained '
                                                              'rewrite or dependency.')],
                                                  'kind': 'type',
-                                                 'signature': '(relation: DeletionRelation)'},
+                                                 'signature': '(*, relation: DeletionRelation)'},
  'zipzi.modeling.deletion.DeletionRowRelation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowRelation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRowRemoval': {'children': ('zipzi.modeling.deletion.DeletionRowRemoval.__repr__',
@@ -972,7 +962,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                             'Deleted identity and its ownership/scope/dependency '
                                                             'reason.')],
                                                 'kind': 'type',
-                                                'signature': '(removal: DeletionRemoval)'},
+                                                'signature': '(*, removal: DeletionRemoval)'},
  'zipzi.modeling.deletion.DeletionRowRemoval.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowRemoval.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRowStructural': {'children': ('zipzi.modeling.deletion.DeletionRowStructural.__repr__',
@@ -984,7 +974,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                    'fields': [('blocker',
                                                                'Native invalid-result address and diagnostic code.')],
                                                    'kind': 'type',
-                                                   'signature': '(blocker: DeletionStructuralBlocker)'},
+                                                   'signature': '(*, blocker: DeletionStructuralBlocker)'},
  'zipzi.modeling.deletion.DeletionRowStructural.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowStructural.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionSection': {'children': (),
@@ -1004,7 +994,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                               'Frozen report section addressed by report_page.'),
                                                              ('count', 'Total rows in this section, before paging.')],
                                                   'kind': 'type',
-                                                  'signature': '(section: DeletionSection, count: int)'},
+                                                  'signature': '(*, section: DeletionSection, count: int)'},
  'zipzi.modeling.deletion.DeletionSectionCount.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionSectionCount.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionStructuralBlocker': {'children': ('zipzi.modeling.deletion.DeletionStructuralBlocker.__repr__',
@@ -1024,7 +1014,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                    'Display diagnostic describing the invalid result; '
                                                                    'never parsed to decide execution.')],
                                                        'kind': 'type',
-                                                       'signature': '(object_id: str, code: str, reason: str)'},
+                                                       'signature': '(*, object_id: str, code: str, reason: str)'},
  'zipzi.modeling.deletion.DeletionStructuralBlocker.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionStructuralBlocker.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionSummary': {'children': ('zipzi.modeling.deletion.DeletionSummary.__repr__',
@@ -1045,7 +1035,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                          'False until a valid candidate allowed complete export '
                                                          'preflight.')],
                                              'kind': 'type',
-                                             'signature': '(state: DeletionReviewState, requested: int, sections: '
+                                             'signature': '(*, state: DeletionReviewState, requested: int, sections: '
                                                           'tuple[DeletionSectionCount, ...], export_analysis_complete: '
                                                           'bool)'},
  'zipzi.modeling.deletion.DeletionSummary.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -1067,7 +1057,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                   'Delete this owned attachment record and clear '
                                                                   'resolved optional sound/UserData references.')],
                                                       'kind': 'type',
-                                                      'signature': '(value: str)'},
+                                                      'signature': '(*, value: str)'},
  'zipzi.modeling.deletion.DeletionTargetAttachment.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionTargetAttachment.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetDeformer': {'children': ('zipzi.modeling.deletion.DeletionTargetDeformer.__repr__',
@@ -1080,7 +1070,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                 'Delete this deformation subtree, including meshes '
                                                                 'across organization Parts.')],
                                                     'kind': 'type',
-                                                    'signature': '(value: str)'},
+                                                    'signature': '(*, value: str)'},
  'zipzi.modeling.deletion.DeletionTargetDeformer.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionTargetDeformer.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetDissolvePart': {'children': ('zipzi.modeling.deletion.DeletionTargetDissolvePart.__repr__',
@@ -1094,7 +1084,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                     'Remove this Part while retaining and migrating '
                                                                     'its organization members.')],
                                                         'kind': 'type',
-                                                        'signature': '(value: str)'},
+                                                        'signature': '(*, value: str)'},
  'zipzi.modeling.deletion.DeletionTargetDissolvePart.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionTargetDissolvePart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetGlue': {'children': ('zipzi.modeling.deletion.DeletionTargetGlue.__repr__',
@@ -1107,7 +1097,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                             'Delete this Glue connection, pairs and owned bindings; '
                                                             'endpoint meshes remain.')],
                                                 'kind': 'type',
-                                                'signature': '(value: str)'},
+                                                'signature': '(*, value: str)'},
  'zipzi.modeling.deletion.DeletionTargetGlue.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionTargetGlue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetMesh': {'children': ('zipzi.modeling.deletion.DeletionTargetMesh.__repr__',
@@ -1120,7 +1110,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                             'Delete this Mesh and its owned identities; shared '
                                                             'resources remain.')],
                                                 'kind': 'type',
-                                                'signature': '(value: str)'},
+                                                'signature': '(*, value: str)'},
  'zipzi.modeling.deletion.DeletionTargetMesh.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionTargetMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetOffscreen': {'children': ('zipzi.modeling.deletion.DeletionTargetOffscreen.__repr__',
@@ -1133,7 +1123,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                  'Delete this Offscreen composite and its own '
                                                                  'shapes/bindings; its Part remains.')],
                                                      'kind': 'type',
-                                                     'signature': '(value: str)'},
+                                                     'signature': '(*, value: str)'},
  'zipzi.modeling.deletion.DeletionTargetOffscreen.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionTargetOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetParameter': {'children': ('zipzi.modeling.deletion.DeletionTargetParameter.__repr__',
@@ -1146,7 +1136,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                  'Delete this parameter and reduce ordinary axes at '
                                                                  'its frozen default unless explicitly overridden.')],
                                                      'kind': 'type',
-                                                     'signature': '(value: str)'},
+                                                     'signature': '(*, value: str)'},
  'zipzi.modeling.deletion.DeletionTargetParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionTargetParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetParameterFolder': {'children': ('zipzi.modeling.deletion.DeletionTargetParameterFolder.__repr__',
@@ -1162,7 +1152,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                        'parameters and nested folders in the retained '
                                                                        'parent.')],
                                                            'kind': 'type',
-                                                           'signature': '(value: str)'},
+                                                           'signature': '(*, value: str)'},
  'zipzi.modeling.deletion.DeletionTargetParameterFolder.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionTargetParameterFolder.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetParameterFolderContents': {'children': ('zipzi.modeling.deletion.DeletionTargetParameterFolderContents.__repr__',
@@ -1178,7 +1168,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                                'and explicitly include its contained '
                                                                                'parameters.')],
                                                                    'kind': 'type',
-                                                                   'signature': '(value: str)'},
+                                                                   'signature': '(*, value: str)'},
  'zipzi.modeling.deletion.DeletionTargetParameterFolderContents.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionTargetParameterFolderContents.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetPart': {'children': ('zipzi.modeling.deletion.DeletionTargetPart.__repr__',
@@ -1191,7 +1181,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                             'Delete this Part organization subtree; external '
                                                             'deformation members remain and migrate.')],
                                                 'kind': 'type',
-                                                'signature': '(value: str)'},
+                                                'signature': '(*, value: str)'},
  'zipzi.modeling.deletion.DeletionTargetPart.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionTargetPart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetRecord': {'children': ('zipzi.modeling.deletion.DeletionTargetRecord.__repr__',
@@ -1204,7 +1194,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                               'Typed non-scene business record; its native domain '
                                                               'validates ownership, child identities and choices.')],
                                                   'kind': 'type',
-                                                  'signature': '(value: DeletionObject)'},
+                                                  'signature': '(*, value: DeletionObject)'},
  'zipzi.modeling.deletion.DeletionTargetRecord.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionTargetRecord.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetRemoveDeformer': {'children': ('zipzi.modeling.deletion.DeletionTargetRemoveDeformer.__repr__',
@@ -1219,7 +1209,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                       'Remove only this Deformer and retain/migrate '
                                                                       'its deformation children.')],
                                                           'kind': 'type',
-                                                          'signature': '(value: str)'},
+                                                          'signature': '(*, value: str)'},
  'zipzi.modeling.deletion.DeletionTargetRemoveDeformer.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionTargetRemoveDeformer.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetTexture': {'children': ('zipzi.modeling.deletion.DeletionTargetTexture.__repr__',
@@ -1232,7 +1222,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                'Delete this image record; retained users require an '
                                                                'explicit replacement or unconfigured choice.')],
                                                    'kind': 'type',
-                                                   'signature': '(value: str)'},
+                                                   'signature': '(*, value: str)'},
  'zipzi.modeling.deletion.DeletionTargetTexture.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionTargetTexture.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTolerance': {'children': ('zipzi.modeling.deletion.DeletionTolerance.__repr__',
@@ -1247,6 +1237,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                            'Finite nonnegative tolerance times the original geometry '
                                                            'scale.')],
                                                'kind': 'type',
-                                               'signature': '(absolute: float, relative: float)'},
+                                               'signature': '(*, absolute: float, relative: float)'},
  'zipzi.modeling.deletion.DeletionTolerance.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionTolerance.summary': {'alias': 'zipzi.ApiDescription.summary'}}

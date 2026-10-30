@@ -35,29 +35,15 @@ Check the owning client/lease locally and return this FieldAddress without IO. U
 
 ## zipzi.references.FieldAddress.__exit__
 
-`(kind: object, exception: BaseException | None, traceback: object) -> None`
-
-Close the owned lease on scope exit; never suppress the body exception.
-
-Python supplies the context arguments. Closing can synchronously contact
-the host. On normal exit an unknown release remains recoverable and is
-raised; during an existing exception cleanup failure is added as a note.
-Retain the handle for pending cleanup. No formal document write occurs.
-
+Alias of [zipzi.Buffer.__exit__](runtime.md#zipzibuffer__exit__).
 
 ## zipzi.references.FieldAddress.close
 
-`() -> None`
-
-Release this owned handle once, without mutating formal model content. A lost release response keeps the original recovery owner; confirmed close is idempotent and later use fails.
-
+Alias of [zipzi.Buffer.close](runtime.md#zipzibufferclose).
 
 ## zipzi.references.FieldAddress.pending_request
 
-`() -> PendingRequest | None`
-
-Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
-
+Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 
 ## zipzi.references.FieldAddress.plan
 
@@ -82,22 +68,11 @@ Check the owning client/lease locally and return this LabelAddress without IO. U
 
 ## zipzi.references.LabelAddress.__exit__
 
-`(kind: object, exception: BaseException | None, traceback: object) -> None`
-
-Close the owned lease on scope exit; never suppress the body exception.
-
-Python supplies the context arguments. Closing can synchronously contact
-the host. On normal exit an unknown release remains recoverable and is
-raised; during an existing exception cleanup failure is added as a note.
-Retain the handle for pending cleanup. No formal document write occurs.
-
+Alias of [zipzi.Buffer.__exit__](runtime.md#zipzibuffer__exit__).
 
 ## zipzi.references.LabelAddress.close
 
-`() -> None`
-
-Release this owned handle once, without mutating formal model content. A lost release response keeps the original recovery owner; confirmed close is idempotent and later use fails.
-
+Alias of [zipzi.Buffer.close](runtime.md#zipzibufferclose).
 
 ## zipzi.references.LabelAddress.expected
 
@@ -115,10 +90,7 @@ Return the cached target UUID without IO. Field epoch and incarnation remain par
 
 ## zipzi.references.LabelAddress.pending_request
 
-`() -> PendingRequest | None`
-
-Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
-
+Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 
 ## zipzi.references.LabelAddress.plan
 
@@ -150,15 +122,7 @@ Check the owning client/lease locally and return this ObjectRef without IO. Use 
 
 ## zipzi.references.ObjectRef.__exit__
 
-`(kind: object, exception: BaseException | None, traceback: object) -> None`
-
-Close the owned lease on scope exit; never suppress the body exception.
-
-Python supplies the context arguments. Closing can synchronously contact
-the host. On normal exit an unknown release remains recoverable and is
-raised; during an existing exception cleanup failure is added as a note.
-Retain the handle for pending cleanup. No formal document write occurs.
-
+Alias of [zipzi.Buffer.__exit__](runtime.md#zipzibuffer__exit__).
 
 ## zipzi.references.ObjectRef.capabilities
 
@@ -169,10 +133,7 @@ Query a declared capability domain for this live reference. Returns an owned sou
 
 ## zipzi.references.ObjectRef.close
 
-`() -> None`
-
-Release this owned handle once, without mutating formal model content. A lost release response keeps the original recovery owner; confirmed close is idempotent and later use fails.
-
+Alias of [zipzi.Buffer.close](runtime.md#zipzibufferclose).
 
 ## zipzi.references.ObjectRef.id
 
@@ -197,10 +158,7 @@ Capture a label address bound to this reference incarnation and field epoch. Clo
 
 ## zipzi.references.ObjectRef.pending_request
 
-`() -> PendingRequest | None`
-
-Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
-
+Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 
 ## zipzi.references.ObjectRef.resolve
 

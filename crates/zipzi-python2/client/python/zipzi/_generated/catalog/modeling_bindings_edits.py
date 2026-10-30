@@ -18,7 +18,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                    'it against a Session/Edit source\n'
                                                                    'rather than mutating this value.')],
                                                        'kind': 'type',
-                                                       'signature': '(value: BlendAuthoringEdit)'},
+                                                       'signature': '(*, value: BlendAuthoringEdit)'},
  'zipzi.modeling.bindings.BindingAuthoringEditBlend.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BindingAuthoringEditBlend.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BindingAuthoringEditGrid': {'children': ('zipzi.modeling.bindings.BindingAuthoringEditGrid.__repr__',
@@ -33,7 +33,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                   'apply/plan it against a Session/Edit\n'
                                                                   'source rather than mutating this value.')],
                                                       'kind': 'type',
-                                                      'signature': '(value: BindingGridEdit)'},
+                                                      'signature': '(*, value: BindingGridEdit)'},
  'zipzi.modeling.bindings.BindingAuthoringEditGrid.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BindingAuthoringEditGrid.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BindingAuthoringEditMeshGrid': {'children': ('zipzi.modeling.bindings.BindingAuthoringEditMeshGrid.__repr__',
@@ -49,7 +49,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                       'apply/plan it against a Session/Edit\n'
                                                                       'source rather than mutating this value.')],
                                                           'kind': 'type',
-                                                          'signature': '(value: MeshGridEdit)'},
+                                                          'signature': '(*, value: MeshGridEdit)'},
  'zipzi.modeling.bindings.BindingAuthoringEditMeshGrid.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BindingAuthoringEditMeshGrid.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BindingAuthoringEditParameterRange': {'children': ('zipzi.modeling.bindings.BindingAuthoringEditParameterRange.__repr__',
@@ -66,7 +66,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                             'Session/Edit\n'
                                                                             'source rather than mutating this value.')],
                                                                 'kind': 'type',
-                                                                'signature': '(value: ParameterRangeEdit)'},
+                                                                'signature': '(*, value: ParameterRangeEdit)'},
  'zipzi.modeling.bindings.BindingAuthoringEditParameterRange.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BindingAuthoringEditParameterRange.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BindingAuthoringEditReparent': {'children': ('zipzi.modeling.bindings.BindingAuthoringEditReparent.__repr__',
@@ -82,7 +82,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                       'apply/plan it against a Session/Edit\n'
                                                                       'source rather than mutating this value.')],
                                                           'kind': 'type',
-                                                          'signature': '(value: ReparentEdit)'},
+                                                          'signature': '(*, value: ReparentEdit)'},
  'zipzi.modeling.bindings.BindingAuthoringEditReparent.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BindingAuthoringEditReparent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BindingGridEdit': {'children': (),
@@ -105,7 +105,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                'default Base edits the\n'
                                                                'undeformed base shape.')],
                                                    'kind': 'type',
-                                                   'signature': '(id: str, target: BindingGridTarget)'},
+                                                   'signature': '(*, id: str, target: BindingGridTarget)'},
  'zipzi.modeling.bindings.BindingGridEditCreate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BindingGridEditCreate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BindingGridEditDelete': {'children': ('zipzi.modeling.bindings.BindingGridEditDelete.__repr__',
@@ -118,7 +118,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                'Stable owner ID for the addressed drawing group, '
                                                                'collection or reference selection.')],
                                                    'kind': 'type',
-                                                   'signature': '(owner: str)'},
+                                                   'signature': '(*, owner: str)'},
  'zipzi.modeling.bindings.BindingGridEditDelete.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BindingGridEditDelete.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BindingGridEditEdit': {'children': ('zipzi.modeling.bindings.BindingGridEditEdit.__repr__',
@@ -134,7 +134,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                              'Typed axis/sample grid edit to perform on this owner; '
                                                              'not a Runtime operation ID.')],
                                                  'kind': 'type',
-                                                 'signature': '(owner: str, operation: GridOperation)'},
+                                                 'signature': '(*, owner: str, operation: GridOperation)'},
  'zipzi.modeling.bindings.BindingGridEditEdit.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BindingGridEditEdit.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BlendAuthoringEdit': {'children': (),
@@ -162,7 +162,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                       'Replacement ordered parameter samples and '
                                                                       'constraint weights.')],
                                                           'kind': 'type',
-                                                          'signature': '(id: str, parameter_id: str, samples: '
+                                                          'signature': '(*, id: str, parameter_id: str, samples: '
                                                                        'tuple[ConstraintSample, ...])'},
  'zipzi.modeling.bindings.BlendAuthoringEditConstraint.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BlendAuthoringEditConstraint.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -188,7 +188,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                          'Stable BlendShape key-table ID controlling '
                                                                          'the binding.')],
                                                              'kind': 'type',
-                                                             'signature': '(id: str, target_id: str, target_kind: '
+                                                             'signature': '(*, id: str, target_id: str, target_kind: '
                                                                           'BlendShapeTargetKind, key_table_id: str)'},
  'zipzi.modeling.bindings.BlendAuthoringEditCreateBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BlendAuthoringEditCreateBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -204,7 +204,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                             'Complete BlendShape constraint with its '
                                                                             'driving parameter and weighted samples.')],
                                                                 'kind': 'type',
-                                                                'signature': '(constraint: BlendShapeConstraint)'},
+                                                                'signature': '(*, constraint: BlendShapeConstraint)'},
  'zipzi.modeling.bindings.BlendAuthoringEditCreateConstraint.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BlendAuthoringEditCreateConstraint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BlendAuthoringEditCreateTable': {'children': ('zipzi.modeling.bindings.BlendAuthoringEditCreateTable.__repr__',
@@ -219,7 +219,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                        'Complete BlendShape key table with stable '
                                                                        'sample IDs and an explicit base sample.')],
                                                            'kind': 'type',
-                                                           'signature': '(table: BlendShapeKeyTable)'},
+                                                           'signature': '(*, table: BlendShapeKeyTable)'},
  'zipzi.modeling.bindings.BlendAuthoringEditCreateTable.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BlendAuthoringEditCreateTable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BlendAuthoringEditSetBindingTable': {'children': ('zipzi.modeling.bindings.BlendAuthoringEditSetBindingTable.__repr__',
@@ -242,7 +242,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                            'Whether to reset shape data when switching '
                                                                            'the binding to another key table.')],
                                                                'kind': 'type',
-                                                               'signature': '(id: str, key_table_id: str, reset: '
+                                                               'signature': '(*, id: str, key_table_id: str, reset: '
                                                                             'bool)'},
  'zipzi.modeling.bindings.BlendAuthoringEditSetBindingTable.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BlendAuthoringEditSetBindingTable.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -260,7 +260,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                  'Typed sample/base/parameter edit to perform on this '
                                                                  'BlendShape key table.')],
                                                      'kind': 'type',
-                                                     'signature': '(id: str, operation: BlendTableOperation)'},
+                                                     'signature': '(*, id: str, operation: BlendTableOperation)'},
  'zipzi.modeling.bindings.BlendAuthoringEditTable.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BlendAuthoringEditTable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.MeshGridEdit': {'children': (),
@@ -283,7 +283,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                              'axis identity is distinct\n'
                                                              'from the parameter ID.')],
                                                  'kind': 'type',
-                                                 'signature': '(binding_id: str, axis: BindingAxis)'},
+                                                 'signature': '(*, binding_id: str, axis: BindingAxis)'},
  'zipzi.modeling.bindings.MeshGridEditAddAxis.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.MeshGridEditAddAxis.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.MeshGridEditCreate': {'children': ('zipzi.modeling.bindings.MeshGridEditCreate.__repr__',
@@ -298,7 +298,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                            ('mesh_id',
                                                             'Stable ID of the target mesh in this document.')],
                                                 'kind': 'type',
-                                                'signature': '(id: str, mesh_id: str)'},
+                                                'signature': '(*, id: str, mesh_id: str)'},
  'zipzi.modeling.bindings.MeshGridEditCreate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.MeshGridEditCreate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.MeshGridEditDeleteSample': {'children': ('zipzi.modeling.bindings.MeshGridEditDeleteSample.__repr__',
@@ -317,7 +317,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                  ('value',
                                                                   'Scalar value in the referenced parameter domain.')],
                                                       'kind': 'type',
-                                                      'signature': '(binding_id: str, parameter_id: str, value: '
+                                                      'signature': '(*, binding_id: str, parameter_id: str, value: '
                                                                    'float)'},
  'zipzi.modeling.bindings.MeshGridEditDeleteSample.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.MeshGridEditDeleteSample.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -337,7 +337,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                  ('value',
                                                                   'Scalar value in the referenced parameter domain.')],
                                                       'kind': 'type',
-                                                      'signature': '(binding_id: str, parameter_id: str, value: '
+                                                      'signature': '(*, binding_id: str, parameter_id: str, value: '
                                                                    'float)'},
  'zipzi.modeling.bindings.MeshGridEditInsertSample.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.MeshGridEditInsertSample.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -359,8 +359,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                ('to',
                                                                 'New sample value in the same parameter domain.')],
                                                     'kind': 'type',
-                                                    'signature': '(binding_id: str, parameter_id: str, from_: float, '
-                                                                 'to: float)'},
+                                                    'signature': '(*, binding_id: str, parameter_id: str, from_: '
+                                                                 'float, to: float)'},
  'zipzi.modeling.bindings.MeshGridEditMoveSample.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.MeshGridEditMoveSample.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.MeshGridEditRemoveAxis': {'children': ('zipzi.modeling.bindings.MeshGridEditRemoveAxis.__repr__',
@@ -379,7 +379,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                 'Explicit parameter-domain reduction used when '
                                                                 'removing or replacing an axis.')],
                                                     'kind': 'type',
-                                                    'signature': '(binding_id: str, parameter_id: str, reduction: '
+                                                    'signature': '(*, binding_id: str, parameter_id: str, reduction: '
                                                                  'AxisReduction)'},
  'zipzi.modeling.bindings.MeshGridEditRemoveAxis.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.MeshGridEditRemoveAxis.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -396,6 +396,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                  'Document parameter IDs in the requested axis '
                                                                  'order.')],
                                                      'kind': 'type',
-                                                     'signature': '(binding_id: str, parameter_ids: tuple[str, ...])'},
+                                                     'signature': '(*, binding_id: str, parameter_ids: tuple[str, '
+                                                                  '...])'},
  'zipzi.modeling.bindings.MeshGridEditReorderAxes.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.MeshGridEditReorderAxes.summary': {'alias': 'zipzi.ApiDescription.summary'}}

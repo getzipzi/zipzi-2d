@@ -3,11 +3,13 @@ from __future__ import annotations
 from typing import NamedTuple
 
 class Vec2(NamedTuple):
+    'Immutable owned Vec2 value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nx: Horizontal coordinate; its space and units are determined by the containing geometry or\npose.\ny: Vertical coordinate; its space and units are determined by the containing geometry or pose.'
     __module__ = "zipzi.modeling.common"
     x: float
     y: float
 
 class PreciseVec2(NamedTuple):
+    'Immutable owned PreciseVec2 value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nx: Horizontal coordinate; its space and units are determined by the containing geometry or\npose.\ny: Vertical coordinate; its space and units are determined by the containing geometry or pose.'
     __module__ = "zipzi.modeling.common"
     x: float
     y: float

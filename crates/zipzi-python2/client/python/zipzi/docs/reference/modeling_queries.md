@@ -33,7 +33,7 @@ Immutable owned CollectionQueryClips value. Construction owns declared collectio
 
 ## zipzi.modeling.queries.CollectionQueryDocument
 
-`(field: DocumentField)`
+`(*, field: DocumentField)`
 
 Immutable owned CollectionQueryDocument value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -41,7 +41,7 @@ Immutable owned CollectionQueryDocument value. Construction owns declared collec
 
 ## zipzi.modeling.queries.CollectionQueryExpressionEntries
 
-`(expression_id: str)`
+`(*, expression_id: str)`
 
 Immutable owned CollectionQueryExpressionEntries value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -56,7 +56,7 @@ Immutable owned CollectionQueryExpressions value. Construction owns declared col
 
 ## zipzi.modeling.queries.CollectionQueryMotion
 
-`(collection: MotionContainer)`
+`(*, collection: MotionContainer)`
 
 Immutable owned CollectionQueryMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -71,7 +71,7 @@ Immutable owned CollectionQueryMotionGroups value. Construction owns declared co
 
 ## zipzi.modeling.queries.CollectionQueryOrganization
 
-`(collection: OrganizationCollection)`
+`(*, collection: OrganizationCollection)`
 
 Immutable owned CollectionQueryOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -79,7 +79,7 @@ Immutable owned CollectionQueryOrganization value. Construction owns declared co
 
 ## zipzi.modeling.queries.CollectionQueryPhysics
 
-`(collection: PhysicsCollection)`
+`(*, collection: PhysicsCollection)`
 
 Immutable owned CollectionQueryPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -87,7 +87,7 @@ Immutable owned CollectionQueryPhysics value. Construction owns declared collect
 
 ## zipzi.modeling.queries.CollectionQueryPose
 
-`(collection: PoseCollection)`
+`(*, collection: PoseCollection)`
 
 Immutable owned CollectionQueryPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -95,7 +95,7 @@ Immutable owned CollectionQueryPose value. Construction owns declared collection
 
 ## zipzi.modeling.queries.CollectionQueryReferences
 
-`(collection: ReferenceCollection)`
+`(*, collection: ReferenceCollection)`
 
 Immutable owned CollectionQueryReferences value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -110,7 +110,7 @@ Immutable owned CollectionQueryResources value. Construction owns declared colle
 
 ## zipzi.modeling.queries.CollectionQueryScene
 
-`(collection: SceneCollection)`
+`(*, collection: SceneCollection)`
 
 Immutable owned CollectionQueryScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -118,7 +118,7 @@ Immutable owned CollectionQueryScene value. Construction owns declared collectio
 
 ## zipzi.modeling.queries.ModelingQuery
 
-`(assets: tuple[str, ...] = (), meshes: tuple[str, ...] = (), parameters: tuple[str, ...] = (), parts: tuple[str, ...] = (), transforms: tuple[str, ...] = (), bindings: tuple[str, ...] = (), scene_bindings: tuple[str, ...] = (), blend_key_tables: tuple[str, ...] = (), blend_constraints: tuple[str, ...] = (), blend_bindings: tuple[str, ...] = (), glues: tuple[str, ...] = (), offscreens: tuple[str, ...] = (), parameter_groups: tuple[str, ...] = (), attachments: tuple[str, ...] = (), motions: tuple[str, ...] = (), motion_groups: tuple[str, ...] = (), motion_registrations: tuple[str, ...] = (), expressions: tuple[str, ...] = (), physics: bool = False, pose: bool = False)`
+`(*, assets: tuple[str, ...] = (), meshes: tuple[str, ...] = (), parameters: tuple[str, ...] = (), parts: tuple[str, ...] = (), transforms: tuple[str, ...] = (), bindings: tuple[str, ...] = (), scene_bindings: tuple[str, ...] = (), blend_key_tables: tuple[str, ...] = (), blend_constraints: tuple[str, ...] = (), blend_bindings: tuple[str, ...] = (), glues: tuple[str, ...] = (), offscreens: tuple[str, ...] = (), parameter_groups: tuple[str, ...] = (), attachments: tuple[str, ...] = (), motions: tuple[str, ...] = (), motion_groups: tuple[str, ...] = (), motion_registrations: tuple[str, ...] = (), expressions: tuple[str, ...] = (), physics: bool = False, pose: bool = False)`
 
 Immutable owned ModelingQuery value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -159,7 +159,7 @@ requests no payloads, while collection IDs remain discoverable.
 
 ## zipzi.modeling.queries.OwnedModelingRecords
 
-`(document_id: str, setup: ModelSetup, hierarchy_order: HierarchyOrder, editor_state: EditorState, display_info: DisplayInfo, model3_settings: Model3Settings, draw_order_groups: tuple[DrawOrderGroup, ...] | None = None, ids: _Mapping[str, tuple[str, ...]], assets: tuple[ImageAsset | None, ...], meshes: tuple[Mesh | None, ...], parameters: tuple[Parameter | None, ...], parts: tuple[Part | None, ...], transforms: tuple[Transform | None, ...], bindings: tuple[MeshBinding | None, ...], scene_bindings: tuple[SceneBinding | None, ...], blend_key_tables: tuple[BlendShapeKeyTable | None, ...], blend_constraints: tuple[BlendShapeConstraint | None, ...], blend_bindings: tuple[BlendShapeBinding | None, ...], glues: tuple[Glue | None, ...], offscreens: tuple[Offscreen | None, ...], parameter_groups: tuple[CdiParameterGroup | None, ...], attachments: tuple[PackageAttachment | None, ...], motions: tuple[MotionClip | None, ...], motion_groups: tuple[MotionGroup | None, ...], motion_registrations: tuple[MotionRegistration | None, ...], expressions: tuple[ExpressionAsset | None, ...], physics: PhysicsAsset | None = None, pose: PoseAsset | None = None)`
+`(*, document_id: str, setup: ModelSetup, hierarchy_order: HierarchyOrder, editor_state: EditorState, display_info: DisplayInfo, model3_settings: Model3Settings, draw_order_groups: tuple[DrawOrderGroup, ...] | None = None, ids: _Mapping[str, tuple[str, ...]], assets: tuple[ImageAsset | None, ...], meshes: tuple[Mesh | None, ...], parameters: tuple[Parameter | None, ...], parts: tuple[Part | None, ...], transforms: tuple[Transform | None, ...], bindings: tuple[MeshBinding | None, ...], scene_bindings: tuple[SceneBinding | None, ...], blend_key_tables: tuple[BlendShapeKeyTable | None, ...], blend_constraints: tuple[BlendShapeConstraint | None, ...], blend_bindings: tuple[BlendShapeBinding | None, ...], glues: tuple[Glue | None, ...], offscreens: tuple[Offscreen | None, ...], parameter_groups: tuple[CdiParameterGroup | None, ...], attachments: tuple[PackageAttachment | None, ...], motions: tuple[MotionClip | None, ...], motion_groups: tuple[MotionGroup | None, ...], motion_registrations: tuple[MotionRegistration | None, ...], expressions: tuple[ExpressionAsset | None, ...], physics: PhysicsAsset | None = None, pose: PoseAsset | None = None)`
 
 Immutable owned OwnedModelingRecords value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

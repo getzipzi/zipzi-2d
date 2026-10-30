@@ -12,7 +12,7 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.modeling.deletion.DeletionDecision
 
-`(object: DeletionObject, reason: DeletionDecisionReason, choices: tuple[DeletionChoice, ...])`
+`(*, object: DeletionObject, reason: DeletionDecisionReason, choices: tuple[DeletionChoice, ...])`
 
 Immutable owned DeletionDecision value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -36,7 +36,7 @@ Immutable owned DeletionDecisionReasonBlendBaseReplacementRequired value. Constr
 
 ## zipzi.modeling.deletion.DeletionDecisionReasonConversionUnproven
 
-`(code: str)`
+`(*, code: str)`
 
 Immutable owned DeletionDecisionReasonConversionUnproven value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -44,7 +44,7 @@ Immutable owned DeletionDecisionReasonConversionUnproven value. Construction own
 
 ## zipzi.modeling.deletion.DeletionDecisionReasonInvalidContainer
 
-`(code: str)`
+`(*, code: str)`
 
 Immutable owned DeletionDecisionReasonInvalidContainer value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -94,7 +94,7 @@ Typed public API entry.
 
 ## zipzi.modeling.deletion.DeletionEffectBindingContributionRemoved
 
-`(object: DeletionObject, binding: DeletionObject)`
+`(*, object: DeletionObject, binding: DeletionObject)`
 
 Immutable owned DeletionEffectBindingContributionRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -103,7 +103,7 @@ Immutable owned DeletionEffectBindingContributionRemoved value. Construction own
 
 ## zipzi.modeling.deletion.DeletionEffectCompositionChanged
 
-`(value: DeletionObject)`
+`(*, value: DeletionObject)`
 
 Immutable owned DeletionEffectCompositionChanged value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -111,7 +111,7 @@ Immutable owned DeletionEffectCompositionChanged value. Construction owns declar
 
 ## zipzi.modeling.deletion.DeletionEffectContentChanged
 
-`(value: DeletionObject)`
+`(*, value: DeletionObject)`
 
 Immutable owned DeletionEffectContentChanged value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -119,7 +119,7 @@ Immutable owned DeletionEffectContentChanged value. Construction owns declared c
 
 ## zipzi.modeling.deletion.DeletionEffectDeformationChanged
 
-`(value: DeletionObject)`
+`(*, value: DeletionObject)`
 
 Immutable owned DeletionEffectDeformationChanged value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -127,7 +127,7 @@ Immutable owned DeletionEffectDeformationChanged value. Construction owns declar
 
 ## zipzi.modeling.deletion.DeletionEffectDrawingGroupFlattened
 
-`(group: DeletionObject, destination: DeletionObject, source_range: tuple[int, int], destination_range: tuple[int, int], dynamic_order: bool, offscreen: DeletionObject | None = None)`
+`(*, group: DeletionObject, destination: DeletionObject, source_range: tuple[int, int], destination_range: tuple[int, int], dynamic_order: bool, offscreen: DeletionObject | None = None)`
 
 Immutable owned DeletionEffectDrawingGroupFlattened value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -140,7 +140,7 @@ Immutable owned DeletionEffectDrawingGroupFlattened value. Construction owns dec
 
 ## zipzi.modeling.deletion.DeletionEffectGlueRemoved
 
-`(value: DeletionObject)`
+`(*, value: DeletionObject)`
 
 Immutable owned DeletionEffectGlueRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -148,7 +148,7 @@ Immutable owned DeletionEffectGlueRemoved value. Construction owns declared coll
 
 ## zipzi.modeling.deletion.DeletionEffectHitAreaRemoved
 
-`(value: DeletionObject)`
+`(*, value: DeletionObject)`
 
 Immutable owned DeletionEffectHitAreaRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -156,7 +156,7 @@ Immutable owned DeletionEffectHitAreaRemoved value. Construction owns declared c
 
 ## zipzi.modeling.deletion.DeletionEffectMaskChanged
 
-`(value: DeletionObject)`
+`(*, value: DeletionObject)`
 
 Immutable owned DeletionEffectMaskChanged value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -164,7 +164,7 @@ Immutable owned DeletionEffectMaskChanged value. Construction owns declared coll
 
 ## zipzi.modeling.deletion.DeletionEffectMotionRegistrationMoved
 
-`(registration: DeletionObject, group: DeletionObject)`
+`(*, registration: DeletionObject, group: DeletionObject)`
 
 Immutable owned DeletionEffectMotionRegistrationMoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -173,7 +173,7 @@ Immutable owned DeletionEffectMotionRegistrationMoved value. Construction owns d
 
 ## zipzi.modeling.deletion.DeletionEffectOrganizationChanged
 
-`(value: DeletionObject)`
+`(*, value: DeletionObject)`
 
 Immutable owned DeletionEffectOrganizationChanged value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -181,7 +181,7 @@ Immutable owned DeletionEffectOrganizationChanged value. Construction owns decla
 
 ## zipzi.modeling.deletion.DeletionEffectParameterAnimationRemoved
 
-`(value: DeletionObject)`
+`(*, value: DeletionObject)`
 
 Immutable owned DeletionEffectParameterAnimationRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -189,7 +189,7 @@ Immutable owned DeletionEffectParameterAnimationRemoved value. Construction owns
 
 ## zipzi.modeling.deletion.DeletionEffectParameterDimensionRemoved
 
-`(object: DeletionObject, parameter: DeletionObject, value: float, effective_value: float, disabled: bool)`
+`(*, object: DeletionObject, parameter: DeletionObject, value: float, effective_value: float, disabled: bool)`
 
 Immutable owned DeletionEffectParameterDimensionRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -201,7 +201,7 @@ Immutable owned DeletionEffectParameterDimensionRemoved value. Construction owns
 
 ## zipzi.modeling.deletion.DeletionEffectPartAnimationRemoved
 
-`(value: DeletionObject)`
+`(*, value: DeletionObject)`
 
 Immutable owned DeletionEffectPartAnimationRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -209,7 +209,7 @@ Immutable owned DeletionEffectPartAnimationRemoved value. Construction owns decl
 
 ## zipzi.modeling.deletion.DeletionEffectPartStateRemoved
 
-`(part: DeletionObject, enabled: bool, animated_order: bool)`
+`(*, part: DeletionObject, enabled: bool, animated_order: bool)`
 
 Immutable owned DeletionEffectPartStateRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -219,7 +219,7 @@ Immutable owned DeletionEffectPartStateRemoved value. Construction owns declared
 
 ## zipzi.modeling.deletion.DeletionEffectPhysicsChannelRemoved
 
-`(object: DeletionObject, group: DeletionObject)`
+`(*, object: DeletionObject, group: DeletionObject)`
 
 Immutable owned DeletionEffectPhysicsChannelRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -228,7 +228,7 @@ Immutable owned DeletionEffectPhysicsChannelRemoved value. Construction owns dec
 
 ## zipzi.modeling.deletion.DeletionEffectResourceReplaced
 
-`(object: DeletionObject, source: DeletionObject, replacement: DeletionObject | None = None)`
+`(*, object: DeletionObject, source: DeletionObject, replacement: DeletionObject | None = None)`
 
 Immutable owned DeletionEffectResourceReplaced value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -238,7 +238,7 @@ Immutable owned DeletionEffectResourceReplaced value. Construction owns declared
 
 ## zipzi.modeling.deletion.DeletionEffectUnpreservedChannels
 
-`(object: DeletionObject, channels: tuple[DeletionChannel, ...])`
+`(*, object: DeletionObject, channels: tuple[DeletionChannel, ...])`
 
 Immutable owned DeletionEffectUnpreservedChannels value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

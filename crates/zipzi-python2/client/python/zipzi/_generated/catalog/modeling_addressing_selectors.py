@@ -20,7 +20,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
                                                                          'exported\n'
                                                                          'runtime_id.')],
                                                              'kind': 'type',
-                                                             'signature': '(id: str)'},
+                                                             'signature': '(*, id: str)'},
  'zipzi.modeling.addressing.AddressSelectorAttachmentPath.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressSelectorAttachmentPath.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressSelectorBinding': {'children': ('zipzi.modeling.addressing.AddressSelectorBinding.__repr__',
@@ -35,7 +35,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
                                                                   'distinct from the exported\n'
                                                                   'runtime_id.')],
                                                       'kind': 'type',
-                                                      'signature': '(id: str)'},
+                                                      'signature': '(*, id: str)'},
  'zipzi.modeling.addressing.AddressSelectorBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressSelectorBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressSelectorContent': {'children': ('zipzi.modeling.addressing.AddressSelectorContent.__repr__',
@@ -54,7 +54,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
                                                                   'default Base edits the\n'
                                                                   'undeformed base shape.')],
                                                       'kind': 'type',
-                                                      'signature': '(id: str, target: SceneContentTarget)'},
+                                                      'signature': '(*, id: str, target: SceneContentTarget)'},
  'zipzi.modeling.addressing.AddressSelectorContent.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressSelectorContent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressSelectorDocument': {'children': ('zipzi.modeling.addressing.AddressSelectorDocument.__repr__',
@@ -68,7 +68,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
                                                                    'Explicit field discriminator; must match the '
                                                                    'addressed object/domain.')],
                                                        'kind': 'type',
-                                                       'signature': '(field: DocumentField)'},
+                                                       'signature': '(*, field: DocumentField)'},
  'zipzi.modeling.addressing.AddressSelectorDocument.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressSelectorDocument.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressSelectorDrawingGroup': {'children': ('zipzi.modeling.addressing.AddressSelectorDrawingGroup.__repr__',
@@ -83,7 +83,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
                                                                        'Stable owner ID for the addressed drawing '
                                                                        'group, collection or reference selection.')],
                                                            'kind': 'type',
-                                                           'signature': '(owner: str)'},
+                                                           'signature': '(*, owner: str)'},
  'zipzi.modeling.addressing.AddressSelectorDrawingGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressSelectorDrawingGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressSelectorExpressionEntry': {'children': ('zipzi.modeling.addressing.AddressSelectorExpressionEntry.__repr__',
@@ -98,7 +98,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
                                                                           'Stable identity of the addressed native '
                                                                           'animation object.')],
                                                               'kind': 'type',
-                                                              'signature': '(id: str)'},
+                                                              'signature': '(*, id: str)'},
  'zipzi.modeling.addressing.AddressSelectorExpressionEntry.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressSelectorExpressionEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressSelectorMotionRegistration': {'children': ('zipzi.modeling.addressing.AddressSelectorMotionRegistration.__repr__',
@@ -113,7 +113,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
                                                                              'Stable identity of the addressed native '
                                                                              'animation object.')],
                                                                  'kind': 'type',
-                                                                 'signature': '(id: str)'},
+                                                                 'signature': '(*, id: str)'},
  'zipzi.modeling.addressing.AddressSelectorMotionRegistration.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressSelectorMotionRegistration.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressSelectorOrganization': {'children': ('zipzi.modeling.addressing.AddressSelectorOrganization.__repr__',
@@ -129,7 +129,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
                                                                        'it is distinct from the exported\n'
                                                                        'runtime_id.')],
                                                            'kind': 'type',
-                                                           'signature': '(id: str)'},
+                                                           'signature': '(*, id: str)'},
  'zipzi.modeling.addressing.AddressSelectorOrganization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressSelectorOrganization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressSelectorPhysics': {'children': ('zipzi.modeling.addressing.AddressSelectorPhysics.__repr__',
@@ -143,7 +143,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
                                                                   'Stable identity of the addressed native animation '
                                                                   'object.')],
                                                       'kind': 'type',
-                                                      'signature': '(id: str)'},
+                                                      'signature': '(*, id: str)'},
  'zipzi.modeling.addressing.AddressSelectorPhysics.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressSelectorPhysics.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressSelectorPose': {'children': ('zipzi.modeling.addressing.AddressSelectorPose.__repr__',
@@ -156,7 +156,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
                                                                'Stable identity of the addressed native animation '
                                                                'object.')],
                                                    'kind': 'type',
-                                                   'signature': '(id: str)'},
+                                                   'signature': '(*, id: str)'},
  'zipzi.modeling.addressing.AddressSelectorPose.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressSelectorPose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressSelectorReference': {'children': ('zipzi.modeling.addressing.AddressSelectorReference.__repr__',
@@ -171,7 +171,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
                                                                     'is distinct from the exported\n'
                                                                     'runtime_id.')],
                                                         'kind': 'type',
-                                                        'signature': '(id: str)'},
+                                                        'signature': '(*, id: str)'},
  'zipzi.modeling.addressing.AddressSelectorReference.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressSelectorReference.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressSelectorResourceName': {'children': ('zipzi.modeling.addressing.AddressSelectorResourceName.__repr__',
@@ -187,7 +187,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
                                                                        'it is distinct from the exported\n'
                                                                        'runtime_id.')],
                                                            'kind': 'type',
-                                                           'signature': '(id: str)'},
+                                                           'signature': '(*, id: str)'},
  'zipzi.modeling.addressing.AddressSelectorResourceName.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressSelectorResourceName.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressSelectorScene': {'children': ('zipzi.modeling.addressing.AddressSelectorScene.__repr__',
@@ -204,7 +204,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
                                                                 'Explicit field discriminator; must match the '
                                                                 'addressed object/domain.')],
                                                     'kind': 'type',
-                                                    'signature': '(id: str, field: SceneField)'},
+                                                    'signature': '(*, id: str, field: SceneField)'},
  'zipzi.modeling.addressing.AddressSelectorScene.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressSelectorScene.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressSelectorSelection': {'children': ('zipzi.modeling.addressing.AddressSelectorSelection.__repr__',
@@ -221,6 +221,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
                                                                     'Explicit field discriminator; must match the '
                                                                     'addressed object/domain.')],
                                                         'kind': 'type',
-                                                        'signature': '(owner: str, field: ReferenceSelectionField)'},
+                                                        'signature': '(*, owner: str, field: ReferenceSelectionField)'},
  'zipzi.modeling.addressing.AddressSelectorSelection.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressSelectorSelection.summary': {'alias': 'zipzi.ApiDescription.summary'}}

@@ -12,7 +12,7 @@ Canonical resources modeling values.
 
 ## zipzi.modeling.resources.ImageAsset
 
-`(unresolved_source: str | None = None, id: str, name: str, content: ImageContent | None = None)`
+`(*, unresolved_source: str | None = None, id: str, name: str, content: ImageContent | None = None)`
 
 Immutable owned ImageAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -23,7 +23,7 @@ Immutable owned ImageAsset value. Construction owns declared collections; readin
 
 ## zipzi.modeling.resources.ImageContent
 
-`(source: str, width: int, height: int, sha256: str)`
+`(*, source: str, width: int, height: int, sha256: str)`
 
 Immutable owned ImageContent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -42,7 +42,7 @@ Typed public API entry.
 
 ## zipzi.modeling.resources.ResourceEditCreate
 
-`(id: str, name: str, before: str | None = None)`
+`(*, id: str, name: str, before: str | None = None)`
 
 Immutable owned ResourceEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -53,7 +53,7 @@ the selected destination.
 
 ## zipzi.modeling.resources.ResourceEditDelete
 
-`(id: str, replacement: SceneReference | None = None)`
+`(*, id: str, replacement: SceneReference | None = None)`
 
 Immutable owned ResourceEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -64,7 +64,7 @@ resolved target or an unresolved/detached reference.
 
 ## zipzi.modeling.resources.ResourceEditDuplicate
 
-`(source: str, id: str, name: str, before: str | None = None)`
+`(*, source: str, id: str, name: str, before: str | None = None)`
 
 Immutable owned ResourceEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -76,7 +76,7 @@ the selected destination.
 
 ## zipzi.modeling.resources.ResourceEditPatchName
 
-`(id: str, expected: str, name: str)`
+`(*, id: str, expected: str, name: str)`
 
 Immutable owned ResourceEditPatchName value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -88,7 +88,7 @@ the edit.
 
 ## zipzi.modeling.resources.ResourceEditReorder
 
-`(ids: tuple[str, ...], before: str | None = None)`
+`(*, ids: tuple[str, ...], before: str | None = None)`
 
 Immutable owned ResourceEditReorder value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -99,7 +99,7 @@ the selected destination.
 
 ## zipzi.modeling.resources.ResourceEditSetContent
 
-`(id: str, expected: ImageContent | None = None, content: ImageContent | None = None)`
+`(*, id: str, expected: ImageContent | None = None, content: ImageContent | None = None)`
 
 Immutable owned ResourceEditSetContent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

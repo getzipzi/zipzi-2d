@@ -12,99 +12,12 @@ Core modeling commands, queries and domain modules.
 
 ## zipzi.modeling.ModelingCommand
 
-``
-
-Typed public API entry.
-
+Alias of [zipzi.modeling.commands.ModelingCommand](modeling_commands.md#zipzimodelingcommandsmodelingcommand).
 
 ## zipzi.modeling.ModelingQuery
 
-`(assets: tuple[str, ...] = (), meshes: tuple[str, ...] = (), parameters: tuple[str, ...] = (), parts: tuple[str, ...] = (), transforms: tuple[str, ...] = (), bindings: tuple[str, ...] = (), scene_bindings: tuple[str, ...] = (), blend_key_tables: tuple[str, ...] = (), blend_constraints: tuple[str, ...] = (), blend_bindings: tuple[str, ...] = (), glues: tuple[str, ...] = (), offscreens: tuple[str, ...] = (), parameter_groups: tuple[str, ...] = (), attachments: tuple[str, ...] = (), motions: tuple[str, ...] = (), motion_groups: tuple[str, ...] = (), motion_registrations: tuple[str, ...] = (), expressions: tuple[str, ...] = (), physics: bool = False, pose: bool = False)`
-
-Immutable owned ModelingQuery value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `assets`: Explicit IDs of image assets to read, in result-slot order; an empty list requests no
-payloads, while collection IDs remain discoverable.
-- `meshes`: Explicit IDs of meshes to read, in result-slot order; an empty list requests no
-payloads, while collection IDs remain discoverable.
-- `parameters`: Explicit IDs of parameters to read, in result-slot order; an empty list requests no
-payloads, while collection IDs remain discoverable.
-- `parts`: Explicit IDs of Parts to read, in result-slot order; an empty list requests no payloads,
-while collection IDs remain discoverable.
-- `transforms`: Explicit IDs of deformation transforms to read, in result-slot order; an empty list
-requests no payloads, while collection IDs remain discoverable.
-- `bindings`: Explicit IDs of ordinary mesh bindings to read, in result-slot order; an empty list
-requests no payloads, while collection IDs remain discoverable.
-- `scene_bindings`: Explicit IDs of scene bindings to read, in result-slot order; an empty list requests no
-payloads, while collection IDs remain discoverable.
-- `blend_key_tables`: Explicit IDs of BlendShape key tables to read, in result-slot order; an empty list
-requests no payloads, while collection IDs remain discoverable.
-- `blend_constraints`: Explicit IDs of BlendShape constraints to read, in result-slot order; an empty list
-requests no payloads, while collection IDs remain discoverable.
-- `blend_bindings`: Explicit IDs of BlendShape bindings to read, in result-slot order; an empty list
-requests no payloads, while collection IDs remain discoverable.
-- `glues`: Explicit IDs of Glue objects to read, in result-slot order; an empty list requests no
-payloads, while collection IDs remain discoverable.
-- `offscreens`: Explicit IDs of Offscreen objects to read, in result-slot order; an empty list requests
-no payloads, while collection IDs remain discoverable.
-- `parameter_groups`: Explicit IDs of CDI parameter groups to read, in result-slot order; an empty list
-requests no payloads, while collection IDs remain discoverable.
-- `attachments`: Explicit IDs of package attachments to read, in result-slot order; an empty list
-requests no payloads, while collection IDs remain discoverable.
-- `motions`: Explicit motion clip IDs; payload slots follow order and retain missing IDs.
-- `motion_groups`: Explicit motion registration-group IDs; group payloads include their ordered entries.
-- `motion_registrations`: Explicit registration IDs, including root and grouped registrations.
-- `expressions`: Explicit expression asset IDs; entries are owned by the selected asset.
-- `physics`: Request the Physics singleton payload; false requests no Physics content.
-- `pose`: Request the Pose singleton payload; false requests no Pose content.
+Alias of [zipzi.modeling.queries.ModelingQuery](modeling_queries.md#zipzimodelingqueriesmodelingquery).
 
 ## zipzi.modeling.OwnedModelingRecords
 
-`(document_id: str, setup: ModelSetup, hierarchy_order: HierarchyOrder, editor_state: EditorState, display_info: DisplayInfo, model3_settings: Model3Settings, draw_order_groups: tuple[DrawOrderGroup, ...] | None = None, ids: _Mapping[str, tuple[str, ...]], assets: tuple[ImageAsset | None, ...], meshes: tuple[Mesh | None, ...], parameters: tuple[Parameter | None, ...], parts: tuple[Part | None, ...], transforms: tuple[Transform | None, ...], bindings: tuple[MeshBinding | None, ...], scene_bindings: tuple[SceneBinding | None, ...], blend_key_tables: tuple[BlendShapeKeyTable | None, ...], blend_constraints: tuple[BlendShapeConstraint | None, ...], blend_bindings: tuple[BlendShapeBinding | None, ...], glues: tuple[Glue | None, ...], offscreens: tuple[Offscreen | None, ...], parameter_groups: tuple[CdiParameterGroup | None, ...], attachments: tuple[PackageAttachment | None, ...], motions: tuple[MotionClip | None, ...], motion_groups: tuple[MotionGroup | None, ...], motion_registrations: tuple[MotionRegistration | None, ...], expressions: tuple[ExpressionAsset | None, ...], physics: PhysicsAsset | None = None, pose: PoseAsset | None = None)`
-
-Immutable owned OwnedModelingRecords value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `document_id`: Stable document UUID; not a Runtime Session handle.
-- `setup`: Model source-canvas and export-frame configuration.
-- `hierarchy_order`: Independent organization/deformation palette ranks; does not alter model relationships.
-- `editor_state`: Owned authoring visibility/lock metadata; separate from evaluated model appearance.
-- `display_info`: Owned CDI display metadata, including explicit imported unresolved references.
-- `model3_settings`: Owned model3 export metadata and reference registrations.
-- `draw_order_groups`: Optional drawing-order groups; None leaves grouping absent instead of supplying an empty
-group list.
-- `ids`: Domain-name-to-ID directory of document collections; identities remain available even
-when no record payloads were requested.
-- `assets`: Owned image assets aligned with the corresponding query ID list; None marks a missing
-requested ID and an empty query returns no payloads.
-- `meshes`: Owned meshes aligned with the corresponding query ID list; None marks a missing
-requested ID and an empty query returns no payloads.
-- `parameters`: Owned parameters aligned with the corresponding query ID list; None marks a missing
-requested ID and an empty query returns no payloads.
-- `parts`: Owned Parts aligned with the corresponding query ID list; None marks a missing requested
-ID and an empty query returns no payloads.
-- `transforms`: Owned deformation transforms aligned with the corresponding query ID list; None marks a
-missing requested ID and an empty query returns no payloads.
-- `bindings`: Owned ordinary mesh bindings aligned with the corresponding query ID list; None marks a
-missing requested ID and an empty query returns no payloads.
-- `scene_bindings`: Owned scene bindings aligned with the corresponding query ID list; None marks a missing
-requested ID and an empty query returns no payloads.
-- `blend_key_tables`: Owned BlendShape key tables aligned with the corresponding query ID list; None marks a
-missing requested ID and an empty query returns no payloads.
-- `blend_constraints`: Owned BlendShape constraints aligned with the corresponding query ID list; None marks a
-missing requested ID and an empty query returns no payloads.
-- `blend_bindings`: Owned BlendShape bindings aligned with the corresponding query ID list; None marks a
-missing requested ID and an empty query returns no payloads.
-- `glues`: Owned Glue objects aligned with the corresponding query ID list; None marks a missing
-requested ID and an empty query returns no payloads.
-- `offscreens`: Owned Offscreen objects aligned with the corresponding query ID list; None marks a
-missing requested ID and an empty query returns no payloads.
-- `parameter_groups`: Owned CDI parameter groups aligned with the corresponding query ID list; None marks a
-missing requested ID and an empty query returns no payloads.
-- `attachments`: Owned package attachments aligned with the corresponding query ID list; None marks a
-missing requested ID and an empty query returns no payloads.
-- `motions`: Owned selected motions aligned with query IDs; None marks a missing ID.
-- `motion_groups`: Owned selected motion_groups aligned with query IDs; None marks a missing ID.
-- `motion_registrations`: Owned selected motion_registrations aligned with query IDs; None marks a missing ID.
-- `expressions`: Owned selected expressions aligned with query IDs; None marks a missing ID.
-- `physics`: Owned Physics singleton when requested and present; None otherwise.
-- `pose`: Owned Pose singleton when requested and present; None otherwise.
+Alias of [zipzi.modeling.queries.OwnedModelingRecords](modeling_queries.md#zipzimodelingqueriesownedmodelingrecords).

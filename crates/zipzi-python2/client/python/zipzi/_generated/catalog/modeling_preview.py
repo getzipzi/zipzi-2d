@@ -14,34 +14,194 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
                             'documentation': 'Canonical preview modeling values.',
                             'kind': 'module',
                             'signature': ''},
- 'zipzi.modeling.preview.PreviewBatch': {'alias': 'zipzi.animation.Batch'},
+ 'zipzi.modeling.preview.PreviewBatch': {'children': ('zipzi.modeling.preview.PreviewBatch.__repr__',
+                                                      'zipzi.modeling.preview.PreviewBatch.summary'),
+                                         'documentation': 'Immutable owned PreviewBatch value. Construction owns '
+                                                          'declared collections; reading fields, repr and summary '
+                                                          'performs no IO.',
+                                         'example': 'docs/recipes.py',
+                                         'fields': [('view',
+                                                     'Explicit image view when GPU observation was requested; None '
+                                                     'keeps CPU-only behavior.'),
+                                                    ('queries',
+                                                     'Owned geometric query descriptors aligned with every '
+                                                     'frame.spatial slot.'),
+                                                    ('sequence',
+                                                     'Accepted sample request ordinal shared by these ordered frames.'),
+                                                    ('frames',
+                                                     'Owned frames in requested target order, retaining duplicate and '
+                                                     'backward targets.')],
+                                         'kind': 'type',
+                                         'signature': '(*, view: ObservationView | None = None, queries: '
+                                                      'tuple[SpatialQuery, ...], sequence: int, frames: '
+                                                      'tuple[PreviewFrame, ...])'},
  'zipzi.modeling.preview.PreviewBatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.preview.PreviewBatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
- 'zipzi.modeling.preview.PreviewCommand': {'alias': 'zipzi.animation.Command'},
- 'zipzi.modeling.preview.PreviewCommandReset': {'alias': 'zipzi.animation.Reset'},
+ 'zipzi.modeling.preview.PreviewCommand': {'children': (),
+                                           'documentation': 'Typed public API entry.',
+                                           'example': 'docs/recipes.py',
+                                           'fields': [],
+                                           'kind': 'value',
+                                           'signature': ''},
+ 'zipzi.modeling.preview.PreviewCommandReset': {'children': ('zipzi.modeling.preview.PreviewCommandReset.__repr__',
+                                                             'zipzi.modeling.preview.PreviewCommandReset.summary'),
+                                                'documentation': 'Immutable owned PreviewCommandReset value. '
+                                                                 'Construction owns declared collections; reading '
+                                                                 'fields, repr and summary performs no IO.',
+                                                'example': 'docs/recipes.py',
+                                                'fields': [],
+                                                'kind': 'type',
+                                                'signature': '()'},
  'zipzi.modeling.preview.PreviewCommandReset.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.preview.PreviewCommandReset.summary': {'alias': 'zipzi.ApiDescription.summary'},
- 'zipzi.modeling.preview.PreviewCommandScheduleExpression': {'alias': 'zipzi.animation.ScheduleExpression'},
+ 'zipzi.modeling.preview.PreviewCommandScheduleExpression': {'children': ('zipzi.modeling.preview.PreviewCommandScheduleExpression.__repr__',
+                                                                          'zipzi.modeling.preview.PreviewCommandScheduleExpression.summary'),
+                                                             'documentation': 'Immutable owned '
+                                                                              'PreviewCommandScheduleExpression value. '
+                                                                              'Construction owns declared collections; '
+                                                                              'reading fields, repr and summary '
+                                                                              'performs no IO.',
+                                                             'example': 'docs/recipes.py',
+                                                             'fields': [('id', 'Native expression asset UUID.'),
+                                                                        ('time',
+                                                                         'Absolute activation time in seconds on this '
+                                                                         "Preview's clock.")],
+                                                             'kind': 'type',
+                                                             'signature': '(*, id: str, time: float)'},
  'zipzi.modeling.preview.PreviewCommandScheduleExpression.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.preview.PreviewCommandScheduleExpression.summary': {'alias': 'zipzi.ApiDescription.summary'},
- 'zipzi.modeling.preview.PreviewCommandScheduleMotion': {'alias': 'zipzi.animation.ScheduleMotion'},
+ 'zipzi.modeling.preview.PreviewCommandScheduleMotion': {'children': ('zipzi.modeling.preview.PreviewCommandScheduleMotion.__repr__',
+                                                                      'zipzi.modeling.preview.PreviewCommandScheduleMotion.summary'),
+                                                         'documentation': 'Immutable owned '
+                                                                          'PreviewCommandScheduleMotion value. '
+                                                                          'Construction owns declared collections; '
+                                                                          'reading fields, repr and summary performs '
+                                                                          'no IO.',
+                                                         'example': 'docs/recipes.py',
+                                                         'fields': [('id', "Clip UUID; uses the clip's own fades."),
+                                                                    ('time',
+                                                                     'Absolute activation time in seconds on this '
+                                                                     "Preview's clock.")],
+                                                         'kind': 'type',
+                                                         'signature': '(*, id: str, time: float)'},
  'zipzi.modeling.preview.PreviewCommandScheduleMotion.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.preview.PreviewCommandScheduleMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
- 'zipzi.modeling.preview.PreviewCommandScheduleParameter': {'alias': 'zipzi.animation.ScheduleParameter'},
+ 'zipzi.modeling.preview.PreviewCommandScheduleParameter': {'children': ('zipzi.modeling.preview.PreviewCommandScheduleParameter.__repr__',
+                                                                         'zipzi.modeling.preview.PreviewCommandScheduleParameter.summary'),
+                                                            'documentation': 'Immutable owned '
+                                                                             'PreviewCommandScheduleParameter value. '
+                                                                             'Construction owns declared collections; '
+                                                                             'reading fields, repr and summary '
+                                                                             'performs no IO.',
+                                                            'example': 'docs/recipes.py',
+                                                            'fields': [('id',
+                                                                        'Document parameter UUID for an SDK input '
+                                                                        'activation.'),
+                                                                       ('time',
+                                                                        'Absolute activation time in seconds on this '
+                                                                        "Preview's clock."),
+                                                                       ('value',
+                                                                        'Finite parameter input in the authored '
+                                                                        'parameter domain.')],
+                                                            'kind': 'type',
+                                                            'signature': '(*, id: str, time: float, value: float)'},
  'zipzi.modeling.preview.PreviewCommandScheduleParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.preview.PreviewCommandScheduleParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
- 'zipzi.modeling.preview.PreviewCommandScheduleRegistration': {'alias': 'zipzi.animation.ScheduleRegistration'},
+ 'zipzi.modeling.preview.PreviewCommandScheduleRegistration': {'children': ('zipzi.modeling.preview.PreviewCommandScheduleRegistration.__repr__',
+                                                                            'zipzi.modeling.preview.PreviewCommandScheduleRegistration.summary'),
+                                                               'documentation': 'Immutable owned '
+                                                                                'PreviewCommandScheduleRegistration '
+                                                                                'value. Construction owns declared '
+                                                                                'collections; reading fields, repr and '
+                                                                                'summary performs no IO.',
+                                                               'example': 'docs/recipes.py',
+                                                               'fields': [('id',
+                                                                           "Registration UUID; uses the registration's "
+                                                                           'SDK fade overrides.'),
+                                                                          ('time',
+                                                                           'Absolute activation time in seconds on '
+                                                                           "this Preview's clock.")],
+                                                               'kind': 'type',
+                                                               'signature': '(*, id: str, time: float)'},
  'zipzi.modeling.preview.PreviewCommandScheduleRegistration.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.preview.PreviewCommandScheduleRegistration.summary': {'alias': 'zipzi.ApiDescription.summary'},
- 'zipzi.modeling.preview.PreviewCommandSetParameter': {'alias': 'zipzi.animation.SetParameter'},
+ 'zipzi.modeling.preview.PreviewCommandSetParameter': {'children': ('zipzi.modeling.preview.PreviewCommandSetParameter.__repr__',
+                                                                    'zipzi.modeling.preview.PreviewCommandSetParameter.summary'),
+                                                       'documentation': 'Immutable owned PreviewCommandSetParameter '
+                                                                        'value. Construction owns declared '
+                                                                        'collections; reading fields, repr and summary '
+                                                                        'performs no IO.',
+                                                       'example': 'docs/recipes.py',
+                                                       'fields': [('id',
+                                                                   'Document parameter UUID; the SDK validates '
+                                                                   'existence and domain.'),
+                                                                  ('value',
+                                                                   "Finite base value in the parameter's authored "
+                                                                   'domain.')],
+                                                       'kind': 'type',
+                                                       'signature': '(*, id: str, value: float)'},
  'zipzi.modeling.preview.PreviewCommandSetParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.preview.PreviewCommandSetParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
- 'zipzi.modeling.preview.PreviewCommandSetPhysics': {'alias': 'zipzi.animation.SetPhysics'},
+ 'zipzi.modeling.preview.PreviewCommandSetPhysics': {'children': ('zipzi.modeling.preview.PreviewCommandSetPhysics.__repr__',
+                                                                  'zipzi.modeling.preview.PreviewCommandSetPhysics.summary'),
+                                                     'documentation': 'Immutable owned PreviewCommandSetPhysics value. '
+                                                                      'Construction owns declared collections; reading '
+                                                                      'fields, repr and summary performs no IO.',
+                                                     'example': 'docs/recipes.py',
+                                                     'fields': [('enabled',
+                                                                 'Enable the SDK Physics stage in this Preview only.'),
+                                                                ('stabilized_start',
+                                                                 'Use the SDK stabilized-start policy on canonical '
+                                                                 'replay.')],
+                                                     'kind': 'type',
+                                                     'signature': '(*, enabled: bool, stabilized_start: bool)'},
  'zipzi.modeling.preview.PreviewCommandSetPhysics.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.preview.PreviewCommandSetPhysics.summary': {'alias': 'zipzi.ApiDescription.summary'},
- 'zipzi.modeling.preview.PreviewFrame': {'alias': 'zipzi.animation.Frame'},
+ 'zipzi.modeling.preview.PreviewFrame': {'children': ('zipzi.modeling.preview.PreviewFrame.__repr__',
+                                                      'zipzi.modeling.preview.PreviewFrame.summary'),
+                                         'documentation': 'Immutable owned PreviewFrame value. Construction owns '
+                                                          'declared collections; reading fields, repr and summary '
+                                                          'performs no IO.',
+                                         'example': 'docs/recipes.py',
+                                         'fields': [('observation',
+                                                     'Optional GPU image from this exact animation state and '
+                                                     'once-resolved batch textures.'),
+                                                    ('spatial',
+                                                     'Geometric query results in the corresponding request order, from '
+                                                     'this exact SDK state.'),
+                                                    ('preview_id',
+                                                     'Runtime-wide Preview serial; pair with the outer Source.runtime '
+                                                     'for view identity.'),
+                                                    ('sequence',
+                                                     'Accepted sample request ordinal; pair with the outer Source and '
+                                                     'Preview identity.'),
+                                                    ('index', 'Zero-based target slot in the ordered sample request.'),
+                                                    ('motion',
+                                                     'SDK Motion/Expression/Physics/Pose result and actual sample '
+                                                     'coordinates.'),
+                                                    ('geometry',
+                                                     'Evaluated CPU geometry when requested; model_opacity remains a '
+                                                     'separate SDK channel.')],
+                                         'kind': 'type',
+                                         'signature': '(*, observation: ObservationImage | None = None, spatial: '
+                                                      'tuple[SpatialResult, ...], preview_id: int, sequence: int, '
+                                                      'index: int, motion: MotionSnapshot, geometry: DrawableFrame | '
+                                                      'None = None)'},
  'zipzi.modeling.preview.PreviewFrame.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.preview.PreviewFrame.summary': {'alias': 'zipzi.ApiDescription.summary'},
- 'zipzi.modeling.preview.PreviewState': {'alias': 'zipzi.animation.State'},
+ 'zipzi.modeling.preview.PreviewState': {'children': ('zipzi.modeling.preview.PreviewState.__repr__',
+                                                      'zipzi.modeling.preview.PreviewState.summary'),
+                                         'documentation': 'Immutable owned PreviewState value. Construction owns '
+                                                          'declared collections; reading fields, repr and summary '
+                                                          'performs no IO.',
+                                         'example': 'docs/recipes.py',
+                                         'fields': [('sequence',
+                                                     'Monotonic accepted operation ordinal, including cancelled sample '
+                                                     'requests.'),
+                                                    ('time',
+                                                     'Actual SDK clock after the last completed operation, in '
+                                                     'seconds.')],
+                                         'kind': 'type',
+                                         'signature': '(*, sequence: int, time: float)'},
  'zipzi.modeling.preview.PreviewState.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.preview.PreviewState.summary': {'alias': 'zipzi.ApiDescription.summary'}}

@@ -18,7 +18,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
                                                                       'using forward slashes; absolute paths\n'
                                                                       'and .. components are invalid.')],
                                                           'kind': 'type',
-                                                          'signature': '(path: str)'},
+                                                          'signature': '(*, path: str)'},
  'zipzi.modeling.addressing.AddressPatchAttachmentPath.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressPatchAttachmentPath.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressPatchBinding': {'children': ('zipzi.modeling.addressing.AddressPatchBinding.__repr__',
@@ -31,7 +31,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
                                                                'Typed patch for the addressed object; apply through '
                                                                'the Edit to mutate candidate state.')],
                                                    'kind': 'type',
-                                                   'signature': '(patch: BindingFieldPatch)'},
+                                                   'signature': '(*, patch: BindingFieldPatch)'},
  'zipzi.modeling.addressing.AddressPatchBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressPatchBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressPatchContent': {'children': ('zipzi.modeling.addressing.AddressPatchContent.__repr__',
@@ -43,7 +43,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
                                                    'fields': [('value',
                                                                'Scalar value in the referenced parameter domain.')],
                                                    'kind': 'type',
-                                                   'signature': '(value: SceneContentValue)'},
+                                                   'signature': '(*, value: SceneContentValue)'},
  'zipzi.modeling.addressing.AddressPatchContent.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressPatchContent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressPatchDocument': {'children': ('zipzi.modeling.addressing.AddressPatchDocument.__repr__',
@@ -55,7 +55,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
                                                     'fields': [('value',
                                                                 'Scalar value in the referenced parameter domain.')],
                                                     'kind': 'type',
-                                                    'signature': '(value: DocumentValue)'},
+                                                    'signature': '(*, value: DocumentValue)'},
  'zipzi.modeling.addressing.AddressPatchDocument.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressPatchDocument.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressPatchDrawingRange': {'children': ('zipzi.modeling.addressing.AddressPatchDrawingRange.__repr__',
@@ -69,7 +69,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
                                                                     'Inclusive lower and upper drawing-order bounds, '
                                                                     'in that order.')],
                                                         'kind': 'type',
-                                                        'signature': '(range: tuple[int, int])'},
+                                                        'signature': '(*, range: tuple[int, int])'},
  'zipzi.modeling.addressing.AddressPatchDrawingRange.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressPatchDrawingRange.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressPatchExpressionEntry': {'children': ('zipzi.modeling.addressing.AddressPatchExpressionEntry.__repr__',
@@ -84,7 +84,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
                                                                        'Replacement expression target/value/blend '
                                                                        'fields, under captured owner epochs.')],
                                                            'kind': 'type',
-                                                           'signature': '(fields: ExpressionEntryFields)'},
+                                                           'signature': '(*, fields: ExpressionEntryFields)'},
  'zipzi.modeling.addressing.AddressPatchExpressionEntry.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressPatchExpressionEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressPatchMotionRegistration': {'children': ('zipzi.modeling.addressing.AddressPatchMotionRegistration.__repr__',
@@ -99,7 +99,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
                                                                           'Complete replacement registration with its '
                                                                           'existing stable identity.')],
                                                               'kind': 'type',
-                                                              'signature': '(entry: MotionRegistration)'},
+                                                              'signature': '(*, entry: MotionRegistration)'},
  'zipzi.modeling.addressing.AddressPatchMotionRegistration.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressPatchMotionRegistration.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressPatchOrganization': {'children': ('zipzi.modeling.addressing.AddressPatchOrganization.__repr__',
@@ -114,7 +114,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
                                                                     'constructing this intent does not\n'
                                                                     'mutate or publish.')],
                                                         'kind': 'type',
-                                                        'signature': '(intent: OrganizationEdit)'},
+                                                        'signature': '(*, intent: OrganizationEdit)'},
  'zipzi.modeling.addressing.AddressPatchOrganization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressPatchOrganization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressPatchPhysics': {'children': ('zipzi.modeling.addressing.AddressPatchPhysics.__repr__',
@@ -127,7 +127,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
                                                                'Atomic property changes targeting only the captured '
                                                                'Physics entity.')],
                                                    'kind': 'type',
-                                                   'signature': '(changes: tuple[PhysicsProperty, ...])'},
+                                                   'signature': '(*, changes: tuple[PhysicsProperty, ...])'},
  'zipzi.modeling.addressing.AddressPatchPhysics.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressPatchPhysics.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressPatchPose': {'children': ('zipzi.modeling.addressing.AddressPatchPose.__repr__',
@@ -140,7 +140,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
                                                             'Replacement fields for the captured Pose '
                                                             'singleton/group/entry/link.')],
                                                 'kind': 'type',
-                                                'signature': '(fields: PoseFields)'},
+                                                'signature': '(*, fields: PoseFields)'},
  'zipzi.modeling.addressing.AddressPatchPose.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressPatchPose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressPatchReference': {'children': ('zipzi.modeling.addressing.AddressPatchReference.__repr__',
@@ -154,7 +154,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
                                                                  'must match the addressed reference\n'
                                                                  'kind.')],
                                                      'kind': 'type',
-                                                     'signature': '(fields: ReferenceFields)'},
+                                                     'signature': '(*, fields: ReferenceFields)'},
  'zipzi.modeling.addressing.AddressPatchReference.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressPatchReference.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressPatchResourceName': {'children': ('zipzi.modeling.addressing.AddressPatchResourceName.__repr__',
@@ -168,7 +168,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
                                                                     'Human-readable display name; use the stable ID '
                                                                     'for identity because names can change.')],
                                                         'kind': 'type',
-                                                        'signature': '(name: str)'},
+                                                        'signature': '(*, name: str)'},
  'zipzi.modeling.addressing.AddressPatchResourceName.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressPatchResourceName.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressPatchScene': {'children': ('zipzi.modeling.addressing.AddressPatchScene.__repr__',
@@ -183,7 +183,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
                                                              'Explicitly clear existing Glue vertex pairs when '
                                                              'changing Glue endpoints.')],
                                                  'kind': 'type',
-                                                 'signature': '(value: SceneFieldValue, clear_glue_pairs: bool)'},
+                                                 'signature': '(*, value: SceneFieldValue, clear_glue_pairs: bool)'},
  'zipzi.modeling.addressing.AddressPatchScene.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressPatchScene.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.AddressPatchSelection': {'children': ('zipzi.modeling.addressing.AddressPatchSelection.__repr__',
@@ -196,6 +196,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
                                                                  'Complete replacement ordered target-ID selection; an '
                                                                  'empty list explicitly clears it.')],
                                                      'kind': 'type',
-                                                     'signature': '(targets: tuple[str, ...])'},
+                                                     'signature': '(*, targets: tuple[str, ...])'},
  'zipzi.modeling.addressing.AddressPatchSelection.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AddressPatchSelection.summary': {'alias': 'zipzi.ApiDescription.summary'}}

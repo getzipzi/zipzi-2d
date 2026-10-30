@@ -62,7 +62,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                   'kind': 'type',
                                   'signature': '(parameter_id: str, samples: tuple[Sample, ...], base_sample_id: str, '
                                                "id: str | None = None, kind: Literal['scene_create_blend_table'] = "
-                                               "field(default='scene_create_blend_table', init=False))"},
+                                               '<factory>)'},
  'zipzi.scene.CreateBlendTable.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.CreateBlendTable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreateGlue': {'children': ('zipzi.scene.CreateGlue.__repr__', 'zipzi.scene.CreateGlue.summary'),
@@ -88,8 +88,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                         'argument or a mutable object field.')],
                             'kind': 'type',
                             'signature': '(name: str, a: str, b: str, part_id: str | None = None, id: str | None = '
-                                         "None, kind: Literal['scene_create_glue'] = "
-                                         "field(default='scene_create_glue', init=False))"},
+                                         "None, kind: Literal['scene_create_glue'] = <factory>)"},
  'zipzi.scene.CreateGlue.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.CreateGlue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreateMeshBlend': {'children': ('zipzi.scene.CreateMeshBlend.__repr__',
@@ -106,8 +105,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                              'constructor argument or a mutable object field.')],
                                  'kind': 'type',
                                  'signature': '(mesh_id: str, table_id: str, id: str | None = None, kind: '
-                                              "Literal['scene_create_mesh_blend'] = "
-                                              "field(default='scene_create_mesh_blend', init=False))"},
+                                              "Literal['scene_create_mesh_blend'] = <factory>)"},
  'zipzi.scene.CreateMeshBlend.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.CreateMeshBlend.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreateOffscreen': {'children': ('zipzi.scene.CreateOffscreen.__repr__',
@@ -127,8 +125,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                              'constructor argument or a mutable object field.')],
                                  'kind': 'type',
                                  'signature': '(name: str, part_id: str, id: str | None = None, kind: '
-                                              "Literal['scene_create_offscreen'] = "
-                                              "field(default='scene_create_offscreen', init=False))"},
+                                              "Literal['scene_create_offscreen'] = <factory>)"},
  'zipzi.scene.CreateOffscreen.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.CreateOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreateParameterGroup': {'children': ('zipzi.scene.CreateParameterGroup.__repr__',
@@ -146,8 +143,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                                   'constructor argument or a mutable object field.')],
                                       'kind': 'type',
                                       'signature': '(spec: ParameterGroupSpec, kind: '
-                                                   "Literal['scene_create_parameter_group'] = "
-                                                   "field(default='scene_create_parameter_group', init=False))"},
+                                                   "Literal['scene_create_parameter_group'] = <factory>)"},
  'zipzi.scene.CreateParameterGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.CreateParameterGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreatePart': {'children': ('zipzi.scene.CreatePart.__repr__', 'zipzi.scene.CreatePart.summary'),
@@ -161,8 +157,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                         'Fixed operation discriminator supplied by this value type; not a constructor '
                                         'argument or a mutable object field.')],
                             'kind': 'type',
-                            'signature': "(spec: PartSpec, kind: Literal['scene_create_part'] = "
-                                         "field(default='scene_create_part', init=False))"},
+                            'signature': "(spec: PartSpec, kind: Literal['scene_create_part'] = <factory>)"},
  'zipzi.scene.CreatePart.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.CreatePart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreateRotation': {'children': ('zipzi.scene.CreateRotation.__repr__',
@@ -185,8 +180,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                             'constructor argument or a mutable object field.')],
                                 'kind': 'type',
                                 'signature': '(name: str, placement: Placement, id: str | None = None, kind: '
-                                             "Literal['scene_create_rotation'] = "
-                                             "field(default='scene_create_rotation', init=False))"},
+                                             "Literal['scene_create_rotation'] = <factory>)"},
  'zipzi.scene.CreateRotation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.CreateRotation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreateWarp': {'children': ('zipzi.scene.CreateWarp.__repr__', 'zipzi.scene.CreateWarp.summary'),
@@ -210,7 +204,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                             'kind': 'type',
                             'signature': '(name: str, placement: Placement, bounds: tuple[float, float, float, float] '
                                          "| None = None, id: str | None = None, kind: Literal['scene_create_warp'] = "
-                                         "field(default='scene_create_warp', init=False))"},
+                                         '<factory>)'},
  'zipzi.scene.CreateWarp.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.CreateWarp.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.DeleteGluePairs': {'children': ('zipzi.scene.DeleteGluePairs.__repr__',
@@ -228,8 +222,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                              'constructor argument or a mutable object field.')],
                                  'kind': 'type',
                                  'signature': '(glue_id: str, ids: tuple[str, ...], kind: '
-                                              "Literal['scene_delete_glue_pairs'] = "
-                                              "field(default='scene_delete_glue_pairs', init=False))"},
+                                              "Literal['scene_delete_glue_pairs'] = <factory>)"},
  'zipzi.scene.DeleteGluePairs.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.DeleteGluePairs.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.DeleteMeshVertices': {'children': ('zipzi.scene.DeleteMeshVertices.__repr__',
@@ -250,8 +243,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                                 'constructor argument or a mutable object field.')],
                                     'kind': 'type',
                                     'signature': '(mesh_id: str, vertices: tuple[int, ...], remove_dependents: bool, '
-                                                 "kind: Literal['scene_delete_mesh_vertices'] = "
-                                                 "field(default='scene_delete_mesh_vertices', init=False))"},
+                                                 "kind: Literal['scene_delete_mesh_vertices'] = <factory>)"},
  'zipzi.scene.DeleteMeshVertices.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.DeleteMeshVertices.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.DeleteOrganization': {'children': ('zipzi.scene.DeleteOrganization.__repr__',
@@ -273,8 +265,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                                 'constructor argument or a mutable object field.')],
                                     'kind': 'type',
                                     'signature': '(ids: tuple[str, ...], dissolve: bool, kind: '
-                                                 "Literal['scene_delete_organization'] = "
-                                                 "field(default='scene_delete_organization', init=False))"},
+                                                 "Literal['scene_delete_organization'] = <factory>)"},
  'zipzi.scene.DeleteOrganization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.DeleteOrganization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.DeleteScene': {'children': ('zipzi.scene.DeleteScene.__repr__', 'zipzi.scene.DeleteScene.summary'),
@@ -293,7 +284,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                          'argument or a mutable object field.')],
                              'kind': 'type',
                              'signature': "(ids: tuple[str, ...], subtree: bool, kind: Literal['scene_delete_scene'] = "
-                                          "field(default='scene_delete_scene', init=False))"},
+                                          '<factory>)'},
  'zipzi.scene.DeleteScene.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.DeleteScene.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.DuplicateScene': {'children': ('zipzi.scene.DuplicateScene.__repr__',
@@ -322,7 +313,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                 'kind': 'type',
                                 'signature': '(ids: tuple[str, ...], subtree: bool, part_id: str | None = None, '
                                              "before: str | None = None, kind: Literal['scene_duplicate_scene'] = "
-                                             "field(default='scene_duplicate_scene', init=False))"},
+                                             '<factory>)'},
  'zipzi.scene.DuplicateScene.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.DuplicateScene.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.GluePair': {'children': ('zipzi.scene.GluePair.__repr__', 'zipzi.scene.GluePair.summary'),
@@ -363,8 +354,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                             'constructor argument or a mutable object field.')],
                                 'kind': 'type',
                                 'signature': '(glue_id: str, pair: GluePair, before: str | None = None, kind: '
-                                             "Literal['scene_insert_glue_pair'] = "
-                                             "field(default='scene_insert_glue_pair', init=False))"},
+                                             "Literal['scene_insert_glue_pair'] = <factory>)"},
  'zipzi.scene.InsertGluePair.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.InsertGluePair.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.InsertMeshVertex': {'children': ('zipzi.scene.InsertMeshVertex.__repr__',
@@ -392,8 +382,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                   'kind': 'type',
                                   'signature': '(mesh_id: str, vertex_id: int, position: tuple[float, float], uv: '
                                                'tuple[float, float], weights: tuple[VertexWeight, ...], before: int | '
-                                               "None = None, kind: Literal['scene_insert_mesh_vertex'] = "
-                                               "field(default='scene_insert_mesh_vertex', init=False))"},
+                                               "None = None, kind: Literal['scene_insert_mesh_vertex'] = <factory>)"},
  'zipzi.scene.InsertMeshVertex.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.InsertMeshVertex.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.InsertOffscreenKeyform': {'children': ('zipzi.scene.InsertOffscreenKeyform.__repr__',
@@ -415,7 +404,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                         'kind': 'type',
                                         'signature': '(offscreen_id: str, value: OffscreenForm, before: int | None = '
                                                      "None, kind: Literal['scene_insert_offscreen_keyform'] = "
-                                                     "field(default='scene_insert_offscreen_keyform', init=False))"},
+                                                     '<factory>)'},
  'zipzi.scene.InsertOffscreenKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.InsertOffscreenKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.MoveDeformation': {'children': ('zipzi.scene.MoveDeformation.__repr__',
@@ -440,8 +429,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                              'constructor argument or a mutable object field.')],
                                  'kind': 'type',
                                  'signature': '(ids: tuple[str, ...], parent_id: str | None = None, before: str | None '
-                                              "= None, kind: Literal['scene_move_deformation'] = "
-                                              "field(default='scene_move_deformation', init=False))"},
+                                              "= None, kind: Literal['scene_move_deformation'] = <factory>)"},
  'zipzi.scene.MoveDeformation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.MoveDeformation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.MoveParameterGroups': {'children': ('zipzi.scene.MoveParameterGroups.__repr__',
@@ -468,7 +456,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                      'kind': 'type',
                                      'signature': '(ids: tuple[str, ...], parent_id: str | None = None, before: str | '
                                                   "None = None, kind: Literal['scene_move_parameter_groups'] = "
-                                                  "field(default='scene_move_parameter_groups', init=False))"},
+                                                  '<factory>)'},
  'zipzi.scene.MoveParameterGroups.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.MoveParameterGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.MoveParameters': {'children': ('zipzi.scene.MoveParameters.__repr__',
@@ -492,8 +480,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                             'constructor argument or a mutable object field.')],
                                 'kind': 'type',
                                 'signature': '(ids: tuple[str, ...], group_id: str | None = None, before: str | None = '
-                                             "None, kind: Literal['scene_move_parameters'] = "
-                                             "field(default='scene_move_parameters', init=False))"},
+                                             "None, kind: Literal['scene_move_parameters'] = <factory>)"},
  'zipzi.scene.MoveParameters.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.MoveParameters.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.MoveToPart': {'children': ('zipzi.scene.MoveToPart.__repr__', 'zipzi.scene.MoveToPart.summary'),
@@ -515,8 +502,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                         'argument or a mutable object field.')],
                             'kind': 'type',
                             'signature': '(ids: tuple[str, ...], part_id: str | None = None, before: str | None = '
-                                         "None, kind: Literal['scene_move_to_part'] = "
-                                         "field(default='scene_move_to_part', init=False))"},
+                                         "None, kind: Literal['scene_move_to_part'] = <factory>)"},
  'zipzi.scene.MoveToPart.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.MoveToPart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.OffscreenForm': {'children': ('zipzi.scene.OffscreenForm.__repr__', 'zipzi.scene.OffscreenForm.summary'),
@@ -611,8 +597,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                                    'constructor argument or a mutable object field.')],
                                        'kind': 'type',
                                        'signature': '(offscreen_id: str, slot: int, value: OffscreenForm, kind: '
-                                                    "Literal['scene_patch_offscreen_keyform'] = "
-                                                    "field(default='scene_patch_offscreen_keyform', init=False))"},
+                                                    "Literal['scene_patch_offscreen_keyform'] = <factory>)"},
  'zipzi.scene.PatchOffscreenKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.PatchOffscreenKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.Placement': {'children': ('zipzi.scene.Placement.__repr__', 'zipzi.scene.Placement.summary'),
@@ -650,8 +635,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                                  'constructor argument or a mutable object field.')],
                                      'kind': 'type',
                                      'signature': '(mesh_id: str, order: tuple[int, ...], kind: '
-                                                  "Literal['scene_reorder_mesh_vertices'] = "
-                                                  "field(default='scene_reorder_mesh_vertices', init=False))"},
+                                                  "Literal['scene_reorder_mesh_vertices'] = <factory>)"},
  'zipzi.scene.ReorderMeshVertices.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.ReorderMeshVertices.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.ReparentLocal': {'children': ('zipzi.scene.ReparentLocal.__repr__', 'zipzi.scene.ReparentLocal.summary'),
@@ -675,8 +659,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                            'constructor argument or a mutable object field.')],
                                'kind': 'type',
                                'signature': '(ids: tuple[str, ...], parent_id: str | None = None, before: str | None = '
-                                            "None, kind: Literal['scene_reparent_local'] = "
-                                            "field(default='scene_reparent_local', init=False))"},
+                                            "None, kind: Literal['scene_reparent_local'] = <factory>)"},
  'zipzi.scene.ReparentLocal.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.ReparentLocal.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.ReplaceTriangles': {'children': ('zipzi.scene.ReplaceTriangles.__repr__',
@@ -694,8 +677,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                               'constructor argument or a mutable object field.')],
                                   'kind': 'type',
                                   'signature': '(mesh_id: str, triangles: tuple[tuple[int, int, int], ...], kind: '
-                                               "Literal['scene_replace_triangles'] = "
-                                               "field(default='scene_replace_triangles', init=False))"},
+                                               "Literal['scene_replace_triangles'] = <factory>)"},
  'zipzi.scene.ReplaceTriangles.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.ReplaceTriangles.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.Sample': {'children': ('zipzi.scene.Sample.__repr__', 'zipzi.scene.Sample.summary'),
@@ -729,8 +711,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                       'kind': 'type',
                                       'signature': '(mesh_id: str, binding_id: str, sample_id: str, updates: '
                                                    'tuple[VertexPatch, ...], kind: '
-                                                   "Literal['scene_set_mesh_blend_vertices'] = "
-                                                   "field(default='scene_set_mesh_blend_vertices', init=False))"},
+                                                   "Literal['scene_set_mesh_blend_vertices'] = <factory>)"},
  'zipzi.scene.SetMeshBlendVertices.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.SetMeshBlendVertices.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.SetOffscreenStaticKeyform': {'children': ('zipzi.scene.SetOffscreenStaticKeyform.__repr__',
@@ -749,9 +730,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                                        'a constructor argument or a mutable object field.')],
                                            'kind': 'type',
                                            'signature': '(offscreen_id: str, keyform: int, kind: '
-                                                        "Literal['scene_set_offscreen_static_keyform'] = "
-                                                        "field(default='scene_set_offscreen_static_keyform', "
-                                                        'init=False))'},
+                                                        "Literal['scene_set_offscreen_static_keyform'] = <factory>)"},
  'zipzi.scene.SetOffscreenStaticKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.SetOffscreenStaticKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.SetSceneEnabled': {'children': ('zipzi.scene.SetSceneEnabled.__repr__',
@@ -775,8 +754,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                              'constructor argument or a mutable object field.')],
                                  'kind': 'type',
                                  'signature': '(id: str, expected: bool, enabled: bool, kind: '
-                                              "Literal['scene_set_scene_enabled'] = "
-                                              "field(default='scene_set_scene_enabled', init=False))"},
+                                              "Literal['scene_set_scene_enabled'] = <factory>)"},
  'zipzi.scene.SetSceneEnabled.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.SetSceneEnabled.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.SetSceneLabel': {'children': ('zipzi.scene.SetSceneLabel.__repr__', 'zipzi.scene.SetSceneLabel.summary'),
@@ -800,8 +778,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                            'constructor argument or a mutable object field.')],
                                'kind': 'type',
                                'signature': '(id: str, expected: str, name: str, kind: '
-                                            "Literal['scene_set_scene_label'] = field(default='scene_set_scene_label', "
-                                            'init=False))'},
+                                            "Literal['scene_set_scene_label'] = <factory>)"},
  'zipzi.scene.SetSceneLabel.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.SetSceneLabel.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.Summary': {'children': ('zipzi.scene.Summary.__repr__', 'zipzi.scene.Summary.summary'),

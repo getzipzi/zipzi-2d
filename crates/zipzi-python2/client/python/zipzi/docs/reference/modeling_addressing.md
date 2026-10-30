@@ -12,7 +12,7 @@ Canonical addressing modeling values.
 
 ## zipzi.modeling.addressing.AttachmentCapabilities
 
-`(inspect: CapabilityState, patch: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, load_content: CapabilityState)`
+`(*, inspect: CapabilityState, patch: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, load_content: CapabilityState)`
 
 Immutable owned AttachmentCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -29,7 +29,7 @@ before invoking the operation.
 
 ## zipzi.modeling.addressing.BindingCapabilities
 
-`(inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, reorder: CapabilityState, delete: CapabilityState, repair: CapabilityState, preview: CapabilityState)`
+`(*, inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, reorder: CapabilityState, delete: CapabilityState, repair: CapabilityState, preview: CapabilityState)`
 
 Immutable owned BindingCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -57,7 +57,7 @@ Typed public API entry.
 
 ## zipzi.modeling.addressing.CapabilitiesAttachment
 
-`(value: AttachmentCapabilities)`
+`(*, value: AttachmentCapabilities)`
 
 Immutable owned CapabilitiesAttachment value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -66,7 +66,7 @@ not infer support from method presence.
 
 ## zipzi.modeling.addressing.CapabilitiesBinding
 
-`(value: BindingCapabilities)`
+`(*, value: BindingCapabilities)`
 
 Immutable owned CapabilitiesBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -75,7 +75,7 @@ not infer support from method presence.
 
 ## zipzi.modeling.addressing.CapabilitiesCollection
 
-`(value: CollectionCapabilities)`
+`(*, value: CollectionCapabilities)`
 
 Immutable owned CapabilitiesCollection value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -84,7 +84,7 @@ presence.
 
 ## zipzi.modeling.addressing.CapabilitiesContent
 
-`(value: SceneContentCapabilities)`
+`(*, value: SceneContentCapabilities)`
 
 Immutable owned CapabilitiesContent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -93,7 +93,7 @@ support from method presence.
 
 ## zipzi.modeling.addressing.CapabilitiesDocument
 
-`(value: CapabilityState)`
+`(*, value: CapabilityState)`
 
 Immutable owned CapabilitiesDocument value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -102,7 +102,7 @@ not infer support from method presence.
 
 ## zipzi.modeling.addressing.CapabilitiesExpression
 
-`(value: ExpressionCapabilities)`
+`(*, value: ExpressionCapabilities)`
 
 Immutable owned CapabilitiesExpression value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -110,7 +110,7 @@ Immutable owned CapabilitiesExpression value. Construction owns declared collect
 
 ## zipzi.modeling.addressing.CapabilitiesMotion
 
-`(value: MotionCapabilities)`
+`(*, value: MotionCapabilities)`
 
 Immutable owned CapabilitiesMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -118,7 +118,7 @@ Immutable owned CapabilitiesMotion value. Construction owns declared collections
 
 ## zipzi.modeling.addressing.CapabilitiesOrganization
 
-`(value: OrganizationCapabilities)`
+`(*, value: OrganizationCapabilities)`
 
 Immutable owned CapabilitiesOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -127,7 +127,7 @@ infer support from method presence.
 
 ## zipzi.modeling.addressing.CapabilitiesPhysics
 
-`(value: PhysicsCapabilities)`
+`(*, value: PhysicsCapabilities)`
 
 Immutable owned CapabilitiesPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -135,7 +135,7 @@ Immutable owned CapabilitiesPhysics value. Construction owns declared collection
 
 ## zipzi.modeling.addressing.CapabilitiesPose
 
-`(value: PoseCapabilities)`
+`(*, value: PoseCapabilities)`
 
 Immutable owned CapabilitiesPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -143,7 +143,7 @@ Immutable owned CapabilitiesPose value. Construction owns declared collections; 
 
 ## zipzi.modeling.addressing.CapabilitiesReferences
 
-`(value: ReferenceCapabilities)`
+`(*, value: ReferenceCapabilities)`
 
 Immutable owned CapabilitiesReferences value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -152,7 +152,7 @@ infer support from method presence.
 
 ## zipzi.modeling.addressing.CapabilitiesResource
 
-`(value: ResourceCapabilities)`
+`(*, value: ResourceCapabilities)`
 
 Immutable owned CapabilitiesResource value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -161,7 +161,7 @@ infer support from method presence.
 
 ## zipzi.modeling.addressing.CapabilitiesScene
 
-`(value: SceneCapabilities)`
+`(*, value: SceneCapabilities)`
 
 Immutable owned CapabilitiesScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -191,7 +191,7 @@ Immutable owned CapabilityStateAvailable value. Construction owns declared colle
 
 ## zipzi.modeling.addressing.CapabilityStateUnavailable
 
-`(code: str)`
+`(*, code: str)`
 
 Immutable owned CapabilityStateUnavailable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -199,7 +199,7 @@ Immutable owned CapabilityStateUnavailable value. Construction owns declared col
 
 ## zipzi.modeling.addressing.CapabilityStateUnsupported
 
-`(code: str)`
+`(*, code: str)`
 
 Immutable owned CapabilityStateUnsupported value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -207,7 +207,7 @@ Immutable owned CapabilityStateUnsupported value. Construction owns declared col
 
 ## zipzi.modeling.addressing.CollectionCapabilities
 
-`(create: CapabilityState, move_into: CapabilityState, reorder: CapabilityState)`
+`(*, create: CapabilityState, move_into: CapabilityState, reorder: CapabilityState)`
 
 Immutable owned CollectionCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -220,7 +220,7 @@ invoking the operation.
 
 ## zipzi.modeling.addressing.ExpressionCapabilities
 
-`(inspect: CapabilityState, create_entry: CapabilityState, patch: CapabilityState, move_entry: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, repair: CapabilityState, preview: CapabilityState)`
+`(*, inspect: CapabilityState, create_entry: CapabilityState, patch: CapabilityState, move_entry: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, repair: CapabilityState, preview: CapabilityState)`
 
 Immutable owned ExpressionCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -235,7 +235,7 @@ Immutable owned ExpressionCapabilities value. Construction owns declared collect
 
 ## zipzi.modeling.addressing.MotionCapabilities
 
-`(inspect: CapabilityState, patch: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, move_object: CapabilityState, preview: CapabilityState, create_child: CapabilityState, reorder: CapabilityState, repair: CapabilityState, edit_content: CapabilityState)`
+`(*, inspect: CapabilityState, patch: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, move_object: CapabilityState, preview: CapabilityState, create_child: CapabilityState, reorder: CapabilityState, repair: CapabilityState, edit_content: CapabilityState)`
 
 Immutable owned MotionCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -252,7 +252,7 @@ Immutable owned MotionCapabilities value. Construction owns declared collections
 
 ## zipzi.modeling.addressing.OrganizationCapabilities
 
-`(inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, move_object: CapabilityState, reorder: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, dissolve: CapabilityState)`
+`(*, inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, move_object: CapabilityState, reorder: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, dissolve: CapabilityState)`
 
 Immutable owned OrganizationCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -275,7 +275,7 @@ state/reason before invoking the operation.
 
 ## zipzi.modeling.addressing.PhysicsCapabilities
 
-`(inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, move_object: CapabilityState, reorder: CapabilityState, repair: CapabilityState, preview: CapabilityState)`
+`(*, inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, move_object: CapabilityState, reorder: CapabilityState, repair: CapabilityState, preview: CapabilityState)`
 
 Immutable owned PhysicsCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -291,7 +291,7 @@ Immutable owned PhysicsCapabilities value. Construction owns declared collection
 
 ## zipzi.modeling.addressing.PoseCapabilities
 
-`(inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, move_object: CapabilityState, reorder: CapabilityState, repair: CapabilityState, dissolve: CapabilityState, preview: CapabilityState)`
+`(*, inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, move_object: CapabilityState, reorder: CapabilityState, repair: CapabilityState, dissolve: CapabilityState, preview: CapabilityState)`
 
 Immutable owned PoseCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -308,7 +308,7 @@ Immutable owned PoseCapabilities value. Construction owns declared collections; 
 
 ## zipzi.modeling.addressing.ReferenceCapabilities
 
-`(inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, move_object: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, dissolve: CapabilityState)`
+`(*, inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, move_object: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, dissolve: CapabilityState)`
 
 Immutable owned ReferenceCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -336,7 +336,7 @@ Typed public API entry.
 
 ## zipzi.modeling.addressing.ReferenceCollectionCdiCombinedMembers
 
-`(set_id: str)`
+`(*, set_id: str)`
 
 Immutable owned ReferenceCollectionCdiCombinedMembers value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -365,7 +365,7 @@ Immutable owned ReferenceCollectionModelParameterGroups value. Construction owns
 
 ## zipzi.modeling.addressing.ReferenceCollectionModelParameterMembers
 
-`(group_id: str)`
+`(*, group_id: str)`
 
 Immutable owned ReferenceCollectionModelParameterMembers value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -380,7 +380,7 @@ Typed public API entry.
 
 ## zipzi.modeling.addressing.ReferenceEditCreateCdiCombinedSet
 
-`(id: str, before: str | None = None)`
+`(*, id: str, before: str | None = None)`
 
 Immutable owned ReferenceEditCreateCdiCombinedSet value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -390,7 +390,7 @@ the selected destination.
 
 ## zipzi.modeling.addressing.ReferenceEditCreateMember
 
-`(id: str, collection: ReferenceCollection, before: str | None = None)`
+`(*, id: str, collection: ReferenceCollection, before: str | None = None)`
 
 Immutable owned ReferenceEditCreateMember value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -401,7 +401,7 @@ the selected destination.
 
 ## zipzi.modeling.addressing.ReferenceEditCreateModelHitArea
 
-`(id: str, name: str, before: str | None = None)`
+`(*, id: str, name: str, before: str | None = None)`
 
 Immutable owned ReferenceEditCreateModelHitArea value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -412,7 +412,7 @@ the selected destination.
 
 ## zipzi.modeling.addressing.ReferenceEditCreateModelParameterGroup
 
-`(id: str, name: str, before: str | None = None)`
+`(*, id: str, name: str, before: str | None = None)`
 
 Immutable owned ReferenceEditCreateModelParameterGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -423,7 +423,7 @@ the selected destination.
 
 ## zipzi.modeling.addressing.ReferenceEditDelete
 
-`(ids: tuple[str, ...])`
+`(*, ids: tuple[str, ...])`
 
 Immutable owned ReferenceEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -432,7 +432,7 @@ are not identities.
 
 ## zipzi.modeling.addressing.ReferenceEditDissolve
 
-`(id: str, destination: str, before: str | None = None)`
+`(*, id: str, destination: str, before: str | None = None)`
 
 Immutable owned ReferenceEditDissolve value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -445,7 +445,7 @@ the selected destination.
 
 ## zipzi.modeling.addressing.ReferenceEditDuplicate
 
-`(ids: tuple[str, ...], destination: ReferenceCollection, before: str | None = None)`
+`(*, ids: tuple[str, ...], destination: ReferenceCollection, before: str | None = None)`
 
 Immutable owned ReferenceEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -458,7 +458,7 @@ the selected destination.
 
 ## zipzi.modeling.addressing.ReferenceEditMove
 
-`(ids: tuple[str, ...], destination: ReferenceCollection, before: str | None = None)`
+`(*, ids: tuple[str, ...], destination: ReferenceCollection, before: str | None = None)`
 
 Immutable owned ReferenceEditMove value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -471,7 +471,7 @@ the selected destination.
 
 ## zipzi.modeling.addressing.ReferenceEditPatch
 
-`(id: str, expected: ReferenceFields, fields: ReferenceFields)`
+`(*, id: str, expected: ReferenceFields, fields: ReferenceFields)`
 
 Immutable owned ReferenceEditPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -484,7 +484,7 @@ kind.
 
 ## zipzi.modeling.addressing.ReferenceEditReplaceSelection
 
-`(owner: str, field: ReferenceSelectionField, expected: tuple[str, ...], targets: tuple[str, ...])`
+`(*, owner: str, field: ReferenceSelectionField, expected: tuple[str, ...], targets: tuple[str, ...])`
 
 Immutable owned ReferenceEditReplaceSelection value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -495,7 +495,7 @@ Immutable owned ReferenceEditReplaceSelection value. Construction owns declared 
 
 ## zipzi.modeling.addressing.ReferenceEntryCdiParameterRef
 
-`(id: str, target: CdiParameterRef)`
+`(*, id: str, target: CdiParameterRef)`
 
 Immutable owned ReferenceEntryCdiParameterRef value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -505,7 +505,7 @@ remains independent of the target.
 
 ## zipzi.modeling.addressing.ReferenceEntryModelTargetRef
 
-`(id: str, target: ModelTargetRef)`
+`(*, id: str, target: ModelTargetRef)`
 
 Immutable owned ReferenceEntryModelTargetRef value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -522,7 +522,7 @@ Typed public API entry.
 
 ## zipzi.modeling.addressing.ReferenceFieldsCdiCombinedMember
 
-`(target: CdiParameterRef)`
+`(*, target: CdiParameterRef)`
 
 Immutable owned ReferenceFieldsCdiCombinedMember value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -531,7 +531,7 @@ remains independent of the target.
 
 ## zipzi.modeling.addressing.ReferenceFieldsModelHitArea
 
-`(name: str, mesh: ModelTargetRef)`
+`(*, name: str, mesh: ModelTargetRef)`
 
 Immutable owned ReferenceFieldsModelHitArea value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -540,7 +540,7 @@ Immutable owned ReferenceFieldsModelHitArea value. Construction owns declared co
 
 ## zipzi.modeling.addressing.ReferenceFieldsModelParameterGroup
 
-`(name: str)`
+`(*, name: str)`
 
 Immutable owned ReferenceFieldsModelParameterGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -548,7 +548,7 @@ Immutable owned ReferenceFieldsModelParameterGroup value. Construction owns decl
 
 ## zipzi.modeling.addressing.ReferenceFieldsModelParameterMember
 
-`(target: ModelTargetRef)`
+`(*, target: ModelTargetRef)`
 
 Immutable owned ReferenceFieldsModelParameterMember value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -564,7 +564,7 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.modeling.addressing.ResourceCapabilities
 
-`(inspect: CapabilityState, patch: CapabilityState, load_content: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, reorder: CapabilityState)`
+`(*, inspect: CapabilityState, patch: CapabilityState, load_content: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, reorder: CapabilityState)`
 
 Immutable owned ResourceCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -583,7 +583,7 @@ invoking the operation.
 
 ## zipzi.modeling.addressing.SceneCapabilities
 
-`(inspect: CapabilityState, patch: CapabilityState, move_object: CapabilityState, reparent: CapabilityState, reorder: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, dissolve: CapabilityState)`
+`(*, inspect: CapabilityState, patch: CapabilityState, move_object: CapabilityState, reparent: CapabilityState, reorder: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, dissolve: CapabilityState)`
 
 Immutable owned SceneCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -606,7 +606,7 @@ state/reason before invoking the operation.
 
 ## zipzi.modeling.addressing.SceneContentCapabilities
 
-`(inspect: CapabilityState, edit: CapabilityState, topology: CapabilityState)`
+`(*, inspect: CapabilityState, edit: CapabilityState, topology: CapabilityState)`
 
 Immutable owned SceneContentCapabilities value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

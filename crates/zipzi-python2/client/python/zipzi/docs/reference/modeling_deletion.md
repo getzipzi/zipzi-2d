@@ -40,7 +40,7 @@ Immutable owned DeletionFieldAttachmentUserData value. Construction owns declare
 
 ## zipzi.modeling.deletion.DeletionFieldBlendConstraint
 
-`(slot: int)`
+`(*, slot: int)`
 
 Immutable owned DeletionFieldBlendConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -76,7 +76,7 @@ Immutable owned DeletionFieldCdiCombinedParameter value. Construction owns decla
 
 ## zipzi.modeling.deletion.DeletionFieldCdiParameter
 
-`(slot: int)`
+`(*, slot: int)`
 
 Immutable owned DeletionFieldCdiParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -84,7 +84,7 @@ Immutable owned DeletionFieldCdiParameter value. Construction owns declared coll
 
 ## zipzi.modeling.deletion.DeletionFieldCdiPart
 
-`(slot: int)`
+`(*, slot: int)`
 
 Immutable owned DeletionFieldCdiPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -106,7 +106,7 @@ Immutable owned DeletionFieldDeformationParent value. Construction owns declared
 
 ## zipzi.modeling.deletion.DeletionFieldDrawingItem
 
-`(slot: int)`
+`(*, slot: int)`
 
 Immutable owned DeletionFieldDrawingItem value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -163,7 +163,7 @@ Immutable owned DeletionFieldMeshInvertedMask value. Construction owns declared 
 
 ## zipzi.modeling.deletion.DeletionFieldMeshMask
 
-`(slot: int)`
+`(*, slot: int)`
 
 Immutable owned DeletionFieldMeshMask value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -206,7 +206,7 @@ Immutable owned DeletionFieldMotionRegistrationContainer value. Construction own
 
 ## zipzi.modeling.deletion.DeletionFieldOffscreenMask
 
-`(slot: int)`
+`(*, slot: int)`
 
 Immutable owned DeletionFieldOffscreenMask value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -284,7 +284,7 @@ Immutable owned DeletionFieldTexture value. Construction owns declared collectio
 
 ## zipzi.modeling.deletion.DeletionIntent
 
-`(request: DeletionRequest, accepted_export_failures: tuple[OpaqueExportIssue, ...] = ())`
+`(*, request: DeletionRequest, accepted_export_failures: tuple[OpaqueExportIssue, ...] = ())`
 
 Immutable owned DeletionIntent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -300,7 +300,7 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.modeling.deletion.DeletionLock
 
-`(object: DeletionObject, source_id: str)`
+`(*, object: DeletionObject, source_id: str)`
 
 Immutable owned DeletionLock value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -309,7 +309,7 @@ Immutable owned DeletionLock value. Construction owns declared collections; read
 
 ## zipzi.modeling.deletion.DeletionObject
 
-`(kind: DeletionKind, id: str, owner_id: str | None = None)`
+`(*, kind: DeletionKind, id: str, owner_id: str | None = None)`
 
 Immutable owned DeletionObject value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -319,7 +319,7 @@ Immutable owned DeletionObject value. Construction owns declared collections; re
 
 ## zipzi.modeling.deletion.DeletionOffscreenPlacement
 
-`(part_id: str, mapping: tuple[int, ...] | None = None)`
+`(*, part_id: str, mapping: tuple[int, ...] | None = None)`
 
 Immutable owned DeletionOffscreenPlacement value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -328,7 +328,7 @@ Immutable owned DeletionOffscreenPlacement value. Construction owns declared col
 
 ## zipzi.modeling.deletion.DeletionPage
 
-`(section: DeletionSection, offset: int, total: int, rows: tuple[DeletionRow, ...], next_offset: int | None = None)`
+`(*, section: DeletionSection, offset: int, total: int, rows: tuple[DeletionRow, ...], next_offset: int | None = None)`
 
 Immutable owned DeletionPage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -340,7 +340,7 @@ Immutable owned DeletionPage value. Construction owns declared collections; read
 
 ## zipzi.modeling.deletion.DeletionPositionGuarantee
 
-`(strategy: ReparentStrategy, tolerance: float, relative_tolerance: float, measured_error: float, error_bound: float, domain_parameters: int, edit_time_seconds: float | None = None)`
+`(*, strategy: ReparentStrategy, tolerance: float, relative_tolerance: float, measured_error: float, error_bound: float, domain_parameters: int, edit_time_seconds: float | None = None)`
 
 Immutable owned DeletionPositionGuarantee value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -354,7 +354,7 @@ Immutable owned DeletionPositionGuarantee value. Construction owns declared coll
 
 ## zipzi.modeling.deletion.DeletionRelation
 
-`(owner: DeletionObject, field: DeletionField, target: DeletionObject)`
+`(*, owner: DeletionObject, field: DeletionField, target: DeletionObject)`
 
 Immutable owned DeletionRelation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -364,7 +364,7 @@ Immutable owned DeletionRelation value. Construction owns declared collections; 
 
 ## zipzi.modeling.deletion.DeletionRemoval
 
-`(object: DeletionObject, reason: DeletionReason)`
+`(*, object: DeletionObject, reason: DeletionReason)`
 
 Immutable owned DeletionRemoval value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -373,7 +373,7 @@ Immutable owned DeletionRemoval value. Construction owns declared collections; r
 
 ## zipzi.modeling.deletion.DeletionRequest
 
-`(roots: tuple[DeletionTarget, ...], reparent: _Mapping[str, ReparentStrategy] = field(default_factory=lambda: {key0: read_ReparentStrategy(v0) for key0, v0 in record({}).items()}), conversion_context: ReparentContext | None = None, offscreen_placements: _Mapping[str, DeletionOffscreenPlacement] = field(default_factory=lambda: {key0: read_DeletionOffscreenPlacement(v0) for key0, v0 in record({}).items()}), tolerance: DeletionTolerance = field(default_factory=lambda: read_DeletionTolerance({'absolute': 0.001, 'relative': 1e-06})), parameter_slices: _Mapping[str, float] = field(default_factory=lambda: {key0: number(v0) for key0, v0 in record({}).items()}), texture_replacements: _Mapping[str, str | None] = field(default_factory=lambda: {key0: None if v0 is None else string(v0) for key0, v0 in record({}).items()}), physics_node_replacements: _Mapping[str, str] = field(default_factory=lambda: {key0: string(v0) for key0, v0 in record({}).items()}), blend_base_replacements: _Mapping[str, str] = field(default_factory=lambda: {key0: string(v0) for key0, v0 in record({}).items()}))`
+`(*, roots: tuple[DeletionTarget, ...], reparent: _Mapping[str, ReparentStrategy] = <factory>, conversion_context: ReparentContext | None = None, offscreen_placements: _Mapping[str, DeletionOffscreenPlacement] = <factory>, tolerance: DeletionTolerance = <factory>, parameter_slices: _Mapping[str, float] = <factory>, texture_replacements: _Mapping[str, str | None] = <factory>, physics_node_replacements: _Mapping[str, str] = <factory>, blend_base_replacements: _Mapping[str, str] = <factory>)`
 
 Immutable owned DeletionRequest value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -403,7 +403,7 @@ Typed public API entry.
 
 ## zipzi.modeling.deletion.DeletionRowDecision
 
-`(decision: DeletionDecision)`
+`(*, decision: DeletionDecision)`
 
 Immutable owned DeletionRowDecision value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -411,7 +411,7 @@ Immutable owned DeletionRowDecision value. Construction owns declared collection
 
 ## zipzi.modeling.deletion.DeletionRowDeformation
 
-`(object: DeletionObject, parent_id: str, strategy: ReparentStrategy, guarantee: DeletionPositionGuarantee | None = None)`
+`(*, object: DeletionObject, parent_id: str, strategy: ReparentStrategy, guarantee: DeletionPositionGuarantee | None = None)`
 
 Immutable owned DeletionRowDeformation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -422,7 +422,7 @@ Immutable owned DeletionRowDeformation value. Construction owns declared collect
 
 ## zipzi.modeling.deletion.DeletionRowDomain
 
-`(object: DeletionObject, parameter_id: str, minimum: float, maximum: float, reference_value: float)`
+`(*, object: DeletionObject, parameter_id: str, minimum: float, maximum: float, reference_value: float)`
 
 Immutable owned DeletionRowDomain value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -434,7 +434,7 @@ Immutable owned DeletionRowDomain value. Construction owns declared collections;
 
 ## zipzi.modeling.deletion.DeletionRowEffect
 
-`(effect: DeletionEffect)`
+`(*, effect: DeletionEffect)`
 
 Immutable owned DeletionRowEffect value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -442,7 +442,7 @@ Immutable owned DeletionRowEffect value. Construction owns declared collections;
 
 ## zipzi.modeling.deletion.DeletionRowExport
 
-`(failure: OpaqueExportIssue, existing: bool)`
+`(*, failure: OpaqueExportIssue, existing: bool)`
 
 Immutable owned DeletionRowExport value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -451,7 +451,7 @@ Immutable owned DeletionRowExport value. Construction owns declared collections;
 
 ## zipzi.modeling.deletion.DeletionRowGuaranteeLimit
 
-`(object: DeletionObject, ancestor: DeletionObject)`
+`(*, object: DeletionObject, ancestor: DeletionObject)`
 
 Immutable owned DeletionRowGuaranteeLimit value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -460,7 +460,7 @@ Immutable owned DeletionRowGuaranteeLimit value. Construction owns declared coll
 
 ## zipzi.modeling.deletion.DeletionRowLock
 
-`(blocker: DeletionLock)`
+`(*, blocker: DeletionLock)`
 
 Immutable owned DeletionRowLock value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -468,7 +468,7 @@ Immutable owned DeletionRowLock value. Construction owns declared collections; r
 
 ## zipzi.modeling.deletion.DeletionRowOrganization
 
-`(object: DeletionObject, parent_id: str, mapping_slots: int | None = None)`
+`(*, object: DeletionObject, parent_id: str, mapping_slots: int | None = None)`
 
 Immutable owned DeletionRowOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -478,7 +478,7 @@ Immutable owned DeletionRowOrganization value. Construction owns declared collec
 
 ## zipzi.modeling.deletion.DeletionRowRelation
 
-`(relation: DeletionRelation)`
+`(*, relation: DeletionRelation)`
 
 Immutable owned DeletionRowRelation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -486,7 +486,7 @@ Immutable owned DeletionRowRelation value. Construction owns declared collection
 
 ## zipzi.modeling.deletion.DeletionRowRemoval
 
-`(removal: DeletionRemoval)`
+`(*, removal: DeletionRemoval)`
 
 Immutable owned DeletionRowRemoval value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -494,7 +494,7 @@ Immutable owned DeletionRowRemoval value. Construction owns declared collections
 
 ## zipzi.modeling.deletion.DeletionRowStructural
 
-`(blocker: DeletionStructuralBlocker)`
+`(*, blocker: DeletionStructuralBlocker)`
 
 Immutable owned DeletionRowStructural value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -509,7 +509,7 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.modeling.deletion.DeletionSectionCount
 
-`(section: DeletionSection, count: int)`
+`(*, section: DeletionSection, count: int)`
 
 Immutable owned DeletionSectionCount value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -518,7 +518,7 @@ Immutable owned DeletionSectionCount value. Construction owns declared collectio
 
 ## zipzi.modeling.deletion.DeletionStructuralBlocker
 
-`(object_id: str, code: str, reason: str)`
+`(*, object_id: str, code: str, reason: str)`
 
 Immutable owned DeletionStructuralBlocker value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -528,7 +528,7 @@ Immutable owned DeletionStructuralBlocker value. Construction owns declared coll
 
 ## zipzi.modeling.deletion.DeletionSummary
 
-`(state: DeletionReviewState, requested: int, sections: tuple[DeletionSectionCount, ...], export_analysis_complete: bool)`
+`(*, state: DeletionReviewState, requested: int, sections: tuple[DeletionSectionCount, ...], export_analysis_complete: bool)`
 
 Immutable owned DeletionSummary value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -546,7 +546,7 @@ Typed public API entry.
 
 ## zipzi.modeling.deletion.DeletionTargetAttachment
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned DeletionTargetAttachment value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -554,7 +554,7 @@ Immutable owned DeletionTargetAttachment value. Construction owns declared colle
 
 ## zipzi.modeling.deletion.DeletionTargetDeformer
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned DeletionTargetDeformer value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -562,7 +562,7 @@ Immutable owned DeletionTargetDeformer value. Construction owns declared collect
 
 ## zipzi.modeling.deletion.DeletionTargetDissolvePart
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned DeletionTargetDissolvePart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -570,7 +570,7 @@ Immutable owned DeletionTargetDissolvePart value. Construction owns declared col
 
 ## zipzi.modeling.deletion.DeletionTargetGlue
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned DeletionTargetGlue value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -578,7 +578,7 @@ Immutable owned DeletionTargetGlue value. Construction owns declared collections
 
 ## zipzi.modeling.deletion.DeletionTargetMesh
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned DeletionTargetMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -586,7 +586,7 @@ Immutable owned DeletionTargetMesh value. Construction owns declared collections
 
 ## zipzi.modeling.deletion.DeletionTargetOffscreen
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned DeletionTargetOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -594,7 +594,7 @@ Immutable owned DeletionTargetOffscreen value. Construction owns declared collec
 
 ## zipzi.modeling.deletion.DeletionTargetParameter
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned DeletionTargetParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -602,7 +602,7 @@ Immutable owned DeletionTargetParameter value. Construction owns declared collec
 
 ## zipzi.modeling.deletion.DeletionTargetParameterFolder
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned DeletionTargetParameterFolder value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -610,7 +610,7 @@ Immutable owned DeletionTargetParameterFolder value. Construction owns declared 
 
 ## zipzi.modeling.deletion.DeletionTargetParameterFolderContents
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned DeletionTargetParameterFolderContents value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -618,7 +618,7 @@ Immutable owned DeletionTargetParameterFolderContents value. Construction owns d
 
 ## zipzi.modeling.deletion.DeletionTargetPart
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned DeletionTargetPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -626,7 +626,7 @@ Immutable owned DeletionTargetPart value. Construction owns declared collections
 
 ## zipzi.modeling.deletion.DeletionTargetRecord
 
-`(value: DeletionObject)`
+`(*, value: DeletionObject)`
 
 Immutable owned DeletionTargetRecord value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -634,7 +634,7 @@ Immutable owned DeletionTargetRecord value. Construction owns declared collectio
 
 ## zipzi.modeling.deletion.DeletionTargetRemoveDeformer
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned DeletionTargetRemoveDeformer value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -642,7 +642,7 @@ Immutable owned DeletionTargetRemoveDeformer value. Construction owns declared c
 
 ## zipzi.modeling.deletion.DeletionTargetTexture
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned DeletionTargetTexture value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -650,7 +650,7 @@ Immutable owned DeletionTargetTexture value. Construction owns declared collecti
 
 ## zipzi.modeling.deletion.DeletionTolerance
 
-`(absolute: float, relative: float)`
+`(*, absolute: float, relative: float)`
 
 Immutable owned DeletionTolerance value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

@@ -19,7 +19,7 @@ Typed public API entry.
 
 ## zipzi.modeling.mesh.ManualMeshOperationConstrainEdge
 
-`(a: int, b: int)`
+`(*, a: int, b: int)`
 
 Immutable owned ManualMeshOperationConstrainEdge value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -28,7 +28,7 @@ Immutable owned ManualMeshOperationConstrainEdge value. Construction owns declar
 
 ## zipzi.modeling.mesh.ManualMeshOperationDeleteEdge
 
-`(a: int, b: int)`
+`(*, a: int, b: int)`
 
 Immutable owned ManualMeshOperationDeleteEdge value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -37,7 +37,7 @@ Immutable owned ManualMeshOperationDeleteEdge value. Construction owns declared 
 
 ## zipzi.modeling.mesh.ManualMeshOperationDeleteVertices
 
-`(ids: tuple[int, ...])`
+`(*, ids: tuple[int, ...])`
 
 Immutable owned ManualMeshOperationDeleteVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -45,7 +45,7 @@ Immutable owned ManualMeshOperationDeleteVertices value. Construction owns decla
 
 ## zipzi.modeling.mesh.ManualMeshOperationInsertConnectedVertex
 
-`(from_: int, id: int, uv: Vec2)`
+`(*, from_: int, id: int, uv: Vec2)`
 
 Immutable owned ManualMeshOperationInsertConnectedVertex value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -55,7 +55,7 @@ Immutable owned ManualMeshOperationInsertConnectedVertex value. Construction own
 
 ## zipzi.modeling.mesh.ManualMeshOperationInsertVertex
 
-`(id: int, uv: Vec2)`
+`(*, id: int, uv: Vec2)`
 
 Immutable owned ManualMeshOperationInsertVertex value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -64,7 +64,7 @@ Immutable owned ManualMeshOperationInsertVertex value. Construction owns declare
 
 ## zipzi.modeling.mesh.ManualMeshOperationMoveVertices
 
-`(targets: tuple[ManualVertexTarget, ...], motion_from: tuple[ManualVertexTarget, ...] | None = None)`
+`(*, targets: tuple[ManualVertexTarget, ...], motion_from: tuple[ManualVertexTarget, ...] | None = None)`
 
 Immutable owned ManualMeshOperationMoveVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -80,7 +80,7 @@ Immutable owned ManualMeshOperationReconnect value. Construction owns declared c
 
 ## zipzi.modeling.mesh.ManualMeshOperationReleaseConstraint
 
-`(a: int, b: int)`
+`(*, a: int, b: int)`
 
 Immutable owned ManualMeshOperationReleaseConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -89,7 +89,7 @@ Immutable owned ManualMeshOperationReleaseConstraint value. Construction owns de
 
 ## zipzi.modeling.mesh.ManualMeshTransferReport
 
-`(added: int, moved: int, removed: int, shape_count: int, reconnected: bool, glue_endpoints: bool, non_affine_parent: bool, affine_extension: bool, appearance_limits: tuple[str, ...], cost: ConversionCost)`
+`(*, added: int, moved: int, removed: int, shape_count: int, reconnected: bool, glue_endpoints: bool, non_affine_parent: bool, affine_extension: bool, appearance_limits: tuple[str, ...], cost: ConversionCost)`
 
 Immutable owned ManualMeshTransferReport value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -106,7 +106,7 @@ Immutable owned ManualMeshTransferReport value. Construction owns declared colle
 
 ## zipzi.modeling.mesh.ManualVertexTarget
 
-`(id: int, uv: Vec2)`
+`(*, id: int, uv: Vec2)`
 
 Immutable owned ManualVertexTarget value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -115,7 +115,7 @@ Immutable owned ManualVertexTarget value. Construction owns declared collections
 
 ## zipzi.modeling.mesh.Mesh
 
-`(id: str, name: str, texture_asset_id: SceneReference, vertex_ids: tuple[int, ...], base_positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], triangles: tuple[tuple[int, int, int], ...], meshing: MeshMeshing | None = None, runtime_id: str, part_id: str, deformer_id: str, appearance: Appearance, draw_order: float | None = None, blend_mode: BlendMode, enabled: bool, double_sided: bool, inverted_mask: bool, masks: tuple[str, ...], raw_blend_mode: int | None = None)`
+`(*, id: str, name: str, texture_asset_id: SceneReference, vertex_ids: tuple[int, ...], base_positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], triangles: tuple[tuple[int, int, int], ...], meshing: MeshMeshing | None = None, runtime_id: str, part_id: str, deformer_id: str, appearance: Appearance, draw_order: float | None = None, blend_mode: BlendMode, enabled: bool, double_sided: bool, inverted_mask: bool, masks: tuple[str, ...], raw_blend_mode: int | None = None)`
 
 Immutable owned Mesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -145,7 +145,7 @@ this channel unspecified for native evaluation.
 
 ## zipzi.modeling.mesh.MeshConstraint
 
-`(endpoints: tuple[int, int], kind: MeshConstraintKind)`
+`(*, endpoints: tuple[int, int], kind: MeshConstraintKind)`
 
 Immutable owned MeshConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -161,7 +161,7 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.modeling.mesh.MeshMeshing
 
-`(boundary: tuple[int, ...], constraints: tuple[MeshConstraint, ...])`
+`(*, boundary: tuple[int, ...], constraints: tuple[MeshConstraint, ...])`
 
 Immutable owned MeshMeshing value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -170,7 +170,7 @@ Immutable owned MeshMeshing value. Construction owns declared collections; readi
 
 ## zipzi.modeling.mesh.NewMeshVertex
 
-`(vertex_id: int, position: Vec2, uv: Vec2, seed: VertexSeed)`
+`(*, vertex_id: int, position: Vec2, uv: Vec2, seed: VertexSeed)`
 
 Immutable owned NewMeshVertex value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -181,7 +181,7 @@ Immutable owned NewMeshVertex value. Construction owns declared collections; rea
 
 ## zipzi.modeling.mesh.TopologyReplacement
 
-`(mesh: Mesh, binding: MeshBinding | None = None, blend_bindings: tuple[BlendShapeBinding, ...], glues: tuple[Glue, ...], vertex_mapping: _Mapping[int, int | None])`
+`(*, mesh: Mesh, binding: MeshBinding | None = None, blend_bindings: tuple[BlendShapeBinding, ...], glues: tuple[Glue, ...], vertex_mapping: _Mapping[int, int | None])`
 
 Immutable owned TopologyReplacement value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -195,7 +195,7 @@ removes it.
 
 ## zipzi.modeling.mesh.VertexContentPatch
 
-`(vertex_id: int, position: Vec2 | None = None, uv: Vec2 | None = None)`
+`(*, vertex_id: int, position: Vec2 | None = None, uv: Vec2 | None = None)`
 
 Immutable owned VertexContentPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -227,7 +227,7 @@ Immutable owned VertexSeedBase value. Construction owns declared collections; re
 
 ## zipzi.modeling.mesh.VertexSeedInterpolate
 
-`(weights: tuple[VertexWeight, ...])`
+`(*, weights: tuple[VertexWeight, ...])`
 
 Immutable owned VertexSeedInterpolate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -235,7 +235,7 @@ Immutable owned VertexSeedInterpolate value. Construction owns declared collecti
 
 ## zipzi.modeling.mesh.VertexWeight
 
-`(vertex_id: int, weight: float)`
+`(*, vertex_id: int, weight: float)`
 
 Immutable owned VertexWeight value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

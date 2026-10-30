@@ -26,7 +26,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.runtime': {'children': ('zipzi.modelin
                                                       'Whether an unfinished UI interaction was present when the '
                                                       'context was captured.')],
                                           'kind': 'type',
-                                          'signature': '(version: _Version, view_id: str, selected_ids: tuple[str, '
+                                          'signature': '(*, version: _Version, view_id: str, selected_ids: tuple[str, '
                                                        '...], workspace: str, editing_context: str, active_tool: str, '
                                                        'pending_interaction: bool)'},
  'zipzi.modeling.runtime.EditorContext.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},

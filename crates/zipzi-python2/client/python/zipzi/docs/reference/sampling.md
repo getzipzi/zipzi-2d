@@ -12,10 +12,7 @@ Explicit CPU sampling with generated owned values and exact source checks.
 
 ## zipzi.sampling.BlendMode
 
-`()`
-
-Immutable typed value. See field semantics and the linked workflow.
-
+Alias of [zipzi.modeling.scene.BlendMode](modeling_scene.md#zipzimodelingsceneblendmode).
 
 ## zipzi.sampling.Checks
 
@@ -59,10 +56,7 @@ triangle-specific.
 
 ## zipzi.sampling.DiagnosticKind
 
-`()`
-
-Immutable typed value. See field semantics and the linked workflow.
-
+Alias of [zipzi.modeling.sampling.GeometryDiagnosticKind](modeling_sampling.md#zipzimodelingsamplinggeometrydiagnostickind).
 
 ## zipzi.sampling.Drawable
 
@@ -111,21 +105,7 @@ Owned sampling Frame value; reading fields, repr and summary performs no IO.
 
 ## zipzi.sampling.MeshQuality
 
-`(mesh_id: str, visible: bool, vertex_count: int, triangles: tuple[TriangleQuality, ...], min_angle_degrees: float | None = None, max_aspect_ratio: float | None = None, max_edge_stretch: float | None = None, degenerate_triangles: int, flipped_triangles: int, texture_coverage: TextureCoverage | None = None)`
-
-Immutable owned MeshQuality value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `mesh_id`: Stable document mesh ID, in evaluated drawable order.
-- `visible`: Evaluated enabled/visible/positive-opacity state. Metrics are geometric and ignore occlusion.
-- `vertex_count`: Number of evaluated vertices.
-- `triangles`: Per-triangle metrics in evaluated Y-up model coordinates, relative to default parameters
-of the same frozen authoring source. This does not certify unsampled parameter intervals.
-- `min_angle_degrees`: Smallest angle over this mesh; None for an empty mesh.
-- `max_aspect_ratio`: Largest finite aspect ratio; collapsed triangles are counted separately.
-- `max_edge_stretch`: Largest finite symmetric edge-length ratio relative to the default pose.
-- `degenerate_triangles`: Number of exactly zero-area evaluated triangles.
-- `flipped_triangles`: Number of negative relative-area triangles. Degenerate references are excluded.
-- `texture_coverage`: Optional source-texture coverage. CPU-only sampling does not resolve image pixels.
+Alias of [zipzi.modeling.sampling.MeshQuality](modeling_sampling.md#zipzimodelingsamplingmeshquality).
 
 ## zipzi.sampling.Offscreen
 
@@ -201,31 +181,8 @@ Uses default parameters of this same frozen source as the reference, without ima
 
 ## zipzi.sampling.TextureCoverage
 
-`(alpha_threshold: int, pixel_step: int, sampled_pixels: int, covered_pixels: int, transparent_covered_pixels: int, opaque_pixels: int, uncovered_opaque_pixels: int, transparent_coverage_fraction: float | None = None, uncovered_opaque_fraction: float | None = None, out_of_bounds_triangles: int)`
-
-Immutable owned TextureCoverage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `alpha_threshold`: Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.
-- `pixel_step`: Top-down source-pixel grid spacing. Values above 1 mean an approximate report.
-- `sampled_pixels`: Number of source pixel centers tested on the regular grid.
-- `covered_pixels`: Tested pixel centers covered by the union of UV triangles inside [0,1].
-- `transparent_covered_pixels`: Covered centers whose source alpha is below the threshold.
-- `opaque_pixels`: Tested centers whose source alpha is at least the threshold.
-- `uncovered_opaque_pixels`: Opaque centers outside the UV triangle union: a contour coverage error, not a distance.
-- `transparent_coverage_fraction`: Transparent covered / covered; None if no tested center is covered.
-- `uncovered_opaque_fraction`: Uncovered opaque / opaque; None for an entirely transparent sampled image.
-- `out_of_bounds_triangles`: Number of UV triangles with vertices outside [0,1]; repeat-sampled coverage is not measured.
+Alias of [zipzi.modeling.observation.TextureCoverage](modeling_observation.md#zipzimodelingobservationtexturecoverage).
 
 ## zipzi.sampling.TriangleQuality
 
-`(triangle_index: int, area: float, min_angle_degrees: float, aspect_ratio: float | None = None, relative_area: float | None = None, edge_stretch: float | None = None)`
-
-Immutable owned TriangleQuality value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `triangle_index`: Zero-based triangle offset, in the sampled drawable's index order.
-- `area`: Unsigned evaluated area in model units squared.
-- `min_angle_degrees`: Smallest interior angle in degrees; zero for a collapsed triangle.
-- `aspect_ratio`: Longest edge divided by its altitude. None for a collapsed triangle.
-- `relative_area`: Signed area / signed default-pose area. Negative means flipped; None if the reference is degenerate.
-- `edge_stretch`: Largest symmetric edge-length ratio max(current/reference, reference/current).
-None if any reference or sampled edge is collapsed. A rigid transform gives 1.
+Alias of [zipzi.modeling.sampling.TriangleQuality](modeling_sampling.md#zipzimodelingsamplingtrianglequality).

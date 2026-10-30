@@ -40,6 +40,8 @@ def main() -> None:
         if args.install_only:
             print(python)
             return
+        subprocess.run([str(python), '-I', str(PACKAGE / 'tests/installed_contract.py'),
+            '--output', str(output / 'installed-contract.md')], cwd=tempfile.gettempdir(), check=True)
         build = subprocess.run(["cargo", "build", "--locked", "-p", "zipzi-runtime", "--features", "gpu-observation,test-support",
             "--example", "local_host_fixture", '--message-format=json-render-diagnostics'], cwd=ROOT, check=True, stdout=subprocess.PIPE, text=True, encoding='utf-8')
         host = publish_executable(output, executable(build.stdout, 'local_host_fixture', 'example'))

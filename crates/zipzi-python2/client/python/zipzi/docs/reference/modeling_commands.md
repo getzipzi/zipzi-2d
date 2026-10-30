@@ -12,7 +12,7 @@ Canonical commands modeling values.
 
 ## zipzi.modeling.commands.ConversionCost
 
-`(sample_combinations: int, payload_bytes: int, temporary_bytes: int, history_bytes: int)`
+`(*, sample_combinations: int, payload_bytes: int, temporary_bytes: int, history_bytes: int)`
 
 Immutable owned ConversionCost value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -23,7 +23,7 @@ Immutable owned ConversionCost value. Construction owns declared collections; re
 
 ## zipzi.modeling.commands.ConversionDomain
 
-`(parameter_id: str, minimum: float, maximum: float)`
+`(*, parameter_id: str, minimum: float, maximum: float)`
 
 Immutable owned ConversionDomain value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -40,7 +40,7 @@ Typed public API entry.
 
 ## zipzi.modeling.commands.ModelingCommandAttachment
 
-`(intent: AttachmentEdit)`
+`(*, intent: AttachmentEdit)`
 
 Immutable owned ModelingCommandAttachment value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -50,7 +50,7 @@ mutate or publish.
 
 ## zipzi.modeling.commands.ModelingCommandBinding
 
-`(intent: BindingAuthoringEdit)`
+`(*, intent: BindingAuthoringEdit)`
 
 Immutable owned ModelingCommandBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -60,7 +60,7 @@ mutate or publish.
 
 ## zipzi.modeling.commands.ModelingCommandContent
 
-`(intent: SceneContentEdit)`
+`(*, intent: SceneContentEdit)`
 
 Immutable owned ModelingCommandContent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -70,7 +70,7 @@ mutate or publish.
 
 ## zipzi.modeling.commands.ModelingCommandCreateAsset
 
-`(asset: ImageAsset)`
+`(*, asset: ImageAsset)`
 
 Immutable owned ModelingCommandCreateAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -80,7 +80,7 @@ not publish.
 
 ## zipzi.modeling.commands.ModelingCommandCreateBinding
 
-`(binding: MeshBinding)`
+`(*, binding: MeshBinding)`
 
 Immutable owned ModelingCommandCreateBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -90,7 +90,7 @@ does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandCreateBlendBinding
 
-`(binding: BlendShapeBinding)`
+`(*, binding: BlendShapeBinding)`
 
 Immutable owned ModelingCommandCreateBlendBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -100,7 +100,7 @@ alone does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandCreateBlendConstraint
 
-`(constraint: BlendShapeConstraint)`
+`(*, constraint: BlendShapeConstraint)`
 
 Immutable owned ModelingCommandCreateBlendConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -110,7 +110,7 @@ alone does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable
 
-`(table: BlendShapeKeyTable)`
+`(*, table: BlendShapeKeyTable)`
 
 Immutable owned ModelingCommandCreateBlendKeyTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -120,7 +120,7 @@ alone does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandCreateExpression
 
-`(expression: ExpressionAsset)`
+`(*, expression: ExpressionAsset)`
 
 Immutable owned ModelingCommandCreateExpression value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -129,7 +129,7 @@ Immutable owned ModelingCommandCreateExpression value. Construction owns declare
 
 ## zipzi.modeling.commands.ModelingCommandCreateGlue
 
-`(glue: Glue)`
+`(*, glue: Glue)`
 
 Immutable owned ModelingCommandCreateGlue value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -139,7 +139,7 @@ not publish.
 
 ## zipzi.modeling.commands.ModelingCommandCreateMesh
 
-`(mesh: Mesh)`
+`(*, mesh: Mesh)`
 
 Immutable owned ModelingCommandCreateMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -149,7 +149,7 @@ not publish.
 
 ## zipzi.modeling.commands.ModelingCommandCreateMotion
 
-`(clip: MotionClip)`
+`(*, clip: MotionClip)`
 
 Immutable owned ModelingCommandCreateMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -158,7 +158,7 @@ Immutable owned ModelingCommandCreateMotion value. Construction owns declared co
 
 ## zipzi.modeling.commands.ModelingCommandCreateOffscreen
 
-`(offscreen: Offscreen)`
+`(*, offscreen: Offscreen)`
 
 Immutable owned ModelingCommandCreateOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -168,7 +168,7 @@ does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandCreateParameter
 
-`(parameter: Parameter)`
+`(*, parameter: Parameter)`
 
 Immutable owned ModelingCommandCreateParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -178,7 +178,7 @@ does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandCreatePart
 
-`(part: Part)`
+`(*, part: Part)`
 
 Immutable owned ModelingCommandCreatePart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -188,7 +188,7 @@ not publish.
 
 ## zipzi.modeling.commands.ModelingCommandCreateSceneBinding
 
-`(binding: SceneBinding)`
+`(*, binding: SceneBinding)`
 
 Immutable owned ModelingCommandCreateSceneBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -198,7 +198,7 @@ alone does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandCreateTransform
 
-`(transform: Transform)`
+`(*, transform: Transform)`
 
 Immutable owned ModelingCommandCreateTransform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -208,7 +208,7 @@ does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandDeletion
 
-`(intent: DeletionIntent)`
+`(*, intent: DeletionIntent)`
 
 Immutable owned ModelingCommandDeletion value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -217,7 +217,7 @@ Immutable owned ModelingCommandDeletion value. Construction owns declared collec
 
 ## zipzi.modeling.commands.ModelingCommandDocument
 
-`(intent: DocumentAuthoringEdit)`
+`(*, intent: DocumentAuthoringEdit)`
 
 Immutable owned ModelingCommandDocument value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -227,7 +227,7 @@ mutate or publish.
 
 ## zipzi.modeling.commands.ModelingCommandEraseObject
 
-`(id: str)`
+`(*, id: str)`
 
 Immutable owned ModelingCommandEraseObject value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -237,7 +237,7 @@ runtime_id.
 
 ## zipzi.modeling.commands.ModelingCommandExpression
 
-`(intent: ExpressionEdit)`
+`(*, intent: ExpressionEdit)`
 
 Immutable owned ModelingCommandExpression value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -246,7 +246,7 @@ Immutable owned ModelingCommandExpression value. Construction owns declared coll
 
 ## zipzi.modeling.commands.ModelingCommandManualMesh
 
-`(mesh_id: str, expected: _Source, operation: ManualMeshOperation)`
+`(*, mesh_id: str, expected: _Source, operation: ManualMeshOperation)`
 
 Immutable owned ModelingCommandManualMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -257,7 +257,7 @@ Immutable owned ModelingCommandManualMesh value. Construction owns declared coll
 
 ## zipzi.modeling.commands.ModelingCommandMotion
 
-`(intent: MotionEdit)`
+`(*, intent: MotionEdit)`
 
 Immutable owned ModelingCommandMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -266,7 +266,7 @@ Immutable owned ModelingCommandMotion value. Construction owns declared collecti
 
 ## zipzi.modeling.commands.ModelingCommandOrganization
 
-`(intent: OrganizationEdit)`
+`(*, intent: OrganizationEdit)`
 
 Immutable owned ModelingCommandOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -276,7 +276,7 @@ mutate or publish.
 
 ## zipzi.modeling.commands.ModelingCommandPhysics
 
-`(intent: PhysicsEdit)`
+`(*, intent: PhysicsEdit)`
 
 Immutable owned ModelingCommandPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -285,7 +285,7 @@ Immutable owned ModelingCommandPhysics value. Construction owns declared collect
 
 ## zipzi.modeling.commands.ModelingCommandPose
 
-`(intent: PoseEdit)`
+`(*, intent: PoseEdit)`
 
 Immutable owned ModelingCommandPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -294,7 +294,7 @@ Immutable owned ModelingCommandPose value. Construction owns declared collection
 
 ## zipzi.modeling.commands.ModelingCommandReferences
 
-`(intent: ReferenceEdit)`
+`(*, intent: ReferenceEdit)`
 
 Immutable owned ModelingCommandReferences value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -304,7 +304,7 @@ mutate or publish.
 
 ## zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid
 
-`(id: str, columns: int, rows: int)`
+`(*, id: str, columns: int, rows: int)`
 
 Immutable owned ModelingCommandRemeshRectangleGrid value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -318,7 +318,7 @@ satisfy native vertex/working-set limits.
 
 ## zipzi.modeling.commands.ModelingCommandRenameMesh
 
-`(id: str, name: str)`
+`(*, id: str, name: str)`
 
 Immutable owned ModelingCommandRenameMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -329,7 +329,7 @@ runtime_id.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceAsset
 
-`(asset: ImageAsset)`
+`(*, asset: ImageAsset)`
 
 Immutable owned ModelingCommandReplaceAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -339,7 +339,7 @@ identity; this DTO alone does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceBinding
 
-`(binding: MeshBinding)`
+`(*, binding: MeshBinding)`
 
 Immutable owned ModelingCommandReplaceBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -349,7 +349,7 @@ identity; this DTO alone does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceBlendBinding
 
-`(binding: BlendShapeBinding)`
+`(*, binding: BlendShapeBinding)`
 
 Immutable owned ModelingCommandReplaceBlendBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -359,7 +359,7 @@ stable identity; this DTO alone does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint
 
-`(constraint: BlendShapeConstraint)`
+`(*, constraint: BlendShapeConstraint)`
 
 Immutable owned ModelingCommandReplaceBlendConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -369,7 +369,7 @@ stable identity; this DTO alone does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable
 
-`(table: BlendShapeKeyTable)`
+`(*, table: BlendShapeKeyTable)`
 
 Immutable owned ModelingCommandReplaceBlendKeyTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -379,7 +379,7 @@ stable identity; this DTO alone does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups
 
-`(groups: tuple[DrawOrderGroup, ...])`
+`(*, groups: tuple[DrawOrderGroup, ...])`
 
 Immutable owned ModelingCommandReplaceDrawOrderGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -389,7 +389,7 @@ and ranges. This is a required list, not an optional grouping override.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceEditorState
 
-`(state: EditorState)`
+`(*, state: EditorState)`
 
 Immutable owned ModelingCommandReplaceEditorState value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -398,7 +398,7 @@ Immutable owned ModelingCommandReplaceEditorState value. Construction owns decla
 
 ## zipzi.modeling.commands.ModelingCommandReplaceExpression
 
-`(expression: ExpressionAsset)`
+`(*, expression: ExpressionAsset)`
 
 Immutable owned ModelingCommandReplaceExpression value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -407,7 +407,7 @@ Immutable owned ModelingCommandReplaceExpression value. Construction owns declar
 
 ## zipzi.modeling.commands.ModelingCommandReplaceGlue
 
-`(glue: Glue)`
+`(*, glue: Glue)`
 
 Immutable owned ModelingCommandReplaceGlue value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -417,7 +417,7 @@ identity; this DTO alone does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder
 
-`(order: HierarchyOrder)`
+`(*, order: HierarchyOrder)`
 
 Immutable owned ModelingCommandReplaceHierarchyOrder value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -426,7 +426,7 @@ Immutable owned ModelingCommandReplaceHierarchyOrder value. Construction owns de
 
 ## zipzi.modeling.commands.ModelingCommandReplaceMesh
 
-`(mesh: Mesh)`
+`(*, mesh: Mesh)`
 
 Immutable owned ModelingCommandReplaceMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -436,7 +436,7 @@ identity; this DTO alone does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceModelSetup
 
-`(setup: ModelSetup)`
+`(*, setup: ModelSetup)`
 
 Immutable owned ModelingCommandReplaceModelSetup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -445,7 +445,7 @@ Immutable owned ModelingCommandReplaceModelSetup value. Construction owns declar
 
 ## zipzi.modeling.commands.ModelingCommandReplaceMotion
 
-`(clip: MotionClip)`
+`(*, clip: MotionClip)`
 
 Immutable owned ModelingCommandReplaceMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -454,7 +454,7 @@ Immutable owned ModelingCommandReplaceMotion value. Construction owns declared c
 
 ## zipzi.modeling.commands.ModelingCommandReplaceOffscreen
 
-`(offscreen: Offscreen)`
+`(*, offscreen: Offscreen)`
 
 Immutable owned ModelingCommandReplaceOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -464,7 +464,7 @@ identity; this DTO alone does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceParameter
 
-`(parameter: Parameter)`
+`(*, parameter: Parameter)`
 
 Immutable owned ModelingCommandReplaceParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -474,7 +474,7 @@ identity; this DTO alone does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandReplacePart
 
-`(part: Part)`
+`(*, part: Part)`
 
 Immutable owned ModelingCommandReplacePart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -484,7 +484,7 @@ identity; this DTO alone does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceSceneBinding
 
-`(binding: SceneBinding)`
+`(*, binding: SceneBinding)`
 
 Immutable owned ModelingCommandReplaceSceneBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -494,7 +494,7 @@ stable identity; this DTO alone does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceTopology
 
-`(source: GeometrySnapshot, replacement: TopologyReplacement)`
+`(*, source: GeometrySnapshot, replacement: TopologyReplacement)`
 
 Immutable owned ModelingCommandReplaceTopology value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -506,7 +506,7 @@ remeshing plan.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceTransform
 
-`(transform: Transform)`
+`(*, transform: Transform)`
 
 Immutable owned ModelingCommandReplaceTransform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -516,7 +516,7 @@ identity; this DTO alone does not publish.
 
 ## zipzi.modeling.commands.ModelingCommandResource
 
-`(intent: ResourceEdit)`
+`(*, intent: ResourceEdit)`
 
 Immutable owned ModelingCommandResource value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -526,7 +526,7 @@ mutate or publish.
 
 ## zipzi.modeling.commands.ModelingCommandScene
 
-`(intent: SceneEdit)`
+`(*, intent: SceneEdit)`
 
 Immutable owned ModelingCommandScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -536,7 +536,7 @@ mutate or publish.
 
 ## zipzi.modeling.commands.ModelingCommandSetMeshKeyform
 
-`(id: str, keyform: MeshKeyform)`
+`(*, id: str, keyform: MeshKeyform)`
 
 Immutable owned ModelingCommandSetMeshKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -547,7 +547,7 @@ runtime_id.
 
 ## zipzi.modeling.commands.ModelingCommandSetPhysics
 
-`(physics: PhysicsAsset)`
+`(*, physics: PhysicsAsset)`
 
 Immutable owned ModelingCommandSetPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -556,7 +556,7 @@ Immutable owned ModelingCommandSetPhysics value. Construction owns declared coll
 
 ## zipzi.modeling.commands.ModelingCommandSetPose
 
-`(pose: PoseAsset)`
+`(*, pose: PoseAsset)`
 
 Immutable owned ModelingCommandSetPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -565,7 +565,7 @@ Immutable owned ModelingCommandSetPose value. Construction owns declared collect
 
 ## zipzi.modeling.commands.ModelingCommandSetSceneKeyform
 
-`(id: str, keyform: SceneKeyform)`
+`(*, id: str, keyform: SceneKeyform)`
 
 Immutable owned ModelingCommandSetSceneKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -576,7 +576,7 @@ runtime_id.
 
 ## zipzi.modeling.commands.ModelingCommandUpdatePositions
 
-`(id: str, vertex_ids: tuple[int, ...], positions: tuple[Vec2, ...])`
+`(*, id: str, vertex_ids: tuple[int, ...], positions: tuple[Vec2, ...])`
 
 Immutable owned ModelingCommandUpdatePositions value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

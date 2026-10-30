@@ -56,7 +56,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                            'known-field edits\n'
                                                            'cannot silently change the meaning of those fields.')],
                                                'kind': 'type',
-                                               'signature': '(id: str, name: str, file_type: str | None = None, '
+                                               'signature': '(*, id: str, name: str, file_type: str | None = None, '
                                                             'fade_in: float | None = None, fade_out: float | None = '
                                                             'None, entries: tuple[ExpressionEntry, ...], extensions: '
                                                             '_Mapping[str, ExtensionValue], opaque_source_ids: '
@@ -90,7 +90,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                                 'Human-readable display or registration name; distinct '
                                                                 'from persistent object identity.')],
                                                     'kind': 'type',
-                                                    'signature': '(id: str, name: str)'},
+                                                    'signature': '(*, id: str, name: str)'},
  'zipzi.modeling.expression.ExpressionEditCreate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionEditCreate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditCreateEntry': {'children': ('zipzi.modeling.expression.ExpressionEditCreateEntry.__repr__',
@@ -110,7 +110,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                                      'Optional stable sibling ID before which to '
                                                                      'insert; None appends.')],
                                                          'kind': 'type',
-                                                         'signature': '(owner: str, id: str, before: str | None = '
+                                                         'signature': '(*, owner: str, id: str, before: str | None = '
                                                                       'None)'},
  'zipzi.modeling.expression.ExpressionEditCreateEntry.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionEditCreateEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -124,7 +124,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                                 'Stable identity in the owning authoring domain; '
                                                                 'exported metadata IDs retain their source text.')],
                                                     'kind': 'type',
-                                                    'signature': '(id: str)'},
+                                                    'signature': '(*, id: str)'},
  'zipzi.modeling.expression.ExpressionEditDelete.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionEditDelete.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditDeleteEntries': {'children': ('zipzi.modeling.expression.ExpressionEditDeleteEntries.__repr__',
@@ -139,7 +139,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                                        'Ordered stable IDs selected by this operation; '
                                                                        'names and row numbers are not identities.')],
                                                            'kind': 'type',
-                                                           'signature': '(ids: tuple[str, ...])'},
+                                                           'signature': '(*, ids: tuple[str, ...])'},
  'zipzi.modeling.expression.ExpressionEditDeleteEntries.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionEditDeleteEntries.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditDuplicate': {'children': ('zipzi.modeling.expression.ExpressionEditDuplicate.__repr__',
@@ -162,7 +162,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                                    'New stable entry IDs paired with the source '
                                                                    'expression entries.')],
                                                        'kind': 'type',
-                                                       'signature': '(source: str, id: str, name: str, entry_ids: '
+                                                       'signature': '(*, source: str, id: str, name: str, entry_ids: '
                                                                     'tuple[str, ...])'},
  'zipzi.modeling.expression.ExpressionEditDuplicate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionEditDuplicate.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -188,9 +188,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                                           'Optional stable sibling ID before which to '
                                                                           'insert; None appends.')],
                                                               'kind': 'type',
-                                                              'signature': '(ids: tuple[str, ...], new_ids: tuple[str, '
-                                                                           '...], destination: str, before: str | None '
-                                                                           '= None)'},
+                                                              'signature': '(*, ids: tuple[str, ...], new_ids: '
+                                                                           'tuple[str, ...], destination: str, before: '
+                                                                           'str | None = None)'},
  'zipzi.modeling.expression.ExpressionEditDuplicateEntries.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionEditDuplicateEntries.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditMoveEntries': {'children': ('zipzi.modeling.expression.ExpressionEditMoveEntries.__repr__',
@@ -210,7 +210,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                                      'Optional stable sibling ID before which to '
                                                                      'insert; None appends.')],
                                                          'kind': 'type',
-                                                         'signature': '(ids: tuple[str, ...], destination: str, '
+                                                         'signature': '(*, ids: tuple[str, ...], destination: str, '
                                                                       'before: str | None = None)'},
  'zipzi.modeling.expression.ExpressionEditMoveEntries.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionEditMoveEntries.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -231,7 +231,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                                     'Typed replacement fields for the addressed '
                                                                     'object, applied atomically.')],
                                                         'kind': 'type',
-                                                        'signature': '(id: str, expected: ExpressionEntryFields, '
+                                                        'signature': '(*, id: str, expected: ExpressionEntryFields, '
                                                                      'fields: ExpressionEntryFields)'},
  'zipzi.modeling.expression.ExpressionEditPatchEntry.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionEditPatchEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -245,7 +245,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                                  'Ordered stable IDs selected by this operation; names '
                                                                  'and row numbers are not identities.')],
                                                      'kind': 'type',
-                                                     'signature': '(ids: tuple[str, ...])'},
+                                                     'signature': '(*, ids: tuple[str, ...])'},
  'zipzi.modeling.expression.ExpressionEditReorder.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionEditReorder.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEntry': {'children': ('zipzi.modeling.expression.ExpressionEntry.__repr__',
@@ -268,9 +268,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                            'Owned opaque imported fields preserved for format '
                                                            'roundtrips; declared fields cannot be shadowed.')],
                                                'kind': 'type',
-                                               'signature': '(id: str, target: ExpressionTarget, value: float, blend: '
-                                                            'ExpressionBlend | None = None, extensions: _Mapping[str, '
-                                                            'ExtensionValue])'},
+                                               'signature': '(*, id: str, target: ExpressionTarget, value: float, '
+                                                            'blend: ExpressionBlend | None = None, extensions: '
+                                                            '_Mapping[str, ExtensionValue])'},
  'zipzi.modeling.expression.ExpressionEntry.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEntryFields': {'children': ('zipzi.modeling.expression.ExpressionEntryFields.__repr__',
@@ -289,7 +289,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                                  'Optional expression blend mode; None uses the native '
                                                                  'Add default.')],
                                                      'kind': 'type',
-                                                     'signature': '(target: ExpressionTarget, value: float, blend: '
+                                                     'signature': '(*, target: ExpressionTarget, value: float, blend: '
                                                                   'ExpressionBlend | None = None)'},
  'zipzi.modeling.expression.ExpressionEntryFields.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionEntryFields.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -310,7 +310,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                                     'Stable document parameter UUID; evaluation uses '
                                                                     'its declared range and default.')],
                                                         'kind': 'type',
-                                                        'signature': '(parameter_id: str)'},
+                                                        'signature': '(*, parameter_id: str)'},
  'zipzi.modeling.expression.ExpressionTargetResolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionTargetResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionTargetUnresolved': {'children': ('zipzi.modeling.expression.ExpressionTargetUnresolved.__repr__',
@@ -324,7 +324,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                                       'Imported/exported runtime label, distinct from '
                                                                       'the document object UUID.')],
                                                           'kind': 'type',
-                                                          'signature': '(runtime_id: str)'},
+                                                          'signature': '(*, runtime_id: str)'},
  'zipzi.modeling.expression.ExpressionTargetUnresolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionTargetUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionTargetUnspecified': {'children': ('zipzi.modeling.expression.ExpressionTargetUnspecified.__repr__',

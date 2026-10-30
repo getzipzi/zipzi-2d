@@ -88,7 +88,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                   'Ordered stable mesh IDs used as clipping-mask sources, not texture '
                                                   'IDs.')],
                                       'kind': 'type',
-                                      'signature': '(id: str, runtime_id: str, part_id: str, raw_blend_mode: int | '
+                                      'signature': '(*, id: str, runtime_id: str, part_id: str, raw_blend_mode: int | '
                                                    'None = None, texture_asset_id: str, texture_slot: int, renderable: '
                                                    'bool = True, positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], '
                                                    'indices: tuple[int, ...], draw_order: int, render_order: int, '
@@ -121,10 +121,11 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                       ('deformers',
                                                        'Editor controls evaluated in the same pose as the drawables.')],
                                            'kind': 'type',
-                                           'signature': '(source_revision: int, parameters: tuple[EvaluatedParameter, '
-                                                        '...], drawables: tuple[Drawable, ...], offscreens: '
-                                                        'tuple[OffscreenFrame, ...], render_plan: tuple[RenderCommand, '
-                                                        '...], deformers: tuple[EvaluatedDeformer, ...])'},
+                                           'signature': '(*, source_revision: int, parameters: '
+                                                        'tuple[EvaluatedParameter, ...], drawables: tuple[Drawable, '
+                                                        '...], offscreens: tuple[OffscreenFrame, ...], render_plan: '
+                                                        'tuple[RenderCommand, ...], deformers: '
+                                                        'tuple[EvaluatedDeformer, ...])'},
  'zipzi.modeling.sampling.DrawableFrame.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.DrawableFrame.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.EvaluatedDeformer': {'children': ('zipzi.modeling.sampling.EvaluatedDeformer.__repr__',
@@ -156,7 +157,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                            'rotation\n'
                                                            'coefficients at large model origins.')],
                                                'kind': 'type',
-                                               'signature': '(id: str, enabled: bool, points: tuple[Vec2, ...], '
+                                               'signature': '(*, id: str, enabled: bool, points: tuple[Vec2, ...], '
                                                             'rotation_axis: Vec2 | None = None, rotation_basis: '
                                                             'tuple[Vec2, Vec2] | None = None)'},
  'zipzi.modeling.sampling.EvaluatedDeformer.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -180,7 +181,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                             'Whether the effective parameter value differs due to '
                                                             'range clamping.')],
                                                 'kind': 'type',
-                                                'signature': '(id: str, requested: float, value: float, clamped: '
+                                                'signature': '(*, id: str, requested: float, value: float, clamped: '
                                                              'bool)'},
  'zipzi.modeling.sampling.EvaluatedParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.EvaluatedParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -198,7 +199,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                             'means the diagnostic is not\n'
                                                             'triangle-specific.')],
                                                 'kind': 'type',
-                                                'signature': '(kind: GeometryDiagnosticKind, mesh_id: str, '
+                                                'signature': '(*, kind: GeometryDiagnosticKind, mesh_id: str, '
                                                              'triangle_index: int | None = None)'},
  'zipzi.modeling.sampling.GeometryDiagnostic.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.GeometryDiagnostic.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -239,10 +240,11 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                           'Coordinate space of positions; local-space variants carry '
                                                           'the controlling transform ID.')],
                                               'kind': 'type',
-                                              'signature': '(version: _Version, mesh_id: str, vertex_ids: tuple[int, '
-                                                           '...], positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], '
-                                                           'triangles: tuple[tuple[int, int, int], ...], meshing: '
-                                                           'MeshMeshing | None = None, space: GeometrySpace)'},
+                                              'signature': '(*, version: _Version, mesh_id: str, vertex_ids: '
+                                                           'tuple[int, ...], positions: tuple[Vec2, ...], uvs: '
+                                                           'tuple[Vec2, ...], triangles: tuple[tuple[int, int, int], '
+                                                           '...], meshing: MeshMeshing | None = None, space: '
+                                                           'GeometrySpace)'},
  'zipzi.modeling.sampling.GeometrySnapshot.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.GeometrySnapshot.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.GeometrySpace': {'children': (),
@@ -273,7 +275,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                                     'Stable rotation-transform ID defining the local '
                                                                     'position space.')],
                                                         'kind': 'type',
-                                                        'signature': '(value: str)'},
+                                                        'signature': '(*, value: str)'},
  'zipzi.modeling.sampling.GeometrySpaceRotationLocal.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.GeometrySpaceRotationLocal.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.GeometrySpaceWarpParameter': {'children': ('zipzi.modeling.sampling.GeometrySpaceWarpParameter.__repr__',
@@ -287,7 +289,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                                     'Stable warp-transform ID defining the '
                                                                     'parameter/lattice position space.')],
                                                         'kind': 'type',
-                                                        'signature': '(value: str)'},
+                                                        'signature': '(*, value: str)'},
  'zipzi.modeling.sampling.GeometrySpaceWarpParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.GeometrySpaceWarpParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.MeshQuality': {'children': ('zipzi.modeling.sampling.MeshQuality.__repr__',
@@ -324,7 +326,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                      'Optional source-texture coverage. CPU-only sampling does not '
                                                      'resolve image pixels.')],
                                          'kind': 'type',
-                                         'signature': '(mesh_id: str, visible: bool, vertex_count: int, triangles: '
+                                         'signature': '(*, mesh_id: str, visible: bool, vertex_count: int, triangles: '
                                                       'tuple[TriangleQuality, ...], min_angle_degrees: float | None = '
                                                       'None, max_aspect_ratio: float | None = None, max_edge_stretch: '
                                                       'float | None = None, degenerate_triangles: int, '
@@ -357,9 +359,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                          'Uses default parameters of this same frozen source as the '
                                                          'reference, without image coverage.')],
                                              'kind': 'type',
-                                             'signature': '(version: _Version, parameters: tuple[_Mapping[str, float], '
-                                                          '...], frames: tuple[DrawableFrame, ...], diagnostics: '
-                                                          'tuple[GeometryDiagnostic, ...], quality: '
+                                             'signature': '(*, version: _Version, parameters: tuple[_Mapping[str, '
+                                                          'float], ...], frames: tuple[DrawableFrame, ...], '
+                                                          'diagnostics: tuple[GeometryDiagnostic, ...], quality: '
                                                           'tuple[tuple[MeshQuality, ...], ...])'},
  'zipzi.modeling.sampling.ModelingSamples.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.ModelingSamples.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -407,7 +409,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                        ('screen_color',
                                                         'Evaluated RGBA screen factors, channel order R, G, B, A.')],
                                             'kind': 'type',
-                                            'signature': '(renderable: bool = True, id: str, runtime_id: str, '
+                                            'signature': '(*, renderable: bool = True, id: str, runtime_id: str, '
                                                          'owner_part_id: str, parent_offscreen_id: str | None = None, '
                                                          'render_order: int, opacity: float, enabled: bool, '
                                                          'blend_mode: int, flags: int, masks: tuple[str, ...], '
@@ -432,7 +434,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                                      'Stable Offscreen object ID; not a texture asset '
                                                                      'ID.')],
                                                          'kind': 'type',
-                                                         'signature': '(offscreen_id: str)'},
+                                                         'signature': '(*, offscreen_id: str)'},
  'zipzi.modeling.sampling.RenderCommandBeginOffscreen.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.RenderCommandBeginOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.RenderCommandDrawMesh': {'children': ('zipzi.modeling.sampling.RenderCommandDrawMesh.__repr__',
@@ -444,7 +446,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                    'fields': [('mesh_id',
                                                                'Stable ID of the target mesh in this document.')],
                                                    'kind': 'type',
-                                                   'signature': '(mesh_id: str)'},
+                                                   'signature': '(*, mesh_id: str)'},
  'zipzi.modeling.sampling.RenderCommandDrawMesh.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.RenderCommandDrawMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.RenderCommandEndOffscreen': {'children': ('zipzi.modeling.sampling.RenderCommandEndOffscreen.__repr__',
@@ -458,7 +460,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                                    'Stable Offscreen object ID; not a texture asset '
                                                                    'ID.')],
                                                        'kind': 'type',
-                                                       'signature': '(offscreen_id: str)'},
+                                                       'signature': '(*, offscreen_id: str)'},
  'zipzi.modeling.sampling.RenderCommandEndOffscreen.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.RenderCommandEndOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.TriangleQuality': {'children': ('zipzi.modeling.sampling.TriangleQuality.__repr__',
@@ -486,7 +488,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                          'None if any reference or sampled edge is collapsed. A rigid '
                                                          'transform gives 1.')],
                                              'kind': 'type',
-                                             'signature': '(triangle_index: int, area: float, min_angle_degrees: '
+                                             'signature': '(*, triangle_index: int, area: float, min_angle_degrees: '
                                                           'float, aspect_ratio: float | None = None, relative_area: '
                                                           'float | None = None, edge_stretch: float | None = None)'},
  'zipzi.modeling.sampling.TriangleQuality.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},

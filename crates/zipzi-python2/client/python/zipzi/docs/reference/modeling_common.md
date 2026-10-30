@@ -14,7 +14,7 @@ Canonical common modeling values.
 
 `(x: float, y: float)`
 
-Immutable typed value. See field semantics and the linked workflow.
+Immutable owned PreciseVec2 value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 - `x`: Horizontal coordinate; its space and units are determined by the containing geometry or
 pose.
@@ -24,7 +24,7 @@ pose.
 
 `(x: float, y: float)`
 
-Immutable typed value. See field semantics and the linked workflow.
+Immutable owned Vec2 value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
 - `x`: Horizontal coordinate; its space and units are determined by the containing geometry or
 pose.

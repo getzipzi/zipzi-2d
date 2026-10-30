@@ -12,7 +12,7 @@ Canonical pose modeling values.
 
 ## zipzi.modeling.pose.PoseAsset
 
-`(id: str, file_type: str | None = None, fade_in: float | None = None, groups: tuple[PoseGroup, ...], extensions: _Mapping[str, ExtensionValue], opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
+`(*, id: str, file_type: str | None = None, fade_in: float | None = None, groups: tuple[PoseGroup, ...], extensions: _Mapping[str, ExtensionValue], opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
 
 Immutable owned PoseAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -33,7 +33,7 @@ Typed public API entry.
 
 ## zipzi.modeling.pose.PoseCollectionEntries
 
-`(group_id: str)`
+`(*, group_id: str)`
 
 Immutable owned PoseCollectionEntries value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -48,7 +48,7 @@ Immutable owned PoseCollectionGroups value. Construction owns declared collectio
 
 ## zipzi.modeling.pose.PoseCollectionLinks
 
-`(entry_id: str)`
+`(*, entry_id: str)`
 
 Immutable owned PoseCollectionLinks value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -63,7 +63,7 @@ Typed public API entry.
 
 ## zipzi.modeling.pose.PoseEditCreate
 
-`(id: str)`
+`(*, id: str)`
 
 Immutable owned PoseEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -71,7 +71,7 @@ Immutable owned PoseEditCreate value. Construction owns declared collections; re
 
 ## zipzi.modeling.pose.PoseEditCreateEntry
 
-`(group_id: str, id: str, before: str | None = None)`
+`(*, group_id: str, id: str, before: str | None = None)`
 
 Immutable owned PoseEditCreateEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -81,7 +81,7 @@ Immutable owned PoseEditCreateEntry value. Construction owns declared collection
 
 ## zipzi.modeling.pose.PoseEditCreateGroup
 
-`(pose_id: str, id: str, name: str, before: str | None = None)`
+`(*, pose_id: str, id: str, name: str, before: str | None = None)`
 
 Immutable owned PoseEditCreateGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -92,7 +92,7 @@ Immutable owned PoseEditCreateGroup value. Construction owns declared collection
 
 ## zipzi.modeling.pose.PoseEditCreateLink
 
-`(entry_id: str, id: str, before: str | None = None)`
+`(*, entry_id: str, id: str, before: str | None = None)`
 
 Immutable owned PoseEditCreateLink value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -102,7 +102,7 @@ Immutable owned PoseEditCreateLink value. Construction owns declared collections
 
 ## zipzi.modeling.pose.PoseEditDelete
 
-`(ids: tuple[str, ...])`
+`(*, ids: tuple[str, ...])`
 
 Immutable owned PoseEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -110,7 +110,7 @@ Immutable owned PoseEditDelete value. Construction owns declared collections; re
 
 ## zipzi.modeling.pose.PoseEditDissolveGroup
 
-`(id: str, destination: str, before: str | None = None)`
+`(*, id: str, destination: str, before: str | None = None)`
 
 Immutable owned PoseEditDissolveGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -120,7 +120,7 @@ Immutable owned PoseEditDissolveGroup value. Construction owns declared collecti
 
 ## zipzi.modeling.pose.PoseEditDuplicate
 
-`(ids: tuple[str, ...], destination: PoseCollection, before: str | None = None)`
+`(*, ids: tuple[str, ...], destination: PoseCollection, before: str | None = None)`
 
 Immutable owned PoseEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -130,7 +130,7 @@ Immutable owned PoseEditDuplicate value. Construction owns declared collections;
 
 ## zipzi.modeling.pose.PoseEditMove
 
-`(ids: tuple[str, ...], destination: PoseCollection, before: str | None = None)`
+`(*, ids: tuple[str, ...], destination: PoseCollection, before: str | None = None)`
 
 Immutable owned PoseEditMove value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -140,7 +140,7 @@ Immutable owned PoseEditMove value. Construction owns declared collections; read
 
 ## zipzi.modeling.pose.PoseEditPatch
 
-`(id: str, expected: PoseFields, fields: PoseFields)`
+`(*, id: str, expected: PoseFields, fields: PoseFields)`
 
 Immutable owned PoseEditPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -150,7 +150,7 @@ Immutable owned PoseEditPatch value. Construction owns declared collections; rea
 
 ## zipzi.modeling.pose.PoseEntry
 
-`(id: str, part: PosePartRef, links: tuple[PoseLink, ...] | None = None, extensions: _Mapping[str, ExtensionValue])`
+`(*, id: str, part: PosePartRef, links: tuple[PoseLink, ...] | None = None, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned PoseEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -168,7 +168,7 @@ Typed public API entry.
 
 ## zipzi.modeling.pose.PoseFieldsAsset
 
-`(fade_in: float | None = None)`
+`(*, fade_in: float | None = None)`
 
 Immutable owned PoseFieldsAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -176,7 +176,7 @@ Immutable owned PoseFieldsAsset value. Construction owns declared collections; r
 
 ## zipzi.modeling.pose.PoseFieldsEntry
 
-`(part: PosePartRef)`
+`(*, part: PosePartRef)`
 
 Immutable owned PoseFieldsEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -184,7 +184,7 @@ Immutable owned PoseFieldsEntry value. Construction owns declared collections; r
 
 ## zipzi.modeling.pose.PoseFieldsGroup
 
-`(name: str)`
+`(*, name: str)`
 
 Immutable owned PoseFieldsGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -192,7 +192,7 @@ Immutable owned PoseFieldsGroup value. Construction owns declared collections; r
 
 ## zipzi.modeling.pose.PoseFieldsLink
 
-`(target: PosePartRef)`
+`(*, target: PosePartRef)`
 
 Immutable owned PoseFieldsLink value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -200,7 +200,7 @@ Immutable owned PoseFieldsLink value. Construction owns declared collections; re
 
 ## zipzi.modeling.pose.PoseGroup
 
-`(id: str, name: str, entries: tuple[PoseEntry, ...])`
+`(*, id: str, name: str, entries: tuple[PoseEntry, ...])`
 
 Immutable owned PoseGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -210,7 +210,7 @@ Immutable owned PoseGroup value. Construction owns declared collections; reading
 
 ## zipzi.modeling.pose.PoseLink
 
-`(id: str, target: PosePartRef)`
+`(*, id: str, target: PosePartRef)`
 
 Immutable owned PoseLink value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -226,7 +226,7 @@ Typed public API entry.
 
 ## zipzi.modeling.pose.PosePartRefResolved
 
-`(part_id: str)`
+`(*, part_id: str)`
 
 Immutable owned PosePartRefResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -234,7 +234,7 @@ Immutable owned PosePartRefResolved value. Construction owns declared collection
 
 ## zipzi.modeling.pose.PosePartRefUnresolved
 
-`(runtime_id: str)`
+`(*, runtime_id: str)`
 
 Immutable owned PosePartRefUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

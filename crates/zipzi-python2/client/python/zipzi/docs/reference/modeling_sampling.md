@@ -12,7 +12,7 @@ Canonical sampling modeling values.
 
 ## zipzi.modeling.sampling.Drawable
 
-`(id: str, runtime_id: str, part_id: str, raw_blend_mode: int | None = None, texture_asset_id: str, texture_slot: int, renderable: bool = True, positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], indices: tuple[int, ...], draw_order: int, render_order: int, opacity: float, multiply_color: tuple[float, float, float, float], screen_color: tuple[float, float, float, float], blend_mode: BlendMode, enabled: bool, visible: bool, double_sided: bool, inverted_mask: bool, masks: tuple[str, ...])`
+`(*, id: str, runtime_id: str, part_id: str, raw_blend_mode: int | None = None, texture_asset_id: str, texture_slot: int, renderable: bool = True, positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], indices: tuple[int, ...], draw_order: int, render_order: int, opacity: float, multiply_color: tuple[float, float, float, float], screen_color: tuple[float, float, float, float], blend_mode: BlendMode, enabled: bool, visible: bool, double_sided: bool, inverted_mask: bool, masks: tuple[str, ...])`
 
 Immutable owned Drawable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -44,7 +44,7 @@ above 1 are retained without clamping.
 
 ## zipzi.modeling.sampling.DrawableFrame
 
-`(source_revision: int, parameters: tuple[EvaluatedParameter, ...], drawables: tuple[Drawable, ...], offscreens: tuple[OffscreenFrame, ...], render_plan: tuple[RenderCommand, ...], deformers: tuple[EvaluatedDeformer, ...])`
+`(*, source_revision: int, parameters: tuple[EvaluatedParameter, ...], drawables: tuple[Drawable, ...], offscreens: tuple[OffscreenFrame, ...], render_plan: tuple[RenderCommand, ...], deformers: tuple[EvaluatedDeformer, ...])`
 
 Immutable owned DrawableFrame value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -57,7 +57,7 @@ Immutable owned DrawableFrame value. Construction owns declared collections; rea
 
 ## zipzi.modeling.sampling.EvaluatedDeformer
 
-`(id: str, enabled: bool, points: tuple[Vec2, ...], rotation_axis: Vec2 | None = None, rotation_basis: tuple[Vec2, Vec2] | None = None)`
+`(*, id: str, enabled: bool, points: tuple[Vec2, ...], rotation_axis: Vec2 | None = None, rotation_basis: tuple[Vec2, Vec2] | None = None)`
 
 Immutable owned EvaluatedDeformer value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -74,7 +74,7 @@ coefficients at large model origins.
 
 ## zipzi.modeling.sampling.EvaluatedParameter
 
-`(id: str, requested: float, value: float, clamped: bool)`
+`(*, id: str, requested: float, value: float, clamped: bool)`
 
 Immutable owned EvaluatedParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -85,7 +85,7 @@ Immutable owned EvaluatedParameter value. Construction owns declared collections
 
 ## zipzi.modeling.sampling.GeometryDiagnostic
 
-`(kind: GeometryDiagnosticKind, mesh_id: str, triangle_index: int | None = None)`
+`(*, kind: GeometryDiagnosticKind, mesh_id: str, triangle_index: int | None = None)`
 
 Immutable owned GeometryDiagnostic value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -103,7 +103,7 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.modeling.sampling.GeometrySnapshot
 
-`(version: _Version, mesh_id: str, vertex_ids: tuple[int, ...], positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], triangles: tuple[tuple[int, int, int], ...], meshing: MeshMeshing | None = None, space: GeometrySpace)`
+`(*, version: _Version, mesh_id: str, vertex_ids: tuple[int, ...], positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], triangles: tuple[tuple[int, int, int], ...], meshing: MeshMeshing | None = None, space: GeometrySpace)`
 
 Immutable owned GeometrySnapshot value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -133,7 +133,7 @@ Immutable owned GeometrySpaceModel value. Construction owns declared collections
 
 ## zipzi.modeling.sampling.GeometrySpaceRotationLocal
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned GeometrySpaceRotationLocal value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -141,7 +141,7 @@ Immutable owned GeometrySpaceRotationLocal value. Construction owns declared col
 
 ## zipzi.modeling.sampling.GeometrySpaceWarpParameter
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned GeometrySpaceWarpParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -149,7 +149,7 @@ Immutable owned GeometrySpaceWarpParameter value. Construction owns declared col
 
 ## zipzi.modeling.sampling.MeshQuality
 
-`(mesh_id: str, visible: bool, vertex_count: int, triangles: tuple[TriangleQuality, ...], min_angle_degrees: float | None = None, max_aspect_ratio: float | None = None, max_edge_stretch: float | None = None, degenerate_triangles: int, flipped_triangles: int, texture_coverage: TextureCoverage | None = None)`
+`(*, mesh_id: str, visible: bool, vertex_count: int, triangles: tuple[TriangleQuality, ...], min_angle_degrees: float | None = None, max_aspect_ratio: float | None = None, max_edge_stretch: float | None = None, degenerate_triangles: int, flipped_triangles: int, texture_coverage: TextureCoverage | None = None)`
 
 Immutable owned MeshQuality value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -167,7 +167,7 @@ of the same frozen authoring source. This does not certify unsampled parameter i
 
 ## zipzi.modeling.sampling.ModelingSamples
 
-`(version: _Version, parameters: tuple[_Mapping[str, float], ...], frames: tuple[DrawableFrame, ...], diagnostics: tuple[GeometryDiagnostic, ...], quality: tuple[tuple[MeshQuality, ...], ...])`
+`(*, version: _Version, parameters: tuple[_Mapping[str, float], ...], frames: tuple[DrawableFrame, ...], diagnostics: tuple[GeometryDiagnostic, ...], quality: tuple[tuple[MeshQuality, ...], ...])`
 
 Immutable owned ModelingSamples value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -181,7 +181,7 @@ Uses default parameters of this same frozen source as the reference, without ima
 
 ## zipzi.modeling.sampling.OffscreenFrame
 
-`(renderable: bool = True, id: str, runtime_id: str, owner_part_id: str, parent_offscreen_id: str | None = None, render_order: int, opacity: float, enabled: bool, blend_mode: int, flags: int, masks: tuple[str, ...], multiply_color: tuple[float, float, float, float], screen_color: tuple[float, float, float, float])`
+`(*, renderable: bool = True, id: str, runtime_id: str, owner_part_id: str, parent_offscreen_id: str | None = None, render_order: int, opacity: float, enabled: bool, blend_mode: int, flags: int, masks: tuple[str, ...], multiply_color: tuple[float, float, float, float], screen_color: tuple[float, float, float, float])`
 
 Immutable owned OffscreenFrame value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -210,7 +210,7 @@ Typed public API entry.
 
 ## zipzi.modeling.sampling.RenderCommandBeginOffscreen
 
-`(offscreen_id: str)`
+`(*, offscreen_id: str)`
 
 Immutable owned RenderCommandBeginOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -218,7 +218,7 @@ Immutable owned RenderCommandBeginOffscreen value. Construction owns declared co
 
 ## zipzi.modeling.sampling.RenderCommandDrawMesh
 
-`(mesh_id: str)`
+`(*, mesh_id: str)`
 
 Immutable owned RenderCommandDrawMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -226,7 +226,7 @@ Immutable owned RenderCommandDrawMesh value. Construction owns declared collecti
 
 ## zipzi.modeling.sampling.RenderCommandEndOffscreen
 
-`(offscreen_id: str)`
+`(*, offscreen_id: str)`
 
 Immutable owned RenderCommandEndOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -234,7 +234,7 @@ Immutable owned RenderCommandEndOffscreen value. Construction owns declared coll
 
 ## zipzi.modeling.sampling.TriangleQuality
 
-`(triangle_index: int, area: float, min_angle_degrees: float, aspect_ratio: float | None = None, relative_area: float | None = None, edge_stretch: float | None = None)`
+`(*, triangle_index: int, area: float, min_angle_degrees: float, aspect_ratio: float | None = None, relative_area: float | None = None, edge_stretch: float | None = None)`
 
 Immutable owned TriangleQuality value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

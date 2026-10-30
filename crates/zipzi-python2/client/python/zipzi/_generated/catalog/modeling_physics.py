@@ -82,7 +82,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                      'Original imported-content hash used to detect unsupported '
                                                      'changes to opaque fields.')],
                                          'kind': 'type',
-                                         'signature': '(id: str, data: PhysicsDefinition, opaque_source_ids: '
+                                         'signature': '(*, id: str, data: PhysicsDefinition, opaque_source_ids: '
                                                       '_Mapping[str, str] | None = None, opaque_source_content_hash: '
                                                       'str | None = None)'},
  'zipzi.modeling.physics.PhysicsAsset.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -97,7 +97,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                              'Optional Physics fixed-step frequency; None follows the '
                                                              'evaluation delta.')],
                                                  'kind': 'type',
-                                                 'signature': '(value: float | None = None)'},
+                                                 'signature': '(*, value: float | None = None)'},
  'zipzi.modeling.physics.PhysicsAssetProperty.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsAssetProperty.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsAssetPropertyFps': {'alias': 'zipzi.modeling.physics.PhysicsAssetProperty'},
@@ -136,7 +136,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                     'fields': [('group_id',
                                                                 'Stable Physics rig ID owning the selected rows.')],
                                                     'kind': 'type',
-                                                    'signature': '(group_id: str)'},
+                                                    'signature': '(*, group_id: str)'},
  'zipzi.modeling.physics.PhysicsCollectionInputs.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsCollectionInputs.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsCollectionNodes': {'children': ('zipzi.modeling.physics.PhysicsCollectionNodes.__repr__',
@@ -148,7 +148,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                    'fields': [('group_id',
                                                                'Stable Physics rig ID owning the selected rows.')],
                                                    'kind': 'type',
-                                                   'signature': '(group_id: str)'},
+                                                   'signature': '(*, group_id: str)'},
  'zipzi.modeling.physics.PhysicsCollectionNodes.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsCollectionNodes.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsCollectionOutputs': {'children': ('zipzi.modeling.physics.PhysicsCollectionOutputs.__repr__',
@@ -160,7 +160,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                      'fields': [('group_id',
                                                                  'Stable Physics rig ID owning the selected rows.')],
                                                      'kind': 'type',
-                                                     'signature': '(group_id: str)'},
+                                                     'signature': '(*, group_id: str)'},
  'zipzi.modeling.physics.PhysicsCollectionOutputs.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsCollectionOutputs.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsDefinition': {'children': ('zipzi.modeling.physics.PhysicsDefinition.__repr__',
@@ -178,7 +178,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                           'Owned opaque imported fields preserved for format '
                                                           'roundtrips; declared fields cannot be shadowed.')],
                                               'kind': 'type',
-                                              'signature': '(version: int, meta: PhysicsMeta, settings: '
+                                              'signature': '(*, version: int, meta: PhysicsMeta, settings: '
                                                            'tuple[PhysicsSetting, ...], extensions: _Mapping[str, '
                                                            'ExtensionValue])'},
  'zipzi.modeling.physics.PhysicsDefinition.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -199,7 +199,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                'Owned opaque imported fields preserved for format '
                                                                'roundtrips; declared fields cannot be shadowed.')],
                                                    'kind': 'type',
-                                                   'signature': '(Id: str, Name: str, extensions: _Mapping[str, '
+                                                   'signature': '(*, Id: str, Name: str, extensions: _Mapping[str, '
                                                                 'ExtensionValue])'},
  'zipzi.modeling.physics.PhysicsDictionaryEntry.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsDictionaryEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -227,7 +227,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                'Optional stable sibling ID before which to insert; '
                                                                'None appends.')],
                                                    'kind': 'type',
-                                                   'signature': '(asset_id: str, id: str, name: str, before: str | '
+                                                   'signature': '(*, asset_id: str, id: str, name: str, before: str | '
                                                                 'None = None)'},
  'zipzi.modeling.physics.PhysicsEditCreateGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsEditCreateGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -247,7 +247,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                'Optional stable sibling ID before which to insert; '
                                                                'None appends.')],
                                                    'kind': 'type',
-                                                   'signature': '(group_id: str, id: str, before: str | None = None)'},
+                                                   'signature': '(*, group_id: str, id: str, before: str | None = '
+                                                                'None)'},
  'zipzi.modeling.physics.PhysicsEditCreateInput.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsEditCreateInput.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditCreateOutput': {'children': ('zipzi.modeling.physics.PhysicsEditCreateOutput.__repr__',
@@ -269,8 +270,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                 'Optional stable sibling ID before which to insert; '
                                                                 'None appends.')],
                                                     'kind': 'type',
-                                                    'signature': '(group_id: str, id: str, node_id: str, before: str | '
-                                                                 'None = None)'},
+                                                    'signature': '(*, group_id: str, id: str, node_id: str, before: '
+                                                                 'str | None = None)'},
  'zipzi.modeling.physics.PhysicsEditCreateOutput.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsEditCreateOutput.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditDelete': {'children': ('zipzi.modeling.physics.PhysicsEditDelete.__repr__',
@@ -286,7 +287,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                           'Explicit old-node to replacement-node identities used when '
                                                           'repairing output references.')],
                                               'kind': 'type',
-                                              'signature': '(ids: tuple[str, ...], node_replacements: _Mapping[str, '
+                                              'signature': '(*, ids: tuple[str, ...], node_replacements: _Mapping[str, '
                                                            'str])'},
  'zipzi.modeling.physics.PhysicsEditDelete.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsEditDelete.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -306,7 +307,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                              'Optional stable sibling ID before which to insert; None '
                                                              'appends.')],
                                                  'kind': 'type',
-                                                 'signature': '(ids: tuple[str, ...], group_id: str | None = None, '
+                                                 'signature': '(*, ids: tuple[str, ...], group_id: str | None = None, '
                                                               'before: str | None = None)'},
  'zipzi.modeling.physics.PhysicsEditDuplicate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsEditDuplicate.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -323,7 +324,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                  'Optional stable sibling ID before which to insert; '
                                                                  'None appends.')],
                                                      'kind': 'type',
-                                                     'signature': '(id: str, before: str | None = None)'},
+                                                     'signature': '(*, id: str, before: str | None = None)'},
  'zipzi.modeling.physics.PhysicsEditDuplicateNode.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsEditDuplicateNode.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditInsertNode': {'children': ('zipzi.modeling.physics.PhysicsEditInsertNode.__repr__',
@@ -342,8 +343,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                               'Optional stable sibling ID before which to insert; None '
                                                               'appends.')],
                                                   'kind': 'type',
-                                                  'signature': '(group_id: str, node: PhysicsNode, before: str | None '
-                                                               '= None)'},
+                                                  'signature': '(*, group_id: str, node: PhysicsNode, before: str | '
+                                                               'None = None)'},
  'zipzi.modeling.physics.PhysicsEditInsertNode.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsEditInsertNode.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditMoveInputs': {'children': ('zipzi.modeling.physics.PhysicsEditMoveInputs.__repr__',
@@ -362,7 +363,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                               'Optional stable sibling ID before which to insert; None '
                                                               'appends.')],
                                                   'kind': 'type',
-                                                  'signature': '(ids: tuple[str, ...], group_id: str, before: str | '
+                                                  'signature': '(*, ids: tuple[str, ...], group_id: str, before: str | '
                                                                'None = None)'},
  'zipzi.modeling.physics.PhysicsEditMoveInputs.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsEditMoveInputs.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -379,7 +380,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                             'Optional stable sibling ID before which to insert; None '
                                                             'appends.')],
                                                 'kind': 'type',
-                                                'signature': '(id: str, before: str | None = None)'},
+                                                'signature': '(*, id: str, before: str | None = None)'},
  'zipzi.modeling.physics.PhysicsEditMoveNode.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsEditMoveNode.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditMoveOutputs': {'children': ('zipzi.modeling.physics.PhysicsEditMoveOutputs.__repr__',
@@ -401,8 +402,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                'Explicit old-node to replacement-node identities used '
                                                                'when repairing output references.')],
                                                    'kind': 'type',
-                                                   'signature': '(ids: tuple[str, ...], group_id: str, before: str | '
-                                                                'None = None, node_replacements: _Mapping[str, str])'},
+                                                   'signature': '(*, ids: tuple[str, ...], group_id: str, before: str '
+                                                                '| None = None, node_replacements: _Mapping[str, '
+                                                                'str])'},
  'zipzi.modeling.physics.PhysicsEditMoveOutputs.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsEditMoveOutputs.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditPatch': {'children': ('zipzi.modeling.physics.PhysicsEditPatch.__repr__',
@@ -415,7 +417,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                          'Typed atomic Physics changes validated against the current '
                                                          'candidate.')],
                                              'kind': 'type',
-                                             'signature': '(patch: PhysicsPatch)'},
+                                             'signature': '(*, patch: PhysicsPatch)'},
  'zipzi.modeling.physics.PhysicsEditPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsEditPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditReorderGroups': {'children': ('zipzi.modeling.physics.PhysicsEditReorderGroups.__repr__',
@@ -431,7 +433,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                  'Optional stable sibling ID before which to insert; '
                                                                  'None appends.')],
                                                      'kind': 'type',
-                                                     'signature': '(ids: tuple[str, ...], before: str | None = None)'},
+                                                     'signature': '(*, ids: tuple[str, ...], before: str | None = '
+                                                                  'None)'},
  'zipzi.modeling.physics.PhysicsEditReorderGroups.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsEditReorderGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsForces': {'children': ('zipzi.modeling.physics.PhysicsForces.__repr__',
@@ -450,7 +453,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                       'Owned opaque imported fields preserved for format roundtrips; '
                                                       'declared fields cannot be shadowed.')],
                                           'kind': 'type',
-                                          'signature': '(Gravity: PhysicsVector, Wind: PhysicsVector, extensions: '
+                                          'signature': '(*, Gravity: PhysicsVector, Wind: PhysicsVector, extensions: '
                                                        '_Mapping[str, ExtensionValue])'},
  'zipzi.modeling.physics.PhysicsForces.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsForces.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -480,7 +483,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                      'Owned opaque imported fields preserved for format roundtrips; '
                                                      'declared fields cannot be shadowed.')],
                                          'kind': 'type',
-                                         'signature': '(id: str, source: PhysicsTarget, reference_extensions: '
+                                         'signature': '(*, id: str, source: PhysicsTarget, reference_extensions: '
                                                       '_Mapping[str, ExtensionValue], weight: float, kind: '
                                                       'PhysicsAxis, reflect: bool, extensions: _Mapping[str, '
                                                       'ExtensionValue])'},
@@ -514,7 +517,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                     'Owned opaque imported fields preserved for format roundtrips; '
                                                     'declared fields cannot be shadowed.')],
                                         'kind': 'type',
-                                        'signature': '(PhysicsSettingCount: int, TotalInputCount: int, '
+                                        'signature': '(*, PhysicsSettingCount: int, TotalInputCount: int, '
                                                      'TotalOutputCount: int, VertexCount: int, EffectiveForces: '
                                                      'PhysicsForces, PhysicsDictionary: tuple[PhysicsDictionaryEntry, '
                                                      '...], Fps: float | None = None, extensions: _Mapping[str, '
@@ -541,7 +544,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                     'Owned opaque imported fields preserved for format roundtrips; '
                                                     'declared fields cannot be shadowed.')],
                                         'kind': 'type',
-                                        'signature': '(id: str, position: PhysicsVector, mobility: float, delay: '
+                                        'signature': '(*, id: str, position: PhysicsVector, mobility: float, delay: '
                                                      'float, acceleration: float, radius: float, extensions: '
                                                      '_Mapping[str, ExtensionValue])'},
  'zipzi.modeling.physics.PhysicsNode.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -562,7 +565,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                              'Owned opaque imported fields preserved for format '
                                                              'roundtrips; declared fields cannot be shadowed.')],
                                                  'kind': 'type',
-                                                 'signature': '(Position: PhysicsRange, Angle: PhysicsRange, '
+                                                 'signature': '(*, Position: PhysicsRange, Angle: PhysicsRange, '
                                                               'extensions: _Mapping[str, ExtensionValue])'},
  'zipzi.modeling.physics.PhysicsNormalization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsNormalization.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -597,7 +600,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                       'Owned opaque imported fields preserved for format roundtrips; '
                                                       'declared fields cannot be shadowed.')],
                                           'kind': 'type',
-                                          'signature': '(id: str, destination: PhysicsTarget, reference_extensions: '
+                                          'signature': '(*, id: str, destination: PhysicsTarget, reference_extensions: '
                                                        '_Mapping[str, ExtensionValue], node_id: str, scale: float, '
                                                        'weight: float, kind: PhysicsAxis, reflect: bool, extensions: '
                                                        '_Mapping[str, ExtensionValue])'},
@@ -620,7 +623,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                               'Whether the SDK clamped this output to the target '
                                                               'parameter range.')],
                                                   'kind': 'type',
-                                                  'signature': '(raw: float, before: float, after: float, clamped: '
+                                                  'signature': '(*, raw: float, before: float, after: float, clamped: '
                                                                'bool)'},
  'zipzi.modeling.physics.PhysicsOutputSnapshot.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsOutputSnapshot.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -636,7 +639,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                      'separate.'),
                                                     ('rig', 'Optional atomic changes to one owned Physics rig/group.')],
                                          'kind': 'type',
-                                         'signature': '(asset_id: str, asset_changes: tuple[PhysicsAssetProperty, '
+                                         'signature': '(*, asset_id: str, asset_changes: tuple[PhysicsAssetProperty, '
                                                       '...], rig: PhysicsRigPatch | None = None)'},
  'zipzi.modeling.physics.PhysicsPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -658,7 +661,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                           'Replacement minimum/default/maximum range '
                                                                           'for angle normalization.')],
                                                               'kind': 'type',
-                                                              'signature': '(value: PhysicsRange)'},
+                                                              'signature': '(*, value: PhysicsRange)'},
  'zipzi.modeling.physics.PhysicsPropertyAngleNormalization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyAngleNormalization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyInputAxis': {'children': ('zipzi.modeling.physics.PhysicsPropertyInputAxis.__repr__',
@@ -674,7 +677,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                  'Channel value or replacement payload in the domain '
                                                                  'declared by this field type.')],
                                                      'kind': 'type',
-                                                     'signature': '(id: str, value: PhysicsAxis)'},
+                                                     'signature': '(*, id: str, value: PhysicsAxis)'},
  'zipzi.modeling.physics.PhysicsPropertyInputAxis.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyInputAxis.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyInputParameter': {'children': ('zipzi.modeling.physics.PhysicsPropertyInputParameter.__repr__',
@@ -693,7 +696,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                       'Typed target reference; unresolved imported '
                                                                       'runtime labels remain explicit.')],
                                                           'kind': 'type',
-                                                          'signature': '(id: str, target: PhysicsTarget)'},
+                                                          'signature': '(*, id: str, target: PhysicsTarget)'},
  'zipzi.modeling.physics.PhysicsPropertyInputParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyInputParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyInputReflect': {'children': ('zipzi.modeling.physics.PhysicsPropertyInputReflect.__repr__',
@@ -710,7 +713,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                     'Channel value or replacement payload in the '
                                                                     'domain declared by this field type.')],
                                                         'kind': 'type',
-                                                        'signature': '(id: str, value: bool)'},
+                                                        'signature': '(*, id: str, value: bool)'},
  'zipzi.modeling.physics.PhysicsPropertyInputReflect.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyInputReflect.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyInputWeight': {'children': ('zipzi.modeling.physics.PhysicsPropertyInputWeight.__repr__',
@@ -727,7 +730,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                    'Channel value or replacement payload in the domain '
                                                                    'declared by this field type.')],
                                                        'kind': 'type',
-                                                       'signature': '(id: str, value: float)'},
+                                                       'signature': '(*, id: str, value: float)'},
  'zipzi.modeling.physics.PhysicsPropertyInputWeight.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyInputWeight.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyName': {'children': ('zipzi.modeling.physics.PhysicsPropertyName.__repr__',
@@ -738,7 +741,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('value', 'Replacement display name of the Physics group.')],
                                                 'kind': 'type',
-                                                'signature': '(value: str)'},
+                                                'signature': '(*, value: str)'},
  'zipzi.modeling.physics.PhysicsPropertyName.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyName.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyOutputAxis': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputAxis.__repr__',
@@ -755,7 +758,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                   'Channel value or replacement payload in the domain '
                                                                   'declared by this field type.')],
                                                       'kind': 'type',
-                                                      'signature': '(id: str, value: PhysicsAxis)'},
+                                                      'signature': '(*, id: str, value: PhysicsAxis)'},
  'zipzi.modeling.physics.PhysicsPropertyOutputAxis.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyOutputAxis.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyOutputNode': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputNode.__repr__',
@@ -772,7 +775,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                   'Stable node identity, independent of the node index '
                                                                   'used by exported Physics JSON.')],
                                                       'kind': 'type',
-                                                      'signature': '(id: str, node_id: str)'},
+                                                      'signature': '(*, id: str, node_id: str)'},
  'zipzi.modeling.physics.PhysicsPropertyOutputNode.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyOutputNode.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyOutputParameter': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputParameter.__repr__',
@@ -791,7 +794,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                        'Typed target reference; unresolved imported '
                                                                        'runtime labels remain explicit.')],
                                                            'kind': 'type',
-                                                           'signature': '(id: str, target: PhysicsTarget)'},
+                                                           'signature': '(*, id: str, target: PhysicsTarget)'},
  'zipzi.modeling.physics.PhysicsPropertyOutputParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyOutputParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyOutputReflect': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputReflect.__repr__',
@@ -809,7 +812,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                      'Channel value or replacement payload in the '
                                                                      'domain declared by this field type.')],
                                                          'kind': 'type',
-                                                         'signature': '(id: str, value: bool)'},
+                                                         'signature': '(*, id: str, value: bool)'},
  'zipzi.modeling.physics.PhysicsPropertyOutputReflect.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyOutputReflect.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyOutputScale': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputScale.__repr__',
@@ -826,7 +829,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                    'Channel value or replacement payload in the domain '
                                                                    'declared by this field type.')],
                                                        'kind': 'type',
-                                                       'signature': '(id: str, value: float)'},
+                                                       'signature': '(*, id: str, value: float)'},
  'zipzi.modeling.physics.PhysicsPropertyOutputScale.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyOutputScale.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyOutputWeight': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputWeight.__repr__',
@@ -843,7 +846,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                     'Channel value or replacement payload in the '
                                                                     'domain declared by this field type.')],
                                                         'kind': 'type',
-                                                        'signature': '(id: str, value: float)'},
+                                                        'signature': '(*, id: str, value: float)'},
  'zipzi.modeling.physics.PhysicsPropertyOutputWeight.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyOutputWeight.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyPositionNormalization': {'children': ('zipzi.modeling.physics.PhysicsPropertyPositionNormalization.__repr__',
@@ -858,7 +861,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                              'Replacement minimum/default/maximum '
                                                                              'range for position normalization.')],
                                                                  'kind': 'type',
-                                                                 'signature': '(value: PhysicsRange)'},
+                                                                 'signature': '(*, value: PhysicsRange)'},
  'zipzi.modeling.physics.PhysicsPropertyPositionNormalization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyPositionNormalization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyVertexAcceleration': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexAcceleration.__repr__',
@@ -877,7 +880,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                           'Channel value or replacement payload in the '
                                                                           'domain declared by this field type.')],
                                                               'kind': 'type',
-                                                              'signature': '(id: str, value: float)'},
+                                                              'signature': '(*, id: str, value: float)'},
  'zipzi.modeling.physics.PhysicsPropertyVertexAcceleration.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyVertexAcceleration.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyVertexDelay': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexDelay.__repr__',
@@ -894,7 +897,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                    'Channel value or replacement payload in the domain '
                                                                    'declared by this field type.')],
                                                        'kind': 'type',
-                                                       'signature': '(id: str, value: float)'},
+                                                       'signature': '(*, id: str, value: float)'},
  'zipzi.modeling.physics.PhysicsPropertyVertexDelay.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyVertexDelay.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyVertexMobility': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexMobility.__repr__',
@@ -913,7 +916,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                       'Channel value or replacement payload in the '
                                                                       'domain declared by this field type.')],
                                                           'kind': 'type',
-                                                          'signature': '(id: str, value: float)'},
+                                                          'signature': '(*, id: str, value: float)'},
  'zipzi.modeling.physics.PhysicsPropertyVertexMobility.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyVertexMobility.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyVertexPosition': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexPosition.__repr__',
@@ -932,7 +935,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                       'Channel value or replacement payload in the '
                                                                       'domain declared by this field type.')],
                                                           'kind': 'type',
-                                                          'signature': '(id: str, value: PhysicsVector)'},
+                                                          'signature': '(*, id: str, value: PhysicsVector)'},
  'zipzi.modeling.physics.PhysicsPropertyVertexPosition.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyVertexPosition.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyVertexRadius': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexRadius.__repr__',
@@ -949,7 +952,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                     'Channel value or replacement payload in the '
                                                                     'domain declared by this field type.')],
                                                         'kind': 'type',
-                                                        'signature': '(id: str, value: float)'},
+                                                        'signature': '(*, id: str, value: float)'},
  'zipzi.modeling.physics.PhysicsPropertyVertexRadius.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyVertexRadius.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsRange': {'children': ('zipzi.modeling.physics.PhysicsRange.__repr__',
@@ -967,7 +970,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                      'Upper normalization bound in the declared position or angle '
                                                      'domain.')],
                                          'kind': 'type',
-                                         'signature': '(Minimum: float, Default: float, Maximum: float)'},
+                                         'signature': '(*, Minimum: float, Default: float, Maximum: float)'},
  'zipzi.modeling.physics.PhysicsRange.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsRange.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsRigPatch': {'children': ('zipzi.modeling.physics.PhysicsRigPatch.__repr__',
@@ -983,7 +986,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                         'Ordered typed property changes validated as one native '
                                                         'operation.')],
                                             'kind': 'type',
-                                            'signature': '(group_id: str, changes: tuple[PhysicsProperty, ...])'},
+                                            'signature': '(*, group_id: str, changes: tuple[PhysicsProperty, ...])'},
  'zipzi.modeling.physics.PhysicsRigPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsRigPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsRigSnapshot': {'children': ('zipzi.modeling.physics.PhysicsRigSnapshot.__repr__',
@@ -1011,7 +1014,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                            'Latest output observations; None marks an unavailable '
                                                            'channel.')],
                                                'kind': 'type',
-                                               'signature': '(id: str, input_ids: tuple[str, ...], output_ids: '
+                                               'signature': '(*, id: str, input_ids: tuple[str, ...], output_ids: '
                                                             'tuple[str, ...], node_ids: tuple[str, ...], particles: '
                                                             'tuple[tuple[float, float], ...], input_angle: float, '
                                                             'inputs: tuple[float, ...], outputs: '
@@ -1045,8 +1048,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                        'Owned opaque imported fields preserved for format roundtrips; '
                                                        'declared fields cannot be shadowed.')],
                                            'kind': 'type',
-                                           'signature': '(id: str, external_id: str, inputs: tuple[PhysicsInput, ...], '
-                                                        'outputs: tuple[PhysicsOutput, ...], vertices: '
+                                           'signature': '(*, id: str, external_id: str, inputs: tuple[PhysicsInput, '
+                                                        '...], outputs: tuple[PhysicsOutput, ...], vertices: '
                                                         'tuple[PhysicsNode, ...], normalization: PhysicsNormalization, '
                                                         'extensions: _Mapping[str, ExtensionValue])'},
  'zipzi.modeling.physics.PhysicsSetting.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -1067,7 +1070,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                               'Stable document parameter UUID; evaluation uses its '
                                                               'declared range and default.')],
                                                   'kind': 'type',
-                                                  'signature': '(parameter_id: str)'},
+                                                  'signature': '(*, parameter_id: str)'},
  'zipzi.modeling.physics.PhysicsTargetResolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsTargetResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsTargetUnresolved': {'children': ('zipzi.modeling.physics.PhysicsTargetUnresolved.__repr__',
@@ -1080,7 +1083,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                 'Imported/exported runtime label, distinct from the '
                                                                 'document object UUID.')],
                                                     'kind': 'type',
-                                                    'signature': '(runtime_id: str)'},
+                                                    'signature': '(*, runtime_id: str)'},
  'zipzi.modeling.physics.PhysicsTargetUnresolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsTargetUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsTargetUnspecified': {'children': ('zipzi.modeling.physics.PhysicsTargetUnspecified.__repr__',
@@ -1107,6 +1110,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                       'Vertical component in the native Physics coordinate '
                                                       'convention.')],
                                           'kind': 'type',
-                                          'signature': '(X: float, Y: float)'},
+                                          'signature': '(*, X: float, Y: float)'},
  'zipzi.modeling.physics.PhysicsVector.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsVector.summary': {'alias': 'zipzi.ApiDescription.summary'}}

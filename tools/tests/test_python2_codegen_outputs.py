@@ -86,6 +86,31 @@ class OutputManifest(unittest.TestCase):
         self.write(data)
         self.assertEqual(self.write(data, True), [])
 
+    def test_output_and_parent_collisions_fail_before_publication(self):
+        before = (self.root / outputs.MANIFEST).read_bytes()
+        for blocker in (self.root / B, (self.root / B).parent):
+            with self.subTest(path=blocker):
+                if blocker == self.root / B:
+                    blocker.mkdir(parents=True)
+                else:
+                    blocker.write_text('handwritten')
+                with self.assertRaisesRegex(ValueError, 'not a (regular file|directory)'):
+                    self.write({A: HEADER + 'new\n', B: HEADER + 'b\n'})
+                self.assertEqual((self.root / A).read_text(), HEADER + 'a\n')
+                self.assertEqual((self.root / outputs.MANIFEST).read_bytes(), before)
+                if blocker.is_dir():
+                    blocker.rmdir()
+                    blocker.parent.rmdir()
+                else:
+                    blocker.unlink()
+
+    def test_paths_reject_windows_separators_and_stream_names(self):
+        for path in ('client/python/zipzi/_generated/..\\handwritten.py',
+                     'client/python/zipzi/_generated/a.py:stream'):
+            with self.subTest(path=path), self.assertRaisesRegex(ValueError, 'Unowned'):
+                self.write({A: HEADER + 'new\n', path: HEADER + 'x\n'})
+        self.assertEqual((self.root / A).read_text(), HEADER + 'a\n')
+
 
 class CodegenStats(unittest.TestCase):
     def test_static_counts_and_domain_coverage(self):

@@ -22,10 +22,7 @@ invalid input.
 
 ## zipzi.parameters.Kind
 
-`()`
-
-Immutable typed value. See field semantics and the linked workflow.
-
+Alias of [zipzi.modeling.parameters.ParameterKind](modeling_parameters.md#zipzimodelingparametersparameterkind).
 
 ## zipzi.parameters.Parameter
 
@@ -98,18 +95,4 @@ runtime_id.
 
 ## zipzi.parameters.Summary
 
-`(id: str, name: str, object_kind: str, runtime_id: str, part_id: str | None, parent_id: str | None, enabled: bool, mesh_id: str | None, width: int | None, height: int | None, vertex_count: int | None)`
-
-Immutable owned ObjectSummary value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `id`: Persistent canonical UUID in the selected document.
-- `name`: Exact, case-sensitive display name; binding names use their mesh name.
-- `object_kind`: Stable SDK kind tag, e.g. mesh, parameter, mesh_binding or image.
-- `runtime_id`: SDK runtime label; empty when this kind has no runtime label.
-- `part_id`: Owning Part UUID when applicable; None means no Part ownership.
-- `parent_id`: Deformation or organization parent UUID when applicable.
-- `enabled`: Whether the scene object is enabled; true for metadata without that field.
-- `mesh_id`: Bound mesh UUID for mesh bindings; None for other collections.
-- `width`: Decoded image width in pixels when known, without reading pixels.
-- `height`: Decoded image height in pixels when known, without reading pixels.
-- `vertex_count`: Number of mesh vertices, without cloning vertex data.
+Alias of [zipzi.ObjectSummary](runtime.md#zipziobjectsummary).

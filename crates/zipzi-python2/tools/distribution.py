@@ -118,6 +118,9 @@ def main():
             run(mode+'-venv',['uv','venv','--python','3.14',venv])
             python=venv_python(venv)
             run(mode+'-install',['uv','pip','install','--python',python,pure,*([extension] if mode=='local' else [])])
+            if mode=='connected':
+                run('connected-offline-contract',[python,'-I',archived/'tests/installed_contract.py',
+                    '--output',output/'installed-contract.md'],cwd=output)
             run(mode+'-recipe',[python,'-I',archived/'tests/installed_recipe.py',mode,*(['--observation'] if args.observation else [])],cwd=output,
                 env=dict(environment,ZIPZI_PYTHON2_HOST=str(host)))
         artifacts=[*sorted((output/'sdists').glob('*')),*sorted((output/'wheels').glob('*')),host]

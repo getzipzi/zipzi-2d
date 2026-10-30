@@ -56,8 +56,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                'Original imported-content hash used to detect unsupported changes to '
                                                'opaque fields.')],
                                    'kind': 'type',
-                                   'signature': '(id: str, file_type: str | None = None, fade_in: float | None = None, '
-                                                'groups: tuple[PoseGroup, ...], extensions: _Mapping[str, '
+                                   'signature': '(*, id: str, file_type: str | None = None, fade_in: float | None = '
+                                                'None, groups: tuple[PoseGroup, ...], extensions: _Mapping[str, '
                                                 'ExtensionValue], opaque_source_ids: _Mapping[str, str] | None = None, '
                                                 'opaque_source_content_hash: str | None = None)'},
  'zipzi.modeling.pose.PoseAsset.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -78,7 +78,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                            'Stable ID of the group owning the affected rows or node '
                                                            'chain.')],
                                                'kind': 'type',
-                                               'signature': '(group_id: str)'},
+                                               'signature': '(*, group_id: str)'},
  'zipzi.modeling.pose.PoseCollectionEntries.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseCollectionEntries.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseCollectionGroups': {'children': ('zipzi.modeling.pose.PoseCollectionGroups.__repr__',
@@ -102,7 +102,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                          'Stable ID of the owning entry; links remain owned by that '
                                                          'entry.')],
                                              'kind': 'type',
-                                             'signature': '(entry_id: str)'},
+                                             'signature': '(*, entry_id: str)'},
  'zipzi.modeling.pose.PoseCollectionLinks.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseCollectionLinks.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseEdit': {'children': (),
@@ -121,7 +121,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                     'Stable identity in the owning authoring domain; exported metadata '
                                                     'IDs retain their source text.')],
                                         'kind': 'type',
-                                        'signature': '(id: str)'},
+                                        'signature': '(*, id: str)'},
  'zipzi.modeling.pose.PoseEditCreate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseEditCreate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseEditCreateEntry': {'children': ('zipzi.modeling.pose.PoseEditCreateEntry.__repr__',
@@ -140,7 +140,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                          'Optional stable sibling ID before which to insert; None '
                                                          'appends.')],
                                              'kind': 'type',
-                                             'signature': '(group_id: str, id: str, before: str | None = None)'},
+                                             'signature': '(*, group_id: str, id: str, before: str | None = None)'},
  'zipzi.modeling.pose.PoseEditCreateEntry.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseEditCreateEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseEditCreateGroup': {'children': ('zipzi.modeling.pose.PoseEditCreateGroup.__repr__',
@@ -162,7 +162,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                          'Optional stable sibling ID before which to insert; None '
                                                          'appends.')],
                                              'kind': 'type',
-                                             'signature': '(pose_id: str, id: str, name: str, before: str | None = '
+                                             'signature': '(*, pose_id: str, id: str, name: str, before: str | None = '
                                                           'None)'},
  'zipzi.modeling.pose.PoseEditCreateGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseEditCreateGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -182,7 +182,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                         'Optional stable sibling ID before which to insert; None '
                                                         'appends.')],
                                             'kind': 'type',
-                                            'signature': '(entry_id: str, id: str, before: str | None = None)'},
+                                            'signature': '(*, entry_id: str, id: str, before: str | None = None)'},
  'zipzi.modeling.pose.PoseEditCreateLink.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseEditCreateLink.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseEditDelete': {'children': ('zipzi.modeling.pose.PoseEditDelete.__repr__',
@@ -195,7 +195,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                     'Ordered stable IDs selected by this operation; names and row '
                                                     'numbers are not identities.')],
                                         'kind': 'type',
-                                        'signature': '(ids: tuple[str, ...])'},
+                                        'signature': '(*, ids: tuple[str, ...])'},
  'zipzi.modeling.pose.PoseEditDelete.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseEditDelete.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseEditDissolveGroup': {'children': ('zipzi.modeling.pose.PoseEditDissolveGroup.__repr__',
@@ -214,7 +214,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                            'Optional stable sibling ID before which to insert; None '
                                                            'appends.')],
                                                'kind': 'type',
-                                               'signature': '(id: str, destination: str, before: str | None = None)'},
+                                               'signature': '(*, id: str, destination: str, before: str | None = '
+                                                            'None)'},
  'zipzi.modeling.pose.PoseEditDissolveGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseEditDissolveGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseEditDuplicate': {'children': ('zipzi.modeling.pose.PoseEditDuplicate.__repr__',
@@ -233,8 +234,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                        'Optional stable sibling ID before which to insert; None '
                                                        'appends.')],
                                            'kind': 'type',
-                                           'signature': '(ids: tuple[str, ...], destination: PoseCollection, before: '
-                                                        'str | None = None)'},
+                                           'signature': '(*, ids: tuple[str, ...], destination: PoseCollection, '
+                                                        'before: str | None = None)'},
  'zipzi.modeling.pose.PoseEditDuplicate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseEditDuplicate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseEditMove': {'children': ('zipzi.modeling.pose.PoseEditMove.__repr__',
@@ -251,8 +252,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                  ('before',
                                                   'Optional stable sibling ID before which to insert; None appends.')],
                                       'kind': 'type',
-                                      'signature': '(ids: tuple[str, ...], destination: PoseCollection, before: str | '
-                                                   'None = None)'},
+                                      'signature': '(*, ids: tuple[str, ...], destination: PoseCollection, before: str '
+                                                   '| None = None)'},
  'zipzi.modeling.pose.PoseEditMove.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseEditMove.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseEditPatch': {'children': ('zipzi.modeling.pose.PoseEditPatch.__repr__',
@@ -271,7 +272,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                    'Typed replacement fields for the addressed object, applied '
                                                    'atomically.')],
                                        'kind': 'type',
-                                       'signature': '(id: str, expected: PoseFields, fields: PoseFields)'},
+                                       'signature': '(*, id: str, expected: PoseFields, fields: PoseFields)'},
  'zipzi.modeling.pose.PoseEditPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseEditPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseEntry': {'children': ('zipzi.modeling.pose.PoseEntry.__repr__',
@@ -292,7 +293,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                'Owned opaque imported fields preserved for format roundtrips; declared '
                                                'fields cannot be shadowed.')],
                                    'kind': 'type',
-                                   'signature': '(id: str, part: PosePartRef, links: tuple[PoseLink, ...] | None = '
+                                   'signature': '(*, id: str, part: PosePartRef, links: tuple[PoseLink, ...] | None = '
                                                 'None, extensions: _Mapping[str, ExtensionValue])'},
  'zipzi.modeling.pose.PoseEntry.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -312,7 +313,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                      'Optional fade-in duration in seconds; None retains the '
                                                      'format/runtime default.')],
                                          'kind': 'type',
-                                         'signature': '(fade_in: float | None = None)'},
+                                         'signature': '(*, fade_in: float | None = None)'},
  'zipzi.modeling.pose.PoseFieldsAsset.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseFieldsAsset.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseFieldsEntry': {'children': ('zipzi.modeling.pose.PoseFieldsEntry.__repr__',
@@ -325,7 +326,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                      'Typed resolved/unresolved Part reference retained by the Pose '
                                                      'entry or link.')],
                                          'kind': 'type',
-                                         'signature': '(part: PosePartRef)'},
+                                         'signature': '(*, part: PosePartRef)'},
  'zipzi.modeling.pose.PoseFieldsEntry.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseFieldsEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseFieldsGroup': {'children': ('zipzi.modeling.pose.PoseFieldsGroup.__repr__',
@@ -338,7 +339,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                      'Human-readable display or registration name; distinct from '
                                                      'persistent object identity.')],
                                          'kind': 'type',
-                                         'signature': '(name: str)'},
+                                         'signature': '(*, name: str)'},
  'zipzi.modeling.pose.PoseFieldsGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseFieldsGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseFieldsLink': {'children': ('zipzi.modeling.pose.PoseFieldsLink.__repr__',
@@ -351,7 +352,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                     'Typed target reference; unresolved imported runtime labels remain '
                                                     'explicit.')],
                                         'kind': 'type',
-                                        'signature': '(target: PosePartRef)'},
+                                        'signature': '(*, target: PosePartRef)'},
  'zipzi.modeling.pose.PoseFieldsLink.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseFieldsLink.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseGroup': {'children': ('zipzi.modeling.pose.PoseGroup.__repr__',
@@ -369,7 +370,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                'Ordered owned registrations or expression/Pose entries, with stable '
                                                'identities.')],
                                    'kind': 'type',
-                                   'signature': '(id: str, name: str, entries: tuple[PoseEntry, ...])'},
+                                   'signature': '(*, id: str, name: str, entries: tuple[PoseEntry, ...])'},
  'zipzi.modeling.pose.PoseGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseLink': {'children': ('zipzi.modeling.pose.PoseLink.__repr__',
@@ -384,7 +385,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                               'Typed target reference; unresolved imported runtime labels remain '
                                               'explicit.')],
                                   'kind': 'type',
-                                  'signature': '(id: str, target: PosePartRef)'},
+                                  'signature': '(*, id: str, target: PosePartRef)'},
  'zipzi.modeling.pose.PoseLink.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseLink.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PosePartRef': {'children': (),
@@ -403,7 +404,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                          'Stable document Part UUID for this opacity or visibility '
                                                          'reference.')],
                                              'kind': 'type',
-                                             'signature': '(part_id: str)'},
+                                             'signature': '(*, part_id: str)'},
  'zipzi.modeling.pose.PosePartRefResolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PosePartRefResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PosePartRefUnresolved': {'children': ('zipzi.modeling.pose.PosePartRefUnresolved.__repr__',
@@ -416,7 +417,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                            'Imported/exported runtime label, distinct from the '
                                                            'document object UUID.')],
                                                'kind': 'type',
-                                               'signature': '(runtime_id: str)'},
+                                               'signature': '(*, runtime_id: str)'},
  'zipzi.modeling.pose.PosePartRefUnresolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PosePartRefUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PosePartRefUnspecified': {'children': ('zipzi.modeling.pose.PosePartRefUnspecified.__repr__',

@@ -12,7 +12,7 @@ Canonical parameters modeling values.
 
 ## zipzi.modeling.parameters.Parameter
 
-`(id: str, runtime_id: str, name: str, minimum: float, maximum: float, default_value: float, decimal_places: int = 6, kind: ParameterKind = field(default_factory=lambda: read_ParameterKind('normal')), repeat: bool = False)`
+`(*, id: str, runtime_id: str, name: str, minimum: float, maximum: float, default_value: float, decimal_places: int = 6, kind: ParameterKind = ParameterKind.NORMAL, repeat: bool = False)`
 
 Immutable owned Parameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -35,7 +35,7 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.modeling.parameters.ParameterRangeEdit
 
-`(parameter_id: str, minimum: float, maximum: float, default_value: float, policy: ParameterRangePolicy)`
+`(*, parameter_id: str, minimum: float, maximum: float, default_value: float, policy: ParameterRangePolicy)`
 
 Immutable owned ParameterRangeEdit value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

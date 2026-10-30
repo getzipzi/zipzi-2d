@@ -72,7 +72,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                        'distinct from the referenced\n'
                                                        'object identity.')],
                                            'kind': 'type',
-                                           'signature': '(id: str, members: tuple[ReferenceEntryCdiParameterRef, '
+                                           'signature': '(*, id: str, members: tuple[ReferenceEntryCdiParameterRef, '
                                                         '...])'},
  'zipzi.modeling.project.CdiCombinedSet.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.CdiCombinedSet.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -92,8 +92,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                         'Imported group document-ID to runtime-ID map, retained to '
                                                         'validate opaque metadata.')],
                                             'kind': 'type',
-                                            'signature': '(parameters: _Mapping[str, str], parts: _Mapping[str, str], '
-                                                         'groups: _Mapping[str, str])'},
+                                            'signature': '(*, parameters: _Mapping[str, str], parts: _Mapping[str, '
+                                                         'str], groups: _Mapping[str, str])'},
  'zipzi.modeling.project.CdiNamespaceIds.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.CdiNamespaceIds.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiParameterEntry': {'children': (),
@@ -121,8 +121,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                   'retain unknown keys when editing\n'
                                                                   'known fields.')],
                                                       'kind': 'type',
-                                                      'signature': '(parameter_id: str, group_id: str | None = None, '
-                                                                   'extensions: _Mapping[str, ExtensionValue])'},
+                                                      'signature': '(*, parameter_id: str, group_id: str | None = '
+                                                                   'None, extensions: _Mapping[str, ExtensionValue])'},
  'zipzi.modeling.project.CdiParameterEntryResolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.CdiParameterEntryResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiParameterEntryUnresolved': {'children': ('zipzi.modeling.project.CdiParameterEntryUnresolved.__repr__',
@@ -148,7 +148,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                     'retain unknown keys when editing\n'
                                                                     'known fields.')],
                                                         'kind': 'type',
-                                                        'signature': '(runtime_id: str, name: str, group_id: str | '
+                                                        'signature': '(*, runtime_id: str, name: str, group_id: str | '
                                                                      'None = None, extensions: _Mapping[str, '
                                                                      'ExtensionValue])'},
  'zipzi.modeling.project.CdiParameterEntryUnresolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -177,7 +177,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                           'unknown keys when editing known\n'
                                                           'fields.')],
                                               'kind': 'type',
-                                              'signature': '(id: str, runtime_id: str, name: str, parent_id: str | '
+                                              'signature': '(*, id: str, runtime_id: str, name: str, parent_id: str | '
                                                            'None = None, extensions: _Mapping[str, ExtensionValue])'},
  'zipzi.modeling.project.CdiParameterGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.CdiParameterGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -197,7 +197,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                 'Stable document parameter ID, not its exported '
                                                                 'runtime identifier.')],
                                                     'kind': 'type',
-                                                    'signature': '(parameter_id: str)'},
+                                                    'signature': '(*, parameter_id: str)'},
  'zipzi.modeling.project.CdiParameterRefResolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.CdiParameterRefResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiParameterRefUnresolved': {'children': ('zipzi.modeling.project.CdiParameterRefUnresolved.__repr__',
@@ -212,7 +212,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                   'import/export; not the document\n'
                                                                   'object ID.')],
                                                       'kind': 'type',
-                                                      'signature': '(runtime_id: str)'},
+                                                      'signature': '(*, runtime_id: str)'},
  'zipzi.modeling.project.CdiParameterRefUnresolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.CdiParameterRefUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiParameterRefUnspecified': {'children': ('zipzi.modeling.project.CdiParameterRefUnspecified.__repr__',
@@ -247,7 +247,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                              'unknown keys when editing\n'
                                                              'known fields.')],
                                                  'kind': 'type',
-                                                 'signature': '(part_id: str, extensions: _Mapping[str, '
+                                                 'signature': '(*, part_id: str, extensions: _Mapping[str, '
                                                               'ExtensionValue])'},
  'zipzi.modeling.project.CdiPartEntryResolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.CdiPartEntryResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -269,7 +269,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                'retain unknown keys when editing\n'
                                                                'known fields.')],
                                                    'kind': 'type',
-                                                   'signature': '(runtime_id: str, name: str, extensions: '
+                                                   'signature': '(*, runtime_id: str, name: str, extensions: '
                                                                 '_Mapping[str, ExtensionValue])'},
  'zipzi.modeling.project.CdiPartEntryUnresolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.CdiPartEntryUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -304,12 +304,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                     'Complete namespace identity at import when opaque extensions '
                                                     'exist.')],
                                         'kind': 'type',
-                                        'signature': '(origin: DisplayInfoOrigin, parameters: tuple[CdiParameterEntry, '
-                                                     '...] | None = None, parameter_groups: tuple[CdiParameterGroup, '
-                                                     '...] | None = None, parts: tuple[CdiPartEntry, ...] | None = '
-                                                     'None, combined_parameters: tuple[CdiCombinedSet, ...] | None = '
-                                                     'None, extensions: _Mapping[str, ExtensionValue], '
-                                                     'opaque_source_ids: CdiNamespaceIds | None = None)'},
+                                        'signature': '(*, origin: DisplayInfoOrigin, parameters: '
+                                                     'tuple[CdiParameterEntry, ...] | None = None, parameter_groups: '
+                                                     'tuple[CdiParameterGroup, ...] | None = None, parts: '
+                                                     'tuple[CdiPartEntry, ...] | None = None, combined_parameters: '
+                                                     'tuple[CdiCombinedSet, ...] | None = None, extensions: '
+                                                     '_Mapping[str, ExtensionValue], opaque_source_ids: '
+                                                     'CdiNamespaceIds | None = None)'},
  'zipzi.modeling.project.DisplayInfo.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.DisplayInfo.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DisplayInfoOrigin': {'children': (),
@@ -339,7 +340,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                   ('value',
                                                                    'Scalar value in the referenced parameter domain.')],
                                                        'kind': 'type',
-                                                       'signature': '(expected: DocumentValue, value: DocumentValue)'},
+                                                       'signature': '(*, expected: DocumentValue, value: '
+                                                                    'DocumentValue)'},
  'zipzi.modeling.project.DocumentAuthoringEditPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.DocumentAuthoringEditPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter': {'children': ('zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter.__repr__',
@@ -360,8 +362,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                                 'Stable document parameter ID, not its '
                                                                                 'exported runtime identifier.')],
                                                                     'kind': 'type',
-                                                                    'signature': '(runtime_id: str, parameter_id: str '
-                                                                                 '| None = None)'},
+                                                                    'signature': '(*, runtime_id: str, parameter_id: '
+                                                                                 'str | None = None)'},
  'zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart': {'children': ('zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart.__repr__',
@@ -382,8 +384,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                            'of the deformation parent. None selects\n'
                                                                            'the root/unassigned container.')],
                                                                'kind': 'type',
-                                                               'signature': '(runtime_id: str, part_id: str | None = '
-                                                                            'None)'},
+                                                               'signature': '(*, runtime_id: str, part_id: str | None '
+                                                                            '= None)'},
  'zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment': {'children': ('zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment.__repr__',
@@ -405,8 +407,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                                      'distinct from its relative '
                                                                                      'package path.')],
                                                                          'kind': 'type',
-                                                                         'signature': '(path: str, attachment_id: str '
-                                                                                      '| None = None)'},
+                                                                         'signature': '(*, path: str, attachment_id: '
+                                                                                      'str | None = None)'},
  'zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DocumentField': {'children': (),
@@ -433,7 +435,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                     'Replacement export-frame scale and padding '
                                                                     'settings.')],
                                                         'kind': 'type',
-                                                        'signature': '(value: ExportSettings)'},
+                                                        'signature': '(*, value: ExportSettings)'},
  'zipzi.modeling.project.DocumentValueExportSettings.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.DocumentValueExportSettings.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DocumentValueLayout': {'children': ('zipzi.modeling.project.DocumentValueLayout.__repr__',
@@ -446,7 +448,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                             'Replacement model3 layout map; None explicitly removes '
                                                             'the layout.')],
                                                 'kind': 'type',
-                                                'signature': '(value: _Mapping[str, float] | None = None)'},
+                                                'signature': '(*, value: _Mapping[str, float] | None = None)'},
  'zipzi.modeling.project.DocumentValueLayout.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.DocumentValueLayout.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DocumentValueSourceCanvas': {'children': ('zipzi.modeling.project.DocumentValueSourceCanvas.__repr__',
@@ -460,7 +462,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                   'Replacement source-canvas metadata; None explicitly '
                                                                   'removes the canvas provenance.')],
                                                       'kind': 'type',
-                                                      'signature': '(value: Canvas | None = None)'},
+                                                      'signature': '(*, value: Canvas | None = None)'},
  'zipzi.modeling.project.DocumentValueSourceCanvas.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.DocumentValueSourceCanvas.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.EditorState': {'children': ('zipzi.modeling.project.EditorState.__repr__',
@@ -473,9 +475,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                     'Explicit flags only, keyed by globally unique object ID. Defaults '
                                                     'are omitted.')],
                                         'kind': 'type',
-                                        'signature': '(objects: _Mapping[str, ObjectEditorState] = '
-                                                     'field(default_factory=lambda: {key0: read_ObjectEditorState(v0) '
-                                                     'for key0, v0 in record({}).items()}))'},
+                                        'signature': '(*, objects: _Mapping[str, ObjectEditorState] = <factory>)'},
  'zipzi.modeling.project.EditorState.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.EditorState.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ExportFormat': {'children': (),
@@ -509,8 +509,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                        'Finite nonnegative minimum automatic export extent in model '
                                                        'units; native default is 256.')],
                                            'kind': 'type',
-                                           'signature': '(pixels_per_unit: float, bounds: tuple[float, float, float, '
-                                                        'float] | None = None, padding_fraction: float, '
+                                           'signature': '(*, pixels_per_unit: float, bounds: tuple[float, float, '
+                                                        'float, float] | None = None, padding_fraction: float, '
                                                         'padding_pixels: float, minimum_extent: float)'},
  'zipzi.modeling.project.ExportSettings.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ExportSettings.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -552,7 +552,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                        'Preserved opaque imported model3 source metadata; None means '
                                                        'none was retained.')],
                                            'kind': 'type',
-                                           'signature': '(groups: tuple[ModelParameterGroup, ...] | None = None, '
+                                           'signature': '(*, groups: tuple[ModelParameterGroup, ...] | None = None, '
                                                         'layout: _Mapping[str, float] | None = None, hit_areas: '
                                                         'tuple[ModelHitArea, ...] | None = None, user_data: '
                                                         'AttachmentRef | None = None, extensions: _Mapping[str, '
@@ -580,10 +580,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                      'keys when editing known\n'
                                                      'fields.')],
                                          'kind': 'type',
-                                         'signature': '(id: str, name: str, mesh: ModelTargetRef, extensions: '
-                                                      '_Mapping[str, ExtensionValue] = field(default_factory=lambda: '
-                                                      '{key0: _read_extension(v0) for key0, v0 in '
-                                                      'record({}).items()}))'},
+                                         'signature': '(*, id: str, name: str, mesh: ModelTargetRef, extensions: '
+                                                      '_Mapping[str, ExtensionValue] = <factory>)'},
  'zipzi.modeling.project.ModelHitArea.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ModelHitArea.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ModelParameterGroup': {'children': ('zipzi.modeling.project.ModelParameterGroup.__repr__',
@@ -607,11 +605,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                             'unknown keys when editing known\n'
                                                             'fields.')],
                                                 'kind': 'type',
-                                                'signature': '(id: str, name: str, parameters: '
+                                                'signature': '(*, id: str, name: str, parameters: '
                                                              'tuple[ReferenceEntryModelTargetRef, ...], extensions: '
-                                                             '_Mapping[str, ExtensionValue] = '
-                                                             'field(default_factory=lambda: {key0: _read_extension(v0) '
-                                                             'for key0, v0 in record({}).items()}))'},
+                                                             '_Mapping[str, ExtensionValue] = <factory>)'},
  'zipzi.modeling.project.ModelParameterGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ModelParameterGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ModelTargetRef': {'children': (),
@@ -630,7 +626,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                'Stable document ID of the object described or selected '
                                                                'by this value.')],
                                                    'kind': 'type',
-                                                   'signature': '(object_id: str)'},
+                                                   'signature': '(*, object_id: str)'},
  'zipzi.modeling.project.ModelTargetRefResolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ModelTargetRefResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ModelTargetRefUnresolved': {'children': ('zipzi.modeling.project.ModelTargetRefUnresolved.__repr__',
@@ -644,7 +640,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                  'import/export; not the document\n'
                                                                  'object ID.')],
                                                      'kind': 'type',
-                                                     'signature': '(runtime_id: str)'},
+                                                     'signature': '(*, runtime_id: str)'},
  'zipzi.modeling.project.ModelTargetRefUnresolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ModelTargetRefUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ModelTargetRefUnspecified': {'children': ('zipzi.modeling.project.ModelTargetRefUnspecified.__repr__',
@@ -672,7 +668,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                           'Authoring lock state; native edit admission and '
                                                           'capabilities enforce the lock.')],
                                               'kind': 'type',
-                                              'signature': '(hidden_in_editor: bool = False, locked: bool = False)'},
+                                              'signature': '(*, hidden_in_editor: bool = False, locked: bool = False)'},
  'zipzi.modeling.project.ObjectEditorState.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ObjectEditorState.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportIssue': {'children': (),
@@ -691,7 +687,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                              'Exact native opaque-field guard violated by this '
                                                              'retained resource.')],
                                                  'kind': 'type',
-                                                 'signature': '(problem: OpaqueExportProblem)'},
+                                                 'signature': '(*, problem: OpaqueExportProblem)'},
  'zipzi.modeling.project.OpaqueExportIssueCdi.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.OpaqueExportIssueCdi.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportIssueExpression': {'children': ('zipzi.modeling.project.OpaqueExportIssueExpression.__repr__',
@@ -708,7 +704,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                     'Exact native opaque-field guard violated by this '
                                                                     'retained resource.')],
                                                         'kind': 'type',
-                                                        'signature': '(id: str, problem: OpaqueExportProblem)'},
+                                                        'signature': '(*, id: str, problem: OpaqueExportProblem)'},
  'zipzi.modeling.project.OpaqueExportIssueExpression.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.OpaqueExportIssueExpression.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportIssueModel3NamespaceChanged': {'children': ('zipzi.modeling.project.OpaqueExportIssueModel3NamespaceChanged.__repr__',
@@ -738,7 +734,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                 'Exact native opaque-field guard violated by this '
                                                                 'retained resource.')],
                                                     'kind': 'type',
-                                                    'signature': '(id: str, problem: OpaqueExportProblem)'},
+                                                    'signature': '(*, id: str, problem: OpaqueExportProblem)'},
  'zipzi.modeling.project.OpaqueExportIssueMotion.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.OpaqueExportIssueMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportIssuePhysics': {'children': ('zipzi.modeling.project.OpaqueExportIssuePhysics.__repr__',
@@ -754,7 +750,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                  'Exact native opaque-field guard violated by this '
                                                                  'retained resource.')],
                                                      'kind': 'type',
-                                                     'signature': '(id: str, problem: OpaqueExportProblem)'},
+                                                     'signature': '(*, id: str, problem: OpaqueExportProblem)'},
  'zipzi.modeling.project.OpaqueExportIssuePhysics.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.OpaqueExportIssuePhysics.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportIssuePose': {'children': ('zipzi.modeling.project.OpaqueExportIssuePose.__repr__',
@@ -770,7 +766,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                               'Exact native opaque-field guard violated by this '
                                                               'retained resource.')],
                                                   'kind': 'type',
-                                                  'signature': '(id: str, problem: OpaqueExportProblem)'},
+                                                  'signature': '(*, id: str, problem: OpaqueExportProblem)'},
  'zipzi.modeling.project.OpaqueExportIssuePose.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.OpaqueExportIssuePose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportProblem': {'children': (),
@@ -797,7 +793,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                           'Optional owned file contents; None preserves an unavailable '
                                                           'attachment, not an empty file.')],
                                               'kind': 'type',
-                                              'signature': '(id: str, path: str, bytes: _Bytes | None = None)'},
+                                              'signature': '(*, id: str, path: str, bytes: _Bytes | None = None)'},
  'zipzi.modeling.project.PackageAttachment.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.PackageAttachment.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectDiagnostic': {'children': ('zipzi.modeling.project.ProjectDiagnostic.__repr__',
@@ -819,7 +815,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                           'Human-readable diagnostic detail; code is the stable '
                                                           'programmatic discriminator.')],
                                               'kind': 'type',
-                                              'signature': '(severity: str, code: str, object_id: str, message: str)'},
+                                              'signature': '(*, severity: str, code: str, object_id: str, message: '
+                                                           'str)'},
  'zipzi.modeling.project.ProjectDiagnostic.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ProjectDiagnostic.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectReport': {'children': ('zipzi.modeling.project.ProjectReport.__repr__',
@@ -852,9 +849,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                       'client-side path\n'
                                                       'translation is implied.')],
                                           'kind': 'type',
-                                          'signature': '(before: _Version, after: _Version, warnings: tuple[str, ...], '
-                                                       'diagnostics: tuple[ProjectDiagnostic, ...], published: bool, '
-                                                       'durable: bool, paths: tuple[str, ...])'},
+                                          'signature': '(*, before: _Version, after: _Version, warnings: tuple[str, '
+                                                       '...], diagnostics: tuple[ProjectDiagnostic, ...], published: '
+                                                       'bool, durable: bool, paths: tuple[str, ...])'},
  'zipzi.modeling.project.ProjectReport.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ProjectReport.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectRequest': {'children': (),
@@ -904,9 +901,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                              'instead of requiring an\n'
                                                              'explicit one.')],
                                                  'kind': 'type',
-                                                 'signature': '(path: str, format: ExportFormat, name: str, object_id: '
-                                                              'str | None = None, allow_loss: bool, bake_animation: '
-                                                              'bool, auto_frame_rate: bool)'},
+                                                 'signature': '(*, path: str, format: ExportFormat, name: str, '
+                                                              'object_id: str | None = None, allow_loss: bool, '
+                                                              'bake_animation: bool, auto_frame_rate: bool)'},
  'zipzi.modeling.project.ProjectRequestExport.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ProjectRequestExport.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectRequestImport': {'children': ('zipzi.modeling.project.ProjectRequestImport.__repr__',
@@ -926,7 +923,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                              'used by imports requiring\n'
                                                              'separate images.')],
                                                  'kind': 'type',
-                                                 'signature': '(path: str, format: ImportFormat, textures: '
+                                                 'signature': '(*, path: str, format: ImportFormat, textures: '
                                                               'tuple[TextureSlot, ...])'},
  'zipzi.modeling.project.ProjectRequestImport.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ProjectRequestImport.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -941,7 +938,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                          ('setup',
                                                           'Model source-canvas and export-frame configuration.')],
                                               'kind': 'type',
-                                              'signature': '(document_id: str, setup: ModelSetup)'},
+                                              'signature': '(*, document_id: str, setup: ModelSetup)'},
  'zipzi.modeling.project.ProjectRequestNew.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ProjectRequestNew.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectRequestOpen': {'children': ('zipzi.modeling.project.ProjectRequestOpen.__repr__',
@@ -954,7 +951,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                            'Host-side filesystem path for this IO request; resolve it '
                                                            'explicitly on the host.')],
                                                'kind': 'type',
-                                               'signature': '(path: str)'},
+                                               'signature': '(*, path: str)'},
  'zipzi.modeling.project.ProjectRequestOpen.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ProjectRequestOpen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.TextureSlot': {'children': ('zipzi.modeling.project.TextureSlot.__repr__',
@@ -969,6 +966,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                    ('path',
                                                     'Host-side image file path supplying this external texture slot.')],
                                         'kind': 'type',
-                                        'signature': '(slot: int, path: str)'},
+                                        'signature': '(*, slot: int, path: str)'},
  'zipzi.modeling.project.TextureSlot.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.TextureSlot.summary': {'alias': 'zipzi.ApiDescription.summary'}}

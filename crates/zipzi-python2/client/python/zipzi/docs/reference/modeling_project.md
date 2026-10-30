@@ -12,7 +12,7 @@ Canonical project modeling values.
 
 ## zipzi.modeling.project.CdiCombinedSet
 
-`(id: str, members: tuple[ReferenceEntryCdiParameterRef, ...])`
+`(*, id: str, members: tuple[ReferenceEntryCdiParameterRef, ...])`
 
 Immutable owned CdiCombinedSet value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -22,7 +22,7 @@ object identity.
 
 ## zipzi.modeling.project.CdiNamespaceIds
 
-`(parameters: _Mapping[str, str], parts: _Mapping[str, str], groups: _Mapping[str, str])`
+`(*, parameters: _Mapping[str, str], parts: _Mapping[str, str], groups: _Mapping[str, str])`
 
 Immutable owned CdiNamespaceIds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -39,7 +39,7 @@ Typed public API entry.
 
 ## zipzi.modeling.project.CdiParameterEntryResolved
 
-`(parameter_id: str, group_id: str | None = None, extensions: _Mapping[str, ExtensionValue])`
+`(*, parameter_id: str, group_id: str | None = None, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned CdiParameterEntryResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -51,7 +51,7 @@ known fields.
 
 ## zipzi.modeling.project.CdiParameterEntryUnresolved
 
-`(runtime_id: str, name: str, group_id: str | None = None, extensions: _Mapping[str, ExtensionValue])`
+`(*, runtime_id: str, name: str, group_id: str | None = None, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned CdiParameterEntryUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -65,7 +65,7 @@ known fields.
 
 ## zipzi.modeling.project.CdiParameterGroup
 
-`(id: str, runtime_id: str, name: str, parent_id: str | None = None, extensions: _Mapping[str, ExtensionValue])`
+`(*, id: str, runtime_id: str, name: str, parent_id: str | None = None, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned CdiParameterGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -86,7 +86,7 @@ Typed public API entry.
 
 ## zipzi.modeling.project.CdiParameterRefResolved
 
-`(parameter_id: str)`
+`(*, parameter_id: str)`
 
 Immutable owned CdiParameterRefResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -94,7 +94,7 @@ Immutable owned CdiParameterRefResolved value. Construction owns declared collec
 
 ## zipzi.modeling.project.CdiParameterRefUnresolved
 
-`(runtime_id: str)`
+`(*, runtime_id: str)`
 
 Immutable owned CdiParameterRefUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -117,7 +117,7 @@ Typed public API entry.
 
 ## zipzi.modeling.project.CdiPartEntryResolved
 
-`(part_id: str, extensions: _Mapping[str, ExtensionValue])`
+`(*, part_id: str, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned CdiPartEntryResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -127,7 +127,7 @@ known fields.
 
 ## zipzi.modeling.project.CdiPartEntryUnresolved
 
-`(runtime_id: str, name: str, extensions: _Mapping[str, ExtensionValue])`
+`(*, runtime_id: str, name: str, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned CdiPartEntryUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -139,7 +139,7 @@ known fields.
 
 ## zipzi.modeling.project.DisplayInfo
 
-`(origin: DisplayInfoOrigin, parameters: tuple[CdiParameterEntry, ...] | None = None, parameter_groups: tuple[CdiParameterGroup, ...] | None = None, parts: tuple[CdiPartEntry, ...] | None = None, combined_parameters: tuple[CdiCombinedSet, ...] | None = None, extensions: _Mapping[str, ExtensionValue], opaque_source_ids: CdiNamespaceIds | None = None)`
+`(*, origin: DisplayInfoOrigin, parameters: tuple[CdiParameterEntry, ...] | None = None, parameter_groups: tuple[CdiParameterGroup, ...] | None = None, parts: tuple[CdiPartEntry, ...] | None = None, combined_parameters: tuple[CdiCombinedSet, ...] | None = None, extensions: _Mapping[str, ExtensionValue], opaque_source_ids: CdiNamespaceIds | None = None)`
 
 Immutable owned DisplayInfo value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -171,7 +171,7 @@ Typed public API entry.
 
 ## zipzi.modeling.project.DocumentAuthoringEditPatch
 
-`(expected: DocumentValue, value: DocumentValue)`
+`(*, expected: DocumentValue, value: DocumentValue)`
 
 Immutable owned DocumentAuthoringEditPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -181,7 +181,7 @@ the edit.
 
 ## zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter
 
-`(runtime_id: str, parameter_id: str | None = None)`
+`(*, runtime_id: str, parameter_id: str | None = None)`
 
 Immutable owned DocumentAuthoringEditRepairCdiParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -191,7 +191,7 @@ object ID.
 
 ## zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart
 
-`(runtime_id: str, part_id: str | None = None)`
+`(*, runtime_id: str, part_id: str | None = None)`
 
 Immutable owned DocumentAuthoringEditRepairCdiPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -202,7 +202,7 @@ the root/unassigned container.
 
 ## zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment
 
-`(path: str, attachment_id: str | None = None)`
+`(*, path: str, attachment_id: str | None = None)`
 
 Immutable owned DocumentAuthoringEditRepairMissingAttachment value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -226,7 +226,7 @@ Typed public API entry.
 
 ## zipzi.modeling.project.DocumentValueExportSettings
 
-`(value: ExportSettings)`
+`(*, value: ExportSettings)`
 
 Immutable owned DocumentValueExportSettings value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -234,7 +234,7 @@ Immutable owned DocumentValueExportSettings value. Construction owns declared co
 
 ## zipzi.modeling.project.DocumentValueLayout
 
-`(value: _Mapping[str, float] | None = None)`
+`(*, value: _Mapping[str, float] | None = None)`
 
 Immutable owned DocumentValueLayout value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -242,7 +242,7 @@ Immutable owned DocumentValueLayout value. Construction owns declared collection
 
 ## zipzi.modeling.project.DocumentValueSourceCanvas
 
-`(value: Canvas | None = None)`
+`(*, value: Canvas | None = None)`
 
 Immutable owned DocumentValueSourceCanvas value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -250,7 +250,7 @@ Immutable owned DocumentValueSourceCanvas value. Construction owns declared coll
 
 ## zipzi.modeling.project.EditorState
 
-`(objects: _Mapping[str, ObjectEditorState] = field(default_factory=lambda: {key0: read_ObjectEditorState(v0) for key0, v0 in record({}).items()}))`
+`(*, objects: _Mapping[str, ObjectEditorState] = <factory>)`
 
 Immutable owned EditorState value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -265,7 +265,7 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.modeling.project.ExportSettings
 
-`(pixels_per_unit: float, bounds: tuple[float, float, float, float] | None = None, padding_fraction: float, padding_pixels: float, minimum_extent: float)`
+`(*, pixels_per_unit: float, bounds: tuple[float, float, float, float] | None = None, padding_fraction: float, padding_pixels: float, minimum_extent: float)`
 
 Immutable owned ExportSettings value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -286,7 +286,7 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.modeling.project.Model3Settings
 
-`(groups: tuple[ModelParameterGroup, ...] | None = None, layout: _Mapping[str, float] | None = None, hit_areas: tuple[ModelHitArea, ...] | None = None, user_data: AttachmentRef | None = None, extensions: _Mapping[str, ExtensionValue], source_runtime_ids: _Mapping[str, str] | None = None, source_content: str | None = None)`
+`(*, groups: tuple[ModelParameterGroup, ...] | None = None, layout: _Mapping[str, float] | None = None, hit_areas: tuple[ModelHitArea, ...] | None = None, user_data: AttachmentRef | None = None, extensions: _Mapping[str, ExtensionValue], source_runtime_ids: _Mapping[str, str] | None = None, source_content: str | None = None)`
 
 Immutable owned Model3Settings value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -303,7 +303,7 @@ fields.
 
 ## zipzi.modeling.project.ModelHitArea
 
-`(id: str, name: str, mesh: ModelTargetRef, extensions: _Mapping[str, ExtensionValue] = field(default_factory=lambda: {key0: _read_extension(v0) for key0, v0 in record({}).items()}))`
+`(*, id: str, name: str, mesh: ModelTargetRef, extensions: _Mapping[str, ExtensionValue] = <factory>)`
 
 Immutable owned ModelHitArea value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -315,7 +315,7 @@ fields.
 
 ## zipzi.modeling.project.ModelParameterGroup
 
-`(id: str, name: str, parameters: tuple[ReferenceEntryModelTargetRef, ...], extensions: _Mapping[str, ExtensionValue] = field(default_factory=lambda: {key0: _read_extension(v0) for key0, v0 in record({}).items()}))`
+`(*, id: str, name: str, parameters: tuple[ReferenceEntryModelTargetRef, ...], extensions: _Mapping[str, ExtensionValue] = <factory>)`
 
 Immutable owned ModelParameterGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -335,7 +335,7 @@ Typed public API entry.
 
 ## zipzi.modeling.project.ModelTargetRefResolved
 
-`(object_id: str)`
+`(*, object_id: str)`
 
 Immutable owned ModelTargetRefResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -343,7 +343,7 @@ Immutable owned ModelTargetRefResolved value. Construction owns declared collect
 
 ## zipzi.modeling.project.ModelTargetRefUnresolved
 
-`(runtime_id: str)`
+`(*, runtime_id: str)`
 
 Immutable owned ModelTargetRefUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -359,7 +359,7 @@ Immutable owned ModelTargetRefUnspecified value. Construction owns declared coll
 
 ## zipzi.modeling.project.ObjectEditorState
 
-`(hidden_in_editor: bool = False, locked: bool = False)`
+`(*, hidden_in_editor: bool = False, locked: bool = False)`
 
 Immutable owned ObjectEditorState value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -375,7 +375,7 @@ Typed public API entry.
 
 ## zipzi.modeling.project.OpaqueExportIssueCdi
 
-`(problem: OpaqueExportProblem)`
+`(*, problem: OpaqueExportProblem)`
 
 Immutable owned OpaqueExportIssueCdi value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -383,7 +383,7 @@ Immutable owned OpaqueExportIssueCdi value. Construction owns declared collectio
 
 ## zipzi.modeling.project.OpaqueExportIssueExpression
 
-`(id: str, problem: OpaqueExportProblem)`
+`(*, id: str, problem: OpaqueExportProblem)`
 
 Immutable owned OpaqueExportIssueExpression value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -399,7 +399,7 @@ Immutable owned OpaqueExportIssueModel3NamespaceChanged value. Construction owns
 
 ## zipzi.modeling.project.OpaqueExportIssueMotion
 
-`(id: str, problem: OpaqueExportProblem)`
+`(*, id: str, problem: OpaqueExportProblem)`
 
 Immutable owned OpaqueExportIssueMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -408,7 +408,7 @@ Immutable owned OpaqueExportIssueMotion value. Construction owns declared collec
 
 ## zipzi.modeling.project.OpaqueExportIssuePhysics
 
-`(id: str, problem: OpaqueExportProblem)`
+`(*, id: str, problem: OpaqueExportProblem)`
 
 Immutable owned OpaqueExportIssuePhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -417,7 +417,7 @@ Immutable owned OpaqueExportIssuePhysics value. Construction owns declared colle
 
 ## zipzi.modeling.project.OpaqueExportIssuePose
 
-`(id: str, problem: OpaqueExportProblem)`
+`(*, id: str, problem: OpaqueExportProblem)`
 
 Immutable owned OpaqueExportIssuePose value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -433,7 +433,7 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.modeling.project.PackageAttachment
 
-`(id: str, path: str, bytes: _Bytes | None = None)`
+`(*, id: str, path: str, bytes: _Bytes | None = None)`
 
 Immutable owned PackageAttachment value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -444,7 +444,7 @@ and .. are invalid.
 
 ## zipzi.modeling.project.ProjectDiagnostic
 
-`(severity: str, code: str, object_id: str, message: str)`
+`(*, severity: str, code: str, object_id: str, message: str)`
 
 Immutable owned ProjectDiagnostic value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -455,7 +455,7 @@ Immutable owned ProjectDiagnostic value. Construction owns declared collections;
 
 ## zipzi.modeling.project.ProjectReport
 
-`(before: _Version, after: _Version, warnings: tuple[str, ...], diagnostics: tuple[ProjectDiagnostic, ...], published: bool, durable: bool, paths: tuple[str, ...])`
+`(*, before: _Version, after: _Version, warnings: tuple[str, ...], diagnostics: tuple[ProjectDiagnostic, ...], published: bool, durable: bool, paths: tuple[str, ...])`
 
 Immutable owned ProjectReport value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -487,7 +487,7 @@ Immutable owned ProjectRequestDiagnose value. Construction owns declared collect
 
 ## zipzi.modeling.project.ProjectRequestExport
 
-`(path: str, format: ExportFormat, name: str, object_id: str | None = None, allow_loss: bool, bake_animation: bool, auto_frame_rate: bool)`
+`(*, path: str, format: ExportFormat, name: str, object_id: str | None = None, allow_loss: bool, bake_animation: bool, auto_frame_rate: bool)`
 
 Immutable owned ProjectRequestExport value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -503,7 +503,7 @@ explicit one.
 
 ## zipzi.modeling.project.ProjectRequestImport
 
-`(path: str, format: ImportFormat, textures: tuple[TextureSlot, ...])`
+`(*, path: str, format: ImportFormat, textures: tuple[TextureSlot, ...])`
 
 Immutable owned ProjectRequestImport value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -514,7 +514,7 @@ separate images.
 
 ## zipzi.modeling.project.ProjectRequestNew
 
-`(document_id: str, setup: ModelSetup)`
+`(*, document_id: str, setup: ModelSetup)`
 
 Immutable owned ProjectRequestNew value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -523,7 +523,7 @@ Immutable owned ProjectRequestNew value. Construction owns declared collections;
 
 ## zipzi.modeling.project.ProjectRequestOpen
 
-`(path: str)`
+`(*, path: str)`
 
 Immutable owned ProjectRequestOpen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -531,7 +531,7 @@ Immutable owned ProjectRequestOpen value. Construction owns declared collections
 
 ## zipzi.modeling.project.TextureSlot
 
-`(slot: int, path: str)`
+`(*, slot: int, path: str)`
 
 Immutable owned TextureSlot value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

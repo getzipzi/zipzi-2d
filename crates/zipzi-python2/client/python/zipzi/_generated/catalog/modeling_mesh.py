@@ -45,7 +45,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                                      ('b',
                                                                       'Second endpoint identity of the fixed edge.')],
                                                           'kind': 'type',
-                                                          'signature': '(a: int, b: int)'},
+                                                          'signature': '(*, a: int, b: int)'},
  'zipzi.modeling.mesh.ManualMeshOperationConstrainEdge.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.ManualMeshOperationConstrainEdge.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.ManualMeshOperationDeleteEdge': {'children': ('zipzi.modeling.mesh.ManualMeshOperationDeleteEdge.__repr__',
@@ -60,7 +60,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                                   ('b',
                                                                    'Second endpoint identity of the edge to remove.')],
                                                        'kind': 'type',
-                                                       'signature': '(a: int, b: int)'},
+                                                       'signature': '(*, a: int, b: int)'},
  'zipzi.modeling.mesh.ManualMeshOperationDeleteEdge.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.ManualMeshOperationDeleteEdge.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.ManualMeshOperationDeleteVertices': {'children': ('zipzi.modeling.mesh.ManualMeshOperationDeleteVertices.__repr__',
@@ -75,7 +75,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                                        'Persistent vertex identities to remove '
                                                                        'atomically.')],
                                                            'kind': 'type',
-                                                           'signature': '(ids: tuple[int, ...])'},
+                                                           'signature': '(*, ids: tuple[int, ...])'},
  'zipzi.modeling.mesh.ManualMeshOperationDeleteVertices.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.ManualMeshOperationDeleteVertices.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.ManualMeshOperationInsertConnectedVertex': {'children': ('zipzi.modeling.mesh.ManualMeshOperationInsertConnectedVertex.__repr__',
@@ -96,7 +96,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                                               'Absolute UV position of the new '
                                                                               'vertex.')],
                                                                   'kind': 'type',
-                                                                  'signature': '(from_: int, id: int, uv: Vec2)'},
+                                                                  'signature': '(*, from_: int, id: int, uv: Vec2)'},
  'zipzi.modeling.mesh.ManualMeshOperationInsertConnectedVertex.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.ManualMeshOperationInsertConnectedVertex.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.ManualMeshOperationInsertVertex': {'children': ('zipzi.modeling.mesh.ManualMeshOperationInsertVertex.__repr__',
@@ -112,7 +112,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                                      'a cancelled candidate.'),
                                                                     ('uv', 'Absolute UV position of the new vertex.')],
                                                          'kind': 'type',
-                                                         'signature': '(id: int, uv: Vec2)'},
+                                                         'signature': '(*, id: int, uv: Vec2)'},
  'zipzi.modeling.mesh.ManualMeshOperationInsertVertex.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.ManualMeshOperationInsertVertex.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.ManualMeshOperationMoveVertices': {'children': ('zipzi.modeling.mesh.ManualMeshOperationMoveVertices.__repr__',
@@ -130,7 +130,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                                      'Last accepted preview positions for swept '
                                                                      'crossing checks; None uses source positions.')],
                                                          'kind': 'type',
-                                                         'signature': '(targets: tuple[ManualVertexTarget, ...], '
+                                                         'signature': '(*, targets: tuple[ManualVertexTarget, ...], '
                                                                       'motion_from: tuple[ManualVertexTarget, ...] | '
                                                                       'None = None)'},
  'zipzi.modeling.mesh.ManualMeshOperationMoveVertices.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -162,7 +162,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                                           'Second endpoint identity of the constraint '
                                                                           'to release.')],
                                                               'kind': 'type',
-                                                              'signature': '(a: int, b: int)'},
+                                                              'signature': '(*, a: int, b: int)'},
  'zipzi.modeling.mesh.ManualMeshOperationReleaseConstraint.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.ManualMeshOperationReleaseConstraint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.ManualMeshTransferReport': {'children': ('zipzi.modeling.mesh.ManualMeshTransferReport.__repr__',
@@ -196,7 +196,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                               'Conservative result, workspace and history '
                                                               'accounting.')],
                                                   'kind': 'type',
-                                                  'signature': '(added: int, moved: int, removed: int, shape_count: '
+                                                  'signature': '(*, added: int, moved: int, removed: int, shape_count: '
                                                                'int, reconnected: bool, glue_endpoints: bool, '
                                                                'non_affine_parent: bool, affine_extension: bool, '
                                                                'appearance_limits: tuple[str, ...], cost: '
@@ -215,7 +215,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                        ('uv',
                                                         'Absolute target UV coordinate in the mesh texture domain.')],
                                             'kind': 'type',
-                                            'signature': '(id: int, uv: Vec2)'},
+                                            'signature': '(*, id: int, uv: Vec2)'},
  'zipzi.modeling.mesh.ManualVertexTarget.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.ManualVertexTarget.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.Mesh': {'children': ('zipzi.modeling.mesh.Mesh.__repr__', 'zipzi.modeling.mesh.Mesh.summary'),
@@ -275,7 +275,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                           'Original format-specific blend-mode code; None means no preserved raw '
                                           'code.')],
                               'kind': 'type',
-                              'signature': '(id: str, name: str, texture_asset_id: SceneReference, vertex_ids: '
+                              'signature': '(*, id: str, name: str, texture_asset_id: SceneReference, vertex_ids: '
                                            'tuple[int, ...], base_positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], '
                                            'triangles: tuple[tuple[int, int, int], ...], meshing: MeshMeshing | None = '
                                            'None, runtime_id: str, part_id: str, deformer_id: str, appearance: '
@@ -297,10 +297,16 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                     'Whether this edge was fixed by the user or supplied by the '
                                                     'edge-layout generator.')],
                                         'kind': 'type',
-                                        'signature': '(endpoints: tuple[int, int], kind: MeshConstraintKind)'},
+                                        'signature': '(*, endpoints: tuple[int, int], kind: MeshConstraintKind)'},
  'zipzi.modeling.mesh.MeshConstraint.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.MeshConstraint.summary': {'alias': 'zipzi.ApiDescription.summary'},
- 'zipzi.modeling.mesh.MeshConstraintKind': {'alias': 'zipzi.meshes.ConstraintKind'},
+ 'zipzi.modeling.mesh.MeshConstraintKind': {'children': (),
+                                            'documentation': 'Immutable typed value. See field semantics and the '
+                                                             'linked workflow.',
+                                            'example': 'docs/recipes.py',
+                                            'fields': [],
+                                            'kind': 'type',
+                                            'signature': '()'},
  'zipzi.modeling.mesh.MeshMeshing': {'children': ('zipzi.modeling.mesh.MeshMeshing.__repr__',
                                                   'zipzi.modeling.mesh.MeshMeshing.summary'),
                                      'documentation': 'Immutable owned MeshMeshing value. Construction owns declared '
@@ -313,7 +319,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                  'Internal constraints sorted by their canonical endpoint pairs; '
                                                  'excludes boundary edges.')],
                                      'kind': 'type',
-                                     'signature': '(boundary: tuple[int, ...], constraints: tuple[MeshConstraint, '
+                                     'signature': '(*, boundary: tuple[int, ...], constraints: tuple[MeshConstraint, '
                                                   '...])'},
  'zipzi.modeling.mesh.MeshMeshing.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.MeshMeshing.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -335,7 +341,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                    'Explicit policy for initializing this new vertex in dependent '
                                                    'ordinary/BlendShape keyforms.')],
                                        'kind': 'type',
-                                       'signature': '(vertex_id: int, position: Vec2, uv: Vec2, seed: VertexSeed)'},
+                                       'signature': '(*, vertex_id: int, position: Vec2, uv: Vec2, seed: VertexSeed)'},
  'zipzi.modeling.mesh.NewMeshVertex.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.NewMeshVertex.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.TopologyReplacement': {'children': ('zipzi.modeling.mesh.TopologyReplacement.__repr__',
@@ -362,7 +368,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                          'identity and None explicitly\n'
                                                          'removes it.')],
                                              'kind': 'type',
-                                             'signature': '(mesh: Mesh, binding: MeshBinding | None = None, '
+                                             'signature': '(*, mesh: Mesh, binding: MeshBinding | None = None, '
                                                           'blend_bindings: tuple[BlendShapeBinding, ...], glues: '
                                                           'tuple[Glue, ...], vertex_mapping: _Mapping[int, int | '
                                                           'None])'},
@@ -384,7 +390,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                        ('uv',
                                                         'Optional texture UV pair; None preserves the current UV.')],
                                             'kind': 'type',
-                                            'signature': '(vertex_id: int, position: Vec2 | None = None, uv: Vec2 | '
+                                            'signature': '(*, vertex_id: int, position: Vec2 | None = None, uv: Vec2 | '
                                                          'None = None)'},
  'zipzi.modeling.mesh.VertexContentPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.VertexContentPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -422,7 +428,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                            'Source vertex IDs and interpolation weights used to seed '
                                                            'dependent shape content.')],
                                                'kind': 'type',
-                                               'signature': '(weights: tuple[VertexWeight, ...])'},
+                                               'signature': '(*, weights: tuple[VertexWeight, ...])'},
  'zipzi.modeling.mesh.VertexSeedInterpolate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.VertexSeedInterpolate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.VertexWeight': {'children': ('zipzi.modeling.mesh.VertexWeight.__repr__',
@@ -437,6 +443,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                   'Dimensionless interpolation weight applied to the referenced source '
                                                   'vertex.')],
                                       'kind': 'type',
-                                      'signature': '(vertex_id: int, weight: float)'},
+                                      'signature': '(*, vertex_id: int, weight: float)'},
  'zipzi.modeling.mesh.VertexWeight.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.VertexWeight.summary': {'alias': 'zipzi.ApiDescription.summary'}}

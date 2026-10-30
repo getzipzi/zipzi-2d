@@ -12,7 +12,7 @@ Canonical expression modeling values.
 
 ## zipzi.modeling.expression.ExpressionAsset
 
-`(id: str, name: str, file_type: str | None = None, fade_in: float | None = None, fade_out: float | None = None, entries: tuple[ExpressionEntry, ...], extensions: _Mapping[str, ExtensionValue], opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
+`(*, id: str, name: str, file_type: str | None = None, fade_in: float | None = None, fade_out: float | None = None, entries: tuple[ExpressionEntry, ...], extensions: _Mapping[str, ExtensionValue], opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
 
 Immutable owned ExpressionAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -43,7 +43,7 @@ Typed public API entry.
 
 ## zipzi.modeling.expression.ExpressionEditCreate
 
-`(id: str, name: str)`
+`(*, id: str, name: str)`
 
 Immutable owned ExpressionEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -52,7 +52,7 @@ Immutable owned ExpressionEditCreate value. Construction owns declared collectio
 
 ## zipzi.modeling.expression.ExpressionEditCreateEntry
 
-`(owner: str, id: str, before: str | None = None)`
+`(*, owner: str, id: str, before: str | None = None)`
 
 Immutable owned ExpressionEditCreateEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -62,7 +62,7 @@ Immutable owned ExpressionEditCreateEntry value. Construction owns declared coll
 
 ## zipzi.modeling.expression.ExpressionEditDelete
 
-`(id: str)`
+`(*, id: str)`
 
 Immutable owned ExpressionEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -70,7 +70,7 @@ Immutable owned ExpressionEditDelete value. Construction owns declared collectio
 
 ## zipzi.modeling.expression.ExpressionEditDeleteEntries
 
-`(ids: tuple[str, ...])`
+`(*, ids: tuple[str, ...])`
 
 Immutable owned ExpressionEditDeleteEntries value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -78,7 +78,7 @@ Immutable owned ExpressionEditDeleteEntries value. Construction owns declared co
 
 ## zipzi.modeling.expression.ExpressionEditDuplicate
 
-`(source: str, id: str, name: str, entry_ids: tuple[str, ...])`
+`(*, source: str, id: str, name: str, entry_ids: tuple[str, ...])`
 
 Immutable owned ExpressionEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -89,7 +89,7 @@ Immutable owned ExpressionEditDuplicate value. Construction owns declared collec
 
 ## zipzi.modeling.expression.ExpressionEditDuplicateEntries
 
-`(ids: tuple[str, ...], new_ids: tuple[str, ...], destination: str, before: str | None = None)`
+`(*, ids: tuple[str, ...], new_ids: tuple[str, ...], destination: str, before: str | None = None)`
 
 Immutable owned ExpressionEditDuplicateEntries value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -100,7 +100,7 @@ Immutable owned ExpressionEditDuplicateEntries value. Construction owns declared
 
 ## zipzi.modeling.expression.ExpressionEditMoveEntries
 
-`(ids: tuple[str, ...], destination: str, before: str | None = None)`
+`(*, ids: tuple[str, ...], destination: str, before: str | None = None)`
 
 Immutable owned ExpressionEditMoveEntries value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -110,7 +110,7 @@ Immutable owned ExpressionEditMoveEntries value. Construction owns declared coll
 
 ## zipzi.modeling.expression.ExpressionEditPatchEntry
 
-`(id: str, expected: ExpressionEntryFields, fields: ExpressionEntryFields)`
+`(*, id: str, expected: ExpressionEntryFields, fields: ExpressionEntryFields)`
 
 Immutable owned ExpressionEditPatchEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -120,7 +120,7 @@ Immutable owned ExpressionEditPatchEntry value. Construction owns declared colle
 
 ## zipzi.modeling.expression.ExpressionEditReorder
 
-`(ids: tuple[str, ...])`
+`(*, ids: tuple[str, ...])`
 
 Immutable owned ExpressionEditReorder value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -128,7 +128,7 @@ Immutable owned ExpressionEditReorder value. Construction owns declared collecti
 
 ## zipzi.modeling.expression.ExpressionEntry
 
-`(id: str, target: ExpressionTarget, value: float, blend: ExpressionBlend | None = None, extensions: _Mapping[str, ExtensionValue])`
+`(*, id: str, target: ExpressionTarget, value: float, blend: ExpressionBlend | None = None, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned ExpressionEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -140,7 +140,7 @@ Immutable owned ExpressionEntry value. Construction owns declared collections; r
 
 ## zipzi.modeling.expression.ExpressionEntryFields
 
-`(target: ExpressionTarget, value: float, blend: ExpressionBlend | None = None)`
+`(*, target: ExpressionTarget, value: float, blend: ExpressionBlend | None = None)`
 
 Immutable owned ExpressionEntryFields value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -157,7 +157,7 @@ Typed public API entry.
 
 ## zipzi.modeling.expression.ExpressionTargetResolved
 
-`(parameter_id: str)`
+`(*, parameter_id: str)`
 
 Immutable owned ExpressionTargetResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -165,7 +165,7 @@ Immutable owned ExpressionTargetResolved value. Construction owns declared colle
 
 ## zipzi.modeling.expression.ExpressionTargetUnresolved
 
-`(runtime_id: str)`
+`(*, runtime_id: str)`
 
 Immutable owned ExpressionTargetUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

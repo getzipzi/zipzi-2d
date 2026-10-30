@@ -26,30 +26,15 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.Session.bindings.get
 
-`(id: str, *, expected: Source | None=None) -> Snapshot[bindings.MeshBinding]`
-
-Read one owned value at an exact formal or candidate Source.
-
-id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.bindings.get(id); value = snapshot.value.
-
+Alias of [zipzi.Edit.bindings.get](runtime_edit.md#zipzieditbindingsget).
 
 ## zipzi.Session.bindings.get_many
 
-`(ids: Sequence[str], *, expected: Source | None=None) -> Batch[bindings.MeshBinding]`
-
-Read all selected IDs atomically from one formal or candidate Source.
-
-ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.bindings.get_many((id, id)).
-
+Alias of [zipzi.Edit.bindings.get_many](runtime_edit.md#zipzieditbindingsget_many).
 
 ## zipzi.Session.bindings.list
 
-`(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[bindings.Summary]`
-
-Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
-
-name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.bindings.list(name="Face", limit=128).
-
+Alias of [zipzi.Edit.bindings.list](runtime_edit.md#zipzieditbindingslist).
 
 ## zipzi.Session.capabilities
 
@@ -118,72 +103,39 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.Session.meshes.get
 
-`(id: str, *, expected: Source | None=None) -> Snapshot[meshes.Mesh]`
-
-Read one owned value at an exact formal or candidate Source.
-
-id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.meshes.get(id); value = snapshot.value.
-
+Alias of [zipzi.Edit.meshes.get](runtime_edit.md#zipzieditmeshesget).
 
 ## zipzi.Session.meshes.get_many
 
-`(ids: Sequence[str], *, expected: Source | None=None) -> Batch[meshes.Mesh]`
-
-Read all selected IDs atomically from one formal or candidate Source.
-
-ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.meshes.get_many((id, id)).
-
+Alias of [zipzi.Edit.meshes.get_many](runtime_edit.md#zipzieditmeshesget_many).
 
 ## zipzi.Session.meshes.list
 
-`(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[meshes.Summary]`
-
-Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
-
-name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.meshes.list(name="Face", limit=128).
-
+Alias of [zipzi.Edit.meshes.list](runtime_edit.md#zipzieditmesheslist).
 
 ## zipzi.Session.modeling
 
-`(session: '_lifecycle.Session', edit: '_lifecycle.Edit | None'=None)`
-
-Immutable typed value. See field semantics and the linked workflow.
-
+Alias of [zipzi.Edit.modeling](runtime_edit.md#zipzieditmodeling).
 
 ## zipzi.Session.modeling.observe
 
-`(poses: Sequence[Mapping[str, float]], view: observation.View, *, expected: Source | None=None) -> '_lifecycle.Job[Snapshot[observation.Batch]]'`
-
-Render 1..64 explicit parameter poses from an exact frozen Source. The explicit Y-up model ROI preserves aspect ratio; frames contain GPU RGBA8, Rust-encoded PNG, view mapping, actual adapter and texture hashes. view.quality includes per-mesh geometry and sampled source-alpha coverage; view.topology enables wireframe, persistent vertex IDs, constraints and strain overlays with the same frozen mapping. Rendering resolves one immutable texture set per batch, never publishes history and does not abort an Edit on failure. Device initialization occurs on the worker; missing GPU produces a structured failure, independently of CPU operations. Runtime count/byte/device budgets apply. Recover a lost submission or result through its original Call; wait/close the Job to release its result slot.
-
+Alias of [zipzi.Edit.modeling.observe](runtime_edit.md#zipzieditmodelingobserve).
 
 ## zipzi.Session.modeling.records
 
-`(query: modeling.ModelingQuery) -> Snapshot[modeling.OwnedModelingRecords]`
-
-Read selected canonical records from one exact source without editing. query lists stable IDs per domain; empty lists request no payloads, while the ids directory still exposes collection identities. Returns an owned Snapshot; payload slots follow query order and None marks a missing requested ID. This synchronous query may reject count/byte budgets but does not abort an Edit. Recover a lost response through its original Call; results need no close. Example: result = session.modeling.records(modeling.ModelingQuery(meshes=(id,))).
-
+Alias of [zipzi.Edit.modeling.records](runtime_edit.md#zipzieditmodelingrecords).
 
 ## zipzi.Session.modeling.sample
 
-`(poses: Sequence[Mapping[str, float]], *, checks: sampling.Checks=sampling.Checks(), expected: Source | None=None) -> Snapshot[sampling.Result]`
-
-Synchronously evaluate CPU poses without editing or GPU work. poses is an ordered sequence of parameter-ID/value maps in each parameter domain; inputs are owned before execution. checks supplies authored validity diagnostics and, with quality=True, per-pose model-space mesh quality relative to this frozen source at default parameters; quality reports do not cover unsampled intervals. expected=None accepts current content while an explicit Source rejects changes atomically. Returns Snapshot[sampling.Result] with frames in pose order. Native count/byte/work budgets apply; query/diagnostic failure does not abort an Edit. A lost result recovers through its original multi-stage Call, never by silently resampling current content. Owned results need no close. Example: sampled = session.modeling.sample(({parameter_id: 0.5},)).
-
+Alias of [zipzi.Edit.modeling.sample](runtime_edit.md#zipzieditmodelingsample).
 
 ## zipzi.Session.modeling.sample_async
 
-`(poses: Sequence[Mapping[str, float]], *, checks: sampling.Checks=sampling.Checks(), expected: Source | None=None) -> '_lifecycle.Job[Snapshot[sampling.Result]]'`
-
-Submit CPU evaluation of poses at the captured exact Source and return Job[Snapshot[sampling.Result]]. poses, checks and expected have the same semantics as sample; this named API always returns a Job rather than switching by input size. Native admission can reject work/count/byte budgets before acceptance. After an unknown submission recover the original Job instead of submitting another. Wait for the actual owned result and close/wait the Job to release its bounded result slot; JobTimeout keeps it pending. Example: with session.modeling.sample_async(({parameter_id: 0.5},)) as job: sampled = job.wait().
-
+Alias of [zipzi.Edit.modeling.sample_async](runtime_edit.md#zipzieditmodelingsample_async).
 
 ## zipzi.Session.modeling.spatial
 
-`(poses: Sequence[Mapping[str, float]], queries: Sequence[_spatial.Query], *, expected: Source | None=None) -> '_lifecycle.Job[Snapshot[_spatial.Batch]]'`
-
-Submit frozen CPU geometry queries for explicit parameter poses. Returns Job[Snapshot[spatial.Batch]] with effective parameters, exact Source, requested queries and ordered bounds/hit results. Coordinates are Y-up model units, never screen pixels; hidden geometry is explicitly selectable. Candidate reads do not publish or abort an Edit. A lost submission/result recovers the original call rather than querying newer content. No textures, masks, occlusion or GPU are used.
-
+Alias of [zipzi.Edit.modeling.spatial](runtime_edit.md#zipzieditmodelingspatial).
 
 ## zipzi.Session.parameters
 
@@ -194,30 +146,15 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.Session.parameters.get
 
-`(id: str, *, expected: Source | None=None) -> Snapshot[parameters.Parameter]`
-
-Read one owned value at an exact formal or candidate Source.
-
-id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.parameters.get(id); value = snapshot.value.
-
+Alias of [zipzi.Edit.parameters.get](runtime_edit.md#zipzieditparametersget).
 
 ## zipzi.Session.parameters.get_many
 
-`(ids: Sequence[str], *, expected: Source | None=None) -> Batch[parameters.Parameter]`
-
-Read all selected IDs atomically from one formal or candidate Source.
-
-ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.parameters.get_many((id, id)).
-
+Alias of [zipzi.Edit.parameters.get_many](runtime_edit.md#zipzieditparametersget_many).
 
 ## zipzi.Session.parameters.list
 
-`(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[parameters.Summary]`
-
-Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
-
-name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.parameters.list(name="Face", limit=128).
-
+Alias of [zipzi.Edit.parameters.list](runtime_edit.md#zipzieditparameterslist).
 
 ## zipzi.Session.plan
 
@@ -312,71 +249,35 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.Session.resources.get
 
-`(id: str, *, expected: Source | None=None) -> Snapshot[resources.Image]`
-
-Read one owned value at an exact formal or candidate Source.
-
-id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.resources.get(id); value = snapshot.value.
-
+Alias of [zipzi.Edit.resources.get](runtime_edit.md#zipzieditresourcesget).
 
 ## zipzi.Session.resources.get_many
 
-`(ids: Sequence[str], *, expected: Source | None=None) -> Batch[resources.Image]`
-
-Read all selected IDs atomically from one formal or candidate Source.
-
-ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.resources.get_many((id, id)).
-
+Alias of [zipzi.Edit.resources.get_many](runtime_edit.md#zipzieditresourcesget_many).
 
 ## zipzi.Session.resources.list
 
-`(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[resources.Summary]`
-
-Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
-
-name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.resources.list(name="Face", limit=128).
-
+Alias of [zipzi.Edit.resources.list](runtime_edit.md#zipzieditresourceslist).
 
 ## zipzi.Session.resources.snapshot
 
-`(id: str) -> resources.ImageLease`
-
-Capture pixels of image id at this exact formal/candidate source into an independent ImageLease. This synchronous request can reject a missing image or lease/byte budget; queries do not abort an Edit. The lease pins pixels across replacement and history eviction: close it or use with. Its source is cached, and pixels() returns owned ImagePixels. Recover an unknown capture through its original Call. Example: with session.resources.snapshot(id) as lease: pixels = lease.pixels().
-
+Alias of [zipzi.Edit.resources.snapshot](runtime_edit.md#zipzieditresourcessnapshot).
 
 ## zipzi.Session.scene
 
-`(session: '_lifecycle.Session', edit: '_lifecycle.Edit | None'=None)`
-
-Immutable typed value. See field semantics and the linked workflow.
-
+Alias of [zipzi.Edit.scene](runtime_edit.md#zipzieditscene).
 
 ## zipzi.Session.scene.get
 
-`(id: str, *, expected: Source | None=None) -> Snapshot[scene.Summary]`
-
-Read one owned value at an exact formal or candidate Source.
-
-id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.scene.get(id); value = snapshot.value.
-
+Alias of [zipzi.Edit.scene.get](runtime_edit.md#zipzieditsceneget).
 
 ## zipzi.Session.scene.get_many
 
-`(ids: Sequence[str], *, expected: Source | None=None) -> Batch[scene.Summary]`
-
-Read all selected IDs atomically from one formal or candidate Source.
-
-ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.scene.get_many((id, id)).
-
+Alias of [zipzi.Edit.scene.get_many](runtime_edit.md#zipzieditsceneget_many).
 
 ## zipzi.Session.scene.list
 
-`(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[scene.Summary]`
-
-Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
-
-name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.scene.list(name="Face", limit=128).
-
+Alias of [zipzi.Edit.scene.list](runtime_edit.md#zipzieditscenelist).
 
 ## zipzi.Session.show_window
 

@@ -12,7 +12,7 @@ Canonical scene modeling values.
 
 ## zipzi.modeling.scene.Appearance
 
-`(opacity: float, multiply: tuple[float, float, float], screen: tuple[float, float, float])`
+`(*, opacity: float, multiply: tuple[float, float, float], screen: tuple[float, float, float])`
 
 Immutable owned Appearance value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -30,7 +30,7 @@ Typed public API entry.
 
 ## zipzi.modeling.scene.AttachmentRefResolved
 
-`(attachment_id: str)`
+`(*, attachment_id: str)`
 
 Immutable owned AttachmentRefResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -38,7 +38,7 @@ Immutable owned AttachmentRefResolved value. Construction owns declared collecti
 
 ## zipzi.modeling.scene.AttachmentRefUnresolved
 
-`(path: str)`
+`(*, path: str)`
 
 Immutable owned AttachmentRefUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -54,7 +54,7 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.modeling.scene.Canvas
 
-`(width: float, height: float, origin: Vec2, pixels_per_unit: float, flag: int = 1)`
+`(*, width: float, height: float, origin: Vec2, pixels_per_unit: float, flag: int = 1)`
 
 Immutable owned Canvas value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -68,7 +68,7 @@ this metadata does not rescale model geometry or change evaluation.
 
 ## zipzi.modeling.scene.DrawOrderGroup
 
-`(owner: str, items: tuple[str, ...], min_order: int, max_order: int)`
+`(*, owner: str, items: tuple[str, ...], min_order: int, max_order: int)`
 
 Immutable owned DrawOrderGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -79,7 +79,7 @@ Immutable owned DrawOrderGroup value. Construction owns declared collections; re
 
 ## zipzi.modeling.scene.Glue
 
-`(id: str, runtime_id: str, name: str, mesh_a_id: SceneReference, mesh_b_id: SceneReference, pairs: tuple[GlueVertexPair, ...], intensity: float, binding: GlueBinding | None = None)`
+`(*, id: str, runtime_id: str, name: str, mesh_a_id: SceneReference, mesh_b_id: SceneReference, pairs: tuple[GlueVertexPair, ...], intensity: float, binding: GlueBinding | None = None)`
 
 Immutable owned Glue value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -94,7 +94,7 @@ Immutable owned Glue value. Construction owns declared collections; reading fiel
 
 ## zipzi.modeling.scene.GlueVertexPair
 
-`(id: str, vertex_a: int | None = None, vertex_b: int | None = None, weight_a: float, weight_b: float)`
+`(*, id: str, vertex_a: int | None = None, vertex_b: int | None = None, weight_a: float, weight_b: float)`
 
 Immutable owned GlueVertexPair value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -106,7 +106,7 @@ Immutable owned GlueVertexPair value. Construction owns declared collections; re
 
 ## zipzi.modeling.scene.HierarchyOrder
 
-`(organization: tuple[str, ...] = (), deformation: tuple[str, ...] = (), glues: tuple[str, ...] = ())`
+`(*, organization: tuple[str, ...] = (), deformation: tuple[str, ...] = (), glues: tuple[str, ...] = ())`
 
 Immutable owned HierarchyOrder value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -117,7 +117,7 @@ source order.
 
 ## zipzi.modeling.scene.ModelSetup
 
-`(source_canvas: Canvas | None = None, export: ExportSettings)`
+`(*, source_canvas: Canvas | None = None, export: ExportSettings)`
 
 Immutable owned ModelSetup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -126,7 +126,7 @@ Immutable owned ModelSetup value. Construction owns declared collections; readin
 
 ## zipzi.modeling.scene.Offscreen
 
-`(id: str, runtime_id: str, name: str, part_id: str, enabled: bool = True, blend_mode: int, flags: int, masks: tuple[str, ...], part_keyform_indices: tuple[int, ...], keyforms: tuple[OffscreenKeyform, ...])`
+`(*, id: str, runtime_id: str, name: str, part_id: str, enabled: bool = True, blend_mode: int, flags: int, masks: tuple[str, ...], part_keyform_indices: tuple[int, ...], keyforms: tuple[OffscreenKeyform, ...])`
 
 Immutable owned Offscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -165,7 +165,7 @@ Immutable owned OffscreenDeletePolicyRejectReferences value. Construction owns d
 
 ## zipzi.modeling.scene.OffscreenDeletePolicyRemap
 
-`(replacements: _Mapping[int, int | None])`
+`(*, replacements: _Mapping[int, int | None])`
 
 Immutable owned OffscreenDeletePolicyRemap value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -174,7 +174,7 @@ slot.
 
 ## zipzi.modeling.scene.OffscreenMappingPatch
 
-`(slot: PartKeyformSlot, keyform: int)`
+`(*, slot: PartKeyformSlot, keyform: int)`
 
 Immutable owned OffscreenMappingPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -190,7 +190,7 @@ Typed public API entry.
 
 ## zipzi.modeling.scene.OrganizationCollectionParameterGroups
 
-`(parent_id: str | None = None)`
+`(*, parent_id: str | None = None)`
 
 Immutable owned OrganizationCollectionParameterGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -199,7 +199,7 @@ selects the root/unassigned container.
 
 ## zipzi.modeling.scene.OrganizationCollectionParameters
 
-`(group_id: str | None = None)`
+`(*, group_id: str | None = None)`
 
 Immutable owned OrganizationCollectionParameters value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -208,7 +208,7 @@ root/unassigned container.
 
 ## zipzi.modeling.scene.OrganizationCollectionPartMembers
 
-`(part_id: str | None = None)`
+`(*, part_id: str | None = None)`
 
 Immutable owned OrganizationCollectionPartMembers value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -224,7 +224,7 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.modeling.scene.Part
 
-`(id: str, runtime_id: str, name: str, parent_id: str, enabled: bool, draw_order: float)`
+`(*, id: str, runtime_id: str, name: str, parent_id: str, enabled: bool, draw_order: float)`
 
 Immutable owned Part value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -238,7 +238,7 @@ string represents the root/unassigned container.
 
 ## zipzi.modeling.scene.PartId
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned PartId value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -246,7 +246,7 @@ Immutable owned PartId value. Construction owns declared collections; reading fi
 
 ## zipzi.modeling.scene.ReparentContext
 
-`(parameter_values: _Mapping[str, float], parameter_domain: tuple[ConversionDomain, ...], edit_time_seconds: float)`
+`(*, parameter_values: _Mapping[str, float], parameter_domain: tuple[ConversionDomain, ...], edit_time_seconds: float)`
 
 Immutable owned ReparentContext value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -258,7 +258,7 @@ dependency must have an explicit finite interval.
 
 ## zipzi.modeling.scene.ReparentPlacement
 
-`(before: str | None = None)`
+`(*, before: str | None = None)`
 
 Immutable owned ReparentPlacement value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -273,7 +273,7 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.modeling.scene.RotationPose
 
-`(origin: PreciseVec2, angle: float, scale: float, reflect_x: bool, reflect_y: bool)`
+`(*, origin: PreciseVec2, angle: float, scale: float, reflect_x: bool, reflect_y: bool)`
 
 Immutable owned RotationPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -285,7 +285,7 @@ Immutable owned RotationPose value. Construction owns declared collections; read
 
 ## zipzi.modeling.scene.RotationTransform
 
-`(base_angle: float, pose: RotationPose)`
+`(*, base_angle: float, pose: RotationPose)`
 
 Immutable owned RotationTransform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -301,7 +301,7 @@ Typed public API entry.
 
 ## zipzi.modeling.scene.SceneCollectionDeformation
 
-`(parent_id: str | None = None)`
+`(*, parent_id: str | None = None)`
 
 Immutable owned SceneCollectionDeformation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -310,7 +310,7 @@ selects the root/unassigned container.
 
 ## zipzi.modeling.scene.SceneCollectionDrawing
 
-`(owner: str)`
+`(*, owner: str)`
 
 Immutable owned SceneCollectionDrawing value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -332,7 +332,7 @@ Immutable owned SceneCollectionGlues value. Construction owns declared collectio
 
 ## zipzi.modeling.scene.SceneCollectionOrganization
 
-`(part_id: str | None = None)`
+`(*, part_id: str | None = None)`
 
 Immutable owned SceneCollectionOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -348,7 +348,7 @@ Typed public API entry.
 
 ## zipzi.modeling.scene.SceneContentTargetGluePair
 
-`(pair_id: str)`
+`(*, pair_id: str)`
 
 Immutable owned SceneContentTargetGluePair value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -356,7 +356,7 @@ Immutable owned SceneContentTargetGluePair value. Construction owns declared col
 
 ## zipzi.modeling.scene.SceneContentTargetOffscreenKeyform
 
-`(slot: int)`
+`(*, slot: int)`
 
 Immutable owned SceneContentTargetOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -365,7 +365,7 @@ object ID.
 
 ## zipzi.modeling.scene.SceneContentTargetOffscreenMapping
 
-`(slot: PartKeyformSlot)`
+`(*, slot: PartKeyformSlot)`
 
 Immutable owned SceneContentTargetOffscreenMapping value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -374,7 +374,7 @@ offset.
 
 ## zipzi.modeling.scene.SceneContentTargetTriangle
 
-`(slot: int)`
+`(*, slot: int)`
 
 Immutable owned SceneContentTargetTriangle value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -383,7 +383,7 @@ object ID.
 
 ## zipzi.modeling.scene.SceneContentTargetVertexPosition
 
-`(vertex_id: int, shape: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'})))`
+`(*, vertex_id: int, shape: ShapeTarget = <factory>)`
 
 Immutable owned SceneContentTargetVertexPosition value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -393,7 +393,7 @@ shape.
 
 ## zipzi.modeling.scene.SceneContentTargetVertexUv
 
-`(vertex_id: int)`
+`(*, vertex_id: int)`
 
 Immutable owned SceneContentTargetVertexUv value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -401,7 +401,7 @@ Immutable owned SceneContentTargetVertexUv value. Construction owns declared col
 
 ## zipzi.modeling.scene.SceneContentTargetWarpBezierControl
 
-`(node: int, component: int, shape: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'})))`
+`(*, node: int, component: int, shape: ShapeTarget = <factory>)`
 
 Immutable owned SceneContentTargetWarpBezierControl value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -412,7 +412,7 @@ shape.
 
 ## zipzi.modeling.scene.SceneContentTargetWarpPoint
 
-`(row: int, column: int, shape: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'})))`
+`(*, row: int, column: int, shape: ShapeTarget = <factory>)`
 
 Immutable owned SceneContentTargetWarpPoint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -430,7 +430,7 @@ Typed public API entry.
 
 ## zipzi.modeling.scene.SceneContentValueGluePair
 
-`(value: GlueVertexPair)`
+`(*, value: GlueVertexPair)`
 
 Immutable owned SceneContentValueGluePair value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -438,7 +438,7 @@ Immutable owned SceneContentValueGluePair value. Construction owns declared coll
 
 ## zipzi.modeling.scene.SceneContentValueMapping
 
-`(value: int)`
+`(*, value: int)`
 
 Immutable owned SceneContentValueMapping value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -446,7 +446,7 @@ Immutable owned SceneContentValueMapping value. Construction owns declared colle
 
 ## zipzi.modeling.scene.SceneContentValueOffscreenKeyform
 
-`(value: OffscreenKeyform)`
+`(*, value: OffscreenKeyform)`
 
 Immutable owned SceneContentValueOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -454,7 +454,7 @@ Immutable owned SceneContentValueOffscreenKeyform value. Construction owns decla
 
 ## zipzi.modeling.scene.SceneContentValuePoint
 
-`(value: Vec2)`
+`(*, value: Vec2)`
 
 Immutable owned SceneContentValuePoint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -462,7 +462,7 @@ Immutable owned SceneContentValuePoint value. Construction owns declared collect
 
 ## zipzi.modeling.scene.SceneContentValueTriangle
 
-`(value: tuple[int, int, int])`
+`(*, value: tuple[int, int, int])`
 
 Immutable owned SceneContentValueTriangle value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -484,7 +484,7 @@ Typed public API entry.
 
 ## zipzi.modeling.scene.SceneCreateGlue
 
-`(a: SceneReference = field(default_factory=lambda: read_SceneReference({'kind': 'unspecified'})), b: SceneReference = field(default_factory=lambda: read_SceneReference({'kind': 'unspecified'})))`
+`(*, a: SceneReference = <factory>, b: SceneReference = <factory>)`
 
 Immutable owned SceneCreateGlue value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -495,7 +495,7 @@ references retain runtime identifiers.
 
 ## zipzi.modeling.scene.SceneCreateMesh
 
-`(texture: SceneReference = field(default_factory=lambda: read_SceneReference({'kind': 'unspecified'})))`
+`(*, texture: SceneReference = <factory>)`
 
 Immutable owned SceneCreateMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -518,7 +518,7 @@ Immutable owned SceneCreateRotation value. Construction owns declared collection
 
 ## zipzi.modeling.scene.SceneCreateWarp
 
-`(bounds: tuple[float, float, float, float] | None = None)`
+`(*, bounds: tuple[float, float, float, float] | None = None)`
 
 Immutable owned SceneCreateWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -541,7 +541,7 @@ Typed public API entry.
 
 ## zipzi.modeling.scene.SceneFieldValueAppearance
 
-`(value: Appearance)`
+`(*, value: Appearance)`
 
 Immutable owned SceneFieldValueAppearance value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -549,7 +549,7 @@ Immutable owned SceneFieldValueAppearance value. Construction owns declared coll
 
 ## zipzi.modeling.scene.SceneFieldValueContext
 
-`(part_id: str | None = None, parent_id: str | None = None)`
+`(*, part_id: str | None = None, parent_id: str | None = None)`
 
 Immutable owned SceneFieldValueContext value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -560,7 +560,7 @@ selects the root/unassigned container.
 
 ## zipzi.modeling.scene.SceneFieldValueEnabled
 
-`(value: bool)`
+`(*, value: bool)`
 
 Immutable owned SceneFieldValueEnabled value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -568,7 +568,7 @@ Immutable owned SceneFieldValueEnabled value. Construction owns declared collect
 
 ## zipzi.modeling.scene.SceneFieldValueGlueEndpoints
 
-`(a: SceneReference, b: SceneReference)`
+`(*, a: SceneReference, b: SceneReference)`
 
 Immutable owned SceneFieldValueGlueEndpoints value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -579,7 +579,7 @@ references retain runtime identifiers.
 
 ## zipzi.modeling.scene.SceneFieldValueGlueIntensity
 
-`(value: float)`
+`(*, value: float)`
 
 Immutable owned SceneFieldValueGlueIntensity value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -587,7 +587,7 @@ Immutable owned SceneFieldValueGlueIntensity value. Construction owns declared c
 
 ## zipzi.modeling.scene.SceneFieldValueLabel
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned SceneFieldValueLabel value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -595,7 +595,7 @@ Immutable owned SceneFieldValueLabel value. Construction owns declared collectio
 
 ## zipzi.modeling.scene.SceneFieldValueMasks
 
-`(value: tuple[str, ...])`
+`(*, value: tuple[str, ...])`
 
 Immutable owned SceneFieldValueMasks value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -603,7 +603,7 @@ Immutable owned SceneFieldValueMasks value. Construction owns declared collectio
 
 ## zipzi.modeling.scene.SceneFieldValueMeshDrawing
 
-`(draw_order: float | None = None, blend_mode: BlendMode, raw_blend_mode: int | None = None, double_sided: bool, inverted_mask: bool)`
+`(*, draw_order: float | None = None, blend_mode: BlendMode, raw_blend_mode: int | None = None, double_sided: bool, inverted_mask: bool)`
 
 Immutable owned SceneFieldValueMeshDrawing value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -616,7 +616,7 @@ leaves this channel unspecified for native evaluation.
 
 ## zipzi.modeling.scene.SceneFieldValueOffscreen
 
-`(blend_mode: int, flags: int, keyforms: tuple[OffscreenKeyform, ...], part_keyform_indices: tuple[int, ...])`
+`(*, blend_mode: int, flags: int, keyforms: tuple[OffscreenKeyform, ...], part_keyform_indices: tuple[int, ...])`
 
 Immutable owned SceneFieldValueOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -628,7 +628,7 @@ key table.
 
 ## zipzi.modeling.scene.SceneFieldValueRotation
 
-`(value: RotationTransform)`
+`(*, value: RotationTransform)`
 
 Immutable owned SceneFieldValueRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -636,7 +636,7 @@ Immutable owned SceneFieldValueRotation value. Construction owns declared collec
 
 ## zipzi.modeling.scene.SceneFieldValueRuntimeId
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned SceneFieldValueRuntimeId value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -644,7 +644,7 @@ Immutable owned SceneFieldValueRuntimeId value. Construction owns declared colle
 
 ## zipzi.modeling.scene.SceneFieldValueTexture
 
-`(value: SceneReference)`
+`(*, value: SceneReference)`
 
 Immutable owned SceneFieldValueTexture value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -652,7 +652,7 @@ Immutable owned SceneFieldValueTexture value. Construction owns declared collect
 
 ## zipzi.modeling.scene.SceneFieldValueWarp
 
-`(value: WarpTransform)`
+`(*, value: WarpTransform)`
 
 Immutable owned SceneFieldValueWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -667,7 +667,7 @@ Typed public API entry.
 
 ## zipzi.modeling.scene.SceneReferenceResolved
 
-`(object_id: str)`
+`(*, object_id: str)`
 
 Immutable owned SceneReferenceResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -675,7 +675,7 @@ Immutable owned SceneReferenceResolved value. Construction owns declared collect
 
 ## zipzi.modeling.scene.SceneReferenceUnresolved
 
-`(runtime_id: str)`
+`(*, runtime_id: str)`
 
 Immutable owned SceneReferenceUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -705,7 +705,7 @@ Immutable owned ShapeTargetBase value. Construction owns declared collections; r
 
 ## zipzi.modeling.scene.ShapeTargetBlend
 
-`(binding_id: str, sample_id: str)`
+`(*, binding_id: str, sample_id: str)`
 
 Immutable owned ShapeTargetBlend value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -715,7 +715,7 @@ parameter value.
 
 ## zipzi.modeling.scene.ShapeTargetOrdinary
 
-`(binding_id: str, samples: tuple[str, ...])`
+`(*, binding_id: str, samples: tuple[str, ...])`
 
 Immutable owned ShapeTargetOrdinary value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -724,7 +724,7 @@ Immutable owned ShapeTargetOrdinary value. Construction owns declared collection
 
 ## zipzi.modeling.scene.Transform
 
-`(id: str, runtime_id: str, name: str, part_id: PartId | None = None, parent_id: TransformId | None = None, data: TransformData, enabled: bool, appearance: Appearance)`
+`(*, id: str, runtime_id: str, name: str, part_id: PartId | None = None, parent_id: TransformId | None = None, data: TransformData, enabled: bool, appearance: Appearance)`
 
 Immutable owned Transform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -749,7 +749,7 @@ Typed public API entry.
 
 ## zipzi.modeling.scene.TransformDataRotation
 
-`(value: RotationTransform)`
+`(*, value: RotationTransform)`
 
 Immutable owned TransformDataRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -757,7 +757,7 @@ Immutable owned TransformDataRotation value. Construction owns declared collecti
 
 ## zipzi.modeling.scene.TransformDataWarp
 
-`(value: WarpTransform)`
+`(*, value: WarpTransform)`
 
 Immutable owned TransformDataWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -765,7 +765,7 @@ Immutable owned TransformDataWarp value. Construction owns declared collections;
 
 ## zipzi.modeling.scene.TransformId
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned TransformId value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -773,7 +773,7 @@ Immutable owned TransformId value. Construction owns declared collections; readi
 
 ## zipzi.modeling.scene.WarpBezier
 
-`(rows: int, columns: int, nodes: tuple[WarpBezierNode, ...])`
+`(*, rows: int, columns: int, nodes: tuple[WarpBezierNode, ...])`
 
 Immutable owned WarpBezier value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -783,7 +783,7 @@ Immutable owned WarpBezier value. Construction owns declared collections; readin
 
 ## zipzi.modeling.scene.WarpBezierNode
 
-`(position: Vec2, handles: tuple[Vec2, Vec2, Vec2, Vec2])`
+`(*, position: Vec2, handles: tuple[Vec2, Vec2, Vec2, Vec2])`
 
 Immutable owned WarpBezierNode value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -792,7 +792,7 @@ Immutable owned WarpBezierNode value. Construction owns declared collections; re
 
 ## zipzi.modeling.scene.WarpPointPatch
 
-`(row: int, column: int, point: Vec2)`
+`(*, row: int, column: int, point: Vec2)`
 
 Immutable owned WarpPointPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -802,7 +802,7 @@ Immutable owned WarpPointPatch value. Construction owns declared collections; re
 
 ## zipzi.modeling.scene.WarpTransform
 
-`(bezier: WarpBezier | None = None, rows: int, columns: int, quad: bool, points: tuple[Vec2, ...])`
+`(*, bezier: WarpBezier | None = None, rows: int, columns: int, quad: bool, points: tuple[Vec2, ...])`
 
 Immutable owned WarpTransform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

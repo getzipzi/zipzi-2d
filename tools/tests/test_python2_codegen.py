@@ -174,7 +174,16 @@ class Python2Codegen(unittest.TestCase):
         self.assertNotIn('field(',signature)
         self.assertIn('assets: tuple[str, ...] = ()',signature)
         self.assertIn('physics: bool = False',signature)
-        self.assertIn('`'+signature+'`',output['client/python/zipzi/docs/reference/modeling.md'])
+        self.assertIn('`'+signature+'`',output['client/python/zipzi/docs/reference/modeling_queries.md'])
+        self.assertIn('modeling_queries.md#zipzimodelingqueriesmodelingquery',
+                      output['client/python/zipzi/docs/reference/modeling.md'])
+        self.assertTrue(signature.startswith('(*, '),signature)
+        parameter=catalog['zipzi.modeling.parameters.Parameter']['signature']
+        self.assertIn('kind: ParameterKind = ParameterKind.NORMAL',parameter)
+        self.assertNotIn('read_',parameter)
+        self.assertNotIn('field(',parameter)
+        self.assertIn('zipzi.mesh_generation',catalog['zipzi']['children'])
+        self.assertIn('zipzi.mesh_generation.MeshSettings',catalog['zipzi.mesh_generation']['children'])
 
     def test_full_help_preserves_content_and_query_runtime_defaults(self):
         import sys
@@ -298,6 +307,9 @@ class Python2Codegen(unittest.TestCase):
             'zipzi.modeling.project.CdiNamespaceIds':('parameters','document-ID to runtime-ID map'),
             'zipzi.modeling.bindings.BindingGridEditEdit':('operation','Typed axis/sample grid edit'),
             'zipzi.modeling.bindings.DeltaOffscreenKeyform':('multiply','neutral (1, 1, 1)'),
+            'zipzi.modeling.common.Vec2':('x','Horizontal coordinate'),
+            'zipzi.modeling.common.PreciseVec2':('y','Vertical coordinate'),
+            'zipzi.mesh_generation.MeshSettings':('alpha_threshold','Alpha cutoff'),
         }
         reference='\n'.join(value for path,value in output.items() if path.startswith('client/python/zipzi/docs/reference/'))
         import sys
@@ -441,14 +453,33 @@ class Python2Codegen(unittest.TestCase):
     def test_projection_model_records_canonical_alias_and_special_reasons(self):
         original=gen._api_codegen.document_model
         projected=[]
+        entries=[]
         def capture(*args):
             model=original(*args)
             projected.extend(model[-1])
+            entries.extend(model[0])
             return model
         with patch.object(gen._api_codegen,'document_model',side_effect=capture):
-            render_fixture(self.contract())
+            output=render_fixture(self.contract())
+        paths={entry.path for entry in entries}
+        graph=gen.TypeGraph.from_contract(gen.schema.read(PACKAGE/'schema/authoring.json'))
+        for item in projected:
+            with self.subTest(path=item.canonical_path):
+                self.assertIn(item.rust_type_id,graph.definitions)
+                self.assertIn(item.canonical_path,paths)
+                source=output['client/python/'+item.implementation_module.replace('.','/')+'.py']
+                symbols={node.name for node in ast.parse(source).body if isinstance(node,ast.ClassDef)}
+                symbols.update(node.target.id for node in ast.parse(source).body
+                               if isinstance(node,ast.AnnAssign) and isinstance(node.target,ast.Name))
+                self.assertIn(item.canonical_path.rsplit('.',1)[-1],symbols)
         canonical=next(item for item in projected if item.rust_type_id=='zipzi_contract::model::MeshConstraintKind' and item.projection_id=='canonical')
         self.assertIn('zipzi.meshes.ConstraintKind',canonical.aliases)
+        shard=ast.parse(output['client/python/zipzi/_generated/catalog/meshes.py'])
+        data=next(ast.literal_eval(node.value) for node in shard.body
+                  if isinstance(node,ast.AnnAssign) and node.target.id=='DATA')
+        self.assertEqual(data['zipzi.meshes.ConstraintKind'],{'alias':canonical.canonical_path})
+        alias_page=output['client/python/zipzi/docs/reference/meshes.md']
+        self.assertIn('modeling_mesh.md#zipzimodelingmeshmeshconstraintkind',alias_page)
         special=[item for item in projected if item.projection_id!='canonical']
         self.assertTrue(special)
         self.assertTrue(all(item.reason for item in special))

@@ -57,7 +57,8 @@ def build_api(contract,package,dto_names,modeling_name,resolve=lambda shape: sha
             if file=='resource_ops':
                 # Keep the reviewed ImageCreateSpec flattening used by resource_ops.
                 fields=[item for f in fields for item in (resolve(f['shape'])['fields'] if f['name']=='spec' else [f])]
-            bind(file,prefix+variant['rust_name'],dict(name=shape['name']+'::'+variant['rust_name'],fields=fields))
+            bind(file,prefix+variant['rust_name'],dict(name=shape['name']+'::'+variant['rust_name'],
+                 rust_type_id=shape['name'],variant=variant['rust_name'],fields=fields))
     for section,file in ((contract,'meshes'),(contract['resources'],'resource_values'),(contract['scene'],'scene')):
         for binding in section['bindings']:
             if binding['form']=='external':continue
@@ -72,8 +73,8 @@ def build_api(contract,package,dto_names,modeling_name,resolve=lambda shape: sha
     for rust,shape in shapes.items():
         if rust in {s['name'] for s in contract['modeling']['roots']} or rust.startswith(('zipzi_contract::','zipzi_core::','zipzi_sdk::','zipzi_runtime::','zipzi_animation::','zipzi_project::')):
             short=modeling_name(rust)
+            bind('modeling',short,shape)
             if shape['kind'] in {'union','serde_enum'}:variants(shape,'modeling',short)
-            else:bind('modeling',short,shape)
         for domain,file in [('parameters','parameter_values'),('bindings','binding_values'),('sampling','sampling_values'),('references','reference_values')]:
             name=dto_names[domain].get(rust.rsplit('::',1)[-1])
             if name is None:continue
@@ -117,8 +118,7 @@ def build_api(contract,package,dto_names,modeling_name,resolve=lambda shape: sha
             raise ValueError('Missing semantic field documentation: '+node.name+'.'+', '.join(missing))
         return [(name,documented[name]) for name in declared]
     pattern=r'\b('+'|'.join(sorted(READ_CLASSES))+r')\.read\b'
-    projected=[] if graph is None else list(graph.projections)
-    planned_ids=set() if graph is None else {item.rust_type_id for item in graph.projections}
+    projected=[]
     def render_python(path,content):
         if not path.endswith('.py'):return content
         if '/_generated/' in path:
@@ -130,17 +130,22 @@ def build_api(contract,package,dto_names,modeling_name,resolve=lambda shape: sha
             if graph is not None:
                 file=Path(path).stem
                 for node in tree.body:
-                    if not isinstance(node,ast.ClassDef):continue
-                    shape=class_shapes.get((file,node.name))
+                    if isinstance(node,ast.ClassDef):name=node.name
+                    elif (file=='modeling' and isinstance(node,ast.AnnAssign)
+                          and isinstance(node.target,ast.Name) and 'TypeAlias' in ast.unparse(node.annotation)):
+                        name=node.target.id
+                    else:continue
+                    shape=class_shapes.get((file,name))
                     if shape is None:continue
-                    identity=shape['name'];base=identity
-                    while base not in graph.domains and '::' in base:base=base.rsplit('::',1)[0]
-                    if base not in graph.domains:continue
-                    domain=graph.domains[base]
+                    identity=shape.get('rust_type_id',shape['name'])
+                    if identity not in graph.domains:continue
+                    domain=graph.domains[identity]
                     if file=='modeling':
-                        if identity in planned_ids:continue
-                        projected.append(Projection(identity,'canonical',domain,'zipzi._generated.values.'+domain,
-                                                    'zipzi.modeling.'+domain+'.'+node.name))
+                        variant=shape.get('variant')
+                        projected.append(Projection(identity,'canonical' if variant is None else 'variant:'+variant,
+                                                    domain,'zipzi._generated.values.'+domain,
+                                                    'zipzi.modeling.'+domain+'.'+name,
+                                                    reason=None if variant is None else 'Typed constructor for the '+variant+' variant of '+identity+'.'))
                     else:
                         reason=SPECIAL_PROJECTIONS.get(file)
                         if reason is None:raise ValueError('Unreviewed special projection: '+file+'.'+node.name)
@@ -148,8 +153,10 @@ def build_api(contract,package,dto_names,modeling_name,resolve=lambda shape: sha
                                      and len(n.targets)==1 and isinstance(n.targets[0],ast.Name)
                                      and n.targets[0].id=='__module__' and isinstance(n.value,ast.Constant)
                                      and isinstance(n.value.value,str)), 'zipzi._generated.'+file)
-                        projected.append(Projection(identity,file+'.'+node.name,domain,'zipzi._generated.'+file,
-                                                    module+'.'+node.name,
+                        if module.startswith('zipzi._generated.'):
+                            continue
+                        projected.append(Projection(identity,file+'.'+name,domain,'zipzi._generated.'+file,
+                                                    module+'.'+name,
                                                     construction='convenience',field_conversion='owned-client',
                                                     wire='compiled-shape',reason=reason))
         if '@dataclass(' in content:content=compact(content)
@@ -161,10 +168,10 @@ def build_api(contract,package,dto_names,modeling_name,resolve=lambda shape: sha
             content=content+'\n__all__ = '+repr(names)+'\n'
         content=re.sub(pattern,r'\1._read',content)
         content=content.replace('    def read(', '    def _read(').replace('    def wire(', '    def _wire(').replace('.wire()', '._wire()')
-        if '/_generated/' not in path or '@dataclass' not in content:return content
+        if '/_generated/' not in path:return content
         tree=parse(path,content);lines=content.splitlines(True);edits=[]
         for node in tree.body:
-            if not isinstance(node,ast.ClassDef) or ast.get_docstring(node) or not any(isinstance(n,ast.Name) and n.id=='CompactValue' for n in node.bases):continue
+            if not isinstance(node,ast.ClassDef) or ast.get_docstring(node) or not any(isinstance(n,ast.Name) and n.id in {'CompactValue','NamedTuple'} for n in node.bases):continue
             fs=compiled_fields(Path(path).stem,node)
             text='Immutable owned '+node.name+' value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
             if fs:text+='\n\nFields:\n'+'\n'.join(name+': '+doc for name,doc in fs)
@@ -190,12 +197,12 @@ def build_api(contract,package,dto_names,modeling_name,resolve=lambda shape: sha
                 if isinstance(node,ast.ClassDef) and ('modeling',node.name) in class_shapes:
                     class_shapes[(domain,node.name)]=class_shapes[('modeling',node.name)]
         validate_projections(tuple(projected))
-        return sources,parse,class_shapes,compiled_fields,python_fields,tuple(projected)
+        return sources,parse,class_shapes,compiled_fields,python_fields,tuple(projected),resolve
     return render_python,prepare
 
 
 def document_model(contract,prepared,package):
-    sources,parse,class_shapes,compiled_fields,python_fields,projected=prepared
+    sources,parse,class_shapes,compiled_fields,python_fields,projected,resolve_shape=prepared
     prefix='client/python/zipzi/'
     def module_name(path):
         suffix=path[len(prefix):]
@@ -222,15 +229,26 @@ def document_model(contract,prepared,package):
             if field.value is None:return ''
             source=declared.get(field.target.id,{})
             value=source.get('default')
-            kind=source.get('shape',{}).get('kind')
+            shape=resolve_shape(source.get('shape',{}))
+            kind=shape.get('kind')
             # Render public values from the compiled contract, never evaluate
             # generated factories or change their runtime implementation.
             if value is not None:
                 if kind=='sequence' and value==[]:return ' = ()'
                 if kind in {'string','bool','u8','u16','u32','u64','usize','i32','i64','f32','f64'} and not isinstance(value,dict):
                     return ' = '+repr(value)
+                if kind in {'union','serde_enum'} and all(not v['fields'] for v in shape['variants']):
+                    variant=next((v for v in shape['variants'] if v.get('name',v.get('wire_name'))==value),None)
+                    if variant is not None:
+                        member=re.sub(r'(?<!^)(?=[A-Z])','_',variant['rust_name']).upper()
+                        return ' = '+ast.unparse(field.annotation)+'.'+member
+            if isinstance(field.value,ast.Call) and isinstance(field.value.func,ast.Name) and field.value.func.id=='field':
+                return ' = <factory>'
             return ' = '+ast.unparse(field.value)
-        return '('+', '.join(n.target.id+': '+ast.unparse(n.annotation)+default(n) for n in fields)+')'
+        kw_only=any(isinstance(decorator,ast.Call) and isinstance(decorator.func,ast.Name)
+                    and decorator.func.id=='dataclass' and any(arg.arg=='kw_only' and ast.literal_eval(arg.value) is True for arg in decorator.keywords)
+                    for decorator in node.decorator_list)
+        return '('+('*, ' if kw_only and fields else '')+', '.join(n.target.id+': '+ast.unparse(n.annotation)+default(n) for n in fields)+')'
     for module,tree in trees.items():
         table={}
         for node in tree.body:
@@ -287,7 +305,12 @@ def document_model(contract,prepared,package):
             for child in public_methods(node).values():
                 add(path+'.'+child.name,child);catalog[path]['children'].append(path+'.'+child.name)
     # Public paths are explicit reexports in domain modules, plus canonical modeling DTO types/unions.
-    domains=('meshes','parameters','bindings','resources','scene','sampling','events','references','modeling','ops','animation','spatial','observation','inspection')
+    # Root exports determine public modules, including handwritten optional APIs.
+    root_exports=[]
+    for node in trees[''].body:
+        if isinstance(node,(ast.Assign,ast.AugAssign)) and any(isinstance(t,ast.Name) and t.id=='__all__' for t in (node.targets if isinstance(node,ast.Assign) else [node.target])):
+            root_exports.extend(ast.literal_eval(node.value))
+    domains=tuple(name for name in root_exports if name in trees)
     modeling_domains=tuple(sorted(name.removeprefix('modeling.') for name in trees if name.startswith('modeling.') and '.' not in name[len('modeling.'):]))
     for module in ('',*domains,*('modeling.'+name for name in modeling_domains)):
         public='zipzi'+('.'+module if module else '')
@@ -350,6 +373,8 @@ def document_model(contract,prepared,package):
     canonical_paths={projection.canonical_path for projection in projected}
     for projection in projected:
         entry=by_path.get(projection.canonical_path)
+        if entry is None:
+            raise ValueError('Missing public projection: '+projection.canonical_path)
         aliases=() if entry is None or entry.identity is None else tuple(
             path for path in by_identity[entry.identity] if path != projection.canonical_path and path not in canonical_paths)
         resolved.append(replace(projection,aliases=aliases))

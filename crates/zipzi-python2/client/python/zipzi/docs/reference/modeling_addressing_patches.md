@@ -12,7 +12,7 @@ Typed public API entry.
 
 ## zipzi.modeling.addressing.AddressPatchAttachmentPath
 
-`(path: str)`
+`(*, path: str)`
 
 Immutable owned AddressPatchAttachmentPath value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -21,7 +21,7 @@ and .. components are invalid.
 
 ## zipzi.modeling.addressing.AddressPatchBinding
 
-`(patch: BindingFieldPatch)`
+`(*, patch: BindingFieldPatch)`
 
 Immutable owned AddressPatchBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -29,7 +29,7 @@ Immutable owned AddressPatchBinding value. Construction owns declared collection
 
 ## zipzi.modeling.addressing.AddressPatchContent
 
-`(value: SceneContentValue)`
+`(*, value: SceneContentValue)`
 
 Immutable owned AddressPatchContent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -37,7 +37,7 @@ Immutable owned AddressPatchContent value. Construction owns declared collection
 
 ## zipzi.modeling.addressing.AddressPatchDocument
 
-`(value: DocumentValue)`
+`(*, value: DocumentValue)`
 
 Immutable owned AddressPatchDocument value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -45,7 +45,7 @@ Immutable owned AddressPatchDocument value. Construction owns declared collectio
 
 ## zipzi.modeling.addressing.AddressPatchDrawingRange
 
-`(range: tuple[int, int])`
+`(*, range: tuple[int, int])`
 
 Immutable owned AddressPatchDrawingRange value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -53,7 +53,7 @@ Immutable owned AddressPatchDrawingRange value. Construction owns declared colle
 
 ## zipzi.modeling.addressing.AddressPatchExpressionEntry
 
-`(fields: ExpressionEntryFields)`
+`(*, fields: ExpressionEntryFields)`
 
 Immutable owned AddressPatchExpressionEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -61,7 +61,7 @@ Immutable owned AddressPatchExpressionEntry value. Construction owns declared co
 
 ## zipzi.modeling.addressing.AddressPatchMotionRegistration
 
-`(entry: MotionRegistration)`
+`(*, entry: MotionRegistration)`
 
 Immutable owned AddressPatchMotionRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -69,7 +69,7 @@ Immutable owned AddressPatchMotionRegistration value. Construction owns declared
 
 ## zipzi.modeling.addressing.AddressPatchOrganization
 
-`(intent: OrganizationEdit)`
+`(*, intent: OrganizationEdit)`
 
 Immutable owned AddressPatchOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -78,7 +78,7 @@ mutate or publish.
 
 ## zipzi.modeling.addressing.AddressPatchPhysics
 
-`(changes: tuple[PhysicsProperty, ...])`
+`(*, changes: tuple[PhysicsProperty, ...])`
 
 Immutable owned AddressPatchPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -86,7 +86,7 @@ Immutable owned AddressPatchPhysics value. Construction owns declared collection
 
 ## zipzi.modeling.addressing.AddressPatchPose
 
-`(fields: PoseFields)`
+`(*, fields: PoseFields)`
 
 Immutable owned AddressPatchPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -94,7 +94,7 @@ Immutable owned AddressPatchPose value. Construction owns declared collections; 
 
 ## zipzi.modeling.addressing.AddressPatchReference
 
-`(fields: ReferenceFields)`
+`(*, fields: ReferenceFields)`
 
 Immutable owned AddressPatchReference value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -103,7 +103,7 @@ kind.
 
 ## zipzi.modeling.addressing.AddressPatchResourceName
 
-`(name: str)`
+`(*, name: str)`
 
 Immutable owned AddressPatchResourceName value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -111,7 +111,7 @@ Immutable owned AddressPatchResourceName value. Construction owns declared colle
 
 ## zipzi.modeling.addressing.AddressPatchScene
 
-`(value: SceneFieldValue, clear_glue_pairs: bool)`
+`(*, value: SceneFieldValue, clear_glue_pairs: bool)`
 
 Immutable owned AddressPatchScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -120,7 +120,7 @@ Immutable owned AddressPatchScene value. Construction owns declared collections;
 
 ## zipzi.modeling.addressing.AddressPatchSelection
 
-`(targets: tuple[str, ...])`
+`(*, targets: tuple[str, ...])`
 
 Immutable owned AddressPatchSelection value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

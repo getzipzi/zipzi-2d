@@ -23,6 +23,7 @@ def safe_path(package, path, fixed):
         raise ValueError('Invalid generated path')
     parts = PurePosixPath(path)
     if (parts.is_absolute() or not parts.parts or parts.as_posix() != path
+            or '\\' in path or ':' in path
             or any(part in {'.', '..'} for part in parts.parts)
             or not (path in fixed or any(path.startswith(prefix) for prefix in DIRECTORIES))):
         raise ValueError(f'Unowned generated path: {path}')
@@ -31,6 +32,13 @@ def safe_path(package, path, fixed):
         raise ValueError(f'Generated path traverses a symlink: {path}')
     if not file.resolve().is_relative_to(package.resolve()):
         raise ValueError(f'Generated path outside package: {path}')
+    for parent in file.parents:
+        if parent == package:
+            break
+        if parent.exists() and not parent.is_dir():
+            raise ValueError(f'Generated parent is not a directory: {path}')
+    if file.exists() and not file.is_file():
+        raise ValueError(f'Generated path is not a regular file: {path}')
     return file
 
 
@@ -53,6 +61,8 @@ def read_manifest(package, fixed):
     file = package / MANIFEST
     if file.is_symlink():
         raise ValueError('Manifest is a symlink')
+    if file.exists() and not file.is_file():
+        raise ValueError('Manifest is not a regular file')
     if not file.exists():
         return None
     try:

@@ -19,7 +19,7 @@ Typed public API entry.
 
 ## zipzi.modeling.bindings.AxisReductionResample
 
-`(value: float)`
+`(*, value: float)`
 
 Immutable owned AxisReductionResample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -27,7 +27,7 @@ Immutable owned AxisReductionResample value. Construction owns declared collecti
 
 ## zipzi.modeling.bindings.AxisReductionSlice
 
-`(value: float)`
+`(*, value: float)`
 
 Immutable owned AxisReductionSlice value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -35,7 +35,7 @@ Immutable owned AxisReductionSlice value. Construction owns declared collections
 
 ## zipzi.modeling.bindings.BindingAxis
 
-`(id: str = '', samples: tuple[BindingSample, ...] = (), parameter_id: str)`
+`(*, id: str = '', samples: tuple[BindingSample, ...] = (), parameter_id: str)`
 
 Immutable owned BindingAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -53,7 +53,7 @@ Typed public API entry.
 
 ## zipzi.modeling.bindings.BindingFieldPatchAxisParameter
 
-`(parameter_id: str, reduction: AxisReduction | None = None)`
+`(*, parameter_id: str, reduction: AxisReduction | None = None)`
 
 Immutable owned BindingFieldPatchAxisParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -62,7 +62,7 @@ Immutable owned BindingFieldPatchAxisParameter value. Construction owns declared
 
 ## zipzi.modeling.bindings.BindingFieldPatchConstraintSample
 
-`(value: float, weight: float)`
+`(*, value: float, weight: float)`
 
 Immutable owned BindingFieldPatchConstraintSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -71,7 +71,7 @@ Immutable owned BindingFieldPatchConstraintSample value. Construction owns decla
 
 ## zipzi.modeling.bindings.BindingFieldPatchSampleValue
 
-`(value: float)`
+`(*, value: float)`
 
 Immutable owned BindingFieldPatchSampleValue value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -86,7 +86,7 @@ Typed public API entry.
 
 ## zipzi.modeling.bindings.BindingGridTargetGlue
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned BindingGridTargetGlue value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -94,7 +94,7 @@ Immutable owned BindingGridTargetGlue value. Construction owns declared collecti
 
 ## zipzi.modeling.bindings.BindingGridTargetMesh
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned BindingGridTargetMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -102,7 +102,7 @@ Immutable owned BindingGridTargetMesh value. Construction owns declared collecti
 
 ## zipzi.modeling.bindings.BindingGridTargetScene
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned BindingGridTargetScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -110,7 +110,7 @@ Immutable owned BindingGridTargetScene value. Construction owns declared collect
 
 ## zipzi.modeling.bindings.BindingSample
 
-`(id: str, value: float)`
+`(*, id: str, value: float)`
 
 Immutable owned BindingSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -120,7 +120,7 @@ increasing.
 
 ## zipzi.modeling.bindings.BlendShapeBinding
 
-`(id: str, target_id: str, target_kind: BlendShapeTargetKind, key_table_id: str, constraint_ids: tuple[str, ...], keyforms: DeltaKeyforms)`
+`(*, id: str, target_id: str, target_kind: BlendShapeTargetKind, key_table_id: str, constraint_ids: tuple[str, ...], keyforms: DeltaKeyforms)`
 
 Immutable owned BlendShapeBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -134,7 +134,7 @@ table.
 
 ## zipzi.modeling.bindings.BlendShapeConstraint
 
-`(samples: tuple[ConstraintSample, ...] = (), id: str, parameter_id: str)`
+`(*, samples: tuple[ConstraintSample, ...] = (), id: str, parameter_id: str)`
 
 Immutable owned BlendShapeConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -144,7 +144,7 @@ Immutable owned BlendShapeConstraint value. Construction owns declared collectio
 
 ## zipzi.modeling.bindings.BlendShapeKeyTable
 
-`(samples: tuple[BindingSample, ...] = (), base_sample_id: str = '', id: str, parameter_id: str)`
+`(*, samples: tuple[BindingSample, ...] = (), base_sample_id: str = '', id: str, parameter_id: str)`
 
 Immutable owned BlendShapeKeyTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -170,7 +170,7 @@ Typed public API entry.
 
 ## zipzi.modeling.bindings.BlendTableOperationDelete
 
-`(sample_id: str, replacement_base: str | None = None)`
+`(*, sample_id: str, replacement_base: str | None = None)`
 
 Immutable owned BlendTableOperationDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -180,7 +180,7 @@ parameter value.
 
 ## zipzi.modeling.bindings.BlendTableOperationInsert
 
-`(sample: BindingSample)`
+`(*, sample: BindingSample)`
 
 Immutable owned BlendTableOperationInsert value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -188,7 +188,7 @@ Immutable owned BlendTableOperationInsert value. Construction owns declared coll
 
 ## zipzi.modeling.bindings.BlendTableOperationMove
 
-`(sample_id: str, value: float)`
+`(*, sample_id: str, value: float)`
 
 Immutable owned BlendTableOperationMove value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -198,7 +198,7 @@ parameter value.
 
 ## zipzi.modeling.bindings.BlendTableOperationRemapParameter
 
-`(parameter_id: str, policy: ParameterRangePolicy)`
+`(*, parameter_id: str, policy: ParameterRangePolicy)`
 
 Immutable owned BlendTableOperationRemapParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -208,7 +208,7 @@ requested.
 
 ## zipzi.modeling.bindings.BlendTableOperationSetBase
 
-`(sample_id: str)`
+`(*, sample_id: str)`
 
 Immutable owned BlendTableOperationSetBase value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -217,7 +217,7 @@ parameter value.
 
 ## zipzi.modeling.bindings.BlendTableOperationSetParameter
 
-`(parameter_id: str)`
+`(*, parameter_id: str)`
 
 Immutable owned BlendTableOperationSetParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -225,7 +225,7 @@ Immutable owned BlendTableOperationSetParameter value. Construction owns declare
 
 ## zipzi.modeling.bindings.ConstraintSample
 
-`(id: str, value: float, weight: float)`
+`(*, id: str, value: float, weight: float)`
 
 Immutable owned ConstraintSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -235,7 +235,7 @@ Immutable owned ConstraintSample value. Construction owns declared collections; 
 
 ## zipzi.modeling.bindings.DeltaGlueKeyform
 
-`(sample_id: str = '', intensity: float)`
+`(*, sample_id: str = '', intensity: float)`
 
 Immutable owned DeltaGlueKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -251,7 +251,7 @@ Typed public API entry.
 
 ## zipzi.modeling.bindings.DeltaKeyformsGlue
 
-`(value: tuple[DeltaGlueKeyform, ...])`
+`(*, value: tuple[DeltaGlueKeyform, ...])`
 
 Immutable owned DeltaKeyformsGlue value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -260,7 +260,7 @@ channels describe deltas from the base shape.
 
 ## zipzi.modeling.bindings.DeltaKeyformsMesh
 
-`(value: tuple[DeltaMeshKeyform, ...])`
+`(*, value: tuple[DeltaMeshKeyform, ...])`
 
 Immutable owned DeltaKeyformsMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -269,7 +269,7 @@ channels describe deltas from the base shape.
 
 ## zipzi.modeling.bindings.DeltaKeyformsOffscreen
 
-`(value: tuple[DeltaOffscreenKeyform, ...])`
+`(*, value: tuple[DeltaOffscreenKeyform, ...])`
 
 Immutable owned DeltaKeyformsOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -278,7 +278,7 @@ channels describe deltas from the base shape.
 
 ## zipzi.modeling.bindings.DeltaKeyformsPart
 
-`(value: tuple[DeltaPartKeyform, ...])`
+`(*, value: tuple[DeltaPartKeyform, ...])`
 
 Immutable owned DeltaKeyformsPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -287,7 +287,7 @@ channels describe deltas from the base shape.
 
 ## zipzi.modeling.bindings.DeltaKeyformsRotation
 
-`(value: tuple[DeltaRotationKeyform, ...])`
+`(*, value: tuple[DeltaRotationKeyform, ...])`
 
 Immutable owned DeltaKeyformsRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -296,7 +296,7 @@ channels describe deltas from the base shape.
 
 ## zipzi.modeling.bindings.DeltaKeyformsWarp
 
-`(value: tuple[DeltaWarpKeyform, ...])`
+`(*, value: tuple[DeltaWarpKeyform, ...])`
 
 Immutable owned DeltaKeyformsWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -305,7 +305,7 @@ channels describe deltas from the base shape.
 
 ## zipzi.modeling.bindings.DeltaMeshKeyform
 
-`(sample_id: str = '', positions: tuple[Vec2, ...], opacity: float | None = None, draw_order: float | None = None, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
+`(*, sample_id: str = '', positions: tuple[Vec2, ...], opacity: float | None = None, draw_order: float | None = None, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
 
 Immutable owned DeltaMeshKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -320,7 +320,7 @@ channel.
 
 ## zipzi.modeling.bindings.DeltaOffscreenKeyform
 
-`(sample_id: str = '', opacity: float, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
+`(*, sample_id: str = '', opacity: float, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
 
 Immutable owned DeltaOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -333,7 +333,7 @@ channel.
 
 ## zipzi.modeling.bindings.DeltaPartKeyform
 
-`(sample_id: str = '', draw_order: float)`
+`(*, sample_id: str = '', draw_order: float)`
 
 Immutable owned DeltaPartKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -342,7 +342,7 @@ Immutable owned DeltaPartKeyform value. Construction owns declared collections; 
 
 ## zipzi.modeling.bindings.DeltaRotationKeyform
 
-`(sample_id: str = '', origin: Vec2 | None = None, angle: float | None = None, scale: float | None = None, opacity: float | None = None, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
+`(*, sample_id: str = '', origin: Vec2 | None = None, angle: float | None = None, scale: float | None = None, opacity: float | None = None, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
 
 Immutable owned DeltaRotationKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -359,7 +359,7 @@ channel.
 
 ## zipzi.modeling.bindings.DeltaWarpKeyform
 
-`(sample_id: str = '', points: tuple[Vec2, ...], opacity: float | None = None, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
+`(*, sample_id: str = '', points: tuple[Vec2, ...], opacity: float | None = None, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
 
 Immutable owned DeltaWarpKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -373,7 +373,7 @@ channel.
 
 ## zipzi.modeling.bindings.GlueBinding
 
-`(axes: tuple[BindingAxis, ...], keyforms: tuple[GlueKeyform, ...])`
+`(*, axes: tuple[BindingAxis, ...], keyforms: tuple[GlueKeyform, ...])`
 
 Immutable owned GlueBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -383,7 +383,7 @@ own identities.
 
 ## zipzi.modeling.bindings.GlueKeyform
 
-`(samples: tuple[str, ...] = (), intensity: float)`
+`(*, samples: tuple[str, ...] = (), intensity: float)`
 
 Immutable owned GlueKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -399,7 +399,7 @@ Typed public API entry.
 
 ## zipzi.modeling.bindings.GridOperationAddAxis
 
-`(axis: BindingAxis)`
+`(*, axis: BindingAxis)`
 
 Immutable owned GridOperationAddAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -408,7 +408,7 @@ from the parameter ID.
 
 ## zipzi.modeling.bindings.GridOperationDeleteSample
 
-`(sample_id: str)`
+`(*, sample_id: str)`
 
 Immutable owned GridOperationDeleteSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -417,7 +417,7 @@ parameter value.
 
 ## zipzi.modeling.bindings.GridOperationInsertSample
 
-`(axis_id: str, id: str, value: float)`
+`(*, axis_id: str, id: str, value: float)`
 
 Immutable owned GridOperationInsertSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -427,7 +427,7 @@ Immutable owned GridOperationInsertSample value. Construction owns declared coll
 
 ## zipzi.modeling.bindings.GridOperationMoveSample
 
-`(sample_id: str, value: float)`
+`(*, sample_id: str, value: float)`
 
 Immutable owned GridOperationMoveSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -437,7 +437,7 @@ parameter value.
 
 ## zipzi.modeling.bindings.GridOperationRemapParameter
 
-`(axis_id: str, parameter_id: str, policy: ParameterRangePolicy)`
+`(*, axis_id: str, parameter_id: str, policy: ParameterRangePolicy)`
 
 Immutable owned GridOperationRemapParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -448,7 +448,7 @@ requested.
 
 ## zipzi.modeling.bindings.GridOperationRemoveAxis
 
-`(axis_id: str, reduction: AxisReduction | None = None, keep_pending: bool)`
+`(*, axis_id: str, reduction: AxisReduction | None = None, keep_pending: bool)`
 
 Immutable owned GridOperationRemoveAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -458,7 +458,7 @@ Immutable owned GridOperationRemoveAxis value. Construction owns declared collec
 
 ## zipzi.modeling.bindings.GridOperationReorderAxes
 
-`(axis_ids: tuple[str, ...])`
+`(*, axis_ids: tuple[str, ...])`
 
 Immutable owned GridOperationReorderAxes value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -466,7 +466,7 @@ Immutable owned GridOperationReorderAxes value. Construction owns declared colle
 
 ## zipzi.modeling.bindings.GridOperationSetParameter
 
-`(axis_id: str, parameter_id: str, reduction: AxisReduction | None = None)`
+`(*, axis_id: str, parameter_id: str, reduction: AxisReduction | None = None)`
 
 Immutable owned GridOperationSetParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -476,7 +476,7 @@ Immutable owned GridOperationSetParameter value. Construction owns declared coll
 
 ## zipzi.modeling.bindings.MeshBinding
 
-`(id: str, mesh_id: str, axes: tuple[BindingAxis, ...], keyforms: tuple[MeshKeyform, ...])`
+`(*, id: str, mesh_id: str, axes: tuple[BindingAxis, ...], keyforms: tuple[MeshKeyform, ...])`
 
 Immutable owned MeshBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -489,7 +489,7 @@ table.
 
 ## zipzi.modeling.bindings.MeshKeyform
 
-`(samples: tuple[str, ...] = (), positions: tuple[Vec2, ...], appearance: Appearance, draw_order: float | None = None)`
+`(*, samples: tuple[str, ...] = (), positions: tuple[Vec2, ...], appearance: Appearance, draw_order: float | None = None)`
 
 Immutable owned MeshKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -502,7 +502,7 @@ unoverridden order.
 
 ## zipzi.modeling.bindings.OffscreenKeyform
 
-`(opacity: float, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
+`(*, opacity: float, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
 
 Immutable owned OffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -513,7 +513,7 @@ above 1 are retained without clamping.
 
 ## zipzi.modeling.bindings.PartKeyform
 
-`(samples: tuple[str, ...] = (), draw_order: float)`
+`(*, samples: tuple[str, ...] = (), draw_order: float)`
 
 Immutable owned PartKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -529,7 +529,7 @@ Typed public API entry.
 
 ## zipzi.modeling.bindings.PartKeyformSlotSamples
 
-`(samples: tuple[str, ...])`
+`(*, samples: tuple[str, ...])`
 
 Immutable owned PartKeyformSlotSamples value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -544,7 +544,7 @@ Immutable owned PartKeyformSlotStatic value. Construction owns declared collecti
 
 ## zipzi.modeling.bindings.RotationKeyform
 
-`(samples: tuple[str, ...] = (), rotation: RotationPose, appearance: Appearance)`
+`(*, samples: tuple[str, ...] = (), rotation: RotationPose, appearance: Appearance)`
 
 Immutable owned RotationKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -554,7 +554,7 @@ Immutable owned RotationKeyform value. Construction owns declared collections; r
 
 ## zipzi.modeling.bindings.SceneBinding
 
-`(id: str, axes: tuple[BindingAxis, ...], track: SceneTrack)`
+`(*, id: str, axes: tuple[BindingAxis, ...], track: SceneTrack)`
 
 Immutable owned SceneBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -573,7 +573,7 @@ Typed public API entry.
 
 ## zipzi.modeling.bindings.SceneKeyformPart
 
-`(value: PartKeyform)`
+`(*, value: PartKeyform)`
 
 Immutable owned SceneKeyformPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -581,7 +581,7 @@ Immutable owned SceneKeyformPart value. Construction owns declared collections; 
 
 ## zipzi.modeling.bindings.SceneKeyformRotation
 
-`(value: RotationKeyform)`
+`(*, value: RotationKeyform)`
 
 Immutable owned SceneKeyformRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -590,7 +590,7 @@ combination.
 
 ## zipzi.modeling.bindings.SceneKeyformWarp
 
-`(value: WarpKeyform)`
+`(*, value: WarpKeyform)`
 
 Immutable owned SceneKeyformWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -605,7 +605,7 @@ Typed public API entry.
 
 ## zipzi.modeling.bindings.SceneTrackPart
 
-`(target_id: PartId, keyforms: tuple[PartKeyform, ...])`
+`(*, target_id: PartId, keyforms: tuple[PartKeyform, ...])`
 
 Immutable owned SceneTrackPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -614,7 +614,7 @@ Immutable owned SceneTrackPart value. Construction owns declared collections; re
 
 ## zipzi.modeling.bindings.SceneTrackRotation
 
-`(target_id: TransformId, keyforms: tuple[RotationKeyform, ...])`
+`(*, target_id: TransformId, keyforms: tuple[RotationKeyform, ...])`
 
 Immutable owned SceneTrackRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -623,7 +623,7 @@ Immutable owned SceneTrackRotation value. Construction owns declared collections
 
 ## zipzi.modeling.bindings.SceneTrackWarp
 
-`(target_id: TransformId, keyforms: tuple[WarpKeyform, ...])`
+`(*, target_id: TransformId, keyforms: tuple[WarpKeyform, ...])`
 
 Immutable owned SceneTrackWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -632,7 +632,7 @@ Immutable owned SceneTrackWarp value. Construction owns declared collections; re
 
 ## zipzi.modeling.bindings.WarpKeyform
 
-`(bezier: WarpBezier | None = None, samples: tuple[str, ...] = (), positions: tuple[Vec2, ...], appearance: Appearance)`
+`(*, bezier: WarpBezier | None = None, samples: tuple[str, ...] = (), positions: tuple[Vec2, ...], appearance: Appearance)`
 
 Immutable owned WarpKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

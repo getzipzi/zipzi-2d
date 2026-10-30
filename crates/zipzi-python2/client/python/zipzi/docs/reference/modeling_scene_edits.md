@@ -12,7 +12,7 @@ Typed public API entry.
 
 ## zipzi.modeling.scene.AttachmentEditCreate
 
-`(id: str, path: str)`
+`(*, id: str, path: str)`
 
 Immutable owned AttachmentEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -22,7 +22,7 @@ and .. components are invalid.
 
 ## zipzi.modeling.scene.AttachmentEditDelete
 
-`(id: str)`
+`(*, id: str)`
 
 Immutable owned AttachmentEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -31,7 +31,7 @@ runtime_id.
 
 ## zipzi.modeling.scene.AttachmentEditDeleteWithReplacement
 
-`(id: str, replacement: str | None = None)`
+`(*, id: str, replacement: str | None = None)`
 
 Immutable owned AttachmentEditDeleteWithReplacement value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -42,7 +42,7 @@ references.
 
 ## zipzi.modeling.scene.AttachmentEditDuplicate
 
-`(source: str, id: str, path: str)`
+`(*, source: str, id: str, path: str)`
 
 Immutable owned AttachmentEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -53,7 +53,7 @@ and .. components are invalid.
 
 ## zipzi.modeling.scene.AttachmentEditReorder
 
-`(ids: tuple[str, ...], before: str | None = None)`
+`(*, ids: tuple[str, ...], before: str | None = None)`
 
 Immutable owned AttachmentEditReorder value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -64,7 +64,7 @@ the selected destination.
 
 ## zipzi.modeling.scene.AttachmentEditReplace
 
-`(expected: PackageAttachment, attachment: PackageAttachment)`
+`(*, expected: PackageAttachment, attachment: PackageAttachment)`
 
 Immutable owned AttachmentEditReplace value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -74,7 +74,7 @@ the edit.
 
 ## zipzi.modeling.scene.AttachmentEditSetSound
 
-`(registration: str, reference: AttachmentRef | None = None)`
+`(*, registration: str, reference: AttachmentRef | None = None)`
 
 Immutable owned AttachmentEditSetSound value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -83,7 +83,7 @@ Immutable owned AttachmentEditSetSound value. Construction owns declared collect
 
 ## zipzi.modeling.scene.AttachmentEditSetUserData
 
-`(reference: AttachmentRef | None = None)`
+`(*, reference: AttachmentRef | None = None)`
 
 Immutable owned AttachmentEditSetUserData value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -98,7 +98,7 @@ Typed public API entry.
 
 ## zipzi.modeling.scene.OrganizationEditCreateGroup
 
-`(group: CdiParameterGroup, before: str | None = None)`
+`(*, group: CdiParameterGroup, before: str | None = None)`
 
 Immutable owned OrganizationEditCreateGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -108,7 +108,7 @@ the selected destination.
 
 ## zipzi.modeling.scene.OrganizationEditCreateParameter
 
-`(parameter: Parameter, group_id: str | None = None, before: str | None = None)`
+`(*, parameter: Parameter, group_id: str | None = None, before: str | None = None)`
 
 Immutable owned OrganizationEditCreateParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -120,7 +120,7 @@ the selected destination.
 
 ## zipzi.modeling.scene.OrganizationEditCreatePart
 
-`(part: Part, before: str | None = None)`
+`(*, part: Part, before: str | None = None)`
 
 Immutable owned OrganizationEditCreatePart value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -130,7 +130,7 @@ the selected destination.
 
 ## zipzi.modeling.scene.OrganizationEditDelete
 
-`(ids: tuple[str, ...], policy: OrganizationDeletePolicy)`
+`(*, ids: tuple[str, ...], policy: OrganizationDeletePolicy)`
 
 Immutable owned OrganizationEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -141,7 +141,7 @@ requested.
 
 ## zipzi.modeling.scene.OrganizationEditDuplicate
 
-`(ids: tuple[str, ...], destination: OrganizationCollection, before: str | None = None)`
+`(*, ids: tuple[str, ...], destination: OrganizationCollection, before: str | None = None)`
 
 Immutable owned OrganizationEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -154,7 +154,7 @@ the selected destination.
 
 ## zipzi.modeling.scene.OrganizationEditMove
 
-`(ids: tuple[str, ...], destination: OrganizationCollection, before: str | None = None)`
+`(*, ids: tuple[str, ...], destination: OrganizationCollection, before: str | None = None)`
 
 Immutable owned OrganizationEditMove value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -167,7 +167,7 @@ the selected destination.
 
 ## zipzi.modeling.scene.OrganizationEditPatchGroup
 
-`(expected: CdiParameterGroup, group: CdiParameterGroup)`
+`(*, expected: CdiParameterGroup, group: CdiParameterGroup)`
 
 Immutable owned OrganizationEditPatchGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -177,7 +177,7 @@ the edit.
 
 ## zipzi.modeling.scene.OrganizationEditSetParameterGroup
 
-`(parameter_id: str, group_id: str | None = None)`
+`(*, parameter_id: str, group_id: str | None = None)`
 
 Immutable owned OrganizationEditSetParameterGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -187,7 +187,7 @@ root/unassigned container.
 
 ## zipzi.modeling.scene.ReparentEdit
 
-`(sources: tuple[str, ...], parent_id: str, strategy: ReparentStrategy, placement: ReparentPlacement | None = None, tolerance: float, relative_tolerance: float = 1e-06, context: ReparentContext | None = None)`
+`(*, sources: tuple[str, ...], parent_id: str, strategy: ReparentStrategy, placement: ReparentPlacement | None = None, tolerance: float, relative_tolerance: float = 1e-06, context: ReparentContext | None = None)`
 
 Immutable owned ReparentEdit value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -210,7 +210,7 @@ Typed public API entry.
 
 ## zipzi.modeling.scene.SceneContentEditDeleteGluePairs
 
-`(glue_id: str, ids: tuple[str, ...])`
+`(*, glue_id: str, ids: tuple[str, ...])`
 
 Immutable owned SceneContentEditDeleteGluePairs value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -220,7 +220,7 @@ are not identities.
 
 ## zipzi.modeling.scene.SceneContentEditDeleteMeshVertices
 
-`(mesh_id: str, vertices: tuple[int, ...], policy: VertexDeletePolicy)`
+`(*, mesh_id: str, vertices: tuple[int, ...], policy: VertexDeletePolicy)`
 
 Immutable owned SceneContentEditDeleteMeshVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -231,7 +231,7 @@ requested.
 
 ## zipzi.modeling.scene.SceneContentEditDeleteOffscreenKeyforms
 
-`(offscreen_id: str, slots: tuple[int, ...], policy: OffscreenDeletePolicy)`
+`(*, offscreen_id: str, slots: tuple[int, ...], policy: OffscreenDeletePolicy)`
 
 Immutable owned SceneContentEditDeleteOffscreenKeyforms value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -243,7 +243,7 @@ requested.
 
 ## zipzi.modeling.scene.SceneContentEditDeleteTriangles
 
-`(mesh_id: str, slots: tuple[int, ...])`
+`(*, mesh_id: str, slots: tuple[int, ...])`
 
 Immutable owned SceneContentEditDeleteTriangles value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -252,7 +252,7 @@ Immutable owned SceneContentEditDeleteTriangles value. Construction owns declare
 
 ## zipzi.modeling.scene.SceneContentEditDuplicateGluePairs
 
-`(glue_id: str, ids: tuple[str, ...], before: str | None = None)`
+`(*, glue_id: str, ids: tuple[str, ...], before: str | None = None)`
 
 Immutable owned SceneContentEditDuplicateGluePairs value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -264,7 +264,7 @@ the selected destination.
 
 ## zipzi.modeling.scene.SceneContentEditDuplicateOffscreenKeyforms
 
-`(offscreen_id: str, slots: tuple[int, ...], before: int | None = None)`
+`(*, offscreen_id: str, slots: tuple[int, ...], before: int | None = None)`
 
 Immutable owned SceneContentEditDuplicateOffscreenKeyforms value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -276,7 +276,7 @@ belong to the selected destination.
 
 ## zipzi.modeling.scene.SceneContentEditInsertGluePair
 
-`(glue_id: str, pair: GlueVertexPair, before: str | None = None)`
+`(*, glue_id: str, pair: GlueVertexPair, before: str | None = None)`
 
 Immutable owned SceneContentEditInsertGluePair value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -288,7 +288,7 @@ the selected destination.
 
 ## zipzi.modeling.scene.SceneContentEditInsertMeshVertices
 
-`(mesh_id: str, vertices: tuple[NewMeshVertex, ...], before: int | None = None)`
+`(*, mesh_id: str, vertices: tuple[NewMeshVertex, ...], before: int | None = None)`
 
 Immutable owned SceneContentEditInsertMeshVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -300,7 +300,7 @@ not a position-array index.
 
 ## zipzi.modeling.scene.SceneContentEditInsertOffscreenKeyform
 
-`(offscreen_id: str, value: OffscreenKeyform, before: int | None = None)`
+`(*, offscreen_id: str, value: OffscreenKeyform, before: int | None = None)`
 
 Immutable owned SceneContentEditInsertOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -311,7 +311,7 @@ belong to the selected destination.
 
 ## zipzi.modeling.scene.SceneContentEditInsertTriangle
 
-`(mesh_id: str, vertices: tuple[int, int, int], before: int | None = None)`
+`(*, mesh_id: str, vertices: tuple[int, int, int], before: int | None = None)`
 
 Immutable owned SceneContentEditInsertTriangle value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -322,7 +322,7 @@ belong to the selected destination.
 
 ## zipzi.modeling.scene.SceneContentEditMeshVertices
 
-`(mesh_id: str, target: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'})), updates: tuple[VertexContentPatch, ...])`
+`(*, mesh_id: str, target: ShapeTarget = <factory>, updates: tuple[VertexContentPatch, ...])`
 
 Immutable owned SceneContentEditMeshVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -333,7 +333,7 @@ undeformed base shape.
 
 ## zipzi.modeling.scene.SceneContentEditMoveGluePairs
 
-`(glue_id: str, ids: tuple[str, ...], before: str | None = None)`
+`(*, glue_id: str, ids: tuple[str, ...], before: str | None = None)`
 
 Immutable owned SceneContentEditMoveGluePairs value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -345,7 +345,7 @@ the selected destination.
 
 ## zipzi.modeling.scene.SceneContentEditPatchGluePair
 
-`(glue_id: str, pair: GlueVertexPair)`
+`(*, glue_id: str, pair: GlueVertexPair)`
 
 Immutable owned SceneContentEditPatchGluePair value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -355,7 +355,7 @@ meshes.
 
 ## zipzi.modeling.scene.SceneContentEditPatchOffscreenKeyform
 
-`(offscreen_id: str, slot: int, value: OffscreenKeyform)`
+`(*, offscreen_id: str, slot: int, value: OffscreenKeyform)`
 
 Immutable owned SceneContentEditPatchOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -366,7 +366,7 @@ object ID.
 
 ## zipzi.modeling.scene.SceneContentEditPatchTriangle
 
-`(mesh_id: str, slot: int, vertices: tuple[int, int, int])`
+`(*, mesh_id: str, slot: int, vertices: tuple[int, int, int])`
 
 Immutable owned SceneContentEditPatchTriangle value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -376,7 +376,7 @@ Immutable owned SceneContentEditPatchTriangle value. Construction owns declared 
 
 ## zipzi.modeling.scene.SceneContentEditReorderMeshVertices
 
-`(mesh_id: str, order: tuple[int, ...])`
+`(*, mesh_id: str, order: tuple[int, ...])`
 
 Immutable owned SceneContentEditReorderMeshVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -386,7 +386,7 @@ vertex payload.
 
 ## zipzi.modeling.scene.SceneContentEditReorderOffscreenKeyforms
 
-`(offscreen_id: str, order: tuple[int, ...])`
+`(*, offscreen_id: str, order: tuple[int, ...])`
 
 Immutable owned SceneContentEditReorderOffscreenKeyforms value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -396,7 +396,7 @@ references consistently.
 
 ## zipzi.modeling.scene.SceneContentEditReplaceTriangles
 
-`(mesh_id: str, triangles: tuple[tuple[int, int, int], ...])`
+`(*, mesh_id: str, triangles: tuple[tuple[int, int, int], ...])`
 
 Immutable owned SceneContentEditReplaceTriangles value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -406,7 +406,7 @@ position-array offsets.
 
 ## zipzi.modeling.scene.SceneContentEditResizeWarp
 
-`(transform_id: str, rows: int, columns: int, quad: bool)`
+`(*, transform_id: str, rows: int, columns: int, quad: bool)`
 
 Immutable owned SceneContentEditResizeWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -417,7 +417,7 @@ Immutable owned SceneContentEditResizeWarp value. Construction owns declared col
 
 ## zipzi.modeling.scene.SceneContentEditSetOffscreenMapping
 
-`(offscreen_id: str, updates: tuple[OffscreenMappingPatch, ...])`
+`(*, offscreen_id: str, updates: tuple[OffscreenMappingPatch, ...])`
 
 Immutable owned SceneContentEditSetOffscreenMapping value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -426,7 +426,7 @@ Immutable owned SceneContentEditSetOffscreenMapping value. Construction owns dec
 
 ## zipzi.modeling.scene.SceneContentEditTransferGluePairs
 
-`(glue_id: str, destination: str, pairs: tuple[GlueVertexPair, ...], before: str | None = None)`
+`(*, glue_id: str, destination: str, pairs: tuple[GlueVertexPair, ...], before: str | None = None)`
 
 Immutable owned SceneContentEditTransferGluePairs value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -439,7 +439,7 @@ the selected destination.
 
 ## zipzi.modeling.scene.SceneContentEditWarpBezier
 
-`(transform_id: str, target: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'})), controller: WarpBezier | None = None)`
+`(*, transform_id: str, target: ShapeTarget = <factory>, controller: WarpBezier | None = None)`
 
 Immutable owned SceneContentEditWarpBezier value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -450,7 +450,7 @@ undeformed base shape.
 
 ## zipzi.modeling.scene.SceneContentEditWarpPoints
 
-`(transform_id: str, target: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'})), updates: tuple[WarpPointPatch, ...], clear_bezier: bool = False)`
+`(*, transform_id: str, target: ShapeTarget = <factory>, updates: tuple[WarpPointPatch, ...], clear_bezier: bool = False)`
 
 Immutable owned SceneContentEditWarpPoints value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -469,7 +469,7 @@ Typed public API entry.
 
 ## zipzi.modeling.scene.SceneEditCreate
 
-`(id: str, name: str, object: SceneCreate, part_id: str | None = None, parent_id: str | None = None, before: str | None = None, deformation_before: str | None = None)`
+`(*, id: str, name: str, object: SceneCreate, part_id: str | None = None, parent_id: str | None = None, before: str | None = None, deformation_before: str | None = None)`
 
 Immutable owned SceneEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -487,7 +487,7 @@ Only Mesh/Warp/Rotation support this position; None appends.
 
 ## zipzi.modeling.scene.SceneEditDelete
 
-`(ids: tuple[str, ...], scope: SceneCopyScope = field(default_factory=lambda: read_SceneCopyScope('selected')))`
+`(*, ids: tuple[str, ...], scope: SceneCopyScope = SceneCopyScope.SELECTED)`
 
 Immutable owned SceneEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -498,7 +498,7 @@ included.
 
 ## zipzi.modeling.scene.SceneEditDissolveDrawingGroup
 
-`(owner: str)`
+`(*, owner: str)`
 
 Immutable owned SceneEditDissolveDrawingGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -506,7 +506,7 @@ Immutable owned SceneEditDissolveDrawingGroup value. Construction owns declared 
 
 ## zipzi.modeling.scene.SceneEditDuplicate
 
-`(ids: tuple[str, ...], scope: SceneCopyScope = field(default_factory=lambda: read_SceneCopyScope('selected')), destination: OrganizationCollection | None = None, before: str | None = None)`
+`(*, ids: tuple[str, ...], scope: SceneCopyScope = SceneCopyScope.SELECTED, destination: OrganizationCollection | None = None, before: str | None = None)`
 
 Immutable owned SceneEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -521,7 +521,7 @@ the selected destination.
 
 ## zipzi.modeling.scene.SceneEditDuplicateDrawingGroup
 
-`(source: str, target: str)`
+`(*, source: str, target: str)`
 
 Immutable owned SceneEditDuplicateDrawingGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -532,7 +532,7 @@ undeformed base shape.
 
 ## zipzi.modeling.scene.SceneEditEnsureDrawingGroup
 
-`(owner: str, parent: str, before: str | None = None)`
+`(*, owner: str, parent: str, before: str | None = None)`
 
 Immutable owned SceneEditEnsureDrawingGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -543,7 +543,7 @@ the selected destination.
 
 ## zipzi.modeling.scene.SceneEditMove
 
-`(ids: tuple[str, ...], destination: SceneCollection, before: str | None = None)`
+`(*, ids: tuple[str, ...], destination: SceneCollection, before: str | None = None)`
 
 Immutable owned SceneEditMove value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -556,7 +556,7 @@ the selected destination.
 
 ## zipzi.modeling.scene.SceneEditPatch
 
-`(id: str, expected: SceneFieldValue, value: SceneFieldValue, clear_glue_pairs: bool = False)`
+`(*, id: str, expected: SceneFieldValue, value: SceneFieldValue, clear_glue_pairs: bool = False)`
 
 Immutable owned SceneEditPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -569,7 +569,7 @@ the edit.
 
 ## zipzi.modeling.scene.SceneEditReparent
 
-`(edit: ReparentEdit)`
+`(*, edit: ReparentEdit)`
 
 Immutable owned SceneEditReparent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -577,7 +577,7 @@ Immutable owned SceneEditReparent value. Construction owns declared collections;
 
 ## zipzi.modeling.scene.SceneEditSetDrawingRange
 
-`(owner: str, expected: tuple[int, int], range: tuple[int, int])`
+`(*, owner: str, expected: tuple[int, int], range: tuple[int, int])`
 
 Immutable owned SceneEditSetDrawingRange value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -588,7 +588,7 @@ the edit.
 
 ## zipzi.modeling.scene.SceneEditTransferOffscreen
 
-`(id: str, part_id: str, part_keyform_indices: tuple[int, ...])`
+`(*, id: str, part_id: str, part_keyform_indices: tuple[int, ...])`
 
 Immutable owned SceneEditTransferOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

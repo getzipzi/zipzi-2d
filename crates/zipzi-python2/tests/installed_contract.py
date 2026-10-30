@@ -43,26 +43,31 @@ def audit()->dict[str,object]:
     paths=set(iter_paths())
     failures:dict[str,list[str]]={key:[] for key in ('D01','D02','D04','D07','D08')}
     counts={'symbols':0,'callables':0,'fields':0}
-    if '/site-packages/zipzi/' not in zipzi.__file__:raise RuntimeError('Audit requires an installed wheel')
+    if '/site-packages/zipzi/' not in Path(zipzi.__file__).as_posix():raise RuntimeError('Audit requires an installed wheel')
     if importlib.util.find_spec('zipzi_native') is not None:raise RuntimeError('Offline audit must use the pure wheel only')
-    modules=[zipzi,*[getattr(zipzi,n) for n in ('meshes','parameters','bindings','resources','scene','sampling','events','references','modeling','ops','animation','spatial','observation','inspection')]]
-    modules.extend(value for name in zipzi.modeling.__all__
-                   if inspect.ismodule(value:=getattr(zipzi.modeling,name)))
+    modules=[zipzi]
+    for module in modules:
+        modules.extend(value for name in getattr(module,'__all__',())
+                       if inspect.ismodule(value:=getattr(module,name,None))
+                       and value.__name__.startswith('zipzi.') and value not in modules)
     def visit(path:str,value:object,constructor:bool=True)->None:
         counts['symbols']+=1
         if path not in paths:failures['D01'].append(path+': missing from installed catalog')
         if inspect.isclass(value):
             try:inspect.signature(value);typing.get_type_hints(value)
             except Exception as error:failures['D04'].append(path+': '+str(error))
-            if is_dataclass(value):
+            if is_dataclass(value) or issubclass(value,tuple) and hasattr(value,'_fields'):
                 documented=dict(lookup(path).get('fields',())) if path in paths else {}
-                for field in fields(value):
-                    if field.name.startswith('_'):continue
-                    counts['fields']+=1
-                    description=documented.get(field.name,'').strip()
-                    if not description or description.startswith('Owned ') and description.endswith(' value.'):
-                        failures['D02'].append(path+'.'+field.name+': missing semantic field description')
+                field_names=[field.name for field in fields(value)] if is_dataclass(value) else value._fields
                 text=inspect.getdoc(value) or ''
+                for name in field_names:
+                    if name.startswith('_'):continue
+                    counts['fields']+=1
+                    description=documented.get(name,'').strip()
+                    if not description or description.startswith('Owned ') and description.endswith(' value.'):
+                        failures['D02'].append(path+'.'+name+': missing semantic field description')
+                    elif ' '.join((name+': '+description).split()) not in ' '.join(text.split()):
+                        failures['D02'].append(path+'.'+name+': missing field docstring')
                 if 'Declared by ' in text:failures['D02'].append(path+': Rust fields still have declaration-only descriptions')
             for name in dir(value):
                 if name.startswith('_') and name not in {'__enter__','__exit__','__repr__'}:continue

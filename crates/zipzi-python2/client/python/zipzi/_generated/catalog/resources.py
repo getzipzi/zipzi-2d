@@ -32,8 +32,7 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
                                              'constructor argument or a mutable object field.')],
                                  'kind': 'type',
                                  'signature': '(name: str, image: resources.PreparedImage, id: str | None = None, '
-                                              "kind: Literal['create_image'] = field(default='create_image', "
-                                              'init=False))'},
+                                              "kind: Literal['create_image'] = <factory>)"},
  'zipzi.resources.CreateImage.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.resources.CreateImage.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.resources.Image': {'children': ('zipzi.resources.Image.__repr__', 'zipzi.resources.Image.summary'),
@@ -131,9 +130,8 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
                                              'Fixed operation discriminator supplied by this value type; not a '
                                              'constructor argument or a mutable object field.')],
                                  'kind': 'type',
-                                 'signature': '(id: str, name: str, expected_name: str | None = field(default=None, '
-                                              "kw_only=True), kind: Literal['rename_image'] = "
-                                              "field(default='rename_image', init=False))"},
+                                 'signature': '(id: str, name: str, expected_name: str | None = <factory>, kind: '
+                                              "Literal['rename_image'] = <factory>)"},
  'zipzi.resources.RenameImage.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.resources.RenameImage.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.resources.ReplaceImage': {'children': ('zipzi.resources.ReplaceImage.__repr__',
@@ -154,8 +152,7 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
                                               'constructor argument or a mutable object field.')],
                                   'kind': 'type',
                                   'signature': '(id: str, image: resources.PreparedImage, kind: '
-                                               "Literal['replace_image'] = field(default='replace_image', "
-                                               'init=False))'},
+                                               "Literal['replace_image'] = <factory>)"},
  'zipzi.resources.ReplaceImage.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.resources.ReplaceImage.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.resources.Summary': {'alias': 'zipzi.ObjectSummary'},

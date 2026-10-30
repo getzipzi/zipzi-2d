@@ -12,7 +12,7 @@ Canonical motion modeling values.
 
 ## zipzi.modeling.motion.MotionClip
 
-`(id: str, name: str, duration: float, fps: float, looping: bool, restricted_beziers: bool, fade_in: float | None = None, fade_out: float | None = None, track_order: tuple[str, ...], tracks: tuple[MotionTrack, ...], events: tuple[MotionEvent, ...], extensions: _Mapping[str, ExtensionValue], meta_extensions: _Mapping[str, ExtensionValue], opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
+`(*, id: str, name: str, duration: float, fps: float, looping: bool, restricted_beziers: bool, fade_in: float | None = None, fade_out: float | None = None, track_order: tuple[str, ...], tracks: tuple[MotionTrack, ...], events: tuple[MotionEvent, ...], extensions: _Mapping[str, ExtensionValue], meta_extensions: _Mapping[str, ExtensionValue], opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
 
 Immutable owned MotionClip value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -41,7 +41,7 @@ Typed public API entry.
 
 ## zipzi.modeling.motion.MotionContainerGroup
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned MotionContainerGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -63,7 +63,7 @@ Typed public API entry.
 
 ## zipzi.modeling.motion.MotionEditCreate
 
-`(id: str, name: str, registration_id: str, destination: MotionContainer)`
+`(*, id: str, name: str, registration_id: str, destination: MotionContainer)`
 
 Immutable owned MotionEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -74,7 +74,7 @@ Immutable owned MotionEditCreate value. Construction owns declared collections; 
 
 ## zipzi.modeling.motion.MotionEditCreateGroup
 
-`(id: str, name: str)`
+`(*, id: str, name: str)`
 
 Immutable owned MotionEditCreateGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -83,7 +83,7 @@ Immutable owned MotionEditCreateGroup value. Construction owns declared collecti
 
 ## zipzi.modeling.motion.MotionEditCreateTrack
 
-`(clip: str, id: str, key_id: str, time: float)`
+`(*, clip: str, id: str, key_id: str, time: float)`
 
 Immutable owned MotionEditCreateTrack value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -94,7 +94,7 @@ Immutable owned MotionEditCreateTrack value. Construction owns declared collecti
 
 ## zipzi.modeling.motion.MotionEditDeleteClip
 
-`(id: str)`
+`(*, id: str)`
 
 Immutable owned MotionEditDeleteClip value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -102,7 +102,7 @@ Immutable owned MotionEditDeleteClip value. Construction owns declared collectio
 
 ## zipzi.modeling.motion.MotionEditDeleteEvents
 
-`(ids: tuple[str, ...])`
+`(*, ids: tuple[str, ...])`
 
 Immutable owned MotionEditDeleteEvents value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -110,7 +110,7 @@ Immutable owned MotionEditDeleteEvents value. Construction owns declared collect
 
 ## zipzi.modeling.motion.MotionEditDeleteGroup
 
-`(id: str)`
+`(*, id: str)`
 
 Immutable owned MotionEditDeleteGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -118,7 +118,7 @@ Immutable owned MotionEditDeleteGroup value. Construction owns declared collecti
 
 ## zipzi.modeling.motion.MotionEditDeleteRegistrations
 
-`(ids: tuple[str, ...])`
+`(*, ids: tuple[str, ...])`
 
 Immutable owned MotionEditDeleteRegistrations value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -126,7 +126,7 @@ Immutable owned MotionEditDeleteRegistrations value. Construction owns declared 
 
 ## zipzi.modeling.motion.MotionEditDeleteTracks
 
-`(ids: tuple[str, ...])`
+`(*, ids: tuple[str, ...])`
 
 Immutable owned MotionEditDeleteTracks value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -134,7 +134,7 @@ Immutable owned MotionEditDeleteTracks value. Construction owns declared collect
 
 ## zipzi.modeling.motion.MotionEditDissolveGroup
 
-`(id: str)`
+`(*, id: str)`
 
 Immutable owned MotionEditDissolveGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -142,7 +142,7 @@ Immutable owned MotionEditDissolveGroup value. Construction owns declared collec
 
 ## zipzi.modeling.motion.MotionEditDuplicateClip
 
-`(source: str, id: str, name: str, registration_id: str, destination: MotionContainer)`
+`(*, source: str, id: str, name: str, registration_id: str, destination: MotionContainer)`
 
 Immutable owned MotionEditDuplicateClip value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -154,7 +154,7 @@ Immutable owned MotionEditDuplicateClip value. Construction owns declared collec
 
 ## zipzi.modeling.motion.MotionEditDuplicateGroup
 
-`(source: str, id: str, name: str)`
+`(*, source: str, id: str, name: str)`
 
 Immutable owned MotionEditDuplicateGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -164,7 +164,7 @@ Immutable owned MotionEditDuplicateGroup value. Construction owns declared colle
 
 ## zipzi.modeling.motion.MotionEditDuplicateRegistrations
 
-`(ids: tuple[str, ...], destination: MotionContainer, before: str | None = None)`
+`(*, ids: tuple[str, ...], destination: MotionContainer, before: str | None = None)`
 
 Immutable owned MotionEditDuplicateRegistrations value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -174,7 +174,7 @@ Immutable owned MotionEditDuplicateRegistrations value. Construction owns declar
 
 ## zipzi.modeling.motion.MotionEditMoveEvents
 
-`(ids: tuple[str, ...], destination: str, time_offset: float, copy: bool)`
+`(*, ids: tuple[str, ...], destination: str, time_offset: float, copy: bool)`
 
 Immutable owned MotionEditMoveEvents value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -185,7 +185,7 @@ Immutable owned MotionEditMoveEvents value. Construction owns declared collectio
 
 ## zipzi.modeling.motion.MotionEditMoveRegistrations
 
-`(ids: tuple[str, ...], destination: MotionContainer, before: str | None = None)`
+`(*, ids: tuple[str, ...], destination: MotionContainer, before: str | None = None)`
 
 Immutable owned MotionEditMoveRegistrations value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -195,7 +195,7 @@ Immutable owned MotionEditMoveRegistrations value. Construction owns declared co
 
 ## zipzi.modeling.motion.MotionEditMoveTracks
 
-`(ids: tuple[str, ...], destination: str, before: str | None = None, copy: bool)`
+`(*, ids: tuple[str, ...], destination: str, before: str | None = None, copy: bool)`
 
 Immutable owned MotionEditMoveTracks value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -206,7 +206,7 @@ Immutable owned MotionEditMoveTracks value. Construction owns declared collectio
 
 ## zipzi.modeling.motion.MotionEditPatchRegistration
 
-`(id: str, expected: MotionRegistration, entry: MotionRegistration)`
+`(*, id: str, expected: MotionRegistration, entry: MotionRegistration)`
 
 Immutable owned MotionEditPatchRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -216,7 +216,7 @@ Immutable owned MotionEditPatchRegistration value. Construction owns declared co
 
 ## zipzi.modeling.motion.MotionEditRegister
 
-`(entry: MotionRegistration, destination: MotionContainer, before: str | None = None)`
+`(*, entry: MotionRegistration, destination: MotionContainer, before: str | None = None)`
 
 Immutable owned MotionEditRegister value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -226,7 +226,7 @@ Immutable owned MotionEditRegister value. Construction owns declared collections
 
 ## zipzi.modeling.motion.MotionEditRenameGroup
 
-`(id: str, name: str)`
+`(*, id: str, name: str)`
 
 Immutable owned MotionEditRenameGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -235,7 +235,7 @@ Immutable owned MotionEditRenameGroup value. Construction owns declared collecti
 
 ## zipzi.modeling.motion.MotionEditReorderGroups
 
-`(ids: tuple[str, ...])`
+`(*, ids: tuple[str, ...])`
 
 Immutable owned MotionEditReorderGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -243,7 +243,7 @@ Immutable owned MotionEditReorderGroups value. Construction owns declared collec
 
 ## zipzi.modeling.motion.MotionEditReorderTracks
 
-`(clip: str, ids: tuple[str, ...])`
+`(*, clip: str, ids: tuple[str, ...])`
 
 Immutable owned MotionEditReorderTracks value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -252,7 +252,7 @@ Immutable owned MotionEditReorderTracks value. Construction owns declared collec
 
 ## zipzi.modeling.motion.MotionEditSetEvent
 
-`(clip: str, event: MotionEvent)`
+`(*, clip: str, event: MotionEvent)`
 
 Immutable owned MotionEditSetEvent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -261,7 +261,7 @@ Immutable owned MotionEditSetEvent value. Construction owns declared collections
 
 ## zipzi.modeling.motion.MotionEditSetTrackTarget
 
-`(id: str, target: MotionTrackTarget)`
+`(*, id: str, target: MotionTrackTarget)`
 
 Immutable owned MotionEditSetTrackTarget value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -270,7 +270,7 @@ Immutable owned MotionEditSetTrackTarget value. Construction owns declared colle
 
 ## zipzi.modeling.motion.MotionEditTransferKeys
 
-`(ids: tuple[str, ...], destination_track: str, time_offset: float, copy: bool)`
+`(*, ids: tuple[str, ...], destination_track: str, time_offset: float, copy: bool)`
 
 Immutable owned MotionEditTransferKeys value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -281,7 +281,7 @@ Immutable owned MotionEditTransferKeys value. Construction owns declared collect
 
 ## zipzi.modeling.motion.MotionEvent
 
-`(id: str, time: float, value: str, extensions: _Mapping[str, ExtensionValue])`
+`(*, id: str, time: float, value: str, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned MotionEvent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -292,7 +292,7 @@ Immutable owned MotionEvent value. Construction owns declared collections; readi
 
 ## zipzi.modeling.motion.MotionEventFired
 
-`(motion_id: str, event_id: str, value: str)`
+`(*, motion_id: str, event_id: str, value: str)`
 
 Immutable owned MotionEventFired value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -302,7 +302,7 @@ Immutable owned MotionEventFired value. Construction owns declared collections; 
 
 ## zipzi.modeling.motion.MotionGroup
 
-`(id: str, name: str, entries: tuple[MotionRegistration, ...])`
+`(*, id: str, name: str, entries: tuple[MotionRegistration, ...])`
 
 Immutable owned MotionGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -312,7 +312,7 @@ Immutable owned MotionGroup value. Construction owns declared collections; readi
 
 ## zipzi.modeling.motion.MotionKey
 
-`(id: str, time: float, value: float)`
+`(*, id: str, time: float, value: float)`
 
 Immutable owned MotionKey value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -322,7 +322,7 @@ Immutable owned MotionKey value. Construction owns declared collections; reading
 
 ## zipzi.modeling.motion.MotionPlaybackPosition
 
-`(motion_id: str, local_time: float, period: float, loop_index: int, cycle_origin: float)`
+`(*, motion_id: str, local_time: float, period: float, loop_index: int, cycle_origin: float)`
 
 Immutable owned MotionPlaybackPosition value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -334,7 +334,7 @@ Immutable owned MotionPlaybackPosition value. Construction owns declared collect
 
 ## zipzi.modeling.motion.MotionPoint
 
-`(time: float, value: float)`
+`(*, time: float, value: float)`
 
 Immutable owned MotionPoint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -343,7 +343,7 @@ Immutable owned MotionPoint value. Construction owns declared collections; readi
 
 ## zipzi.modeling.motion.MotionRegistration
 
-`(id: str, clip_id: str, fade_in: float | None = None, fade_out: float | None = None, sound: AttachmentRef | None = None, extensions: _Mapping[str, ExtensionValue])`
+`(*, id: str, clip_id: str, fade_in: float | None = None, fade_out: float | None = None, sound: AttachmentRef | None = None, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned MotionRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -363,7 +363,7 @@ Typed public API entry.
 
 ## zipzi.modeling.motion.MotionSegmentBezier
 
-`(control1: MotionPoint, control2: MotionPoint, end: MotionKey)`
+`(*, control1: MotionPoint, control2: MotionPoint, end: MotionKey)`
 
 Immutable owned MotionSegmentBezier value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -373,7 +373,7 @@ Immutable owned MotionSegmentBezier value. Construction owns declared collection
 
 ## zipzi.modeling.motion.MotionSegmentInverseStepped
 
-`(end: MotionKey)`
+`(*, end: MotionKey)`
 
 Immutable owned MotionSegmentInverseStepped value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -381,7 +381,7 @@ Immutable owned MotionSegmentInverseStepped value. Construction owns declared co
 
 ## zipzi.modeling.motion.MotionSegmentLinear
 
-`(end: MotionKey)`
+`(*, end: MotionKey)`
 
 Immutable owned MotionSegmentLinear value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -389,7 +389,7 @@ Immutable owned MotionSegmentLinear value. Construction owns declared collection
 
 ## zipzi.modeling.motion.MotionSegmentStepped
 
-`(end: MotionKey)`
+`(*, end: MotionKey)`
 
 Immutable owned MotionSegmentStepped value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -397,7 +397,7 @@ Immutable owned MotionSegmentStepped value. Construction owns declared collectio
 
 ## zipzi.modeling.motion.MotionSnapshot
 
-`(physics: tuple[PhysicsRigSnapshot, ...] = (), time: float, parameters: _Mapping[str, float], part_opacity_channels: _Mapping[str, float], part_opacities: _Mapping[str, float], model_opacity: float, active_motions: tuple[str, ...], active_expressions: tuple[str, ...], fired_events: tuple[MotionEventFired, ...], coverage: tuple[str, ...], motion_positions: tuple[MotionPlaybackPosition, ...])`
+`(*, physics: tuple[PhysicsRigSnapshot, ...] = (), time: float, parameters: _Mapping[str, float], part_opacity_channels: _Mapping[str, float], part_opacities: _Mapping[str, float], model_opacity: float, active_motions: tuple[str, ...], active_expressions: tuple[str, ...], fired_events: tuple[MotionEventFired, ...], coverage: tuple[str, ...], motion_positions: tuple[MotionPlaybackPosition, ...])`
 
 Immutable owned MotionSnapshot value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -418,7 +418,7 @@ Internal observations are retained in replay checkpoints for consistent seeks.
 
 ## zipzi.modeling.motion.MotionTrack
 
-`(id: str, target: MotionTrackTarget, initial: MotionKey, segments: tuple[MotionSegment, ...], fade_in: float | None = None, fade_out: float | None = None, extensions: _Mapping[str, ExtensionValue])`
+`(*, id: str, target: MotionTrackTarget, initial: MotionKey, segments: tuple[MotionSegment, ...], fade_in: float | None = None, fade_out: float | None = None, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned MotionTrack value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -439,7 +439,7 @@ Typed public API entry.
 
 ## zipzi.modeling.motion.MotionTrackTargetModel
 
-`(runtime_id: str)`
+`(*, runtime_id: str)`
 
 Immutable owned MotionTrackTargetModel value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -447,7 +447,7 @@ Immutable owned MotionTrackTargetModel value. Construction owns declared collect
 
 ## zipzi.modeling.motion.MotionTrackTargetParameter
 
-`(parameter_id: str)`
+`(*, parameter_id: str)`
 
 Immutable owned MotionTrackTargetParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -455,7 +455,7 @@ Immutable owned MotionTrackTargetParameter value. Construction owns declared col
 
 ## zipzi.modeling.motion.MotionTrackTargetPartOpacity
 
-`(part_id: str)`
+`(*, part_id: str)`
 
 Immutable owned MotionTrackTargetPartOpacity value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -463,7 +463,7 @@ Immutable owned MotionTrackTargetPartOpacity value. Construction owns declared c
 
 ## zipzi.modeling.motion.MotionTrackTargetUnresolved
 
-`(category: str, runtime_id: str)`
+`(*, category: str, runtime_id: str)`
 
 Immutable owned MotionTrackTargetUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

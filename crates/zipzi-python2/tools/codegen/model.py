@@ -1,6 +1,5 @@
 """Checked type graph and documentation records shared by code generators."""
 from dataclasses import dataclass
-import re
 from typing import Any
 
 from . import dependencies, normalize, projections
@@ -8,7 +7,7 @@ from . import dependencies, normalize, projections
 
 @dataclass(frozen=True)
 class Projection:
-    """Reviewed target ownership; destination modules are materialized in P3."""
+    """An emitted Python implementation and its reviewed public paths."""
     rust_type_id: str
     projection_id: str
     domain: str
@@ -42,7 +41,6 @@ class TypeGraph:
     root: Any
     definitions: dict[str, dict[str, Any]]
     domains: dict[str, str]
-    projections: tuple[Projection, ...]
     dependencies: dict[str, tuple[str, ...]]
     components: tuple[tuple[str, ...], ...]
 
@@ -57,17 +55,8 @@ class TypeGraph:
         if missing:
             raise ValueError('Missing domain projection: '+', '.join(missing))
         domains = {name: projections.OWNERS[name] for name in sorted(complete)}
-        def public_name(identity: str) -> str:
-            if '<' in identity:
-                return ''.join(re.findall(r'(?:^|::)([A-Z][A-Za-z0-9_]*)', identity))
-            return identity.rsplit('::', 1)[-1]
-        selected = tuple(Projection(identity, 'canonical', domain,
-                                    'zipzi._generated.values.'+domain,
-                                    'zipzi.modeling.'+domain+'.'+public_name(identity))
-                         for identity, domain in domains.items())
-        validate_projections(selected)
         imports = dependencies.domain_dependencies(definitions, domains)
-        return cls(root, definitions, domains, selected, imports, dependencies.strong_components(imports))
+        return cls(root, definitions, domains, imports, dependencies.strong_components(imports))
 
     def definition(self, identity: str) -> dict[str, Any]:
         try:

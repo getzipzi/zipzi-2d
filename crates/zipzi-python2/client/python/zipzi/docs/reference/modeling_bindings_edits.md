@@ -12,7 +12,7 @@ Typed public API entry.
 
 ## zipzi.modeling.bindings.BindingAuthoringEditBlend
 
-`(value: BlendAuthoringEdit)`
+`(*, value: BlendAuthoringEdit)`
 
 Immutable owned BindingAuthoringEditBlend value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -21,7 +21,7 @@ rather than mutating this value.
 
 ## zipzi.modeling.bindings.BindingAuthoringEditGrid
 
-`(value: BindingGridEdit)`
+`(*, value: BindingGridEdit)`
 
 Immutable owned BindingAuthoringEditGrid value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -30,7 +30,7 @@ source rather than mutating this value.
 
 ## zipzi.modeling.bindings.BindingAuthoringEditMeshGrid
 
-`(value: MeshGridEdit)`
+`(*, value: MeshGridEdit)`
 
 Immutable owned BindingAuthoringEditMeshGrid value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -39,7 +39,7 @@ source rather than mutating this value.
 
 ## zipzi.modeling.bindings.BindingAuthoringEditParameterRange
 
-`(value: ParameterRangeEdit)`
+`(*, value: ParameterRangeEdit)`
 
 Immutable owned BindingAuthoringEditParameterRange value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -48,7 +48,7 @@ source rather than mutating this value.
 
 ## zipzi.modeling.bindings.BindingAuthoringEditReparent
 
-`(value: ReparentEdit)`
+`(*, value: ReparentEdit)`
 
 Immutable owned BindingAuthoringEditReparent value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -64,7 +64,7 @@ Typed public API entry.
 
 ## zipzi.modeling.bindings.BindingGridEditCreate
 
-`(id: str, target: BindingGridTarget)`
+`(*, id: str, target: BindingGridTarget)`
 
 Immutable owned BindingGridEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -74,7 +74,7 @@ undeformed base shape.
 
 ## zipzi.modeling.bindings.BindingGridEditDelete
 
-`(owner: str)`
+`(*, owner: str)`
 
 Immutable owned BindingGridEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -82,7 +82,7 @@ Immutable owned BindingGridEditDelete value. Construction owns declared collecti
 
 ## zipzi.modeling.bindings.BindingGridEditEdit
 
-`(owner: str, operation: GridOperation)`
+`(*, owner: str, operation: GridOperation)`
 
 Immutable owned BindingGridEditEdit value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -98,7 +98,7 @@ Typed public API entry.
 
 ## zipzi.modeling.bindings.BlendAuthoringEditConstraint
 
-`(id: str, parameter_id: str, samples: tuple[ConstraintSample, ...])`
+`(*, id: str, parameter_id: str, samples: tuple[ConstraintSample, ...])`
 
 Immutable owned BlendAuthoringEditConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -109,7 +109,7 @@ runtime_id.
 
 ## zipzi.modeling.bindings.BlendAuthoringEditCreateBinding
 
-`(id: str, target_id: str, target_kind: BlendShapeTargetKind, key_table_id: str)`
+`(*, id: str, target_id: str, target_kind: BlendShapeTargetKind, key_table_id: str)`
 
 Immutable owned BlendAuthoringEditCreateBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -120,7 +120,7 @@ Immutable owned BlendAuthoringEditCreateBinding value. Construction owns declare
 
 ## zipzi.modeling.bindings.BlendAuthoringEditCreateConstraint
 
-`(constraint: BlendShapeConstraint)`
+`(*, constraint: BlendShapeConstraint)`
 
 Immutable owned BlendAuthoringEditCreateConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -128,7 +128,7 @@ Immutable owned BlendAuthoringEditCreateConstraint value. Construction owns decl
 
 ## zipzi.modeling.bindings.BlendAuthoringEditCreateTable
 
-`(table: BlendShapeKeyTable)`
+`(*, table: BlendShapeKeyTable)`
 
 Immutable owned BlendAuthoringEditCreateTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -136,7 +136,7 @@ Immutable owned BlendAuthoringEditCreateTable value. Construction owns declared 
 
 ## zipzi.modeling.bindings.BlendAuthoringEditSetBindingTable
 
-`(id: str, key_table_id: str, reset: bool)`
+`(*, id: str, key_table_id: str, reset: bool)`
 
 Immutable owned BlendAuthoringEditSetBindingTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -147,7 +147,7 @@ runtime_id.
 
 ## zipzi.modeling.bindings.BlendAuthoringEditTable
 
-`(id: str, operation: BlendTableOperation)`
+`(*, id: str, operation: BlendTableOperation)`
 
 Immutable owned BlendAuthoringEditTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -164,7 +164,7 @@ Typed public API entry.
 
 ## zipzi.modeling.bindings.MeshGridEditAddAxis
 
-`(binding_id: str, axis: BindingAxis)`
+`(*, binding_id: str, axis: BindingAxis)`
 
 Immutable owned MeshGridEditAddAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -174,7 +174,7 @@ from the parameter ID.
 
 ## zipzi.modeling.bindings.MeshGridEditCreate
 
-`(id: str, mesh_id: str)`
+`(*, id: str, mesh_id: str)`
 
 Immutable owned MeshGridEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -183,7 +183,7 @@ Immutable owned MeshGridEditCreate value. Construction owns declared collections
 
 ## zipzi.modeling.bindings.MeshGridEditDeleteSample
 
-`(binding_id: str, parameter_id: str, value: float)`
+`(*, binding_id: str, parameter_id: str, value: float)`
 
 Immutable owned MeshGridEditDeleteSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -193,7 +193,7 @@ Immutable owned MeshGridEditDeleteSample value. Construction owns declared colle
 
 ## zipzi.modeling.bindings.MeshGridEditInsertSample
 
-`(binding_id: str, parameter_id: str, value: float)`
+`(*, binding_id: str, parameter_id: str, value: float)`
 
 Immutable owned MeshGridEditInsertSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -203,7 +203,7 @@ Immutable owned MeshGridEditInsertSample value. Construction owns declared colle
 
 ## zipzi.modeling.bindings.MeshGridEditMoveSample
 
-`(binding_id: str, parameter_id: str, from_: float, to: float)`
+`(*, binding_id: str, parameter_id: str, from_: float, to: float)`
 
 Immutable owned MeshGridEditMoveSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -214,7 +214,7 @@ Immutable owned MeshGridEditMoveSample value. Construction owns declared collect
 
 ## zipzi.modeling.bindings.MeshGridEditRemoveAxis
 
-`(binding_id: str, parameter_id: str, reduction: AxisReduction)`
+`(*, binding_id: str, parameter_id: str, reduction: AxisReduction)`
 
 Immutable owned MeshGridEditRemoveAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -224,7 +224,7 @@ Immutable owned MeshGridEditRemoveAxis value. Construction owns declared collect
 
 ## zipzi.modeling.bindings.MeshGridEditReorderAxes
 
-`(binding_id: str, parameter_ids: tuple[str, ...])`
+`(*, binding_id: str, parameter_ids: tuple[str, ...])`
 
 Immutable owned MeshGridEditReorderAxes value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

@@ -58,7 +58,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
                                                                 'Explicit field discriminator; must match the '
                                                                 'addressed object/domain.')],
                                                     'kind': 'type',
-                                                    'signature': '(field: DocumentField)'},
+                                                    'signature': '(*, field: DocumentField)'},
  'zipzi.modeling.queries.CollectionQueryDocument.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.queries.CollectionQueryDocument.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryExpressionEntries': {'children': ('zipzi.modeling.queries.CollectionQueryExpressionEntries.__repr__',
@@ -73,7 +73,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
                                                                          'Stable expression asset ID owning the entry '
                                                                          'collection.')],
                                                              'kind': 'type',
-                                                             'signature': '(expression_id: str)'},
+                                                             'signature': '(*, expression_id: str)'},
  'zipzi.modeling.queries.CollectionQueryExpressionEntries.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.queries.CollectionQueryExpressionEntries.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryExpressions': {'children': ('zipzi.modeling.queries.CollectionQueryExpressions.__repr__',
@@ -98,7 +98,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
                                                               'Root or stable motion-group container for library '
                                                               'registrations.')],
                                                   'kind': 'type',
-                                                  'signature': '(collection: MotionContainer)'},
+                                                  'signature': '(*, collection: MotionContainer)'},
  'zipzi.modeling.queries.CollectionQueryMotion.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.queries.CollectionQueryMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryMotionGroups': {'children': ('zipzi.modeling.queries.CollectionQueryMotionGroups.__repr__',
@@ -124,7 +124,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
                                                                     'Explicit native collection selector; it does not '
                                                                     'imply loading every object payload.')],
                                                         'kind': 'type',
-                                                        'signature': '(collection: OrganizationCollection)'},
+                                                        'signature': '(*, collection: OrganizationCollection)'},
  'zipzi.modeling.queries.CollectionQueryOrganization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.queries.CollectionQueryOrganization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryPhysics': {'children': ('zipzi.modeling.queries.CollectionQueryPhysics.__repr__',
@@ -137,7 +137,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
                                                                'Native Physics group/input/output/node collection '
                                                                'selector.')],
                                                    'kind': 'type',
-                                                   'signature': '(collection: PhysicsCollection)'},
+                                                   'signature': '(*, collection: PhysicsCollection)'},
  'zipzi.modeling.queries.CollectionQueryPhysics.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.queries.CollectionQueryPhysics.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryPose': {'children': ('zipzi.modeling.queries.CollectionQueryPose.__repr__',
@@ -149,7 +149,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
                                                 'fields': [('collection',
                                                             'Native Pose group/entry/link collection selector.')],
                                                 'kind': 'type',
-                                                'signature': '(collection: PoseCollection)'},
+                                                'signature': '(*, collection: PoseCollection)'},
  'zipzi.modeling.queries.CollectionQueryPose.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.queries.CollectionQueryPose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryReferences': {'children': ('zipzi.modeling.queries.CollectionQueryReferences.__repr__',
@@ -163,7 +163,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
                                                                   'Explicit native collection selector; it does not '
                                                                   'imply loading every object payload.')],
                                                       'kind': 'type',
-                                                      'signature': '(collection: ReferenceCollection)'},
+                                                      'signature': '(*, collection: ReferenceCollection)'},
  'zipzi.modeling.queries.CollectionQueryReferences.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.queries.CollectionQueryReferences.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryResources': {'children': ('zipzi.modeling.queries.CollectionQueryResources.__repr__',
@@ -187,12 +187,248 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
                                                              'Explicit native collection selector; it does not imply '
                                                              'loading every object payload.')],
                                                  'kind': 'type',
-                                                 'signature': '(collection: SceneCollection)'},
+                                                 'signature': '(*, collection: SceneCollection)'},
  'zipzi.modeling.queries.CollectionQueryScene.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.queries.CollectionQueryScene.summary': {'alias': 'zipzi.ApiDescription.summary'},
- 'zipzi.modeling.queries.ModelingQuery': {'alias': 'zipzi.modeling.ModelingQuery'},
+ 'zipzi.modeling.queries.ModelingQuery': {'children': ('zipzi.modeling.queries.ModelingQuery.__repr__',
+                                                       'zipzi.modeling.queries.ModelingQuery.summary'),
+                                          'documentation': 'Immutable owned ModelingQuery value. Construction owns '
+                                                           'declared collections; reading fields, repr and summary '
+                                                           'performs no IO.',
+                                          'example': 'docs/recipes.py',
+                                          'fields': [('assets',
+                                                      'Explicit IDs of image assets to read, in result-slot order; an '
+                                                      'empty list requests no\n'
+                                                      'payloads, while collection IDs remain discoverable.'),
+                                                     ('meshes',
+                                                      'Explicit IDs of meshes to read, in result-slot order; an empty '
+                                                      'list requests no\n'
+                                                      'payloads, while collection IDs remain discoverable.'),
+                                                     ('parameters',
+                                                      'Explicit IDs of parameters to read, in result-slot order; an '
+                                                      'empty list requests no\n'
+                                                      'payloads, while collection IDs remain discoverable.'),
+                                                     ('parts',
+                                                      'Explicit IDs of Parts to read, in result-slot order; an empty '
+                                                      'list requests no payloads,\n'
+                                                      'while collection IDs remain discoverable.'),
+                                                     ('transforms',
+                                                      'Explicit IDs of deformation transforms to read, in result-slot '
+                                                      'order; an empty list\n'
+                                                      'requests no payloads, while collection IDs remain '
+                                                      'discoverable.'),
+                                                     ('bindings',
+                                                      'Explicit IDs of ordinary mesh bindings to read, in result-slot '
+                                                      'order; an empty list\n'
+                                                      'requests no payloads, while collection IDs remain '
+                                                      'discoverable.'),
+                                                     ('scene_bindings',
+                                                      'Explicit IDs of scene bindings to read, in result-slot order; '
+                                                      'an empty list requests no\n'
+                                                      'payloads, while collection IDs remain discoverable.'),
+                                                     ('blend_key_tables',
+                                                      'Explicit IDs of BlendShape key tables to read, in result-slot '
+                                                      'order; an empty list\n'
+                                                      'requests no payloads, while collection IDs remain '
+                                                      'discoverable.'),
+                                                     ('blend_constraints',
+                                                      'Explicit IDs of BlendShape constraints to read, in result-slot '
+                                                      'order; an empty list\n'
+                                                      'requests no payloads, while collection IDs remain '
+                                                      'discoverable.'),
+                                                     ('blend_bindings',
+                                                      'Explicit IDs of BlendShape bindings to read, in result-slot '
+                                                      'order; an empty list\n'
+                                                      'requests no payloads, while collection IDs remain '
+                                                      'discoverable.'),
+                                                     ('glues',
+                                                      'Explicit IDs of Glue objects to read, in result-slot order; an '
+                                                      'empty list requests no\n'
+                                                      'payloads, while collection IDs remain discoverable.'),
+                                                     ('offscreens',
+                                                      'Explicit IDs of Offscreen objects to read, in result-slot '
+                                                      'order; an empty list requests\n'
+                                                      'no payloads, while collection IDs remain discoverable.'),
+                                                     ('parameter_groups',
+                                                      'Explicit IDs of CDI parameter groups to read, in result-slot '
+                                                      'order; an empty list\n'
+                                                      'requests no payloads, while collection IDs remain '
+                                                      'discoverable.'),
+                                                     ('attachments',
+                                                      'Explicit IDs of package attachments to read, in result-slot '
+                                                      'order; an empty list\n'
+                                                      'requests no payloads, while collection IDs remain '
+                                                      'discoverable.'),
+                                                     ('motions',
+                                                      'Explicit motion clip IDs; payload slots follow order and retain '
+                                                      'missing IDs.'),
+                                                     ('motion_groups',
+                                                      'Explicit motion registration-group IDs; group payloads include '
+                                                      'their ordered entries.'),
+                                                     ('motion_registrations',
+                                                      'Explicit registration IDs, including root and grouped '
+                                                      'registrations.'),
+                                                     ('expressions',
+                                                      'Explicit expression asset IDs; entries are owned by the '
+                                                      'selected asset.'),
+                                                     ('physics',
+                                                      'Request the Physics singleton payload; false requests no '
+                                                      'Physics content.'),
+                                                     ('pose',
+                                                      'Request the Pose singleton payload; false requests no Pose '
+                                                      'content.')],
+                                          'kind': 'type',
+                                          'signature': '(*, assets: tuple[str, ...] = (), meshes: tuple[str, ...] = '
+                                                       '(), parameters: tuple[str, ...] = (), parts: tuple[str, ...] = '
+                                                       '(), transforms: tuple[str, ...] = (), bindings: tuple[str, '
+                                                       '...] = (), scene_bindings: tuple[str, ...] = (), '
+                                                       'blend_key_tables: tuple[str, ...] = (), blend_constraints: '
+                                                       'tuple[str, ...] = (), blend_bindings: tuple[str, ...] = (), '
+                                                       'glues: tuple[str, ...] = (), offscreens: tuple[str, ...] = (), '
+                                                       'parameter_groups: tuple[str, ...] = (), attachments: '
+                                                       'tuple[str, ...] = (), motions: tuple[str, ...] = (), '
+                                                       'motion_groups: tuple[str, ...] = (), motion_registrations: '
+                                                       'tuple[str, ...] = (), expressions: tuple[str, ...] = (), '
+                                                       'physics: bool = False, pose: bool = False)'},
  'zipzi.modeling.queries.ModelingQuery.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.queries.ModelingQuery.summary': {'alias': 'zipzi.ApiDescription.summary'},
- 'zipzi.modeling.queries.OwnedModelingRecords': {'alias': 'zipzi.modeling.OwnedModelingRecords'},
+ 'zipzi.modeling.queries.OwnedModelingRecords': {'children': ('zipzi.modeling.queries.OwnedModelingRecords.__repr__',
+                                                              'zipzi.modeling.queries.OwnedModelingRecords.summary'),
+                                                 'documentation': 'Immutable owned OwnedModelingRecords value. '
+                                                                  'Construction owns declared collections; reading '
+                                                                  'fields, repr and summary performs no IO.',
+                                                 'example': 'docs/recipes.py',
+                                                 'fields': [('document_id',
+                                                             'Stable document UUID; not a Runtime Session handle.'),
+                                                            ('setup',
+                                                             'Model source-canvas and export-frame configuration.'),
+                                                            ('hierarchy_order',
+                                                             'Independent organization/deformation palette ranks; does '
+                                                             'not alter model relationships.'),
+                                                            ('editor_state',
+                                                             'Owned authoring visibility/lock metadata; separate from '
+                                                             'evaluated model appearance.'),
+                                                            ('display_info',
+                                                             'Owned CDI display metadata, including explicit imported '
+                                                             'unresolved references.'),
+                                                            ('model3_settings',
+                                                             'Owned model3 export metadata and reference '
+                                                             'registrations.'),
+                                                            ('draw_order_groups',
+                                                             'Optional drawing-order groups; None leaves grouping '
+                                                             'absent instead of supplying an empty\n'
+                                                             'group list.'),
+                                                            ('ids',
+                                                             'Domain-name-to-ID directory of document collections; '
+                                                             'identities remain available even\n'
+                                                             'when no record payloads were requested.'),
+                                                            ('assets',
+                                                             'Owned image assets aligned with the corresponding query '
+                                                             'ID list; None marks a missing\n'
+                                                             'requested ID and an empty query returns no payloads.'),
+                                                            ('meshes',
+                                                             'Owned meshes aligned with the corresponding query ID '
+                                                             'list; None marks a missing\n'
+                                                             'requested ID and an empty query returns no payloads.'),
+                                                            ('parameters',
+                                                             'Owned parameters aligned with the corresponding query ID '
+                                                             'list; None marks a missing\n'
+                                                             'requested ID and an empty query returns no payloads.'),
+                                                            ('parts',
+                                                             'Owned Parts aligned with the corresponding query ID '
+                                                             'list; None marks a missing requested\n'
+                                                             'ID and an empty query returns no payloads.'),
+                                                            ('transforms',
+                                                             'Owned deformation transforms aligned with the '
+                                                             'corresponding query ID list; None marks a\n'
+                                                             'missing requested ID and an empty query returns no '
+                                                             'payloads.'),
+                                                            ('bindings',
+                                                             'Owned ordinary mesh bindings aligned with the '
+                                                             'corresponding query ID list; None marks a\n'
+                                                             'missing requested ID and an empty query returns no '
+                                                             'payloads.'),
+                                                            ('scene_bindings',
+                                                             'Owned scene bindings aligned with the corresponding '
+                                                             'query ID list; None marks a missing\n'
+                                                             'requested ID and an empty query returns no payloads.'),
+                                                            ('blend_key_tables',
+                                                             'Owned BlendShape key tables aligned with the '
+                                                             'corresponding query ID list; None marks a\n'
+                                                             'missing requested ID and an empty query returns no '
+                                                             'payloads.'),
+                                                            ('blend_constraints',
+                                                             'Owned BlendShape constraints aligned with the '
+                                                             'corresponding query ID list; None marks a\n'
+                                                             'missing requested ID and an empty query returns no '
+                                                             'payloads.'),
+                                                            ('blend_bindings',
+                                                             'Owned BlendShape bindings aligned with the corresponding '
+                                                             'query ID list; None marks a\n'
+                                                             'missing requested ID and an empty query returns no '
+                                                             'payloads.'),
+                                                            ('glues',
+                                                             'Owned Glue objects aligned with the corresponding query '
+                                                             'ID list; None marks a missing\n'
+                                                             'requested ID and an empty query returns no payloads.'),
+                                                            ('offscreens',
+                                                             'Owned Offscreen objects aligned with the corresponding '
+                                                             'query ID list; None marks a\n'
+                                                             'missing requested ID and an empty query returns no '
+                                                             'payloads.'),
+                                                            ('parameter_groups',
+                                                             'Owned CDI parameter groups aligned with the '
+                                                             'corresponding query ID list; None marks a\n'
+                                                             'missing requested ID and an empty query returns no '
+                                                             'payloads.'),
+                                                            ('attachments',
+                                                             'Owned package attachments aligned with the corresponding '
+                                                             'query ID list; None marks a\n'
+                                                             'missing requested ID and an empty query returns no '
+                                                             'payloads.'),
+                                                            ('motions',
+                                                             'Owned selected motions aligned with query IDs; None '
+                                                             'marks a missing ID.'),
+                                                            ('motion_groups',
+                                                             'Owned selected motion_groups aligned with query IDs; '
+                                                             'None marks a missing ID.'),
+                                                            ('motion_registrations',
+                                                             'Owned selected motion_registrations aligned with query '
+                                                             'IDs; None marks a missing ID.'),
+                                                            ('expressions',
+                                                             'Owned selected expressions aligned with query IDs; None '
+                                                             'marks a missing ID.'),
+                                                            ('physics',
+                                                             'Owned Physics singleton when requested and present; None '
+                                                             'otherwise.'),
+                                                            ('pose',
+                                                             'Owned Pose singleton when requested and present; None '
+                                                             'otherwise.')],
+                                                 'kind': 'type',
+                                                 'signature': '(*, document_id: str, setup: ModelSetup, '
+                                                              'hierarchy_order: HierarchyOrder, editor_state: '
+                                                              'EditorState, display_info: DisplayInfo, '
+                                                              'model3_settings: Model3Settings, draw_order_groups: '
+                                                              'tuple[DrawOrderGroup, ...] | None = None, ids: '
+                                                              '_Mapping[str, tuple[str, ...]], assets: '
+                                                              'tuple[ImageAsset | None, ...], meshes: tuple[Mesh | '
+                                                              'None, ...], parameters: tuple[Parameter | None, ...], '
+                                                              'parts: tuple[Part | None, ...], transforms: '
+                                                              'tuple[Transform | None, ...], bindings: '
+                                                              'tuple[MeshBinding | None, ...], scene_bindings: '
+                                                              'tuple[SceneBinding | None, ...], blend_key_tables: '
+                                                              'tuple[BlendShapeKeyTable | None, ...], '
+                                                              'blend_constraints: tuple[BlendShapeConstraint | None, '
+                                                              '...], blend_bindings: tuple[BlendShapeBinding | None, '
+                                                              '...], glues: tuple[Glue | None, ...], offscreens: '
+                                                              'tuple[Offscreen | None, ...], parameter_groups: '
+                                                              'tuple[CdiParameterGroup | None, ...], attachments: '
+                                                              'tuple[PackageAttachment | None, ...], motions: '
+                                                              'tuple[MotionClip | None, ...], motion_groups: '
+                                                              'tuple[MotionGroup | None, ...], motion_registrations: '
+                                                              'tuple[MotionRegistration | None, ...], expressions: '
+                                                              'tuple[ExpressionAsset | None, ...], physics: '
+                                                              'PhysicsAsset | None = None, pose: PoseAsset | None = '
+                                                              'None)'},
  'zipzi.modeling.queries.OwnedModelingRecords.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.queries.OwnedModelingRecords.summary': {'alias': 'zipzi.ApiDescription.summary'}}

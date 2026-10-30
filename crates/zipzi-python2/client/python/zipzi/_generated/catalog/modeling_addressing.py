@@ -118,9 +118,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                   'contents; inspect its state/reason\n'
                                                                   'before invoking the operation.')],
                                                       'kind': 'type',
-                                                      'signature': '(inspect: CapabilityState, patch: CapabilityState, '
-                                                                   'duplicate: CapabilityState, delete: '
-                                                                   'CapabilityState, load_content: CapabilityState)'},
+                                                      'signature': '(*, inspect: CapabilityState, patch: '
+                                                                   'CapabilityState, duplicate: CapabilityState, '
+                                                                   'delete: CapabilityState, load_content: '
+                                                                   'CapabilityState)'},
  'zipzi.modeling.addressing.AttachmentCapabilities.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AttachmentCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.BindingCapabilities': {'children': ('zipzi.modeling.addressing.BindingCapabilities.__repr__',
@@ -158,7 +159,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                'inspect its state/reason before\n'
                                                                'invoking the operation.')],
                                                    'kind': 'type',
-                                                   'signature': '(inspect: CapabilityState, patch: CapabilityState, '
+                                                   'signature': '(*, inspect: CapabilityState, patch: CapabilityState, '
                                                                 'create_child: CapabilityState, reorder: '
                                                                 'CapabilityState, delete: CapabilityState, repair: '
                                                                 'CapabilityState, preview: CapabilityState)'},
@@ -182,7 +183,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                   'capability states and reasons; do\n'
                                                                   'not infer support from method presence.')],
                                                       'kind': 'type',
-                                                      'signature': '(value: AttachmentCapabilities)'},
+                                                      'signature': '(*, value: AttachmentCapabilities)'},
  'zipzi.modeling.addressing.CapabilitiesAttachment.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesAttachment.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesBinding': {'children': ('zipzi.modeling.addressing.CapabilitiesBinding.__repr__',
@@ -196,7 +197,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                'capability states and reasons; do\n'
                                                                'not infer support from method presence.')],
                                                    'kind': 'type',
-                                                   'signature': '(value: BindingCapabilities)'},
+                                                   'signature': '(*, value: BindingCapabilities)'},
  'zipzi.modeling.addressing.CapabilitiesBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesCollection': {'children': ('zipzi.modeling.addressing.CapabilitiesCollection.__repr__',
@@ -211,7 +212,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                   'do not infer support from method\n'
                                                                   'presence.')],
                                                       'kind': 'type',
-                                                      'signature': '(value: CollectionCapabilities)'},
+                                                      'signature': '(*, value: CollectionCapabilities)'},
  'zipzi.modeling.addressing.CapabilitiesCollection.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesCollection.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesContent': {'children': ('zipzi.modeling.addressing.CapabilitiesContent.__repr__',
@@ -225,7 +226,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                'states and reasons; do not infer\n'
                                                                'support from method presence.')],
                                                    'kind': 'type',
-                                                   'signature': '(value: SceneContentCapabilities)'},
+                                                   'signature': '(*, value: SceneContentCapabilities)'},
  'zipzi.modeling.addressing.CapabilitiesContent.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesContent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesDocument': {'children': ('zipzi.modeling.addressing.CapabilitiesDocument.__repr__',
@@ -239,7 +240,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                 'capability states and reasons; do\n'
                                                                 'not infer support from method presence.')],
                                                     'kind': 'type',
-                                                    'signature': '(value: CapabilityState)'},
+                                                    'signature': '(*, value: CapabilityState)'},
  'zipzi.modeling.addressing.CapabilitiesDocument.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesDocument.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesExpression': {'children': ('zipzi.modeling.addressing.CapabilitiesExpression.__repr__',
@@ -253,7 +254,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                   'Current native expression eligibility; host Preview '
                                                                   'support is advertised separately.')],
                                                       'kind': 'type',
-                                                      'signature': '(value: ExpressionCapabilities)'},
+                                                      'signature': '(*, value: ExpressionCapabilities)'},
  'zipzi.modeling.addressing.CapabilitiesExpression.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesExpression.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesMotion': {'children': ('zipzi.modeling.addressing.CapabilitiesMotion.__repr__',
@@ -266,7 +267,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                               'Current native motion eligibility; host Preview support '
                                                               'is advertised separately.')],
                                                   'kind': 'type',
-                                                  'signature': '(value: MotionCapabilities)'},
+                                                  'signature': '(*, value: MotionCapabilities)'},
  'zipzi.modeling.addressing.CapabilitiesMotion.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesOrganization': {'children': ('zipzi.modeling.addressing.CapabilitiesOrganization.__repr__',
@@ -281,7 +282,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                     'capability states and reasons; do not\n'
                                                                     'infer support from method presence.')],
                                                         'kind': 'type',
-                                                        'signature': '(value: OrganizationCapabilities)'},
+                                                        'signature': '(*, value: OrganizationCapabilities)'},
  'zipzi.modeling.addressing.CapabilitiesOrganization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesOrganization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesPhysics': {'children': ('zipzi.modeling.addressing.CapabilitiesPhysics.__repr__',
@@ -294,7 +295,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                'Current native physics eligibility; host Preview '
                                                                'support is advertised separately.')],
                                                    'kind': 'type',
-                                                   'signature': '(value: PhysicsCapabilities)'},
+                                                   'signature': '(*, value: PhysicsCapabilities)'},
  'zipzi.modeling.addressing.CapabilitiesPhysics.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesPhysics.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesPose': {'children': ('zipzi.modeling.addressing.CapabilitiesPose.__repr__',
@@ -307,7 +308,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                             'Current native pose eligibility; host Preview support is '
                                                             'advertised separately.')],
                                                 'kind': 'type',
-                                                'signature': '(value: PoseCapabilities)'},
+                                                'signature': '(*, value: PoseCapabilities)'},
  'zipzi.modeling.addressing.CapabilitiesPose.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesPose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesReferences': {'children': ('zipzi.modeling.addressing.CapabilitiesReferences.__repr__',
@@ -322,7 +323,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                   'capability states and reasons; do not\n'
                                                                   'infer support from method presence.')],
                                                       'kind': 'type',
-                                                      'signature': '(value: ReferenceCapabilities)'},
+                                                      'signature': '(*, value: ReferenceCapabilities)'},
  'zipzi.modeling.addressing.CapabilitiesReferences.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesReferences.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesResource': {'children': ('zipzi.modeling.addressing.CapabilitiesResource.__repr__',
@@ -336,7 +337,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                 'capability states and reasons; do not\n'
                                                                 'infer support from method presence.')],
                                                     'kind': 'type',
-                                                    'signature': '(value: ResourceCapabilities)'},
+                                                    'signature': '(*, value: ResourceCapabilities)'},
  'zipzi.modeling.addressing.CapabilitiesResource.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesResource.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesScene': {'children': ('zipzi.modeling.addressing.CapabilitiesScene.__repr__',
@@ -350,7 +351,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                              'capability states and reasons; do not\n'
                                                              'infer support from method presence.')],
                                                  'kind': 'type',
-                                                 'signature': '(value: SceneCapabilities)'},
+                                                 'signature': '(*, value: SceneCapabilities)'},
  'zipzi.modeling.addressing.CapabilitiesScene.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesScene.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilityDomain': {'children': (),
@@ -389,7 +390,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                       'Stable reason code explaining why this '
                                                                       'operation is currently unavailable.')],
                                                           'kind': 'type',
-                                                          'signature': '(code: str)'},
+                                                          'signature': '(*, code: str)'},
  'zipzi.modeling.addressing.CapabilityStateUnavailable.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilityStateUnavailable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilityStateUnsupported': {'children': ('zipzi.modeling.addressing.CapabilityStateUnsupported.__repr__',
@@ -404,7 +405,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                       'operation is unsupported for this '
                                                                       'object/domain.')],
                                                           'kind': 'type',
-                                                          'signature': '(code: str)'},
+                                                          'signature': '(*, code: str)'},
  'zipzi.modeling.addressing.CapabilityStateUnsupported.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilityStateUnsupported.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CollectionCapabilities': {'children': ('zipzi.modeling.addressing.CollectionCapabilities.__repr__',
@@ -427,7 +428,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                   'inspect its state/reason before\n'
                                                                   'invoking the operation.')],
                                                       'kind': 'type',
-                                                      'signature': '(create: CapabilityState, move_into: '
+                                                      'signature': '(*, create: CapabilityState, move_into: '
                                                                    'CapabilityState, reorder: CapabilityState)'},
  'zipzi.modeling.addressing.CollectionCapabilities.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CollectionCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -460,7 +461,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                   'Native preview eligibility; host preview API '
                                                                   'availability is advertised separately.')],
                                                       'kind': 'type',
-                                                      'signature': '(inspect: CapabilityState, create_entry: '
+                                                      'signature': '(*, inspect: CapabilityState, create_entry: '
                                                                    'CapabilityState, patch: CapabilityState, '
                                                                    'move_entry: CapabilityState, duplicate: '
                                                                    'CapabilityState, delete: CapabilityState, repair: '
@@ -502,7 +503,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                               'Edit the owning clip content, preserving stable '
                                                               'track/key/event identities.')],
                                                   'kind': 'type',
-                                                  'signature': '(inspect: CapabilityState, patch: CapabilityState, '
+                                                  'signature': '(*, inspect: CapabilityState, patch: CapabilityState, '
                                                                'duplicate: CapabilityState, delete: CapabilityState, '
                                                                'move_object: CapabilityState, preview: '
                                                                'CapabilityState, create_child: CapabilityState, '
@@ -550,7 +551,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                     'preserving contents; inspect its\n'
                                                                     'state/reason before invoking the operation.')],
                                                         'kind': 'type',
-                                                        'signature': '(inspect: CapabilityState, patch: '
+                                                        'signature': '(*, inspect: CapabilityState, patch: '
                                                                      'CapabilityState, create_child: CapabilityState, '
                                                                      'move_object: CapabilityState, reorder: '
                                                                      'CapabilityState, duplicate: CapabilityState, '
@@ -590,7 +591,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                'Native preview eligibility; host preview API '
                                                                'availability is advertised separately.')],
                                                    'kind': 'type',
-                                                   'signature': '(inspect: CapabilityState, patch: CapabilityState, '
+                                                   'signature': '(*, inspect: CapabilityState, patch: CapabilityState, '
                                                                 'create_child: CapabilityState, duplicate: '
                                                                 'CapabilityState, delete: CapabilityState, '
                                                                 'move_object: CapabilityState, reorder: '
@@ -632,7 +633,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                             'Native preview eligibility; host preview API availability '
                                                             'is advertised separately.')],
                                                 'kind': 'type',
-                                                'signature': '(inspect: CapabilityState, patch: CapabilityState, '
+                                                'signature': '(*, inspect: CapabilityState, patch: CapabilityState, '
                                                              'create_child: CapabilityState, duplicate: '
                                                              'CapabilityState, delete: CapabilityState, move_object: '
                                                              'CapabilityState, reorder: CapabilityState, repair: '
@@ -675,10 +676,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                  'preserving contents; inspect its\n'
                                                                  'state/reason before invoking the operation.')],
                                                      'kind': 'type',
-                                                     'signature': '(inspect: CapabilityState, patch: CapabilityState, '
-                                                                  'create_child: CapabilityState, move_object: '
-                                                                  'CapabilityState, duplicate: CapabilityState, '
-                                                                  'delete: CapabilityState, dissolve: '
+                                                     'signature': '(*, inspect: CapabilityState, patch: '
+                                                                  'CapabilityState, create_child: CapabilityState, '
+                                                                  'move_object: CapabilityState, duplicate: '
+                                                                  'CapabilityState, delete: CapabilityState, dissolve: '
                                                                   'CapabilityState)'},
  'zipzi.modeling.addressing.ReferenceCapabilities.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -701,7 +702,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                                  'Stable CDI combined-parameter set ID '
                                                                                  'owning the selected members.')],
                                                                      'kind': 'type',
-                                                                     'signature': '(set_id: str)'},
+                                                                     'signature': '(*, set_id: str)'},
  'zipzi.modeling.addressing.ReferenceCollectionCdiCombinedMembers.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceCollectionCdiCombinedMembers.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceCollectionCdiCombinedSets': {'children': ('zipzi.modeling.addressing.ReferenceCollectionCdiCombinedSets.__repr__',
@@ -758,7 +759,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                                     'object ID; this collection has no '
                                                                                     'root/unassigned group.')],
                                                                         'kind': 'type',
-                                                                        'signature': '(group_id: str)'},
+                                                                        'signature': '(*, group_id: str)'},
  'zipzi.modeling.addressing.ReferenceCollectionModelParameterMembers.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceCollectionModelParameterMembers.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceEdit': {'children': (),
@@ -784,7 +785,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                              'belong to\n'
                                                                              'the selected destination.')],
                                                                  'kind': 'type',
-                                                                 'signature': '(id: str, before: str | None = None)'},
+                                                                 'signature': '(*, id: str, before: str | None = '
+                                                                              'None)'},
  'zipzi.modeling.addressing.ReferenceEditCreateCdiCombinedSet.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceEditCreateCdiCombinedSet.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceEditCreateMember': {'children': ('zipzi.modeling.addressing.ReferenceEditCreateMember.__repr__',
@@ -805,7 +807,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                      'appends. The anchor must belong to\n'
                                                                      'the selected destination.')],
                                                          'kind': 'type',
-                                                         'signature': '(id: str, collection: ReferenceCollection, '
+                                                         'signature': '(*, id: str, collection: ReferenceCollection, '
                                                                       'before: str | None = None)'},
  'zipzi.modeling.addressing.ReferenceEditCreateMember.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceEditCreateMember.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -830,8 +832,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                            'belong to\n'
                                                                            'the selected destination.')],
                                                                'kind': 'type',
-                                                               'signature': '(id: str, name: str, before: str | None = '
-                                                                            'None)'},
+                                                               'signature': '(*, id: str, name: str, before: str | '
+                                                                            'None = None)'},
  'zipzi.modeling.addressing.ReferenceEditCreateModelHitArea.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceEditCreateModelHitArea.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceEditCreateModelParameterGroup': {'children': ('zipzi.modeling.addressing.ReferenceEditCreateModelParameterGroup.__repr__',
@@ -857,8 +859,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                                   'must belong to\n'
                                                                                   'the selected destination.')],
                                                                       'kind': 'type',
-                                                                      'signature': '(id: str, name: str, before: str | '
-                                                                                   'None = None)'},
+                                                                      'signature': '(*, id: str, name: str, before: '
+                                                                                   'str | None = None)'},
  'zipzi.modeling.addressing.ReferenceEditCreateModelParameterGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceEditCreateModelParameterGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceEditDelete': {'children': ('zipzi.modeling.addressing.ReferenceEditDelete.__repr__',
@@ -872,7 +874,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                'visible names and row numbers\n'
                                                                'are not identities.')],
                                                    'kind': 'type',
-                                                   'signature': '(ids: tuple[str, ...])'},
+                                                   'signature': '(*, ids: tuple[str, ...])'},
  'zipzi.modeling.addressing.ReferenceEditDelete.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceEditDelete.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceEditDissolve': {'children': ('zipzi.modeling.addressing.ReferenceEditDissolve.__repr__',
@@ -894,7 +896,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                  'appends. The anchor must belong to\n'
                                                                  'the selected destination.')],
                                                      'kind': 'type',
-                                                     'signature': '(id: str, destination: str, before: str | None = '
+                                                     'signature': '(*, id: str, destination: str, before: str | None = '
                                                                   'None)'},
  'zipzi.modeling.addressing.ReferenceEditDissolve.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceEditDissolve.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -918,7 +920,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                   'appends. The anchor must belong to\n'
                                                                   'the selected destination.')],
                                                       'kind': 'type',
-                                                      'signature': '(ids: tuple[str, ...], destination: '
+                                                      'signature': '(*, ids: tuple[str, ...], destination: '
                                                                    'ReferenceCollection, before: str | None = None)'},
  'zipzi.modeling.addressing.ReferenceEditDuplicate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceEditDuplicate.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -941,7 +943,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                              'appends. The anchor must belong to\n'
                                                              'the selected destination.')],
                                                  'kind': 'type',
-                                                 'signature': '(ids: tuple[str, ...], destination: '
+                                                 'signature': '(*, ids: tuple[str, ...], destination: '
                                                               'ReferenceCollection, before: str | None = None)'},
  'zipzi.modeling.addressing.ReferenceEditMove.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceEditMove.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -964,7 +966,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                               'match the addressed reference\n'
                                                               'kind.')],
                                                   'kind': 'type',
-                                                  'signature': '(id: str, expected: ReferenceFields, fields: '
+                                                  'signature': '(*, id: str, expected: ReferenceFields, fields: '
                                                                'ReferenceFields)'},
  'zipzi.modeling.addressing.ReferenceEditPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceEditPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -990,7 +992,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                          'selection; an empty list explicitly clears '
                                                                          'it.')],
                                                              'kind': 'type',
-                                                             'signature': '(owner: str, field: '
+                                                             'signature': '(*, owner: str, field: '
                                                                           'ReferenceSelectionField, expected: '
                                                                           'tuple[str, ...], targets: tuple[str, ...])'},
  'zipzi.modeling.addressing.ReferenceEditReplaceSelection.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -1012,7 +1014,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                          'identity\n'
                                                                          'remains independent of the target.')],
                                                              'kind': 'type',
-                                                             'signature': '(id: str, target: CdiParameterRef)'},
+                                                             'signature': '(*, id: str, target: CdiParameterRef)'},
  'zipzi.modeling.addressing.ReferenceEntryCdiParameterRef.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceEntryCdiParameterRef.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceEntryModelTargetRef': {'children': ('zipzi.modeling.addressing.ReferenceEntryModelTargetRef.__repr__',
@@ -1032,7 +1034,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                         'identity\n'
                                                                         'remains independent of the target.')],
                                                             'kind': 'type',
-                                                            'signature': '(id: str, target: ModelTargetRef)'},
+                                                            'signature': '(*, id: str, target: ModelTargetRef)'},
  'zipzi.modeling.addressing.ReferenceEntryModelTargetRef.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceEntryModelTargetRef.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceFields': {'children': (),
@@ -1055,7 +1057,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                             'identity\n'
                                                                             'remains independent of the target.')],
                                                                 'kind': 'type',
-                                                                'signature': '(target: CdiParameterRef)'},
+                                                                'signature': '(*, target: CdiParameterRef)'},
  'zipzi.modeling.addressing.ReferenceFieldsCdiCombinedMember.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceFieldsCdiCombinedMember.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceFieldsModelHitArea': {'children': ('zipzi.modeling.addressing.ReferenceFieldsModelHitArea.__repr__',
@@ -1073,7 +1075,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                        'Resolved mesh target or preserved unresolved '
                                                                        'mesh runtime identifier.')],
                                                            'kind': 'type',
-                                                           'signature': '(name: str, mesh: ModelTargetRef)'},
+                                                           'signature': '(*, name: str, mesh: ModelTargetRef)'},
  'zipzi.modeling.addressing.ReferenceFieldsModelHitArea.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceFieldsModelHitArea.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceFieldsModelParameterGroup': {'children': ('zipzi.modeling.addressing.ReferenceFieldsModelParameterGroup.__repr__',
@@ -1089,7 +1091,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                               'stable ID for identity because names '
                                                                               'can change.')],
                                                                   'kind': 'type',
-                                                                  'signature': '(name: str)'},
+                                                                  'signature': '(*, name: str)'},
  'zipzi.modeling.addressing.ReferenceFieldsModelParameterGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceFieldsModelParameterGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceFieldsModelParameterMember': {'children': ('zipzi.modeling.addressing.ReferenceFieldsModelParameterMember.__repr__',
@@ -1106,7 +1108,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                                'identity\n'
                                                                                'remains independent of the target.')],
                                                                    'kind': 'type',
-                                                                   'signature': '(target: ModelTargetRef)'},
+                                                                   'signature': '(*, target: ModelTargetRef)'},
  'zipzi.modeling.addressing.ReferenceFieldsModelParameterMember.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceFieldsModelParameterMember.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceSelectionField': {'children': (),
@@ -1147,10 +1149,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                 'inspect its state/reason before\n'
                                                                 'invoking the operation.')],
                                                     'kind': 'type',
-                                                    'signature': '(inspect: CapabilityState, patch: CapabilityState, '
-                                                                 'load_content: CapabilityState, duplicate: '
-                                                                 'CapabilityState, delete: CapabilityState, reorder: '
-                                                                 'CapabilityState)'},
+                                                    'signature': '(*, inspect: CapabilityState, patch: '
+                                                                 'CapabilityState, load_content: CapabilityState, '
+                                                                 'duplicate: CapabilityState, delete: CapabilityState, '
+                                                                 'reorder: CapabilityState)'},
  'zipzi.modeling.addressing.ResourceCapabilities.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ResourceCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.SceneCapabilities': {'children': ('zipzi.modeling.addressing.SceneCapabilities.__repr__',
@@ -1192,7 +1194,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                              'preserving contents; inspect its\n'
                                                              'state/reason before invoking the operation.')],
                                                  'kind': 'type',
-                                                 'signature': '(inspect: CapabilityState, patch: CapabilityState, '
+                                                 'signature': '(*, inspect: CapabilityState, patch: CapabilityState, '
                                                               'move_object: CapabilityState, reparent: '
                                                               'CapabilityState, reorder: CapabilityState, duplicate: '
                                                               'CapabilityState, delete: CapabilityState, dissolve: '
@@ -1220,7 +1222,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                     'dependencies; inspect its state/reason before '
                                                                     'invoking the operation.')],
                                                         'kind': 'type',
-                                                        'signature': '(inspect: CapabilityState, edit: '
+                                                        'signature': '(*, inspect: CapabilityState, edit: '
                                                                      'CapabilityState, topology: CapabilityState)'},
  'zipzi.modeling.addressing.SceneContentCapabilities.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.SceneContentCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'}}

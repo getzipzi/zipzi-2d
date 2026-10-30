@@ -12,7 +12,7 @@ Canonical observation modeling values.
 
 ## zipzi.modeling.observation.ObservationBatch
 
-`(view: ObservationView, requested: tuple[_Mapping[str, float], ...], frames: tuple[ObservationImage, ...])`
+`(*, view: ObservationView, requested: tuple[_Mapping[str, float], ...], frames: tuple[ObservationImage, ...])`
 
 Immutable owned ObservationBatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -22,7 +22,7 @@ Immutable owned ObservationBatch value. Construction owns declared collections; 
 
 ## zipzi.modeling.observation.ObservationImage
 
-`(width: int, height: int, rgba: _Bytes, png: _Bytes, document_id: str, evaluation_revision: int, capture_id: str, scene_digest: str, render_digest: str, input_sha256: str, adapter_name: str, adapter_backend: str, parameters: _Mapping[str, float], visible_roi: tuple[float, float, float, float], scale: float, offset: tuple[float, float], textures: tuple[ObservedTexture, ...], drawable_bounds: tuple[ObservedBounds, ...], quality: tuple[MeshQuality, ...])`
+`(*, width: int, height: int, rgba: _Bytes, png: _Bytes, document_id: str, evaluation_revision: int, capture_id: str, scene_digest: str, render_digest: str, input_sha256: str, adapter_name: str, adapter_backend: str, parameters: _Mapping[str, float], visible_roi: tuple[float, float, float, float], scale: float, offset: tuple[float, float], textures: tuple[ObservedTexture, ...], drawable_bounds: tuple[ObservedBounds, ...], quality: tuple[MeshQuality, ...])`
 
 Immutable owned ObservationImage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -50,7 +50,7 @@ filtering and UV repeat outside [0,1]. A step above 1 denotes approximate covera
 
 ## zipzi.modeling.observation.ObservationView
 
-`(width: int, height: int, roi: tuple[float, float, float, float], padding_model: float = 0.0, topology: TopologyOverlay | None = None, quality: bool = False)`
+`(*, width: int, height: int, roi: tuple[float, float, float, float], padding_model: float = 0.0, topology: TopologyOverlay | None = None, quality: bool = False)`
 
 Immutable owned ObservationView value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -65,7 +65,7 @@ Uses default parameters of the same source as reference; checks requested frames
 
 ## zipzi.modeling.observation.ObservedBounds
 
-`(id: str, visible: bool, bounds: tuple[int, int, int, int] | None = None)`
+`(*, id: str, visible: bool, bounds: tuple[int, int, int, int] | None = None)`
 
 Immutable owned ObservedBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -75,7 +75,7 @@ Immutable owned ObservedBounds value. Construction owns declared collections; re
 
 ## zipzi.modeling.observation.ObservedTexture
 
-`(asset_id: str, sha256: str)`
+`(*, asset_id: str, sha256: str)`
 
 Immutable owned ObservedTexture value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -84,7 +84,7 @@ Immutable owned ObservedTexture value. Construction owns declared collections; r
 
 ## zipzi.modeling.observation.TextureCoverage
 
-`(alpha_threshold: int, pixel_step: int, sampled_pixels: int, covered_pixels: int, transparent_covered_pixels: int, opaque_pixels: int, uncovered_opaque_pixels: int, transparent_coverage_fraction: float | None = None, uncovered_opaque_fraction: float | None = None, out_of_bounds_triangles: int)`
+`(*, alpha_threshold: int, pixel_step: int, sampled_pixels: int, covered_pixels: int, transparent_covered_pixels: int, opaque_pixels: int, uncovered_opaque_pixels: int, transparent_coverage_fraction: float | None = None, uncovered_opaque_fraction: float | None = None, out_of_bounds_triangles: int)`
 
 Immutable owned TextureCoverage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -101,7 +101,7 @@ Immutable owned TextureCoverage value. Construction owns declared collections; r
 
 ## zipzi.modeling.observation.TopologyOverlay
 
-`(targets: tuple[ObjectTarget, ...] | None = None, wireframe: bool = True, vertices: bool = False, vertex_ids: bool = False, constraints: bool = False, strain: bool = False, include_hidden: bool = False, topology_only: bool = False, heat_opacity: float = 0.25, anomalies_only: bool = False, thresholds: TopologyThresholds = field(default_factory=lambda: read_TopologyThresholds({'max_aspect_ratio': 20.0, 'max_edge_stretch': 2.0, 'min_angle_degrees': 10.0})), label_scale: int = 2, label_spacing: int = 3, max_labels: int = 256)`
+`(*, targets: tuple[ObjectTarget, ...] | None = None, wireframe: bool = True, vertices: bool = False, vertex_ids: bool = False, constraints: bool = False, strain: bool = False, include_hidden: bool = False, topology_only: bool = False, heat_opacity: float = 0.25, anomalies_only: bool = False, thresholds: TopologyThresholds = <factory>, label_scale: int = 2, label_spacing: int = 3, max_labels: int = 256)`
 
 Immutable owned TopologyOverlay value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -128,7 +128,7 @@ an ID is omitted when no nearby in-view position has enough space.
 
 ## zipzi.modeling.observation.TopologyThresholds
 
-`(min_angle_degrees: float = 10.0, max_aspect_ratio: float = 20.0, max_edge_stretch: float = 2.0)`
+`(*, min_angle_degrees: float = 10.0, max_aspect_ratio: float = 20.0, max_edge_stretch: float = 2.0)`
 
 Immutable owned TopologyThresholds value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

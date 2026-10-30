@@ -23,8 +23,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                           'Actually available alternatives; selecting one requires a '
                                                           'new source-bound plan.')],
                                               'kind': 'type',
-                                              'signature': '(object: DeletionObject, reason: DeletionDecisionReason, '
-                                                           'choices: tuple[DeletionChoice, ...])'},
+                                              'signature': '(*, object: DeletionObject, reason: '
+                                                           'DeletionDecisionReason, choices: tuple[DeletionChoice, '
+                                                           '...])'},
  'zipzi.modeling.deletion.DeletionDecision.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionDecision.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionDecisionReason': {'children': (),
@@ -63,7 +64,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                                                   'available resolutions come from '
                                                                                   'typed choices.')],
                                                                       'kind': 'type',
-                                                                      'signature': '(code: str)'},
+                                                                      'signature': '(*, code: str)'},
  'zipzi.modeling.deletion.DeletionDecisionReasonConversionUnproven.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionDecisionReasonConversionUnproven.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionDecisionReasonInvalidContainer': {'children': ('zipzi.modeling.deletion.DeletionDecisionReasonInvalidContainer.__repr__',
@@ -80,7 +81,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                                                 'an explicit larger deletion or '
                                                                                 'cancellation.')],
                                                                     'kind': 'type',
-                                                                    'signature': '(code: str)'},
+                                                                    'signature': '(*, code: str)'},
  'zipzi.modeling.deletion.DeletionDecisionReasonInvalidContainer.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionDecisionReasonInvalidContainer.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionDecisionReasonOffscreenMappingRequired': {'children': ('zipzi.modeling.deletion.DeletionDecisionReasonOffscreenMappingRequired.__repr__',
@@ -182,8 +183,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                                                   'that previously supplied this '
                                                                                   'contribution.')],
                                                                       'kind': 'type',
-                                                                      'signature': '(object: DeletionObject, binding: '
-                                                                                   'DeletionObject)'},
+                                                                      'signature': '(*, object: DeletionObject, '
+                                                                                   'binding: DeletionObject)'},
  'zipzi.modeling.deletion.DeletionEffectBindingContributionRemoved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionEffectBindingContributionRemoved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionEffectCompositionChanged': {'children': ('zipzi.modeling.deletion.DeletionEffectCompositionChanged.__repr__',
@@ -198,7 +199,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                                           'Affected Offscreen or Part whose '
                                                                           'compositing can change.')],
                                                               'kind': 'type',
-                                                              'signature': '(value: DeletionObject)'},
+                                                              'signature': '(*, value: DeletionObject)'},
  'zipzi.modeling.deletion.DeletionEffectCompositionChanged.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionEffectCompositionChanged.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionEffectContentChanged': {'children': ('zipzi.modeling.deletion.DeletionEffectContentChanged.__repr__',
@@ -213,7 +214,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                                       'Retained owner whose selected stable content '
                                                                       'identities disappear.')],
                                                           'kind': 'type',
-                                                          'signature': '(value: DeletionObject)'},
+                                                          'signature': '(*, value: DeletionObject)'},
  'zipzi.modeling.deletion.DeletionEffectContentChanged.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionEffectContentChanged.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionEffectDeformationChanged': {'children': ('zipzi.modeling.deletion.DeletionEffectDeformationChanged.__repr__',
@@ -228,7 +229,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                                           'Surviving object whose deformation is not '
                                                                           'fully preserved.')],
                                                               'kind': 'type',
-                                                              'signature': '(value: DeletionObject)'},
+                                                              'signature': '(*, value: DeletionObject)'},
  'zipzi.modeling.deletion.DeletionEffectDeformationChanged.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionEffectDeformationChanged.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionEffectDrawingGroupFlattened': {'children': ('zipzi.modeling.deletion.DeletionEffectDrawingGroupFlattened.__repr__',
@@ -256,7 +257,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                                              'Original composite whose group scope is '
                                                                              'lost or migrated.')],
                                                                  'kind': 'type',
-                                                                 'signature': '(group: DeletionObject, destination: '
+                                                                 'signature': '(*, group: DeletionObject, destination: '
                                                                               'DeletionObject, source_range: '
                                                                               'tuple[int, int], destination_range: '
                                                                               'tuple[int, int], dynamic_order: bool, '
@@ -275,7 +276,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                                    'Deleted connection whose seam or postprocessing '
                                                                    'contribution disappears.')],
                                                        'kind': 'type',
-                                                       'signature': '(value: DeletionObject)'},
+                                                       'signature': '(*, value: DeletionObject)'},
  'zipzi.modeling.deletion.DeletionEffectGlueRemoved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionEffectGlueRemoved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionEffectHitAreaRemoved': {'children': ('zipzi.modeling.deletion.DeletionEffectHitAreaRemoved.__repr__',
@@ -289,7 +290,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                           'fields': [('value',
                                                                       'Deleted model3 Hit Area registration.')],
                                                           'kind': 'type',
-                                                          'signature': '(value: DeletionObject)'},
+                                                          'signature': '(*, value: DeletionObject)'},
  'zipzi.modeling.deletion.DeletionEffectHitAreaRemoved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionEffectHitAreaRemoved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionEffectMaskChanged': {'children': ('zipzi.modeling.deletion.DeletionEffectMaskChanged.__repr__',
@@ -303,7 +304,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                                    'Retained Mask consumer whose clipping effect '
                                                                    'changes.')],
                                                        'kind': 'type',
-                                                       'signature': '(value: DeletionObject)'},
+                                                       'signature': '(*, value: DeletionObject)'},
  'zipzi.modeling.deletion.DeletionEffectMaskChanged.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionEffectMaskChanged.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionEffectMotionRegistrationMoved': {'children': ('zipzi.modeling.deletion.DeletionEffectMotionRegistrationMoved.__repr__',
@@ -323,8 +324,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                                                'is not deleted with its other '
                                                                                'entries.')],
                                                                    'kind': 'type',
-                                                                   'signature': '(registration: DeletionObject, group: '
-                                                                                'DeletionObject)'},
+                                                                   'signature': '(*, registration: DeletionObject, '
+                                                                                'group: DeletionObject)'},
  'zipzi.modeling.deletion.DeletionEffectMotionRegistrationMoved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionEffectMotionRegistrationMoved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionEffectOrganizationChanged': {'children': ('zipzi.modeling.deletion.DeletionEffectOrganizationChanged.__repr__',
@@ -339,7 +340,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                                            'Surviving member whose organization owner '
                                                                            'changes.')],
                                                                'kind': 'type',
-                                                               'signature': '(value: DeletionObject)'},
+                                                               'signature': '(*, value: DeletionObject)'},
  'zipzi.modeling.deletion.DeletionEffectOrganizationChanged.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionEffectOrganizationChanged.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionEffectParameterAnimationRemoved': {'children': ('zipzi.modeling.deletion.DeletionEffectParameterAnimationRemoved.__repr__',
@@ -356,7 +357,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                                                  'record; other tracks, events and '
                                                                                  'resource registrations remain.')],
                                                                      'kind': 'type',
-                                                                     'signature': '(value: DeletionObject)'},
+                                                                     'signature': '(*, value: DeletionObject)'},
  'zipzi.modeling.deletion.DeletionEffectParameterAnimationRemoved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionEffectParameterAnimationRemoved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionEffectParameterDimensionRemoved': {'children': ('zipzi.modeling.deletion.DeletionEffectParameterDimensionRemoved.__repr__',
@@ -388,10 +389,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                                                  'disables the ordinary target outside '
                                                                                  'the native grid.')],
                                                                      'kind': 'type',
-                                                                     'signature': '(object: DeletionObject, parameter: '
-                                                                                  'DeletionObject, value: float, '
-                                                                                  'effective_value: float, disabled: '
-                                                                                  'bool)'},
+                                                                     'signature': '(*, object: DeletionObject, '
+                                                                                  'parameter: DeletionObject, value: '
+                                                                                  'float, effective_value: float, '
+                                                                                  'disabled: bool)'},
  'zipzi.modeling.deletion.DeletionEffectParameterDimensionRemoved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionEffectParameterDimensionRemoved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionEffectPartAnimationRemoved': {'children': ('zipzi.modeling.deletion.DeletionEffectPartAnimationRemoved.__repr__',
@@ -406,7 +407,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                                             'Removed Part animation/Pose record; its '
                                                                             'container remains.')],
                                                                 'kind': 'type',
-                                                                'signature': '(value: DeletionObject)'},
+                                                                'signature': '(*, value: DeletionObject)'},
  'zipzi.modeling.deletion.DeletionEffectPartAnimationRemoved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionEffectPartAnimationRemoved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionEffectPartStateRemoved': {'children': ('zipzi.modeling.deletion.DeletionEffectPartStateRemoved.__repr__',
@@ -427,7 +428,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                                         'Whether the removed Part had parameter-driven '
                                                                         'drawing order.')],
                                                             'kind': 'type',
-                                                            'signature': '(part: DeletionObject, enabled: bool, '
+                                                            'signature': '(*, part: DeletionObject, enabled: bool, '
                                                                          'animated_order: bool)'},
  'zipzi.modeling.deletion.DeletionEffectPartStateRemoved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionEffectPartStateRemoved.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -446,7 +447,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                                              'Retained Physics setting group whose '
                                                                              'behavior changes.')],
                                                                  'kind': 'type',
-                                                                 'signature': '(object: DeletionObject, group: '
+                                                                 'signature': '(*, object: DeletionObject, group: '
                                                                               'DeletionObject)'},
  'zipzi.modeling.deletion.DeletionEffectPhysicsChannelRemoved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionEffectPhysicsChannelRemoved.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -468,7 +469,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                                         'Retained replacement resource; None means an '
                                                                         'explicit clear/unconfigured result.')],
                                                             'kind': 'type',
-                                                            'signature': '(object: DeletionObject, source: '
+                                                            'signature': '(*, object: DeletionObject, source: '
                                                                          'DeletionObject, replacement: DeletionObject '
                                                                          '| None = None)'},
  'zipzi.modeling.deletion.DeletionEffectResourceReplaced.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -488,7 +489,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                                            'Explicit channels not covered by the '
                                                                            'converter position guarantee.')],
                                                                'kind': 'type',
-                                                               'signature': '(object: DeletionObject, channels: '
+                                                               'signature': '(*, object: DeletionObject, channels: '
                                                                             'tuple[DeletionChannel, ...])'},
  'zipzi.modeling.deletion.DeletionEffectUnpreservedChannels.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionEffectUnpreservedChannels.summary': {'alias': 'zipzi.ApiDescription.summary'},

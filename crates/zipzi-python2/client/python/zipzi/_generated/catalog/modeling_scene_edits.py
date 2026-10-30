@@ -20,7 +20,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                            'slashes; absolute paths\n'
                                                            'and .. components are invalid.')],
                                                'kind': 'type',
-                                               'signature': '(id: str, path: str)'},
+                                               'signature': '(*, id: str, path: str)'},
  'zipzi.modeling.scene.AttachmentEditCreate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.AttachmentEditCreate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.AttachmentEditDelete': {'children': ('zipzi.modeling.scene.AttachmentEditDelete.__repr__',
@@ -34,7 +34,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                            'distinct from the exported\n'
                                                            'runtime_id.')],
                                                'kind': 'type',
-                                               'signature': '(id: str)'},
+                                               'signature': '(*, id: str)'},
  'zipzi.modeling.scene.AttachmentEditDelete.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.AttachmentEditDelete.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.AttachmentEditDeleteWithReplacement': {'children': ('zipzi.modeling.scene.AttachmentEditDeleteWithReplacement.__repr__',
@@ -55,7 +55,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                           'references; None explicitly removes those\n'
                                                                           'references.')],
                                                               'kind': 'type',
-                                                              'signature': '(id: str, replacement: str | None = None)'},
+                                                              'signature': '(*, id: str, replacement: str | None = '
+                                                                           'None)'},
  'zipzi.modeling.scene.AttachmentEditDeleteWithReplacement.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.AttachmentEditDeleteWithReplacement.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.AttachmentEditDuplicate': {'children': ('zipzi.modeling.scene.AttachmentEditDuplicate.__repr__',
@@ -75,7 +76,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                               'forward slashes; absolute paths\n'
                                                               'and .. components are invalid.')],
                                                   'kind': 'type',
-                                                  'signature': '(source: str, id: str, path: str)'},
+                                                  'signature': '(*, source: str, id: str, path: str)'},
  'zipzi.modeling.scene.AttachmentEditDuplicate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.AttachmentEditDuplicate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.AttachmentEditReorder': {'children': ('zipzi.modeling.scene.AttachmentEditReorder.__repr__',
@@ -93,7 +94,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                             'The anchor must belong to\n'
                                                             'the selected destination.')],
                                                 'kind': 'type',
-                                                'signature': '(ids: tuple[str, ...], before: str | None = None)'},
+                                                'signature': '(*, ids: tuple[str, ...], before: str | None = None)'},
  'zipzi.modeling.scene.AttachmentEditReorder.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.AttachmentEditReorder.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.AttachmentEditReplace': {'children': ('zipzi.modeling.scene.AttachmentEditReplace.__repr__',
@@ -110,7 +111,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                             'Complete package attachment record to replace; bytes may '
                                                             'be explicitly unavailable.')],
                                                 'kind': 'type',
-                                                'signature': '(expected: PackageAttachment, attachment: '
+                                                'signature': '(*, expected: PackageAttachment, attachment: '
                                                              'PackageAttachment)'},
  'zipzi.modeling.scene.AttachmentEditReplace.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.AttachmentEditReplace.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -127,8 +128,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                              'Resolved attachment identity or explicitly unresolved '
                                                              'package path.')],
                                                  'kind': 'type',
-                                                 'signature': '(registration: str, reference: AttachmentRef | None = '
-                                                              'None)'},
+                                                 'signature': '(*, registration: str, reference: AttachmentRef | None '
+                                                              '= None)'},
  'zipzi.modeling.scene.AttachmentEditSetSound.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.AttachmentEditSetSound.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.AttachmentEditSetUserData': {'children': ('zipzi.modeling.scene.AttachmentEditSetUserData.__repr__',
@@ -141,7 +142,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                 'Resolved attachment identity or explicitly unresolved '
                                                                 'package path.')],
                                                     'kind': 'type',
-                                                    'signature': '(reference: AttachmentRef | None = None)'},
+                                                    'signature': '(*, reference: AttachmentRef | None = None)'},
  'zipzi.modeling.scene.AttachmentEditSetUserData.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.AttachmentEditSetUserData.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OrganizationEdit': {'children': (),
@@ -165,7 +166,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                   'appends. The anchor must belong to\n'
                                                                   'the selected destination.')],
                                                       'kind': 'type',
-                                                      'signature': '(group: CdiParameterGroup, before: str | None = '
+                                                      'signature': '(*, group: CdiParameterGroup, before: str | None = '
                                                                    'None)'},
  'zipzi.modeling.scene.OrganizationEditCreateGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.OrganizationEditCreateGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -189,8 +190,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                       'None appends. The anchor must belong to\n'
                                                                       'the selected destination.')],
                                                           'kind': 'type',
-                                                          'signature': '(parameter: Parameter, group_id: str | None = '
-                                                                       'None, before: str | None = None)'},
+                                                          'signature': '(*, parameter: Parameter, group_id: str | None '
+                                                                       '= None, before: str | None = None)'},
  'zipzi.modeling.scene.OrganizationEditCreateParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.OrganizationEditCreateParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OrganizationEditCreatePart': {'children': ('zipzi.modeling.scene.OrganizationEditCreatePart.__repr__',
@@ -208,7 +209,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                  'appends. The anchor must belong to\n'
                                                                  'the selected destination.')],
                                                      'kind': 'type',
-                                                     'signature': '(part: Part, before: str | None = None)'},
+                                                     'signature': '(*, part: Part, before: str | None = None)'},
  'zipzi.modeling.scene.OrganizationEditCreatePart.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.OrganizationEditCreatePart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OrganizationEditDelete': {'children': ('zipzi.modeling.scene.OrganizationEditDelete.__repr__',
@@ -226,7 +227,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                              'removal or remapping is\n'
                                                              'requested.')],
                                                  'kind': 'type',
-                                                 'signature': '(ids: tuple[str, ...], policy: '
+                                                 'signature': '(*, ids: tuple[str, ...], policy: '
                                                               'OrganizationDeletePolicy)'},
  'zipzi.modeling.scene.OrganizationEditDelete.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.OrganizationEditDelete.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -249,7 +250,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                 'appends. The anchor must belong to\n'
                                                                 'the selected destination.')],
                                                     'kind': 'type',
-                                                    'signature': '(ids: tuple[str, ...], destination: '
+                                                    'signature': '(*, ids: tuple[str, ...], destination: '
                                                                  'OrganizationCollection, before: str | None = None)'},
  'zipzi.modeling.scene.OrganizationEditDuplicate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.OrganizationEditDuplicate.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -272,7 +273,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                            'The anchor must belong to\n'
                                                            'the selected destination.')],
                                                'kind': 'type',
-                                               'signature': '(ids: tuple[str, ...], destination: '
+                                               'signature': '(*, ids: tuple[str, ...], destination: '
                                                             'OrganizationCollection, before: str | None = None)'},
  'zipzi.modeling.scene.OrganizationEditMove.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.OrganizationEditMove.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -291,7 +292,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                  'Complete CDI parameter-group metadata record to '
                                                                  'create or replace.')],
                                                      'kind': 'type',
-                                                     'signature': '(expected: CdiParameterGroup, group: '
+                                                     'signature': '(*, expected: CdiParameterGroup, group: '
                                                                   'CdiParameterGroup)'},
  'zipzi.modeling.scene.OrganizationEditPatchGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.OrganizationEditPatchGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -311,8 +312,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                         'hierarchy. None selects the\n'
                                                                         'root/unassigned container.')],
                                                             'kind': 'type',
-                                                            'signature': '(parameter_id: str, group_id: str | None = '
-                                                                         'None)'},
+                                                            'signature': '(*, parameter_id: str, group_id: str | None '
+                                                                         '= None)'},
  'zipzi.modeling.scene.OrganizationEditSetParameterGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.OrganizationEditSetParameterGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.ReparentEdit': {'children': ('zipzi.modeling.scene.ReparentEdit.__repr__',
@@ -345,7 +346,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                    'Motion/Physics must first be resolved to parameters by the '
                                                    'caller.')],
                                        'kind': 'type',
-                                       'signature': '(sources: tuple[str, ...], parent_id: str, strategy: '
+                                       'signature': '(*, sources: tuple[str, ...], parent_id: str, strategy: '
                                                     'ReparentStrategy, placement: ReparentPlacement | None = None, '
                                                     'tolerance: float, relative_tolerance: float = 1e-06, context: '
                                                     'ReparentContext | None = None)'},
@@ -373,7 +374,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                       'operation; visible names and row numbers\n'
                                                                       'are not identities.')],
                                                           'kind': 'type',
-                                                          'signature': '(glue_id: str, ids: tuple[str, ...])'},
+                                                          'signature': '(*, glue_id: str, ids: tuple[str, ...])'},
  'zipzi.modeling.scene.SceneContentEditDeleteGluePairs.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditDeleteGluePairs.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentEditDeleteMeshVertices': {'children': ('zipzi.modeling.scene.SceneContentEditDeleteMeshVertices.__repr__',
@@ -395,8 +396,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                          'no implicit removal or remapping is\n'
                                                                          'requested.')],
                                                              'kind': 'type',
-                                                             'signature': '(mesh_id: str, vertices: tuple[int, ...], '
-                                                                          'policy: VertexDeletePolicy)'},
+                                                             'signature': '(*, mesh_id: str, vertices: tuple[int, '
+                                                                          '...], policy: VertexDeletePolicy)'},
  'zipzi.modeling.scene.SceneContentEditDeleteMeshVertices.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditDeleteMeshVertices.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentEditDeleteOffscreenKeyforms': {'children': ('zipzi.modeling.scene.SceneContentEditDeleteOffscreenKeyforms.__repr__',
@@ -421,8 +422,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                               'remapping is\n'
                                                                               'requested.')],
                                                                   'kind': 'type',
-                                                                  'signature': '(offscreen_id: str, slots: tuple[int, '
-                                                                               '...], policy: OffscreenDeletePolicy)'},
+                                                                  'signature': '(*, offscreen_id: str, slots: '
+                                                                               'tuple[int, ...], policy: '
+                                                                               'OffscreenDeletePolicy)'},
  'zipzi.modeling.scene.SceneContentEditDeleteOffscreenKeyforms.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditDeleteOffscreenKeyforms.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentEditDeleteTriangles': {'children': ('zipzi.modeling.scene.SceneContentEditDeleteTriangles.__repr__',
@@ -439,7 +441,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                       'Zero-based content-array positions selected by '
                                                                       'this operation.')],
                                                           'kind': 'type',
-                                                          'signature': '(mesh_id: str, slots: tuple[int, ...])'},
+                                                          'signature': '(*, mesh_id: str, slots: tuple[int, ...])'},
  'zipzi.modeling.scene.SceneContentEditDeleteTriangles.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditDeleteTriangles.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentEditDuplicateGluePairs': {'children': ('zipzi.modeling.scene.SceneContentEditDuplicateGluePairs.__repr__',
@@ -462,7 +464,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                          'None appends. The anchor must belong to\n'
                                                                          'the selected destination.')],
                                                              'kind': 'type',
-                                                             'signature': '(glue_id: str, ids: tuple[str, ...], '
+                                                             'signature': '(*, glue_id: str, ids: tuple[str, ...], '
                                                                           'before: str | None = None)'},
  'zipzi.modeling.scene.SceneContentEditDuplicateGluePairs.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditDuplicateGluePairs.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -490,7 +492,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                                  'belong to the selected '
                                                                                  'destination.')],
                                                                      'kind': 'type',
-                                                                     'signature': '(offscreen_id: str, slots: '
+                                                                     'signature': '(*, offscreen_id: str, slots: '
                                                                                   'tuple[int, ...], before: int | None '
                                                                                   '= None)'},
  'zipzi.modeling.scene.SceneContentEditDuplicateOffscreenKeyforms.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -515,7 +517,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                      'appends. The anchor must belong to\n'
                                                                      'the selected destination.')],
                                                          'kind': 'type',
-                                                         'signature': '(glue_id: str, pair: GlueVertexPair, before: '
+                                                         'signature': '(*, glue_id: str, pair: GlueVertexPair, before: '
                                                                       'str | None = None)'},
  'zipzi.modeling.scene.SceneContentEditInsertGluePair.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditInsertGluePair.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -539,7 +541,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                          'insert new vertices; None appends. This is\n'
                                                                          'not a position-array index.')],
                                                              'kind': 'type',
-                                                             'signature': '(mesh_id: str, vertices: '
+                                                             'signature': '(*, mesh_id: str, vertices: '
                                                                           'tuple[NewMeshVertex, ...], before: int | '
                                                                           'None = None)'},
  'zipzi.modeling.scene.SceneContentEditInsertMeshVertices.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -564,7 +566,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                              'anchor must\n'
                                                                              'belong to the selected destination.')],
                                                                  'kind': 'type',
-                                                                 'signature': '(offscreen_id: str, value: '
+                                                                 'signature': '(*, offscreen_id: str, value: '
                                                                               'OffscreenKeyform, before: int | None = '
                                                                               'None)'},
  'zipzi.modeling.scene.SceneContentEditInsertOffscreenKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -587,8 +589,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                      'insert; None appends. The anchor must\n'
                                                                      'belong to the selected destination.')],
                                                          'kind': 'type',
-                                                         'signature': '(mesh_id: str, vertices: tuple[int, int, int], '
-                                                                      'before: int | None = None)'},
+                                                         'signature': '(*, mesh_id: str, vertices: tuple[int, int, '
+                                                                      'int], before: int | None = None)'},
  'zipzi.modeling.scene.SceneContentEditInsertTriangle.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditInsertTriangle.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentEditMeshVertices': {'children': ('zipzi.modeling.scene.SceneContentEditMeshVertices.__repr__',
@@ -608,10 +610,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                    'Ordered content patches applied together by the '
                                                                    'native edit.')],
                                                        'kind': 'type',
-                                                       'signature': '(mesh_id: str, target: ShapeTarget = '
-                                                                    'field(default_factory=lambda: '
-                                                                    "read_ShapeTarget({'kind': 'base'})), updates: "
-                                                                    'tuple[VertexContentPatch, ...])'},
+                                                       'signature': '(*, mesh_id: str, target: ShapeTarget = '
+                                                                    '<factory>, updates: tuple[VertexContentPatch, '
+                                                                    '...])'},
  'zipzi.modeling.scene.SceneContentEditMeshVertices.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditMeshVertices.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentEditMoveGluePairs': {'children': ('zipzi.modeling.scene.SceneContentEditMoveGluePairs.__repr__',
@@ -634,8 +635,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                     'appends. The anchor must belong to\n'
                                                                     'the selected destination.')],
                                                         'kind': 'type',
-                                                        'signature': '(glue_id: str, ids: tuple[str, ...], before: str '
-                                                                     '| None = None)'},
+                                                        'signature': '(*, glue_id: str, ids: tuple[str, ...], before: '
+                                                                     'str | None = None)'},
  'zipzi.modeling.scene.SceneContentEditMoveGluePairs.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditMoveGluePairs.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentEditPatchGluePair': {'children': ('zipzi.modeling.scene.SceneContentEditPatchGluePair.__repr__',
@@ -654,7 +655,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                     'IDs belong to the two connected\n'
                                                                     'meshes.')],
                                                         'kind': 'type',
-                                                        'signature': '(glue_id: str, pair: GlueVertexPair)'},
+                                                        'signature': '(*, glue_id: str, pair: GlueVertexPair)'},
  'zipzi.modeling.scene.SceneContentEditPatchGluePair.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditPatchGluePair.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentEditPatchOffscreenKeyform': {'children': ('zipzi.modeling.scene.SceneContentEditPatchOffscreenKeyform.__repr__',
@@ -676,7 +677,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                             'Scalar value in the referenced parameter '
                                                                             'domain.')],
                                                                 'kind': 'type',
-                                                                'signature': '(offscreen_id: str, slot: int, value: '
+                                                                'signature': '(*, offscreen_id: str, slot: int, value: '
                                                                              'OffscreenKeyform)'},
  'zipzi.modeling.scene.SceneContentEditPatchOffscreenKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditPatchOffscreenKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -697,8 +698,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                     'Triangle corners as three stable vertex IDs; not '
                                                                     'position-array indices.')],
                                                         'kind': 'type',
-                                                        'signature': '(mesh_id: str, slot: int, vertices: tuple[int, '
-                                                                     'int, int])'},
+                                                        'signature': '(*, mesh_id: str, slot: int, vertices: '
+                                                                     'tuple[int, int, int])'},
  'zipzi.modeling.scene.SceneContentEditPatchTriangle.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditPatchTriangle.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentEditReorderMeshVertices': {'children': ('zipzi.modeling.scene.SceneContentEditReorderMeshVertices.__repr__',
@@ -717,7 +718,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                           'preserves identities and associated per-\n'
                                                                           'vertex payload.')],
                                                               'kind': 'type',
-                                                              'signature': '(mesh_id: str, order: tuple[int, ...])'},
+                                                              'signature': '(*, mesh_id: str, order: tuple[int, ...])'},
  'zipzi.modeling.scene.SceneContentEditReorderMeshVertices.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditReorderMeshVertices.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentEditReorderOffscreenKeyforms': {'children': ('zipzi.modeling.scene.SceneContentEditReorderOffscreenKeyforms.__repr__',
@@ -737,8 +738,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                                'remaps\n'
                                                                                'references consistently.')],
                                                                    'kind': 'type',
-                                                                   'signature': '(offscreen_id: str, order: tuple[int, '
-                                                                                '...])'},
+                                                                   'signature': '(*, offscreen_id: str, order: '
+                                                                                'tuple[int, ...])'},
  'zipzi.modeling.scene.SceneContentEditReorderOffscreenKeyforms.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditReorderOffscreenKeyforms.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentEditReplaceTriangles': {'children': ('zipzi.modeling.scene.SceneContentEditReplaceTriangles.__repr__',
@@ -757,7 +758,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                        'preserve winding and do not substitute\n'
                                                                        'position-array offsets.')],
                                                            'kind': 'type',
-                                                           'signature': '(mesh_id: str, triangles: tuple[tuple[int, '
+                                                           'signature': '(*, mesh_id: str, triangles: tuple[tuple[int, '
                                                                         'int, int], ...])'},
  'zipzi.modeling.scene.SceneContentEditReplaceTriangles.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditReplaceTriangles.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -780,8 +781,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                  'Whether to use the quad warp interpolation mode for '
                                                                  'the lattice.')],
                                                      'kind': 'type',
-                                                     'signature': '(transform_id: str, rows: int, columns: int, quad: '
-                                                                  'bool)'},
+                                                     'signature': '(*, transform_id: str, rows: int, columns: int, '
+                                                                  'quad: bool)'},
  'zipzi.modeling.scene.SceneContentEditResizeWarp.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditResizeWarp.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentEditSetOffscreenMapping': {'children': ('zipzi.modeling.scene.SceneContentEditSetOffscreenMapping.__repr__',
@@ -799,7 +800,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                           'Ordered content patches applied together by '
                                                                           'the native edit.')],
                                                               'kind': 'type',
-                                                              'signature': '(offscreen_id: str, updates: '
+                                                              'signature': '(*, offscreen_id: str, updates: '
                                                                            'tuple[OffscreenMappingPatch, ...])'},
  'zipzi.modeling.scene.SceneContentEditSetOffscreenMapping.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditSetOffscreenMapping.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -827,7 +828,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                         'None appends. The anchor must belong to\n'
                                                                         'the selected destination.')],
                                                             'kind': 'type',
-                                                            'signature': '(glue_id: str, destination: str, pairs: '
+                                                            'signature': '(*, glue_id: str, destination: str, pairs: '
                                                                          'tuple[GlueVertexPair, ...], before: str | '
                                                                          'None = None)'},
  'zipzi.modeling.scene.SceneContentEditTransferGluePairs.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -849,10 +850,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                  'Complete authoring Bezier controller; its baked '
                                                                  'lattice is updated by the native edit.')],
                                                      'kind': 'type',
-                                                     'signature': '(transform_id: str, target: ShapeTarget = '
-                                                                  'field(default_factory=lambda: '
-                                                                  "read_ShapeTarget({'kind': 'base'})), controller: "
-                                                                  'WarpBezier | None = None)'},
+                                                     'signature': '(*, transform_id: str, target: ShapeTarget = '
+                                                                  '<factory>, controller: WarpBezier | None = None)'},
  'zipzi.modeling.scene.SceneContentEditWarpBezier.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditWarpBezier.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentEditWarpPoints': {'children': ('zipzi.modeling.scene.SceneContentEditWarpPoints.__repr__',
@@ -875,11 +874,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                  'Explicitly remove the authoring Bezier controller '
                                                                  'when editing baked lattice points.')],
                                                      'kind': 'type',
-                                                     'signature': '(transform_id: str, target: ShapeTarget = '
-                                                                  'field(default_factory=lambda: '
-                                                                  "read_ShapeTarget({'kind': 'base'})), updates: "
-                                                                  'tuple[WarpPointPatch, ...], clear_bezier: bool = '
-                                                                  'False)'},
+                                                     'signature': '(*, transform_id: str, target: ShapeTarget = '
+                                                                  '<factory>, updates: tuple[WarpPointPatch, ...], '
+                                                                  'clear_bezier: bool = False)'},
  'zipzi.modeling.scene.SceneContentEditWarpPoints.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditWarpPoints.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneEdit': {'children': (),
@@ -921,9 +918,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                       '(`parent_id`).\n'
                                                       'Only Mesh/Warp/Rotation support this position; None appends.')],
                                           'kind': 'type',
-                                          'signature': '(id: str, name: str, object: SceneCreate, part_id: str | None '
-                                                       '= None, parent_id: str | None = None, before: str | None = '
-                                                       'None, deformation_before: str | None = None)'},
+                                          'signature': '(*, id: str, name: str, object: SceneCreate, part_id: str | '
+                                                       'None = None, parent_id: str | None = None, before: str | None '
+                                                       '= None, deformation_before: str | None = None)'},
  'zipzi.modeling.scene.SceneEditCreate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneEditCreate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneEditDelete': {'children': ('zipzi.modeling.scene.SceneEditDelete.__repr__',
@@ -941,9 +938,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                       'deformation descendants are\n'
                                                       'included.')],
                                           'kind': 'type',
-                                          'signature': '(ids: tuple[str, ...], scope: SceneCopyScope = '
-                                                       'field(default_factory=lambda: '
-                                                       "read_SceneCopyScope('selected')))"},
+                                          'signature': '(*, ids: tuple[str, ...], scope: SceneCopyScope = '
+                                                       'SceneCopyScope.SELECTED)'},
  'zipzi.modeling.scene.SceneEditDelete.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneEditDelete.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneEditDissolveDrawingGroup': {'children': ('zipzi.modeling.scene.SceneEditDissolveDrawingGroup.__repr__',
@@ -958,7 +954,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                     'Stable owner ID for the addressed drawing group, '
                                                                     'collection or reference selection.')],
                                                         'kind': 'type',
-                                                        'signature': '(owner: str)'},
+                                                        'signature': '(*, owner: str)'},
  'zipzi.modeling.scene.SceneEditDissolveDrawingGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneEditDissolveDrawingGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneEditDuplicate': {'children': ('zipzi.modeling.scene.SceneEditDuplicate.__repr__',
@@ -984,9 +980,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                          'The anchor must belong to\n'
                                                          'the selected destination.')],
                                              'kind': 'type',
-                                             'signature': '(ids: tuple[str, ...], scope: SceneCopyScope = '
-                                                          'field(default_factory=lambda: '
-                                                          "read_SceneCopyScope('selected')), destination: "
+                                             'signature': '(*, ids: tuple[str, ...], scope: SceneCopyScope = '
+                                                          'SceneCopyScope.SELECTED, destination: '
                                                           'OrganizationCollection | None = None, before: str | None = '
                                                           'None)'},
  'zipzi.modeling.scene.SceneEditDuplicate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -1008,7 +1003,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                      'selector; default Base edits the\n'
                                                                      'undeformed base shape.')],
                                                          'kind': 'type',
-                                                         'signature': '(source: str, target: str)'},
+                                                         'signature': '(*, source: str, target: str)'},
  'zipzi.modeling.scene.SceneEditDuplicateDrawingGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneEditDuplicateDrawingGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneEditEnsureDrawingGroup': {'children': ('zipzi.modeling.scene.SceneEditEnsureDrawingGroup.__repr__',
@@ -1029,7 +1024,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                   'appends. The anchor must belong to\n'
                                                                   'the selected destination.')],
                                                       'kind': 'type',
-                                                      'signature': '(owner: str, parent: str, before: str | None = '
+                                                      'signature': '(*, owner: str, parent: str, before: str | None = '
                                                                    'None)'},
  'zipzi.modeling.scene.SceneEditEnsureDrawingGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneEditEnsureDrawingGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -1052,8 +1047,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                     'anchor must belong to\n'
                                                     'the selected destination.')],
                                         'kind': 'type',
-                                        'signature': '(ids: tuple[str, ...], destination: SceneCollection, before: str '
-                                                     '| None = None)'},
+                                        'signature': '(*, ids: tuple[str, ...], destination: SceneCollection, before: '
+                                                     'str | None = None)'},
  'zipzi.modeling.scene.SceneEditMove.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneEditMove.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneEditPatch': {'children': ('zipzi.modeling.scene.SceneEditPatch.__repr__',
@@ -1075,7 +1070,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                      'Explicitly clear existing Glue vertex pairs when changing Glue '
                                                      'endpoints.')],
                                          'kind': 'type',
-                                         'signature': '(id: str, expected: SceneFieldValue, value: SceneFieldValue, '
+                                         'signature': '(*, id: str, expected: SceneFieldValue, value: SceneFieldValue, '
                                                       'clear_glue_pairs: bool = False)'},
  'zipzi.modeling.scene.SceneEditPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneEditPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -1088,7 +1083,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                             'fields': [('edit',
                                                         'Edit candidate handle; None selects formal document state.')],
                                             'kind': 'type',
-                                            'signature': '(edit: ReparentEdit)'},
+                                            'signature': '(*, edit: ReparentEdit)'},
  'zipzi.modeling.scene.SceneEditReparent.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneEditReparent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneEditSetDrawingRange': {'children': ('zipzi.modeling.scene.SceneEditSetDrawingRange.__repr__',
@@ -1108,7 +1103,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                'Inclusive lower and upper drawing-order bounds, in '
                                                                'that order.')],
                                                    'kind': 'type',
-                                                   'signature': '(owner: str, expected: tuple[int, int], range: '
+                                                   'signature': '(*, owner: str, expected: tuple[int, int], range: '
                                                                 'tuple[int, int])'},
  'zipzi.modeling.scene.SceneEditSetDrawingRange.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneEditSetDrawingRange.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -1130,7 +1125,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                  'Part-keyform-to-Offscreen-keyform mapping; entries '
                                                                  'are keyform slots, not object IDs.')],
                                                      'kind': 'type',
-                                                     'signature': '(id: str, part_id: str, part_keyform_indices: '
+                                                     'signature': '(*, id: str, part_id: str, part_keyform_indices: '
                                                                   'tuple[int, ...])'},
  'zipzi.modeling.scene.SceneEditTransferOffscreen.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneEditTransferOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'}}

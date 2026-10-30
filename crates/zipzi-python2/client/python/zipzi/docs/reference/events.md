@@ -95,10 +95,7 @@ Return the immutable metadata captured at subscribe/resync, without IO. Later po
 
 ## zipzi.events.RegistrySubscription.pending_request
 
-`() -> PendingRequest | None`
-
-Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
-
+Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 
 ## zipzi.events.RegistrySubscription.poll
 
@@ -141,44 +138,23 @@ Immutable typed value. See field semantics and the linked workflow.
 
 ## zipzi.events.SessionSubscription.cursor
 
-`() -> Cursor`
-
-Return this subscription's cached exact cursor without IO. Recover initial subscription before using it; cursors belong to one Runtime and registry/session stream.
-
+Alias of [zipzi.events.RegistrySubscription.cursor](events.md#zipzieventsregistrysubscriptioncursor).
 
 ## zipzi.events.SessionSubscription.initial
 
-`() -> T`
-
-Return the immutable metadata captured at subscribe/resync, without IO. Later poll calls advance the cursor but do not silently refresh this initial value.
-
+Alias of [zipzi.events.RegistrySubscription.initial](events.md#zipzieventsregistrysubscriptioninitial).
 
 ## zipzi.events.SessionSubscription.pending_request
 
-`() -> PendingRequest | None`
-
-Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
-
+Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 
 ## zipzi.events.SessionSubscription.poll
 
-`(*, limit: int=128) -> tuple[Event, ...]`
-
-Read up to limit events after this independent cursor, with limit in 1..256. Advance only after a complete valid page; gaps require explicit resync. Recover the original call after a lost response.
-
+Alias of [zipzi.events.RegistrySubscription.poll](events.md#zipzieventsregistrysubscriptionpoll).
 
 ## zipzi.events.SessionSubscription.resync
 
-`() -> T`
-
-Atomically recapture metadata and reset this subscriber's cached cursor.
-
-Returns the new initial Session/registry metadata after RESYNC_REQUIRED;
-it does not replay missed events or drain another subscriber. This is a
-synchronous host read under event/response budgets. Recover a lost reply
-through its original Call before polling again. No model write occurs.
-Example: initial = subscription.resync().
-
+Alias of [zipzi.events.RegistrySubscription.resync](events.md#zipzieventsregistrysubscriptionresync).
 
 ## zipzi.events.StateChanged
 

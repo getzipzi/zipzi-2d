@@ -46,7 +46,8 @@ class Schema(unittest.TestCase):
 
     def test_traversal_symlink_and_duplicate_paths_are_rejected(self):
         original = json.loads(self.index.read_text())
-        for relative in ('../outside.json', '/tmp/outside.json', 'types/../outside.json'):
+        for relative in ('../outside.json', '/tmp/outside.json', 'types/../outside.json',
+                         'types/..\\outside.json', 'types/mesh.json:stream.json'):
             index = json.loads(json.dumps(original))
             index['shards'][0]['path'] = relative
             self.write_index(index)

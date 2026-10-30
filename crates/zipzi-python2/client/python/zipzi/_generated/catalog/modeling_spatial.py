@@ -41,7 +41,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                     'Containing triangles; populated only when `details` was '
                                                     'requested.')],
                                         'kind': 'type',
-                                        'signature': '(mesh_id: str, name: str, part_path: tuple[str, ...], '
+                                        'signature': '(*, mesh_id: str, name: str, part_path: tuple[str, ...], '
                                                      'part_names: tuple[str, ...], enabled: bool, visible: bool, '
                                                      'opacity: float, render_order: int, triangles: tuple[TriangleHit, '
                                                      '...])'},
@@ -58,7 +58,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                      ('truncated',
                                                       'Whether any candidates were omitted by the limit.')],
                                           'kind': 'type',
-                                          'signature': '(hits: tuple[GeometryHit, ...], total: int, truncated: bool)'},
+                                          'signature': '(*, hits: tuple[GeometryHit, ...], total: int, truncated: '
+                                                       'bool)'},
  'zipzi.modeling.spatial.GeometryQuery.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.spatial.GeometryQuery.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.ObjectBounds': {'children': ('zipzi.modeling.spatial.ObjectBounds.__repr__',
@@ -82,8 +83,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                      '`filtered_out`, or\n'
                                                      '`no_evaluated_positions`.')],
                                          'kind': 'type',
-                                         'signature': '(mesh_ids: tuple[str, ...], model_bounds: tuple[float, float, '
-                                                      'float, float] | None = None, empty_reason: str | None = None)'},
+                                         'signature': '(*, mesh_ids: tuple[str, ...], model_bounds: tuple[float, '
+                                                      'float, float, float] | None = None, empty_reason: str | None = '
+                                                      'None)'},
  'zipzi.modeling.spatial.ObjectBounds.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.spatial.ObjectBounds.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.ObjectTarget': {'children': (),
@@ -100,7 +102,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                              'example': 'docs/recipes.py',
                                              'fields': [('value', 'Persistent authoring mesh UUID.')],
                                              'kind': 'type',
-                                             'signature': '(value: str)'},
+                                             'signature': '(*, value: str)'},
  'zipzi.modeling.spatial.ObjectTargetMesh.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.spatial.ObjectTargetMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.ObjectTargetPart': {'children': ('zipzi.modeling.spatial.ObjectTargetPart.__repr__',
@@ -111,7 +113,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                              'example': 'docs/recipes.py',
                                              'fields': [('value', 'Persistent Part UUID selecting descendant meshes.')],
                                              'kind': 'type',
-                                             'signature': '(value: str)'},
+                                             'signature': '(*, value: str)'},
  'zipzi.modeling.spatial.ObjectTargetPart.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.spatial.ObjectTargetPart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.SpatialFrame': {'children': ('zipzi.modeling.spatial.SpatialFrame.__repr__',
@@ -127,7 +129,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                      'Query results in input order, including repeated queries and '
                                                      'empty results.')],
                                          'kind': 'type',
-                                         'signature': '(parameters: _Mapping[str, float], results: '
+                                         'signature': '(*, parameters: _Mapping[str, float], results: '
                                                       'tuple[SpatialResult, ...])'},
  'zipzi.modeling.spatial.SpatialFrame.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.spatial.SpatialFrame.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -150,8 +152,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                            'Include disabled, hidden and zero-opacity geometry in the '
                                                            'union.')],
                                                'kind': 'type',
-                                               'signature': '(targets: tuple[ObjectTarget, ...], include_hidden: bool '
-                                                            '= False)'},
+                                               'signature': '(*, targets: tuple[ObjectTarget, ...], include_hidden: '
+                                                            'bool = False)'},
  'zipzi.modeling.spatial.SpatialQueryBounds.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.spatial.SpatialQueryBounds.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.SpatialQueryHits': {'children': ('zipzi.modeling.spatial.SpatialQueryHits.__repr__',
@@ -173,8 +175,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                          'Maximum mesh candidates retained in descending draw order; '
                                                          'total remains untruncated.')],
                                              'kind': 'type',
-                                             'signature': '(point: tuple[float, float], include_hidden: bool = False, '
-                                                          'details: bool = False, max_candidates: int = 32)'},
+                                             'signature': '(*, point: tuple[float, float], include_hidden: bool = '
+                                                          'False, details: bool = False, max_candidates: int = 32)'},
  'zipzi.modeling.spatial.SpatialQueryHits.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.spatial.SpatialQueryHits.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.SpatialResult': {'children': (),
@@ -193,7 +195,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                             'Bounds and resolved mesh IDs for the corresponding '
                                                             'selector request.')],
                                                 'kind': 'type',
-                                                'signature': '(value: ObjectBounds)'},
+                                                'signature': '(*, value: ObjectBounds)'},
  'zipzi.modeling.spatial.SpatialResultBounds.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.spatial.SpatialResultBounds.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.SpatialResultHits': {'children': ('zipzi.modeling.spatial.SpatialResultHits.__repr__',
@@ -206,7 +208,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                           'Geometric candidates in SDK order, including total and '
                                                           'truncation metadata.')],
                                               'kind': 'type',
-                                              'signature': '(value: GeometryQuery)'},
+                                              'signature': '(*, value: GeometryQuery)'},
  'zipzi.modeling.spatial.SpatialResultHits.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.spatial.SpatialResultHits.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.SpatialSamples': {'children': ('zipzi.modeling.spatial.SpatialSamples.__repr__',
@@ -227,7 +229,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                        'Effective poses and query results, aligned with requested '
                                                        'parameter maps.')],
                                            'kind': 'type',
-                                           'signature': '(version: _Version, requested: tuple[_Mapping[str, float], '
+                                           'signature': '(*, version: _Version, requested: tuple[_Mapping[str, float], '
                                                         '...], queries: tuple[SpatialQuery, ...], frames: '
                                                         'tuple[SpatialFrame, ...])'},
  'zipzi.modeling.spatial.SpatialSamples.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -249,7 +251,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                    ('uv',
                                                     "UV coordinate interpolated from the triangle's evaluated UVs.")],
                                         'kind': 'type',
-                                        'signature': '(triangle_index: int, vertex_indices: tuple[int, int, int], '
+                                        'signature': '(*, triangle_index: int, vertex_indices: tuple[int, int, int], '
                                                      'vertex_ids: tuple[int, int, int] | None = None, barycentric: '
                                                      'tuple[float, float, float], uv: tuple[float, float] | None = '
                                                      'None)'},

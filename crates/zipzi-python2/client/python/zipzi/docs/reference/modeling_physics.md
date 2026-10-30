@@ -12,7 +12,7 @@ Canonical physics modeling values.
 
 ## zipzi.modeling.physics.PhysicsAsset
 
-`(id: str, data: PhysicsDefinition, opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
+`(*, id: str, data: PhysicsDefinition, opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
 
 Immutable owned PhysicsAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -23,7 +23,7 @@ Immutable owned PhysicsAsset value. Construction owns declared collections; read
 
 ## zipzi.modeling.physics.PhysicsAssetProperty
 
-`(value: float | None = None)`
+`(*, value: float | None = None)`
 
 Immutable owned PhysicsAssetPropertyFps value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -31,11 +31,7 @@ Immutable owned PhysicsAssetPropertyFps value. Construction owns declared collec
 
 ## zipzi.modeling.physics.PhysicsAssetPropertyFps
 
-`(value: float | None = None)`
-
-Immutable owned PhysicsAssetPropertyFps value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `value`: Optional Physics fixed-step frequency; None follows the evaluation delta.
+Alias of [zipzi.modeling.physics.PhysicsAssetProperty](modeling_physics.md#zipzimodelingphysicsphysicsassetproperty).
 
 ## zipzi.modeling.physics.PhysicsAxis
 
@@ -60,7 +56,7 @@ Immutable owned PhysicsCollectionGroups value. Construction owns declared collec
 
 ## zipzi.modeling.physics.PhysicsCollectionInputs
 
-`(group_id: str)`
+`(*, group_id: str)`
 
 Immutable owned PhysicsCollectionInputs value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -68,7 +64,7 @@ Immutable owned PhysicsCollectionInputs value. Construction owns declared collec
 
 ## zipzi.modeling.physics.PhysicsCollectionNodes
 
-`(group_id: str)`
+`(*, group_id: str)`
 
 Immutable owned PhysicsCollectionNodes value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -76,7 +72,7 @@ Immutable owned PhysicsCollectionNodes value. Construction owns declared collect
 
 ## zipzi.modeling.physics.PhysicsCollectionOutputs
 
-`(group_id: str)`
+`(*, group_id: str)`
 
 Immutable owned PhysicsCollectionOutputs value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -84,7 +80,7 @@ Immutable owned PhysicsCollectionOutputs value. Construction owns declared colle
 
 ## zipzi.modeling.physics.PhysicsDefinition
 
-`(version: int, meta: PhysicsMeta, settings: tuple[PhysicsSetting, ...], extensions: _Mapping[str, ExtensionValue])`
+`(*, version: int, meta: PhysicsMeta, settings: tuple[PhysicsSetting, ...], extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned PhysicsDefinition value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -95,7 +91,7 @@ Immutable owned PhysicsDefinition value. Construction owns declared collections;
 
 ## zipzi.modeling.physics.PhysicsDictionaryEntry
 
-`(Id: str, Name: str, extensions: _Mapping[str, ExtensionValue])`
+`(*, Id: str, Name: str, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned PhysicsDictionaryEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -112,7 +108,7 @@ Typed public API entry.
 
 ## zipzi.modeling.physics.PhysicsEditCreateGroup
 
-`(asset_id: str, id: str, name: str, before: str | None = None)`
+`(*, asset_id: str, id: str, name: str, before: str | None = None)`
 
 Immutable owned PhysicsEditCreateGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -123,7 +119,7 @@ Immutable owned PhysicsEditCreateGroup value. Construction owns declared collect
 
 ## zipzi.modeling.physics.PhysicsEditCreateInput
 
-`(group_id: str, id: str, before: str | None = None)`
+`(*, group_id: str, id: str, before: str | None = None)`
 
 Immutable owned PhysicsEditCreateInput value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -133,7 +129,7 @@ Immutable owned PhysicsEditCreateInput value. Construction owns declared collect
 
 ## zipzi.modeling.physics.PhysicsEditCreateOutput
 
-`(group_id: str, id: str, node_id: str, before: str | None = None)`
+`(*, group_id: str, id: str, node_id: str, before: str | None = None)`
 
 Immutable owned PhysicsEditCreateOutput value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -144,7 +140,7 @@ Immutable owned PhysicsEditCreateOutput value. Construction owns declared collec
 
 ## zipzi.modeling.physics.PhysicsEditDelete
 
-`(ids: tuple[str, ...], node_replacements: _Mapping[str, str])`
+`(*, ids: tuple[str, ...], node_replacements: _Mapping[str, str])`
 
 Immutable owned PhysicsEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -153,7 +149,7 @@ Immutable owned PhysicsEditDelete value. Construction owns declared collections;
 
 ## zipzi.modeling.physics.PhysicsEditDuplicate
 
-`(ids: tuple[str, ...], group_id: str | None = None, before: str | None = None)`
+`(*, ids: tuple[str, ...], group_id: str | None = None, before: str | None = None)`
 
 Immutable owned PhysicsEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -163,7 +159,7 @@ Immutable owned PhysicsEditDuplicate value. Construction owns declared collectio
 
 ## zipzi.modeling.physics.PhysicsEditDuplicateNode
 
-`(id: str, before: str | None = None)`
+`(*, id: str, before: str | None = None)`
 
 Immutable owned PhysicsEditDuplicateNode value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -172,7 +168,7 @@ Immutable owned PhysicsEditDuplicateNode value. Construction owns declared colle
 
 ## zipzi.modeling.physics.PhysicsEditInsertNode
 
-`(group_id: str, node: PhysicsNode, before: str | None = None)`
+`(*, group_id: str, node: PhysicsNode, before: str | None = None)`
 
 Immutable owned PhysicsEditInsertNode value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -182,7 +178,7 @@ Immutable owned PhysicsEditInsertNode value. Construction owns declared collecti
 
 ## zipzi.modeling.physics.PhysicsEditMoveInputs
 
-`(ids: tuple[str, ...], group_id: str, before: str | None = None)`
+`(*, ids: tuple[str, ...], group_id: str, before: str | None = None)`
 
 Immutable owned PhysicsEditMoveInputs value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -192,7 +188,7 @@ Immutable owned PhysicsEditMoveInputs value. Construction owns declared collecti
 
 ## zipzi.modeling.physics.PhysicsEditMoveNode
 
-`(id: str, before: str | None = None)`
+`(*, id: str, before: str | None = None)`
 
 Immutable owned PhysicsEditMoveNode value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -201,7 +197,7 @@ Immutable owned PhysicsEditMoveNode value. Construction owns declared collection
 
 ## zipzi.modeling.physics.PhysicsEditMoveOutputs
 
-`(ids: tuple[str, ...], group_id: str, before: str | None = None, node_replacements: _Mapping[str, str])`
+`(*, ids: tuple[str, ...], group_id: str, before: str | None = None, node_replacements: _Mapping[str, str])`
 
 Immutable owned PhysicsEditMoveOutputs value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -212,7 +208,7 @@ Immutable owned PhysicsEditMoveOutputs value. Construction owns declared collect
 
 ## zipzi.modeling.physics.PhysicsEditPatch
 
-`(patch: PhysicsPatch)`
+`(*, patch: PhysicsPatch)`
 
 Immutable owned PhysicsEditPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -220,7 +216,7 @@ Immutable owned PhysicsEditPatch value. Construction owns declared collections; 
 
 ## zipzi.modeling.physics.PhysicsEditReorderGroups
 
-`(ids: tuple[str, ...], before: str | None = None)`
+`(*, ids: tuple[str, ...], before: str | None = None)`
 
 Immutable owned PhysicsEditReorderGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -229,7 +225,7 @@ Immutable owned PhysicsEditReorderGroups value. Construction owns declared colle
 
 ## zipzi.modeling.physics.PhysicsForces
 
-`(Gravity: PhysicsVector, Wind: PhysicsVector, extensions: _Mapping[str, ExtensionValue])`
+`(*, Gravity: PhysicsVector, Wind: PhysicsVector, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned PhysicsForces value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -239,7 +235,7 @@ Immutable owned PhysicsForces value. Construction owns declared collections; rea
 
 ## zipzi.modeling.physics.PhysicsInput
 
-`(id: str, source: PhysicsTarget, reference_extensions: _Mapping[str, ExtensionValue], weight: float, kind: PhysicsAxis, reflect: bool, extensions: _Mapping[str, ExtensionValue])`
+`(*, id: str, source: PhysicsTarget, reference_extensions: _Mapping[str, ExtensionValue], weight: float, kind: PhysicsAxis, reflect: bool, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned PhysicsInput value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -253,7 +249,7 @@ Immutable owned PhysicsInput value. Construction owns declared collections; read
 
 ## zipzi.modeling.physics.PhysicsMeta
 
-`(PhysicsSettingCount: int, TotalInputCount: int, TotalOutputCount: int, VertexCount: int, EffectiveForces: PhysicsForces, PhysicsDictionary: tuple[PhysicsDictionaryEntry, ...], Fps: float | None = None, extensions: _Mapping[str, ExtensionValue])`
+`(*, PhysicsSettingCount: int, TotalInputCount: int, TotalOutputCount: int, VertexCount: int, EffectiveForces: PhysicsForces, PhysicsDictionary: tuple[PhysicsDictionaryEntry, ...], Fps: float | None = None, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned PhysicsMeta value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -268,7 +264,7 @@ Immutable owned PhysicsMeta value. Construction owns declared collections; readi
 
 ## zipzi.modeling.physics.PhysicsNode
 
-`(id: str, position: PhysicsVector, mobility: float, delay: float, acceleration: float, radius: float, extensions: _Mapping[str, ExtensionValue])`
+`(*, id: str, position: PhysicsVector, mobility: float, delay: float, acceleration: float, radius: float, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned PhysicsNode value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -282,7 +278,7 @@ Immutable owned PhysicsNode value. Construction owns declared collections; readi
 
 ## zipzi.modeling.physics.PhysicsNormalization
 
-`(Position: PhysicsRange, Angle: PhysicsRange, extensions: _Mapping[str, ExtensionValue])`
+`(*, Position: PhysicsRange, Angle: PhysicsRange, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned PhysicsNormalization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -292,7 +288,7 @@ Immutable owned PhysicsNormalization value. Construction owns declared collectio
 
 ## zipzi.modeling.physics.PhysicsOutput
 
-`(id: str, destination: PhysicsTarget, reference_extensions: _Mapping[str, ExtensionValue], node_id: str, scale: float, weight: float, kind: PhysicsAxis, reflect: bool, extensions: _Mapping[str, ExtensionValue])`
+`(*, id: str, destination: PhysicsTarget, reference_extensions: _Mapping[str, ExtensionValue], node_id: str, scale: float, weight: float, kind: PhysicsAxis, reflect: bool, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned PhysicsOutput value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -308,7 +304,7 @@ Immutable owned PhysicsOutput value. Construction owns declared collections; rea
 
 ## zipzi.modeling.physics.PhysicsOutputSnapshot
 
-`(raw: float, before: float, after: float, clamped: bool)`
+`(*, raw: float, before: float, after: float, clamped: bool)`
 
 Immutable owned PhysicsOutputSnapshot value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -319,7 +315,7 @@ Immutable owned PhysicsOutputSnapshot value. Construction owns declared collecti
 
 ## zipzi.modeling.physics.PhysicsPatch
 
-`(asset_id: str, asset_changes: tuple[PhysicsAssetProperty, ...], rig: PhysicsRigPatch | None = None)`
+`(*, asset_id: str, asset_changes: tuple[PhysicsAssetProperty, ...], rig: PhysicsRigPatch | None = None)`
 
 Immutable owned PhysicsPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -336,7 +332,7 @@ Typed public API entry.
 
 ## zipzi.modeling.physics.PhysicsPropertyAngleNormalization
 
-`(value: PhysicsRange)`
+`(*, value: PhysicsRange)`
 
 Immutable owned PhysicsPropertyAngleNormalization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -344,7 +340,7 @@ Immutable owned PhysicsPropertyAngleNormalization value. Construction owns decla
 
 ## zipzi.modeling.physics.PhysicsPropertyInputAxis
 
-`(id: str, value: PhysicsAxis)`
+`(*, id: str, value: PhysicsAxis)`
 
 Immutable owned PhysicsPropertyInputAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -353,7 +349,7 @@ Immutable owned PhysicsPropertyInputAxis value. Construction owns declared colle
 
 ## zipzi.modeling.physics.PhysicsPropertyInputParameter
 
-`(id: str, target: PhysicsTarget)`
+`(*, id: str, target: PhysicsTarget)`
 
 Immutable owned PhysicsPropertyInputParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -362,7 +358,7 @@ Immutable owned PhysicsPropertyInputParameter value. Construction owns declared 
 
 ## zipzi.modeling.physics.PhysicsPropertyInputReflect
 
-`(id: str, value: bool)`
+`(*, id: str, value: bool)`
 
 Immutable owned PhysicsPropertyInputReflect value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -371,7 +367,7 @@ Immutable owned PhysicsPropertyInputReflect value. Construction owns declared co
 
 ## zipzi.modeling.physics.PhysicsPropertyInputWeight
 
-`(id: str, value: float)`
+`(*, id: str, value: float)`
 
 Immutable owned PhysicsPropertyInputWeight value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -380,7 +376,7 @@ Immutable owned PhysicsPropertyInputWeight value. Construction owns declared col
 
 ## zipzi.modeling.physics.PhysicsPropertyName
 
-`(value: str)`
+`(*, value: str)`
 
 Immutable owned PhysicsPropertyName value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -388,7 +384,7 @@ Immutable owned PhysicsPropertyName value. Construction owns declared collection
 
 ## zipzi.modeling.physics.PhysicsPropertyOutputAxis
 
-`(id: str, value: PhysicsAxis)`
+`(*, id: str, value: PhysicsAxis)`
 
 Immutable owned PhysicsPropertyOutputAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -397,7 +393,7 @@ Immutable owned PhysicsPropertyOutputAxis value. Construction owns declared coll
 
 ## zipzi.modeling.physics.PhysicsPropertyOutputNode
 
-`(id: str, node_id: str)`
+`(*, id: str, node_id: str)`
 
 Immutable owned PhysicsPropertyOutputNode value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -406,7 +402,7 @@ Immutable owned PhysicsPropertyOutputNode value. Construction owns declared coll
 
 ## zipzi.modeling.physics.PhysicsPropertyOutputParameter
 
-`(id: str, target: PhysicsTarget)`
+`(*, id: str, target: PhysicsTarget)`
 
 Immutable owned PhysicsPropertyOutputParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -415,7 +411,7 @@ Immutable owned PhysicsPropertyOutputParameter value. Construction owns declared
 
 ## zipzi.modeling.physics.PhysicsPropertyOutputReflect
 
-`(id: str, value: bool)`
+`(*, id: str, value: bool)`
 
 Immutable owned PhysicsPropertyOutputReflect value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -424,7 +420,7 @@ Immutable owned PhysicsPropertyOutputReflect value. Construction owns declared c
 
 ## zipzi.modeling.physics.PhysicsPropertyOutputScale
 
-`(id: str, value: float)`
+`(*, id: str, value: float)`
 
 Immutable owned PhysicsPropertyOutputScale value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -433,7 +429,7 @@ Immutable owned PhysicsPropertyOutputScale value. Construction owns declared col
 
 ## zipzi.modeling.physics.PhysicsPropertyOutputWeight
 
-`(id: str, value: float)`
+`(*, id: str, value: float)`
 
 Immutable owned PhysicsPropertyOutputWeight value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -442,7 +438,7 @@ Immutable owned PhysicsPropertyOutputWeight value. Construction owns declared co
 
 ## zipzi.modeling.physics.PhysicsPropertyPositionNormalization
 
-`(value: PhysicsRange)`
+`(*, value: PhysicsRange)`
 
 Immutable owned PhysicsPropertyPositionNormalization value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -450,7 +446,7 @@ Immutable owned PhysicsPropertyPositionNormalization value. Construction owns de
 
 ## zipzi.modeling.physics.PhysicsPropertyVertexAcceleration
 
-`(id: str, value: float)`
+`(*, id: str, value: float)`
 
 Immutable owned PhysicsPropertyVertexAcceleration value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -459,7 +455,7 @@ Immutable owned PhysicsPropertyVertexAcceleration value. Construction owns decla
 
 ## zipzi.modeling.physics.PhysicsPropertyVertexDelay
 
-`(id: str, value: float)`
+`(*, id: str, value: float)`
 
 Immutable owned PhysicsPropertyVertexDelay value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -468,7 +464,7 @@ Immutable owned PhysicsPropertyVertexDelay value. Construction owns declared col
 
 ## zipzi.modeling.physics.PhysicsPropertyVertexMobility
 
-`(id: str, value: float)`
+`(*, id: str, value: float)`
 
 Immutable owned PhysicsPropertyVertexMobility value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -477,7 +473,7 @@ Immutable owned PhysicsPropertyVertexMobility value. Construction owns declared 
 
 ## zipzi.modeling.physics.PhysicsPropertyVertexPosition
 
-`(id: str, value: PhysicsVector)`
+`(*, id: str, value: PhysicsVector)`
 
 Immutable owned PhysicsPropertyVertexPosition value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -486,7 +482,7 @@ Immutable owned PhysicsPropertyVertexPosition value. Construction owns declared 
 
 ## zipzi.modeling.physics.PhysicsPropertyVertexRadius
 
-`(id: str, value: float)`
+`(*, id: str, value: float)`
 
 Immutable owned PhysicsPropertyVertexRadius value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -495,7 +491,7 @@ Immutable owned PhysicsPropertyVertexRadius value. Construction owns declared co
 
 ## zipzi.modeling.physics.PhysicsRange
 
-`(Minimum: float, Default: float, Maximum: float)`
+`(*, Minimum: float, Default: float, Maximum: float)`
 
 Immutable owned PhysicsRange value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -505,7 +501,7 @@ Immutable owned PhysicsRange value. Construction owns declared collections; read
 
 ## zipzi.modeling.physics.PhysicsRigPatch
 
-`(group_id: str, changes: tuple[PhysicsProperty, ...])`
+`(*, group_id: str, changes: tuple[PhysicsProperty, ...])`
 
 Immutable owned PhysicsRigPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -514,7 +510,7 @@ Immutable owned PhysicsRigPatch value. Construction owns declared collections; r
 
 ## zipzi.modeling.physics.PhysicsRigSnapshot
 
-`(id: str, input_ids: tuple[str, ...], output_ids: tuple[str, ...], node_ids: tuple[str, ...], particles: tuple[tuple[float, float], ...], input_angle: float, inputs: tuple[float, ...], outputs: tuple[PhysicsOutputSnapshot | None, ...])`
+`(*, id: str, input_ids: tuple[str, ...], output_ids: tuple[str, ...], node_ids: tuple[str, ...], particles: tuple[tuple[float, float], ...], input_angle: float, inputs: tuple[float, ...], outputs: tuple[PhysicsOutputSnapshot | None, ...])`
 
 Immutable owned PhysicsRigSnapshot value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -531,7 +527,7 @@ gravity direction with rotating input axes.
 
 ## zipzi.modeling.physics.PhysicsSetting
 
-`(id: str, external_id: str, inputs: tuple[PhysicsInput, ...], outputs: tuple[PhysicsOutput, ...], vertices: tuple[PhysicsNode, ...], normalization: PhysicsNormalization, extensions: _Mapping[str, ExtensionValue])`
+`(*, id: str, external_id: str, inputs: tuple[PhysicsInput, ...], outputs: tuple[PhysicsOutput, ...], vertices: tuple[PhysicsNode, ...], normalization: PhysicsNormalization, extensions: _Mapping[str, ExtensionValue])`
 
 Immutable owned PhysicsSetting value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -552,7 +548,7 @@ Typed public API entry.
 
 ## zipzi.modeling.physics.PhysicsTargetResolved
 
-`(parameter_id: str)`
+`(*, parameter_id: str)`
 
 Immutable owned PhysicsTargetResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -560,7 +556,7 @@ Immutable owned PhysicsTargetResolved value. Construction owns declared collecti
 
 ## zipzi.modeling.physics.PhysicsTargetUnresolved
 
-`(runtime_id: str)`
+`(*, runtime_id: str)`
 
 Immutable owned PhysicsTargetUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -575,7 +571,7 @@ Immutable owned PhysicsTargetUnspecified value. Construction owns declared colle
 
 ## zipzi.modeling.physics.PhysicsVector
 
-`(X: float, Y: float)`
+`(*, X: float, Y: float)`
 
 Immutable owned PhysicsVector value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 

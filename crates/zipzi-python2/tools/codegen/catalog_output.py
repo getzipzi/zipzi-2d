@@ -10,7 +10,7 @@ SPLITS = {
 }
 
 
-def render(entries, contract, contract_hash, domains, common, package_version, source_sha, prefix, header):
+def render(entries, contract, contract_hash, domains, common, package_version, source_sha, prefix, header, projections=()):
     entry_index = {entry.path: entry for entry in entries}
     catalog = {entry.path: entry.row() for entry in entries}
     catalog['zipzi']['documentation'] += ' Package '+package_version+'; protocol '+contract['protocol']+'; client source SHA-256 '+source_sha+'.'
@@ -37,13 +37,6 @@ def render(entries, contract, contract_hash, domains, common, package_version, s
     pages = {name: [header.rstrip(), '# '+name.title()+' API', '',
                     'See [common behavior](common.md) for inherited owned-value methods.', '']
              for name in groups}
-    for path, row in sorted(catalog.items()):
-        if entry_index[path].inherited:
-            continue
-        page = pages[group(path)]
-        page.extend(['## '+path, '', '`'+row.get('signature', '')+'`', '', row.get('documentation', ''), ''])
-        page.extend('- `'+field+'`: '+text for field, text in row.get('fields', ()))
-        page.append('')
     reference = [header.rstrip(), '# Installed Python API reference', '',
                  'Browse the [workflow guide](guide.md) and [common behavior](reference/common.md).', '',
                  '## API domains', '']
@@ -55,8 +48,11 @@ def render(entries, contract, contract_hash, domains, common, package_version, s
 
     # Only combine entries with identical content and relative child navigation.
     canonical = {}
+    preferred = {item.canonical_path: 0 if item.projection_id=='canonical' else 1 for item in projections}
     shards = {name: {} for name in groups}
-    for path, row in sorted(catalog.items()):
+    # Choose reviewed implementation paths before aliases, independent of spelling.
+    for path in sorted(catalog, key=lambda path: (preferred.get(path,2), path)):
+        row = catalog[path]
         comparable = dict(row)
         comparable['children'] = tuple('@'+c[len(path):] if c.startswith(path+'.') else c for c in row['children'])
         identity = entry_index[path].identity
@@ -71,6 +67,20 @@ def render(entries, contract, contract_hash, domains, common, package_version, s
                 value.pop('documentation')
                 value['common'] = inherited
         shards[group(path)][path] = value
+
+    for path, row in sorted(catalog.items()):
+        if entry_index[path].inherited:
+            continue
+        page = pages[group(path)]
+        value = shards[group(path)][path]
+        page.extend(['## '+path, ''])
+        if 'alias' in value:
+            target = value['alias']
+            page.extend(['Alias of ['+target+']('+group(target)+'.md#'+target.lower().replace('.', '')+').', ''])
+            continue
+        page.extend(['`'+row.get('signature', '')+'`', '', row.get('documentation', ''), ''])
+        page.extend('- `'+field+'`: '+text for field, text in row.get('fields', ()))
+        page.append('')
 
     catalog_prefix = prefix+'_generated/catalog/'
     result = {
