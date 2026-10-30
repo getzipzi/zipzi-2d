@@ -3,6 +3,7 @@ import re
 import keyword
 import json
 from codegen.projections import NATIVE_ENTRYPOINTS
+from codegen import validation
 TARGETS=frozenset()
 
 def public_name(rust_name):
@@ -105,13 +106,7 @@ def render_modeling(contract, header, rust_header, resolve, domains):
         k=s['kind'];p=' '*indent
         if k=='sequence' and s['item']['kind']=='u8':return [p+f'if not isinstance({e}, bytes):',p+'    raise TypeError(\"Expected immutable bytes\")']
         if k=='shared':return check(s['item'],e,indent,d)
-        if k=='string':cond=f'not isinstance({e}, str)'
-        elif k=='bool':cond=f'type({e}) is not bool'
-        elif k in {'u8','u16','u32','u64','usize','i32','i64'}:
-            bits=dict(u8=8,u16=16,u32=32,u64=64,usize=64,i32=32,i64=64)[k];lo=-(1<<(bits-1)) if k.startswith('i') else 0;hi=(1<<(bits-1)) if k.startswith('i') else 1<<bits
-            cond=f'type({e}) is not int or not {lo} <= {e} < {hi}'
-        elif k in {'f32','f64'}:
-            cond=f'isinstance({e}, bool) or not isinstance({e}, (float, int)) or not math.isfinite({e})'+(f' or abs({e}) > 3.4028234663852886e38' if k=='f32' else '')
+        if k in validation.PRIMITIVES:return [p+f'_check_{k}({e})']
         elif k=='optional':return [p+f'if {e} is not None:']+check(s['item'],e,indent+4,d)
         elif k in {'sequence','array'}:
             v='v'+str(d);out=[p+f'if not isinstance({e}, tuple):',p+'    raise TypeError("Expected an immutable tuple")']
@@ -155,6 +150,7 @@ def render_modeling(contract, header, rust_header, resolve, domains):
         if k in {'string','bool'}:return ('string' if k=='string' else '_boolean')+'('+e+')'
         return 'read_'+nm(s)+'('+e+')'
     py=[header.rstrip(),'from __future__ import annotations','from dataclasses import dataclass, field','from enum import Enum','from collections.abc import Mapping','from types import MappingProxyType','from typing import ClassVar, TypeAlias, NamedTuple, cast','import math','from .._values import record, sequence, string, integer, number, Version','from .._extensions import ExtensionValue, freeze as _freeze_extension, validate as _validate_extension, encode as _encode_extension, read as _read_extension','','def _bytes(value: object) -> bytes:', '    return value if isinstance(value, bytes) else bytes(integer(v) for v in sequence(value))', '', 'def _boolean(value: object) -> bool:','    if type(value) is not bool: raise TypeError("Expected bool")','    return value','']
+    py.extend(validation.helpers())
     def record_class(n,fs,tag=None):
         if n in {'Vec2','PreciseVec2'}:
             py.extend(['class '+n+'(NamedTuple):', '    __module__ = \"zipzi.modeling\"']+[ '    '+pn(f)+': '+typ(f['shape']) for f in fs]+[''])

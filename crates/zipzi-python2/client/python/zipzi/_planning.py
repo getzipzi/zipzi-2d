@@ -1,7 +1,7 @@
 """Translate the public plannable operation subset into existing Runtime calls."""
 from __future__ import annotations
 from ._generated import scene as _scene_codec
-from ._generated import codecs as _modeling_codec
+from ._generated.codecs import commands as _modeling_codec
 from typing import TYPE_CHECKING
 from . import meshes, resources, ops
 from ._generated import plan_intents, planning

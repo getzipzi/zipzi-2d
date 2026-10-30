@@ -1,6 +1,7 @@
 """Typed spatial request/result projection; geometry is evaluated only by Rust."""
 from collections.abc import Sequence,Mapping
-from ._generated import values as m, codecs as _modeling_codec
+from ._generated import values as m
+from ._generated.codecs import spatial as _modeling_codec
 from ._values import Source,record
 from ._results import Snapshot
 from ._jobs import Job

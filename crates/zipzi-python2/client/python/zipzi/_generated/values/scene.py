@@ -15,19 +15,19 @@ from typing import ClassVar as _ClassVar
 from typing import TypeAlias
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from .project import CdiParameterGroup as CdiParameterGroup
-    from .commands import ConversionDomain as ConversionDomain
-    from .project import ExportSettings as ExportSettings
-    from .bindings import GlueBinding as GlueBinding
-    from .mesh import NewMeshVertex as NewMeshVertex
-    from .bindings import OffscreenKeyform as OffscreenKeyform
-    from .project import PackageAttachment as PackageAttachment
-    from .parameters import Parameter as Parameter
-    from .bindings import PartKeyformSlot as PartKeyformSlot
-    from .common import PreciseVec2 as PreciseVec2
-    from .common import Vec2 as Vec2
-    from .mesh import VertexContentPatch as VertexContentPatch
-    from .mesh import VertexDeletePolicy as VertexDeletePolicy
+    from .project import CdiParameterGroup
+    from .commands import ConversionDomain
+    from .project import ExportSettings
+    from .bindings import GlueBinding
+    from .mesh import NewMeshVertex
+    from .bindings import OffscreenKeyform
+    from .project import PackageAttachment
+    from .parameters import Parameter
+    from .bindings import PartKeyformSlot
+    from .common import PreciseVec2
+    from .common import Vec2
+    from .mesh import VertexContentPatch
+    from .mesh import VertexDeletePolicy
 
 def read_SceneCopyScope(value: object) -> SceneCopyScope:
     from ..codecs.scene import read_SceneCopyScope as decode

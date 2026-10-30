@@ -3,15 +3,15 @@ from __future__ import annotations
 from ..._values import sequence
 from ..._values import string
 from functools import cache
-from .support import Writer as Writer, _field as _field
+from .support import Writer, _field
 
 @cache
 def _dependencies__write_sceneedit():
-    from .scene import _write_organizationcollection as _write_organizationcollection
-    from .scene import _write_scenecollection as _write_scenecollection
-    from .scene import _write_scenecopyscope as _write_scenecopyscope
-    from .scene import _write_scenecreate as _write_scenecreate
-    from .scene import _write_scenefieldvalue as _write_scenefieldvalue
+    from .scene import _write_organizationcollection
+    from .scene import _write_scenecollection
+    from .scene import _write_scenecopyscope
+    from .scene import _write_scenecreate
+    from .scene import _write_scenefieldvalue
     return _write_organizationcollection, _write_scenecollection, _write_scenecopyscope, _write_scenecreate, _write_scenefieldvalue,
 
 def _write_sceneedit(value: object, w: Writer) -> None:
@@ -124,9 +124,9 @@ def _write_sceneedit(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__write_reparentedit():
-    from .scene import _write_reparentcontext as _write_reparentcontext
-    from .scene import _write_reparentplacement as _write_reparentplacement
-    from .scene import _write_reparentstrategy as _write_reparentstrategy
+    from .scene import _write_reparentcontext
+    from .scene import _write_reparentplacement
+    from .scene import _write_reparentstrategy
     return _write_reparentcontext, _write_reparentplacement, _write_reparentstrategy,
 
 def _write_reparentedit(value: object, w: Writer) -> None:
@@ -152,11 +152,11 @@ def _write_reparentedit(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__write_organizationedit():
-    from .project import _write_cdiparametergroup as _write_cdiparametergroup
-    from .scene import _write_organizationcollection as _write_organizationcollection
-    from .scene import _write_organizationdeletepolicy as _write_organizationdeletepolicy
-    from .parameters import _write_parameter as _write_parameter
-    from .scene import _write_part as _write_part
+    from .project import _write_cdiparametergroup
+    from .scene import _write_organizationcollection
+    from .scene import _write_organizationdeletepolicy
+    from .parameters import _write_parameter
+    from .scene import _write_part
     return _write_cdiparametergroup, _write_organizationcollection, _write_organizationdeletepolicy, _write_parameter, _write_part,
 
 def _write_organizationedit(value: object, w: Writer) -> None:
@@ -239,16 +239,16 @@ def _write_organizationedit(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__write_scenecontentedit():
-    from .scene import _write_gluevertexpair as _write_gluevertexpair
-    from .mesh import _write_newmeshvertex as _write_newmeshvertex
-    from .scene import _write_offscreendeletepolicy as _write_offscreendeletepolicy
-    from .bindings import _write_offscreenkeyform as _write_offscreenkeyform
-    from .scene import _write_offscreenmappingpatch as _write_offscreenmappingpatch
-    from .scene import _write_shapetarget as _write_shapetarget
-    from .mesh import _write_vertexcontentpatch as _write_vertexcontentpatch
-    from .mesh import _write_vertexdeletepolicy as _write_vertexdeletepolicy
-    from .scene import _write_warpbezier as _write_warpbezier
-    from .scene import _write_warppointpatch as _write_warppointpatch
+    from .scene import _write_gluevertexpair
+    from .mesh import _write_newmeshvertex
+    from .scene import _write_offscreendeletepolicy
+    from .bindings import _write_offscreenkeyform
+    from .scene import _write_offscreenmappingpatch
+    from .scene import _write_shapetarget
+    from .mesh import _write_vertexcontentpatch
+    from .mesh import _write_vertexdeletepolicy
+    from .scene import _write_warpbezier
+    from .scene import _write_warppointpatch
     return _write_gluevertexpair, _write_newmeshvertex, _write_offscreendeletepolicy, _write_offscreenkeyform, _write_offscreenmappingpatch, _write_shapetarget, _write_vertexcontentpatch, _write_vertexdeletepolicy, _write_warpbezier, _write_warppointpatch,
 
 def _write_scenecontentedit(value: object, w: Writer) -> None:
@@ -448,8 +448,8 @@ def _write_scenecontentedit(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__write_attachmentedit():
-    from .scene import _write_attachmentref as _write_attachmentref
-    from .project import _write_packageattachment as _write_packageattachment
+    from .scene import _write_attachmentref
+    from .project import _write_packageattachment
     return _write_attachmentref, _write_packageattachment,
 
 def _write_attachmentedit(value: object, w: Writer) -> None:
@@ -510,14 +510,14 @@ def _write_attachmentedit(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__write_sceneoperation():
-    from .scene import _write_gluepairspec as _write_gluepairspec
-    from .scene import _write_offscreenformspec as _write_offscreenformspec
-    from .parameters import _write_parametergroupcreatespec as _write_parametergroupcreatespec
-    from .scene import _write_partcreatespec as _write_partcreatespec
-    from .bindings import _write_scalarsample as _write_scalarsample
-    from .scene import _write_sceneplacement as _write_sceneplacement
-    from .mesh import _write_vertexpatchspec as _write_vertexpatchspec
-    from .mesh import _write_vertexweightspec as _write_vertexweightspec
+    from .scene import _write_gluepairspec
+    from .scene import _write_offscreenformspec
+    from .parameters import _write_parametergroupcreatespec
+    from .scene import _write_partcreatespec
+    from .bindings import _write_scalarsample
+    from .scene import _write_sceneplacement
+    from .mesh import _write_vertexpatchspec
+    from .mesh import _write_vertexweightspec
     return _write_gluepairspec, _write_offscreenformspec, _write_parametergroupcreatespec, _write_partcreatespec, _write_scalarsample, _write_sceneplacement, _write_vertexpatchspec, _write_vertexweightspec,
 
 def _write_sceneoperation(value: object, w: Writer) -> None:

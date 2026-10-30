@@ -7,80 +7,61 @@ from ..._values import number
 from ..._values import record
 from ..._values import sequence
 from ..._values import string
+from .._modeling_support import _check_f32
+from .._modeling_support import _check_string
 from collections.abc import Mapping
 from typing import cast
-import math
-from ..values import PoseAsset as PoseAsset, PoseCollection as PoseCollection, PoseCollectionEntries as PoseCollectionEntries, PoseCollectionGroups as PoseCollectionGroups, PoseCollectionLinks as PoseCollectionLinks, PoseEdit as PoseEdit, PoseEditCreate as PoseEditCreate, PoseEditCreateEntry as PoseEditCreateEntry, PoseEditCreateGroup as PoseEditCreateGroup, PoseEditCreateLink as PoseEditCreateLink, PoseEditDelete as PoseEditDelete, PoseEditDissolveGroup as PoseEditDissolveGroup, PoseEditDuplicate as PoseEditDuplicate, PoseEditMove as PoseEditMove, PoseEditPatch as PoseEditPatch, PoseEntry as PoseEntry, PoseFields as PoseFields, PoseFieldsAsset as PoseFieldsAsset, PoseFieldsEntry as PoseFieldsEntry, PoseFieldsGroup as PoseFieldsGroup, PoseFieldsLink as PoseFieldsLink, PoseGroup as PoseGroup, PoseLink as PoseLink, PosePartRef as PosePartRef, PosePartRefResolved as PosePartRefResolved, PosePartRefUnresolved as PosePartRefUnresolved, PosePartRefUnspecified as PosePartRefUnspecified
+from ..values import PoseAsset, PoseCollection, PoseCollectionEntries, PoseCollectionGroups, PoseCollectionLinks, PoseEdit, PoseEditCreate, PoseEditCreateEntry, PoseEditCreateGroup, PoseEditCreateLink, PoseEditDelete, PoseEditDissolveGroup, PoseEditDuplicate, PoseEditMove, PoseEditPatch, PoseEntry, PoseFields, PoseFieldsAsset, PoseFieldsEntry, PoseFieldsGroup, PoseFieldsLink, PoseGroup, PoseLink, PosePartRef, PosePartRefResolved, PosePartRefUnresolved, PosePartRefUnspecified
 
 def validate_PoseEdit(value: PoseEdit) -> None:
     if isinstance(value, PoseEditCreate):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
     elif isinstance(value, PoseEditCreateGroup):
-        if not isinstance(value.pose_id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.pose_id)
+        _check_string(value.id)
+        _check_string(value.name)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, PoseEditCreateEntry):
-        if not isinstance(value.group_id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.group_id)
+        _check_string(value.id)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, PoseEditCreateLink):
-        if not isinstance(value.entry_id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.entry_id)
+        _check_string(value.id)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, PoseEditPatch):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_PoseFields(value.expected)
         validate_PoseFields(value.fields)
     elif isinstance(value, PoseEditMove):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         validate_PoseCollection(value.destination)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, PoseEditDuplicate):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         validate_PoseCollection(value.destination)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, PoseEditDelete):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
     elif isinstance(value, PoseEditDissolveGroup):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.destination, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
+        _check_string(value.destination)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     else:
         raise TypeError("Expected PoseEdit")
 
@@ -141,11 +122,9 @@ def read_PoseEdit(value: object) -> PoseEdit:
 def validate_PoseFields(value: PoseFields) -> None:
     if isinstance(value, PoseFieldsAsset):
         if value.fade_in is not None:
-            if isinstance(value.fade_in, bool) or not isinstance(value.fade_in, (float, int)) or not math.isfinite(value.fade_in) or abs(value.fade_in) > 3.4028234663852886e38:
-                raise ValueError("Expected f32")
+            _check_f32(value.fade_in)
     elif isinstance(value, PoseFieldsGroup):
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.name)
     elif isinstance(value, PoseFieldsEntry):
         validate_PosePartRef(value.part)
     elif isinstance(value, PoseFieldsLink):
@@ -186,11 +165,9 @@ def validate_PosePartRef(value: PosePartRef) -> None:
     if isinstance(value, PosePartRefUnspecified):
         pass
     elif isinstance(value, PosePartRefResolved):
-        if not isinstance(value.part_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.part_id)
     elif isinstance(value, PosePartRefUnresolved):
-        if not isinstance(value.runtime_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.runtime_id)
     else:
         raise TypeError("Expected PosePartRef")
 
@@ -221,11 +198,9 @@ def validate_PoseCollection(value: PoseCollection) -> None:
     if isinstance(value, PoseCollectionGroups):
         pass
     elif isinstance(value, PoseCollectionEntries):
-        if not isinstance(value.group_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.group_id)
     elif isinstance(value, PoseCollectionLinks):
-        if not isinstance(value.entry_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.entry_id)
     else:
         raise TypeError("Expected PoseCollection")
 
@@ -255,31 +230,24 @@ def read_PoseCollection(value: object) -> PoseCollection:
 def validate_PoseAsset(value: PoseAsset) -> None:
     if not isinstance(value, PoseAsset):
         raise TypeError("Expected PoseAsset")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
     if value.file_type is not None:
-        if not isinstance(value.file_type, str):
-            raise ValueError("Expected string")
+        _check_string(value.file_type)
     if value.fade_in is not None:
-        if isinstance(value.fade_in, bool) or not isinstance(value.fade_in, (float, int)) or not math.isfinite(value.fade_in) or abs(value.fade_in) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.fade_in)
     if not isinstance(value.groups, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.groups:
         validate_PoseGroup(v0)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
     if value.opaque_source_ids is not None:
         for key0, v0 in value.opaque_source_ids.items():
-            if not isinstance(key0, str):
-                raise ValueError("Expected string")
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(key0)
+            _check_string(v0)
     if value.opaque_source_content_hash is not None:
-        if not isinstance(value.opaque_source_content_hash, str):
-            raise ValueError("Expected string")
+        _check_string(value.opaque_source_content_hash)
 
 def encode_PoseAsset(value: PoseAsset) -> object:
     return {'id': value.id, 'file_type': None if value.file_type is None else value.file_type, 'fade_in': None if value.fade_in is None else value.fade_in, 'groups': [encode_PoseGroup(v0) for v0 in value.groups], 'extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}, 'opaque_source_ids': None if value.opaque_source_ids is None else {str(key0): v0 for key0, v0 in value.opaque_source_ids.items()}, 'opaque_source_content_hash': None if value.opaque_source_content_hash is None else value.opaque_source_content_hash}
@@ -292,10 +260,8 @@ def read_PoseAsset(value: object) -> PoseAsset:
 def validate_PoseGroup(value: PoseGroup) -> None:
     if not isinstance(value, PoseGroup):
         raise TypeError("Expected PoseGroup")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.name, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
+    _check_string(value.name)
     if not isinstance(value.entries, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.entries:
@@ -312,8 +278,7 @@ def read_PoseGroup(value: object) -> PoseGroup:
 def validate_PoseEntry(value: PoseEntry) -> None:
     if not isinstance(value, PoseEntry):
         raise TypeError("Expected PoseEntry")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
     validate_PosePartRef(value.part)
     if value.links is not None:
         if not isinstance(value.links, tuple):
@@ -321,8 +286,7 @@ def validate_PoseEntry(value: PoseEntry) -> None:
         for v0 in value.links:
             validate_PoseLink(v0)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
 
 def encode_PoseEntry(value: PoseEntry) -> object:
@@ -336,8 +300,7 @@ def read_PoseEntry(value: object) -> PoseEntry:
 def validate_PoseLink(value: PoseLink) -> None:
     if not isinstance(value, PoseLink):
         raise TypeError("Expected PoseLink")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
     validate_PosePartRef(value.target)
 
 def encode_PoseLink(value: PoseLink) -> object:

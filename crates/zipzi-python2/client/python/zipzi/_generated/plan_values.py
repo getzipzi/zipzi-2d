@@ -3,7 +3,8 @@ from .._presentation import CompactValue
 from dataclasses import dataclass
 from .._values import Source, Version, integer, record, sequence, string
 
-from . import values as modeling, codecs as modeling_codec
+from . import values as modeling
+from .codecs import deletion as modeling_codec
 
 def _boolean(value: object) -> bool:
     if type(value) is not bool:

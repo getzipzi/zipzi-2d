@@ -2,5 +2,5 @@
 """Protocol and build metadata without help data."""
 CONTRACT = 'zipzi-runtime-v2'
 PACKAGE_VERSION = '0.1.0a3'
-CLIENT_SOURCE_SHA256 = '3d7ff6f94d97aa61ecefdbb24a1d488ea8564d3e8faa5ddae65e986f3137d632'
+CLIENT_SOURCE_SHA256 = '45e380e59a4bbc388c497128429cef09b5b5a4184f02ff85271dda263678b7bc'
 CONTRACT_SHA256 = '2df96ed0b34f86aad2379262e93c8a3a5a2f3874ef1ab4fcc5869c4f2f44e5fb'

@@ -4,20 +4,19 @@ from ..._values import integer
 from ..._values import record
 from ..._values import sequence
 from ..._values import string
+from .._modeling_support import _check_string
+from .._modeling_support import _check_u32
 from collections.abc import Mapping
 from typing import cast
-from ..values import ImageAsset as ImageAsset, ImageContent as ImageContent, ResourceEdit as ResourceEdit, ResourceEditCreate as ResourceEditCreate, ResourceEditDelete as ResourceEditDelete, ResourceEditDuplicate as ResourceEditDuplicate, ResourceEditPatchName as ResourceEditPatchName, ResourceEditReorder as ResourceEditReorder, ResourceEditSetContent as ResourceEditSetContent
+from ..values import ImageAsset, ImageContent, ResourceEdit, ResourceEditCreate, ResourceEditDelete, ResourceEditDuplicate, ResourceEditPatchName, ResourceEditReorder, ResourceEditSetContent
 
 def validate_ImageAsset(value: ImageAsset) -> None:
     if not isinstance(value, ImageAsset):
         raise TypeError("Expected ImageAsset")
     if value.unresolved_source is not None:
-        if not isinstance(value.unresolved_source, str):
-            raise ValueError("Expected string")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.name, str):
-        raise ValueError("Expected string")
+        _check_string(value.unresolved_source)
+    _check_string(value.id)
+    _check_string(value.name)
     if value.content is not None:
         validate_ImageContent(value.content)
 
@@ -32,14 +31,10 @@ def read_ImageAsset(value: object) -> ImageAsset:
 def validate_ImageContent(value: ImageContent) -> None:
     if not isinstance(value, ImageContent):
         raise TypeError("Expected ImageContent")
-    if not isinstance(value.source, str):
-        raise ValueError("Expected string")
-    if type(value.width) is not int or not 0 <= value.width < 4294967296:
-        raise ValueError("Expected u32")
-    if type(value.height) is not int or not 0 <= value.height < 4294967296:
-        raise ValueError("Expected u32")
-    if not isinstance(value.sha256, str):
-        raise ValueError("Expected string")
+    _check_string(value.source)
+    _check_u32(value.width)
+    _check_u32(value.height)
+    _check_string(value.sha256)
 
 def encode_ImageContent(value: ImageContent) -> object:
     return {'source': value.source, 'width': value.width, 'height': value.height, 'sha256': value.sha256}
@@ -50,25 +45,18 @@ def read_ImageContent(value: object) -> ImageContent:
     return ImageContent(source=string(r['source']), width=integer(r['width']), height=integer(r['height']), sha256=string(r['sha256']))
 
 def validate_ResourceEdit(value: ResourceEdit) -> None:
-    from .scene import validate_SceneReference as validate_SceneReference
+    from .scene import validate_SceneReference
     if isinstance(value, ResourceEditCreate):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
+        _check_string(value.name)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, ResourceEditPatchName):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.expected, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
+        _check_string(value.expected)
+        _check_string(value.name)
     elif isinstance(value, ResourceEditSetContent):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         if value.expected is not None:
             validate_ImageContent(value.expected)
         if value.content is not None:
@@ -77,31 +65,24 @@ def validate_ResourceEdit(value: ResourceEdit) -> None:
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, ResourceEditDuplicate):
-        if not isinstance(value.source, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.source)
+        _check_string(value.id)
+        _check_string(value.name)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, ResourceEditDelete):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         if value.replacement is not None:
             validate_SceneReference(value.replacement)
     else:
         raise TypeError("Expected ResourceEdit")
 
 def encode_ResourceEdit(value: ResourceEdit) -> object:
-    from .scene import encode_SceneReference as encode_SceneReference
+    from .scene import encode_SceneReference
     if isinstance(value, ResourceEditCreate):
         return {'operation': 'create', **cast(Mapping[str, object], {'id': value.id, 'name': value.name, 'before': None if value.before is None else value.before})}
     elif isinstance(value, ResourceEditPatchName):
@@ -117,7 +98,7 @@ def encode_ResourceEdit(value: ResourceEdit) -> object:
     raise TypeError("Expected ResourceEdit")
 
 def read_ResourceEdit(value: object) -> ResourceEdit:
-    from .scene import read_SceneReference as read_SceneReference
+    from .scene import read_SceneReference
     if isinstance(value, (ResourceEditCreate, ResourceEditPatchName, ResourceEditSetContent, ResourceEditReorder, ResourceEditDuplicate, ResourceEditDelete,)): return value
     r = record(value)
     tag = string(r['operation'])

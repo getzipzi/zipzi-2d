@@ -57,7 +57,7 @@ def render_resources(contract, Model, header, rust_header, resolve=lambda shape:
         if module=='resources':
             lines += ['def _bytes(value: object) -> bytes:', '    return value if isinstance(value, bytes) else bytes(integer(v) for v in sequence(value))','']
         else:
-            lines += ['from . import values as modeling, codecs as modeling_codec', '', 'def _boolean(value: object) -> bool:', '    if type(value) is not bool:', '        raise TypeError("Expected a boolean")','    return value','']
+            lines += ['from . import values as modeling', 'from .codecs import deletion as modeling_codec', '', 'def _boolean(value: object) -> bool:', '    if type(value) is not bool:', '        raise TypeError("Expected a boolean")','    return value','']
         for s in m.records:
             b=m.binding(s)
             if b['module']!=module: continue

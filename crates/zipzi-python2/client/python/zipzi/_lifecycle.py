@@ -1,5 +1,5 @@
 """Handwritten ownership/known-state wrappers. Runtime remains authoritative."""
-from ._generated import codecs as _modeling_codec
+from ._generated.codecs import commands as _command_codec, project as _project_codec, queries as _query_codec
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TypeVar, overload
@@ -202,7 +202,7 @@ class Session:
 
     def capabilities(self, query: modeling.queries.CollectionQuery) -> Snapshot[modeling.addressing.Capabilities]:
         'Query selected collection capabilities at the captured formal Source. Results explain available/unavailable/unsupported states and do not reserve future admission.'
-        _modeling_codec.validate_CollectionQuery(query)
+        _query_codec.validate_CollectionQuery(query)
         return known(lambda: queries.capabilities(self._backend.collection_capabilities(self._token, query, self)),
             lambda: queries.capabilities(self._backend.recover(self)))
 
@@ -245,9 +245,9 @@ class Project:
         self._session = session
     def run(self, request:modeling.project.ProjectRequest)->Job[modeling.project.ProjectReport]:
         'Submit one typed ProjectRequest and return Job[ProjectReport]. Input selects explicit format/IO policy; losses and notices belong to the report. Wait and verify before claiming publication.'
-        _modeling_codec.validate_ProjectRequest(request)
+        _project_codec.validate_ProjectRequest(request)
         s=self._session
-        return Job[modeling.project.ProjectReport]._start(s._backend,lambda owner:s._backend.project(s._token,request,owner),"project",lambda raw:_modeling_codec.read_ProjectReport(record(raw)["report"]))
+        return Job[modeling.project.ProjectReport]._start(s._backend,lambda owner:s._backend.project(s._token,request,owner),"project",lambda raw:_project_codec.read_ProjectReport(record(raw)["report"]))
     def diagnose(self)->Job[modeling.project.ProjectReport]:
         'Submit SDK project diagnostics without publishing edited model content. Returns Job[ProjectReport] with owned diagnostics; wait releases the result slot.'
         return self.run(modeling.project.ProjectRequestDiagnose())
@@ -525,6 +525,6 @@ def _plan_job(backend: Backend, session: object, edit: object | None,
               operation: ModelingPlanOperation) -> Job[plans.Plan]:
     if not isinstance(operation, MODELING_PLAN_TYPES):
         raise TypeError("This operation is not registered for asynchronous planning")
-    _modeling_codec.validate_ModelingCommand(operation)
+    _command_codec.validate_ModelingCommand(operation)
     return Job[plans.Plan]._start(backend, lambda owner: backend.modeling_plan_job(session, edit, operation, owner),
         "planned", lambda raw: plans.Plan(backend)._load(raw))

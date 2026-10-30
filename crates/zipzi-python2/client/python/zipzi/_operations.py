@@ -1,6 +1,6 @@
 """Internal typed wire projection; public constructors live in domain modules."""
 from ._generated import scene as _scene_codec
-from ._generated import codecs as _modeling_codec
+from ._generated.codecs import commands as _modeling_codec
 from ._generated.values.commands import OPERATION_TYPES as _MODELING_OPERATION_TYPES
 from typing import TypeAlias
 from . import meshes, parameters, bindings, resources

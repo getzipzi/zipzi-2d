@@ -17,11 +17,11 @@ from typing import ClassVar as _ClassVar
 from typing import TypeAlias
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from .scene import AttachmentRef as AttachmentRef
-    from .scene import Canvas as Canvas
-    from .scene import ModelSetup as ModelSetup
-    from .addressing import ReferenceEntryCdiParameterRef as ReferenceEntryCdiParameterRef
-    from .addressing import ReferenceEntryModelTargetRef as ReferenceEntryModelTargetRef
+    from .scene import AttachmentRef
+    from .scene import Canvas
+    from .scene import ModelSetup
+    from .addressing import ReferenceEntryCdiParameterRef
+    from .addressing import ReferenceEntryModelTargetRef
 
 def read_ObjectEditorState(value: object) -> ObjectEditorState:
     from ..codecs.project import read_ObjectEditorState as decode

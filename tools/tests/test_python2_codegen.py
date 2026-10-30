@@ -216,10 +216,29 @@ class Python2Codegen(unittest.TestCase):
                         and isinstance(value.value,ast.Name) and value.value.id=='self'):
                     self.assertNotEqual(name.value,value.attr)
 
+    def test_private_codecs_have_domain_imports_without_duplicate_export_layers(self):
+        output=render_fixture(self.contract())
+        root=ast.parse(output['client/python/zipzi/_generated/codecs/__init__.py'])
+        imports=[n for n in root.body if isinstance(n,(ast.Import,ast.ImportFrom))]
+        self.assertTrue(imports)
+        for node in imports:
+            self.assertIsInstance(node,ast.ImportFrom)
+            self.assertIsNone(node.module)
+            for alias in node.names:
+                self.assertIn('client/python/zipzi/_generated/codecs/'+alias.name+'.py',output)
+        for path,source in output.items():
+            if not path.endswith('.py') or path.endswith('/__init__.py'):continue
+            if not any('/_generated/'+domain+'/' in path for domain in ('codecs','values','binary')):continue
+            for node in ast.walk(ast.parse(source)):
+                if not isinstance(node,(ast.Import,ast.ImportFrom)):continue
+                for alias in node.names:
+                    self.assertNotEqual(alias.name,alias.asname,(path,node.lineno))
+
     def test_flattened_physics_extensions_roundtrip_and_cannot_shadow_fields(self):
         import sys
         with patch.object(sys, 'path', [str(PACKAGE / 'client/python'), *sys.path]):
-            from zipzi._generated import values, codecs as codec
+            from zipzi._generated import values
+            from zipzi._generated.codecs import physics as codec
             domain = values.PhysicsRange(Minimum=-1., Default=0., Maximum=1.)
             nested = {'enabled': True, 'levels': [1, 2]}
             value = values.PhysicsNormalization(Position=domain, Angle=domain,

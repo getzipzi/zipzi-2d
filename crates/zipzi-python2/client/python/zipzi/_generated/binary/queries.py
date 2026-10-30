@@ -2,36 +2,36 @@
 from __future__ import annotations
 from .. import values as m
 from functools import cache
-from .support import OUTPUT_SIGNATURE as OUTPUT_SIGNATURE, Reader as Reader
+from .support import OUTPUT_SIGNATURE, Reader
 
 @cache
 def _dependencies__read_ownedmodelingrecords():
-    from .bindings import _read_blendshapebinding as _read_blendshapebinding
-    from .bindings import _read_blendshapeconstraint as _read_blendshapeconstraint
-    from .bindings import _read_blendshapekeytable as _read_blendshapekeytable
-    from .project import _read_cdiparametergroup as _read_cdiparametergroup
-    from .project import _read_displayinfo as _read_displayinfo
-    from .scene import _read_drawordergroup as _read_drawordergroup
-    from .project import _read_editorstate as _read_editorstate
-    from .expression import _read_expressionasset as _read_expressionasset
-    from .scene import _read_glue as _read_glue
-    from .scene import _read_hierarchyorder as _read_hierarchyorder
-    from .resources import _read_imageasset as _read_imageasset
-    from .mesh import _read_mesh as _read_mesh
-    from .bindings import _read_meshbinding as _read_meshbinding
-    from .project import _read_model3settings as _read_model3settings
-    from .scene import _read_modelsetup as _read_modelsetup
-    from .motion import _read_motionclip as _read_motionclip
-    from .motion import _read_motiongroup as _read_motiongroup
-    from .motion import _read_motionregistration as _read_motionregistration
-    from .scene import _read_offscreen as _read_offscreen
-    from .project import _read_packageattachment as _read_packageattachment
-    from .parameters import _read_parameter as _read_parameter
-    from .scene import _read_part as _read_part
-    from .physics import _read_physicsasset as _read_physicsasset
-    from .pose import _read_poseasset as _read_poseasset
-    from .bindings import _read_scenebinding as _read_scenebinding
-    from .scene import _read_transform as _read_transform
+    from .bindings import _read_blendshapebinding
+    from .bindings import _read_blendshapeconstraint
+    from .bindings import _read_blendshapekeytable
+    from .project import _read_cdiparametergroup
+    from .project import _read_displayinfo
+    from .scene import _read_drawordergroup
+    from .project import _read_editorstate
+    from .expression import _read_expressionasset
+    from .scene import _read_glue
+    from .scene import _read_hierarchyorder
+    from .resources import _read_imageasset
+    from .mesh import _read_mesh
+    from .bindings import _read_meshbinding
+    from .project import _read_model3settings
+    from .scene import _read_modelsetup
+    from .motion import _read_motionclip
+    from .motion import _read_motiongroup
+    from .motion import _read_motionregistration
+    from .scene import _read_offscreen
+    from .project import _read_packageattachment
+    from .parameters import _read_parameter
+    from .scene import _read_part
+    from .physics import _read_physicsasset
+    from .pose import _read_poseasset
+    from .bindings import _read_scenebinding
+    from .scene import _read_transform
     return _read_blendshapebinding, _read_blendshapeconstraint, _read_blendshapekeytable, _read_cdiparametergroup, _read_displayinfo, _read_drawordergroup, _read_editorstate, _read_expressionasset, _read_glue, _read_hierarchyorder, _read_imageasset, _read_mesh, _read_meshbinding, _read_model3settings, _read_modelsetup, _read_motionclip, _read_motiongroup, _read_motionregistration, _read_offscreen, _read_packageattachment, _read_parameter, _read_part, _read_physicsasset, _read_poseasset, _read_scenebinding, _read_transform,
 
 def _read_ownedmodelingrecords(r: Reader) -> m.OwnedModelingRecords:

@@ -12,8 +12,8 @@ from typing import ClassVar as _ClassVar
 from typing import TypeAlias
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from .scene import AttachmentRef as AttachmentRef
-    from .physics import PhysicsRigSnapshot as PhysicsRigSnapshot
+    from .scene import AttachmentRef
+    from .physics import PhysicsRigSnapshot
 
 def read_PhysicsRigSnapshot(value: object) -> PhysicsRigSnapshot:
     from ..codecs.physics import read_PhysicsRigSnapshot as decode

@@ -194,7 +194,7 @@ def render_dtos(contract, header, resolve=lambda shape: shape):
             n=name(s)
             if n in {'Point','Bounds'}:continue
             if domain=='sampling' and n in {'MeshQuality','TriangleQuality','TextureCoverage'}:
-                lines += ['from .values import '+n+' as '+n, 'from .codecs import read_'+n+' as read_'+n, '']
+                lines += ['from .values import '+n+' as '+n, 'from .codecs.'+OWNERS[s['name']]+' import read_'+n+' as read_'+n, '']
                 continue
             if n=='ObjectKind':
                 tags=[v['name'] for v in variants(s)]
@@ -279,6 +279,6 @@ def render_dtos(contract, header, resolve=lambda shape: shape):
     # Public planning is a subset of the same Runtime commands, derived from the SDK intent registration.
     vs=resolve(contract['planning'])['variants'];classes=['m.ModelingCommand'+v['rust_name'] for v in vs]
     tag,content=resolve(contract['planning'])['tag'],resolve(contract['planning'])['content']
-    planning=[header.rstrip(),'from . import values as m, codecs','from .._values import record','', 'ModelingPlanOperation = '+' | '.join(classes),'MODELING_PLAN_TYPES = ('+', '.join(classes)+',)','', 'def encode_modeling(value: ModelingPlanOperation) -> dict[str, object]:','    raw = record(codecs.encode_ModelingCommand(value))','    return {'+repr(tag)+': raw["op"], '+repr(content)+': raw["intent"]}','']
+    planning=[header.rstrip(),'from . import values as m','from .codecs.commands import encode_ModelingCommand','from .._values import record','', 'ModelingPlanOperation = '+' | '.join(classes),'MODELING_PLAN_TYPES = ('+', '.join(classes)+',)','', 'def encode_modeling(value: ModelingPlanOperation) -> dict[str, object]:','    raw = record(encode_ModelingCommand(value))','    return {'+repr(tag)+': raw["op"], '+repr(content)+': raw["intent"]}','']
     output['client/python/zipzi/_generated/planning.py']='\n'.join(planning)
     return output

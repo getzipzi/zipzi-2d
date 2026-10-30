@@ -5,94 +5,75 @@ from ..._values import record
 from ..._values import sequence
 from ..._values import string
 from .._modeling_support import _boolean
+from .._modeling_support import _check_bool
+from .._modeling_support import _check_i32
+from .._modeling_support import _check_string
 from collections.abc import Mapping
 from collections.abc import Mapping as _Mapping
 from typing import cast
-from ..values import AddressPatch as AddressPatch, AddressPatchAttachmentPath as AddressPatchAttachmentPath, AddressPatchBinding as AddressPatchBinding, AddressPatchContent as AddressPatchContent, AddressPatchDocument as AddressPatchDocument, AddressPatchDrawingRange as AddressPatchDrawingRange, AddressPatchExpressionEntry as AddressPatchExpressionEntry, AddressPatchMotionRegistration as AddressPatchMotionRegistration, AddressPatchOrganization as AddressPatchOrganization, AddressPatchPhysics as AddressPatchPhysics, AddressPatchPose as AddressPatchPose, AddressPatchReference as AddressPatchReference, AddressPatchResourceName as AddressPatchResourceName, AddressPatchScene as AddressPatchScene, AddressPatchSelection as AddressPatchSelection, AddressSelector as AddressSelector, AddressSelectorAttachmentPath as AddressSelectorAttachmentPath, AddressSelectorBinding as AddressSelectorBinding, AddressSelectorContent as AddressSelectorContent, AddressSelectorDocument as AddressSelectorDocument, AddressSelectorDrawingGroup as AddressSelectorDrawingGroup, AddressSelectorExpressionEntry as AddressSelectorExpressionEntry, AddressSelectorMotionRegistration as AddressSelectorMotionRegistration, AddressSelectorOrganization as AddressSelectorOrganization, AddressSelectorPhysics as AddressSelectorPhysics, AddressSelectorPose as AddressSelectorPose, AddressSelectorReference as AddressSelectorReference, AddressSelectorResourceName as AddressSelectorResourceName, AddressSelectorScene as AddressSelectorScene, AddressSelectorSelection as AddressSelectorSelection, AttachmentCapabilities as AttachmentCapabilities, BindingCapabilities as BindingCapabilities, Capabilities as Capabilities, CapabilitiesAttachment as CapabilitiesAttachment, CapabilitiesBinding as CapabilitiesBinding, CapabilitiesCollection as CapabilitiesCollection, CapabilitiesContent as CapabilitiesContent, CapabilitiesDocument as CapabilitiesDocument, CapabilitiesExpression as CapabilitiesExpression, CapabilitiesMotion as CapabilitiesMotion, CapabilitiesOrganization as CapabilitiesOrganization, CapabilitiesPhysics as CapabilitiesPhysics, CapabilitiesPose as CapabilitiesPose, CapabilitiesReferences as CapabilitiesReferences, CapabilitiesResource as CapabilitiesResource, CapabilitiesScene as CapabilitiesScene, CapabilityDomain as CapabilityDomain, CapabilityState as CapabilityState, CapabilityStateAvailable as CapabilityStateAvailable, CapabilityStateUnavailable as CapabilityStateUnavailable, CapabilityStateUnsupported as CapabilityStateUnsupported, CollectionCapabilities as CollectionCapabilities, ExpressionCapabilities as ExpressionCapabilities, MotionCapabilities as MotionCapabilities, ObjectKind as ObjectKind, OrganizationCapabilities as OrganizationCapabilities, PhysicsCapabilities as PhysicsCapabilities, PoseCapabilities as PoseCapabilities, ReferenceCapabilities as ReferenceCapabilities, ReferenceCollection as ReferenceCollection, ReferenceCollectionCdiCombinedMembers as ReferenceCollectionCdiCombinedMembers, ReferenceCollectionCdiCombinedSets as ReferenceCollectionCdiCombinedSets, ReferenceCollectionModelHitAreas as ReferenceCollectionModelHitAreas, ReferenceCollectionModelParameterGroups as ReferenceCollectionModelParameterGroups, ReferenceCollectionModelParameterMembers as ReferenceCollectionModelParameterMembers, ReferenceEdit as ReferenceEdit, ReferenceEditCreateCdiCombinedSet as ReferenceEditCreateCdiCombinedSet, ReferenceEditCreateMember as ReferenceEditCreateMember, ReferenceEditCreateModelHitArea as ReferenceEditCreateModelHitArea, ReferenceEditCreateModelParameterGroup as ReferenceEditCreateModelParameterGroup, ReferenceEditDelete as ReferenceEditDelete, ReferenceEditDissolve as ReferenceEditDissolve, ReferenceEditDuplicate as ReferenceEditDuplicate, ReferenceEditMove as ReferenceEditMove, ReferenceEditPatch as ReferenceEditPatch, ReferenceEditReplaceSelection as ReferenceEditReplaceSelection, ReferenceEntryCdiParameterRef as ReferenceEntryCdiParameterRef, ReferenceEntryModelTargetRef as ReferenceEntryModelTargetRef, ReferenceFields as ReferenceFields, ReferenceFieldsCdiCombinedMember as ReferenceFieldsCdiCombinedMember, ReferenceFieldsModelHitArea as ReferenceFieldsModelHitArea, ReferenceFieldsModelParameterGroup as ReferenceFieldsModelParameterGroup, ReferenceFieldsModelParameterMember as ReferenceFieldsModelParameterMember, ReferenceSelectionField as ReferenceSelectionField, ResourceCapabilities as ResourceCapabilities, SceneCapabilities as SceneCapabilities, SceneContentCapabilities as SceneContentCapabilities
+from ..values import AddressPatch, AddressPatchAttachmentPath, AddressPatchBinding, AddressPatchContent, AddressPatchDocument, AddressPatchDrawingRange, AddressPatchExpressionEntry, AddressPatchMotionRegistration, AddressPatchOrganization, AddressPatchPhysics, AddressPatchPose, AddressPatchReference, AddressPatchResourceName, AddressPatchScene, AddressPatchSelection, AddressSelector, AddressSelectorAttachmentPath, AddressSelectorBinding, AddressSelectorContent, AddressSelectorDocument, AddressSelectorDrawingGroup, AddressSelectorExpressionEntry, AddressSelectorMotionRegistration, AddressSelectorOrganization, AddressSelectorPhysics, AddressSelectorPose, AddressSelectorReference, AddressSelectorResourceName, AddressSelectorScene, AddressSelectorSelection, AttachmentCapabilities, BindingCapabilities, Capabilities, CapabilitiesAttachment, CapabilitiesBinding, CapabilitiesCollection, CapabilitiesContent, CapabilitiesDocument, CapabilitiesExpression, CapabilitiesMotion, CapabilitiesOrganization, CapabilitiesPhysics, CapabilitiesPose, CapabilitiesReferences, CapabilitiesResource, CapabilitiesScene, CapabilityDomain, CapabilityState, CapabilityStateAvailable, CapabilityStateUnavailable, CapabilityStateUnsupported, CollectionCapabilities, ExpressionCapabilities, MotionCapabilities, ObjectKind, OrganizationCapabilities, PhysicsCapabilities, PoseCapabilities, ReferenceCapabilities, ReferenceCollection, ReferenceCollectionCdiCombinedMembers, ReferenceCollectionCdiCombinedSets, ReferenceCollectionModelHitAreas, ReferenceCollectionModelParameterGroups, ReferenceCollectionModelParameterMembers, ReferenceEdit, ReferenceEditCreateCdiCombinedSet, ReferenceEditCreateMember, ReferenceEditCreateModelHitArea, ReferenceEditCreateModelParameterGroup, ReferenceEditDelete, ReferenceEditDissolve, ReferenceEditDuplicate, ReferenceEditMove, ReferenceEditPatch, ReferenceEditReplaceSelection, ReferenceEntryCdiParameterRef, ReferenceEntryModelTargetRef, ReferenceFields, ReferenceFieldsCdiCombinedMember, ReferenceFieldsModelHitArea, ReferenceFieldsModelParameterGroup, ReferenceFieldsModelParameterMember, ReferenceSelectionField, ResourceCapabilities, SceneCapabilities, SceneContentCapabilities
 
 def validate_ReferenceEdit(value: ReferenceEdit) -> None:
     if isinstance(value, ReferenceEditCreateModelParameterGroup):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
+        _check_string(value.name)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, ReferenceEditCreateModelHitArea):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
+        _check_string(value.name)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, ReferenceEditCreateCdiCombinedSet):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, ReferenceEditCreateMember):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_ReferenceCollection(value.collection)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, ReferenceEditPatch):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_ReferenceFields(value.expected)
         validate_ReferenceFields(value.fields)
     elif isinstance(value, ReferenceEditMove):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         validate_ReferenceCollection(value.destination)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, ReferenceEditDuplicate):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         validate_ReferenceCollection(value.destination)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, ReferenceEditDelete):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
     elif isinstance(value, ReferenceEditDissolve):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.destination, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
+        _check_string(value.destination)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, ReferenceEditReplaceSelection):
-        if not isinstance(value.owner, str):
-            raise ValueError("Expected string")
+        _check_string(value.owner)
         validate_ReferenceSelectionField(value.field)
         if not isinstance(value.expected, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.expected:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         if not isinstance(value.targets, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.targets:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
     else:
         raise TypeError("Expected ReferenceEdit")
 
@@ -163,11 +144,9 @@ def validate_ReferenceCollection(value: ReferenceCollection) -> None:
     elif isinstance(value, ReferenceCollectionCdiCombinedSets):
         pass
     elif isinstance(value, ReferenceCollectionModelParameterMembers):
-        if not isinstance(value.group_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.group_id)
     elif isinstance(value, ReferenceCollectionCdiCombinedMembers):
-        if not isinstance(value.set_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.set_id)
     else:
         raise TypeError("Expected ReferenceCollection")
 
@@ -203,14 +182,12 @@ def read_ReferenceCollection(value: object) -> ReferenceCollection:
     raise ValueError("Unknown ReferenceCollection variant")
 
 def validate_ReferenceFields(value: ReferenceFields) -> None:
-    from .project import validate_CdiParameterRef as validate_CdiParameterRef
-    from .project import validate_ModelTargetRef as validate_ModelTargetRef
+    from .project import validate_CdiParameterRef
+    from .project import validate_ModelTargetRef
     if isinstance(value, ReferenceFieldsModelParameterGroup):
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.name)
     elif isinstance(value, ReferenceFieldsModelHitArea):
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.name)
         validate_ModelTargetRef(value.mesh)
     elif isinstance(value, ReferenceFieldsModelParameterMember):
         validate_ModelTargetRef(value.target)
@@ -220,8 +197,8 @@ def validate_ReferenceFields(value: ReferenceFields) -> None:
         raise TypeError("Expected ReferenceFields")
 
 def encode_ReferenceFields(value: ReferenceFields) -> object:
-    from .project import encode_CdiParameterRef as encode_CdiParameterRef
-    from .project import encode_ModelTargetRef as encode_ModelTargetRef
+    from .project import encode_CdiParameterRef
+    from .project import encode_ModelTargetRef
     if isinstance(value, ReferenceFieldsModelParameterGroup):
         return {'kind': 'model_parameter_group', **cast(Mapping[str, object], {'name': value.name})}
     elif isinstance(value, ReferenceFieldsModelHitArea):
@@ -233,8 +210,8 @@ def encode_ReferenceFields(value: ReferenceFields) -> object:
     raise TypeError("Expected ReferenceFields")
 
 def read_ReferenceFields(value: object) -> ReferenceFields:
-    from .project import read_CdiParameterRef as read_CdiParameterRef
-    from .project import read_ModelTargetRef as read_ModelTargetRef
+    from .project import read_CdiParameterRef
+    from .project import read_ModelTargetRef
     if isinstance(value, (ReferenceFieldsModelParameterGroup, ReferenceFieldsModelHitArea, ReferenceFieldsModelParameterMember, ReferenceFieldsCdiCombinedMember,)): return value
     r = record(value)
     tag = string(r['kind'])
@@ -264,96 +241,81 @@ def read_ReferenceSelectionField(value: object) -> ReferenceSelectionField:
     return ReferenceSelectionField(string(value))
 
 def validate_ReferenceEntryCdiParameterRef(value: ReferenceEntryCdiParameterRef) -> None:
-    from .project import validate_CdiParameterRef as validate_CdiParameterRef
+    from .project import validate_CdiParameterRef
     if not isinstance(value, ReferenceEntryCdiParameterRef):
         raise TypeError("Expected ReferenceEntryCdiParameterRef")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
     validate_CdiParameterRef(value.target)
 
 def encode_ReferenceEntryCdiParameterRef(value: ReferenceEntryCdiParameterRef) -> object:
-    from .project import encode_CdiParameterRef as encode_CdiParameterRef
+    from .project import encode_CdiParameterRef
     return {'id': value.id, 'target': encode_CdiParameterRef(value.target)}
 
 def read_ReferenceEntryCdiParameterRef(value: object) -> ReferenceEntryCdiParameterRef:
-    from .project import read_CdiParameterRef as read_CdiParameterRef
+    from .project import read_CdiParameterRef
     if isinstance(value, ReferenceEntryCdiParameterRef): return value
     r = record(value)
     return ReferenceEntryCdiParameterRef(id=string(r['id']), target=read_CdiParameterRef(r['target']))
 
 def validate_ReferenceEntryModelTargetRef(value: ReferenceEntryModelTargetRef) -> None:
-    from .project import validate_ModelTargetRef as validate_ModelTargetRef
+    from .project import validate_ModelTargetRef
     if not isinstance(value, ReferenceEntryModelTargetRef):
         raise TypeError("Expected ReferenceEntryModelTargetRef")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
     validate_ModelTargetRef(value.target)
 
 def encode_ReferenceEntryModelTargetRef(value: ReferenceEntryModelTargetRef) -> object:
-    from .project import encode_ModelTargetRef as encode_ModelTargetRef
+    from .project import encode_ModelTargetRef
     return {'id': value.id, 'target': encode_ModelTargetRef(value.target)}
 
 def read_ReferenceEntryModelTargetRef(value: object) -> ReferenceEntryModelTargetRef:
-    from .project import read_ModelTargetRef as read_ModelTargetRef
+    from .project import read_ModelTargetRef
     if isinstance(value, ReferenceEntryModelTargetRef): return value
     r = record(value)
     return ReferenceEntryModelTargetRef(id=string(r['id']), target=read_ModelTargetRef(r['target']))
 
 def validate_AddressSelector(value: AddressSelector) -> None:
-    from .project import validate_DocumentField as validate_DocumentField
-    from .scene import validate_SceneContentTarget as validate_SceneContentTarget
-    from .scene import validate_SceneField as validate_SceneField
+    from .project import validate_DocumentField
+    from .scene import validate_SceneContentTarget
+    from .scene import validate_SceneField
     if isinstance(value, AddressSelectorScene):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_SceneField(value.field)
     elif isinstance(value, AddressSelectorDrawingGroup):
-        if not isinstance(value.owner, str):
-            raise ValueError("Expected string")
+        _check_string(value.owner)
     elif isinstance(value, AddressSelectorBinding):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
     elif isinstance(value, AddressSelectorOrganization):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
     elif isinstance(value, AddressSelectorContent):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_SceneContentTarget(value.target)
     elif isinstance(value, AddressSelectorReference):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
     elif isinstance(value, AddressSelectorSelection):
-        if not isinstance(value.owner, str):
-            raise ValueError("Expected string")
+        _check_string(value.owner)
         validate_ReferenceSelectionField(value.field)
     elif isinstance(value, AddressSelectorResourceName):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
     elif isinstance(value, AddressSelectorAttachmentPath):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
     elif isinstance(value, AddressSelectorDocument):
         validate_DocumentField(value.field)
     elif isinstance(value, AddressSelectorMotionRegistration):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
     elif isinstance(value, AddressSelectorExpressionEntry):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
     elif isinstance(value, AddressSelectorPhysics):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
     elif isinstance(value, AddressSelectorPose):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
     else:
         raise TypeError("Expected AddressSelector")
 
 def encode_AddressSelector(value: AddressSelector) -> object:
-    from .project import encode_DocumentField as encode_DocumentField
-    from .scene import encode_SceneContentTarget as encode_SceneContentTarget
-    from .scene import encode_SceneField as encode_SceneField
+    from .project import encode_DocumentField
+    from .scene import encode_SceneContentTarget
+    from .scene import encode_SceneField
     if isinstance(value, AddressSelectorScene):
         return {'kind': 'scene', **cast(Mapping[str, object], {'id': value.id, 'field': encode_SceneField(value.field)})}
     elif isinstance(value, AddressSelectorDrawingGroup):
@@ -385,9 +347,9 @@ def encode_AddressSelector(value: AddressSelector) -> object:
     raise TypeError("Expected AddressSelector")
 
 def read_AddressSelector(value: object) -> AddressSelector:
-    from .project import read_DocumentField as read_DocumentField
-    from .scene import read_SceneContentTarget as read_SceneContentTarget
-    from .scene import read_SceneField as read_SceneField
+    from .project import read_DocumentField
+    from .scene import read_SceneContentTarget
+    from .scene import read_SceneField
     if isinstance(value, (AddressSelectorScene, AddressSelectorDrawingGroup, AddressSelectorBinding, AddressSelectorOrganization, AddressSelectorContent, AddressSelectorReference, AddressSelectorSelection, AddressSelectorResourceName, AddressSelectorAttachmentPath, AddressSelectorDocument, AddressSelectorMotionRegistration, AddressSelectorExpressionEntry, AddressSelectorPhysics, AddressSelectorPose,)): return value
     r = record(value)
     tag = string(r['kind'])
@@ -436,27 +398,25 @@ def read_AddressSelector(value: object) -> AddressSelector:
     raise ValueError("Unknown AddressSelector variant")
 
 def validate_AddressPatch(value: AddressPatch) -> None:
-    from .bindings import validate_BindingFieldPatch as validate_BindingFieldPatch
-    from .project import validate_DocumentValue as validate_DocumentValue
-    from .expression import validate_ExpressionEntryFields as validate_ExpressionEntryFields
-    from .motion import validate_MotionRegistration as validate_MotionRegistration
-    from .scene_edits import validate_OrganizationEdit as validate_OrganizationEdit
-    from .physics import validate_PhysicsProperty as validate_PhysicsProperty
-    from .pose import validate_PoseFields as validate_PoseFields
-    from .scene import validate_SceneContentValue as validate_SceneContentValue
-    from .scene import validate_SceneFieldValue as validate_SceneFieldValue
+    from .bindings import validate_BindingFieldPatch
+    from .project import validate_DocumentValue
+    from .expression import validate_ExpressionEntryFields
+    from .motion import validate_MotionRegistration
+    from .scene_edits import validate_OrganizationEdit
+    from .physics import validate_PhysicsProperty
+    from .pose import validate_PoseFields
+    from .scene import validate_SceneContentValue
+    from .scene import validate_SceneFieldValue
     if isinstance(value, AddressPatchScene):
         validate_SceneFieldValue(value.value)
-        if type(value.clear_glue_pairs) is not bool:
-            raise ValueError("Expected bool")
+        _check_bool(value.clear_glue_pairs)
     elif isinstance(value, AddressPatchDrawingRange):
         if not isinstance(value.range, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.range) != 2:
             raise ValueError("Invalid fixed array length")
         for v0 in value.range:
-            if type(v0) is not int or not -2147483648 <= v0 < 2147483648:
-                raise ValueError("Expected i32")
+            _check_i32(v0)
     elif isinstance(value, AddressPatchBinding):
         validate_BindingFieldPatch(value.patch)
     elif isinstance(value, AddressPatchOrganization):
@@ -469,14 +429,11 @@ def validate_AddressPatch(value: AddressPatch) -> None:
         if not isinstance(value.targets, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.targets:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
     elif isinstance(value, AddressPatchResourceName):
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.name)
     elif isinstance(value, AddressPatchAttachmentPath):
-        if not isinstance(value.path, str):
-            raise ValueError("Expected string")
+        _check_string(value.path)
     elif isinstance(value, AddressPatchDocument):
         validate_DocumentValue(value.value)
     elif isinstance(value, AddressPatchMotionRegistration):
@@ -494,15 +451,15 @@ def validate_AddressPatch(value: AddressPatch) -> None:
         raise TypeError("Expected AddressPatch")
 
 def encode_AddressPatch(value: AddressPatch) -> object:
-    from .bindings import encode_BindingFieldPatch as encode_BindingFieldPatch
-    from .project import encode_DocumentValue as encode_DocumentValue
-    from .expression import encode_ExpressionEntryFields as encode_ExpressionEntryFields
-    from .motion import encode_MotionRegistration as encode_MotionRegistration
-    from .scene_edits import encode_OrganizationEdit as encode_OrganizationEdit
-    from .physics import encode_PhysicsProperty as encode_PhysicsProperty
-    from .pose import encode_PoseFields as encode_PoseFields
-    from .scene import encode_SceneContentValue as encode_SceneContentValue
-    from .scene import encode_SceneFieldValue as encode_SceneFieldValue
+    from .bindings import encode_BindingFieldPatch
+    from .project import encode_DocumentValue
+    from .expression import encode_ExpressionEntryFields
+    from .motion import encode_MotionRegistration
+    from .scene_edits import encode_OrganizationEdit
+    from .physics import encode_PhysicsProperty
+    from .pose import encode_PoseFields
+    from .scene import encode_SceneContentValue
+    from .scene import encode_SceneFieldValue
     if isinstance(value, AddressPatchScene):
         return {'kind': 'scene', **cast(Mapping[str, object], {'value': encode_SceneFieldValue(value.value), 'clear_glue_pairs': value.clear_glue_pairs})}
     elif isinstance(value, AddressPatchDrawingRange):
@@ -534,15 +491,15 @@ def encode_AddressPatch(value: AddressPatch) -> object:
     raise TypeError("Expected AddressPatch")
 
 def read_AddressPatch(value: object) -> AddressPatch:
-    from .bindings import read_BindingFieldPatch as read_BindingFieldPatch
-    from .project import read_DocumentValue as read_DocumentValue
-    from .expression import read_ExpressionEntryFields as read_ExpressionEntryFields
-    from .motion import read_MotionRegistration as read_MotionRegistration
-    from .scene_edits import read_OrganizationEdit as read_OrganizationEdit
-    from .physics import read_PhysicsProperty as read_PhysicsProperty
-    from .pose import read_PoseFields as read_PoseFields
-    from .scene import read_SceneContentValue as read_SceneContentValue
-    from .scene import read_SceneFieldValue as read_SceneFieldValue
+    from .bindings import read_BindingFieldPatch
+    from .project import read_DocumentValue
+    from .expression import read_ExpressionEntryFields
+    from .motion import read_MotionRegistration
+    from .scene_edits import read_OrganizationEdit
+    from .physics import read_PhysicsProperty
+    from .pose import read_PoseFields
+    from .scene import read_SceneContentValue
+    from .scene import read_SceneFieldValue
     if isinstance(value, (AddressPatchScene, AddressPatchDrawingRange, AddressPatchBinding, AddressPatchOrganization, AddressPatchContent, AddressPatchReference, AddressPatchSelection, AddressPatchResourceName, AddressPatchAttachmentPath, AddressPatchDocument, AddressPatchMotionRegistration, AddressPatchExpressionEntry, AddressPatchPhysics, AddressPatchPose,)): return value
     r = record(value)
     tag = string(r['kind'])
@@ -716,11 +673,9 @@ def validate_CapabilityState(value: CapabilityState) -> None:
     if isinstance(value, CapabilityStateAvailable):
         pass
     elif isinstance(value, CapabilityStateUnsupported):
-        if not isinstance(value.code, str):
-            raise ValueError("Expected string")
+        _check_string(value.code)
     elif isinstance(value, CapabilityStateUnavailable):
-        if not isinstance(value.code, str):
-            raise ValueError("Expected string")
+        _check_string(value.code)
     else:
         raise TypeError("Expected CapabilityState")
 

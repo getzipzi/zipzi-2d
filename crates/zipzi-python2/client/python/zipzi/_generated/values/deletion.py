@@ -14,9 +14,9 @@ from typing import ClassVar as _ClassVar
 from typing import TypeAlias
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from .project import OpaqueExportIssue as OpaqueExportIssue
-    from .scene import ReparentContext as ReparentContext
-    from .scene import ReparentStrategy as ReparentStrategy
+    from .project import OpaqueExportIssue
+    from .scene import ReparentContext
+    from .scene import ReparentStrategy
 
 def read_DeletionOffscreenPlacement(value: object) -> DeletionOffscreenPlacement:
     from ..codecs.deletion import read_DeletionOffscreenPlacement as decode

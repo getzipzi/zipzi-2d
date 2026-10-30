@@ -6,12 +6,12 @@ from typing import ClassVar as _ClassVar
 from typing import TypeAlias
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from .sampling import DrawableFrame as DrawableFrame
-    from .motion import MotionSnapshot as MotionSnapshot
-    from .observation import ObservationImage as ObservationImage
-    from .observation import ObservationView as ObservationView
-    from .spatial import SpatialQuery as SpatialQuery
-    from .spatial import SpatialResult as SpatialResult
+    from .sampling import DrawableFrame
+    from .motion import MotionSnapshot
+    from .observation import ObservationImage
+    from .observation import ObservationView
+    from .spatial import SpatialQuery
+    from .spatial import SpatialResult
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PreviewCommandSetParameter(CompactValue):

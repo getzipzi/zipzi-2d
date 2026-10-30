@@ -7,7 +7,7 @@ See [common behavior](common.md) for inherited owned-value methods.
 
 ``
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a3; protocol zipzi-runtime-v2; client source SHA-256 3d7ff6f94d97aa61ecefdbb24a1d488ea8564d3e8faa5ddae65e986f3137d632.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a3; protocol zipzi-runtime-v2; client source SHA-256 45e380e59a4bbc388c497128429cef09b5b5a4184f02ff85271dda263678b7bc.
 
 
 ## zipzi.ApiDescription

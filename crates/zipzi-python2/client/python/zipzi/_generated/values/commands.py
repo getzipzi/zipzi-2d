@@ -7,45 +7,45 @@ from typing import ClassVar as _ClassVar
 from typing import TypeAlias
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from .scene import AttachmentEdit as AttachmentEdit
-    from .bindings import BindingAuthoringEdit as BindingAuthoringEdit
-    from .bindings import BlendShapeBinding as BlendShapeBinding
-    from .bindings import BlendShapeConstraint as BlendShapeConstraint
-    from .bindings import BlendShapeKeyTable as BlendShapeKeyTable
-    from .deletion import DeletionIntent as DeletionIntent
-    from .project import DocumentAuthoringEdit as DocumentAuthoringEdit
-    from .scene import DrawOrderGroup as DrawOrderGroup
-    from .project import EditorState as EditorState
-    from .expression import ExpressionAsset as ExpressionAsset
-    from .expression import ExpressionEdit as ExpressionEdit
-    from .sampling import GeometrySnapshot as GeometrySnapshot
-    from .scene import Glue as Glue
-    from .scene import HierarchyOrder as HierarchyOrder
-    from .resources import ImageAsset as ImageAsset
-    from .mesh import ManualMeshOperation as ManualMeshOperation
-    from .mesh import Mesh as Mesh
-    from .bindings import MeshBinding as MeshBinding
-    from .bindings import MeshKeyform as MeshKeyform
-    from .scene import ModelSetup as ModelSetup
-    from .motion import MotionClip as MotionClip
-    from .motion import MotionEdit as MotionEdit
-    from .scene import Offscreen as Offscreen
-    from .scene import OrganizationEdit as OrganizationEdit
-    from .parameters import Parameter as Parameter
-    from .scene import Part as Part
-    from .physics import PhysicsAsset as PhysicsAsset
-    from .physics import PhysicsEdit as PhysicsEdit
-    from .pose import PoseAsset as PoseAsset
-    from .pose import PoseEdit as PoseEdit
-    from .addressing import ReferenceEdit as ReferenceEdit
-    from .resources import ResourceEdit as ResourceEdit
-    from .bindings import SceneBinding as SceneBinding
-    from .scene import SceneContentEdit as SceneContentEdit
-    from .scene import SceneEdit as SceneEdit
-    from .bindings import SceneKeyform as SceneKeyform
-    from .mesh import TopologyReplacement as TopologyReplacement
-    from .scene import Transform as Transform
-    from .common import Vec2 as Vec2
+    from .scene import AttachmentEdit
+    from .bindings import BindingAuthoringEdit
+    from .bindings import BlendShapeBinding
+    from .bindings import BlendShapeConstraint
+    from .bindings import BlendShapeKeyTable
+    from .deletion import DeletionIntent
+    from .project import DocumentAuthoringEdit
+    from .scene import DrawOrderGroup
+    from .project import EditorState
+    from .expression import ExpressionAsset
+    from .expression import ExpressionEdit
+    from .sampling import GeometrySnapshot
+    from .scene import Glue
+    from .scene import HierarchyOrder
+    from .resources import ImageAsset
+    from .mesh import ManualMeshOperation
+    from .mesh import Mesh
+    from .bindings import MeshBinding
+    from .bindings import MeshKeyform
+    from .scene import ModelSetup
+    from .motion import MotionClip
+    from .motion import MotionEdit
+    from .scene import Offscreen
+    from .scene import OrganizationEdit
+    from .parameters import Parameter
+    from .scene import Part
+    from .physics import PhysicsAsset
+    from .physics import PhysicsEdit
+    from .pose import PoseAsset
+    from .pose import PoseEdit
+    from .addressing import ReferenceEdit
+    from .resources import ResourceEdit
+    from .bindings import SceneBinding
+    from .scene import SceneContentEdit
+    from .scene import SceneEdit
+    from .bindings import SceneKeyform
+    from .mesh import TopologyReplacement
+    from .scene import Transform
+    from .common import Vec2
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandCreateAsset(CompactValue):

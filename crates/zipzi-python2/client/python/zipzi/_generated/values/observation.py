@@ -11,8 +11,8 @@ from dataclasses import field
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from .sampling import MeshQuality as MeshQuality
-    from .spatial import ObjectTarget as ObjectTarget
+    from .sampling import MeshQuality
+    from .spatial import ObjectTarget
 
 def read_TopologyThresholds(value: object) -> TopologyThresholds:
     from ..codecs.observation import read_TopologyThresholds as decode

@@ -9,13 +9,13 @@ from ..._values import sequence
 from ..._values import string
 from typing import cast
 from functools import cache
-from .support import MESH_SIGNATURE as MESH_SIGNATURE, Reader as Reader, Writer as Writer, _field as _field, _mapping as _mapping, _mesh_meshing as _mesh_meshing, _point as _point
+from .support import MESH_SIGNATURE, Reader, Writer, _field, _mapping, _mesh_meshing, _point
 
 @cache
 def _dependencies__write_mesh():
-    from .scene import _write_appearance as _write_appearance
-    from .scene import _write_blendmode as _write_blendmode
-    from .scene import _write_scenereference as _write_scenereference
+    from .scene import _write_appearance
+    from .scene import _write_blendmode
+    from .scene import _write_scenereference
     return _write_appearance, _write_blendmode, _write_scenereference,
 
 def _write_mesh(value: object, w: Writer) -> None:
@@ -65,9 +65,9 @@ def _write_mesh(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__read_mesh():
-    from .scene import _read_appearance as _read_appearance
-    from .scene import _read_blendmode as _read_blendmode
-    from .scene import _read_scenereference as _read_scenereference
+    from .scene import _read_appearance
+    from .scene import _read_blendmode
+    from .scene import _read_scenereference
     return _read_appearance, _read_blendmode, _read_scenereference,
 
 def _read_mesh(r: Reader) -> m.Mesh:
@@ -114,7 +114,7 @@ def _read_meshconstraintkind(r: Reader) -> m.MeshConstraintKind:
 
 @cache
 def _dependencies__write_vertexcontentpatch():
-    from .common import _write_vec2 as _write_vec2
+    from .common import _write_vec2
     return _write_vec2,
 
 def _write_vertexcontentpatch(value: object, w: Writer) -> None:
@@ -133,7 +133,7 @@ def _write_vertexcontentpatch(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__write_newmeshvertex():
-    from .common import _write_vec2 as _write_vec2
+    from .common import _write_vec2
     return _write_vec2,
 
 def _write_newmeshvertex(value: object, w: Writer) -> None:
@@ -171,9 +171,9 @@ def _write_vertexdeletepolicy(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__write_topologyreplacement():
-    from .bindings import _write_blendshapebinding as _write_blendshapebinding
-    from .scene import _write_glue as _write_glue
-    from .bindings import _write_meshbinding as _write_meshbinding
+    from .bindings import _write_blendshapebinding
+    from .scene import _write_glue
+    from .bindings import _write_meshbinding
     return _write_blendshapebinding, _write_glue, _write_meshbinding,
 
 def _write_topologyreplacement(value: object, w: Writer) -> None:
@@ -204,7 +204,7 @@ def _write_topologyreplacement(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__write_manualmeshoperation():
-    from .common import _write_vec2 as _write_vec2
+    from .common import _write_vec2
     return _write_vec2,
 
 def _write_manualmeshoperation(value: object, w: Writer) -> None:
@@ -257,7 +257,7 @@ def _write_manualmeshoperation(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__write_manualvertextarget():
-    from .common import _write_vec2 as _write_vec2
+    from .common import _write_vec2
     return _write_vec2,
 
 def _write_manualvertextarget(value: object, w: Writer) -> None:
@@ -346,7 +346,7 @@ def _read_meshgeometry(r: Reader) -> meshes.Geometry:
 
 @cache
 def _dependencies__read_meshsnapshot():
-    from .common import _read_sourceref as _read_sourceref
+    from .common import _read_sourceref
     return _read_sourceref,
 
 def _read_meshsnapshot(r: Reader) -> Snapshot[meshes.Mesh]:

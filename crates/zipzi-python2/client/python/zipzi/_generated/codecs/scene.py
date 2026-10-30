@@ -6,21 +6,26 @@ from ..._values import record
 from ..._values import sequence
 from ..._values import string
 from .._modeling_support import _boolean
+from .._modeling_support import _check_bool
+from .._modeling_support import _check_f32
+from .._modeling_support import _check_f64
+from .._modeling_support import _check_i32
+from .._modeling_support import _check_string
+from .._modeling_support import _check_u32
+from .._modeling_support import _check_u8
+from .._modeling_support import _check_usize
 from collections.abc import Mapping
 from collections.abc import Mapping as _Mapping
 from typing import cast
-import math
-from ..values import Appearance as Appearance, AttachmentRef as AttachmentRef, AttachmentRefResolved as AttachmentRefResolved, AttachmentRefUnresolved as AttachmentRefUnresolved, BlendMode as BlendMode, Canvas as Canvas, DrawOrderGroup as DrawOrderGroup, Glue as Glue, GlueVertexPair as GlueVertexPair, HierarchyOrder as HierarchyOrder, ModelSetup as ModelSetup, Offscreen as Offscreen, OffscreenDeletePolicy as OffscreenDeletePolicy, OffscreenDeletePolicyNeutral as OffscreenDeletePolicyNeutral, OffscreenDeletePolicyRejectReferences as OffscreenDeletePolicyRejectReferences, OffscreenDeletePolicyRemap as OffscreenDeletePolicyRemap, OffscreenMappingPatch as OffscreenMappingPatch, OrganizationCollection as OrganizationCollection, OrganizationCollectionParameterGroups as OrganizationCollectionParameterGroups, OrganizationCollectionParameters as OrganizationCollectionParameters, OrganizationCollectionPartMembers as OrganizationCollectionPartMembers, OrganizationDeletePolicy as OrganizationDeletePolicy, Part as Part, PartId as PartId, ReparentContext as ReparentContext, ReparentPlacement as ReparentPlacement, ReparentStrategy as ReparentStrategy, RotationPose as RotationPose, RotationTransform as RotationTransform, SceneCollection as SceneCollection, SceneCollectionDeformation as SceneCollectionDeformation, SceneCollectionDrawing as SceneCollectionDrawing, SceneCollectionDrawingGroups as SceneCollectionDrawingGroups, SceneCollectionGlues as SceneCollectionGlues, SceneCollectionOrganization as SceneCollectionOrganization, SceneContentTarget as SceneContentTarget, SceneContentTargetGluePair as SceneContentTargetGluePair, SceneContentTargetOffscreenKeyform as SceneContentTargetOffscreenKeyform, SceneContentTargetOffscreenMapping as SceneContentTargetOffscreenMapping, SceneContentTargetTriangle as SceneContentTargetTriangle, SceneContentTargetVertexPosition as SceneContentTargetVertexPosition, SceneContentTargetVertexUv as SceneContentTargetVertexUv, SceneContentTargetWarpBezierControl as SceneContentTargetWarpBezierControl, SceneContentTargetWarpPoint as SceneContentTargetWarpPoint, SceneContentValue as SceneContentValue, SceneContentValueGluePair as SceneContentValueGluePair, SceneContentValueMapping as SceneContentValueMapping, SceneContentValueOffscreenKeyform as SceneContentValueOffscreenKeyform, SceneContentValuePoint as SceneContentValuePoint, SceneContentValueTriangle as SceneContentValueTriangle, SceneCopyScope as SceneCopyScope, SceneCreate as SceneCreate, SceneCreateGlue as SceneCreateGlue, SceneCreateMesh as SceneCreateMesh, SceneCreateOffscreen as SceneCreateOffscreen, SceneCreateRotation as SceneCreateRotation, SceneCreateWarp as SceneCreateWarp, SceneField as SceneField, SceneFieldValue as SceneFieldValue, SceneFieldValueAppearance as SceneFieldValueAppearance, SceneFieldValueContext as SceneFieldValueContext, SceneFieldValueEnabled as SceneFieldValueEnabled, SceneFieldValueGlueEndpoints as SceneFieldValueGlueEndpoints, SceneFieldValueGlueIntensity as SceneFieldValueGlueIntensity, SceneFieldValueLabel as SceneFieldValueLabel, SceneFieldValueMasks as SceneFieldValueMasks, SceneFieldValueMeshDrawing as SceneFieldValueMeshDrawing, SceneFieldValueOffscreen as SceneFieldValueOffscreen, SceneFieldValueRotation as SceneFieldValueRotation, SceneFieldValueRuntimeId as SceneFieldValueRuntimeId, SceneFieldValueTexture as SceneFieldValueTexture, SceneFieldValueWarp as SceneFieldValueWarp, SceneReference as SceneReference, SceneReferenceResolved as SceneReferenceResolved, SceneReferenceUnresolved as SceneReferenceUnresolved, SceneReferenceUnspecified as SceneReferenceUnspecified, ShapeTarget as ShapeTarget, ShapeTargetBase as ShapeTargetBase, ShapeTargetBlend as ShapeTargetBlend, ShapeTargetOrdinary as ShapeTargetOrdinary, Transform as Transform, TransformData as TransformData, TransformDataRotation as TransformDataRotation, TransformDataWarp as TransformDataWarp, TransformId as TransformId, Vec2 as Vec2, WarpBezier as WarpBezier, WarpBezierNode as WarpBezierNode, WarpPointPatch as WarpPointPatch, WarpTransform as WarpTransform
+from ..values import Appearance, AttachmentRef, AttachmentRefResolved, AttachmentRefUnresolved, BlendMode, Canvas, DrawOrderGroup, Glue, GlueVertexPair, HierarchyOrder, ModelSetup, Offscreen, OffscreenDeletePolicy, OffscreenDeletePolicyNeutral, OffscreenDeletePolicyRejectReferences, OffscreenDeletePolicyRemap, OffscreenMappingPatch, OrganizationCollection, OrganizationCollectionParameterGroups, OrganizationCollectionParameters, OrganizationCollectionPartMembers, OrganizationDeletePolicy, Part, PartId, ReparentContext, ReparentPlacement, ReparentStrategy, RotationPose, RotationTransform, SceneCollection, SceneCollectionDeformation, SceneCollectionDrawing, SceneCollectionDrawingGroups, SceneCollectionGlues, SceneCollectionOrganization, SceneContentTarget, SceneContentTargetGluePair, SceneContentTargetOffscreenKeyform, SceneContentTargetOffscreenMapping, SceneContentTargetTriangle, SceneContentTargetVertexPosition, SceneContentTargetVertexUv, SceneContentTargetWarpBezierControl, SceneContentTargetWarpPoint, SceneContentValue, SceneContentValueGluePair, SceneContentValueMapping, SceneContentValueOffscreenKeyform, SceneContentValuePoint, SceneContentValueTriangle, SceneCopyScope, SceneCreate, SceneCreateGlue, SceneCreateMesh, SceneCreateOffscreen, SceneCreateRotation, SceneCreateWarp, SceneField, SceneFieldValue, SceneFieldValueAppearance, SceneFieldValueContext, SceneFieldValueEnabled, SceneFieldValueGlueEndpoints, SceneFieldValueGlueIntensity, SceneFieldValueLabel, SceneFieldValueMasks, SceneFieldValueMeshDrawing, SceneFieldValueOffscreen, SceneFieldValueRotation, SceneFieldValueRuntimeId, SceneFieldValueTexture, SceneFieldValueWarp, SceneReference, SceneReferenceResolved, SceneReferenceUnresolved, SceneReferenceUnspecified, ShapeTarget, ShapeTargetBase, ShapeTargetBlend, ShapeTargetOrdinary, Transform, TransformData, TransformDataRotation, TransformDataWarp, TransformId, Vec2, WarpBezier, WarpBezierNode, WarpPointPatch, WarpTransform
 
 def validate_SceneReference(value: SceneReference) -> None:
     if isinstance(value, SceneReferenceUnspecified):
         pass
     elif isinstance(value, SceneReferenceResolved):
-        if not isinstance(value.object_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.object_id)
     elif isinstance(value, SceneReferenceUnresolved):
-        if not isinstance(value.runtime_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.runtime_id)
     else:
         raise TypeError("Expected SceneReference")
 
@@ -50,22 +55,19 @@ def read_SceneReference(value: object) -> SceneReference:
 def validate_Appearance(value: Appearance) -> None:
     if not isinstance(value, Appearance):
         raise TypeError("Expected Appearance")
-    if isinstance(value.opacity, bool) or not isinstance(value.opacity, (float, int)) or not math.isfinite(value.opacity) or abs(value.opacity) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_f32(value.opacity)
     if not isinstance(value.multiply, tuple):
         raise TypeError("Expected an immutable tuple")
     if len(value.multiply) != 3:
         raise ValueError("Invalid fixed array length")
     for v0 in value.multiply:
-        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(v0)
     if not isinstance(value.screen, tuple):
         raise TypeError("Expected an immutable tuple")
     if len(value.screen) != 3:
         raise ValueError("Invalid fixed array length")
     for v0 in value.screen:
-        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(v0)
 
 def encode_Appearance(value: Appearance) -> object:
     return {'opacity': value.opacity, 'multiply': [v0 for v0 in value.multiply], 'screen': [v0 for v0 in value.screen]}
@@ -89,18 +91,12 @@ def read_BlendMode(value: object) -> BlendMode:
 def validate_Part(value: Part) -> None:
     if not isinstance(value, Part):
         raise TypeError("Expected Part")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.runtime_id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.name, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.parent_id, str):
-        raise ValueError("Expected string")
-    if type(value.enabled) is not bool:
-        raise ValueError("Expected bool")
-    if isinstance(value.draw_order, bool) or not isinstance(value.draw_order, (float, int)) or not math.isfinite(value.draw_order) or abs(value.draw_order) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_string(value.id)
+    _check_string(value.runtime_id)
+    _check_string(value.name)
+    _check_string(value.parent_id)
+    _check_bool(value.enabled)
+    _check_f32(value.draw_order)
 
 def encode_Part(value: Part) -> object:
     return {'id': value.id, 'runtime_id': value.runtime_id, 'name': value.name, 'parent_id': value.parent_id, 'enabled': value.enabled, 'draw_order': value.draw_order}
@@ -113,19 +109,15 @@ def read_Part(value: object) -> Part:
 def validate_Transform(value: Transform) -> None:
     if not isinstance(value, Transform):
         raise TypeError("Expected Transform")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.runtime_id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.name, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
+    _check_string(value.runtime_id)
+    _check_string(value.name)
     if value.part_id is not None:
         validate_PartId(value.part_id)
     if value.parent_id is not None:
         validate_TransformId(value.parent_id)
     validate_TransformData(value.data)
-    if type(value.enabled) is not bool:
-        raise ValueError("Expected bool")
+    _check_bool(value.enabled)
     validate_Appearance(value.appearance)
 
 def encode_Transform(value: Transform) -> object:
@@ -139,8 +131,7 @@ def read_Transform(value: object) -> Transform:
 def validate_PartId(value: PartId) -> None:
     if not isinstance(value, PartId):
         raise TypeError("Expected PartId")
-    if not isinstance(value.value, str):
-        raise ValueError("Expected string")
+    _check_string(value.value)
 
 def encode_PartId(value: PartId) -> object:
     return value.value
@@ -152,8 +143,7 @@ def read_PartId(value: object) -> PartId:
 def validate_TransformId(value: TransformId) -> None:
     if not isinstance(value, TransformId):
         raise TypeError("Expected TransformId")
-    if not isinstance(value.value, str):
-        raise ValueError("Expected string")
+    _check_string(value.value)
 
 def encode_TransformId(value: TransformId) -> object:
     return value.value
@@ -188,28 +178,25 @@ def read_TransformData(value: object) -> TransformData:
     raise ValueError("Unknown TransformData variant")
 
 def validate_WarpTransform(value: WarpTransform) -> None:
-    from .common import validate_Vec2 as validate_Vec2
+    from .common import validate_Vec2
     if not isinstance(value, WarpTransform):
         raise TypeError("Expected WarpTransform")
     if value.bezier is not None:
         validate_WarpBezier(value.bezier)
-    if type(value.rows) is not int or not 0 <= value.rows < 4294967296:
-        raise ValueError("Expected u32")
-    if type(value.columns) is not int or not 0 <= value.columns < 4294967296:
-        raise ValueError("Expected u32")
-    if type(value.quad) is not bool:
-        raise ValueError("Expected bool")
+    _check_u32(value.rows)
+    _check_u32(value.columns)
+    _check_bool(value.quad)
     if not isinstance(value.points, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.points:
         validate_Vec2(v0)
 
 def encode_WarpTransform(value: WarpTransform) -> object:
-    from .common import encode_Vec2 as encode_Vec2
+    from .common import encode_Vec2
     return {'bezier': None if value.bezier is None else encode_WarpBezier(value.bezier), 'rows': value.rows, 'columns': value.columns, 'quad': value.quad, 'points': [encode_Vec2(v0) for v0 in value.points]}
 
 def read_WarpTransform(value: object) -> WarpTransform:
-    from .common import read_Vec2 as read_Vec2
+    from .common import read_Vec2
     if isinstance(value, WarpTransform): return value
     r = record(value)
     return WarpTransform(bezier=None if r.get('bezier', None) is None else read_WarpBezier(r.get('bezier', None)), rows=integer(r['rows']), columns=integer(r['columns']), quad=_boolean(r['quad']), points=tuple(read_Vec2(v0) for v0 in sequence(r['points'])))
@@ -217,10 +204,8 @@ def read_WarpTransform(value: object) -> WarpTransform:
 def validate_WarpBezier(value: WarpBezier) -> None:
     if not isinstance(value, WarpBezier):
         raise TypeError("Expected WarpBezier")
-    if type(value.rows) is not int or not 0 <= value.rows < 4294967296:
-        raise ValueError("Expected u32")
-    if type(value.columns) is not int or not 0 <= value.columns < 4294967296:
-        raise ValueError("Expected u32")
+    _check_u32(value.rows)
+    _check_u32(value.columns)
     if not isinstance(value.nodes, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.nodes:
@@ -235,7 +220,7 @@ def read_WarpBezier(value: object) -> WarpBezier:
     return WarpBezier(rows=integer(r['rows']), columns=integer(r['columns']), nodes=tuple(read_WarpBezierNode(v0) for v0 in sequence(r['nodes'])))
 
 def validate_WarpBezierNode(value: WarpBezierNode) -> None:
-    from .common import validate_Vec2 as validate_Vec2
+    from .common import validate_Vec2
     if not isinstance(value, WarpBezierNode):
         raise TypeError("Expected WarpBezierNode")
     validate_Vec2(value.position)
@@ -247,11 +232,11 @@ def validate_WarpBezierNode(value: WarpBezierNode) -> None:
         validate_Vec2(v0)
 
 def encode_WarpBezierNode(value: WarpBezierNode) -> object:
-    from .common import encode_Vec2 as encode_Vec2
+    from .common import encode_Vec2
     return {'position': encode_Vec2(value.position), 'handles': [encode_Vec2(v0) for v0 in value.handles]}
 
 def read_WarpBezierNode(value: object) -> WarpBezierNode:
-    from .common import read_Vec2 as read_Vec2
+    from .common import read_Vec2
     if isinstance(value, WarpBezierNode): return value
     r = record(value)
     return WarpBezierNode(position=read_Vec2(r['position']), handles=cast('tuple[Vec2, Vec2, Vec2, Vec2]', tuple(read_Vec2(v0) for v0 in sequence(r['handles']))))
@@ -259,8 +244,7 @@ def read_WarpBezierNode(value: object) -> WarpBezierNode:
 def validate_RotationTransform(value: RotationTransform) -> None:
     if not isinstance(value, RotationTransform):
         raise TypeError("Expected RotationTransform")
-    if isinstance(value.base_angle, bool) or not isinstance(value.base_angle, (float, int)) or not math.isfinite(value.base_angle) or abs(value.base_angle) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_f32(value.base_angle)
     validate_RotationPose(value.pose)
 
 def encode_RotationTransform(value: RotationTransform) -> object:
@@ -272,56 +256,48 @@ def read_RotationTransform(value: object) -> RotationTransform:
     return RotationTransform(base_angle=number(r['base_angle']), pose=read_RotationPose(r['pose']))
 
 def validate_RotationPose(value: RotationPose) -> None:
-    from .common import validate_PreciseVec2 as validate_PreciseVec2
+    from .common import validate_PreciseVec2
     if not isinstance(value, RotationPose):
         raise TypeError("Expected RotationPose")
     validate_PreciseVec2(value.origin)
-    if isinstance(value.angle, bool) or not isinstance(value.angle, (float, int)) or not math.isfinite(value.angle) or abs(value.angle) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.scale, bool) or not isinstance(value.scale, (float, int)) or not math.isfinite(value.scale) or abs(value.scale) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if type(value.reflect_x) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.reflect_y) is not bool:
-        raise ValueError("Expected bool")
+    _check_f32(value.angle)
+    _check_f32(value.scale)
+    _check_bool(value.reflect_x)
+    _check_bool(value.reflect_y)
 
 def encode_RotationPose(value: RotationPose) -> object:
-    from .common import encode_PreciseVec2 as encode_PreciseVec2
+    from .common import encode_PreciseVec2
     return {'origin': encode_PreciseVec2(value.origin), 'angle': value.angle, 'scale': value.scale, 'reflect_x': value.reflect_x, 'reflect_y': value.reflect_y}
 
 def read_RotationPose(value: object) -> RotationPose:
-    from .common import read_PreciseVec2 as read_PreciseVec2
+    from .common import read_PreciseVec2
     if isinstance(value, RotationPose): return value
     r = record(value)
     return RotationPose(origin=read_PreciseVec2(r['origin']), angle=number(r['angle']), scale=number(r['scale']), reflect_x=_boolean(r['reflect_x']), reflect_y=_boolean(r['reflect_y']))
 
 def validate_Glue(value: Glue) -> None:
-    from .bindings import validate_GlueBinding as validate_GlueBinding
+    from .bindings import validate_GlueBinding
     if not isinstance(value, Glue):
         raise TypeError("Expected Glue")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.runtime_id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.name, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
+    _check_string(value.runtime_id)
+    _check_string(value.name)
     validate_SceneReference(value.mesh_a_id)
     validate_SceneReference(value.mesh_b_id)
     if not isinstance(value.pairs, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.pairs:
         validate_GlueVertexPair(v0)
-    if isinstance(value.intensity, bool) or not isinstance(value.intensity, (float, int)) or not math.isfinite(value.intensity) or abs(value.intensity) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_f32(value.intensity)
     if value.binding is not None:
         validate_GlueBinding(value.binding)
 
 def encode_Glue(value: Glue) -> object:
-    from .bindings import encode_GlueBinding as encode_GlueBinding
+    from .bindings import encode_GlueBinding
     return {'id': value.id, 'runtime_id': value.runtime_id, 'name': value.name, 'mesh_a_id': encode_SceneReference(value.mesh_a_id), 'mesh_b_id': encode_SceneReference(value.mesh_b_id), 'pairs': [encode_GlueVertexPair(v0) for v0 in value.pairs], 'intensity': value.intensity, 'binding': None if value.binding is None else encode_GlueBinding(value.binding)}
 
 def read_Glue(value: object) -> Glue:
-    from .bindings import read_GlueBinding as read_GlueBinding
+    from .bindings import read_GlueBinding
     if isinstance(value, Glue): return value
     r = record(value)
     return Glue(id=string(r['id']), runtime_id=string(r['runtime_id']), name=string(r['name']), mesh_a_id=read_SceneReference(r['mesh_a_id']), mesh_b_id=read_SceneReference(r['mesh_b_id']), pairs=tuple(read_GlueVertexPair(v0) for v0 in sequence(r['pairs'])), intensity=number(r['intensity']), binding=None if r.get('binding', None) is None else read_GlueBinding(r.get('binding', None)))
@@ -329,18 +305,13 @@ def read_Glue(value: object) -> Glue:
 def validate_GlueVertexPair(value: GlueVertexPair) -> None:
     if not isinstance(value, GlueVertexPair):
         raise TypeError("Expected GlueVertexPair")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
     if value.vertex_a is not None:
-        if type(value.vertex_a) is not int or not 0 <= value.vertex_a < 4294967296:
-            raise ValueError("Expected u32")
+        _check_u32(value.vertex_a)
     if value.vertex_b is not None:
-        if type(value.vertex_b) is not int or not 0 <= value.vertex_b < 4294967296:
-            raise ValueError("Expected u32")
-    if isinstance(value.weight_a, bool) or not isinstance(value.weight_a, (float, int)) or not math.isfinite(value.weight_a) or abs(value.weight_a) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.weight_b, bool) or not isinstance(value.weight_b, (float, int)) or not math.isfinite(value.weight_b) or abs(value.weight_b) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+        _check_u32(value.vertex_b)
+    _check_f32(value.weight_a)
+    _check_f32(value.weight_b)
 
 def encode_GlueVertexPair(value: GlueVertexPair) -> object:
     return {'id': value.id, 'vertex_a': None if value.vertex_a is None else value.vertex_a, 'vertex_b': None if value.vertex_b is None else value.vertex_b, 'weight_a': value.weight_a, 'weight_b': value.weight_b}
@@ -351,44 +322,35 @@ def read_GlueVertexPair(value: object) -> GlueVertexPair:
     return GlueVertexPair(id=string(r['id']), vertex_a=None if r.get('vertex_a', None) is None else integer(r.get('vertex_a', None)), vertex_b=None if r.get('vertex_b', None) is None else integer(r.get('vertex_b', None)), weight_a=number(r['weight_a']), weight_b=number(r['weight_b']))
 
 def validate_Offscreen(value: Offscreen) -> None:
-    from .bindings import validate_OffscreenKeyform as validate_OffscreenKeyform
+    from .bindings import validate_OffscreenKeyform
     if not isinstance(value, Offscreen):
         raise TypeError("Expected Offscreen")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.runtime_id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.name, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.part_id, str):
-        raise ValueError("Expected string")
-    if type(value.enabled) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.blend_mode) is not int or not 0 <= value.blend_mode < 4294967296:
-        raise ValueError("Expected u32")
-    if type(value.flags) is not int or not 0 <= value.flags < 256:
-        raise ValueError("Expected u8")
+    _check_string(value.id)
+    _check_string(value.runtime_id)
+    _check_string(value.name)
+    _check_string(value.part_id)
+    _check_bool(value.enabled)
+    _check_u32(value.blend_mode)
+    _check_u8(value.flags)
     if not isinstance(value.masks, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.masks:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.part_keyform_indices, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.part_keyform_indices:
-        if type(v0) is not int or not -2147483648 <= v0 < 2147483648:
-            raise ValueError("Expected i32")
+        _check_i32(v0)
     if not isinstance(value.keyforms, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.keyforms:
         validate_OffscreenKeyform(v0)
 
 def encode_Offscreen(value: Offscreen) -> object:
-    from .bindings import encode_OffscreenKeyform as encode_OffscreenKeyform
+    from .bindings import encode_OffscreenKeyform
     return {'id': value.id, 'runtime_id': value.runtime_id, 'name': value.name, 'part_id': value.part_id, 'enabled': value.enabled, 'blend_mode': value.blend_mode, 'flags': value.flags, 'masks': [v0 for v0 in value.masks], 'part_keyform_indices': [v0 for v0 in value.part_keyform_indices], 'keyforms': [encode_OffscreenKeyform(v0) for v0 in value.keyforms]}
 
 def read_Offscreen(value: object) -> Offscreen:
-    from .bindings import read_OffscreenKeyform as read_OffscreenKeyform
+    from .bindings import read_OffscreenKeyform
     if isinstance(value, Offscreen): return value
     r = record(value)
     return Offscreen(id=string(r['id']), runtime_id=string(r['runtime_id']), name=string(r['name']), part_id=string(r['part_id']), enabled=_boolean(r.get('enabled', True)), blend_mode=integer(r['blend_mode']), flags=integer(r['flags']), masks=tuple(string(v0) for v0 in sequence(r['masks'])), part_keyform_indices=tuple(integer(v0) for v0 in sequence(r['part_keyform_indices'])), keyforms=tuple(read_OffscreenKeyform(v0) for v0 in sequence(r['keyforms'])))
@@ -405,27 +367,24 @@ def read_ReparentStrategy(value: object) -> ReparentStrategy:
     return ReparentStrategy(string(value))
 
 def validate_ReparentContext(value: ReparentContext) -> None:
-    from .commands import validate_ConversionDomain as validate_ConversionDomain
+    from .commands import validate_ConversionDomain
     if not isinstance(value, ReparentContext):
         raise TypeError("Expected ReparentContext")
     for key0, v0 in value.parameter_values.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
-        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(key0)
+        _check_f32(v0)
     if not isinstance(value.parameter_domain, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.parameter_domain:
         validate_ConversionDomain(v0)
-    if isinstance(value.edit_time_seconds, bool) or not isinstance(value.edit_time_seconds, (float, int)) or not math.isfinite(value.edit_time_seconds):
-        raise ValueError("Expected f64")
+    _check_f64(value.edit_time_seconds)
 
 def encode_ReparentContext(value: ReparentContext) -> object:
-    from .commands import encode_ConversionDomain as encode_ConversionDomain
+    from .commands import encode_ConversionDomain
     return {'parameter_values': {str(key0): v0 for key0, v0 in value.parameter_values.items()}, 'parameter_domain': [encode_ConversionDomain(v0) for v0 in value.parameter_domain], 'edit_time_seconds': value.edit_time_seconds}
 
 def read_ReparentContext(value: object) -> ReparentContext:
-    from .commands import read_ConversionDomain as read_ConversionDomain
+    from .commands import read_ConversionDomain
     if isinstance(value, ReparentContext): return value
     r = record(value)
     return ReparentContext(parameter_values={key0: number(v0) for key0, v0 in record(r['parameter_values']).items()}, parameter_domain=tuple(read_ConversionDomain(v0) for v0 in sequence(r['parameter_domain'])), edit_time_seconds=number(r['edit_time_seconds']))
@@ -440,8 +399,7 @@ def validate_SceneCreate(value: SceneCreate) -> None:
             if len(value.bounds) != 4:
                 raise ValueError("Invalid fixed array length")
             for v0 in value.bounds:
-                if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-                    raise ValueError("Expected f32")
+                _check_f32(v0)
     elif isinstance(value, SceneCreateRotation):
         pass
     elif isinstance(value, SceneCreateOffscreen):
@@ -485,16 +443,13 @@ def read_SceneCreate(value: object) -> SceneCreate:
     raise ValueError("Unknown SceneCreate variant")
 
 def validate_SceneFieldValue(value: SceneFieldValue) -> None:
-    from .bindings import validate_OffscreenKeyform as validate_OffscreenKeyform
+    from .bindings import validate_OffscreenKeyform
     if isinstance(value, SceneFieldValueLabel):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     elif isinstance(value, SceneFieldValueRuntimeId):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     elif isinstance(value, SceneFieldValueEnabled):
-        if type(value.value) is not bool:
-            raise ValueError("Expected bool")
+        _check_bool(value.value)
     elif isinstance(value, SceneFieldValueAppearance):
         validate_Appearance(value.value)
     elif isinstance(value, SceneFieldValueTexture):
@@ -503,20 +458,15 @@ def validate_SceneFieldValue(value: SceneFieldValue) -> None:
         if not isinstance(value.value, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.value:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
     elif isinstance(value, SceneFieldValueMeshDrawing):
         if value.draw_order is not None:
-            if isinstance(value.draw_order, bool) or not isinstance(value.draw_order, (float, int)) or not math.isfinite(value.draw_order) or abs(value.draw_order) > 3.4028234663852886e38:
-                raise ValueError("Expected f32")
+            _check_f32(value.draw_order)
         validate_BlendMode(value.blend_mode)
         if value.raw_blend_mode is not None:
-            if type(value.raw_blend_mode) is not int or not 0 <= value.raw_blend_mode < 4294967296:
-                raise ValueError("Expected u32")
-        if type(value.double_sided) is not bool:
-            raise ValueError("Expected bool")
-        if type(value.inverted_mask) is not bool:
-            raise ValueError("Expected bool")
+            _check_u32(value.raw_blend_mode)
+        _check_bool(value.double_sided)
+        _check_bool(value.inverted_mask)
     elif isinstance(value, SceneFieldValueWarp):
         validate_WarpTransform(value.value)
     elif isinstance(value, SceneFieldValueRotation):
@@ -525,13 +475,10 @@ def validate_SceneFieldValue(value: SceneFieldValue) -> None:
         validate_SceneReference(value.a)
         validate_SceneReference(value.b)
     elif isinstance(value, SceneFieldValueGlueIntensity):
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.value)
     elif isinstance(value, SceneFieldValueOffscreen):
-        if type(value.blend_mode) is not int or not 0 <= value.blend_mode < 4294967296:
-            raise ValueError("Expected u32")
-        if type(value.flags) is not int or not 0 <= value.flags < 256:
-            raise ValueError("Expected u8")
+        _check_u32(value.blend_mode)
+        _check_u8(value.flags)
         if not isinstance(value.keyforms, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.keyforms:
@@ -539,20 +486,17 @@ def validate_SceneFieldValue(value: SceneFieldValue) -> None:
         if not isinstance(value.part_keyform_indices, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.part_keyform_indices:
-            if type(v0) is not int or not -2147483648 <= v0 < 2147483648:
-                raise ValueError("Expected i32")
+            _check_i32(v0)
     elif isinstance(value, SceneFieldValueContext):
         if value.part_id is not None:
-            if not isinstance(value.part_id, str):
-                raise ValueError("Expected string")
+            _check_string(value.part_id)
         if value.parent_id is not None:
-            if not isinstance(value.parent_id, str):
-                raise ValueError("Expected string")
+            _check_string(value.parent_id)
     else:
         raise TypeError("Expected SceneFieldValue")
 
 def encode_SceneFieldValue(value: SceneFieldValue) -> object:
-    from .bindings import encode_OffscreenKeyform as encode_OffscreenKeyform
+    from .bindings import encode_OffscreenKeyform
     if isinstance(value, SceneFieldValueLabel):
         return {'field': 'label', 'value': value.value}
     elif isinstance(value, SceneFieldValueRuntimeId):
@@ -582,7 +526,7 @@ def encode_SceneFieldValue(value: SceneFieldValue) -> object:
     raise TypeError("Expected SceneFieldValue")
 
 def read_SceneFieldValue(value: object) -> SceneFieldValue:
-    from .bindings import read_OffscreenKeyform as read_OffscreenKeyform
+    from .bindings import read_OffscreenKeyform
     if isinstance(value, (SceneFieldValueLabel, SceneFieldValueRuntimeId, SceneFieldValueEnabled, SceneFieldValueAppearance, SceneFieldValueTexture, SceneFieldValueMasks, SceneFieldValueMeshDrawing, SceneFieldValueWarp, SceneFieldValueRotation, SceneFieldValueGlueEndpoints, SceneFieldValueGlueIntensity, SceneFieldValueOffscreen, SceneFieldValueContext,)): return value
     r = record(value)
     tag = string(r['field'])
@@ -621,19 +565,16 @@ def read_SceneFieldValue(value: object) -> SceneFieldValue:
 def validate_SceneCollection(value: SceneCollection) -> None:
     if isinstance(value, SceneCollectionOrganization):
         if value.part_id is not None:
-            if not isinstance(value.part_id, str):
-                raise ValueError("Expected string")
+            _check_string(value.part_id)
     elif isinstance(value, SceneCollectionDeformation):
         if value.parent_id is not None:
-            if not isinstance(value.parent_id, str):
-                raise ValueError("Expected string")
+            _check_string(value.parent_id)
     elif isinstance(value, SceneCollectionGlues):
         pass
     elif isinstance(value, SceneCollectionDrawingGroups):
         pass
     elif isinstance(value, SceneCollectionDrawing):
-        if not isinstance(value.owner, str):
-            raise ValueError("Expected string")
+        _check_string(value.owner)
     else:
         raise TypeError("Expected SceneCollection")
 
@@ -673,8 +614,7 @@ def validate_ReparentPlacement(value: ReparentPlacement) -> None:
     if not isinstance(value, ReparentPlacement):
         raise TypeError("Expected ReparentPlacement")
     if value.before is not None:
-        if not isinstance(value.before, str):
-            raise ValueError("Expected string")
+        _check_string(value.before)
 
 def encode_ReparentPlacement(value: ReparentPlacement) -> object:
     return {'before': None if value.before is None else value.before}
@@ -698,16 +638,13 @@ def read_SceneCopyScope(value: object) -> SceneCopyScope:
 def validate_OrganizationCollection(value: OrganizationCollection) -> None:
     if isinstance(value, OrganizationCollectionParameters):
         if value.group_id is not None:
-            if not isinstance(value.group_id, str):
-                raise ValueError("Expected string")
+            _check_string(value.group_id)
     elif isinstance(value, OrganizationCollectionParameterGroups):
         if value.parent_id is not None:
-            if not isinstance(value.parent_id, str):
-                raise ValueError("Expected string")
+            _check_string(value.parent_id)
     elif isinstance(value, OrganizationCollectionPartMembers):
         if value.part_id is not None:
-            if not isinstance(value.part_id, str):
-                raise ValueError("Expected string")
+            _check_string(value.part_id)
     else:
         raise TypeError("Expected OrganizationCollection")
 
@@ -750,18 +687,14 @@ def validate_ShapeTarget(value: ShapeTarget) -> None:
     if isinstance(value, ShapeTargetBase):
         pass
     elif isinstance(value, ShapeTargetOrdinary):
-        if not isinstance(value.binding_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.binding_id)
         if not isinstance(value.samples, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.samples:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
     elif isinstance(value, ShapeTargetBlend):
-        if not isinstance(value.binding_id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.sample_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.binding_id)
+        _check_string(value.sample_id)
     else:
         raise TypeError("Expected ShapeTarget")
 
@@ -789,21 +722,19 @@ def read_ShapeTarget(value: object) -> ShapeTarget:
     raise ValueError("Unknown ShapeTarget variant")
 
 def validate_WarpPointPatch(value: WarpPointPatch) -> None:
-    from .common import validate_Vec2 as validate_Vec2
+    from .common import validate_Vec2
     if not isinstance(value, WarpPointPatch):
         raise TypeError("Expected WarpPointPatch")
-    if type(value.row) is not int or not 0 <= value.row < 4294967296:
-        raise ValueError("Expected u32")
-    if type(value.column) is not int or not 0 <= value.column < 4294967296:
-        raise ValueError("Expected u32")
+    _check_u32(value.row)
+    _check_u32(value.column)
     validate_Vec2(value.point)
 
 def encode_WarpPointPatch(value: WarpPointPatch) -> object:
-    from .common import encode_Vec2 as encode_Vec2
+    from .common import encode_Vec2
     return {'row': value.row, 'column': value.column, 'point': encode_Vec2(value.point)}
 
 def read_WarpPointPatch(value: object) -> WarpPointPatch:
-    from .common import read_Vec2 as read_Vec2
+    from .common import read_Vec2
     if isinstance(value, WarpPointPatch): return value
     r = record(value)
     return WarpPointPatch(row=integer(r['row']), column=integer(r['column']), point=read_Vec2(r['point']))
@@ -815,11 +746,9 @@ def validate_OffscreenDeletePolicy(value: OffscreenDeletePolicy) -> None:
         pass
     elif isinstance(value, OffscreenDeletePolicyRemap):
         for key0, v0 in value.replacements.items():
-            if type(key0) is not int or not 0 <= key0 < 18446744073709551616:
-                raise ValueError("Expected usize")
+            _check_usize(key0)
             if v0 is not None:
-                if type(v0) is not int or not 0 <= v0 < 18446744073709551616:
-                    raise ValueError("Expected usize")
+                _check_usize(v0)
     else:
         raise TypeError("Expected OffscreenDeletePolicy")
 
@@ -846,54 +775,47 @@ def read_OffscreenDeletePolicy(value: object) -> OffscreenDeletePolicy:
     raise ValueError("Unknown OffscreenDeletePolicy variant")
 
 def validate_OffscreenMappingPatch(value: OffscreenMappingPatch) -> None:
-    from .bindings import validate_PartKeyformSlot as validate_PartKeyformSlot
+    from .bindings import validate_PartKeyformSlot
     if not isinstance(value, OffscreenMappingPatch):
         raise TypeError("Expected OffscreenMappingPatch")
     validate_PartKeyformSlot(value.slot)
-    if type(value.keyform) is not int or not -2147483648 <= value.keyform < 2147483648:
-        raise ValueError("Expected i32")
+    _check_i32(value.keyform)
 
 def encode_OffscreenMappingPatch(value: OffscreenMappingPatch) -> object:
-    from .bindings import encode_PartKeyformSlot as encode_PartKeyformSlot
+    from .bindings import encode_PartKeyformSlot
     return {'slot': encode_PartKeyformSlot(value.slot), 'keyform': value.keyform}
 
 def read_OffscreenMappingPatch(value: object) -> OffscreenMappingPatch:
-    from .bindings import read_PartKeyformSlot as read_PartKeyformSlot
+    from .bindings import read_PartKeyformSlot
     if isinstance(value, OffscreenMappingPatch): return value
     r = record(value)
     return OffscreenMappingPatch(slot=read_PartKeyformSlot(r['slot']), keyform=integer(r['keyform']))
 
 def validate_Canvas(value: Canvas) -> None:
-    from .common import validate_Vec2 as validate_Vec2
+    from .common import validate_Vec2
     if not isinstance(value, Canvas):
         raise TypeError("Expected Canvas")
-    if isinstance(value.width, bool) or not isinstance(value.width, (float, int)) or not math.isfinite(value.width) or abs(value.width) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.height, bool) or not isinstance(value.height, (float, int)) or not math.isfinite(value.height) or abs(value.height) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_f32(value.width)
+    _check_f32(value.height)
     validate_Vec2(value.origin)
-    if isinstance(value.pixels_per_unit, bool) or not isinstance(value.pixels_per_unit, (float, int)) or not math.isfinite(value.pixels_per_unit) or abs(value.pixels_per_unit) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if type(value.flag) is not int or not 0 <= value.flag < 256:
-        raise ValueError("Expected u8")
+    _check_f32(value.pixels_per_unit)
+    _check_u8(value.flag)
 
 def encode_Canvas(value: Canvas) -> object:
-    from .common import encode_Vec2 as encode_Vec2
+    from .common import encode_Vec2
     return {'width': value.width, 'height': value.height, 'origin': encode_Vec2(value.origin), 'pixels_per_unit': value.pixels_per_unit, 'flag': value.flag}
 
 def read_Canvas(value: object) -> Canvas:
-    from .common import read_Vec2 as read_Vec2
+    from .common import read_Vec2
     if isinstance(value, Canvas): return value
     r = record(value)
     return Canvas(width=number(r['width']), height=number(r['height']), origin=read_Vec2(r['origin']), pixels_per_unit=number(r['pixels_per_unit']), flag=integer(r.get('flag', 1)))
 
 def validate_AttachmentRef(value: AttachmentRef) -> None:
     if isinstance(value, AttachmentRefResolved):
-        if not isinstance(value.attachment_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.attachment_id)
     elif isinstance(value, AttachmentRefUnresolved):
-        if not isinstance(value.path, str):
-            raise ValueError("Expected string")
+        _check_string(value.path)
     else:
         raise TypeError("Expected AttachmentRef")
 
@@ -917,7 +839,7 @@ def read_AttachmentRef(value: object) -> AttachmentRef:
     raise ValueError("Unknown AttachmentRef variant")
 
 def validate_ModelSetup(value: ModelSetup) -> None:
-    from .project import validate_ExportSettings as validate_ExportSettings
+    from .project import validate_ExportSettings
     if not isinstance(value, ModelSetup):
         raise TypeError("Expected ModelSetup")
     if value.source_canvas is not None:
@@ -925,11 +847,11 @@ def validate_ModelSetup(value: ModelSetup) -> None:
     validate_ExportSettings(value.export)
 
 def encode_ModelSetup(value: ModelSetup) -> object:
-    from .project import encode_ExportSettings as encode_ExportSettings
+    from .project import encode_ExportSettings
     return {'source_canvas': None if value.source_canvas is None else encode_Canvas(value.source_canvas), 'export': encode_ExportSettings(value.export)}
 
 def read_ModelSetup(value: object) -> ModelSetup:
-    from .project import read_ExportSettings as read_ExportSettings
+    from .project import read_ExportSettings
     if isinstance(value, ModelSetup): return value
     r = record(value)
     return ModelSetup(source_canvas=None if r.get('source_canvas', None) is None else read_Canvas(r.get('source_canvas', None)), export=read_ExportSettings(r['export']))
@@ -940,18 +862,15 @@ def validate_HierarchyOrder(value: HierarchyOrder) -> None:
     if not isinstance(value.organization, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.organization:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.deformation, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.deformation:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.glues, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.glues:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
 
 def encode_HierarchyOrder(value: HierarchyOrder) -> object:
     return {'organization': [v0 for v0 in value.organization], 'deformation': [v0 for v0 in value.deformation], 'glues': [v0 for v0 in value.glues]}
@@ -964,17 +883,13 @@ def read_HierarchyOrder(value: object) -> HierarchyOrder:
 def validate_DrawOrderGroup(value: DrawOrderGroup) -> None:
     if not isinstance(value, DrawOrderGroup):
         raise TypeError("Expected DrawOrderGroup")
-    if not isinstance(value.owner, str):
-        raise ValueError("Expected string")
+    _check_string(value.owner)
     if not isinstance(value.items, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.items:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
-    if type(value.min_order) is not int or not -2147483648 <= value.min_order < 2147483648:
-        raise ValueError("Expected i32")
-    if type(value.max_order) is not int or not -2147483648 <= value.max_order < 2147483648:
-        raise ValueError("Expected i32")
+        _check_string(v0)
+    _check_i32(value.min_order)
+    _check_i32(value.max_order)
 
 def encode_DrawOrderGroup(value: DrawOrderGroup) -> object:
     return {'owner': value.owner, 'items': [v0 for v0 in value.items], 'min_order': value.min_order, 'max_order': value.max_order}
@@ -996,42 +911,33 @@ def read_SceneField(value: object) -> SceneField:
     return SceneField(string(value))
 
 def validate_SceneContentTarget(value: SceneContentTarget) -> None:
-    from .bindings import validate_PartKeyformSlot as validate_PartKeyformSlot
+    from .bindings import validate_PartKeyformSlot
     if isinstance(value, SceneContentTargetVertexPosition):
-        if type(value.vertex_id) is not int or not 0 <= value.vertex_id < 4294967296:
-            raise ValueError("Expected u32")
+        _check_u32(value.vertex_id)
         validate_ShapeTarget(value.shape)
     elif isinstance(value, SceneContentTargetVertexUv):
-        if type(value.vertex_id) is not int or not 0 <= value.vertex_id < 4294967296:
-            raise ValueError("Expected u32")
+        _check_u32(value.vertex_id)
     elif isinstance(value, SceneContentTargetTriangle):
-        if type(value.slot) is not int or not 0 <= value.slot < 18446744073709551616:
-            raise ValueError("Expected usize")
+        _check_usize(value.slot)
     elif isinstance(value, SceneContentTargetWarpPoint):
-        if type(value.row) is not int or not 0 <= value.row < 4294967296:
-            raise ValueError("Expected u32")
-        if type(value.column) is not int or not 0 <= value.column < 4294967296:
-            raise ValueError("Expected u32")
+        _check_u32(value.row)
+        _check_u32(value.column)
         validate_ShapeTarget(value.shape)
     elif isinstance(value, SceneContentTargetWarpBezierControl):
-        if type(value.node) is not int or not 0 <= value.node < 18446744073709551616:
-            raise ValueError("Expected usize")
-        if type(value.component) is not int or not 0 <= value.component < 18446744073709551616:
-            raise ValueError("Expected usize")
+        _check_usize(value.node)
+        _check_usize(value.component)
         validate_ShapeTarget(value.shape)
     elif isinstance(value, SceneContentTargetGluePair):
-        if not isinstance(value.pair_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.pair_id)
     elif isinstance(value, SceneContentTargetOffscreenKeyform):
-        if type(value.slot) is not int or not 0 <= value.slot < 18446744073709551616:
-            raise ValueError("Expected usize")
+        _check_usize(value.slot)
     elif isinstance(value, SceneContentTargetOffscreenMapping):
         validate_PartKeyformSlot(value.slot)
     else:
         raise TypeError("Expected SceneContentTarget")
 
 def encode_SceneContentTarget(value: SceneContentTarget) -> object:
-    from .bindings import encode_PartKeyformSlot as encode_PartKeyformSlot
+    from .bindings import encode_PartKeyformSlot
     if isinstance(value, SceneContentTargetVertexPosition):
         return {'kind': 'vertex_position', **cast(Mapping[str, object], {'vertex_id': value.vertex_id, 'shape': encode_ShapeTarget(value.shape)})}
     elif isinstance(value, SceneContentTargetVertexUv):
@@ -1051,7 +957,7 @@ def encode_SceneContentTarget(value: SceneContentTarget) -> object:
     raise TypeError("Expected SceneContentTarget")
 
 def read_SceneContentTarget(value: object) -> SceneContentTarget:
-    from .bindings import read_PartKeyformSlot as read_PartKeyformSlot
+    from .bindings import read_PartKeyformSlot
     if isinstance(value, (SceneContentTargetVertexPosition, SceneContentTargetVertexUv, SceneContentTargetTriangle, SceneContentTargetWarpPoint, SceneContentTargetWarpBezierControl, SceneContentTargetGluePair, SceneContentTargetOffscreenKeyform, SceneContentTargetOffscreenMapping,)): return value
     r = record(value)
     tag = string(r['kind'])
@@ -1082,8 +988,8 @@ def read_SceneContentTarget(value: object) -> SceneContentTarget:
     raise ValueError("Unknown SceneContentTarget variant")
 
 def validate_SceneContentValue(value: SceneContentValue) -> None:
-    from .bindings import validate_OffscreenKeyform as validate_OffscreenKeyform
-    from .common import validate_Vec2 as validate_Vec2
+    from .bindings import validate_OffscreenKeyform
+    from .common import validate_Vec2
     if isinstance(value, SceneContentValuePoint):
         validate_Vec2(value.value)
     elif isinstance(value, SceneContentValueTriangle):
@@ -1092,21 +998,19 @@ def validate_SceneContentValue(value: SceneContentValue) -> None:
         if len(value.value) != 3:
             raise ValueError("Invalid fixed array length")
         for v0 in value.value:
-            if type(v0) is not int or not 0 <= v0 < 4294967296:
-                raise ValueError("Expected u32")
+            _check_u32(v0)
     elif isinstance(value, SceneContentValueGluePair):
         validate_GlueVertexPair(value.value)
     elif isinstance(value, SceneContentValueOffscreenKeyform):
         validate_OffscreenKeyform(value.value)
     elif isinstance(value, SceneContentValueMapping):
-        if type(value.value) is not int or not -2147483648 <= value.value < 2147483648:
-            raise ValueError("Expected i32")
+        _check_i32(value.value)
     else:
         raise TypeError("Expected SceneContentValue")
 
 def encode_SceneContentValue(value: SceneContentValue) -> object:
-    from .bindings import encode_OffscreenKeyform as encode_OffscreenKeyform
-    from .common import encode_Vec2 as encode_Vec2
+    from .bindings import encode_OffscreenKeyform
+    from .common import encode_Vec2
     if isinstance(value, SceneContentValuePoint):
         return {'kind': 'point', 'value': encode_Vec2(value.value)}
     elif isinstance(value, SceneContentValueTriangle):
@@ -1120,8 +1024,8 @@ def encode_SceneContentValue(value: SceneContentValue) -> object:
     raise TypeError("Expected SceneContentValue")
 
 def read_SceneContentValue(value: object) -> SceneContentValue:
-    from .bindings import read_OffscreenKeyform as read_OffscreenKeyform
-    from .common import read_Vec2 as read_Vec2
+    from .bindings import read_OffscreenKeyform
+    from .common import read_Vec2
     if isinstance(value, (SceneContentValuePoint, SceneContentValueTriangle, SceneContentValueGluePair, SceneContentValueOffscreenKeyform, SceneContentValueMapping,)): return value
     r = record(value)
     tag = string(r['kind'])

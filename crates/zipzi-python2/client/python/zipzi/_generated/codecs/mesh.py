@@ -6,28 +6,29 @@ from ..._values import record
 from ..._values import sequence
 from ..._values import string
 from .._modeling_support import _boolean
+from .._modeling_support import _check_bool
+from .._modeling_support import _check_f32
+from .._modeling_support import _check_string
+from .._modeling_support import _check_u32
+from .._modeling_support import _check_usize
 from collections.abc import Mapping
 from typing import cast
-import math
-from ..values import ManualMeshOperation as ManualMeshOperation, ManualMeshOperationConstrainEdge as ManualMeshOperationConstrainEdge, ManualMeshOperationDeleteEdge as ManualMeshOperationDeleteEdge, ManualMeshOperationDeleteVertices as ManualMeshOperationDeleteVertices, ManualMeshOperationInsertConnectedVertex as ManualMeshOperationInsertConnectedVertex, ManualMeshOperationInsertVertex as ManualMeshOperationInsertVertex, ManualMeshOperationMoveVertices as ManualMeshOperationMoveVertices, ManualMeshOperationReconnect as ManualMeshOperationReconnect, ManualMeshOperationReleaseConstraint as ManualMeshOperationReleaseConstraint, ManualMeshTransferReport as ManualMeshTransferReport, ManualVertexTarget as ManualVertexTarget, Mesh as Mesh, MeshConstraint as MeshConstraint, MeshConstraintKind as MeshConstraintKind, MeshMeshing as MeshMeshing, NewMeshVertex as NewMeshVertex, TopologyReplacement as TopologyReplacement, VertexContentPatch as VertexContentPatch, VertexDeletePolicy as VertexDeletePolicy, VertexSeed as VertexSeed, VertexSeedBase as VertexSeedBase, VertexSeedInterpolate as VertexSeedInterpolate, VertexWeight as VertexWeight
+from ..values import ManualMeshOperation, ManualMeshOperationConstrainEdge, ManualMeshOperationDeleteEdge, ManualMeshOperationDeleteVertices, ManualMeshOperationInsertConnectedVertex, ManualMeshOperationInsertVertex, ManualMeshOperationMoveVertices, ManualMeshOperationReconnect, ManualMeshOperationReleaseConstraint, ManualMeshTransferReport, ManualVertexTarget, Mesh, MeshConstraint, MeshConstraintKind, MeshMeshing, NewMeshVertex, TopologyReplacement, VertexContentPatch, VertexDeletePolicy, VertexSeed, VertexSeedBase, VertexSeedInterpolate, VertexWeight
 
 def validate_Mesh(value: Mesh) -> None:
-    from .scene import validate_Appearance as validate_Appearance
-    from .scene import validate_BlendMode as validate_BlendMode
-    from .scene import validate_SceneReference as validate_SceneReference
-    from .common import validate_Vec2 as validate_Vec2
+    from .scene import validate_Appearance
+    from .scene import validate_BlendMode
+    from .scene import validate_SceneReference
+    from .common import validate_Vec2
     if not isinstance(value, Mesh):
         raise TypeError("Expected Mesh")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.name, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
+    _check_string(value.name)
     validate_SceneReference(value.texture_asset_id)
     if not isinstance(value.vertex_ids, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.vertex_ids:
-        if type(v0) is not int or not 0 <= v0 < 4294967296:
-            raise ValueError("Expected u32")
+        _check_u32(v0)
     if not isinstance(value.base_positions, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.base_positions:
@@ -44,48 +45,38 @@ def validate_Mesh(value: Mesh) -> None:
         if len(v0) != 3:
             raise ValueError("Invalid fixed array length")
         for v1 in v0:
-            if type(v1) is not int or not 0 <= v1 < 4294967296:
-                raise ValueError("Expected u32")
+            _check_u32(v1)
     if value.meshing is not None:
         validate_MeshMeshing(value.meshing)
-    if not isinstance(value.runtime_id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.part_id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.deformer_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.runtime_id)
+    _check_string(value.part_id)
+    _check_string(value.deformer_id)
     validate_Appearance(value.appearance)
     if value.draw_order is not None:
-        if isinstance(value.draw_order, bool) or not isinstance(value.draw_order, (float, int)) or not math.isfinite(value.draw_order) or abs(value.draw_order) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.draw_order)
     validate_BlendMode(value.blend_mode)
-    if type(value.enabled) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.double_sided) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.inverted_mask) is not bool:
-        raise ValueError("Expected bool")
+    _check_bool(value.enabled)
+    _check_bool(value.double_sided)
+    _check_bool(value.inverted_mask)
     if not isinstance(value.masks, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.masks:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if value.raw_blend_mode is not None:
-        if type(value.raw_blend_mode) is not int or not 0 <= value.raw_blend_mode < 4294967296:
-            raise ValueError("Expected u32")
+        _check_u32(value.raw_blend_mode)
 
 def encode_Mesh(value: Mesh) -> object:
-    from .scene import encode_Appearance as encode_Appearance
-    from .scene import encode_BlendMode as encode_BlendMode
-    from .scene import encode_SceneReference as encode_SceneReference
-    from .common import encode_Vec2 as encode_Vec2
+    from .scene import encode_Appearance
+    from .scene import encode_BlendMode
+    from .scene import encode_SceneReference
+    from .common import encode_Vec2
     return {'id': value.id, 'name': value.name, 'texture_asset_id': encode_SceneReference(value.texture_asset_id), 'vertex_ids': [v0 for v0 in value.vertex_ids], 'base_positions': [encode_Vec2(v0) for v0 in value.base_positions], 'uvs': [encode_Vec2(v0) for v0 in value.uvs], 'triangles': [[v1 for v1 in v0] for v0 in value.triangles], 'meshing': None if value.meshing is None else encode_MeshMeshing(value.meshing), 'runtime_id': value.runtime_id, 'part_id': value.part_id, 'deformer_id': value.deformer_id, 'appearance': encode_Appearance(value.appearance), 'draw_order': None if value.draw_order is None else value.draw_order, 'blend_mode': encode_BlendMode(value.blend_mode), 'enabled': value.enabled, 'double_sided': value.double_sided, 'inverted_mask': value.inverted_mask, 'masks': [v0 for v0 in value.masks], 'raw_blend_mode': None if value.raw_blend_mode is None else value.raw_blend_mode}
 
 def read_Mesh(value: object) -> Mesh:
-    from .scene import read_Appearance as read_Appearance
-    from .scene import read_BlendMode as read_BlendMode
-    from .scene import read_SceneReference as read_SceneReference
-    from .common import read_Vec2 as read_Vec2
+    from .scene import read_Appearance
+    from .scene import read_BlendMode
+    from .scene import read_SceneReference
+    from .common import read_Vec2
     if isinstance(value, Mesh): return value
     r = record(value)
     return Mesh(id=string(r['id']), name=string(r['name']), texture_asset_id=read_SceneReference(r['texture_asset_id']), vertex_ids=tuple(integer(v0) for v0 in sequence(r['vertex_ids'])), base_positions=tuple(read_Vec2(v0) for v0 in sequence(r['base_positions'])), uvs=tuple(read_Vec2(v0) for v0 in sequence(r['uvs'])), triangles=tuple(cast('tuple[int, int, int]', tuple(integer(v1) for v1 in sequence(v0))) for v0 in sequence(r['triangles'])), meshing=None if r.get('meshing', None) is None else read_MeshMeshing(r.get('meshing', None)), runtime_id=string(r['runtime_id']), part_id=string(r['part_id']), deformer_id=string(r['deformer_id']), appearance=read_Appearance(r['appearance']), draw_order=None if r.get('draw_order', None) is None else number(r.get('draw_order', None)), blend_mode=read_BlendMode(r['blend_mode']), enabled=_boolean(r['enabled']), double_sided=_boolean(r['double_sided']), inverted_mask=_boolean(r['inverted_mask']), masks=tuple(string(v0) for v0 in sequence(r['masks'])), raw_blend_mode=None if r.get('raw_blend_mode', None) is None else integer(r.get('raw_blend_mode', None)))
@@ -96,8 +87,7 @@ def validate_MeshMeshing(value: MeshMeshing) -> None:
     if not isinstance(value.boundary, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.boundary:
-        if type(v0) is not int or not 0 <= v0 < 4294967296:
-            raise ValueError("Expected u32")
+        _check_u32(v0)
     if not isinstance(value.constraints, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.constraints:
@@ -119,8 +109,7 @@ def validate_MeshConstraint(value: MeshConstraint) -> None:
     if len(value.endpoints) != 2:
         raise ValueError("Invalid fixed array length")
     for v0 in value.endpoints:
-        if type(v0) is not int or not 0 <= v0 < 4294967296:
-            raise ValueError("Expected u32")
+        _check_u32(v0)
     validate_MeshConstraintKind(value.kind)
 
 def encode_MeshConstraint(value: MeshConstraint) -> object:
@@ -143,42 +132,40 @@ def read_MeshConstraintKind(value: object) -> MeshConstraintKind:
     return MeshConstraintKind(string(value))
 
 def validate_VertexContentPatch(value: VertexContentPatch) -> None:
-    from .common import validate_Vec2 as validate_Vec2
+    from .common import validate_Vec2
     if not isinstance(value, VertexContentPatch):
         raise TypeError("Expected VertexContentPatch")
-    if type(value.vertex_id) is not int or not 0 <= value.vertex_id < 4294967296:
-        raise ValueError("Expected u32")
+    _check_u32(value.vertex_id)
     if value.position is not None:
         validate_Vec2(value.position)
     if value.uv is not None:
         validate_Vec2(value.uv)
 
 def encode_VertexContentPatch(value: VertexContentPatch) -> object:
-    from .common import encode_Vec2 as encode_Vec2
+    from .common import encode_Vec2
     return {'vertex_id': value.vertex_id, 'position': None if value.position is None else encode_Vec2(value.position), 'uv': None if value.uv is None else encode_Vec2(value.uv)}
 
 def read_VertexContentPatch(value: object) -> VertexContentPatch:
-    from .common import read_Vec2 as read_Vec2
+    from .common import read_Vec2
     if isinstance(value, VertexContentPatch): return value
     r = record(value)
     return VertexContentPatch(vertex_id=integer(r['vertex_id']), position=None if r.get('position', None) is None else read_Vec2(r.get('position', None)), uv=None if r.get('uv', None) is None else read_Vec2(r.get('uv', None)))
 
 def validate_NewMeshVertex(value: NewMeshVertex) -> None:
-    from .common import validate_Vec2 as validate_Vec2
+    from .common import validate_Vec2
     if not isinstance(value, NewMeshVertex):
         raise TypeError("Expected NewMeshVertex")
-    if type(value.vertex_id) is not int or not 0 <= value.vertex_id < 4294967296:
-        raise ValueError("Expected u32")
+    _check_u32(value.vertex_id)
     validate_Vec2(value.position)
     validate_Vec2(value.uv)
     validate_VertexSeed(value.seed)
 
 def encode_NewMeshVertex(value: NewMeshVertex) -> object:
-    from .common import encode_Vec2 as encode_Vec2
+    from .common import encode_Vec2
     return {'vertex_id': value.vertex_id, 'position': encode_Vec2(value.position), 'uv': encode_Vec2(value.uv), 'seed': encode_VertexSeed(value.seed)}
 
 def read_NewMeshVertex(value: object) -> NewMeshVertex:
-    from .common import read_Vec2 as read_Vec2
+    from .common import read_Vec2
     if isinstance(value, NewMeshVertex): return value
     r = record(value)
     return NewMeshVertex(vertex_id=integer(r['vertex_id']), position=read_Vec2(r['position']), uv=read_Vec2(r['uv']), seed=read_VertexSeed(r['seed']))
@@ -215,10 +202,8 @@ def read_VertexSeed(value: object) -> VertexSeed:
 def validate_VertexWeight(value: VertexWeight) -> None:
     if not isinstance(value, VertexWeight):
         raise TypeError("Expected VertexWeight")
-    if type(value.vertex_id) is not int or not 0 <= value.vertex_id < 4294967296:
-        raise ValueError("Expected u32")
-    if isinstance(value.weight, bool) or not isinstance(value.weight, (float, int)) or not math.isfinite(value.weight) or abs(value.weight) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_u32(value.vertex_id)
+    _check_f32(value.weight)
 
 def encode_VertexWeight(value: VertexWeight) -> object:
     return {'vertex_id': value.vertex_id, 'weight': value.weight}
@@ -240,9 +225,9 @@ def read_VertexDeletePolicy(value: object) -> VertexDeletePolicy:
     return VertexDeletePolicy(string(value))
 
 def validate_TopologyReplacement(value: TopologyReplacement) -> None:
-    from .bindings import validate_BlendShapeBinding as validate_BlendShapeBinding
-    from .scene import validate_Glue as validate_Glue
-    from .bindings import validate_MeshBinding as validate_MeshBinding
+    from .bindings import validate_BlendShapeBinding
+    from .scene import validate_Glue
+    from .bindings import validate_MeshBinding
     if not isinstance(value, TopologyReplacement):
         raise TypeError("Expected TopologyReplacement")
     validate_Mesh(value.mesh)
@@ -257,43 +242,36 @@ def validate_TopologyReplacement(value: TopologyReplacement) -> None:
     for v0 in value.glues:
         validate_Glue(v0)
     for key0, v0 in value.vertex_mapping.items():
-        if type(key0) is not int or not 0 <= key0 < 4294967296:
-            raise ValueError("Expected u32")
+        _check_u32(key0)
         if v0 is not None:
-            if type(v0) is not int or not 0 <= v0 < 4294967296:
-                raise ValueError("Expected u32")
+            _check_u32(v0)
 
 def encode_TopologyReplacement(value: TopologyReplacement) -> object:
-    from .bindings import encode_BlendShapeBinding as encode_BlendShapeBinding
-    from .scene import encode_Glue as encode_Glue
-    from .bindings import encode_MeshBinding as encode_MeshBinding
+    from .bindings import encode_BlendShapeBinding
+    from .scene import encode_Glue
+    from .bindings import encode_MeshBinding
     return {'mesh': encode_Mesh(value.mesh), 'binding': None if value.binding is None else encode_MeshBinding(value.binding), 'blend_bindings': [encode_BlendShapeBinding(v0) for v0 in value.blend_bindings], 'glues': [encode_Glue(v0) for v0 in value.glues], 'vertex_mapping': {str(key0): None if v0 is None else v0 for key0, v0 in value.vertex_mapping.items()}}
 
 def read_TopologyReplacement(value: object) -> TopologyReplacement:
-    from .bindings import read_BlendShapeBinding as read_BlendShapeBinding
-    from .scene import read_Glue as read_Glue
-    from .bindings import read_MeshBinding as read_MeshBinding
+    from .bindings import read_BlendShapeBinding
+    from .scene import read_Glue
+    from .bindings import read_MeshBinding
     if isinstance(value, TopologyReplacement): return value
     r = record(value)
     return TopologyReplacement(mesh=read_Mesh(r['mesh']), binding=None if r.get('binding', None) is None else read_MeshBinding(r.get('binding', None)), blend_bindings=tuple(read_BlendShapeBinding(v0) for v0 in sequence(r['blend_bindings'])), glues=tuple(read_Glue(v0) for v0 in sequence(r['glues'])), vertex_mapping={int(key0): None if v0 is None else integer(v0) for key0, v0 in record(r['vertex_mapping']).items()})
 
 def validate_ManualMeshOperation(value: ManualMeshOperation) -> None:
-    from .common import validate_Vec2 as validate_Vec2
+    from .common import validate_Vec2
     if isinstance(value, ManualMeshOperationInsertVertex):
-        if type(value.id) is not int or not 0 <= value.id < 4294967296:
-            raise ValueError("Expected u32")
+        _check_u32(value.id)
         validate_Vec2(value.uv)
     elif isinstance(value, ManualMeshOperationInsertConnectedVertex):
-        if type(value.from_) is not int or not 0 <= value.from_ < 4294967296:
-            raise ValueError("Expected u32")
-        if type(value.id) is not int or not 0 <= value.id < 4294967296:
-            raise ValueError("Expected u32")
+        _check_u32(value.from_)
+        _check_u32(value.id)
         validate_Vec2(value.uv)
     elif isinstance(value, ManualMeshOperationDeleteEdge):
-        if type(value.a) is not int or not 0 <= value.a < 4294967296:
-            raise ValueError("Expected u32")
-        if type(value.b) is not int or not 0 <= value.b < 4294967296:
-            raise ValueError("Expected u32")
+        _check_u32(value.a)
+        _check_u32(value.b)
     elif isinstance(value, ManualMeshOperationMoveVertices):
         if not isinstance(value.targets, tuple):
             raise TypeError("Expected an immutable tuple")
@@ -308,25 +286,20 @@ def validate_ManualMeshOperation(value: ManualMeshOperation) -> None:
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if type(v0) is not int or not 0 <= v0 < 4294967296:
-                raise ValueError("Expected u32")
+            _check_u32(v0)
     elif isinstance(value, ManualMeshOperationConstrainEdge):
-        if type(value.a) is not int or not 0 <= value.a < 4294967296:
-            raise ValueError("Expected u32")
-        if type(value.b) is not int or not 0 <= value.b < 4294967296:
-            raise ValueError("Expected u32")
+        _check_u32(value.a)
+        _check_u32(value.b)
     elif isinstance(value, ManualMeshOperationReleaseConstraint):
-        if type(value.a) is not int or not 0 <= value.a < 4294967296:
-            raise ValueError("Expected u32")
-        if type(value.b) is not int or not 0 <= value.b < 4294967296:
-            raise ValueError("Expected u32")
+        _check_u32(value.a)
+        _check_u32(value.b)
     elif isinstance(value, ManualMeshOperationReconnect):
         pass
     else:
         raise TypeError("Expected ManualMeshOperation")
 
 def encode_ManualMeshOperation(value: ManualMeshOperation) -> object:
-    from .common import encode_Vec2 as encode_Vec2
+    from .common import encode_Vec2
     if isinstance(value, ManualMeshOperationInsertVertex):
         return {'op': 'insert_vertex', **cast(Mapping[str, object], {'id': value.id, 'uv': encode_Vec2(value.uv)})}
     elif isinstance(value, ManualMeshOperationInsertConnectedVertex):
@@ -346,7 +319,7 @@ def encode_ManualMeshOperation(value: ManualMeshOperation) -> object:
     raise TypeError("Expected ManualMeshOperation")
 
 def read_ManualMeshOperation(value: object) -> ManualMeshOperation:
-    from .common import read_Vec2 as read_Vec2
+    from .common import read_Vec2
     if isinstance(value, (ManualMeshOperationInsertVertex, ManualMeshOperationInsertConnectedVertex, ManualMeshOperationDeleteEdge, ManualMeshOperationMoveVertices, ManualMeshOperationDeleteVertices, ManualMeshOperationConstrainEdge, ManualMeshOperationReleaseConstraint, ManualMeshOperationReconnect,)): return value
     r = record(value)
     tag = string(r['op'])
@@ -376,56 +349,46 @@ def read_ManualMeshOperation(value: object) -> ManualMeshOperation:
     raise ValueError("Unknown ManualMeshOperation variant")
 
 def validate_ManualVertexTarget(value: ManualVertexTarget) -> None:
-    from .common import validate_Vec2 as validate_Vec2
+    from .common import validate_Vec2
     if not isinstance(value, ManualVertexTarget):
         raise TypeError("Expected ManualVertexTarget")
-    if type(value.id) is not int or not 0 <= value.id < 4294967296:
-        raise ValueError("Expected u32")
+    _check_u32(value.id)
     validate_Vec2(value.uv)
 
 def encode_ManualVertexTarget(value: ManualVertexTarget) -> object:
-    from .common import encode_Vec2 as encode_Vec2
+    from .common import encode_Vec2
     return {'id': value.id, 'uv': encode_Vec2(value.uv)}
 
 def read_ManualVertexTarget(value: object) -> ManualVertexTarget:
-    from .common import read_Vec2 as read_Vec2
+    from .common import read_Vec2
     if isinstance(value, ManualVertexTarget): return value
     r = record(value)
     return ManualVertexTarget(id=integer(r['id']), uv=read_Vec2(r['uv']))
 
 def validate_ManualMeshTransferReport(value: ManualMeshTransferReport) -> None:
-    from .commands import validate_ConversionCost as validate_ConversionCost
+    from .commands import validate_ConversionCost
     if not isinstance(value, ManualMeshTransferReport):
         raise TypeError("Expected ManualMeshTransferReport")
-    if type(value.added) is not int or not 0 <= value.added < 18446744073709551616:
-        raise ValueError("Expected usize")
-    if type(value.moved) is not int or not 0 <= value.moved < 18446744073709551616:
-        raise ValueError("Expected usize")
-    if type(value.removed) is not int or not 0 <= value.removed < 18446744073709551616:
-        raise ValueError("Expected usize")
-    if type(value.shape_count) is not int or not 0 <= value.shape_count < 18446744073709551616:
-        raise ValueError("Expected usize")
-    if type(value.reconnected) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.glue_endpoints) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.non_affine_parent) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.affine_extension) is not bool:
-        raise ValueError("Expected bool")
+    _check_usize(value.added)
+    _check_usize(value.moved)
+    _check_usize(value.removed)
+    _check_usize(value.shape_count)
+    _check_bool(value.reconnected)
+    _check_bool(value.glue_endpoints)
+    _check_bool(value.non_affine_parent)
+    _check_bool(value.affine_extension)
     if not isinstance(value.appearance_limits, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.appearance_limits:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     validate_ConversionCost(value.cost)
 
 def encode_ManualMeshTransferReport(value: ManualMeshTransferReport) -> object:
-    from .commands import encode_ConversionCost as encode_ConversionCost
+    from .commands import encode_ConversionCost
     return {'added': value.added, 'moved': value.moved, 'removed': value.removed, 'shape_count': value.shape_count, 'reconnected': value.reconnected, 'glue_endpoints': value.glue_endpoints, 'non_affine_parent': value.non_affine_parent, 'affine_extension': value.affine_extension, 'appearance_limits': [v0 for v0 in value.appearance_limits], 'cost': encode_ConversionCost(value.cost)}
 
 def read_ManualMeshTransferReport(value: object) -> ManualMeshTransferReport:
-    from .commands import read_ConversionCost as read_ConversionCost
+    from .commands import read_ConversionCost
     if isinstance(value, ManualMeshTransferReport): return value
     r = record(value)
     return ManualMeshTransferReport(added=integer(r['added']), moved=integer(r['moved']), removed=integer(r['removed']), shape_count=integer(r['shape_count']), reconnected=_boolean(r['reconnected']), glue_endpoints=_boolean(r['glue_endpoints']), non_affine_parent=_boolean(r['non_affine_parent']), affine_extension=_boolean(r['affine_extension']), appearance_limits=tuple(string(v0) for v0 in sequence(r['appearance_limits'])), cost=read_ConversionCost(r['cost']))

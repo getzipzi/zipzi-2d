@@ -1,6 +1,6 @@
 """Runtime-scoped SDK handles and explicit scene label addresses."""
 from __future__ import annotations
-from ._generated import codecs as _modeling_codec
+from ._generated.codecs import addressing as _modeling_codec
 from typing import TYPE_CHECKING
 from ._owned import Owned
 from . import modeling

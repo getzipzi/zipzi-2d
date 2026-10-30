@@ -7,7 +7,7 @@ from ..._values import integer
 from ..._values import sequence
 from ..._values import string
 from functools import cache
-from .support import Reader as Reader, Writer as Writer, _field as _field
+from .support import Reader, Writer, _field
 
 def _write_imageasset(value: object, w: Writer) -> None:
     if _field(value, 'unresolved_source') is None:
@@ -37,7 +37,7 @@ def _read_imagecontent(r: Reader) -> m.ImageContent:
 
 @cache
 def _dependencies__write_resourceedit():
-    from .scene import _write_scenereference as _write_scenereference
+    from .scene import _write_scenereference
     return _write_scenereference,
 
 def _write_resourceedit(value: object, w: Writer) -> None:
@@ -112,7 +112,7 @@ def _write_imagecreatespec(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__read_imagesnapshot():
-    from .common import _read_sourceref as _read_sourceref
+    from .common import _read_sourceref
     return _read_sourceref,
 
 def _read_imagesnapshot(r: Reader) -> Snapshot[resources.Image]:

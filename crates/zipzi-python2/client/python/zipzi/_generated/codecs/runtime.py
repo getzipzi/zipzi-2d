@@ -4,35 +4,31 @@ from ..._values import record
 from ..._values import sequence
 from ..._values import string
 from .._modeling_support import _boolean
-from ..values import EditorContext as EditorContext
+from .._modeling_support import _check_bool
+from .._modeling_support import _check_string
+from ..values import EditorContext
 
 def validate_EditorContext(value: EditorContext) -> None:
-    from .common import validate_Version as validate_Version
+    from .common import validate_Version
     if not isinstance(value, EditorContext):
         raise TypeError("Expected EditorContext")
     validate_Version(value.version)
-    if not isinstance(value.view_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.view_id)
     if not isinstance(value.selected_ids, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.selected_ids:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
-    if not isinstance(value.workspace, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.editing_context, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.active_tool, str):
-        raise ValueError("Expected string")
-    if type(value.pending_interaction) is not bool:
-        raise ValueError("Expected bool")
+        _check_string(v0)
+    _check_string(value.workspace)
+    _check_string(value.editing_context)
+    _check_string(value.active_tool)
+    _check_bool(value.pending_interaction)
 
 def encode_EditorContext(value: EditorContext) -> object:
-    from .common import encode_Version as encode_Version
+    from .common import encode_Version
     return {'version': encode_Version(value.version), 'view_id': value.view_id, 'selected_ids': [v0 for v0 in value.selected_ids], 'workspace': value.workspace, 'editing_context': value.editing_context, 'active_tool': value.active_tool, 'pending_interaction': value.pending_interaction}
 
 def read_EditorContext(value: object) -> EditorContext:
-    from .common import read_Version as read_Version
+    from .common import read_Version
     if isinstance(value, EditorContext): return value
     r = record(value)
     return EditorContext(version=read_Version(r['version']), view_id=string(r['view_id']), selected_ids=tuple(string(v0) for v0 in sequence(r['selected_ids'])), workspace=string(r['workspace']), editing_context=string(r['editing_context']), active_tool=string(r['active_tool']), pending_interaction=_boolean(r['pending_interaction']))

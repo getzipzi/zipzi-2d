@@ -3,12 +3,12 @@ from __future__ import annotations
 from .. import values as m
 from ..._values import integer
 from functools import cache
-from .support import Reader as Reader
+from .support import Reader
 
 @cache
 def _dependencies__read_previewbatch():
-    from .observation import _read_observationview as _read_observationview
-    from .spatial import _read_spatialquery as _read_spatialquery
+    from .observation import _read_observationview
+    from .spatial import _read_spatialquery
     return _read_observationview, _read_spatialquery,
 
 def _read_previewbatch(r: Reader) -> m.PreviewBatch:
@@ -17,10 +17,10 @@ def _read_previewbatch(r: Reader) -> m.PreviewBatch:
 
 @cache
 def _dependencies__read_previewframe():
-    from .sampling import _read_drawableframe as _read_drawableframe
-    from .motion import _read_motionsnapshot as _read_motionsnapshot
-    from .observation import _read_observationimage as _read_observationimage
-    from .spatial import _read_spatialresult as _read_spatialresult
+    from .sampling import _read_drawableframe
+    from .motion import _read_motionsnapshot
+    from .observation import _read_observationimage
+    from .spatial import _read_spatialresult
     return _read_drawableframe, _read_motionsnapshot, _read_observationimage, _read_spatialresult,
 
 def _read_previewframe(r: Reader) -> m.PreviewFrame:

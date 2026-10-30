@@ -2,6 +2,7 @@
 import ast
 from collections import defaultdict
 import re
+from codegen.validation import PRIMITIVES
 
 
 def _name(identity):
@@ -37,6 +38,7 @@ def split(source, graph, header):
     codecs=defaultdict(list)
     symbols={}
     function_domains={}
+    support_functions={'_bytes','_boolean',*('_check_'+kind for kind in PRIMITIVES)}
     for node in tree.body:
         if isinstance(node,ast.ClassDef):
             if node.name not in owners:raise ValueError('Unowned generated class: '+node.name)
@@ -67,7 +69,7 @@ def split(source, graph, header):
             else:raise ValueError('Unreviewed modeling assignment: '+ast.unparse(target))
         elif isinstance(node,(ast.Import,ast.ImportFrom)):
             pass
-        elif isinstance(node,ast.FunctionDef) and node.name in {'_bytes','_boolean'}:
+        elif isinstance(node,ast.FunctionDef) and node.name in support_functions:
             pass
         else:raise ValueError('Unreviewed modeling declaration: '+type(node).__name__)
 
@@ -104,13 +106,14 @@ def split(source, graph, header):
         '_bytes':'from .._modeling_support import _bytes',
         '_boolean':'from .._modeling_support import _boolean',
     }
+    prelude.update({name:'from .._modeling_support import '+name for name in support_functions if name.startswith('_check_')})
     def text(node):
         first=min([node.lineno,*[item.lineno for item in getattr(node,'decorator_list',())]])
         return ''.join(lines[first-1:node.end_lineno]).rstrip()
     def imports(names):return sorted({prelude[name] for name in names if name in prelude})
-    support=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in {'_bytes','_boolean'}]
+    support=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in support_functions]
     support_names=_uses(support)
-    output[prefix+'_modeling_support.py']=header+'from __future__ import annotations\n'+'\n'.join(imports(support_names)).replace('from ..._values','from .._values')+'\n\n'+'\n\n'.join(text(n) for n in support)+'\n\n__all__ = ["_bytes", "_boolean"]\n'
+    output[prefix+'_modeling_support.py']=header+'from __future__ import annotations\n'+'\n'.join(imports(support_names)).replace('from ..._values','from .._values')+'\n\n'+'\n\n'.join(text(n) for n in support)+'\n\n__all__ = '+repr(sorted(support_functions))+'\n'
     for domain,nodes in sorted(values.items()):
         used=_uses(nodes)
         external={name:symbols[name] for name in used if name in symbols and symbols[name]!=domain}
@@ -120,7 +123,7 @@ def split(source, graph, header):
         parts=[header.rstrip(),'from __future__ import annotations',*imports(used)]
         if external:
             parts+=['from typing import TYPE_CHECKING','if TYPE_CHECKING:']
-            for name,owner in sorted(external.items()):parts+=['    from .'+owner+' import '+name+' as '+name]
+            for name,owner in sorted(external.items()):parts+=['    from .'+owner+' import '+name]
         parts+=['']
         for reader in default_reads:
             target=reader[5:]
@@ -140,18 +143,21 @@ def split(source, graph, header):
         used=_uses(nodes)
         names=sorted(name for name in used if name in symbols)
         parts=[header.rstrip(),'from __future__ import annotations',*imports(used)]
-        if names:parts.append('from ..values import '+', '.join(name+' as '+name for name in names))
+        if names:parts.append('from ..values import '+', '.join(names))
         parts.append('')
         for node in nodes:
             used_in_function=_uses([node])
             dependencies=sorted(name for name in used_in_function if name in function_domains and function_domains[name]!=domain)
             original=text(node).splitlines()
             for name in reversed(dependencies):
-                original.insert(1,'    from .'+function_domains[name]+' import '+name+' as '+name)
+                original.insert(1,'    from .'+function_domains[name]+' import '+name)
             parts.extend(['\n'.join(original),''])
         output[prefix+'codecs/'+domain+'.py']='\n'.join(parts).rstrip()+'\n'
-    init=[header.rstrip(),'"""Direct typed JSON validation and codecs."""']
-    for name,domain in sorted(function_domains.items()):init.append('from .'+domain+' import '+name+' as '+name)
+    init=[header.rstrip(),'"""Direct typed JSON codecs, exported only as domain modules."""']
+    # Preserve eager domain initialization so shrinking the package exports does
+    # not defer file loading into the first authoring operation.
+    init.extend('from . import '+domain for domain in sorted(codecs))
+    init.append('__all__ = '+repr(sorted(codecs)))
     output[prefix+'codecs/__init__.py']='\n'.join(init)+'\n'
     for domain,nodes in sorted(values.items()):
         exported=sorted(name for name,owner in symbols.items() if owner==domain)

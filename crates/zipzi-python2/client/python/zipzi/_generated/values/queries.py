@@ -12,39 +12,39 @@ from typing import ClassVar as _ClassVar
 from typing import TypeAlias
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from .bindings import BlendShapeBinding as BlendShapeBinding
-    from .bindings import BlendShapeConstraint as BlendShapeConstraint
-    from .bindings import BlendShapeKeyTable as BlendShapeKeyTable
-    from .project import CdiParameterGroup as CdiParameterGroup
-    from .project import DisplayInfo as DisplayInfo
-    from .project import DocumentField as DocumentField
-    from .scene import DrawOrderGroup as DrawOrderGroup
-    from .project import EditorState as EditorState
-    from .expression import ExpressionAsset as ExpressionAsset
-    from .scene import Glue as Glue
-    from .scene import HierarchyOrder as HierarchyOrder
-    from .resources import ImageAsset as ImageAsset
-    from .mesh import Mesh as Mesh
-    from .bindings import MeshBinding as MeshBinding
-    from .project import Model3Settings as Model3Settings
-    from .scene import ModelSetup as ModelSetup
-    from .motion import MotionClip as MotionClip
-    from .motion import MotionContainer as MotionContainer
-    from .motion import MotionGroup as MotionGroup
-    from .motion import MotionRegistration as MotionRegistration
-    from .scene import Offscreen as Offscreen
-    from .scene import OrganizationCollection as OrganizationCollection
-    from .project import PackageAttachment as PackageAttachment
-    from .parameters import Parameter as Parameter
-    from .scene import Part as Part
-    from .physics import PhysicsAsset as PhysicsAsset
-    from .physics import PhysicsCollection as PhysicsCollection
-    from .pose import PoseAsset as PoseAsset
-    from .pose import PoseCollection as PoseCollection
-    from .addressing import ReferenceCollection as ReferenceCollection
-    from .bindings import SceneBinding as SceneBinding
-    from .scene import SceneCollection as SceneCollection
-    from .scene import Transform as Transform
+    from .bindings import BlendShapeBinding
+    from .bindings import BlendShapeConstraint
+    from .bindings import BlendShapeKeyTable
+    from .project import CdiParameterGroup
+    from .project import DisplayInfo
+    from .project import DocumentField
+    from .scene import DrawOrderGroup
+    from .project import EditorState
+    from .expression import ExpressionAsset
+    from .scene import Glue
+    from .scene import HierarchyOrder
+    from .resources import ImageAsset
+    from .mesh import Mesh
+    from .bindings import MeshBinding
+    from .project import Model3Settings
+    from .scene import ModelSetup
+    from .motion import MotionClip
+    from .motion import MotionContainer
+    from .motion import MotionGroup
+    from .motion import MotionRegistration
+    from .scene import Offscreen
+    from .scene import OrganizationCollection
+    from .project import PackageAttachment
+    from .parameters import Parameter
+    from .scene import Part
+    from .physics import PhysicsAsset
+    from .physics import PhysicsCollection
+    from .pose import PoseAsset
+    from .pose import PoseCollection
+    from .addressing import ReferenceCollection
+    from .bindings import SceneBinding
+    from .scene import SceneCollection
+    from .scene import Transform
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingQuery(CompactValue):

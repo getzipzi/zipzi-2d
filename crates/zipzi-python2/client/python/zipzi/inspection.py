@@ -8,7 +8,8 @@ import json
 from pathlib import Path
 from ._presentation import CompactValue
 from ._results import Snapshot
-from ._generated import values as m, codecs as _modeling_codec
+from ._generated import values as m
+from ._generated.codecs import observation as _modeling_codec
 
 @dataclass(frozen=True,repr=False)
 class Report(CompactValue):

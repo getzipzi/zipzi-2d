@@ -6,7 +6,7 @@ from ..._values import sequence
 from ..._values import string
 from typing import cast
 from functools import cache
-from .support import Reader as Reader, Writer as Writer, _field as _field, _mapping as _mapping
+from .support import Reader, Writer, _field, _mapping
 
 def _write_opaqueexportissue(value: object, w: Writer) -> None:
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
@@ -144,7 +144,7 @@ def _write_documentauthoringedit(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__write_documentvalue():
-    from .scene import _write_canvas as _write_canvas
+    from .scene import _write_canvas
     return _write_canvas,
 
 def _write_documentvalue(value: object, w: Writer) -> None:
@@ -248,7 +248,7 @@ def _read_cdipartentry(r: Reader) -> m.CdiPartEntry:
 
 @cache
 def _dependencies__read_cdicombinedset():
-    from .addressing import _read_referenceentrycdiparameterref as _read_referenceentrycdiparameterref
+    from .addressing import _read_referenceentrycdiparameterref
     return _read_referenceentrycdiparameterref,
 
 def _read_cdicombinedset(r: Reader) -> m.CdiCombinedSet:
@@ -260,7 +260,7 @@ def _read_cdinamespaceids(r: Reader) -> m.CdiNamespaceIds:
 
 @cache
 def _dependencies__read_model3settings():
-    from .scene import _read_attachmentref as _read_attachmentref
+    from .scene import _read_attachmentref
     return _read_attachmentref,
 
 def _read_model3settings(r: Reader) -> m.Model3Settings:
@@ -269,7 +269,7 @@ def _read_model3settings(r: Reader) -> m.Model3Settings:
 
 @cache
 def _dependencies__read_modelparametergroup():
-    from .addressing import _read_referenceentrymodeltargetref as _read_referenceentrymodeltargetref
+    from .addressing import _read_referenceentrymodeltargetref
     return _read_referenceentrymodeltargetref,
 
 def _read_modelparametergroup(r: Reader) -> m.ModelParameterGroup:

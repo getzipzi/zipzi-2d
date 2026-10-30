@@ -6,7 +6,7 @@ from ..._values import number
 from ..._values import sequence
 from ..._values import string
 from functools import cache
-from .support import Reader as Reader, Writer as Writer, _field as _field, _mapping as _mapping
+from .support import Reader, Writer, _field, _mapping
 
 def _write_motionedit(value: object, w: Writer) -> None:
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
@@ -174,7 +174,7 @@ def _write_motioncontainer(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__write_motionregistration():
-    from .scene import _write_attachmentref as _write_attachmentref
+    from .scene import _write_attachmentref
     return _write_attachmentref,
 
 def _write_motionregistration(value: object, w: Writer) -> None:
@@ -204,7 +204,7 @@ def _write_motionregistration(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__read_motionregistration():
-    from .scene import _read_attachmentref as _read_attachmentref
+    from .scene import _read_attachmentref
     return _read_attachmentref,
 
 def _read_motionregistration(r: Reader) -> m.MotionRegistration:
@@ -393,7 +393,7 @@ def _read_motiongroup(r: Reader) -> m.MotionGroup:
 
 @cache
 def _dependencies__read_motionsnapshot():
-    from .physics import _read_physicsrigsnapshot as _read_physicsrigsnapshot
+    from .physics import _read_physicsrigsnapshot
     return _read_physicsrigsnapshot,
 
 def _read_motionsnapshot(r: Reader) -> m.MotionSnapshot:

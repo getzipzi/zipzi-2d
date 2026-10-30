@@ -10,11 +10,15 @@ from ..._values import sequence
 from ..._values import string
 from .._modeling_support import _boolean
 from .._modeling_support import _bytes
+from .._modeling_support import _check_bool
+from .._modeling_support import _check_f32
+from .._modeling_support import _check_f64
+from .._modeling_support import _check_string
+from .._modeling_support import _check_usize
 from collections.abc import Mapping
 from collections.abc import Mapping as _Mapping
 from typing import cast
-import math
-from ..values import CdiCombinedSet as CdiCombinedSet, CdiNamespaceIds as CdiNamespaceIds, CdiParameterEntry as CdiParameterEntry, CdiParameterEntryResolved as CdiParameterEntryResolved, CdiParameterEntryUnresolved as CdiParameterEntryUnresolved, CdiParameterGroup as CdiParameterGroup, CdiParameterRef as CdiParameterRef, CdiParameterRefResolved as CdiParameterRefResolved, CdiParameterRefUnresolved as CdiParameterRefUnresolved, CdiParameterRefUnspecified as CdiParameterRefUnspecified, CdiPartEntry as CdiPartEntry, CdiPartEntryResolved as CdiPartEntryResolved, CdiPartEntryUnresolved as CdiPartEntryUnresolved, DisplayInfo as DisplayInfo, DisplayInfoOrigin as DisplayInfoOrigin, DocumentAuthoringEdit as DocumentAuthoringEdit, DocumentAuthoringEditPatch as DocumentAuthoringEditPatch, DocumentAuthoringEditRepairCdiParameter as DocumentAuthoringEditRepairCdiParameter, DocumentAuthoringEditRepairCdiPart as DocumentAuthoringEditRepairCdiPart, DocumentAuthoringEditRepairMissingAttachment as DocumentAuthoringEditRepairMissingAttachment, DocumentField as DocumentField, DocumentValue as DocumentValue, DocumentValueExportSettings as DocumentValueExportSettings, DocumentValueLayout as DocumentValueLayout, DocumentValueSourceCanvas as DocumentValueSourceCanvas, EditorState as EditorState, ExportFormat as ExportFormat, ExportSettings as ExportSettings, ImportFormat as ImportFormat, Model3Settings as Model3Settings, ModelHitArea as ModelHitArea, ModelParameterGroup as ModelParameterGroup, ModelTargetRef as ModelTargetRef, ModelTargetRefResolved as ModelTargetRefResolved, ModelTargetRefUnresolved as ModelTargetRefUnresolved, ModelTargetRefUnspecified as ModelTargetRefUnspecified, ObjectEditorState as ObjectEditorState, OpaqueExportIssue as OpaqueExportIssue, OpaqueExportIssueCdi as OpaqueExportIssueCdi, OpaqueExportIssueExpression as OpaqueExportIssueExpression, OpaqueExportIssueModel3NamespaceChanged as OpaqueExportIssueModel3NamespaceChanged, OpaqueExportIssueMotion as OpaqueExportIssueMotion, OpaqueExportIssuePhysics as OpaqueExportIssuePhysics, OpaqueExportIssuePose as OpaqueExportIssuePose, OpaqueExportProblem as OpaqueExportProblem, PackageAttachment as PackageAttachment, ProjectDiagnostic as ProjectDiagnostic, ProjectReport as ProjectReport, ProjectRequest as ProjectRequest, ProjectRequestDiagnose as ProjectRequestDiagnose, ProjectRequestExport as ProjectRequestExport, ProjectRequestImport as ProjectRequestImport, ProjectRequestNew as ProjectRequestNew, ProjectRequestOpen as ProjectRequestOpen, TextureSlot as TextureSlot
+from ..values import CdiCombinedSet, CdiNamespaceIds, CdiParameterEntry, CdiParameterEntryResolved, CdiParameterEntryUnresolved, CdiParameterGroup, CdiParameterRef, CdiParameterRefResolved, CdiParameterRefUnresolved, CdiParameterRefUnspecified, CdiPartEntry, CdiPartEntryResolved, CdiPartEntryUnresolved, DisplayInfo, DisplayInfoOrigin, DocumentAuthoringEdit, DocumentAuthoringEditPatch, DocumentAuthoringEditRepairCdiParameter, DocumentAuthoringEditRepairCdiPart, DocumentAuthoringEditRepairMissingAttachment, DocumentField, DocumentValue, DocumentValueExportSettings, DocumentValueLayout, DocumentValueSourceCanvas, EditorState, ExportFormat, ExportSettings, ImportFormat, Model3Settings, ModelHitArea, ModelParameterGroup, ModelTargetRef, ModelTargetRefResolved, ModelTargetRefUnresolved, ModelTargetRefUnspecified, ObjectEditorState, OpaqueExportIssue, OpaqueExportIssueCdi, OpaqueExportIssueExpression, OpaqueExportIssueModel3NamespaceChanged, OpaqueExportIssueMotion, OpaqueExportIssuePhysics, OpaqueExportIssuePose, OpaqueExportProblem, PackageAttachment, ProjectDiagnostic, ProjectReport, ProjectRequest, ProjectRequestDiagnose, ProjectRequestExport, ProjectRequestImport, ProjectRequestNew, ProjectRequestOpen, TextureSlot
 
 def validate_OpaqueExportIssue(value: OpaqueExportIssue) -> None:
     if isinstance(value, OpaqueExportIssueModel3NamespaceChanged):
@@ -22,20 +26,16 @@ def validate_OpaqueExportIssue(value: OpaqueExportIssue) -> None:
     elif isinstance(value, OpaqueExportIssueCdi):
         validate_OpaqueExportProblem(value.problem)
     elif isinstance(value, OpaqueExportIssueMotion):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_OpaqueExportProblem(value.problem)
     elif isinstance(value, OpaqueExportIssueExpression):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_OpaqueExportProblem(value.problem)
     elif isinstance(value, OpaqueExportIssuePose):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_OpaqueExportProblem(value.problem)
     elif isinstance(value, OpaqueExportIssuePhysics):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_OpaqueExportProblem(value.problem)
     else:
         raise TypeError("Expected OpaqueExportIssue")
@@ -92,18 +92,13 @@ def read_OpaqueExportProblem(value: object) -> OpaqueExportProblem:
 def validate_CdiParameterGroup(value: CdiParameterGroup) -> None:
     if not isinstance(value, CdiParameterGroup):
         raise TypeError("Expected CdiParameterGroup")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.runtime_id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.name, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
+    _check_string(value.runtime_id)
+    _check_string(value.name)
     if value.parent_id is not None:
-        if not isinstance(value.parent_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.parent_id)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
 
 def encode_CdiParameterGroup(value: CdiParameterGroup) -> object:
@@ -118,11 +113,9 @@ def validate_ModelTargetRef(value: ModelTargetRef) -> None:
     if isinstance(value, ModelTargetRefUnspecified):
         pass
     elif isinstance(value, ModelTargetRefResolved):
-        if not isinstance(value.object_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.object_id)
     elif isinstance(value, ModelTargetRefUnresolved):
-        if not isinstance(value.runtime_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.runtime_id)
     else:
         raise TypeError("Expected ModelTargetRef")
 
@@ -153,11 +146,9 @@ def validate_CdiParameterRef(value: CdiParameterRef) -> None:
     if isinstance(value, CdiParameterRefUnspecified):
         pass
     elif isinstance(value, CdiParameterRefResolved):
-        if not isinstance(value.parameter_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.parameter_id)
     elif isinstance(value, CdiParameterRefUnresolved):
-        if not isinstance(value.runtime_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.runtime_id)
     else:
         raise TypeError("Expected CdiParameterRef")
 
@@ -189,23 +180,17 @@ def validate_DocumentAuthoringEdit(value: DocumentAuthoringEdit) -> None:
         validate_DocumentValue(value.expected)
         validate_DocumentValue(value.value)
     elif isinstance(value, DocumentAuthoringEditRepairMissingAttachment):
-        if not isinstance(value.path, str):
-            raise ValueError("Expected string")
+        _check_string(value.path)
         if value.attachment_id is not None:
-            if not isinstance(value.attachment_id, str):
-                raise ValueError("Expected string")
+            _check_string(value.attachment_id)
     elif isinstance(value, DocumentAuthoringEditRepairCdiParameter):
-        if not isinstance(value.runtime_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.runtime_id)
         if value.parameter_id is not None:
-            if not isinstance(value.parameter_id, str):
-                raise ValueError("Expected string")
+            _check_string(value.parameter_id)
     elif isinstance(value, DocumentAuthoringEditRepairCdiPart):
-        if not isinstance(value.runtime_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.runtime_id)
         if value.part_id is not None:
-            if not isinstance(value.part_id, str):
-                raise ValueError("Expected string")
+            _check_string(value.part_id)
     else:
         raise TypeError("Expected DocumentAuthoringEdit")
 
@@ -239,14 +224,12 @@ def read_DocumentAuthoringEdit(value: object) -> DocumentAuthoringEdit:
     raise ValueError("Unknown DocumentAuthoringEdit variant")
 
 def validate_DocumentValue(value: DocumentValue) -> None:
-    from .scene import validate_Canvas as validate_Canvas
+    from .scene import validate_Canvas
     if isinstance(value, DocumentValueLayout):
         if value.value is not None:
             for key0, v0 in value.value.items():
-                if not isinstance(key0, str):
-                    raise ValueError("Expected string")
-                if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0):
-                    raise ValueError("Expected f64")
+                _check_string(key0)
+                _check_f64(v0)
     elif isinstance(value, DocumentValueExportSettings):
         validate_ExportSettings(value.value)
     elif isinstance(value, DocumentValueSourceCanvas):
@@ -256,7 +239,7 @@ def validate_DocumentValue(value: DocumentValue) -> None:
         raise TypeError("Expected DocumentValue")
 
 def encode_DocumentValue(value: DocumentValue) -> object:
-    from .scene import encode_Canvas as encode_Canvas
+    from .scene import encode_Canvas
     if isinstance(value, DocumentValueLayout):
         return {'field': 'layout', 'value': None if value.value is None else {str(key0): v0 for key0, v0 in value.value.items()}}
     elif isinstance(value, DocumentValueExportSettings):
@@ -266,7 +249,7 @@ def encode_DocumentValue(value: DocumentValue) -> object:
     raise TypeError("Expected DocumentValue")
 
 def read_DocumentValue(value: object) -> DocumentValue:
-    from .scene import read_Canvas as read_Canvas
+    from .scene import read_Canvas
     if isinstance(value, (DocumentValueLayout, DocumentValueExportSettings, DocumentValueSourceCanvas,)): return value
     r = record(value)
     tag = string(r['field'])
@@ -281,22 +264,17 @@ def read_DocumentValue(value: object) -> DocumentValue:
 def validate_ExportSettings(value: ExportSettings) -> None:
     if not isinstance(value, ExportSettings):
         raise TypeError("Expected ExportSettings")
-    if isinstance(value.pixels_per_unit, bool) or not isinstance(value.pixels_per_unit, (float, int)) or not math.isfinite(value.pixels_per_unit) or abs(value.pixels_per_unit) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_f32(value.pixels_per_unit)
     if value.bounds is not None:
         if not isinstance(value.bounds, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.bounds) != 4:
             raise ValueError("Invalid fixed array length")
         for v0 in value.bounds:
-            if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-                raise ValueError("Expected f32")
-    if isinstance(value.padding_fraction, bool) or not isinstance(value.padding_fraction, (float, int)) or not math.isfinite(value.padding_fraction) or abs(value.padding_fraction) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.padding_pixels, bool) or not isinstance(value.padding_pixels, (float, int)) or not math.isfinite(value.padding_pixels) or abs(value.padding_pixels) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.minimum_extent, bool) or not isinstance(value.minimum_extent, (float, int)) or not math.isfinite(value.minimum_extent) or abs(value.minimum_extent) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+            _check_f32(v0)
+    _check_f32(value.padding_fraction)
+    _check_f32(value.padding_pixels)
+    _check_f32(value.minimum_extent)
 
 def encode_ExportSettings(value: ExportSettings) -> object:
     return {'pixels_per_unit': value.pixels_per_unit, 'bounds': None if value.bounds is None else [v0 for v0 in value.bounds], 'padding_fraction': value.padding_fraction, 'padding_pixels': value.padding_pixels, 'minimum_extent': value.minimum_extent}
@@ -309,10 +287,8 @@ def read_ExportSettings(value: object) -> ExportSettings:
 def validate_PackageAttachment(value: PackageAttachment) -> None:
     if not isinstance(value, PackageAttachment):
         raise TypeError("Expected PackageAttachment")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.path, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
+    _check_string(value.path)
     if value.bytes is not None:
         if not isinstance(value.bytes, bytes):
             raise TypeError("Expected immutable bytes")
@@ -329,8 +305,7 @@ def validate_EditorState(value: EditorState) -> None:
     if not isinstance(value, EditorState):
         raise TypeError("Expected EditorState")
     for key0, v0 in value.objects.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         validate_ObjectEditorState(v0)
 
 def encode_EditorState(value: EditorState) -> object:
@@ -344,10 +319,8 @@ def read_EditorState(value: object) -> EditorState:
 def validate_ObjectEditorState(value: ObjectEditorState) -> None:
     if not isinstance(value, ObjectEditorState):
         raise TypeError("Expected ObjectEditorState")
-    if type(value.hidden_in_editor) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.locked) is not bool:
-        raise ValueError("Expected bool")
+    _check_bool(value.hidden_in_editor)
+    _check_bool(value.locked)
 
 def encode_ObjectEditorState(value: ObjectEditorState) -> object:
     return {'hidden_in_editor': value.hidden_in_editor, 'locked': value.locked}
@@ -382,8 +355,7 @@ def validate_DisplayInfo(value: DisplayInfo) -> None:
         for v0 in value.combined_parameters:
             validate_CdiCombinedSet(v0)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
     if value.opaque_source_ids is not None:
         validate_CdiNamespaceIds(value.opaque_source_ids)
@@ -409,26 +381,19 @@ def read_DisplayInfoOrigin(value: object) -> DisplayInfoOrigin:
 
 def validate_CdiParameterEntry(value: CdiParameterEntry) -> None:
     if isinstance(value, CdiParameterEntryResolved):
-        if not isinstance(value.parameter_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.parameter_id)
         if value.group_id is not None:
-            if not isinstance(value.group_id, str):
-                raise ValueError("Expected string")
+            _check_string(value.group_id)
         for key0, v0 in value.extensions.items():
-            if not isinstance(key0, str):
-                raise ValueError("Expected string")
+            _check_string(key0)
             _validate_extension(v0)
     elif isinstance(value, CdiParameterEntryUnresolved):
-        if not isinstance(value.runtime_id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.runtime_id)
+        _check_string(value.name)
         if value.group_id is not None:
-            if not isinstance(value.group_id, str):
-                raise ValueError("Expected string")
+            _check_string(value.group_id)
         for key0, v0 in value.extensions.items():
-            if not isinstance(key0, str):
-                raise ValueError("Expected string")
+            _check_string(key0)
             _validate_extension(v0)
     else:
         raise TypeError("Expected CdiParameterEntry")
@@ -454,20 +419,15 @@ def read_CdiParameterEntry(value: object) -> CdiParameterEntry:
 
 def validate_CdiPartEntry(value: CdiPartEntry) -> None:
     if isinstance(value, CdiPartEntryResolved):
-        if not isinstance(value.part_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.part_id)
         for key0, v0 in value.extensions.items():
-            if not isinstance(key0, str):
-                raise ValueError("Expected string")
+            _check_string(key0)
             _validate_extension(v0)
     elif isinstance(value, CdiPartEntryUnresolved):
-        if not isinstance(value.runtime_id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.runtime_id)
+        _check_string(value.name)
         for key0, v0 in value.extensions.items():
-            if not isinstance(key0, str):
-                raise ValueError("Expected string")
+            _check_string(key0)
             _validate_extension(v0)
     else:
         raise TypeError("Expected CdiPartEntry")
@@ -492,22 +452,21 @@ def read_CdiPartEntry(value: object) -> CdiPartEntry:
     raise ValueError("Unknown CdiPartEntry variant")
 
 def validate_CdiCombinedSet(value: CdiCombinedSet) -> None:
-    from .addressing import validate_ReferenceEntryCdiParameterRef as validate_ReferenceEntryCdiParameterRef
+    from .addressing import validate_ReferenceEntryCdiParameterRef
     if not isinstance(value, CdiCombinedSet):
         raise TypeError("Expected CdiCombinedSet")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
     if not isinstance(value.members, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.members:
         validate_ReferenceEntryCdiParameterRef(v0)
 
 def encode_CdiCombinedSet(value: CdiCombinedSet) -> object:
-    from .addressing import encode_ReferenceEntryCdiParameterRef as encode_ReferenceEntryCdiParameterRef
+    from .addressing import encode_ReferenceEntryCdiParameterRef
     return {'id': value.id, 'members': [encode_ReferenceEntryCdiParameterRef(v0) for v0 in value.members]}
 
 def read_CdiCombinedSet(value: object) -> CdiCombinedSet:
-    from .addressing import read_ReferenceEntryCdiParameterRef as read_ReferenceEntryCdiParameterRef
+    from .addressing import read_ReferenceEntryCdiParameterRef
     if isinstance(value, CdiCombinedSet): return value
     r = record(value)
     return CdiCombinedSet(id=string(r['id']), members=tuple(read_ReferenceEntryCdiParameterRef(v0) for v0 in sequence(r['members'])))
@@ -516,20 +475,14 @@ def validate_CdiNamespaceIds(value: CdiNamespaceIds) -> None:
     if not isinstance(value, CdiNamespaceIds):
         raise TypeError("Expected CdiNamespaceIds")
     for key0, v0 in value.parameters.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
+        _check_string(v0)
     for key0, v0 in value.parts.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
+        _check_string(v0)
     for key0, v0 in value.groups.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
+        _check_string(v0)
 
 def encode_CdiNamespaceIds(value: CdiNamespaceIds) -> object:
     return {'parameters': {str(key0): v0 for key0, v0 in value.parameters.items()}, 'parts': {str(key0): v0 for key0, v0 in value.parts.items()}, 'groups': {str(key0): v0 for key0, v0 in value.groups.items()}}
@@ -540,7 +493,7 @@ def read_CdiNamespaceIds(value: object) -> CdiNamespaceIds:
     return CdiNamespaceIds(parameters={key0: string(v0) for key0, v0 in record(r['parameters']).items()}, parts={key0: string(v0) for key0, v0 in record(r['parts']).items()}, groups={key0: string(v0) for key0, v0 in record(r['groups']).items()})
 
 def validate_Model3Settings(value: Model3Settings) -> None:
-    from .scene import validate_AttachmentRef as validate_AttachmentRef
+    from .scene import validate_AttachmentRef
     if not isinstance(value, Model3Settings):
         raise TypeError("Expected Model3Settings")
     if value.groups is not None:
@@ -550,10 +503,8 @@ def validate_Model3Settings(value: Model3Settings) -> None:
             validate_ModelParameterGroup(v0)
     if value.layout is not None:
         for key0, v0 in value.layout.items():
-            if not isinstance(key0, str):
-                raise ValueError("Expected string")
-            if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0):
-                raise ValueError("Expected f64")
+            _check_string(key0)
+            _check_f64(v0)
     if value.hit_areas is not None:
         if not isinstance(value.hit_areas, tuple):
             raise TypeError("Expected an immutable tuple")
@@ -562,52 +513,45 @@ def validate_Model3Settings(value: Model3Settings) -> None:
     if value.user_data is not None:
         validate_AttachmentRef(value.user_data)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
     if value.source_runtime_ids is not None:
         for key0, v0 in value.source_runtime_ids.items():
-            if not isinstance(key0, str):
-                raise ValueError("Expected string")
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(key0)
+            _check_string(v0)
     if value.source_content is not None:
-        if not isinstance(value.source_content, str):
-            raise ValueError("Expected string")
+        _check_string(value.source_content)
 
 def encode_Model3Settings(value: Model3Settings) -> object:
-    from .scene import encode_AttachmentRef as encode_AttachmentRef
+    from .scene import encode_AttachmentRef
     return {'groups': None if value.groups is None else [encode_ModelParameterGroup(v0) for v0 in value.groups], 'layout': None if value.layout is None else {str(key0): v0 for key0, v0 in value.layout.items()}, 'hit_areas': None if value.hit_areas is None else [encode_ModelHitArea(v0) for v0 in value.hit_areas], 'user_data': None if value.user_data is None else encode_AttachmentRef(value.user_data), 'extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}, 'source_runtime_ids': None if value.source_runtime_ids is None else {str(key0): v0 for key0, v0 in value.source_runtime_ids.items()}, 'source_content': None if value.source_content is None else value.source_content}
 
 def read_Model3Settings(value: object) -> Model3Settings:
-    from .scene import read_AttachmentRef as read_AttachmentRef
+    from .scene import read_AttachmentRef
     if isinstance(value, Model3Settings): return value
     r = record(value)
     return Model3Settings(groups=None if r.get('groups', None) is None else tuple(read_ModelParameterGroup(v0) for v0 in sequence(r.get('groups', None))), layout=None if r.get('layout', None) is None else {key0: number(v0) for key0, v0 in record(r.get('layout', None)).items()}, hit_areas=None if r.get('hit_areas', None) is None else tuple(read_ModelHitArea(v0) for v0 in sequence(r.get('hit_areas', None))), user_data=None if r.get('user_data', None) is None else read_AttachmentRef(r.get('user_data', None)), extensions={key0: _read_extension(v0) for key0, v0 in record(r['extensions']).items()}, source_runtime_ids=None if r.get('source_runtime_ids', None) is None else {key0: string(v0) for key0, v0 in record(r.get('source_runtime_ids', None)).items()}, source_content=None if r.get('source_content', None) is None else string(r.get('source_content', None)))
 
 def validate_ModelParameterGroup(value: ModelParameterGroup) -> None:
-    from .addressing import validate_ReferenceEntryModelTargetRef as validate_ReferenceEntryModelTargetRef
+    from .addressing import validate_ReferenceEntryModelTargetRef
     if not isinstance(value, ModelParameterGroup):
         raise TypeError("Expected ModelParameterGroup")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.name, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
+    _check_string(value.name)
     if not isinstance(value.parameters, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.parameters:
         validate_ReferenceEntryModelTargetRef(v0)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
 
 def encode_ModelParameterGroup(value: ModelParameterGroup) -> object:
-    from .addressing import encode_ReferenceEntryModelTargetRef as encode_ReferenceEntryModelTargetRef
+    from .addressing import encode_ReferenceEntryModelTargetRef
     return {'id': value.id, 'name': value.name, 'parameters': [encode_ReferenceEntryModelTargetRef(v0) for v0 in value.parameters], 'extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}}
 
 def read_ModelParameterGroup(value: object) -> ModelParameterGroup:
-    from .addressing import read_ReferenceEntryModelTargetRef as read_ReferenceEntryModelTargetRef
+    from .addressing import read_ReferenceEntryModelTargetRef
     if isinstance(value, ModelParameterGroup): return value
     r = record(value)
     return ModelParameterGroup(id=string(r['id']), name=string(r['name']), parameters=tuple(read_ReferenceEntryModelTargetRef(v0) for v0 in sequence(r['parameters'])), extensions={key0: _read_extension(v0) for key0, v0 in record(r.get('extensions', {})).items()})
@@ -615,14 +559,11 @@ def read_ModelParameterGroup(value: object) -> ModelParameterGroup:
 def validate_ModelHitArea(value: ModelHitArea) -> None:
     if not isinstance(value, ModelHitArea):
         raise TypeError("Expected ModelHitArea")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.name, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
+    _check_string(value.name)
     validate_ModelTargetRef(value.mesh)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
 
 def encode_ModelHitArea(value: ModelHitArea) -> object:
@@ -645,44 +586,35 @@ def read_DocumentField(value: object) -> DocumentField:
     return DocumentField(string(value))
 
 def validate_ProjectRequest(value: ProjectRequest) -> None:
-    from .scene import validate_ModelSetup as validate_ModelSetup
+    from .scene import validate_ModelSetup
     if isinstance(value, ProjectRequestDiagnose):
         pass
     elif isinstance(value, ProjectRequestImport):
-        if not isinstance(value.path, str):
-            raise ValueError("Expected string")
+        _check_string(value.path)
         validate_ImportFormat(value.format)
         if not isinstance(value.textures, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.textures:
             validate_TextureSlot(v0)
     elif isinstance(value, ProjectRequestOpen):
-        if not isinstance(value.path, str):
-            raise ValueError("Expected string")
+        _check_string(value.path)
     elif isinstance(value, ProjectRequestNew):
-        if not isinstance(value.document_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.document_id)
         validate_ModelSetup(value.setup)
     elif isinstance(value, ProjectRequestExport):
-        if not isinstance(value.path, str):
-            raise ValueError("Expected string")
+        _check_string(value.path)
         validate_ExportFormat(value.format)
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.name)
         if value.object_id is not None:
-            if not isinstance(value.object_id, str):
-                raise ValueError("Expected string")
-        if type(value.allow_loss) is not bool:
-            raise ValueError("Expected bool")
-        if type(value.bake_animation) is not bool:
-            raise ValueError("Expected bool")
-        if type(value.auto_frame_rate) is not bool:
-            raise ValueError("Expected bool")
+            _check_string(value.object_id)
+        _check_bool(value.allow_loss)
+        _check_bool(value.bake_animation)
+        _check_bool(value.auto_frame_rate)
     else:
         raise TypeError("Expected ProjectRequest")
 
 def encode_ProjectRequest(value: ProjectRequest) -> object:
-    from .scene import encode_ModelSetup as encode_ModelSetup
+    from .scene import encode_ModelSetup
     if isinstance(value, ProjectRequestDiagnose):
         return {'kind': 'diagnose', **cast(Mapping[str, object], {})}
     elif isinstance(value, ProjectRequestImport):
@@ -696,7 +628,7 @@ def encode_ProjectRequest(value: ProjectRequest) -> object:
     raise TypeError("Expected ProjectRequest")
 
 def read_ProjectRequest(value: object) -> ProjectRequest:
-    from .scene import read_ModelSetup as read_ModelSetup
+    from .scene import read_ModelSetup
     if isinstance(value, (ProjectRequestDiagnose, ProjectRequestImport, ProjectRequestOpen, ProjectRequestNew, ProjectRequestExport,)): return value
     r = record(value)
     tag = string(r['kind'])
@@ -730,10 +662,8 @@ def read_ImportFormat(value: object) -> ImportFormat:
 def validate_TextureSlot(value: TextureSlot) -> None:
     if not isinstance(value, TextureSlot):
         raise TypeError("Expected TextureSlot")
-    if type(value.slot) is not int or not 0 <= value.slot < 18446744073709551616:
-        raise ValueError("Expected usize")
-    if not isinstance(value.path, str):
-        raise ValueError("Expected string")
+    _check_usize(value.slot)
+    _check_string(value.path)
 
 def encode_TextureSlot(value: TextureSlot) -> object:
     return {'slot': value.slot, 'path': value.path}
@@ -755,7 +685,7 @@ def read_ExportFormat(value: object) -> ExportFormat:
     return ExportFormat(string(value))
 
 def validate_ProjectReport(value: ProjectReport) -> None:
-    from .common import validate_Version as validate_Version
+    from .common import validate_Version
     if not isinstance(value, ProjectReport):
         raise TypeError("Expected ProjectReport")
     validate_Version(value.before)
@@ -763,28 +693,24 @@ def validate_ProjectReport(value: ProjectReport) -> None:
     if not isinstance(value.warnings, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.warnings:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.diagnostics, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.diagnostics:
         validate_ProjectDiagnostic(v0)
-    if type(value.published) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.durable) is not bool:
-        raise ValueError("Expected bool")
+    _check_bool(value.published)
+    _check_bool(value.durable)
     if not isinstance(value.paths, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.paths:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
 
 def encode_ProjectReport(value: ProjectReport) -> object:
-    from .common import encode_Version as encode_Version
+    from .common import encode_Version
     return {'before': encode_Version(value.before), 'after': encode_Version(value.after), 'warnings': [v0 for v0 in value.warnings], 'diagnostics': [encode_ProjectDiagnostic(v0) for v0 in value.diagnostics], 'published': value.published, 'durable': value.durable, 'paths': [v0 for v0 in value.paths]}
 
 def read_ProjectReport(value: object) -> ProjectReport:
-    from .common import read_Version as read_Version
+    from .common import read_Version
     if isinstance(value, ProjectReport): return value
     r = record(value)
     return ProjectReport(before=read_Version(r['before']), after=read_Version(r['after']), warnings=tuple(string(v0) for v0 in sequence(r['warnings'])), diagnostics=tuple(read_ProjectDiagnostic(v0) for v0 in sequence(r['diagnostics'])), published=_boolean(r['published']), durable=_boolean(r['durable']), paths=tuple(string(v0) for v0 in sequence(r['paths'])))
@@ -792,14 +718,10 @@ def read_ProjectReport(value: object) -> ProjectReport:
 def validate_ProjectDiagnostic(value: ProjectDiagnostic) -> None:
     if not isinstance(value, ProjectDiagnostic):
         raise TypeError("Expected ProjectDiagnostic")
-    if not isinstance(value.severity, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.code, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.object_id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.message, str):
-        raise ValueError("Expected string")
+    _check_string(value.severity)
+    _check_string(value.code)
+    _check_string(value.object_id)
+    _check_string(value.message)
 
 def encode_ProjectDiagnostic(value: ProjectDiagnostic) -> object:
     return {'severity': value.severity, 'code': value.code, 'object_id': value.object_id, 'message': value.message}

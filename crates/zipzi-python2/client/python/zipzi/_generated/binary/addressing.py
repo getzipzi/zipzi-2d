@@ -4,7 +4,7 @@ from .. import values as m
 from ..._values import sequence
 from ..._values import string
 from functools import cache
-from .support import Reader as Reader, Writer as Writer, _field as _field
+from .support import Reader, Writer, _field
 
 def _write_referenceedit(value: object, w: Writer) -> None:
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
@@ -121,8 +121,8 @@ def _write_referencecollection(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__write_referencefields():
-    from .project import _write_cdiparameterref as _write_cdiparameterref
-    from .project import _write_modeltargetref as _write_modeltargetref
+    from .project import _write_cdiparameterref
+    from .project import _write_modeltargetref
     return _write_cdiparameterref, _write_modeltargetref,
 
 def _write_referencefields(value: object, w: Writer) -> None:
@@ -157,7 +157,7 @@ def _write_referenceselectionfield(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__read_referenceentrycdiparameterref():
-    from .project import _read_cdiparameterref as _read_cdiparameterref
+    from .project import _read_cdiparameterref
     return _read_cdiparameterref,
 
 def _read_referenceentrycdiparameterref(r: Reader) -> m.ReferenceEntryCdiParameterRef:
@@ -166,7 +166,7 @@ def _read_referenceentrycdiparameterref(r: Reader) -> m.ReferenceEntryCdiParamet
 
 @cache
 def _dependencies__read_referenceentrymodeltargetref():
-    from .project import _read_modeltargetref as _read_modeltargetref
+    from .project import _read_modeltargetref
     return _read_modeltargetref,
 
 def _read_referenceentrymodeltargetref(r: Reader) -> m.ReferenceEntryModelTargetRef:

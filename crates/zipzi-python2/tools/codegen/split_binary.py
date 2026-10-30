@@ -78,7 +78,7 @@ def split(source, graph, header):
         if any(any(name in functions and functions[name]!=domain for name in _uses([node])) for node in nodes):
             parts.append('from functools import cache')
         required=sorted(used & support_names)
-        if required:parts.append('from .support import '+', '.join(name+' as '+name for name in required))
+        if required:parts.append('from .support import '+', '.join(required))
         parts.append('')
         for node in nodes:
             dependencies=sorted(name for name in _uses([node]) if name in functions and functions[name]!=domain)
@@ -86,7 +86,7 @@ def split(source, graph, header):
             if dependencies:
                 loader='_dependencies_'+node.name
                 parts.extend(['@cache', 'def '+loader+'():',
-                              *['    from .'+functions[name]+' import '+name+' as '+name for name in dependencies],
+                              *['    from .'+functions[name]+' import '+name for name in dependencies],
                               '    return '+', '.join(dependencies)+',', ''])
                 original.insert(1,'    '+', '.join(dependencies)+', = '+loader+'()')
             parts.extend(['\n'.join(original),''])

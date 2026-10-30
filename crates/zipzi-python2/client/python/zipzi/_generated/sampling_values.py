@@ -259,13 +259,13 @@ class Diagnostic(CompactValue):
         return cls(kind=DiagnosticKind(_text(_get(value, 'kind'))), mesh_id=_text(_get(value, 'mesh_id')), triangle_index=None if _get(value, 'triangle_index') is None else _whole(_get(value, 'triangle_index'), 'usize'))
 
 from .values import TriangleQuality as TriangleQuality
-from .codecs import read_TriangleQuality as read_TriangleQuality
+from .codecs.sampling import read_TriangleQuality as read_TriangleQuality
 
 from .values import TextureCoverage as TextureCoverage
-from .codecs import read_TextureCoverage as read_TextureCoverage
+from .codecs.observation import read_TextureCoverage as read_TextureCoverage
 
 from .values import MeshQuality as MeshQuality
-from .codecs import read_MeshQuality as read_MeshQuality
+from .codecs.sampling import read_MeshQuality as read_MeshQuality
 
 @dataclass(frozen=True, init=False, repr=False)
 class Result(CompactValue):

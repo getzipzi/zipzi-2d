@@ -2,6 +2,7 @@
 from __future__ import annotations
 from .._values import integer
 from .._values import sequence
+import math
 
 def _bytes(value: object) -> bytes:
     return value if isinstance(value, bytes) else bytes(integer(v) for v in sequence(value))
@@ -10,4 +11,48 @@ def _boolean(value: object) -> bool:
     if type(value) is not bool: raise TypeError("Expected bool")
     return value
 
-__all__ = ["_bytes", "_boolean"]
+def _check_string(value: str) -> None:
+    if type(value) is not str and not isinstance(value, str):
+        raise ValueError("Expected string")
+
+def _check_bool(value: bool) -> None:
+    if type(value) is not bool:
+        raise ValueError("Expected bool")
+
+def _check_u8(value: int) -> None:
+    if type(value) is not int or not 0 <= value < 256:
+        raise ValueError("Expected u8")
+
+def _check_u16(value: int) -> None:
+    if type(value) is not int or not 0 <= value < 65536:
+        raise ValueError("Expected u16")
+
+def _check_u32(value: int) -> None:
+    if type(value) is not int or not 0 <= value < 4294967296:
+        raise ValueError("Expected u32")
+
+def _check_u64(value: int) -> None:
+    if type(value) is not int or not 0 <= value < 18446744073709551616:
+        raise ValueError("Expected u64")
+
+def _check_usize(value: int) -> None:
+    if type(value) is not int or not 0 <= value < 18446744073709551616:
+        raise ValueError("Expected usize")
+
+def _check_i32(value: int) -> None:
+    if type(value) is not int or not -2147483648 <= value < 2147483648:
+        raise ValueError("Expected i32")
+
+def _check_i64(value: int) -> None:
+    if type(value) is not int or not -9223372036854775808 <= value < 9223372036854775808:
+        raise ValueError("Expected i64")
+
+def _check_f32(value: float) -> None:
+    if (type(value) is not float and (isinstance(value, bool) or not isinstance(value, (float, int)))) or not math.isfinite(value) or abs(value) > 3.4028234663852886e38:
+        raise ValueError("Expected f32")
+
+def _check_f64(value: float) -> None:
+    if (type(value) is not float and (isinstance(value, bool) or not isinstance(value, (float, int)))) or not math.isfinite(value):
+        raise ValueError("Expected f64")
+
+__all__ = ['_boolean', '_bytes', '_check_bool', '_check_f32', '_check_f64', '_check_i32', '_check_i64', '_check_string', '_check_u16', '_check_u32', '_check_u64', '_check_u8', '_check_usize']

@@ -4,16 +4,15 @@ from ..._values import Source as _Source
 from ..._values import Version
 from ..._values import number
 from ..._values import record
-import math
-from ..values import PreciseVec2 as PreciseVec2, Vec2 as Vec2
+from .._modeling_support import _check_f32
+from .._modeling_support import _check_f64
+from ..values import PreciseVec2, Vec2
 
 def validate_Vec2(value: Vec2) -> None:
     if not isinstance(value, Vec2):
         raise TypeError("Expected Vec2")
-    if isinstance(value.x, bool) or not isinstance(value.x, (float, int)) or not math.isfinite(value.x) or abs(value.x) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.y, bool) or not isinstance(value.y, (float, int)) or not math.isfinite(value.y) or abs(value.y) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_f32(value.x)
+    _check_f32(value.y)
 
 def encode_Vec2(value: Vec2) -> object:
     return {'x': value.x, 'y': value.y}
@@ -26,10 +25,8 @@ def read_Vec2(value: object) -> Vec2:
 def validate_PreciseVec2(value: PreciseVec2) -> None:
     if not isinstance(value, PreciseVec2):
         raise TypeError("Expected PreciseVec2")
-    if isinstance(value.x, bool) or not isinstance(value.x, (float, int)) or not math.isfinite(value.x):
-        raise ValueError("Expected f64")
-    if isinstance(value.y, bool) or not isinstance(value.y, (float, int)) or not math.isfinite(value.y):
-        raise ValueError("Expected f64")
+    _check_f64(value.x)
+    _check_f64(value.y)
 
 def encode_PreciseVec2(value: PreciseVec2) -> object:
     return {'x': value.x, 'y': value.y}

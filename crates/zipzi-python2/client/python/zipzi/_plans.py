@@ -9,7 +9,7 @@ else:
     Backend = object
 from ._generated.plan_values import PlanCost as PlanCost, PlanReport as PlanReport
 from . import ops, modeling
-from ._generated import codecs as _codec
+from ._generated.codecs import deletion as _codec
 
 class Plan(Owned):
     """Owned native plan returned by Session/Edit/address planning factories.

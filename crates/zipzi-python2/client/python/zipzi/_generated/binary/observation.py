@@ -5,7 +5,7 @@ from ..._values import integer
 from ..._values import number
 from typing import cast
 from functools import cache
-from .support import Reader as Reader
+from .support import Reader
 
 def _read_texturecoverage(r: Reader) -> m.TextureCoverage:
     return m.TextureCoverage(alpha_threshold=integer(r.scalar('B')), pixel_step=integer(r.scalar('I')), sampled_pixels=integer(r.scalar('Q')), covered_pixels=integer(r.scalar('Q')), transparent_covered_pixels=integer(r.scalar('Q')), opaque_pixels=integer(r.scalar('Q')), uncovered_opaque_pixels=integer(r.scalar('Q')), transparent_coverage_fraction=(number(r.scalar('d')) if r.optional() else None), uncovered_opaque_fraction=(number(r.scalar('d')) if r.optional() else None), out_of_bounds_triangles=integer(r.scalar('Q')))
@@ -15,7 +15,7 @@ def _read_observationview(r: Reader) -> m.ObservationView:
 
 @cache
 def _dependencies__read_topologyoverlay():
-    from .spatial import _read_objecttarget as _read_objecttarget
+    from .spatial import _read_objecttarget
     return _read_objecttarget,
 
 def _read_topologyoverlay(r: Reader) -> m.TopologyOverlay:
@@ -27,7 +27,7 @@ def _read_topologythresholds(r: Reader) -> m.TopologyThresholds:
 
 @cache
 def _dependencies__read_observationimage():
-    from .sampling import _read_meshquality as _read_meshquality
+    from .sampling import _read_meshquality
     return _read_meshquality,
 
 def _read_observationimage(r: Reader) -> m.ObservationImage:

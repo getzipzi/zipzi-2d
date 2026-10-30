@@ -5,29 +5,24 @@ from ..._values import number
 from ..._values import record
 from ..._values import string
 from .._modeling_support import _boolean
-import math
-from ..values import Parameter as Parameter, ParameterKind as ParameterKind, ParameterRangeEdit as ParameterRangeEdit, ParameterRangePolicy as ParameterRangePolicy
+from .._modeling_support import _check_bool
+from .._modeling_support import _check_f32
+from .._modeling_support import _check_i32
+from .._modeling_support import _check_string
+from ..values import Parameter, ParameterKind, ParameterRangeEdit, ParameterRangePolicy
 
 def validate_Parameter(value: Parameter) -> None:
     if not isinstance(value, Parameter):
         raise TypeError("Expected Parameter")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.runtime_id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.name, str):
-        raise ValueError("Expected string")
-    if isinstance(value.minimum, bool) or not isinstance(value.minimum, (float, int)) or not math.isfinite(value.minimum) or abs(value.minimum) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.maximum, bool) or not isinstance(value.maximum, (float, int)) or not math.isfinite(value.maximum) or abs(value.maximum) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.default_value, bool) or not isinstance(value.default_value, (float, int)) or not math.isfinite(value.default_value) or abs(value.default_value) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if type(value.decimal_places) is not int or not -2147483648 <= value.decimal_places < 2147483648:
-        raise ValueError("Expected i32")
+    _check_string(value.id)
+    _check_string(value.runtime_id)
+    _check_string(value.name)
+    _check_f32(value.minimum)
+    _check_f32(value.maximum)
+    _check_f32(value.default_value)
+    _check_i32(value.decimal_places)
     validate_ParameterKind(value.kind)
-    if type(value.repeat) is not bool:
-        raise ValueError("Expected bool")
+    _check_bool(value.repeat)
 
 def encode_Parameter(value: Parameter) -> object:
     return {'id': value.id, 'runtime_id': value.runtime_id, 'name': value.name, 'minimum': value.minimum, 'maximum': value.maximum, 'default_value': value.default_value, 'decimal_places': value.decimal_places, 'kind': encode_ParameterKind(value.kind), 'repeat': value.repeat}
@@ -62,14 +57,10 @@ def read_ParameterRangePolicy(value: object) -> ParameterRangePolicy:
 def validate_ParameterRangeEdit(value: ParameterRangeEdit) -> None:
     if not isinstance(value, ParameterRangeEdit):
         raise TypeError("Expected ParameterRangeEdit")
-    if not isinstance(value.parameter_id, str):
-        raise ValueError("Expected string")
-    if isinstance(value.minimum, bool) or not isinstance(value.minimum, (float, int)) or not math.isfinite(value.minimum) or abs(value.minimum) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.maximum, bool) or not isinstance(value.maximum, (float, int)) or not math.isfinite(value.maximum) or abs(value.maximum) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.default_value, bool) or not isinstance(value.default_value, (float, int)) or not math.isfinite(value.default_value) or abs(value.default_value) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_string(value.parameter_id)
+    _check_f32(value.minimum)
+    _check_f32(value.maximum)
+    _check_f32(value.default_value)
     validate_ParameterRangePolicy(value.policy)
 
 def encode_ParameterRangeEdit(value: ParameterRangeEdit) -> object:

@@ -10,15 +10,15 @@ from typing import ClassVar as _ClassVar
 from typing import TypeAlias
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from .scene import Appearance as Appearance
-    from .parameters import ParameterRangeEdit as ParameterRangeEdit
-    from .parameters import ParameterRangePolicy as ParameterRangePolicy
-    from .scene import PartId as PartId
-    from .scene import ReparentEdit as ReparentEdit
-    from .scene import RotationPose as RotationPose
-    from .scene import TransformId as TransformId
-    from .common import Vec2 as Vec2
-    from .scene import WarpBezier as WarpBezier
+    from .scene import Appearance
+    from .parameters import ParameterRangeEdit
+    from .parameters import ParameterRangePolicy
+    from .scene import PartId
+    from .scene import ReparentEdit
+    from .scene import RotationPose
+    from .scene import TransformId
+    from .common import Vec2
+    from .scene import WarpBezier
 
 def read_BindingSample(value: object) -> BindingSample:
     from ..codecs.bindings import read_BindingSample as decode

@@ -6,18 +6,22 @@ from ..._values import record
 from ..._values import sequence
 from ..._values import string
 from .._modeling_support import _boolean
+from .._modeling_support import _check_bool
+from .._modeling_support import _check_f32
+from .._modeling_support import _check_f64
+from .._modeling_support import _check_i32
+from .._modeling_support import _check_string
+from .._modeling_support import _check_u32
+from .._modeling_support import _check_usize
 from collections.abc import Mapping
 from typing import cast
-import math
-from ..values import GeometryHit as GeometryHit, GeometryQuery as GeometryQuery, ObjectBounds as ObjectBounds, ObjectTarget as ObjectTarget, ObjectTargetMesh as ObjectTargetMesh, ObjectTargetPart as ObjectTargetPart, SpatialFrame as SpatialFrame, SpatialQuery as SpatialQuery, SpatialQueryBounds as SpatialQueryBounds, SpatialQueryHits as SpatialQueryHits, SpatialResult as SpatialResult, SpatialResultBounds as SpatialResultBounds, SpatialResultHits as SpatialResultHits, SpatialSamples as SpatialSamples, TriangleHit as TriangleHit
+from ..values import GeometryHit, GeometryQuery, ObjectBounds, ObjectTarget, ObjectTargetMesh, ObjectTargetPart, SpatialFrame, SpatialQuery, SpatialQueryBounds, SpatialQueryHits, SpatialResult, SpatialResultBounds, SpatialResultHits, SpatialSamples, TriangleHit
 
 def validate_ObjectTarget(value: ObjectTarget) -> None:
     if isinstance(value, ObjectTargetMesh):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     elif isinstance(value, ObjectTargetPart):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     else:
         raise TypeError("Expected ObjectTarget")
 
@@ -44,22 +48,17 @@ def validate_SpatialQuery(value: SpatialQuery) -> None:
             raise TypeError("Expected an immutable tuple")
         for v0 in value.targets:
             validate_ObjectTarget(v0)
-        if type(value.include_hidden) is not bool:
-            raise ValueError("Expected bool")
+        _check_bool(value.include_hidden)
     elif isinstance(value, SpatialQueryHits):
         if not isinstance(value.point, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.point) != 2:
             raise ValueError("Invalid fixed array length")
         for v0 in value.point:
-            if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0):
-                raise ValueError("Expected f64")
-        if type(value.include_hidden) is not bool:
-            raise ValueError("Expected bool")
-        if type(value.details) is not bool:
-            raise ValueError("Expected bool")
-        if type(value.max_candidates) is not int or not 0 <= value.max_candidates < 18446744073709551616:
-            raise ValueError("Expected usize")
+            _check_f64(v0)
+        _check_bool(value.include_hidden)
+        _check_bool(value.details)
+        _check_usize(value.max_candidates)
     else:
         raise TypeError("Expected SpatialQuery")
 
@@ -113,19 +112,16 @@ def validate_ObjectBounds(value: ObjectBounds) -> None:
     if not isinstance(value.mesh_ids, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.mesh_ids:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if value.model_bounds is not None:
         if not isinstance(value.model_bounds, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.model_bounds) != 4:
             raise ValueError("Invalid fixed array length")
         for v0 in value.model_bounds:
-            if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0):
-                raise ValueError("Expected f64")
+            _check_f64(v0)
     if value.empty_reason is not None:
-        if not isinstance(value.empty_reason, str):
-            raise ValueError("Expected string")
+        _check_string(value.empty_reason)
 
 def encode_ObjectBounds(value: ObjectBounds) -> object:
     return {'mesh_ids': [v0 for v0 in value.mesh_ids], 'model_bounds': None if value.model_bounds is None else [v0 for v0 in value.model_bounds], 'empty_reason': None if value.empty_reason is None else value.empty_reason}
@@ -142,10 +138,8 @@ def validate_GeometryQuery(value: GeometryQuery) -> None:
         raise TypeError("Expected an immutable tuple")
     for v0 in value.hits:
         validate_GeometryHit(v0)
-    if type(value.total) is not int or not 0 <= value.total < 18446744073709551616:
-        raise ValueError("Expected usize")
-    if type(value.truncated) is not bool:
-        raise ValueError("Expected bool")
+    _check_usize(value.total)
+    _check_bool(value.truncated)
 
 def encode_GeometryQuery(value: GeometryQuery) -> object:
     return {'hits': [encode_GeometryHit(v0) for v0 in value.hits], 'total': value.total, 'truncated': value.truncated}
@@ -158,28 +152,20 @@ def read_GeometryQuery(value: object) -> GeometryQuery:
 def validate_GeometryHit(value: GeometryHit) -> None:
     if not isinstance(value, GeometryHit):
         raise TypeError("Expected GeometryHit")
-    if not isinstance(value.mesh_id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.name, str):
-        raise ValueError("Expected string")
+    _check_string(value.mesh_id)
+    _check_string(value.name)
     if not isinstance(value.part_path, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.part_path:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.part_names, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.part_names:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
-    if type(value.enabled) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.visible) is not bool:
-        raise ValueError("Expected bool")
-    if isinstance(value.opacity, bool) or not isinstance(value.opacity, (float, int)) or not math.isfinite(value.opacity) or abs(value.opacity) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if type(value.render_order) is not int or not -2147483648 <= value.render_order < 2147483648:
-        raise ValueError("Expected i32")
+        _check_string(v0)
+    _check_bool(value.enabled)
+    _check_bool(value.visible)
+    _check_f32(value.opacity)
+    _check_i32(value.render_order)
     if not isinstance(value.triangles, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.triangles:
@@ -196,38 +182,33 @@ def read_GeometryHit(value: object) -> GeometryHit:
 def validate_TriangleHit(value: TriangleHit) -> None:
     if not isinstance(value, TriangleHit):
         raise TypeError("Expected TriangleHit")
-    if type(value.triangle_index) is not int or not 0 <= value.triangle_index < 18446744073709551616:
-        raise ValueError("Expected usize")
+    _check_usize(value.triangle_index)
     if not isinstance(value.vertex_indices, tuple):
         raise TypeError("Expected an immutable tuple")
     if len(value.vertex_indices) != 3:
         raise ValueError("Invalid fixed array length")
     for v0 in value.vertex_indices:
-        if type(v0) is not int or not 0 <= v0 < 4294967296:
-            raise ValueError("Expected u32")
+        _check_u32(v0)
     if value.vertex_ids is not None:
         if not isinstance(value.vertex_ids, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.vertex_ids) != 3:
             raise ValueError("Invalid fixed array length")
         for v0 in value.vertex_ids:
-            if type(v0) is not int or not 0 <= v0 < 4294967296:
-                raise ValueError("Expected u32")
+            _check_u32(v0)
     if not isinstance(value.barycentric, tuple):
         raise TypeError("Expected an immutable tuple")
     if len(value.barycentric) != 3:
         raise ValueError("Invalid fixed array length")
     for v0 in value.barycentric:
-        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0):
-            raise ValueError("Expected f64")
+        _check_f64(v0)
     if value.uv is not None:
         if not isinstance(value.uv, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.uv) != 2:
             raise ValueError("Invalid fixed array length")
         for v0 in value.uv:
-            if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0):
-                raise ValueError("Expected f64")
+            _check_f64(v0)
 
 def encode_TriangleHit(value: TriangleHit) -> object:
     return {'triangle_index': value.triangle_index, 'vertex_indices': [v0 for v0 in value.vertex_indices], 'vertex_ids': None if value.vertex_ids is None else [v0 for v0 in value.vertex_ids], 'barycentric': [v0 for v0 in value.barycentric], 'uv': None if value.uv is None else [v0 for v0 in value.uv]}
@@ -238,7 +219,7 @@ def read_TriangleHit(value: object) -> TriangleHit:
     return TriangleHit(triangle_index=integer(r['triangle_index']), vertex_indices=cast('tuple[int, int, int]', tuple(integer(v0) for v0 in sequence(r['vertex_indices']))), vertex_ids=None if r.get('vertex_ids', None) is None else cast('tuple[int, int, int]', tuple(integer(v0) for v0 in sequence(r.get('vertex_ids', None)))), barycentric=cast('tuple[float, float, float]', tuple(number(v0) for v0 in sequence(r['barycentric']))), uv=None if r.get('uv', None) is None else cast('tuple[float, float]', tuple(number(v0) for v0 in sequence(r.get('uv', None)))))
 
 def validate_SpatialSamples(value: SpatialSamples) -> None:
-    from .common import validate_Version as validate_Version
+    from .common import validate_Version
     if not isinstance(value, SpatialSamples):
         raise TypeError("Expected SpatialSamples")
     validate_Version(value.version)
@@ -246,10 +227,8 @@ def validate_SpatialSamples(value: SpatialSamples) -> None:
         raise TypeError("Expected an immutable tuple")
     for v0 in value.requested:
         for key1, v1 in v0.items():
-            if not isinstance(key1, str):
-                raise ValueError("Expected string")
-            if isinstance(v1, bool) or not isinstance(v1, (float, int)) or not math.isfinite(v1) or abs(v1) > 3.4028234663852886e38:
-                raise ValueError("Expected f32")
+            _check_string(key1)
+            _check_f32(v1)
     if not isinstance(value.queries, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.queries:
@@ -260,11 +239,11 @@ def validate_SpatialSamples(value: SpatialSamples) -> None:
         validate_SpatialFrame(v0)
 
 def encode_SpatialSamples(value: SpatialSamples) -> object:
-    from .common import encode_Version as encode_Version
+    from .common import encode_Version
     return {'version': encode_Version(value.version), 'requested': [{str(key1): v1 for key1, v1 in v0.items()} for v0 in value.requested], 'queries': [encode_SpatialQuery(v0) for v0 in value.queries], 'frames': [encode_SpatialFrame(v0) for v0 in value.frames]}
 
 def read_SpatialSamples(value: object) -> SpatialSamples:
-    from .common import read_Version as read_Version
+    from .common import read_Version
     if isinstance(value, SpatialSamples): return value
     r = record(value)
     return SpatialSamples(version=read_Version(r['version']), requested=tuple({key1: number(v1) for key1, v1 in record(v0).items()} for v0 in sequence(r['requested'])), queries=tuple(read_SpatialQuery(v0) for v0 in sequence(r['queries'])), frames=tuple(read_SpatialFrame(v0) for v0 in sequence(r['frames'])))
@@ -273,10 +252,8 @@ def validate_SpatialFrame(value: SpatialFrame) -> None:
     if not isinstance(value, SpatialFrame):
         raise TypeError("Expected SpatialFrame")
     for key0, v0 in value.parameters.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
-        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(key0)
+        _check_f32(v0)
     if not isinstance(value.results, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.results:

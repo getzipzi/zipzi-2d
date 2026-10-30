@@ -4,7 +4,7 @@ from .. import values as m
 from ..._values import number
 from ..._values import sequence
 from ..._values import string
-from .support import Reader as Reader, Writer as Writer, _field as _field, _mapping as _mapping
+from .support import Reader, Writer, _field, _mapping
 
 def _write_poseedit(value: object, w: Writer) -> None:
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))

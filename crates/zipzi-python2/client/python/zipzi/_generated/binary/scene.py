@@ -7,7 +7,7 @@ from ..._values import sequence
 from ..._values import string
 from typing import cast
 from functools import cache
-from .support import Reader as Reader, Writer as Writer, _field as _field, _mapping as _mapping, _point as _point
+from .support import Reader, Writer, _field, _mapping, _point
 
 def _write_scenereference(value: object, w: Writer) -> None:
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
@@ -157,7 +157,7 @@ def _read_warpbezier(r: Reader) -> m.WarpBezier:
 
 @cache
 def _dependencies__write_warpbeziernode():
-    from .common import _write_vec2 as _write_vec2
+    from .common import _write_vec2
     return _write_vec2,
 
 def _write_warpbeziernode(value: object, w: Writer) -> None:
@@ -169,7 +169,7 @@ def _write_warpbeziernode(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__read_warpbeziernode():
-    from .common import _read_vec2 as _read_vec2
+    from .common import _read_vec2
     return _read_vec2,
 
 def _read_warpbeziernode(r: Reader) -> m.WarpBezierNode:
@@ -185,7 +185,7 @@ def _read_rotationtransform(r: Reader) -> m.RotationTransform:
 
 @cache
 def _dependencies__write_rotationpose():
-    from .common import _write_precisevec2 as _write_precisevec2
+    from .common import _write_precisevec2
     return _write_precisevec2,
 
 def _write_rotationpose(value: object, w: Writer) -> None:
@@ -198,7 +198,7 @@ def _write_rotationpose(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__read_rotationpose():
-    from .common import _read_precisevec2 as _read_precisevec2
+    from .common import _read_precisevec2
     return _read_precisevec2,
 
 def _read_rotationpose(r: Reader) -> m.RotationPose:
@@ -207,7 +207,7 @@ def _read_rotationpose(r: Reader) -> m.RotationPose:
 
 @cache
 def _dependencies__write_glue():
-    from .bindings import _write_gluebinding as _write_gluebinding
+    from .bindings import _write_gluebinding
     return _write_gluebinding,
 
 def _write_glue(value: object, w: Writer) -> None:
@@ -230,7 +230,7 @@ def _write_glue(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__read_glue():
-    from .bindings import _read_gluebinding as _read_gluebinding
+    from .bindings import _read_gluebinding
     return _read_gluebinding,
 
 def _read_glue(r: Reader) -> m.Glue:
@@ -257,7 +257,7 @@ def _read_gluevertexpair(r: Reader) -> m.GlueVertexPair:
 
 @cache
 def _dependencies__write_offscreen():
-    from .bindings import _write_offscreenkeyform as _write_offscreenkeyform
+    from .bindings import _write_offscreenkeyform
     return _write_offscreenkeyform,
 
 def _write_offscreen(value: object, w: Writer) -> None:
@@ -283,7 +283,7 @@ def _write_offscreen(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__read_offscreen():
-    from .bindings import _read_offscreenkeyform as _read_offscreenkeyform
+    from .bindings import _read_offscreenkeyform
     return _read_offscreenkeyform,
 
 def _read_offscreen(r: Reader) -> m.Offscreen:
@@ -303,7 +303,7 @@ def _write_reparentstrategy(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__write_reparentcontext():
-    from .commands import _write_conversiondomain as _write_conversiondomain
+    from .commands import _write_conversiondomain
     return _write_conversiondomain,
 
 def _write_reparentcontext(value: object, w: Writer) -> None:
@@ -346,7 +346,7 @@ def _write_scenecreate(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__write_scenefieldvalue():
-    from .bindings import _write_offscreenkeyform as _write_offscreenkeyform
+    from .bindings import _write_offscreenkeyform
     return _write_offscreenkeyform,
 
 def _write_scenefieldvalue(value: object, w: Writer) -> None:
@@ -524,7 +524,7 @@ def _write_shapetarget(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__write_warppointpatch():
-    from .common import _write_vec2 as _write_vec2
+    from .common import _write_vec2
     return _write_vec2,
 
 def _write_warppointpatch(value: object, w: Writer) -> None:
@@ -555,7 +555,7 @@ def _write_offscreendeletepolicy(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__write_offscreenmappingpatch():
-    from .bindings import _write_partkeyformslot as _write_partkeyformslot
+    from .bindings import _write_partkeyformslot
     return _write_partkeyformslot,
 
 def _write_offscreenmappingpatch(value: object, w: Writer) -> None:
@@ -565,7 +565,7 @@ def _write_offscreenmappingpatch(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__write_canvas():
-    from .common import _write_vec2 as _write_vec2
+    from .common import _write_vec2
     return _write_vec2,
 
 def _write_canvas(value: object, w: Writer) -> None:
@@ -578,7 +578,7 @@ def _write_canvas(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__read_canvas():
-    from .common import _read_vec2 as _read_vec2
+    from .common import _read_vec2
     return _read_vec2,
 
 def _read_canvas(r: Reader) -> m.Canvas:
@@ -606,7 +606,7 @@ def _read_attachmentref(r: Reader) -> m.AttachmentRef:
 
 @cache
 def _dependencies__write_modelsetup():
-    from .project import _write_exportsettings as _write_exportsettings
+    from .project import _write_exportsettings
     return _write_exportsettings,
 
 def _write_modelsetup(value: object, w: Writer) -> None:
@@ -620,7 +620,7 @@ def _write_modelsetup(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__read_modelsetup():
-    from .project import _read_exportsettings as _read_exportsettings
+    from .project import _read_exportsettings
     return _read_exportsettings,
 
 def _read_modelsetup(r: Reader) -> m.ModelSetup:

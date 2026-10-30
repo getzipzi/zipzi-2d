@@ -6,14 +6,19 @@ from ..._values import record
 from ..._values import sequence
 from ..._values import string
 from .._modeling_support import _boolean
+from .._modeling_support import _check_bool
+from .._modeling_support import _check_f32
+from .._modeling_support import _check_f64
+from .._modeling_support import _check_i32
+from .._modeling_support import _check_string
+from .._modeling_support import _check_usize
 from collections.abc import Mapping
 from collections.abc import Mapping as _Mapping
 from typing import cast
-import math
-from ..values import DeletionChannel as DeletionChannel, DeletionChoice as DeletionChoice, DeletionDecision as DeletionDecision, DeletionDecisionReason as DeletionDecisionReason, DeletionDecisionReasonBlendBaseReplacementRequired as DeletionDecisionReasonBlendBaseReplacementRequired, DeletionDecisionReasonConversionUnproven as DeletionDecisionReasonConversionUnproven, DeletionDecisionReasonInvalidContainer as DeletionDecisionReasonInvalidContainer, DeletionDecisionReasonOffscreenMappingRequired as DeletionDecisionReasonOffscreenMappingRequired, DeletionDecisionReasonOffscreenOwnerUnavailable as DeletionDecisionReasonOffscreenOwnerUnavailable, DeletionDecisionReasonPartStateUnpreserved as DeletionDecisionReasonPartStateUnpreserved, DeletionDecisionReasonPhysicsNodeReplacementRequired as DeletionDecisionReasonPhysicsNodeReplacementRequired, DeletionDecisionReasonTextureReplacementRequired as DeletionDecisionReasonTextureReplacementRequired, DeletionEffect as DeletionEffect, DeletionEffectBindingContributionRemoved as DeletionEffectBindingContributionRemoved, DeletionEffectCompositionChanged as DeletionEffectCompositionChanged, DeletionEffectContentChanged as DeletionEffectContentChanged, DeletionEffectDeformationChanged as DeletionEffectDeformationChanged, DeletionEffectDrawingGroupFlattened as DeletionEffectDrawingGroupFlattened, DeletionEffectGlueRemoved as DeletionEffectGlueRemoved, DeletionEffectHitAreaRemoved as DeletionEffectHitAreaRemoved, DeletionEffectMaskChanged as DeletionEffectMaskChanged, DeletionEffectMotionRegistrationMoved as DeletionEffectMotionRegistrationMoved, DeletionEffectOrganizationChanged as DeletionEffectOrganizationChanged, DeletionEffectParameterAnimationRemoved as DeletionEffectParameterAnimationRemoved, DeletionEffectParameterDimensionRemoved as DeletionEffectParameterDimensionRemoved, DeletionEffectPartAnimationRemoved as DeletionEffectPartAnimationRemoved, DeletionEffectPartStateRemoved as DeletionEffectPartStateRemoved, DeletionEffectPhysicsChannelRemoved as DeletionEffectPhysicsChannelRemoved, DeletionEffectResourceReplaced as DeletionEffectResourceReplaced, DeletionEffectUnpreservedChannels as DeletionEffectUnpreservedChannels, DeletionField as DeletionField, DeletionFieldAttachmentSound as DeletionFieldAttachmentSound, DeletionFieldAttachmentUserData as DeletionFieldAttachmentUserData, DeletionFieldBlendConstraint as DeletionFieldBlendConstraint, DeletionFieldBlendConstraintParameter as DeletionFieldBlendConstraintParameter, DeletionFieldBlendTable as DeletionFieldBlendTable, DeletionFieldBlendTableParameter as DeletionFieldBlendTableParameter, DeletionFieldCdiCombinedParameter as DeletionFieldCdiCombinedParameter, DeletionFieldCdiParameter as DeletionFieldCdiParameter, DeletionFieldCdiPart as DeletionFieldCdiPart, DeletionFieldConvertedData as DeletionFieldConvertedData, DeletionFieldDeformationParent as DeletionFieldDeformationParent, DeletionFieldDrawingItem as DeletionFieldDrawingItem, DeletionFieldExpressionParameter as DeletionFieldExpressionParameter, DeletionFieldExpressionSourceParameter as DeletionFieldExpressionSourceParameter, DeletionFieldExpressionSourcePart as DeletionFieldExpressionSourcePart, DeletionFieldGlueMeshA as DeletionFieldGlueMeshA, DeletionFieldGlueMeshB as DeletionFieldGlueMeshB, DeletionFieldHitAreaMesh as DeletionFieldHitAreaMesh, DeletionFieldMeshInvertedMask as DeletionFieldMeshInvertedMask, DeletionFieldMeshMask as DeletionFieldMeshMask, DeletionFieldModelParameter as DeletionFieldModelParameter, DeletionFieldMotionClip as DeletionFieldMotionClip, DeletionFieldMotionParameter as DeletionFieldMotionParameter, DeletionFieldMotionPart as DeletionFieldMotionPart, DeletionFieldMotionRegistrationContainer as DeletionFieldMotionRegistrationContainer, DeletionFieldOffscreenMask as DeletionFieldOffscreenMask, DeletionFieldOrganizationParent as DeletionFieldOrganizationParent, DeletionFieldOwned as DeletionFieldOwned, DeletionFieldParameterAxis as DeletionFieldParameterAxis, DeletionFieldParameterFolder as DeletionFieldParameterFolder, DeletionFieldPhysicsNode as DeletionFieldPhysicsNode, DeletionFieldPhysicsParameter as DeletionFieldPhysicsParameter, DeletionFieldPoseLinkPart as DeletionFieldPoseLinkPart, DeletionFieldPosePart as DeletionFieldPosePart, DeletionFieldRequestedScope as DeletionFieldRequestedScope, DeletionFieldTexture as DeletionFieldTexture, DeletionIntent as DeletionIntent, DeletionKind as DeletionKind, DeletionLock as DeletionLock, DeletionObject as DeletionObject, DeletionOffscreenPlacement as DeletionOffscreenPlacement, DeletionPage as DeletionPage, DeletionPositionGuarantee as DeletionPositionGuarantee, DeletionReason as DeletionReason, DeletionRelation as DeletionRelation, DeletionRemoval as DeletionRemoval, DeletionRequest as DeletionRequest, DeletionReviewState as DeletionReviewState, DeletionRow as DeletionRow, DeletionRowDecision as DeletionRowDecision, DeletionRowDeformation as DeletionRowDeformation, DeletionRowDomain as DeletionRowDomain, DeletionRowEffect as DeletionRowEffect, DeletionRowExport as DeletionRowExport, DeletionRowGuaranteeLimit as DeletionRowGuaranteeLimit, DeletionRowLock as DeletionRowLock, DeletionRowOrganization as DeletionRowOrganization, DeletionRowRelation as DeletionRowRelation, DeletionRowRemoval as DeletionRowRemoval, DeletionRowStructural as DeletionRowStructural, DeletionSection as DeletionSection, DeletionSectionCount as DeletionSectionCount, DeletionStructuralBlocker as DeletionStructuralBlocker, DeletionSummary as DeletionSummary, DeletionTarget as DeletionTarget, DeletionTargetAttachment as DeletionTargetAttachment, DeletionTargetDeformer as DeletionTargetDeformer, DeletionTargetDissolvePart as DeletionTargetDissolvePart, DeletionTargetGlue as DeletionTargetGlue, DeletionTargetMesh as DeletionTargetMesh, DeletionTargetOffscreen as DeletionTargetOffscreen, DeletionTargetParameter as DeletionTargetParameter, DeletionTargetParameterFolder as DeletionTargetParameterFolder, DeletionTargetParameterFolderContents as DeletionTargetParameterFolderContents, DeletionTargetPart as DeletionTargetPart, DeletionTargetRecord as DeletionTargetRecord, DeletionTargetRemoveDeformer as DeletionTargetRemoveDeformer, DeletionTargetTexture as DeletionTargetTexture, DeletionTolerance as DeletionTolerance
+from ..values import DeletionChannel, DeletionChoice, DeletionDecision, DeletionDecisionReason, DeletionDecisionReasonBlendBaseReplacementRequired, DeletionDecisionReasonConversionUnproven, DeletionDecisionReasonInvalidContainer, DeletionDecisionReasonOffscreenMappingRequired, DeletionDecisionReasonOffscreenOwnerUnavailable, DeletionDecisionReasonPartStateUnpreserved, DeletionDecisionReasonPhysicsNodeReplacementRequired, DeletionDecisionReasonTextureReplacementRequired, DeletionEffect, DeletionEffectBindingContributionRemoved, DeletionEffectCompositionChanged, DeletionEffectContentChanged, DeletionEffectDeformationChanged, DeletionEffectDrawingGroupFlattened, DeletionEffectGlueRemoved, DeletionEffectHitAreaRemoved, DeletionEffectMaskChanged, DeletionEffectMotionRegistrationMoved, DeletionEffectOrganizationChanged, DeletionEffectParameterAnimationRemoved, DeletionEffectParameterDimensionRemoved, DeletionEffectPartAnimationRemoved, DeletionEffectPartStateRemoved, DeletionEffectPhysicsChannelRemoved, DeletionEffectResourceReplaced, DeletionEffectUnpreservedChannels, DeletionField, DeletionFieldAttachmentSound, DeletionFieldAttachmentUserData, DeletionFieldBlendConstraint, DeletionFieldBlendConstraintParameter, DeletionFieldBlendTable, DeletionFieldBlendTableParameter, DeletionFieldCdiCombinedParameter, DeletionFieldCdiParameter, DeletionFieldCdiPart, DeletionFieldConvertedData, DeletionFieldDeformationParent, DeletionFieldDrawingItem, DeletionFieldExpressionParameter, DeletionFieldExpressionSourceParameter, DeletionFieldExpressionSourcePart, DeletionFieldGlueMeshA, DeletionFieldGlueMeshB, DeletionFieldHitAreaMesh, DeletionFieldMeshInvertedMask, DeletionFieldMeshMask, DeletionFieldModelParameter, DeletionFieldMotionClip, DeletionFieldMotionParameter, DeletionFieldMotionPart, DeletionFieldMotionRegistrationContainer, DeletionFieldOffscreenMask, DeletionFieldOrganizationParent, DeletionFieldOwned, DeletionFieldParameterAxis, DeletionFieldParameterFolder, DeletionFieldPhysicsNode, DeletionFieldPhysicsParameter, DeletionFieldPoseLinkPart, DeletionFieldPosePart, DeletionFieldRequestedScope, DeletionFieldTexture, DeletionIntent, DeletionKind, DeletionLock, DeletionObject, DeletionOffscreenPlacement, DeletionPage, DeletionPositionGuarantee, DeletionReason, DeletionRelation, DeletionRemoval, DeletionRequest, DeletionReviewState, DeletionRow, DeletionRowDecision, DeletionRowDeformation, DeletionRowDomain, DeletionRowEffect, DeletionRowExport, DeletionRowGuaranteeLimit, DeletionRowLock, DeletionRowOrganization, DeletionRowRelation, DeletionRowRemoval, DeletionRowStructural, DeletionSection, DeletionSectionCount, DeletionStructuralBlocker, DeletionSummary, DeletionTarget, DeletionTargetAttachment, DeletionTargetDeformer, DeletionTargetDissolvePart, DeletionTargetGlue, DeletionTargetMesh, DeletionTargetOffscreen, DeletionTargetParameter, DeletionTargetParameterFolder, DeletionTargetParameterFolderContents, DeletionTargetPart, DeletionTargetRecord, DeletionTargetRemoveDeformer, DeletionTargetTexture, DeletionTolerance
 
 def validate_DeletionIntent(value: DeletionIntent) -> None:
-    from .project import validate_OpaqueExportIssue as validate_OpaqueExportIssue
+    from .project import validate_OpaqueExportIssue
     if not isinstance(value, DeletionIntent):
         raise TypeError("Expected DeletionIntent")
     validate_DeletionRequest(value.request)
@@ -23,18 +28,18 @@ def validate_DeletionIntent(value: DeletionIntent) -> None:
         validate_OpaqueExportIssue(v0)
 
 def encode_DeletionIntent(value: DeletionIntent) -> object:
-    from .project import encode_OpaqueExportIssue as encode_OpaqueExportIssue
+    from .project import encode_OpaqueExportIssue
     return {'request': encode_DeletionRequest(value.request), 'accepted_export_failures': [encode_OpaqueExportIssue(v0) for v0 in value.accepted_export_failures]}
 
 def read_DeletionIntent(value: object) -> DeletionIntent:
-    from .project import read_OpaqueExportIssue as read_OpaqueExportIssue
+    from .project import read_OpaqueExportIssue
     if isinstance(value, DeletionIntent): return value
     r = record(value)
     return DeletionIntent(request=read_DeletionRequest(r['request']), accepted_export_failures=tuple(read_OpaqueExportIssue(v0) for v0 in sequence(r.get('accepted_export_failures', []))))
 
 def validate_DeletionRequest(value: DeletionRequest) -> None:
-    from .scene import validate_ReparentContext as validate_ReparentContext
-    from .scene import validate_ReparentStrategy as validate_ReparentStrategy
+    from .scene import validate_ReparentContext
+    from .scene import validate_ReparentStrategy
     if not isinstance(value, DeletionRequest):
         raise TypeError("Expected DeletionRequest")
     if not isinstance(value.roots, tuple):
@@ -42,87 +47,65 @@ def validate_DeletionRequest(value: DeletionRequest) -> None:
     for v0 in value.roots:
         validate_DeletionTarget(v0)
     for key0, v0 in value.reparent.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         validate_ReparentStrategy(v0)
     if value.conversion_context is not None:
         validate_ReparentContext(value.conversion_context)
     for key0, v0 in value.offscreen_placements.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         validate_DeletionOffscreenPlacement(v0)
     validate_DeletionTolerance(value.tolerance)
     for key0, v0 in value.parameter_slices.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
-        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(key0)
+        _check_f32(v0)
     for key0, v0 in value.texture_replacements.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         if v0 is not None:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
     for key0, v0 in value.physics_node_replacements.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
+        _check_string(v0)
     for key0, v0 in value.blend_base_replacements.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
+        _check_string(v0)
 
 def encode_DeletionRequest(value: DeletionRequest) -> object:
-    from .scene import encode_ReparentContext as encode_ReparentContext
-    from .scene import encode_ReparentStrategy as encode_ReparentStrategy
+    from .scene import encode_ReparentContext
+    from .scene import encode_ReparentStrategy
     return {'roots': [encode_DeletionTarget(v0) for v0 in value.roots], 'reparent': {str(key0): encode_ReparentStrategy(v0) for key0, v0 in value.reparent.items()}, 'conversion_context': None if value.conversion_context is None else encode_ReparentContext(value.conversion_context), 'offscreen_placements': {str(key0): encode_DeletionOffscreenPlacement(v0) for key0, v0 in value.offscreen_placements.items()}, 'tolerance': encode_DeletionTolerance(value.tolerance), 'parameter_slices': {str(key0): v0 for key0, v0 in value.parameter_slices.items()}, 'texture_replacements': {str(key0): None if v0 is None else v0 for key0, v0 in value.texture_replacements.items()}, 'physics_node_replacements': {str(key0): v0 for key0, v0 in value.physics_node_replacements.items()}, 'blend_base_replacements': {str(key0): v0 for key0, v0 in value.blend_base_replacements.items()}}
 
 def read_DeletionRequest(value: object) -> DeletionRequest:
-    from .scene import read_ReparentContext as read_ReparentContext
-    from .scene import read_ReparentStrategy as read_ReparentStrategy
+    from .scene import read_ReparentContext
+    from .scene import read_ReparentStrategy
     if isinstance(value, DeletionRequest): return value
     r = record(value)
     return DeletionRequest(roots=tuple(read_DeletionTarget(v0) for v0 in sequence(r['roots'])), reparent={key0: read_ReparentStrategy(v0) for key0, v0 in record(r.get('reparent', {})).items()}, conversion_context=None if r.get('conversion_context', None) is None else read_ReparentContext(r.get('conversion_context', None)), offscreen_placements={key0: read_DeletionOffscreenPlacement(v0) for key0, v0 in record(r.get('offscreen_placements', {})).items()}, tolerance=read_DeletionTolerance(r.get('tolerance', {'absolute': 0.001, 'relative': 1e-06})), parameter_slices={key0: number(v0) for key0, v0 in record(r.get('parameter_slices', {})).items()}, texture_replacements={key0: None if v0 is None else string(v0) for key0, v0 in record(r.get('texture_replacements', {})).items()}, physics_node_replacements={key0: string(v0) for key0, v0 in record(r.get('physics_node_replacements', {})).items()}, blend_base_replacements={key0: string(v0) for key0, v0 in record(r.get('blend_base_replacements', {})).items()})
 
 def validate_DeletionTarget(value: DeletionTarget) -> None:
     if isinstance(value, DeletionTargetMesh):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     elif isinstance(value, DeletionTargetGlue):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     elif isinstance(value, DeletionTargetOffscreen):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     elif isinstance(value, DeletionTargetPart):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     elif isinstance(value, DeletionTargetDeformer):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     elif isinstance(value, DeletionTargetDissolvePart):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     elif isinstance(value, DeletionTargetRemoveDeformer):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     elif isinstance(value, DeletionTargetParameter):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     elif isinstance(value, DeletionTargetParameterFolder):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     elif isinstance(value, DeletionTargetParameterFolderContents):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     elif isinstance(value, DeletionTargetTexture):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     elif isinstance(value, DeletionTargetAttachment):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     elif isinstance(value, DeletionTargetRecord):
         validate_DeletionObject(value.value)
     else:
@@ -193,11 +176,9 @@ def validate_DeletionObject(value: DeletionObject) -> None:
     if not isinstance(value, DeletionObject):
         raise TypeError("Expected DeletionObject")
     validate_DeletionKind(value.kind)
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
     if value.owner_id is not None:
-        if not isinstance(value.owner_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.owner_id)
 
 def encode_DeletionObject(value: DeletionObject) -> object:
     return {'kind': encode_DeletionKind(value.kind), 'id': value.id, 'owner_id': None if value.owner_id is None else value.owner_id}
@@ -221,14 +202,12 @@ def read_DeletionKind(value: object) -> DeletionKind:
 def validate_DeletionOffscreenPlacement(value: DeletionOffscreenPlacement) -> None:
     if not isinstance(value, DeletionOffscreenPlacement):
         raise TypeError("Expected DeletionOffscreenPlacement")
-    if not isinstance(value.part_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.part_id)
     if value.mapping is not None:
         if not isinstance(value.mapping, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.mapping:
-            if type(v0) is not int or not -2147483648 <= v0 < 2147483648:
-                raise ValueError("Expected i32")
+            _check_i32(v0)
 
 def encode_DeletionOffscreenPlacement(value: DeletionOffscreenPlacement) -> object:
     return {'part_id': value.part_id, 'mapping': None if value.mapping is None else [v0 for v0 in value.mapping]}
@@ -241,10 +220,8 @@ def read_DeletionOffscreenPlacement(value: object) -> DeletionOffscreenPlacement
 def validate_DeletionTolerance(value: DeletionTolerance) -> None:
     if not isinstance(value, DeletionTolerance):
         raise TypeError("Expected DeletionTolerance")
-    if isinstance(value.absolute, bool) or not isinstance(value.absolute, (float, int)) or not math.isfinite(value.absolute):
-        raise ValueError("Expected f64")
-    if isinstance(value.relative, bool) or not isinstance(value.relative, (float, int)) or not math.isfinite(value.relative):
-        raise ValueError("Expected f64")
+    _check_f64(value.absolute)
+    _check_f64(value.relative)
 
 def encode_DeletionTolerance(value: DeletionTolerance) -> object:
     return {'absolute': value.absolute, 'relative': value.relative}
@@ -258,14 +235,12 @@ def validate_DeletionSummary(value: DeletionSummary) -> None:
     if not isinstance(value, DeletionSummary):
         raise TypeError("Expected DeletionSummary")
     validate_DeletionReviewState(value.state)
-    if type(value.requested) is not int or not 0 <= value.requested < 18446744073709551616:
-        raise ValueError("Expected usize")
+    _check_usize(value.requested)
     if not isinstance(value.sections, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.sections:
         validate_DeletionSectionCount(v0)
-    if type(value.export_analysis_complete) is not bool:
-        raise ValueError("Expected bool")
+    _check_bool(value.export_analysis_complete)
 
 def encode_DeletionSummary(value: DeletionSummary) -> object:
     return {'state': encode_DeletionReviewState(value.state), 'requested': value.requested, 'sections': [encode_DeletionSectionCount(v0) for v0 in value.sections], 'export_analysis_complete': value.export_analysis_complete}
@@ -290,8 +265,7 @@ def validate_DeletionSectionCount(value: DeletionSectionCount) -> None:
     if not isinstance(value, DeletionSectionCount):
         raise TypeError("Expected DeletionSectionCount")
     validate_DeletionSection(value.section)
-    if type(value.count) is not int or not 0 <= value.count < 18446744073709551616:
-        raise ValueError("Expected usize")
+    _check_usize(value.count)
 
 def encode_DeletionSectionCount(value: DeletionSectionCount) -> object:
     return {'section': encode_DeletionSection(value.section), 'count': value.count}
@@ -316,17 +290,14 @@ def validate_DeletionPage(value: DeletionPage) -> None:
     if not isinstance(value, DeletionPage):
         raise TypeError("Expected DeletionPage")
     validate_DeletionSection(value.section)
-    if type(value.offset) is not int or not 0 <= value.offset < 18446744073709551616:
-        raise ValueError("Expected usize")
-    if type(value.total) is not int or not 0 <= value.total < 18446744073709551616:
-        raise ValueError("Expected usize")
+    _check_usize(value.offset)
+    _check_usize(value.total)
     if not isinstance(value.rows, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.rows:
         validate_DeletionRow(v0)
     if value.next_offset is not None:
-        if type(value.next_offset) is not int or not 0 <= value.next_offset < 18446744073709551616:
-            raise ValueError("Expected usize")
+        _check_usize(value.next_offset)
 
 def encode_DeletionPage(value: DeletionPage) -> object:
     return {'section': encode_DeletionSection(value.section), 'offset': value.offset, 'total': value.total, 'rows': [encode_DeletionRow(v0) for v0 in value.rows], 'next_offset': None if value.next_offset is None else value.next_offset}
@@ -337,8 +308,8 @@ def read_DeletionPage(value: object) -> DeletionPage:
     return DeletionPage(section=read_DeletionSection(r['section']), offset=integer(r['offset']), total=integer(r['total']), rows=tuple(read_DeletionRow(v0) for v0 in sequence(r['rows'])), next_offset=None if r['next_offset'] is None else integer(r['next_offset']))
 
 def validate_DeletionRow(value: DeletionRow) -> None:
-    from .project import validate_OpaqueExportIssue as validate_OpaqueExportIssue
-    from .scene import validate_ReparentStrategy as validate_ReparentStrategy
+    from .project import validate_OpaqueExportIssue
+    from .scene import validate_ReparentStrategy
     if isinstance(value, DeletionRowRemoval):
         validate_DeletionRemoval(value.removal)
     elif isinstance(value, DeletionRowRelation):
@@ -353,41 +324,33 @@ def validate_DeletionRow(value: DeletionRow) -> None:
         validate_DeletionStructuralBlocker(value.blocker)
     elif isinstance(value, DeletionRowDeformation):
         validate_DeletionObject(value.object)
-        if not isinstance(value.parent_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.parent_id)
         validate_ReparentStrategy(value.strategy)
         if value.guarantee is not None:
             validate_DeletionPositionGuarantee(value.guarantee)
     elif isinstance(value, DeletionRowOrganization):
         validate_DeletionObject(value.object)
-        if not isinstance(value.parent_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.parent_id)
         if value.mapping_slots is not None:
-            if type(value.mapping_slots) is not int or not 0 <= value.mapping_slots < 18446744073709551616:
-                raise ValueError("Expected usize")
+            _check_usize(value.mapping_slots)
     elif isinstance(value, DeletionRowGuaranteeLimit):
         validate_DeletionObject(value.object)
         validate_DeletionObject(value.ancestor)
     elif isinstance(value, DeletionRowDomain):
         validate_DeletionObject(value.object)
-        if not isinstance(value.parameter_id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.minimum, bool) or not isinstance(value.minimum, (float, int)) or not math.isfinite(value.minimum) or abs(value.minimum) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
-        if isinstance(value.maximum, bool) or not isinstance(value.maximum, (float, int)) or not math.isfinite(value.maximum) or abs(value.maximum) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
-        if isinstance(value.reference_value, bool) or not isinstance(value.reference_value, (float, int)) or not math.isfinite(value.reference_value) or abs(value.reference_value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.parameter_id)
+        _check_f32(value.minimum)
+        _check_f32(value.maximum)
+        _check_f32(value.reference_value)
     elif isinstance(value, DeletionRowExport):
         validate_OpaqueExportIssue(value.failure)
-        if type(value.existing) is not bool:
-            raise ValueError("Expected bool")
+        _check_bool(value.existing)
     else:
         raise TypeError("Expected DeletionRow")
 
 def encode_DeletionRow(value: DeletionRow) -> object:
-    from .project import encode_OpaqueExportIssue as encode_OpaqueExportIssue
-    from .scene import encode_ReparentStrategy as encode_ReparentStrategy
+    from .project import encode_OpaqueExportIssue
+    from .scene import encode_ReparentStrategy
     if isinstance(value, DeletionRowRemoval):
         return {'kind': 'removal', **cast(Mapping[str, object], {'removal': encode_DeletionRemoval(value.removal)})}
     elif isinstance(value, DeletionRowRelation):
@@ -413,8 +376,8 @@ def encode_DeletionRow(value: DeletionRow) -> object:
     raise TypeError("Expected DeletionRow")
 
 def read_DeletionRow(value: object) -> DeletionRow:
-    from .project import read_OpaqueExportIssue as read_OpaqueExportIssue
-    from .scene import read_ReparentStrategy as read_ReparentStrategy
+    from .project import read_OpaqueExportIssue
+    from .scene import read_ReparentStrategy
     if isinstance(value, (DeletionRowRemoval, DeletionRowRelation, DeletionRowEffect, DeletionRowDecision, DeletionRowLock, DeletionRowStructural, DeletionRowDeformation, DeletionRowOrganization, DeletionRowGuaranteeLimit, DeletionRowDomain, DeletionRowExport,)): return value
     r = record(value)
     tag = string(r['kind'])
@@ -497,13 +460,11 @@ def validate_DeletionField(value: DeletionField) -> None:
     if isinstance(value, DeletionFieldOwned):
         pass
     elif isinstance(value, DeletionFieldMeshMask):
-        if type(value.slot) is not int or not 0 <= value.slot < 18446744073709551616:
-            raise ValueError("Expected usize")
+        _check_usize(value.slot)
     elif isinstance(value, DeletionFieldMeshInvertedMask):
         pass
     elif isinstance(value, DeletionFieldOffscreenMask):
-        if type(value.slot) is not int or not 0 <= value.slot < 18446744073709551616:
-            raise ValueError("Expected usize")
+        _check_usize(value.slot)
     elif isinstance(value, DeletionFieldGlueMeshA):
         pass
     elif isinstance(value, DeletionFieldGlueMeshB):
@@ -511,8 +472,7 @@ def validate_DeletionField(value: DeletionField) -> None:
     elif isinstance(value, DeletionFieldHitAreaMesh):
         pass
     elif isinstance(value, DeletionFieldDrawingItem):
-        if type(value.slot) is not int or not 0 <= value.slot < 18446744073709551616:
-            raise ValueError("Expected usize")
+        _check_usize(value.slot)
     elif isinstance(value, DeletionFieldOrganizationParent):
         pass
     elif isinstance(value, DeletionFieldDeformationParent):
@@ -528,8 +488,7 @@ def validate_DeletionField(value: DeletionField) -> None:
     elif isinstance(value, DeletionFieldExpressionSourcePart):
         pass
     elif isinstance(value, DeletionFieldCdiPart):
-        if type(value.slot) is not int or not 0 <= value.slot < 18446744073709551616:
-            raise ValueError("Expected usize")
+        _check_usize(value.slot)
     elif isinstance(value, DeletionFieldRequestedScope):
         pass
     elif isinstance(value, DeletionFieldParameterAxis):
@@ -541,8 +500,7 @@ def validate_DeletionField(value: DeletionField) -> None:
     elif isinstance(value, DeletionFieldBlendTable):
         pass
     elif isinstance(value, DeletionFieldBlendConstraint):
-        if type(value.slot) is not int or not 0 <= value.slot < 18446744073709551616:
-            raise ValueError("Expected usize")
+        _check_usize(value.slot)
     elif isinstance(value, DeletionFieldMotionParameter):
         pass
     elif isinstance(value, DeletionFieldExpressionParameter):
@@ -568,8 +526,7 @@ def validate_DeletionField(value: DeletionField) -> None:
     elif isinstance(value, DeletionFieldModelParameter):
         pass
     elif isinstance(value, DeletionFieldCdiParameter):
-        if type(value.slot) is not int or not 0 <= value.slot < 18446744073709551616:
-            raise ValueError("Expected usize")
+        _check_usize(value.slot)
     elif isinstance(value, DeletionFieldCdiCombinedParameter):
         pass
     else:
@@ -743,12 +700,9 @@ def validate_DeletionEffect(value: DeletionEffect) -> None:
     elif isinstance(value, DeletionEffectParameterDimensionRemoved):
         validate_DeletionObject(value.object)
         validate_DeletionObject(value.parameter)
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
-        if isinstance(value.effective_value, bool) or not isinstance(value.effective_value, (float, int)) or not math.isfinite(value.effective_value) or abs(value.effective_value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
-        if type(value.disabled) is not bool:
-            raise ValueError("Expected bool")
+        _check_f32(value.value)
+        _check_f32(value.effective_value)
+        _check_bool(value.disabled)
     elif isinstance(value, DeletionEffectBindingContributionRemoved):
         validate_DeletionObject(value.object)
         validate_DeletionObject(value.binding)
@@ -780,17 +734,14 @@ def validate_DeletionEffect(value: DeletionEffect) -> None:
         if len(value.source_range) != 2:
             raise ValueError("Invalid fixed array length")
         for v0 in value.source_range:
-            if type(v0) is not int or not -2147483648 <= v0 < 2147483648:
-                raise ValueError("Expected i32")
+            _check_i32(v0)
         if not isinstance(value.destination_range, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.destination_range) != 2:
             raise ValueError("Invalid fixed array length")
         for v0 in value.destination_range:
-            if type(v0) is not int or not -2147483648 <= v0 < 2147483648:
-                raise ValueError("Expected i32")
-        if type(value.dynamic_order) is not bool:
-            raise ValueError("Expected bool")
+            _check_i32(v0)
+        _check_bool(value.dynamic_order)
         if value.offscreen is not None:
             validate_DeletionObject(value.offscreen)
     elif isinstance(value, DeletionEffectOrganizationChanged):
@@ -805,10 +756,8 @@ def validate_DeletionEffect(value: DeletionEffect) -> None:
             validate_DeletionChannel(v0)
     elif isinstance(value, DeletionEffectPartStateRemoved):
         validate_DeletionObject(value.part)
-        if type(value.enabled) is not bool:
-            raise ValueError("Expected bool")
-        if type(value.animated_order) is not bool:
-            raise ValueError("Expected bool")
+        _check_bool(value.enabled)
+        _check_bool(value.animated_order)
     else:
         raise TypeError("Expected DeletionEffect")
 
@@ -928,8 +877,7 @@ def read_DeletionDecision(value: object) -> DeletionDecision:
 
 def validate_DeletionDecisionReason(value: DeletionDecisionReason) -> None:
     if isinstance(value, DeletionDecisionReasonConversionUnproven):
-        if not isinstance(value.code, str):
-            raise ValueError("Expected string")
+        _check_string(value.code)
     elif isinstance(value, DeletionDecisionReasonOffscreenOwnerUnavailable):
         pass
     elif isinstance(value, DeletionDecisionReasonOffscreenMappingRequired):
@@ -943,8 +891,7 @@ def validate_DeletionDecisionReason(value: DeletionDecisionReason) -> None:
     elif isinstance(value, DeletionDecisionReasonPhysicsNodeReplacementRequired):
         pass
     elif isinstance(value, DeletionDecisionReasonInvalidContainer):
-        if not isinstance(value.code, str):
-            raise ValueError("Expected string")
+        _check_string(value.code)
     else:
         raise TypeError("Expected DeletionDecisionReason")
 
@@ -1006,8 +953,7 @@ def validate_DeletionLock(value: DeletionLock) -> None:
     if not isinstance(value, DeletionLock):
         raise TypeError("Expected DeletionLock")
     validate_DeletionObject(value.object)
-    if not isinstance(value.source_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.source_id)
 
 def encode_DeletionLock(value: DeletionLock) -> object:
     return {'object': encode_DeletionObject(value.object), 'source_id': value.source_id}
@@ -1020,12 +966,9 @@ def read_DeletionLock(value: object) -> DeletionLock:
 def validate_DeletionStructuralBlocker(value: DeletionStructuralBlocker) -> None:
     if not isinstance(value, DeletionStructuralBlocker):
         raise TypeError("Expected DeletionStructuralBlocker")
-    if not isinstance(value.object_id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.code, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.reason, str):
-        raise ValueError("Expected string")
+    _check_string(value.object_id)
+    _check_string(value.code)
+    _check_string(value.reason)
 
 def encode_DeletionStructuralBlocker(value: DeletionStructuralBlocker) -> object:
     return {'object_id': value.object_id, 'code': value.code, 'reason': value.reason}
@@ -1036,30 +979,24 @@ def read_DeletionStructuralBlocker(value: object) -> DeletionStructuralBlocker:
     return DeletionStructuralBlocker(object_id=string(r['object_id']), code=string(r['code']), reason=string(r['reason']))
 
 def validate_DeletionPositionGuarantee(value: DeletionPositionGuarantee) -> None:
-    from .scene import validate_ReparentStrategy as validate_ReparentStrategy
+    from .scene import validate_ReparentStrategy
     if not isinstance(value, DeletionPositionGuarantee):
         raise TypeError("Expected DeletionPositionGuarantee")
     validate_ReparentStrategy(value.strategy)
-    if isinstance(value.tolerance, bool) or not isinstance(value.tolerance, (float, int)) or not math.isfinite(value.tolerance):
-        raise ValueError("Expected f64")
-    if isinstance(value.relative_tolerance, bool) or not isinstance(value.relative_tolerance, (float, int)) or not math.isfinite(value.relative_tolerance):
-        raise ValueError("Expected f64")
-    if isinstance(value.measured_error, bool) or not isinstance(value.measured_error, (float, int)) or not math.isfinite(value.measured_error):
-        raise ValueError("Expected f64")
-    if isinstance(value.error_bound, bool) or not isinstance(value.error_bound, (float, int)) or not math.isfinite(value.error_bound):
-        raise ValueError("Expected f64")
-    if type(value.domain_parameters) is not int or not 0 <= value.domain_parameters < 18446744073709551616:
-        raise ValueError("Expected usize")
+    _check_f64(value.tolerance)
+    _check_f64(value.relative_tolerance)
+    _check_f64(value.measured_error)
+    _check_f64(value.error_bound)
+    _check_usize(value.domain_parameters)
     if value.edit_time_seconds is not None:
-        if isinstance(value.edit_time_seconds, bool) or not isinstance(value.edit_time_seconds, (float, int)) or not math.isfinite(value.edit_time_seconds):
-            raise ValueError("Expected f64")
+        _check_f64(value.edit_time_seconds)
 
 def encode_DeletionPositionGuarantee(value: DeletionPositionGuarantee) -> object:
-    from .scene import encode_ReparentStrategy as encode_ReparentStrategy
+    from .scene import encode_ReparentStrategy
     return {'strategy': encode_ReparentStrategy(value.strategy), 'tolerance': value.tolerance, 'relative_tolerance': value.relative_tolerance, 'measured_error': value.measured_error, 'error_bound': value.error_bound, 'domain_parameters': value.domain_parameters, 'edit_time_seconds': None if value.edit_time_seconds is None else value.edit_time_seconds}
 
 def read_DeletionPositionGuarantee(value: object) -> DeletionPositionGuarantee:
-    from .scene import read_ReparentStrategy as read_ReparentStrategy
+    from .scene import read_ReparentStrategy
     if isinstance(value, DeletionPositionGuarantee): return value
     r = record(value)
     return DeletionPositionGuarantee(strategy=read_ReparentStrategy(r['strategy']), tolerance=number(r['tolerance']), relative_tolerance=number(r['relative_tolerance']), measured_error=number(r['measured_error']), error_bound=number(r['error_bound']), domain_parameters=integer(r['domain_parameters']), edit_time_seconds=None if r['edit_time_seconds'] is None else number(r['edit_time_seconds']))

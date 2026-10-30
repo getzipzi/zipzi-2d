@@ -7,12 +7,12 @@ from ..._values import sequence
 from ..._values import string
 from typing import cast
 from functools import cache
-from .support import Reader as Reader, SAMPLE_SIGNATURE as SAMPLE_SIGNATURE, Writer as Writer, _field as _field, _point as _point
+from .support import Reader, SAMPLE_SIGNATURE, Writer, _field, _point
 
 @cache
 def _dependencies__write_geometrysnapshot():
-    from .mesh import _write_meshmeshing as _write_meshmeshing
-    from .common import _write_version as _write_version
+    from .mesh import _write_meshmeshing
+    from .common import _write_version
     return _write_meshmeshing, _write_version,
 
 def _write_geometrysnapshot(value: object, w: Writer) -> None:
@@ -53,7 +53,7 @@ def _write_geometryspace(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__read_modelingsamples():
-    from .common import _read_version as _read_version
+    from .common import _read_version
     return _read_version,
 
 def _read_modelingsamples(r: Reader) -> m.ModelingSamples:
@@ -68,7 +68,7 @@ def _read_evaluatedparameter(r: Reader) -> m.EvaluatedParameter:
 
 @cache
 def _dependencies__read_drawable():
-    from .scene import _read_blendmode as _read_blendmode
+    from .scene import _read_blendmode
     return _read_blendmode,
 
 def _read_drawable(r: Reader) -> m.Drawable:
@@ -90,7 +90,7 @@ def _read_rendercommand(r: Reader) -> m.RenderCommand:
 
 @cache
 def _dependencies__read_evaluateddeformer():
-    from .common import _read_vec2 as _read_vec2
+    from .common import _read_vec2
     return _read_vec2,
 
 def _read_evaluateddeformer(r: Reader) -> m.EvaluatedDeformer:
@@ -112,7 +112,7 @@ def _read_geometrydiagnostickind(r: Reader) -> m.GeometryDiagnosticKind:
 
 @cache
 def _dependencies__read_meshquality():
-    from .observation import _read_texturecoverage as _read_texturecoverage
+    from .observation import _read_texturecoverage
     return _read_texturecoverage,
 
 def _read_meshquality(r: Reader) -> m.MeshQuality:

@@ -7,35 +7,32 @@ from ..._values import sequence
 from ..._values import string
 from .._modeling_support import _boolean
 from .._modeling_support import _bytes
+from .._modeling_support import _check_bool
+from .._modeling_support import _check_f32
+from .._modeling_support import _check_f64
+from .._modeling_support import _check_string
+from .._modeling_support import _check_u32
+from .._modeling_support import _check_u64
+from .._modeling_support import _check_u8
+from .._modeling_support import _check_usize
 from typing import cast
-import math
-from ..values import ObservationBatch as ObservationBatch, ObservationImage as ObservationImage, ObservationView as ObservationView, ObservedBounds as ObservedBounds, ObservedTexture as ObservedTexture, TextureCoverage as TextureCoverage, TopologyOverlay as TopologyOverlay, TopologyThresholds as TopologyThresholds
+from ..values import ObservationBatch, ObservationImage, ObservationView, ObservedBounds, ObservedTexture, TextureCoverage, TopologyOverlay, TopologyThresholds
 
 def validate_TextureCoverage(value: TextureCoverage) -> None:
     if not isinstance(value, TextureCoverage):
         raise TypeError("Expected TextureCoverage")
-    if type(value.alpha_threshold) is not int or not 0 <= value.alpha_threshold < 256:
-        raise ValueError("Expected u8")
-    if type(value.pixel_step) is not int or not 0 <= value.pixel_step < 4294967296:
-        raise ValueError("Expected u32")
-    if type(value.sampled_pixels) is not int or not 0 <= value.sampled_pixels < 18446744073709551616:
-        raise ValueError("Expected usize")
-    if type(value.covered_pixels) is not int or not 0 <= value.covered_pixels < 18446744073709551616:
-        raise ValueError("Expected usize")
-    if type(value.transparent_covered_pixels) is not int or not 0 <= value.transparent_covered_pixels < 18446744073709551616:
-        raise ValueError("Expected usize")
-    if type(value.opaque_pixels) is not int or not 0 <= value.opaque_pixels < 18446744073709551616:
-        raise ValueError("Expected usize")
-    if type(value.uncovered_opaque_pixels) is not int or not 0 <= value.uncovered_opaque_pixels < 18446744073709551616:
-        raise ValueError("Expected usize")
+    _check_u8(value.alpha_threshold)
+    _check_u32(value.pixel_step)
+    _check_usize(value.sampled_pixels)
+    _check_usize(value.covered_pixels)
+    _check_usize(value.transparent_covered_pixels)
+    _check_usize(value.opaque_pixels)
+    _check_usize(value.uncovered_opaque_pixels)
     if value.transparent_coverage_fraction is not None:
-        if isinstance(value.transparent_coverage_fraction, bool) or not isinstance(value.transparent_coverage_fraction, (float, int)) or not math.isfinite(value.transparent_coverage_fraction):
-            raise ValueError("Expected f64")
+        _check_f64(value.transparent_coverage_fraction)
     if value.uncovered_opaque_fraction is not None:
-        if isinstance(value.uncovered_opaque_fraction, bool) or not isinstance(value.uncovered_opaque_fraction, (float, int)) or not math.isfinite(value.uncovered_opaque_fraction):
-            raise ValueError("Expected f64")
-    if type(value.out_of_bounds_triangles) is not int or not 0 <= value.out_of_bounds_triangles < 18446744073709551616:
-        raise ValueError("Expected usize")
+        _check_f64(value.uncovered_opaque_fraction)
+    _check_usize(value.out_of_bounds_triangles)
 
 def encode_TextureCoverage(value: TextureCoverage) -> object:
     return {'alpha_threshold': value.alpha_threshold, 'pixel_step': value.pixel_step, 'sampled_pixels': value.sampled_pixels, 'covered_pixels': value.covered_pixels, 'transparent_covered_pixels': value.transparent_covered_pixels, 'opaque_pixels': value.opaque_pixels, 'uncovered_opaque_pixels': value.uncovered_opaque_pixels, 'transparent_coverage_fraction': None if value.transparent_coverage_fraction is None else value.transparent_coverage_fraction, 'uncovered_opaque_fraction': None if value.uncovered_opaque_fraction is None else value.uncovered_opaque_fraction, 'out_of_bounds_triangles': value.out_of_bounds_triangles}
@@ -48,23 +45,18 @@ def read_TextureCoverage(value: object) -> TextureCoverage:
 def validate_ObservationView(value: ObservationView) -> None:
     if not isinstance(value, ObservationView):
         raise TypeError("Expected ObservationView")
-    if type(value.width) is not int or not 0 <= value.width < 4294967296:
-        raise ValueError("Expected u32")
-    if type(value.height) is not int or not 0 <= value.height < 4294967296:
-        raise ValueError("Expected u32")
+    _check_u32(value.width)
+    _check_u32(value.height)
     if not isinstance(value.roi, tuple):
         raise TypeError("Expected an immutable tuple")
     if len(value.roi) != 4:
         raise ValueError("Invalid fixed array length")
     for v0 in value.roi:
-        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
-    if isinstance(value.padding_model, bool) or not isinstance(value.padding_model, (float, int)) or not math.isfinite(value.padding_model) or abs(value.padding_model) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+        _check_f32(v0)
+    _check_f32(value.padding_model)
     if value.topology is not None:
         validate_TopologyOverlay(value.topology)
-    if type(value.quality) is not bool:
-        raise ValueError("Expected bool")
+    _check_bool(value.quality)
 
 def encode_ObservationView(value: ObservationView) -> object:
     return {'width': value.width, 'height': value.height, 'roi': [v0 for v0 in value.roi], 'padding_model': value.padding_model, 'topology': None if value.topology is None else encode_TopologyOverlay(value.topology), 'quality': value.quality}
@@ -75,7 +67,7 @@ def read_ObservationView(value: object) -> ObservationView:
     return ObservationView(width=integer(r['width']), height=integer(r['height']), roi=cast('tuple[float, float, float, float]', tuple(number(v0) for v0 in sequence(r['roi']))), padding_model=number(r.get('padding_model', 0.0)), topology=None if r.get('topology', None) is None else read_TopologyOverlay(r.get('topology', None)), quality=_boolean(r.get('quality', False)))
 
 def validate_TopologyOverlay(value: TopologyOverlay) -> None:
-    from .spatial import validate_ObjectTarget as validate_ObjectTarget
+    from .spatial import validate_ObjectTarget
     if not isinstance(value, TopologyOverlay):
         raise TypeError("Expected TopologyOverlay")
     if value.targets is not None:
@@ -83,38 +75,26 @@ def validate_TopologyOverlay(value: TopologyOverlay) -> None:
             raise TypeError("Expected an immutable tuple")
         for v0 in value.targets:
             validate_ObjectTarget(v0)
-    if type(value.wireframe) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.vertices) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.vertex_ids) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.constraints) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.strain) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.include_hidden) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.topology_only) is not bool:
-        raise ValueError("Expected bool")
-    if isinstance(value.heat_opacity, bool) or not isinstance(value.heat_opacity, (float, int)) or not math.isfinite(value.heat_opacity) or abs(value.heat_opacity) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if type(value.anomalies_only) is not bool:
-        raise ValueError("Expected bool")
+    _check_bool(value.wireframe)
+    _check_bool(value.vertices)
+    _check_bool(value.vertex_ids)
+    _check_bool(value.constraints)
+    _check_bool(value.strain)
+    _check_bool(value.include_hidden)
+    _check_bool(value.topology_only)
+    _check_f32(value.heat_opacity)
+    _check_bool(value.anomalies_only)
     validate_TopologyThresholds(value.thresholds)
-    if type(value.label_scale) is not int or not 0 <= value.label_scale < 4294967296:
-        raise ValueError("Expected u32")
-    if type(value.label_spacing) is not int or not 0 <= value.label_spacing < 4294967296:
-        raise ValueError("Expected u32")
-    if type(value.max_labels) is not int or not 0 <= value.max_labels < 18446744073709551616:
-        raise ValueError("Expected usize")
+    _check_u32(value.label_scale)
+    _check_u32(value.label_spacing)
+    _check_usize(value.max_labels)
 
 def encode_TopologyOverlay(value: TopologyOverlay) -> object:
-    from .spatial import encode_ObjectTarget as encode_ObjectTarget
+    from .spatial import encode_ObjectTarget
     return {'targets': None if value.targets is None else [encode_ObjectTarget(v0) for v0 in value.targets], 'wireframe': value.wireframe, 'vertices': value.vertices, 'vertex_ids': value.vertex_ids, 'constraints': value.constraints, 'strain': value.strain, 'include_hidden': value.include_hidden, 'topology_only': value.topology_only, 'heat_opacity': value.heat_opacity, 'anomalies_only': value.anomalies_only, 'thresholds': encode_TopologyThresholds(value.thresholds), 'label_scale': value.label_scale, 'label_spacing': value.label_spacing, 'max_labels': value.max_labels}
 
 def read_TopologyOverlay(value: object) -> TopologyOverlay:
-    from .spatial import read_ObjectTarget as read_ObjectTarget
+    from .spatial import read_ObjectTarget
     if isinstance(value, TopologyOverlay): return value
     r = record(value)
     return TopologyOverlay(targets=None if r.get('targets', None) is None else tuple(read_ObjectTarget(v0) for v0 in sequence(r.get('targets', None))), wireframe=_boolean(r.get('wireframe', True)), vertices=_boolean(r.get('vertices', False)), vertex_ids=_boolean(r.get('vertex_ids', False)), constraints=_boolean(r.get('constraints', False)), strain=_boolean(r.get('strain', False)), include_hidden=_boolean(r.get('include_hidden', False)), topology_only=_boolean(r.get('topology_only', False)), heat_opacity=number(r.get('heat_opacity', 0.25)), anomalies_only=_boolean(r.get('anomalies_only', False)), thresholds=read_TopologyThresholds(r.get('thresholds', {'max_aspect_ratio': 20.0, 'max_edge_stretch': 2.0, 'min_angle_degrees': 10.0})), label_scale=integer(r.get('label_scale', 2)), label_spacing=integer(r.get('label_spacing', 3)), max_labels=integer(r.get('max_labels', 256)))
@@ -122,12 +102,9 @@ def read_TopologyOverlay(value: object) -> TopologyOverlay:
 def validate_TopologyThresholds(value: TopologyThresholds) -> None:
     if not isinstance(value, TopologyThresholds):
         raise TypeError("Expected TopologyThresholds")
-    if isinstance(value.min_angle_degrees, bool) or not isinstance(value.min_angle_degrees, (float, int)) or not math.isfinite(value.min_angle_degrees):
-        raise ValueError("Expected f64")
-    if isinstance(value.max_aspect_ratio, bool) or not isinstance(value.max_aspect_ratio, (float, int)) or not math.isfinite(value.max_aspect_ratio):
-        raise ValueError("Expected f64")
-    if isinstance(value.max_edge_stretch, bool) or not isinstance(value.max_edge_stretch, (float, int)) or not math.isfinite(value.max_edge_stretch):
-        raise ValueError("Expected f64")
+    _check_f64(value.min_angle_degrees)
+    _check_f64(value.max_aspect_ratio)
+    _check_f64(value.max_edge_stretch)
 
 def encode_TopologyThresholds(value: TopologyThresholds) -> object:
     return {'min_angle_degrees': value.min_angle_degrees, 'max_aspect_ratio': value.max_aspect_ratio, 'max_edge_stretch': value.max_edge_stretch}
@@ -138,54 +115,39 @@ def read_TopologyThresholds(value: object) -> TopologyThresholds:
     return TopologyThresholds(min_angle_degrees=number(r.get('min_angle_degrees', 10.0)), max_aspect_ratio=number(r.get('max_aspect_ratio', 20.0)), max_edge_stretch=number(r.get('max_edge_stretch', 2.0)))
 
 def validate_ObservationImage(value: ObservationImage) -> None:
-    from .sampling import validate_MeshQuality as validate_MeshQuality
+    from .sampling import validate_MeshQuality
     if not isinstance(value, ObservationImage):
         raise TypeError("Expected ObservationImage")
-    if type(value.width) is not int or not 0 <= value.width < 4294967296:
-        raise ValueError("Expected u32")
-    if type(value.height) is not int or not 0 <= value.height < 4294967296:
-        raise ValueError("Expected u32")
+    _check_u32(value.width)
+    _check_u32(value.height)
     if not isinstance(value.rgba, bytes):
         raise TypeError("Expected immutable bytes")
     if not isinstance(value.png, bytes):
         raise TypeError("Expected immutable bytes")
-    if not isinstance(value.document_id, str):
-        raise ValueError("Expected string")
-    if type(value.evaluation_revision) is not int or not 0 <= value.evaluation_revision < 18446744073709551616:
-        raise ValueError("Expected u64")
-    if not isinstance(value.capture_id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.scene_digest, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.render_digest, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.input_sha256, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.adapter_name, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.adapter_backend, str):
-        raise ValueError("Expected string")
+    _check_string(value.document_id)
+    _check_u64(value.evaluation_revision)
+    _check_string(value.capture_id)
+    _check_string(value.scene_digest)
+    _check_string(value.render_digest)
+    _check_string(value.input_sha256)
+    _check_string(value.adapter_name)
+    _check_string(value.adapter_backend)
     for key0, v0 in value.parameters.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
-        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(key0)
+        _check_f32(v0)
     if not isinstance(value.visible_roi, tuple):
         raise TypeError("Expected an immutable tuple")
     if len(value.visible_roi) != 4:
         raise ValueError("Invalid fixed array length")
     for v0 in value.visible_roi:
-        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
-    if isinstance(value.scale, bool) or not isinstance(value.scale, (float, int)) or not math.isfinite(value.scale) or abs(value.scale) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+        _check_f32(v0)
+    _check_f32(value.scale)
     if not isinstance(value.offset, tuple):
         raise TypeError("Expected an immutable tuple")
     if len(value.offset) != 2:
         raise ValueError("Invalid fixed array length")
     for v0 in value.offset:
-        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(v0)
     if not isinstance(value.textures, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.textures:
@@ -200,11 +162,11 @@ def validate_ObservationImage(value: ObservationImage) -> None:
         validate_MeshQuality(v0)
 
 def encode_ObservationImage(value: ObservationImage) -> object:
-    from .sampling import encode_MeshQuality as encode_MeshQuality
+    from .sampling import encode_MeshQuality
     return {'width': value.width, 'height': value.height, 'rgba': [v0 for v0 in value.rgba], 'png': [v0 for v0 in value.png], 'document_id': value.document_id, 'evaluation_revision': value.evaluation_revision, 'capture_id': value.capture_id, 'scene_digest': value.scene_digest, 'render_digest': value.render_digest, 'input_sha256': value.input_sha256, 'adapter_name': value.adapter_name, 'adapter_backend': value.adapter_backend, 'parameters': {str(key0): v0 for key0, v0 in value.parameters.items()}, 'visible_roi': [v0 for v0 in value.visible_roi], 'scale': value.scale, 'offset': [v0 for v0 in value.offset], 'textures': [encode_ObservedTexture(v0) for v0 in value.textures], 'drawable_bounds': [encode_ObservedBounds(v0) for v0 in value.drawable_bounds], 'quality': [encode_MeshQuality(v0) for v0 in value.quality]}
 
 def read_ObservationImage(value: object) -> ObservationImage:
-    from .sampling import read_MeshQuality as read_MeshQuality
+    from .sampling import read_MeshQuality
     if isinstance(value, ObservationImage): return value
     r = record(value)
     return ObservationImage(width=integer(r['width']), height=integer(r['height']), rgba=_bytes(r['rgba']), png=_bytes(r['png']), document_id=string(r['document_id']), evaluation_revision=integer(r['evaluation_revision']), capture_id=string(r['capture_id']), scene_digest=string(r['scene_digest']), render_digest=string(r['render_digest']), input_sha256=string(r['input_sha256']), adapter_name=string(r['adapter_name']), adapter_backend=string(r['adapter_backend']), parameters={key0: number(v0) for key0, v0 in record(r['parameters']).items()}, visible_roi=cast('tuple[float, float, float, float]', tuple(number(v0) for v0 in sequence(r['visible_roi']))), scale=number(r['scale']), offset=cast('tuple[float, float]', tuple(number(v0) for v0 in sequence(r['offset']))), textures=tuple(read_ObservedTexture(v0) for v0 in sequence(r['textures'])), drawable_bounds=tuple(read_ObservedBounds(v0) for v0 in sequence(r['drawable_bounds'])), quality=tuple(read_MeshQuality(v0) for v0 in sequence(r['quality'])))
@@ -212,10 +174,8 @@ def read_ObservationImage(value: object) -> ObservationImage:
 def validate_ObservedTexture(value: ObservedTexture) -> None:
     if not isinstance(value, ObservedTexture):
         raise TypeError("Expected ObservedTexture")
-    if not isinstance(value.asset_id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.sha256, str):
-        raise ValueError("Expected string")
+    _check_string(value.asset_id)
+    _check_string(value.sha256)
 
 def encode_ObservedTexture(value: ObservedTexture) -> object:
     return {'asset_id': value.asset_id, 'sha256': value.sha256}
@@ -228,18 +188,15 @@ def read_ObservedTexture(value: object) -> ObservedTexture:
 def validate_ObservedBounds(value: ObservedBounds) -> None:
     if not isinstance(value, ObservedBounds):
         raise TypeError("Expected ObservedBounds")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if type(value.visible) is not bool:
-        raise ValueError("Expected bool")
+    _check_string(value.id)
+    _check_bool(value.visible)
     if value.bounds is not None:
         if not isinstance(value.bounds, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.bounds) != 4:
             raise ValueError("Invalid fixed array length")
         for v0 in value.bounds:
-            if type(v0) is not int or not 0 <= v0 < 4294967296:
-                raise ValueError("Expected u32")
+            _check_u32(v0)
 
 def encode_ObservedBounds(value: ObservedBounds) -> object:
     return {'id': value.id, 'visible': value.visible, 'bounds': None if value.bounds is None else [v0 for v0 in value.bounds]}
@@ -257,10 +214,8 @@ def validate_ObservationBatch(value: ObservationBatch) -> None:
         raise TypeError("Expected an immutable tuple")
     for v0 in value.requested:
         for key1, v1 in v0.items():
-            if not isinstance(key1, str):
-                raise ValueError("Expected string")
-            if isinstance(v1, bool) or not isinstance(v1, (float, int)) or not math.isfinite(v1) or abs(v1) > 3.4028234663852886e38:
-                raise ValueError("Expected f32")
+            _check_string(key1)
+            _check_f32(v1)
     if not isinstance(value.frames, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.frames:

@@ -4,9 +4,11 @@ from ..._values import record
 from ..._values import sequence
 from ..._values import string
 from .._modeling_support import _boolean
+from .._modeling_support import _check_bool
+from .._modeling_support import _check_string
 from collections.abc import Mapping
 from typing import cast
-from ..values import CollectionQuery as CollectionQuery, CollectionQueryAttachments as CollectionQueryAttachments, CollectionQueryClips as CollectionQueryClips, CollectionQueryDocument as CollectionQueryDocument, CollectionQueryExpressionEntries as CollectionQueryExpressionEntries, CollectionQueryExpressions as CollectionQueryExpressions, CollectionQueryMotion as CollectionQueryMotion, CollectionQueryMotionGroups as CollectionQueryMotionGroups, CollectionQueryOrganization as CollectionQueryOrganization, CollectionQueryPhysics as CollectionQueryPhysics, CollectionQueryPose as CollectionQueryPose, CollectionQueryReferences as CollectionQueryReferences, CollectionQueryResources as CollectionQueryResources, CollectionQueryScene as CollectionQueryScene, ModelingQuery as ModelingQuery, OwnedModelingRecords as OwnedModelingRecords
+from ..values import CollectionQuery, CollectionQueryAttachments, CollectionQueryClips, CollectionQueryDocument, CollectionQueryExpressionEntries, CollectionQueryExpressions, CollectionQueryMotion, CollectionQueryMotionGroups, CollectionQueryOrganization, CollectionQueryPhysics, CollectionQueryPose, CollectionQueryReferences, CollectionQueryResources, CollectionQueryScene, ModelingQuery, OwnedModelingRecords
 
 def validate_ModelingQuery(value: ModelingQuery) -> None:
     if not isinstance(value, ModelingQuery):
@@ -14,97 +16,77 @@ def validate_ModelingQuery(value: ModelingQuery) -> None:
     if not isinstance(value.assets, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.assets:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.meshes, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.meshes:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.parameters, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.parameters:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.parts, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.parts:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.transforms, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.transforms:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.bindings, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.bindings:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.scene_bindings, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.scene_bindings:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.blend_key_tables, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.blend_key_tables:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.blend_constraints, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.blend_constraints:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.blend_bindings, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.blend_bindings:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.glues, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.glues:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.offscreens, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.offscreens:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.parameter_groups, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.parameter_groups:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.attachments, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.attachments:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.motions, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.motions:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.motion_groups, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.motion_groups:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.motion_registrations, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.motion_registrations:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.expressions, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.expressions:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
-    if type(value.physics) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.pose) is not bool:
-        raise ValueError("Expected bool")
+        _check_string(v0)
+    _check_bool(value.physics)
+    _check_bool(value.pose)
 
 def encode_ModelingQuery(value: ModelingQuery) -> object:
     return {'assets': [v0 for v0 in value.assets], 'meshes': [v0 for v0 in value.meshes], 'parameters': [v0 for v0 in value.parameters], 'parts': [v0 for v0 in value.parts], 'transforms': [v0 for v0 in value.transforms], 'bindings': [v0 for v0 in value.bindings], 'scene_bindings': [v0 for v0 in value.scene_bindings], 'blend_key_tables': [v0 for v0 in value.blend_key_tables], 'blend_constraints': [v0 for v0 in value.blend_constraints], 'blend_bindings': [v0 for v0 in value.blend_bindings], 'glues': [v0 for v0 in value.glues], 'offscreens': [v0 for v0 in value.offscreens], 'parameter_groups': [v0 for v0 in value.parameter_groups], 'attachments': [v0 for v0 in value.attachments], 'motions': [v0 for v0 in value.motions], 'motion_groups': [v0 for v0 in value.motion_groups], 'motion_registrations': [v0 for v0 in value.motion_registrations], 'expressions': [v0 for v0 in value.expressions], 'physics': value.physics, 'pose': value.pose}
@@ -115,36 +97,35 @@ def read_ModelingQuery(value: object) -> ModelingQuery:
     return ModelingQuery(assets=tuple(string(v0) for v0 in sequence(r.get('assets', []))), meshes=tuple(string(v0) for v0 in sequence(r.get('meshes', []))), parameters=tuple(string(v0) for v0 in sequence(r.get('parameters', []))), parts=tuple(string(v0) for v0 in sequence(r.get('parts', []))), transforms=tuple(string(v0) for v0 in sequence(r.get('transforms', []))), bindings=tuple(string(v0) for v0 in sequence(r.get('bindings', []))), scene_bindings=tuple(string(v0) for v0 in sequence(r.get('scene_bindings', []))), blend_key_tables=tuple(string(v0) for v0 in sequence(r.get('blend_key_tables', []))), blend_constraints=tuple(string(v0) for v0 in sequence(r.get('blend_constraints', []))), blend_bindings=tuple(string(v0) for v0 in sequence(r.get('blend_bindings', []))), glues=tuple(string(v0) for v0 in sequence(r.get('glues', []))), offscreens=tuple(string(v0) for v0 in sequence(r.get('offscreens', []))), parameter_groups=tuple(string(v0) for v0 in sequence(r.get('parameter_groups', []))), attachments=tuple(string(v0) for v0 in sequence(r.get('attachments', []))), motions=tuple(string(v0) for v0 in sequence(r.get('motions', []))), motion_groups=tuple(string(v0) for v0 in sequence(r.get('motion_groups', []))), motion_registrations=tuple(string(v0) for v0 in sequence(r.get('motion_registrations', []))), expressions=tuple(string(v0) for v0 in sequence(r.get('expressions', []))), physics=_boolean(r.get('physics', False)), pose=_boolean(r.get('pose', False)))
 
 def validate_OwnedModelingRecords(value: OwnedModelingRecords) -> None:
-    from .bindings import validate_BlendShapeBinding as validate_BlendShapeBinding
-    from .bindings import validate_BlendShapeConstraint as validate_BlendShapeConstraint
-    from .bindings import validate_BlendShapeKeyTable as validate_BlendShapeKeyTable
-    from .project import validate_CdiParameterGroup as validate_CdiParameterGroup
-    from .project import validate_DisplayInfo as validate_DisplayInfo
-    from .scene import validate_DrawOrderGroup as validate_DrawOrderGroup
-    from .project import validate_EditorState as validate_EditorState
-    from .expression import validate_ExpressionAsset as validate_ExpressionAsset
-    from .scene import validate_Glue as validate_Glue
-    from .scene import validate_HierarchyOrder as validate_HierarchyOrder
-    from .resources import validate_ImageAsset as validate_ImageAsset
-    from .mesh import validate_Mesh as validate_Mesh
-    from .bindings import validate_MeshBinding as validate_MeshBinding
-    from .project import validate_Model3Settings as validate_Model3Settings
-    from .scene import validate_ModelSetup as validate_ModelSetup
-    from .motion import validate_MotionClip as validate_MotionClip
-    from .motion import validate_MotionGroup as validate_MotionGroup
-    from .motion import validate_MotionRegistration as validate_MotionRegistration
-    from .scene import validate_Offscreen as validate_Offscreen
-    from .project import validate_PackageAttachment as validate_PackageAttachment
-    from .parameters import validate_Parameter as validate_Parameter
-    from .scene import validate_Part as validate_Part
-    from .physics import validate_PhysicsAsset as validate_PhysicsAsset
-    from .pose import validate_PoseAsset as validate_PoseAsset
-    from .bindings import validate_SceneBinding as validate_SceneBinding
-    from .scene import validate_Transform as validate_Transform
+    from .bindings import validate_BlendShapeBinding
+    from .bindings import validate_BlendShapeConstraint
+    from .bindings import validate_BlendShapeKeyTable
+    from .project import validate_CdiParameterGroup
+    from .project import validate_DisplayInfo
+    from .scene import validate_DrawOrderGroup
+    from .project import validate_EditorState
+    from .expression import validate_ExpressionAsset
+    from .scene import validate_Glue
+    from .scene import validate_HierarchyOrder
+    from .resources import validate_ImageAsset
+    from .mesh import validate_Mesh
+    from .bindings import validate_MeshBinding
+    from .project import validate_Model3Settings
+    from .scene import validate_ModelSetup
+    from .motion import validate_MotionClip
+    from .motion import validate_MotionGroup
+    from .motion import validate_MotionRegistration
+    from .scene import validate_Offscreen
+    from .project import validate_PackageAttachment
+    from .parameters import validate_Parameter
+    from .scene import validate_Part
+    from .physics import validate_PhysicsAsset
+    from .pose import validate_PoseAsset
+    from .bindings import validate_SceneBinding
+    from .scene import validate_Transform
     if not isinstance(value, OwnedModelingRecords):
         raise TypeError("Expected OwnedModelingRecords")
-    if not isinstance(value.document_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.document_id)
     validate_ModelSetup(value.setup)
     validate_HierarchyOrder(value.hierarchy_order)
     validate_EditorState(value.editor_state)
@@ -156,13 +137,11 @@ def validate_OwnedModelingRecords(value: OwnedModelingRecords) -> None:
         for v0 in value.draw_order_groups:
             validate_DrawOrderGroup(v0)
     for key0, v0 in value.ids.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         if not isinstance(v0, tuple):
             raise TypeError("Expected an immutable tuple")
         for v1 in v0:
-            if not isinstance(v1, str):
-                raise ValueError("Expected string")
+            _check_string(v1)
     if not isinstance(value.assets, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.assets:
@@ -259,73 +238,73 @@ def validate_OwnedModelingRecords(value: OwnedModelingRecords) -> None:
         validate_PoseAsset(value.pose)
 
 def encode_OwnedModelingRecords(value: OwnedModelingRecords) -> object:
-    from .bindings import encode_BlendShapeBinding as encode_BlendShapeBinding
-    from .bindings import encode_BlendShapeConstraint as encode_BlendShapeConstraint
-    from .bindings import encode_BlendShapeKeyTable as encode_BlendShapeKeyTable
-    from .project import encode_CdiParameterGroup as encode_CdiParameterGroup
-    from .project import encode_DisplayInfo as encode_DisplayInfo
-    from .scene import encode_DrawOrderGroup as encode_DrawOrderGroup
-    from .project import encode_EditorState as encode_EditorState
-    from .expression import encode_ExpressionAsset as encode_ExpressionAsset
-    from .scene import encode_Glue as encode_Glue
-    from .scene import encode_HierarchyOrder as encode_HierarchyOrder
-    from .resources import encode_ImageAsset as encode_ImageAsset
-    from .mesh import encode_Mesh as encode_Mesh
-    from .bindings import encode_MeshBinding as encode_MeshBinding
-    from .project import encode_Model3Settings as encode_Model3Settings
-    from .scene import encode_ModelSetup as encode_ModelSetup
-    from .motion import encode_MotionClip as encode_MotionClip
-    from .motion import encode_MotionGroup as encode_MotionGroup
-    from .motion import encode_MotionRegistration as encode_MotionRegistration
-    from .scene import encode_Offscreen as encode_Offscreen
-    from .project import encode_PackageAttachment as encode_PackageAttachment
-    from .parameters import encode_Parameter as encode_Parameter
-    from .scene import encode_Part as encode_Part
-    from .physics import encode_PhysicsAsset as encode_PhysicsAsset
-    from .pose import encode_PoseAsset as encode_PoseAsset
-    from .bindings import encode_SceneBinding as encode_SceneBinding
-    from .scene import encode_Transform as encode_Transform
+    from .bindings import encode_BlendShapeBinding
+    from .bindings import encode_BlendShapeConstraint
+    from .bindings import encode_BlendShapeKeyTable
+    from .project import encode_CdiParameterGroup
+    from .project import encode_DisplayInfo
+    from .scene import encode_DrawOrderGroup
+    from .project import encode_EditorState
+    from .expression import encode_ExpressionAsset
+    from .scene import encode_Glue
+    from .scene import encode_HierarchyOrder
+    from .resources import encode_ImageAsset
+    from .mesh import encode_Mesh
+    from .bindings import encode_MeshBinding
+    from .project import encode_Model3Settings
+    from .scene import encode_ModelSetup
+    from .motion import encode_MotionClip
+    from .motion import encode_MotionGroup
+    from .motion import encode_MotionRegistration
+    from .scene import encode_Offscreen
+    from .project import encode_PackageAttachment
+    from .parameters import encode_Parameter
+    from .scene import encode_Part
+    from .physics import encode_PhysicsAsset
+    from .pose import encode_PoseAsset
+    from .bindings import encode_SceneBinding
+    from .scene import encode_Transform
     return {'document_id': value.document_id, 'setup': encode_ModelSetup(value.setup), 'hierarchy_order': encode_HierarchyOrder(value.hierarchy_order), 'editor_state': encode_EditorState(value.editor_state), 'display_info': encode_DisplayInfo(value.display_info), 'model3_settings': encode_Model3Settings(value.model3_settings), 'draw_order_groups': None if value.draw_order_groups is None else [encode_DrawOrderGroup(v0) for v0 in value.draw_order_groups], 'ids': {str(key0): [v1 for v1 in v0] for key0, v0 in value.ids.items()}, 'assets': [None if v0 is None else encode_ImageAsset(v0) for v0 in value.assets], 'meshes': [None if v0 is None else encode_Mesh(v0) for v0 in value.meshes], 'parameters': [None if v0 is None else encode_Parameter(v0) for v0 in value.parameters], 'parts': [None if v0 is None else encode_Part(v0) for v0 in value.parts], 'transforms': [None if v0 is None else encode_Transform(v0) for v0 in value.transforms], 'bindings': [None if v0 is None else encode_MeshBinding(v0) for v0 in value.bindings], 'scene_bindings': [None if v0 is None else encode_SceneBinding(v0) for v0 in value.scene_bindings], 'blend_key_tables': [None if v0 is None else encode_BlendShapeKeyTable(v0) for v0 in value.blend_key_tables], 'blend_constraints': [None if v0 is None else encode_BlendShapeConstraint(v0) for v0 in value.blend_constraints], 'blend_bindings': [None if v0 is None else encode_BlendShapeBinding(v0) for v0 in value.blend_bindings], 'glues': [None if v0 is None else encode_Glue(v0) for v0 in value.glues], 'offscreens': [None if v0 is None else encode_Offscreen(v0) for v0 in value.offscreens], 'parameter_groups': [None if v0 is None else encode_CdiParameterGroup(v0) for v0 in value.parameter_groups], 'attachments': [None if v0 is None else encode_PackageAttachment(v0) for v0 in value.attachments], 'motions': [None if v0 is None else encode_MotionClip(v0) for v0 in value.motions], 'motion_groups': [None if v0 is None else encode_MotionGroup(v0) for v0 in value.motion_groups], 'motion_registrations': [None if v0 is None else encode_MotionRegistration(v0) for v0 in value.motion_registrations], 'expressions': [None if v0 is None else encode_ExpressionAsset(v0) for v0 in value.expressions], 'physics': None if value.physics is None else encode_PhysicsAsset(value.physics), 'pose': None if value.pose is None else encode_PoseAsset(value.pose)}
 
 def read_OwnedModelingRecords(value: object) -> OwnedModelingRecords:
-    from .bindings import read_BlendShapeBinding as read_BlendShapeBinding
-    from .bindings import read_BlendShapeConstraint as read_BlendShapeConstraint
-    from .bindings import read_BlendShapeKeyTable as read_BlendShapeKeyTable
-    from .project import read_CdiParameterGroup as read_CdiParameterGroup
-    from .project import read_DisplayInfo as read_DisplayInfo
-    from .scene import read_DrawOrderGroup as read_DrawOrderGroup
-    from .project import read_EditorState as read_EditorState
-    from .expression import read_ExpressionAsset as read_ExpressionAsset
-    from .scene import read_Glue as read_Glue
-    from .scene import read_HierarchyOrder as read_HierarchyOrder
-    from .resources import read_ImageAsset as read_ImageAsset
-    from .mesh import read_Mesh as read_Mesh
-    from .bindings import read_MeshBinding as read_MeshBinding
-    from .project import read_Model3Settings as read_Model3Settings
-    from .scene import read_ModelSetup as read_ModelSetup
-    from .motion import read_MotionClip as read_MotionClip
-    from .motion import read_MotionGroup as read_MotionGroup
-    from .motion import read_MotionRegistration as read_MotionRegistration
-    from .scene import read_Offscreen as read_Offscreen
-    from .project import read_PackageAttachment as read_PackageAttachment
-    from .parameters import read_Parameter as read_Parameter
-    from .scene import read_Part as read_Part
-    from .physics import read_PhysicsAsset as read_PhysicsAsset
-    from .pose import read_PoseAsset as read_PoseAsset
-    from .bindings import read_SceneBinding as read_SceneBinding
-    from .scene import read_Transform as read_Transform
+    from .bindings import read_BlendShapeBinding
+    from .bindings import read_BlendShapeConstraint
+    from .bindings import read_BlendShapeKeyTable
+    from .project import read_CdiParameterGroup
+    from .project import read_DisplayInfo
+    from .scene import read_DrawOrderGroup
+    from .project import read_EditorState
+    from .expression import read_ExpressionAsset
+    from .scene import read_Glue
+    from .scene import read_HierarchyOrder
+    from .resources import read_ImageAsset
+    from .mesh import read_Mesh
+    from .bindings import read_MeshBinding
+    from .project import read_Model3Settings
+    from .scene import read_ModelSetup
+    from .motion import read_MotionClip
+    from .motion import read_MotionGroup
+    from .motion import read_MotionRegistration
+    from .scene import read_Offscreen
+    from .project import read_PackageAttachment
+    from .parameters import read_Parameter
+    from .scene import read_Part
+    from .physics import read_PhysicsAsset
+    from .pose import read_PoseAsset
+    from .bindings import read_SceneBinding
+    from .scene import read_Transform
     if isinstance(value, OwnedModelingRecords): return value
     r = record(value)
     return OwnedModelingRecords(document_id=string(r['document_id']), setup=read_ModelSetup(r['setup']), hierarchy_order=read_HierarchyOrder(r['hierarchy_order']), editor_state=read_EditorState(r['editor_state']), display_info=read_DisplayInfo(r['display_info']), model3_settings=read_Model3Settings(r['model3_settings']), draw_order_groups=None if r.get('draw_order_groups', None) is None else tuple(read_DrawOrderGroup(v0) for v0 in sequence(r.get('draw_order_groups', None))), ids={key0: tuple(string(v1) for v1 in sequence(v0)) for key0, v0 in record(r['ids']).items()}, assets=tuple(None if v0 is None else read_ImageAsset(v0) for v0 in sequence(r['assets'])), meshes=tuple(None if v0 is None else read_Mesh(v0) for v0 in sequence(r['meshes'])), parameters=tuple(None if v0 is None else read_Parameter(v0) for v0 in sequence(r['parameters'])), parts=tuple(None if v0 is None else read_Part(v0) for v0 in sequence(r['parts'])), transforms=tuple(None if v0 is None else read_Transform(v0) for v0 in sequence(r['transforms'])), bindings=tuple(None if v0 is None else read_MeshBinding(v0) for v0 in sequence(r['bindings'])), scene_bindings=tuple(None if v0 is None else read_SceneBinding(v0) for v0 in sequence(r['scene_bindings'])), blend_key_tables=tuple(None if v0 is None else read_BlendShapeKeyTable(v0) for v0 in sequence(r['blend_key_tables'])), blend_constraints=tuple(None if v0 is None else read_BlendShapeConstraint(v0) for v0 in sequence(r['blend_constraints'])), blend_bindings=tuple(None if v0 is None else read_BlendShapeBinding(v0) for v0 in sequence(r['blend_bindings'])), glues=tuple(None if v0 is None else read_Glue(v0) for v0 in sequence(r['glues'])), offscreens=tuple(None if v0 is None else read_Offscreen(v0) for v0 in sequence(r['offscreens'])), parameter_groups=tuple(None if v0 is None else read_CdiParameterGroup(v0) for v0 in sequence(r['parameter_groups'])), attachments=tuple(None if v0 is None else read_PackageAttachment(v0) for v0 in sequence(r['attachments'])), motions=tuple(None if v0 is None else read_MotionClip(v0) for v0 in sequence(r['motions'])), motion_groups=tuple(None if v0 is None else read_MotionGroup(v0) for v0 in sequence(r['motion_groups'])), motion_registrations=tuple(None if v0 is None else read_MotionRegistration(v0) for v0 in sequence(r['motion_registrations'])), expressions=tuple(None if v0 is None else read_ExpressionAsset(v0) for v0 in sequence(r['expressions'])), physics=None if r.get('physics', None) is None else read_PhysicsAsset(r.get('physics', None)), pose=None if r.get('pose', None) is None else read_PoseAsset(r.get('pose', None)))
 
 def validate_CollectionQuery(value: CollectionQuery) -> None:
-    from .project import validate_DocumentField as validate_DocumentField
-    from .motion import validate_MotionContainer as validate_MotionContainer
-    from .scene import validate_OrganizationCollection as validate_OrganizationCollection
-    from .physics import validate_PhysicsCollection as validate_PhysicsCollection
-    from .pose import validate_PoseCollection as validate_PoseCollection
-    from .addressing import validate_ReferenceCollection as validate_ReferenceCollection
-    from .scene import validate_SceneCollection as validate_SceneCollection
+    from .project import validate_DocumentField
+    from .motion import validate_MotionContainer
+    from .scene import validate_OrganizationCollection
+    from .physics import validate_PhysicsCollection
+    from .pose import validate_PoseCollection
+    from .addressing import validate_ReferenceCollection
+    from .scene import validate_SceneCollection
     if isinstance(value, CollectionQueryScene):
         validate_SceneCollection(value.collection)
     elif isinstance(value, CollectionQueryOrganization):
@@ -347,8 +326,7 @@ def validate_CollectionQuery(value: CollectionQuery) -> None:
     elif isinstance(value, CollectionQueryExpressions):
         pass
     elif isinstance(value, CollectionQueryExpressionEntries):
-        if not isinstance(value.expression_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.expression_id)
     elif isinstance(value, CollectionQueryPhysics):
         validate_PhysicsCollection(value.collection)
     elif isinstance(value, CollectionQueryPose):
@@ -357,13 +335,13 @@ def validate_CollectionQuery(value: CollectionQuery) -> None:
         raise TypeError("Expected CollectionQuery")
 
 def encode_CollectionQuery(value: CollectionQuery) -> object:
-    from .project import encode_DocumentField as encode_DocumentField
-    from .motion import encode_MotionContainer as encode_MotionContainer
-    from .scene import encode_OrganizationCollection as encode_OrganizationCollection
-    from .physics import encode_PhysicsCollection as encode_PhysicsCollection
-    from .pose import encode_PoseCollection as encode_PoseCollection
-    from .addressing import encode_ReferenceCollection as encode_ReferenceCollection
-    from .scene import encode_SceneCollection as encode_SceneCollection
+    from .project import encode_DocumentField
+    from .motion import encode_MotionContainer
+    from .scene import encode_OrganizationCollection
+    from .physics import encode_PhysicsCollection
+    from .pose import encode_PoseCollection
+    from .addressing import encode_ReferenceCollection
+    from .scene import encode_SceneCollection
     if isinstance(value, CollectionQueryScene):
         return {'kind': 'scene', **cast(Mapping[str, object], {'collection': encode_SceneCollection(value.collection)})}
     elif isinstance(value, CollectionQueryOrganization):
@@ -393,13 +371,13 @@ def encode_CollectionQuery(value: CollectionQuery) -> object:
     raise TypeError("Expected CollectionQuery")
 
 def read_CollectionQuery(value: object) -> CollectionQuery:
-    from .project import read_DocumentField as read_DocumentField
-    from .motion import read_MotionContainer as read_MotionContainer
-    from .scene import read_OrganizationCollection as read_OrganizationCollection
-    from .physics import read_PhysicsCollection as read_PhysicsCollection
-    from .pose import read_PoseCollection as read_PoseCollection
-    from .addressing import read_ReferenceCollection as read_ReferenceCollection
-    from .scene import read_SceneCollection as read_SceneCollection
+    from .project import read_DocumentField
+    from .motion import read_MotionContainer
+    from .scene import read_OrganizationCollection
+    from .physics import read_PhysicsCollection
+    from .pose import read_PoseCollection
+    from .addressing import read_ReferenceCollection
+    from .scene import read_SceneCollection
     if isinstance(value, (CollectionQueryScene, CollectionQueryOrganization, CollectionQueryReferences, CollectionQueryResources, CollectionQueryAttachments, CollectionQueryDocument, CollectionQueryMotion, CollectionQueryMotionGroups, CollectionQueryClips, CollectionQueryExpressions, CollectionQueryExpressionEntries, CollectionQueryPhysics, CollectionQueryPose,)): return value
     r = record(value)
     tag = string(r['kind'])

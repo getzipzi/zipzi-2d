@@ -9,173 +9,129 @@ from ..._values import record
 from ..._values import sequence
 from ..._values import string
 from .._modeling_support import _boolean
+from .._modeling_support import _check_bool
+from .._modeling_support import _check_f32
+from .._modeling_support import _check_string
+from .._modeling_support import _check_u64
 from collections.abc import Mapping
 from typing import cast
-import math
-from ..values import MotionClip as MotionClip, MotionContainer as MotionContainer, MotionContainerGroup as MotionContainerGroup, MotionContainerRoot as MotionContainerRoot, MotionEdit as MotionEdit, MotionEditCreate as MotionEditCreate, MotionEditCreateGroup as MotionEditCreateGroup, MotionEditCreateTrack as MotionEditCreateTrack, MotionEditDeleteClip as MotionEditDeleteClip, MotionEditDeleteEvents as MotionEditDeleteEvents, MotionEditDeleteGroup as MotionEditDeleteGroup, MotionEditDeleteRegistrations as MotionEditDeleteRegistrations, MotionEditDeleteTracks as MotionEditDeleteTracks, MotionEditDissolveGroup as MotionEditDissolveGroup, MotionEditDuplicateClip as MotionEditDuplicateClip, MotionEditDuplicateGroup as MotionEditDuplicateGroup, MotionEditDuplicateRegistrations as MotionEditDuplicateRegistrations, MotionEditMoveEvents as MotionEditMoveEvents, MotionEditMoveRegistrations as MotionEditMoveRegistrations, MotionEditMoveTracks as MotionEditMoveTracks, MotionEditPatchRegistration as MotionEditPatchRegistration, MotionEditRegister as MotionEditRegister, MotionEditRenameGroup as MotionEditRenameGroup, MotionEditReorderGroups as MotionEditReorderGroups, MotionEditReorderTracks as MotionEditReorderTracks, MotionEditSetEvent as MotionEditSetEvent, MotionEditSetTrackTarget as MotionEditSetTrackTarget, MotionEditTransferKeys as MotionEditTransferKeys, MotionEvent as MotionEvent, MotionEventFired as MotionEventFired, MotionGroup as MotionGroup, MotionKey as MotionKey, MotionPlaybackPosition as MotionPlaybackPosition, MotionPoint as MotionPoint, MotionRegistration as MotionRegistration, MotionSegment as MotionSegment, MotionSegmentBezier as MotionSegmentBezier, MotionSegmentInverseStepped as MotionSegmentInverseStepped, MotionSegmentLinear as MotionSegmentLinear, MotionSegmentStepped as MotionSegmentStepped, MotionSnapshot as MotionSnapshot, MotionTrack as MotionTrack, MotionTrackTarget as MotionTrackTarget, MotionTrackTargetModel as MotionTrackTargetModel, MotionTrackTargetParameter as MotionTrackTargetParameter, MotionTrackTargetPartOpacity as MotionTrackTargetPartOpacity, MotionTrackTargetUnresolved as MotionTrackTargetUnresolved, MotionTrackTargetUnspecified as MotionTrackTargetUnspecified
+from ..values import MotionClip, MotionContainer, MotionContainerGroup, MotionContainerRoot, MotionEdit, MotionEditCreate, MotionEditCreateGroup, MotionEditCreateTrack, MotionEditDeleteClip, MotionEditDeleteEvents, MotionEditDeleteGroup, MotionEditDeleteRegistrations, MotionEditDeleteTracks, MotionEditDissolveGroup, MotionEditDuplicateClip, MotionEditDuplicateGroup, MotionEditDuplicateRegistrations, MotionEditMoveEvents, MotionEditMoveRegistrations, MotionEditMoveTracks, MotionEditPatchRegistration, MotionEditRegister, MotionEditRenameGroup, MotionEditReorderGroups, MotionEditReorderTracks, MotionEditSetEvent, MotionEditSetTrackTarget, MotionEditTransferKeys, MotionEvent, MotionEventFired, MotionGroup, MotionKey, MotionPlaybackPosition, MotionPoint, MotionRegistration, MotionSegment, MotionSegmentBezier, MotionSegmentInverseStepped, MotionSegmentLinear, MotionSegmentStepped, MotionSnapshot, MotionTrack, MotionTrackTarget, MotionTrackTargetModel, MotionTrackTargetParameter, MotionTrackTargetPartOpacity, MotionTrackTargetUnresolved, MotionTrackTargetUnspecified
 
 def validate_MotionEdit(value: MotionEdit) -> None:
     if isinstance(value, MotionEditCreate):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.registration_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
+        _check_string(value.name)
+        _check_string(value.registration_id)
         validate_MotionContainer(value.destination)
     elif isinstance(value, MotionEditCreateGroup):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
+        _check_string(value.name)
     elif isinstance(value, MotionEditRenameGroup):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
+        _check_string(value.name)
     elif isinstance(value, MotionEditReorderGroups):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
     elif isinstance(value, MotionEditRegister):
         validate_MotionRegistration(value.entry)
         validate_MotionContainer(value.destination)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, MotionEditPatchRegistration):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_MotionRegistration(value.expected)
         validate_MotionRegistration(value.entry)
     elif isinstance(value, MotionEditMoveRegistrations):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         validate_MotionContainer(value.destination)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, MotionEditDuplicateRegistrations):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         validate_MotionContainer(value.destination)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, MotionEditDeleteRegistrations):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
     elif isinstance(value, MotionEditDissolveGroup):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
     elif isinstance(value, MotionEditDeleteGroup):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
     elif isinstance(value, MotionEditDuplicateGroup):
-        if not isinstance(value.source, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.source)
+        _check_string(value.id)
+        _check_string(value.name)
     elif isinstance(value, MotionEditDuplicateClip):
-        if not isinstance(value.source, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.registration_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.source)
+        _check_string(value.id)
+        _check_string(value.name)
+        _check_string(value.registration_id)
         validate_MotionContainer(value.destination)
     elif isinstance(value, MotionEditDeleteClip):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
     elif isinstance(value, MotionEditReorderTracks):
-        if not isinstance(value.clip, str):
-            raise ValueError("Expected string")
+        _check_string(value.clip)
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
     elif isinstance(value, MotionEditCreateTrack):
-        if not isinstance(value.clip, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.key_id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.clip)
+        _check_string(value.id)
+        _check_string(value.key_id)
+        _check_f32(value.time)
     elif isinstance(value, MotionEditSetTrackTarget):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_MotionTrackTarget(value.target)
     elif isinstance(value, MotionEditMoveTracks):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
-        if not isinstance(value.destination, str):
-            raise ValueError("Expected string")
+            _check_string(v0)
+        _check_string(value.destination)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
-        if type(value.copy) is not bool:
-            raise ValueError("Expected bool")
+            _check_string(value.before)
+        _check_bool(value.copy)
     elif isinstance(value, MotionEditDeleteTracks):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
     elif isinstance(value, MotionEditTransferKeys):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
-        if not isinstance(value.destination_track, str):
-            raise ValueError("Expected string")
-        if isinstance(value.time_offset, bool) or not isinstance(value.time_offset, (float, int)) or not math.isfinite(value.time_offset) or abs(value.time_offset) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
-        if type(value.copy) is not bool:
-            raise ValueError("Expected bool")
+            _check_string(v0)
+        _check_string(value.destination_track)
+        _check_f32(value.time_offset)
+        _check_bool(value.copy)
     elif isinstance(value, MotionEditSetEvent):
-        if not isinstance(value.clip, str):
-            raise ValueError("Expected string")
+        _check_string(value.clip)
         validate_MotionEvent(value.event)
     elif isinstance(value, MotionEditDeleteEvents):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
     elif isinstance(value, MotionEditMoveEvents):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
-        if not isinstance(value.destination, str):
-            raise ValueError("Expected string")
-        if isinstance(value.time_offset, bool) or not isinstance(value.time_offset, (float, int)) or not math.isfinite(value.time_offset) or abs(value.time_offset) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
-        if type(value.copy) is not bool:
-            raise ValueError("Expected bool")
+            _check_string(v0)
+        _check_string(value.destination)
+        _check_f32(value.time_offset)
+        _check_bool(value.copy)
     else:
         raise TypeError("Expected MotionEdit")
 
@@ -307,8 +263,7 @@ def validate_MotionContainer(value: MotionContainer) -> None:
     if isinstance(value, MotionContainerRoot):
         pass
     elif isinstance(value, MotionContainerGroup):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     else:
         raise TypeError("Expected MotionContainer")
 
@@ -330,32 +285,27 @@ def read_MotionContainer(value: object) -> MotionContainer:
     raise ValueError("Unknown MotionContainer variant")
 
 def validate_MotionRegistration(value: MotionRegistration) -> None:
-    from .scene import validate_AttachmentRef as validate_AttachmentRef
+    from .scene import validate_AttachmentRef
     if not isinstance(value, MotionRegistration):
         raise TypeError("Expected MotionRegistration")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.clip_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
+    _check_string(value.clip_id)
     if value.fade_in is not None:
-        if isinstance(value.fade_in, bool) or not isinstance(value.fade_in, (float, int)) or not math.isfinite(value.fade_in) or abs(value.fade_in) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.fade_in)
     if value.fade_out is not None:
-        if isinstance(value.fade_out, bool) or not isinstance(value.fade_out, (float, int)) or not math.isfinite(value.fade_out) or abs(value.fade_out) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.fade_out)
     if value.sound is not None:
         validate_AttachmentRef(value.sound)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
 
 def encode_MotionRegistration(value: MotionRegistration) -> object:
-    from .scene import encode_AttachmentRef as encode_AttachmentRef
+    from .scene import encode_AttachmentRef
     return {'id': value.id, 'clip_id': value.clip_id, 'fade_in': None if value.fade_in is None else value.fade_in, 'fade_out': None if value.fade_out is None else value.fade_out, 'sound': None if value.sound is None else encode_AttachmentRef(value.sound), 'extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}}
 
 def read_MotionRegistration(value: object) -> MotionRegistration:
-    from .scene import read_AttachmentRef as read_AttachmentRef
+    from .scene import read_AttachmentRef
     if isinstance(value, MotionRegistration): return value
     r = record(value)
     return MotionRegistration(id=string(r['id']), clip_id=string(r['clip_id']), fade_in=None if r.get('fade_in', None) is None else number(r.get('fade_in', None)), fade_out=None if r.get('fade_out', None) is None else number(r.get('fade_out', None)), sound=None if r.get('sound', None) is None else read_AttachmentRef(r.get('sound', None)), extensions={key0: _read_extension(v0) for key0, v0 in record(r['extensions']).items()})
@@ -364,19 +314,14 @@ def validate_MotionTrackTarget(value: MotionTrackTarget) -> None:
     if isinstance(value, MotionTrackTargetUnspecified):
         pass
     elif isinstance(value, MotionTrackTargetModel):
-        if not isinstance(value.runtime_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.runtime_id)
     elif isinstance(value, MotionTrackTargetParameter):
-        if not isinstance(value.parameter_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.parameter_id)
     elif isinstance(value, MotionTrackTargetPartOpacity):
-        if not isinstance(value.part_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.part_id)
     elif isinstance(value, MotionTrackTargetUnresolved):
-        if not isinstance(value.category, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.runtime_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.category)
+        _check_string(value.runtime_id)
     else:
         raise TypeError("Expected MotionTrackTarget")
 
@@ -416,15 +361,11 @@ def read_MotionTrackTarget(value: object) -> MotionTrackTarget:
 def validate_MotionEvent(value: MotionEvent) -> None:
     if not isinstance(value, MotionEvent):
         raise TypeError("Expected MotionEvent")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if not isinstance(value.value, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
+    _check_f32(value.time)
+    _check_string(value.value)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
 
 def encode_MotionEvent(value: MotionEvent) -> object:
@@ -438,29 +379,20 @@ def read_MotionEvent(value: object) -> MotionEvent:
 def validate_MotionClip(value: MotionClip) -> None:
     if not isinstance(value, MotionClip):
         raise TypeError("Expected MotionClip")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.name, str):
-        raise ValueError("Expected string")
-    if isinstance(value.duration, bool) or not isinstance(value.duration, (float, int)) or not math.isfinite(value.duration) or abs(value.duration) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.fps, bool) or not isinstance(value.fps, (float, int)) or not math.isfinite(value.fps) or abs(value.fps) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if type(value.looping) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.restricted_beziers) is not bool:
-        raise ValueError("Expected bool")
+    _check_string(value.id)
+    _check_string(value.name)
+    _check_f32(value.duration)
+    _check_f32(value.fps)
+    _check_bool(value.looping)
+    _check_bool(value.restricted_beziers)
     if value.fade_in is not None:
-        if isinstance(value.fade_in, bool) or not isinstance(value.fade_in, (float, int)) or not math.isfinite(value.fade_in) or abs(value.fade_in) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.fade_in)
     if value.fade_out is not None:
-        if isinstance(value.fade_out, bool) or not isinstance(value.fade_out, (float, int)) or not math.isfinite(value.fade_out) or abs(value.fade_out) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.fade_out)
     if not isinstance(value.track_order, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.track_order:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.tracks, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.tracks:
@@ -470,22 +402,17 @@ def validate_MotionClip(value: MotionClip) -> None:
     for v0 in value.events:
         validate_MotionEvent(v0)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
     for key0, v0 in value.meta_extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
     if value.opaque_source_ids is not None:
         for key0, v0 in value.opaque_source_ids.items():
-            if not isinstance(key0, str):
-                raise ValueError("Expected string")
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(key0)
+            _check_string(v0)
     if value.opaque_source_content_hash is not None:
-        if not isinstance(value.opaque_source_content_hash, str):
-            raise ValueError("Expected string")
+        _check_string(value.opaque_source_content_hash)
 
 def encode_MotionClip(value: MotionClip) -> object:
     return {'id': value.id, 'name': value.name, 'duration': value.duration, 'fps': value.fps, 'looping': value.looping, 'restricted_beziers': value.restricted_beziers, 'fade_in': None if value.fade_in is None else value.fade_in, 'fade_out': None if value.fade_out is None else value.fade_out, 'track_order': [v0 for v0 in value.track_order], 'tracks': [encode_MotionTrack(v0) for v0 in value.tracks], 'events': [encode_MotionEvent(v0) for v0 in value.events], 'extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}, 'meta_extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.meta_extensions.items()}, 'opaque_source_ids': None if value.opaque_source_ids is None else {str(key0): v0 for key0, v0 in value.opaque_source_ids.items()}, 'opaque_source_content_hash': None if value.opaque_source_content_hash is None else value.opaque_source_content_hash}
@@ -498,8 +425,7 @@ def read_MotionClip(value: object) -> MotionClip:
 def validate_MotionTrack(value: MotionTrack) -> None:
     if not isinstance(value, MotionTrack):
         raise TypeError("Expected MotionTrack")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
     validate_MotionTrackTarget(value.target)
     validate_MotionKey(value.initial)
     if not isinstance(value.segments, tuple):
@@ -507,14 +433,11 @@ def validate_MotionTrack(value: MotionTrack) -> None:
     for v0 in value.segments:
         validate_MotionSegment(v0)
     if value.fade_in is not None:
-        if isinstance(value.fade_in, bool) or not isinstance(value.fade_in, (float, int)) or not math.isfinite(value.fade_in) or abs(value.fade_in) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.fade_in)
     if value.fade_out is not None:
-        if isinstance(value.fade_out, bool) or not isinstance(value.fade_out, (float, int)) or not math.isfinite(value.fade_out) or abs(value.fade_out) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.fade_out)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
 
 def encode_MotionTrack(value: MotionTrack) -> object:
@@ -528,12 +451,9 @@ def read_MotionTrack(value: object) -> MotionTrack:
 def validate_MotionKey(value: MotionKey) -> None:
     if not isinstance(value, MotionKey):
         raise TypeError("Expected MotionKey")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_string(value.id)
+    _check_f32(value.time)
+    _check_f32(value.value)
 
 def encode_MotionKey(value: MotionKey) -> object:
     return {'id': value.id, 'time': value.time, 'value': value.value}
@@ -589,10 +509,8 @@ def read_MotionSegment(value: object) -> MotionSegment:
 def validate_MotionPoint(value: MotionPoint) -> None:
     if not isinstance(value, MotionPoint):
         raise TypeError("Expected MotionPoint")
-    if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_f32(value.time)
+    _check_f32(value.value)
 
 def encode_MotionPoint(value: MotionPoint) -> object:
     return {'time': value.time, 'value': value.value}
@@ -605,10 +523,8 @@ def read_MotionPoint(value: object) -> MotionPoint:
 def validate_MotionGroup(value: MotionGroup) -> None:
     if not isinstance(value, MotionGroup):
         raise TypeError("Expected MotionGroup")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.name, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
+    _check_string(value.name)
     if not isinstance(value.entries, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.entries:
@@ -623,42 +539,32 @@ def read_MotionGroup(value: object) -> MotionGroup:
     return MotionGroup(id=string(r['id']), name=string(r['name']), entries=tuple(read_MotionRegistration(v0) for v0 in sequence(r['entries'])))
 
 def validate_MotionSnapshot(value: MotionSnapshot) -> None:
-    from .physics import validate_PhysicsRigSnapshot as validate_PhysicsRigSnapshot
+    from .physics import validate_PhysicsRigSnapshot
     if not isinstance(value, MotionSnapshot):
         raise TypeError("Expected MotionSnapshot")
     if not isinstance(value.physics, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.physics:
         validate_PhysicsRigSnapshot(v0)
-    if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_f32(value.time)
     for key0, v0 in value.parameters.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
-        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(key0)
+        _check_f32(v0)
     for key0, v0 in value.part_opacity_channels.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
-        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(key0)
+        _check_f32(v0)
     for key0, v0 in value.part_opacities.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
-        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
-    if isinstance(value.model_opacity, bool) or not isinstance(value.model_opacity, (float, int)) or not math.isfinite(value.model_opacity) or abs(value.model_opacity) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+        _check_string(key0)
+        _check_f32(v0)
+    _check_f32(value.model_opacity)
     if not isinstance(value.active_motions, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.active_motions:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.active_expressions, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.active_expressions:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.fired_events, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.fired_events:
@@ -666,19 +572,18 @@ def validate_MotionSnapshot(value: MotionSnapshot) -> None:
     if not isinstance(value.coverage, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.coverage:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.motion_positions, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.motion_positions:
         validate_MotionPlaybackPosition(v0)
 
 def encode_MotionSnapshot(value: MotionSnapshot) -> object:
-    from .physics import encode_PhysicsRigSnapshot as encode_PhysicsRigSnapshot
+    from .physics import encode_PhysicsRigSnapshot
     return {'physics': [encode_PhysicsRigSnapshot(v0) for v0 in value.physics], 'time': value.time, 'parameters': {str(key0): v0 for key0, v0 in value.parameters.items()}, 'part_opacity_channels': {str(key0): v0 for key0, v0 in value.part_opacity_channels.items()}, 'part_opacities': {str(key0): v0 for key0, v0 in value.part_opacities.items()}, 'model_opacity': value.model_opacity, 'active_motions': [v0 for v0 in value.active_motions], 'active_expressions': [v0 for v0 in value.active_expressions], 'fired_events': [encode_MotionEventFired(v0) for v0 in value.fired_events], 'coverage': [v0 for v0 in value.coverage], 'motion_positions': [encode_MotionPlaybackPosition(v0) for v0 in value.motion_positions]}
 
 def read_MotionSnapshot(value: object) -> MotionSnapshot:
-    from .physics import read_PhysicsRigSnapshot as read_PhysicsRigSnapshot
+    from .physics import read_PhysicsRigSnapshot
     if isinstance(value, MotionSnapshot): return value
     r = record(value)
     return MotionSnapshot(physics=tuple(read_PhysicsRigSnapshot(v0) for v0 in sequence(r.get('physics', []))), time=number(r['time']), parameters={key0: number(v0) for key0, v0 in record(r['parameters']).items()}, part_opacity_channels={key0: number(v0) for key0, v0 in record(r['part_opacity_channels']).items()}, part_opacities={key0: number(v0) for key0, v0 in record(r['part_opacities']).items()}, model_opacity=number(r['model_opacity']), active_motions=tuple(string(v0) for v0 in sequence(r['active_motions'])), active_expressions=tuple(string(v0) for v0 in sequence(r['active_expressions'])), fired_events=tuple(read_MotionEventFired(v0) for v0 in sequence(r['fired_events'])), coverage=tuple(string(v0) for v0 in sequence(r['coverage'])), motion_positions=tuple(read_MotionPlaybackPosition(v0) for v0 in sequence(r['motion_positions'])))
@@ -686,12 +591,9 @@ def read_MotionSnapshot(value: object) -> MotionSnapshot:
 def validate_MotionEventFired(value: MotionEventFired) -> None:
     if not isinstance(value, MotionEventFired):
         raise TypeError("Expected MotionEventFired")
-    if not isinstance(value.motion_id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.event_id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.value, str):
-        raise ValueError("Expected string")
+    _check_string(value.motion_id)
+    _check_string(value.event_id)
+    _check_string(value.value)
 
 def encode_MotionEventFired(value: MotionEventFired) -> object:
     return {'motion_id': value.motion_id, 'event_id': value.event_id, 'value': value.value}
@@ -704,16 +606,11 @@ def read_MotionEventFired(value: object) -> MotionEventFired:
 def validate_MotionPlaybackPosition(value: MotionPlaybackPosition) -> None:
     if not isinstance(value, MotionPlaybackPosition):
         raise TypeError("Expected MotionPlaybackPosition")
-    if not isinstance(value.motion_id, str):
-        raise ValueError("Expected string")
-    if isinstance(value.local_time, bool) or not isinstance(value.local_time, (float, int)) or not math.isfinite(value.local_time) or abs(value.local_time) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.period, bool) or not isinstance(value.period, (float, int)) or not math.isfinite(value.period) or abs(value.period) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if type(value.loop_index) is not int or not 0 <= value.loop_index < 18446744073709551616:
-        raise ValueError("Expected u64")
-    if isinstance(value.cycle_origin, bool) or not isinstance(value.cycle_origin, (float, int)) or not math.isfinite(value.cycle_origin) or abs(value.cycle_origin) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_string(value.motion_id)
+    _check_f32(value.local_time)
+    _check_f32(value.period)
+    _check_u64(value.loop_index)
+    _check_f32(value.cycle_origin)
 
 def encode_MotionPlaybackPosition(value: MotionPlaybackPosition) -> object:
     return {'motion_id': value.motion_id, 'local_time': value.local_time, 'period': value.period, 'loop_index': value.loop_index, 'cycle_origin': value.cycle_origin}

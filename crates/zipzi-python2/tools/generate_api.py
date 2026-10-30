@@ -185,7 +185,7 @@ LIFECYCLE_REQUESTS={
 }
 OWNED_REQUESTS={'resources.Resources':'prepare_image prepare_buffer load_png prepare_png usage','resources.PreparedImage':'pixels','Buffer':'read','Owned':'close','animation.Preview':'info apply sample seek advance_to','references.ObjectRef':'resolve label capabilities scene_capabilities','references.LabelAddress':'plan','references.FieldAddress':'plan','events.SessionSubscription':'poll resync','events.RegistrySubscription':'poll resync'}
 
-def render_api(contract,header,rust_header,resolve=lambda shape: shape):
+def render_api(contract,header,rust_header,resolve,codec_domains):
     runtime=contract['runtime']
     writes={key:list(value) for key,value in WRITES.items()}
     # Public resource constructors flatten the selected SDK spec and replace
@@ -347,7 +347,7 @@ def render_api(contract,header,rust_header,resolve=lambda shape: shape):
             if hook:
                 if hook not in actual:raise ValueError('Missing unique transport hook '+hook)
                 hooks[cls+'.'+name]={'hook':hook,'reason':'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call','contracts':['C01','C07','C08']}
-    backend=[header.rstrip(), 'from __future__ import annotations','from abc import ABC, abstractmethod','from pathlib import Path','from typing import TYPE_CHECKING, Literal','from .. import _operations as ops, sampling','from . import values as modeling, codecs as codec, scene','from .plan_intents import Intent, wire as intent_wire','from .planning import ModelingPlanOperation, encode_modeling','from .._errors import unwrap','from .._values import Source, SessionId, record','from ..events import Cursor','from ..backends._transfers import Transfer, TransferBackend','from ..backends import JobKind','if TYPE_CHECKING:','    from ..backends._native_types import NativeRuntime','']
+    backend=[header.rstrip(), 'from __future__ import annotations','from abc import ABC, abstractmethod','from pathlib import Path','from typing import TYPE_CHECKING, Literal','from .. import _operations as ops, sampling','from . import values as modeling, scene','from .plan_intents import Intent, wire as intent_wire','from .planning import ModelingPlanOperation, encode_modeling','from .._errors import unwrap','from .._values import Source, SessionId, record','from ..events import Cursor','from ..backends._transfers import Transfer, TransferBackend','from ..backends import JobKind','if TYPE_CHECKING:','    from ..backends._native_types import NativeRuntime','']
     for cls,methods in BINDINGS.items():
         backend+=['class '+cls+'Bindings('+('TransferBackend, ' if cls=='Connected' else '')+'ABC):']
         if cls=='Local':backend+=['    _native: NativeRuntime']
@@ -359,5 +359,14 @@ def render_api(contract,header,rust_header,resolve=lambda shape: shape):
             backend+=['    '+line if line else '' for line in source.splitlines()]
         backend+=['']
     backend += ['TRANSPORT_HOOKS = '+repr(hooks), '']
+    used_codec_domains=set()
+    def codec_reference(match):
+        function=match.group(1)
+        domain=codec_domains[function]
+        used_codec_domains.add(domain)
+        return domain+'_codec.'+function
+    backend_source=re.sub(r'\bmodeling\.((?:read_|encode_|validate_)\w+)',codec_reference,'\n'.join(backend))
+    codec_imports='\n'.join('from .codecs import '+domain+' as '+domain+'_codec' for domain in sorted(used_codec_domains))
+    backend_source=backend_source.replace('from . import values as modeling, scene\n','from . import values as modeling, scene\n'+codec_imports+'\n')
     reexports={'client/python/zipzi/'+name+'.py':header+repr(doc)+'\n'+'\n'.join(imports)+'\n__all__ = '+repr(names)+'\n' for name,(doc,imports,names) in PUBLIC_EXPORTS.items()}
-    return {**reexports, 'client/python/zipzi/_generated/backend_bindings.py':re.sub(r'\bmodeling\.(?=(?:read_|encode_|validate_))', 'codec.', '\n'.join(backend)),'client/python/zipzi/_generated/facades.py':'\n'.join(facade), 'client/python/zipzi/_generated/discovery.py':'\n'.join(py), 'src/generated/discovery.rs':'\n'.join(rs), 'client/python/zipzi/_generated/request_directory.py':'\n'.join(directory)+'\n'}
+    return {**reexports, 'client/python/zipzi/_generated/backend_bindings.py':backend_source,'client/python/zipzi/_generated/facades.py':'\n'.join(facade), 'client/python/zipzi/_generated/discovery.py':'\n'.join(py), 'src/generated/discovery.rs':'\n'.join(rs), 'client/python/zipzi/_generated/request_directory.py':'\n'.join(directory)+'\n'}

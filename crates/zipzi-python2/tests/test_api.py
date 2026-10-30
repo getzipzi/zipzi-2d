@@ -276,7 +276,7 @@ class PythonSdk(unittest.TestCase):
 
 
     def test_manual_mesh_source_contract_and_existing_large_writes(self):
-        from zipzi._generated import codecs as wire
+        from zipzi._generated.codecs import commands as wire
         from zipzi._generated.binary.support import Writer, Reader
         from zipzi._generated.binary.common import _write_sourceref, _read_sourceref
         for mode in ("local", "connected"):
@@ -675,6 +675,43 @@ class PythonSdk(unittest.TestCase):
                         self.assertEqual(result.source.sequence, 1)
                 self.assertEqual(session.meshes.get(id).value.name, "Recovered")
                 self.assertEqual(session.info().history, (2, 0))
+
+    def test_generated_scalar_validators_preserve_boundaries_and_exceptions(self):
+        from zipzi._generated import _modeling_support as scalar
+        from zipzi._generated.codecs import parameters as parameter_codec, common as point_codec
+        class IntSubclass(int): pass
+        class FloatSubclass(float): pass
+        class TextSubclass(str): pass
+        for kind, low, high in (('u8',0,1<<8),('u16',0,1<<16),('u32',0,1<<32),
+                                ('u64',0,1<<64),('usize',0,1<<64),
+                                ('i32',-(1<<31),1<<31),('i64',-(1<<63),1<<63)):
+            check=getattr(scalar,'_check_'+kind)
+            for value in (low,high-1):check(value)
+            for value in (low-1,high,True,1.,IntSubclass(1)):
+                with self.subTest(kind=kind,value=value), self.assertRaisesRegex(ValueError,'^Expected '+kind+'$'):
+                    check(value)
+        parameter=m.parameters.Parameter(id=TextSubclass('p'),runtime_id='P',name='P',minimum=-1,
+                                         maximum=1.,default_value=0.,decimal_places=(1<<31)-1)
+        parameter_codec.validate_Parameter(parameter)
+        self.assertIs(type(parameter_codec.encode_Parameter(parameter)['minimum']),int)
+        self.assertEqual(parameter_codec.read_Parameter(parameter_codec.encode_Parameter(parameter)),parameter)
+        for field,value,message in (('id',1,'string'),('repeat',1,'bool'),('repeat',None,'bool'),
+                                    ('decimal_places',True,'i32'),('decimal_places',1<<31,'i32'),
+                                    ('minimum',True,'f32'),('minimum',float('nan'),'f32'),
+                                    ('maximum',float('inf'),'f32'),('default_value',1e39,'f32')):
+            with self.subTest(field=field,value=value), self.assertRaisesRegex(ValueError,'^Expected '+message+'$'):
+                parameter_codec.validate_Parameter(replace(parameter,**{field:value}))
+        for value in (0,IntSubclass(1),FloatSubclass(.5),-3.4028234663852886e38,3.4028234663852886e38):
+            point_codec.validate_Vec2(m.common.Vec2(value,value))
+        for value in (True,float('nan'),float('inf'),-float('inf'),3.402823466385289e38,'0',None):
+            with self.subTest(coordinate=value), self.assertRaisesRegex(ValueError,'^Expected f32$'):
+                point_codec.validate_Vec2(m.common.Vec2(value,0.))
+        with self.assertRaises(OverflowError):point_codec.validate_Vec2(m.common.Vec2(10**400,0.))
+        scalar._check_string(TextSubclass('x'))
+        for value in (False,True):scalar._check_bool(value)
+        for value in (0.,1,1e300):scalar._check_f64(value)
+        for value in (True,float('nan'),float('inf')):
+            with self.assertRaisesRegex(ValueError,'^Expected f64$'):scalar._check_f64(value)
 
     def test_generated_dtos_own_inputs_and_remove_parallel_public_intents(self):
         import dataclasses, inspect, pickle, typing

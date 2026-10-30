@@ -6,7 +6,7 @@ from ..._values import sequence
 from ..._values import string
 from typing import cast
 from functools import cache
-from .support import BINDING_SIGNATURE as BINDING_SIGNATURE, Reader as Reader, Writer as Writer, _field as _field, _point as _point
+from .support import BINDING_SIGNATURE, Reader, Writer, _field, _point
 
 def _write_meshbinding(value: object, w: Writer) -> None:
     w.text(_field(value, 'id'))
@@ -43,7 +43,7 @@ def _read_bindingsample(r: Reader) -> m.BindingSample:
 
 @cache
 def _dependencies__write_meshkeyform():
-    from .scene import _write_appearance as _write_appearance
+    from .scene import _write_appearance
     return _write_appearance,
 
 def _write_meshkeyform(value: object, w: Writer) -> None:
@@ -64,7 +64,7 @@ def _write_meshkeyform(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__read_meshkeyform():
-    from .scene import _read_appearance as _read_appearance
+    from .scene import _read_appearance
     return _read_appearance,
 
 def _read_meshkeyform(r: Reader) -> m.MeshKeyform:
@@ -84,8 +84,8 @@ def _read_scenebinding(r: Reader) -> m.SceneBinding:
 
 @cache
 def _dependencies__write_scenetrack():
-    from .scene import _write_partid as _write_partid
-    from .scene import _write_transformid as _write_transformid
+    from .scene import _write_partid
+    from .scene import _write_transformid
     return _write_partid, _write_transformid,
 
 def _write_scenetrack(value: object, w: Writer) -> None:
@@ -117,8 +117,8 @@ def _write_scenetrack(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__read_scenetrack():
-    from .scene import _read_partid as _read_partid
-    from .scene import _read_transformid as _read_transformid
+    from .scene import _read_partid
+    from .scene import _read_transformid
     return _read_partid, _read_transformid,
 
 def _read_scenetrack(r: Reader) -> m.SceneTrack:
@@ -134,8 +134,8 @@ def _read_scenetrack(r: Reader) -> m.SceneTrack:
 
 @cache
 def _dependencies__write_warpkeyform():
-    from .scene import _write_appearance as _write_appearance
-    from .scene import _write_warpbezier as _write_warpbezier
+    from .scene import _write_appearance
+    from .scene import _write_warpbezier
     return _write_appearance, _write_warpbezier,
 
 def _write_warpkeyform(value: object, w: Writer) -> None:
@@ -156,8 +156,8 @@ def _write_warpkeyform(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__read_warpkeyform():
-    from .scene import _read_appearance as _read_appearance
-    from .scene import _read_warpbezier as _read_warpbezier
+    from .scene import _read_appearance
+    from .scene import _read_warpbezier
     return _read_appearance, _read_warpbezier,
 
 def _read_warpkeyform(r: Reader) -> m.WarpKeyform:
@@ -166,8 +166,8 @@ def _read_warpkeyform(r: Reader) -> m.WarpKeyform:
 
 @cache
 def _dependencies__write_rotationkeyform():
-    from .scene import _write_appearance as _write_appearance
-    from .scene import _write_rotationpose as _write_rotationpose
+    from .scene import _write_appearance
+    from .scene import _write_rotationpose
     return _write_appearance, _write_rotationpose,
 
 def _write_rotationkeyform(value: object, w: Writer) -> None:
@@ -181,8 +181,8 @@ def _write_rotationkeyform(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__read_rotationkeyform():
-    from .scene import _read_appearance as _read_appearance
-    from .scene import _read_rotationpose as _read_rotationpose
+    from .scene import _read_appearance
+    from .scene import _read_rotationpose
     return _read_appearance, _read_rotationpose,
 
 def _read_rotationkeyform(r: Reader) -> m.RotationKeyform:
@@ -397,7 +397,7 @@ def _read_deltawarpkeyform(r: Reader) -> m.DeltaWarpKeyform:
 
 @cache
 def _dependencies__write_deltarotationkeyform():
-    from .common import _write_vec2 as _write_vec2
+    from .common import _write_vec2
     return _write_vec2,
 
 def _write_deltarotationkeyform(value: object, w: Writer) -> None:
@@ -440,7 +440,7 @@ def _write_deltarotationkeyform(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__read_deltarotationkeyform():
-    from .common import _read_vec2 as _read_vec2
+    from .common import _read_vec2
     return _read_vec2,
 
 def _read_deltarotationkeyform(r: Reader) -> m.DeltaRotationKeyform:
@@ -527,8 +527,8 @@ def _read_offscreenkeyform(r: Reader) -> m.OffscreenKeyform:
 
 @cache
 def _dependencies__write_bindingauthoringedit():
-    from .parameters import _write_parameterrangeedit as _write_parameterrangeedit
-    from .scene_edits import _write_reparentedit as _write_reparentedit
+    from .parameters import _write_parameterrangeedit
+    from .scene_edits import _write_reparentedit
     return _write_parameterrangeedit, _write_reparentedit,
 
 def _write_bindingauthoringedit(value: object, w: Writer) -> None:
@@ -584,7 +584,7 @@ def _write_bindinggridtarget(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__write_gridoperation():
-    from .parameters import _write_parameterrangepolicy as _write_parameterrangepolicy
+    from .parameters import _write_parameterrangepolicy
     return _write_parameterrangepolicy,
 
 def _write_gridoperation(value: object, w: Writer) -> None:
@@ -684,7 +684,7 @@ def _write_blendauthoringedit(value: object, w: Writer) -> None:
 
 @cache
 def _dependencies__write_blendtableoperation():
-    from .parameters import _write_parameterrangepolicy as _write_parameterrangepolicy
+    from .parameters import _write_parameterrangepolicy
     return _write_parameterrangepolicy,
 
 def _write_blendtableoperation(value: object, w: Writer) -> None:

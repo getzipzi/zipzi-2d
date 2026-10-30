@@ -7,84 +7,65 @@ from ..._values import number
 from ..._values import record
 from ..._values import sequence
 from ..._values import string
+from .._modeling_support import _check_f32
+from .._modeling_support import _check_string
 from collections.abc import Mapping
 from typing import cast
-import math
-from ..values import ExpressionAsset as ExpressionAsset, ExpressionBlend as ExpressionBlend, ExpressionEdit as ExpressionEdit, ExpressionEditCreate as ExpressionEditCreate, ExpressionEditCreateEntry as ExpressionEditCreateEntry, ExpressionEditDelete as ExpressionEditDelete, ExpressionEditDeleteEntries as ExpressionEditDeleteEntries, ExpressionEditDuplicate as ExpressionEditDuplicate, ExpressionEditDuplicateEntries as ExpressionEditDuplicateEntries, ExpressionEditMoveEntries as ExpressionEditMoveEntries, ExpressionEditPatchEntry as ExpressionEditPatchEntry, ExpressionEditReorder as ExpressionEditReorder, ExpressionEntry as ExpressionEntry, ExpressionEntryFields as ExpressionEntryFields, ExpressionTarget as ExpressionTarget, ExpressionTargetResolved as ExpressionTargetResolved, ExpressionTargetUnresolved as ExpressionTargetUnresolved, ExpressionTargetUnspecified as ExpressionTargetUnspecified
+from ..values import ExpressionAsset, ExpressionBlend, ExpressionEdit, ExpressionEditCreate, ExpressionEditCreateEntry, ExpressionEditDelete, ExpressionEditDeleteEntries, ExpressionEditDuplicate, ExpressionEditDuplicateEntries, ExpressionEditMoveEntries, ExpressionEditPatchEntry, ExpressionEditReorder, ExpressionEntry, ExpressionEntryFields, ExpressionTarget, ExpressionTargetResolved, ExpressionTargetUnresolved, ExpressionTargetUnspecified
 
 def validate_ExpressionEdit(value: ExpressionEdit) -> None:
     if isinstance(value, ExpressionEditCreate):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
+        _check_string(value.name)
     elif isinstance(value, ExpressionEditCreateEntry):
-        if not isinstance(value.owner, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.owner)
+        _check_string(value.id)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, ExpressionEditPatchEntry):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_ExpressionEntryFields(value.expected)
         validate_ExpressionEntryFields(value.fields)
     elif isinstance(value, ExpressionEditMoveEntries):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
-        if not isinstance(value.destination, str):
-            raise ValueError("Expected string")
+            _check_string(v0)
+        _check_string(value.destination)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, ExpressionEditDuplicateEntries):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         if not isinstance(value.new_ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.new_ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
-        if not isinstance(value.destination, str):
-            raise ValueError("Expected string")
+            _check_string(v0)
+        _check_string(value.destination)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, ExpressionEditDeleteEntries):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
     elif isinstance(value, ExpressionEditDuplicate):
-        if not isinstance(value.source, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.source)
+        _check_string(value.id)
+        _check_string(value.name)
         if not isinstance(value.entry_ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.entry_ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
     elif isinstance(value, ExpressionEditDelete):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
     elif isinstance(value, ExpressionEditReorder):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
     else:
         raise TypeError("Expected ExpressionEdit")
 
@@ -146,8 +127,7 @@ def validate_ExpressionEntryFields(value: ExpressionEntryFields) -> None:
     if not isinstance(value, ExpressionEntryFields):
         raise TypeError("Expected ExpressionEntryFields")
     validate_ExpressionTarget(value.target)
-    if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_f32(value.value)
     if value.blend is not None:
         validate_ExpressionBlend(value.blend)
 
@@ -163,11 +143,9 @@ def validate_ExpressionTarget(value: ExpressionTarget) -> None:
     if isinstance(value, ExpressionTargetUnspecified):
         pass
     elif isinstance(value, ExpressionTargetResolved):
-        if not isinstance(value.parameter_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.parameter_id)
     elif isinstance(value, ExpressionTargetUnresolved):
-        if not isinstance(value.runtime_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.runtime_id)
     else:
         raise TypeError("Expected ExpressionTarget")
 
@@ -208,36 +186,27 @@ def read_ExpressionBlend(value: object) -> ExpressionBlend:
 def validate_ExpressionAsset(value: ExpressionAsset) -> None:
     if not isinstance(value, ExpressionAsset):
         raise TypeError("Expected ExpressionAsset")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.name, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
+    _check_string(value.name)
     if value.file_type is not None:
-        if not isinstance(value.file_type, str):
-            raise ValueError("Expected string")
+        _check_string(value.file_type)
     if value.fade_in is not None:
-        if isinstance(value.fade_in, bool) or not isinstance(value.fade_in, (float, int)) or not math.isfinite(value.fade_in) or abs(value.fade_in) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.fade_in)
     if value.fade_out is not None:
-        if isinstance(value.fade_out, bool) or not isinstance(value.fade_out, (float, int)) or not math.isfinite(value.fade_out) or abs(value.fade_out) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.fade_out)
     if not isinstance(value.entries, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.entries:
         validate_ExpressionEntry(v0)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
     if value.opaque_source_ids is not None:
         for key0, v0 in value.opaque_source_ids.items():
-            if not isinstance(key0, str):
-                raise ValueError("Expected string")
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(key0)
+            _check_string(v0)
     if value.opaque_source_content_hash is not None:
-        if not isinstance(value.opaque_source_content_hash, str):
-            raise ValueError("Expected string")
+        _check_string(value.opaque_source_content_hash)
 
 def encode_ExpressionAsset(value: ExpressionAsset) -> object:
     return {'id': value.id, 'name': value.name, 'file_type': None if value.file_type is None else value.file_type, 'fade_in': None if value.fade_in is None else value.fade_in, 'fade_out': None if value.fade_out is None else value.fade_out, 'entries': [encode_ExpressionEntry(v0) for v0 in value.entries], 'extensions': {str(key0): _encode_extension(v0) for key0, v0 in value.extensions.items()}, 'opaque_source_ids': None if value.opaque_source_ids is None else {str(key0): v0 for key0, v0 in value.opaque_source_ids.items()}, 'opaque_source_content_hash': None if value.opaque_source_content_hash is None else value.opaque_source_content_hash}
@@ -250,16 +219,13 @@ def read_ExpressionAsset(value: object) -> ExpressionAsset:
 def validate_ExpressionEntry(value: ExpressionEntry) -> None:
     if not isinstance(value, ExpressionEntry):
         raise TypeError("Expected ExpressionEntry")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
     validate_ExpressionTarget(value.target)
-    if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_f32(value.value)
     if value.blend is not None:
         validate_ExpressionBlend(value.blend)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
 
 def encode_ExpressionEntry(value: ExpressionEntry) -> object:

@@ -6,25 +6,31 @@ from ..._values import record
 from ..._values import sequence
 from ..._values import string
 from .._modeling_support import _boolean
+from .._modeling_support import _check_bool
+from .._modeling_support import _check_f32
+from .._modeling_support import _check_f64
+from .._modeling_support import _check_i32
+from .._modeling_support import _check_string
+from .._modeling_support import _check_u32
+from .._modeling_support import _check_u64
+from .._modeling_support import _check_u8
+from .._modeling_support import _check_usize
 from collections.abc import Mapping as _Mapping
 from typing import cast
-import math
-from ..values import Drawable as Drawable, DrawableFrame as DrawableFrame, EvaluatedDeformer as EvaluatedDeformer, EvaluatedParameter as EvaluatedParameter, GeometryDiagnostic as GeometryDiagnostic, GeometryDiagnosticKind as GeometryDiagnosticKind, GeometrySnapshot as GeometrySnapshot, GeometrySpace as GeometrySpace, GeometrySpaceModel as GeometrySpaceModel, GeometrySpaceRotationLocal as GeometrySpaceRotationLocal, GeometrySpaceWarpParameter as GeometrySpaceWarpParameter, MeshQuality as MeshQuality, ModelingSamples as ModelingSamples, OffscreenFrame as OffscreenFrame, RenderCommand as RenderCommand, RenderCommandBeginOffscreen as RenderCommandBeginOffscreen, RenderCommandDrawMesh as RenderCommandDrawMesh, RenderCommandEndOffscreen as RenderCommandEndOffscreen, TriangleQuality as TriangleQuality, Vec2 as Vec2
+from ..values import Drawable, DrawableFrame, EvaluatedDeformer, EvaluatedParameter, GeometryDiagnostic, GeometryDiagnosticKind, GeometrySnapshot, GeometrySpace, GeometrySpaceModel, GeometrySpaceRotationLocal, GeometrySpaceWarpParameter, MeshQuality, ModelingSamples, OffscreenFrame, RenderCommand, RenderCommandBeginOffscreen, RenderCommandDrawMesh, RenderCommandEndOffscreen, TriangleQuality, Vec2
 
 def validate_GeometrySnapshot(value: GeometrySnapshot) -> None:
-    from .mesh import validate_MeshMeshing as validate_MeshMeshing
-    from .common import validate_Vec2 as validate_Vec2
-    from .common import validate_Version as validate_Version
+    from .mesh import validate_MeshMeshing
+    from .common import validate_Vec2
+    from .common import validate_Version
     if not isinstance(value, GeometrySnapshot):
         raise TypeError("Expected GeometrySnapshot")
     validate_Version(value.version)
-    if not isinstance(value.mesh_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.mesh_id)
     if not isinstance(value.vertex_ids, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.vertex_ids:
-        if type(v0) is not int or not 0 <= v0 < 4294967296:
-            raise ValueError("Expected u32")
+        _check_u32(v0)
     if not isinstance(value.positions, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.positions:
@@ -41,22 +47,21 @@ def validate_GeometrySnapshot(value: GeometrySnapshot) -> None:
         if len(v0) != 3:
             raise ValueError("Invalid fixed array length")
         for v1 in v0:
-            if type(v1) is not int or not 0 <= v1 < 4294967296:
-                raise ValueError("Expected u32")
+            _check_u32(v1)
     if value.meshing is not None:
         validate_MeshMeshing(value.meshing)
     validate_GeometrySpace(value.space)
 
 def encode_GeometrySnapshot(value: GeometrySnapshot) -> object:
-    from .mesh import encode_MeshMeshing as encode_MeshMeshing
-    from .common import encode_Vec2 as encode_Vec2
-    from .common import encode_Version as encode_Version
+    from .mesh import encode_MeshMeshing
+    from .common import encode_Vec2
+    from .common import encode_Version
     return {'version': encode_Version(value.version), 'mesh_id': value.mesh_id, 'vertex_ids': [v0 for v0 in value.vertex_ids], 'positions': [encode_Vec2(v0) for v0 in value.positions], 'uvs': [encode_Vec2(v0) for v0 in value.uvs], 'triangles': [[v1 for v1 in v0] for v0 in value.triangles], 'meshing': None if value.meshing is None else encode_MeshMeshing(value.meshing), 'space': encode_GeometrySpace(value.space)}
 
 def read_GeometrySnapshot(value: object) -> GeometrySnapshot:
-    from .mesh import read_MeshMeshing as read_MeshMeshing
-    from .common import read_Vec2 as read_Vec2
-    from .common import read_Version as read_Version
+    from .mesh import read_MeshMeshing
+    from .common import read_Vec2
+    from .common import read_Version
     if isinstance(value, GeometrySnapshot): return value
     r = record(value)
     return GeometrySnapshot(version=read_Version(r['version']), mesh_id=string(r['mesh_id']), vertex_ids=tuple(integer(v0) for v0 in sequence(r['vertex_ids'])), positions=tuple(read_Vec2(v0) for v0 in sequence(r['positions'])), uvs=tuple(read_Vec2(v0) for v0 in sequence(r['uvs'])), triangles=tuple(cast('tuple[int, int, int]', tuple(integer(v1) for v1 in sequence(v0))) for v0 in sequence(r['triangles'])), meshing=None if r.get('meshing', None) is None else read_MeshMeshing(r.get('meshing', None)), space=read_GeometrySpace(r['space']))
@@ -65,11 +70,9 @@ def validate_GeometrySpace(value: GeometrySpace) -> None:
     if isinstance(value, GeometrySpaceModel):
         pass
     elif isinstance(value, GeometrySpaceRotationLocal):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     elif isinstance(value, GeometrySpaceWarpParameter):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     else:
         raise TypeError("Expected GeometrySpace")
 
@@ -95,7 +98,7 @@ def read_GeometrySpace(value: object) -> GeometrySpace:
     raise ValueError("Unknown GeometrySpace variant")
 
 def validate_ModelingSamples(value: ModelingSamples) -> None:
-    from .common import validate_Version as validate_Version
+    from .common import validate_Version
     if not isinstance(value, ModelingSamples):
         raise TypeError("Expected ModelingSamples")
     validate_Version(value.version)
@@ -103,10 +106,8 @@ def validate_ModelingSamples(value: ModelingSamples) -> None:
         raise TypeError("Expected an immutable tuple")
     for v0 in value.parameters:
         for key1, v1 in v0.items():
-            if not isinstance(key1, str):
-                raise ValueError("Expected string")
-            if isinstance(v1, bool) or not isinstance(v1, (float, int)) or not math.isfinite(v1) or abs(v1) > 3.4028234663852886e38:
-                raise ValueError("Expected f32")
+            _check_string(key1)
+            _check_f32(v1)
     if not isinstance(value.frames, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.frames:
@@ -124,11 +125,11 @@ def validate_ModelingSamples(value: ModelingSamples) -> None:
             validate_MeshQuality(v1)
 
 def encode_ModelingSamples(value: ModelingSamples) -> object:
-    from .common import encode_Version as encode_Version
+    from .common import encode_Version
     return {'version': encode_Version(value.version), 'parameters': [{str(key1): v1 for key1, v1 in v0.items()} for v0 in value.parameters], 'frames': [encode_DrawableFrame(v0) for v0 in value.frames], 'diagnostics': [encode_GeometryDiagnostic(v0) for v0 in value.diagnostics], 'quality': [[encode_MeshQuality(v1) for v1 in v0] for v0 in value.quality]}
 
 def read_ModelingSamples(value: object) -> ModelingSamples:
-    from .common import read_Version as read_Version
+    from .common import read_Version
     if isinstance(value, ModelingSamples): return value
     r = record(value)
     return ModelingSamples(version=read_Version(r['version']), parameters=tuple({key1: number(v1) for key1, v1 in record(v0).items()} for v0 in sequence(r['parameters'])), frames=tuple(read_DrawableFrame(v0) for v0 in sequence(r['frames'])), diagnostics=tuple(read_GeometryDiagnostic(v0) for v0 in sequence(r['diagnostics'])), quality=tuple(tuple(read_MeshQuality(v1) for v1 in sequence(v0)) for v0 in sequence(r['quality'])))
@@ -136,8 +137,7 @@ def read_ModelingSamples(value: object) -> ModelingSamples:
 def validate_DrawableFrame(value: DrawableFrame) -> None:
     if not isinstance(value, DrawableFrame):
         raise TypeError("Expected DrawableFrame")
-    if type(value.source_revision) is not int or not 0 <= value.source_revision < 18446744073709551616:
-        raise ValueError("Expected u64")
+    _check_u64(value.source_revision)
     if not isinstance(value.parameters, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.parameters:
@@ -170,14 +170,10 @@ def read_DrawableFrame(value: object) -> DrawableFrame:
 def validate_EvaluatedParameter(value: EvaluatedParameter) -> None:
     if not isinstance(value, EvaluatedParameter):
         raise TypeError("Expected EvaluatedParameter")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if isinstance(value.requested, bool) or not isinstance(value.requested, (float, int)) or not math.isfinite(value.requested) or abs(value.requested) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if type(value.clamped) is not bool:
-        raise ValueError("Expected bool")
+    _check_string(value.id)
+    _check_f32(value.requested)
+    _check_f32(value.value)
+    _check_bool(value.clamped)
 
 def encode_EvaluatedParameter(value: EvaluatedParameter) -> object:
     return {'id': value.id, 'requested': value.requested, 'value': value.value, 'clamped': value.clamped}
@@ -188,25 +184,18 @@ def read_EvaluatedParameter(value: object) -> EvaluatedParameter:
     return EvaluatedParameter(id=string(r['id']), requested=number(r['requested']), value=number(r['value']), clamped=_boolean(r['clamped']))
 
 def validate_Drawable(value: Drawable) -> None:
-    from .scene import validate_BlendMode as validate_BlendMode
-    from .common import validate_Vec2 as validate_Vec2
+    from .scene import validate_BlendMode
+    from .common import validate_Vec2
     if not isinstance(value, Drawable):
         raise TypeError("Expected Drawable")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.runtime_id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.part_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
+    _check_string(value.runtime_id)
+    _check_string(value.part_id)
     if value.raw_blend_mode is not None:
-        if type(value.raw_blend_mode) is not int or not 0 <= value.raw_blend_mode < 4294967296:
-            raise ValueError("Expected u32")
-    if not isinstance(value.texture_asset_id, str):
-        raise ValueError("Expected string")
-    if type(value.texture_slot) is not int or not -2147483648 <= value.texture_slot < 2147483648:
-        raise ValueError("Expected i32")
-    if type(value.renderable) is not bool:
-        raise ValueError("Expected bool")
+        _check_u32(value.raw_blend_mode)
+    _check_string(value.texture_asset_id)
+    _check_i32(value.texture_slot)
+    _check_bool(value.renderable)
     if not isinstance(value.positions, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.positions:
@@ -218,51 +207,40 @@ def validate_Drawable(value: Drawable) -> None:
     if not isinstance(value.indices, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.indices:
-        if type(v0) is not int or not 0 <= v0 < 4294967296:
-            raise ValueError("Expected u32")
-    if type(value.draw_order) is not int or not -2147483648 <= value.draw_order < 2147483648:
-        raise ValueError("Expected i32")
-    if type(value.render_order) is not int or not -2147483648 <= value.render_order < 2147483648:
-        raise ValueError("Expected i32")
-    if isinstance(value.opacity, bool) or not isinstance(value.opacity, (float, int)) or not math.isfinite(value.opacity) or abs(value.opacity) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+        _check_u32(v0)
+    _check_i32(value.draw_order)
+    _check_i32(value.render_order)
+    _check_f32(value.opacity)
     if not isinstance(value.multiply_color, tuple):
         raise TypeError("Expected an immutable tuple")
     if len(value.multiply_color) != 4:
         raise ValueError("Invalid fixed array length")
     for v0 in value.multiply_color:
-        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(v0)
     if not isinstance(value.screen_color, tuple):
         raise TypeError("Expected an immutable tuple")
     if len(value.screen_color) != 4:
         raise ValueError("Invalid fixed array length")
     for v0 in value.screen_color:
-        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(v0)
     validate_BlendMode(value.blend_mode)
-    if type(value.enabled) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.visible) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.double_sided) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.inverted_mask) is not bool:
-        raise ValueError("Expected bool")
+    _check_bool(value.enabled)
+    _check_bool(value.visible)
+    _check_bool(value.double_sided)
+    _check_bool(value.inverted_mask)
     if not isinstance(value.masks, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.masks:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
 
 def encode_Drawable(value: Drawable) -> object:
-    from .scene import encode_BlendMode as encode_BlendMode
-    from .common import encode_Vec2 as encode_Vec2
+    from .scene import encode_BlendMode
+    from .common import encode_Vec2
     return {'id': value.id, 'runtime_id': value.runtime_id, 'part_id': value.part_id, 'raw_blend_mode': None if value.raw_blend_mode is None else value.raw_blend_mode, 'texture_asset_id': value.texture_asset_id, 'texture_slot': value.texture_slot, 'renderable': value.renderable, 'positions': [encode_Vec2(v0) for v0 in value.positions], 'uvs': [encode_Vec2(v0) for v0 in value.uvs], 'indices': [v0 for v0 in value.indices], 'draw_order': value.draw_order, 'render_order': value.render_order, 'opacity': value.opacity, 'multiply_color': [v0 for v0 in value.multiply_color], 'screen_color': [v0 for v0 in value.screen_color], 'blend_mode': encode_BlendMode(value.blend_mode), 'enabled': value.enabled, 'visible': value.visible, 'double_sided': value.double_sided, 'inverted_mask': value.inverted_mask, 'masks': [v0 for v0 in value.masks]}
 
 def read_Drawable(value: object) -> Drawable:
-    from .scene import read_BlendMode as read_BlendMode
-    from .common import read_Vec2 as read_Vec2
+    from .scene import read_BlendMode
+    from .common import read_Vec2
     if isinstance(value, Drawable): return value
     r = record(value)
     return Drawable(id=string(r['id']), runtime_id=string(r['runtime_id']), part_id=string(r['part_id']), raw_blend_mode=None if r.get('raw_blend_mode', None) is None else integer(r.get('raw_blend_mode', None)), texture_asset_id=string(r['texture_asset_id']), texture_slot=integer(r['texture_slot']), renderable=_boolean(r.get('renderable', True)), positions=tuple(read_Vec2(v0) for v0 in sequence(r['positions'])), uvs=tuple(read_Vec2(v0) for v0 in sequence(r['uvs'])), indices=tuple(integer(v0) for v0 in sequence(r['indices'])), draw_order=integer(r['draw_order']), render_order=integer(r['render_order']), opacity=number(r['opacity']), multiply_color=cast('tuple[float, float, float, float]', tuple(number(v0) for v0 in sequence(r['multiply_color']))), screen_color=cast('tuple[float, float, float, float]', tuple(number(v0) for v0 in sequence(r['screen_color']))), blend_mode=read_BlendMode(r['blend_mode']), enabled=_boolean(r['enabled']), visible=_boolean(r['visible']), double_sided=_boolean(r['double_sided']), inverted_mask=_boolean(r['inverted_mask']), masks=tuple(string(v0) for v0 in sequence(r['masks'])))
@@ -270,46 +248,33 @@ def read_Drawable(value: object) -> Drawable:
 def validate_OffscreenFrame(value: OffscreenFrame) -> None:
     if not isinstance(value, OffscreenFrame):
         raise TypeError("Expected OffscreenFrame")
-    if type(value.renderable) is not bool:
-        raise ValueError("Expected bool")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.runtime_id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.owner_part_id, str):
-        raise ValueError("Expected string")
+    _check_bool(value.renderable)
+    _check_string(value.id)
+    _check_string(value.runtime_id)
+    _check_string(value.owner_part_id)
     if value.parent_offscreen_id is not None:
-        if not isinstance(value.parent_offscreen_id, str):
-            raise ValueError("Expected string")
-    if type(value.render_order) is not int or not -2147483648 <= value.render_order < 2147483648:
-        raise ValueError("Expected i32")
-    if isinstance(value.opacity, bool) or not isinstance(value.opacity, (float, int)) or not math.isfinite(value.opacity) or abs(value.opacity) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if type(value.enabled) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.blend_mode) is not int or not 0 <= value.blend_mode < 4294967296:
-        raise ValueError("Expected u32")
-    if type(value.flags) is not int or not 0 <= value.flags < 256:
-        raise ValueError("Expected u8")
+        _check_string(value.parent_offscreen_id)
+    _check_i32(value.render_order)
+    _check_f32(value.opacity)
+    _check_bool(value.enabled)
+    _check_u32(value.blend_mode)
+    _check_u8(value.flags)
     if not isinstance(value.masks, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.masks:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.multiply_color, tuple):
         raise TypeError("Expected an immutable tuple")
     if len(value.multiply_color) != 4:
         raise ValueError("Invalid fixed array length")
     for v0 in value.multiply_color:
-        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(v0)
     if not isinstance(value.screen_color, tuple):
         raise TypeError("Expected an immutable tuple")
     if len(value.screen_color) != 4:
         raise ValueError("Invalid fixed array length")
     for v0 in value.screen_color:
-        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(v0)
 
 def encode_OffscreenFrame(value: OffscreenFrame) -> object:
     return {'renderable': value.renderable, 'id': value.id, 'runtime_id': value.runtime_id, 'owner_part_id': value.owner_part_id, 'parent_offscreen_id': None if value.parent_offscreen_id is None else value.parent_offscreen_id, 'render_order': value.render_order, 'opacity': value.opacity, 'enabled': value.enabled, 'blend_mode': value.blend_mode, 'flags': value.flags, 'masks': [v0 for v0 in value.masks], 'multiply_color': [v0 for v0 in value.multiply_color], 'screen_color': [v0 for v0 in value.screen_color]}
@@ -321,14 +286,11 @@ def read_OffscreenFrame(value: object) -> OffscreenFrame:
 
 def validate_RenderCommand(value: RenderCommand) -> None:
     if isinstance(value, RenderCommandBeginOffscreen):
-        if not isinstance(value.offscreen_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.offscreen_id)
     elif isinstance(value, RenderCommandDrawMesh):
-        if not isinstance(value.mesh_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.mesh_id)
     elif isinstance(value, RenderCommandEndOffscreen):
-        if not isinstance(value.offscreen_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.offscreen_id)
     else:
         raise TypeError("Expected RenderCommand")
 
@@ -357,13 +319,11 @@ def read_RenderCommand(value: object) -> RenderCommand:
     raise ValueError("Unknown RenderCommand variant")
 
 def validate_EvaluatedDeformer(value: EvaluatedDeformer) -> None:
-    from .common import validate_Vec2 as validate_Vec2
+    from .common import validate_Vec2
     if not isinstance(value, EvaluatedDeformer):
         raise TypeError("Expected EvaluatedDeformer")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if type(value.enabled) is not bool:
-        raise ValueError("Expected bool")
+    _check_string(value.id)
+    _check_bool(value.enabled)
     if not isinstance(value.points, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.points:
@@ -379,11 +339,11 @@ def validate_EvaluatedDeformer(value: EvaluatedDeformer) -> None:
             validate_Vec2(v0)
 
 def encode_EvaluatedDeformer(value: EvaluatedDeformer) -> object:
-    from .common import encode_Vec2 as encode_Vec2
+    from .common import encode_Vec2
     return {'id': value.id, 'enabled': value.enabled, 'points': [encode_Vec2(v0) for v0 in value.points], 'rotation_axis': None if value.rotation_axis is None else encode_Vec2(value.rotation_axis), 'rotation_basis': None if value.rotation_basis is None else [encode_Vec2(v0) for v0 in value.rotation_basis]}
 
 def read_EvaluatedDeformer(value: object) -> EvaluatedDeformer:
-    from .common import read_Vec2 as read_Vec2
+    from .common import read_Vec2
     if isinstance(value, EvaluatedDeformer): return value
     r = record(value)
     return EvaluatedDeformer(id=string(r['id']), enabled=_boolean(r['enabled']), points=tuple(read_Vec2(v0) for v0 in sequence(r['points'])), rotation_axis=None if r.get('rotation_axis', None) is None else read_Vec2(r.get('rotation_axis', None)), rotation_basis=None if r.get('rotation_basis', None) is None else cast('tuple[Vec2, Vec2]', tuple(read_Vec2(v0) for v0 in sequence(r.get('rotation_basis', None)))))
@@ -392,11 +352,9 @@ def validate_GeometryDiagnostic(value: GeometryDiagnostic) -> None:
     if not isinstance(value, GeometryDiagnostic):
         raise TypeError("Expected GeometryDiagnostic")
     validate_GeometryDiagnosticKind(value.kind)
-    if not isinstance(value.mesh_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.mesh_id)
     if value.triangle_index is not None:
-        if type(value.triangle_index) is not int or not 0 <= value.triangle_index < 18446744073709551616:
-            raise ValueError("Expected usize")
+        _check_usize(value.triangle_index)
 
 def encode_GeometryDiagnostic(value: GeometryDiagnostic) -> object:
     return {'kind': encode_GeometryDiagnosticKind(value.kind), 'mesh_id': value.mesh_id, 'triangle_index': None if value.triangle_index is None else value.triangle_index}
@@ -418,41 +376,33 @@ def read_GeometryDiagnosticKind(value: object) -> GeometryDiagnosticKind:
     return GeometryDiagnosticKind(string(value))
 
 def validate_MeshQuality(value: MeshQuality) -> None:
-    from .observation import validate_TextureCoverage as validate_TextureCoverage
+    from .observation import validate_TextureCoverage
     if not isinstance(value, MeshQuality):
         raise TypeError("Expected MeshQuality")
-    if not isinstance(value.mesh_id, str):
-        raise ValueError("Expected string")
-    if type(value.visible) is not bool:
-        raise ValueError("Expected bool")
-    if type(value.vertex_count) is not int or not 0 <= value.vertex_count < 18446744073709551616:
-        raise ValueError("Expected usize")
+    _check_string(value.mesh_id)
+    _check_bool(value.visible)
+    _check_usize(value.vertex_count)
     if not isinstance(value.triangles, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.triangles:
         validate_TriangleQuality(v0)
     if value.min_angle_degrees is not None:
-        if isinstance(value.min_angle_degrees, bool) or not isinstance(value.min_angle_degrees, (float, int)) or not math.isfinite(value.min_angle_degrees):
-            raise ValueError("Expected f64")
+        _check_f64(value.min_angle_degrees)
     if value.max_aspect_ratio is not None:
-        if isinstance(value.max_aspect_ratio, bool) or not isinstance(value.max_aspect_ratio, (float, int)) or not math.isfinite(value.max_aspect_ratio):
-            raise ValueError("Expected f64")
+        _check_f64(value.max_aspect_ratio)
     if value.max_edge_stretch is not None:
-        if isinstance(value.max_edge_stretch, bool) or not isinstance(value.max_edge_stretch, (float, int)) or not math.isfinite(value.max_edge_stretch):
-            raise ValueError("Expected f64")
-    if type(value.degenerate_triangles) is not int or not 0 <= value.degenerate_triangles < 18446744073709551616:
-        raise ValueError("Expected usize")
-    if type(value.flipped_triangles) is not int or not 0 <= value.flipped_triangles < 18446744073709551616:
-        raise ValueError("Expected usize")
+        _check_f64(value.max_edge_stretch)
+    _check_usize(value.degenerate_triangles)
+    _check_usize(value.flipped_triangles)
     if value.texture_coverage is not None:
         validate_TextureCoverage(value.texture_coverage)
 
 def encode_MeshQuality(value: MeshQuality) -> object:
-    from .observation import encode_TextureCoverage as encode_TextureCoverage
+    from .observation import encode_TextureCoverage
     return {'mesh_id': value.mesh_id, 'visible': value.visible, 'vertex_count': value.vertex_count, 'triangles': [encode_TriangleQuality(v0) for v0 in value.triangles], 'min_angle_degrees': None if value.min_angle_degrees is None else value.min_angle_degrees, 'max_aspect_ratio': None if value.max_aspect_ratio is None else value.max_aspect_ratio, 'max_edge_stretch': None if value.max_edge_stretch is None else value.max_edge_stretch, 'degenerate_triangles': value.degenerate_triangles, 'flipped_triangles': value.flipped_triangles, 'texture_coverage': None if value.texture_coverage is None else encode_TextureCoverage(value.texture_coverage)}
 
 def read_MeshQuality(value: object) -> MeshQuality:
-    from .observation import read_TextureCoverage as read_TextureCoverage
+    from .observation import read_TextureCoverage
     if isinstance(value, MeshQuality): return value
     r = record(value)
     return MeshQuality(mesh_id=string(r['mesh_id']), visible=_boolean(r['visible']), vertex_count=integer(r['vertex_count']), triangles=tuple(read_TriangleQuality(v0) for v0 in sequence(r['triangles'])), min_angle_degrees=None if r.get('min_angle_degrees', None) is None else number(r.get('min_angle_degrees', None)), max_aspect_ratio=None if r.get('max_aspect_ratio', None) is None else number(r.get('max_aspect_ratio', None)), max_edge_stretch=None if r.get('max_edge_stretch', None) is None else number(r.get('max_edge_stretch', None)), degenerate_triangles=integer(r['degenerate_triangles']), flipped_triangles=integer(r['flipped_triangles']), texture_coverage=None if r.get('texture_coverage', None) is None else read_TextureCoverage(r.get('texture_coverage', None)))
@@ -460,21 +410,15 @@ def read_MeshQuality(value: object) -> MeshQuality:
 def validate_TriangleQuality(value: TriangleQuality) -> None:
     if not isinstance(value, TriangleQuality):
         raise TypeError("Expected TriangleQuality")
-    if type(value.triangle_index) is not int or not 0 <= value.triangle_index < 18446744073709551616:
-        raise ValueError("Expected usize")
-    if isinstance(value.area, bool) or not isinstance(value.area, (float, int)) or not math.isfinite(value.area):
-        raise ValueError("Expected f64")
-    if isinstance(value.min_angle_degrees, bool) or not isinstance(value.min_angle_degrees, (float, int)) or not math.isfinite(value.min_angle_degrees):
-        raise ValueError("Expected f64")
+    _check_usize(value.triangle_index)
+    _check_f64(value.area)
+    _check_f64(value.min_angle_degrees)
     if value.aspect_ratio is not None:
-        if isinstance(value.aspect_ratio, bool) or not isinstance(value.aspect_ratio, (float, int)) or not math.isfinite(value.aspect_ratio):
-            raise ValueError("Expected f64")
+        _check_f64(value.aspect_ratio)
     if value.relative_area is not None:
-        if isinstance(value.relative_area, bool) or not isinstance(value.relative_area, (float, int)) or not math.isfinite(value.relative_area):
-            raise ValueError("Expected f64")
+        _check_f64(value.relative_area)
     if value.edge_stretch is not None:
-        if isinstance(value.edge_stretch, bool) or not isinstance(value.edge_stretch, (float, int)) or not math.isfinite(value.edge_stretch):
-            raise ValueError("Expected f64")
+        _check_f64(value.edge_stretch)
 
 def encode_TriangleQuality(value: TriangleQuality) -> object:
     return {'triangle_index': value.triangle_index, 'area': value.area, 'min_angle_degrees': value.min_angle_degrees, 'aspect_ratio': None if value.aspect_ratio is None else value.aspect_ratio, 'relative_area': None if value.relative_area is None else value.relative_area, 'edge_stretch': None if value.edge_stretch is None else value.edge_stretch}

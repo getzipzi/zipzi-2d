@@ -8,7 +8,7 @@ from ..._values import number
 from ..._values import record
 from ..._values import string
 from uuid import UUID
-from .support import Reader as Reader, Writer as Writer, _field as _field, _point as _point
+from .support import Reader, Writer, _field, _point
 
 def _write_vec2(value: object, w: Writer) -> None:
     x,y=_point(value)

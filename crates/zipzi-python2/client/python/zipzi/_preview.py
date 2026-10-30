@@ -6,7 +6,8 @@ from ._owned import Owned
 from ._jobs import Job
 from ._results import Snapshot
 from ._values import Source, record, integer
-from ._generated import values as m, codecs as _modeling_codec
+from ._generated import values as m
+from ._generated.codecs import preview as _modeling_codec
 if TYPE_CHECKING:
     from .backends import Backend
 else:

@@ -4,7 +4,7 @@ from .. import values as m
 from ..._values import integer
 from ..._values import number
 from ..._values import string
-from .support import Reader as Reader, Writer as Writer, _field as _field
+from .support import Reader, Writer, _field
 
 def _write_parameter(value: object, w: Writer) -> None:
     w.text(_field(value, 'id'))

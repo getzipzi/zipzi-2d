@@ -6,125 +6,105 @@ from ..._values import record
 from ..._values import sequence
 from ..._values import string
 from .._modeling_support import _boolean
+from .._modeling_support import _check_bool
+from .._modeling_support import _check_f64
+from .._modeling_support import _check_i32
+from .._modeling_support import _check_string
+from .._modeling_support import _check_u32
+from .._modeling_support import _check_usize
 from collections.abc import Mapping
 from typing import cast
-import math
-from ..values import AttachmentEdit as AttachmentEdit, AttachmentEditCreate as AttachmentEditCreate, AttachmentEditDelete as AttachmentEditDelete, AttachmentEditDeleteWithReplacement as AttachmentEditDeleteWithReplacement, AttachmentEditDuplicate as AttachmentEditDuplicate, AttachmentEditReorder as AttachmentEditReorder, AttachmentEditReplace as AttachmentEditReplace, AttachmentEditSetSound as AttachmentEditSetSound, AttachmentEditSetUserData as AttachmentEditSetUserData, OrganizationEdit as OrganizationEdit, OrganizationEditCreateGroup as OrganizationEditCreateGroup, OrganizationEditCreateParameter as OrganizationEditCreateParameter, OrganizationEditCreatePart as OrganizationEditCreatePart, OrganizationEditDelete as OrganizationEditDelete, OrganizationEditDuplicate as OrganizationEditDuplicate, OrganizationEditMove as OrganizationEditMove, OrganizationEditPatchGroup as OrganizationEditPatchGroup, OrganizationEditSetParameterGroup as OrganizationEditSetParameterGroup, ReparentEdit as ReparentEdit, SceneContentEdit as SceneContentEdit, SceneContentEditDeleteGluePairs as SceneContentEditDeleteGluePairs, SceneContentEditDeleteMeshVertices as SceneContentEditDeleteMeshVertices, SceneContentEditDeleteOffscreenKeyforms as SceneContentEditDeleteOffscreenKeyforms, SceneContentEditDeleteTriangles as SceneContentEditDeleteTriangles, SceneContentEditDuplicateGluePairs as SceneContentEditDuplicateGluePairs, SceneContentEditDuplicateOffscreenKeyforms as SceneContentEditDuplicateOffscreenKeyforms, SceneContentEditInsertGluePair as SceneContentEditInsertGluePair, SceneContentEditInsertMeshVertices as SceneContentEditInsertMeshVertices, SceneContentEditInsertOffscreenKeyform as SceneContentEditInsertOffscreenKeyform, SceneContentEditInsertTriangle as SceneContentEditInsertTriangle, SceneContentEditMeshVertices as SceneContentEditMeshVertices, SceneContentEditMoveGluePairs as SceneContentEditMoveGluePairs, SceneContentEditPatchGluePair as SceneContentEditPatchGluePair, SceneContentEditPatchOffscreenKeyform as SceneContentEditPatchOffscreenKeyform, SceneContentEditPatchTriangle as SceneContentEditPatchTriangle, SceneContentEditReorderMeshVertices as SceneContentEditReorderMeshVertices, SceneContentEditReorderOffscreenKeyforms as SceneContentEditReorderOffscreenKeyforms, SceneContentEditReplaceTriangles as SceneContentEditReplaceTriangles, SceneContentEditResizeWarp as SceneContentEditResizeWarp, SceneContentEditSetOffscreenMapping as SceneContentEditSetOffscreenMapping, SceneContentEditTransferGluePairs as SceneContentEditTransferGluePairs, SceneContentEditWarpBezier as SceneContentEditWarpBezier, SceneContentEditWarpPoints as SceneContentEditWarpPoints, SceneEdit as SceneEdit, SceneEditCreate as SceneEditCreate, SceneEditDelete as SceneEditDelete, SceneEditDissolveDrawingGroup as SceneEditDissolveDrawingGroup, SceneEditDuplicate as SceneEditDuplicate, SceneEditDuplicateDrawingGroup as SceneEditDuplicateDrawingGroup, SceneEditEnsureDrawingGroup as SceneEditEnsureDrawingGroup, SceneEditMove as SceneEditMove, SceneEditPatch as SceneEditPatch, SceneEditReparent as SceneEditReparent, SceneEditSetDrawingRange as SceneEditSetDrawingRange, SceneEditTransferOffscreen as SceneEditTransferOffscreen
+from ..values import AttachmentEdit, AttachmentEditCreate, AttachmentEditDelete, AttachmentEditDeleteWithReplacement, AttachmentEditDuplicate, AttachmentEditReorder, AttachmentEditReplace, AttachmentEditSetSound, AttachmentEditSetUserData, OrganizationEdit, OrganizationEditCreateGroup, OrganizationEditCreateParameter, OrganizationEditCreatePart, OrganizationEditDelete, OrganizationEditDuplicate, OrganizationEditMove, OrganizationEditPatchGroup, OrganizationEditSetParameterGroup, ReparentEdit, SceneContentEdit, SceneContentEditDeleteGluePairs, SceneContentEditDeleteMeshVertices, SceneContentEditDeleteOffscreenKeyforms, SceneContentEditDeleteTriangles, SceneContentEditDuplicateGluePairs, SceneContentEditDuplicateOffscreenKeyforms, SceneContentEditInsertGluePair, SceneContentEditInsertMeshVertices, SceneContentEditInsertOffscreenKeyform, SceneContentEditInsertTriangle, SceneContentEditMeshVertices, SceneContentEditMoveGluePairs, SceneContentEditPatchGluePair, SceneContentEditPatchOffscreenKeyform, SceneContentEditPatchTriangle, SceneContentEditReorderMeshVertices, SceneContentEditReorderOffscreenKeyforms, SceneContentEditReplaceTriangles, SceneContentEditResizeWarp, SceneContentEditSetOffscreenMapping, SceneContentEditTransferGluePairs, SceneContentEditWarpBezier, SceneContentEditWarpPoints, SceneEdit, SceneEditCreate, SceneEditDelete, SceneEditDissolveDrawingGroup, SceneEditDuplicate, SceneEditDuplicateDrawingGroup, SceneEditEnsureDrawingGroup, SceneEditMove, SceneEditPatch, SceneEditReparent, SceneEditSetDrawingRange, SceneEditTransferOffscreen
 
 def validate_SceneEdit(value: SceneEdit) -> None:
-    from .scene import validate_OrganizationCollection as validate_OrganizationCollection
-    from .scene import validate_SceneCollection as validate_SceneCollection
-    from .scene import validate_SceneCopyScope as validate_SceneCopyScope
-    from .scene import validate_SceneCreate as validate_SceneCreate
-    from .scene import validate_SceneFieldValue as validate_SceneFieldValue
+    from .scene import validate_OrganizationCollection
+    from .scene import validate_SceneCollection
+    from .scene import validate_SceneCopyScope
+    from .scene import validate_SceneCreate
+    from .scene import validate_SceneFieldValue
     if isinstance(value, SceneEditCreate):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
+        _check_string(value.name)
         validate_SceneCreate(value.object)
         if value.part_id is not None:
-            if not isinstance(value.part_id, str):
-                raise ValueError("Expected string")
+            _check_string(value.part_id)
         if value.parent_id is not None:
-            if not isinstance(value.parent_id, str):
-                raise ValueError("Expected string")
+            _check_string(value.parent_id)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
         if value.deformation_before is not None:
-            if not isinstance(value.deformation_before, str):
-                raise ValueError("Expected string")
+            _check_string(value.deformation_before)
     elif isinstance(value, SceneEditPatch):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_SceneFieldValue(value.expected)
         validate_SceneFieldValue(value.value)
-        if type(value.clear_glue_pairs) is not bool:
-            raise ValueError("Expected bool")
+        _check_bool(value.clear_glue_pairs)
     elif isinstance(value, SceneEditMove):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         validate_SceneCollection(value.destination)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, SceneEditReparent):
         validate_ReparentEdit(value.edit)
     elif isinstance(value, SceneEditDuplicate):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         validate_SceneCopyScope(value.scope)
         if value.destination is not None:
             validate_OrganizationCollection(value.destination)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, SceneEditDelete):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         validate_SceneCopyScope(value.scope)
     elif isinstance(value, SceneEditTransferOffscreen):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.part_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
+        _check_string(value.part_id)
         if not isinstance(value.part_keyform_indices, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.part_keyform_indices:
-            if type(v0) is not int or not -2147483648 <= v0 < 2147483648:
-                raise ValueError("Expected i32")
+            _check_i32(v0)
     elif isinstance(value, SceneEditEnsureDrawingGroup):
-        if not isinstance(value.owner, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.parent, str):
-            raise ValueError("Expected string")
+        _check_string(value.owner)
+        _check_string(value.parent)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, SceneEditSetDrawingRange):
-        if not isinstance(value.owner, str):
-            raise ValueError("Expected string")
+        _check_string(value.owner)
         if not isinstance(value.expected, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.expected) != 2:
             raise ValueError("Invalid fixed array length")
         for v0 in value.expected:
-            if type(v0) is not int or not -2147483648 <= v0 < 2147483648:
-                raise ValueError("Expected i32")
+            _check_i32(v0)
         if not isinstance(value.range, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.range) != 2:
             raise ValueError("Invalid fixed array length")
         for v0 in value.range:
-            if type(v0) is not int or not -2147483648 <= v0 < 2147483648:
-                raise ValueError("Expected i32")
+            _check_i32(v0)
     elif isinstance(value, SceneEditDissolveDrawingGroup):
-        if not isinstance(value.owner, str):
-            raise ValueError("Expected string")
+        _check_string(value.owner)
     elif isinstance(value, SceneEditDuplicateDrawingGroup):
-        if not isinstance(value.source, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.target, str):
-            raise ValueError("Expected string")
+        _check_string(value.source)
+        _check_string(value.target)
     else:
         raise TypeError("Expected SceneEdit")
 
 def encode_SceneEdit(value: SceneEdit) -> object:
-    from .scene import encode_OrganizationCollection as encode_OrganizationCollection
-    from .scene import encode_SceneCollection as encode_SceneCollection
-    from .scene import encode_SceneCopyScope as encode_SceneCopyScope
-    from .scene import encode_SceneCreate as encode_SceneCreate
-    from .scene import encode_SceneFieldValue as encode_SceneFieldValue
+    from .scene import encode_OrganizationCollection
+    from .scene import encode_SceneCollection
+    from .scene import encode_SceneCopyScope
+    from .scene import encode_SceneCreate
+    from .scene import encode_SceneFieldValue
     if isinstance(value, SceneEditCreate):
         return {'operation': 'create', **cast(Mapping[str, object], {'id': value.id, 'name': value.name, 'object': encode_SceneCreate(value.object), 'part_id': None if value.part_id is None else value.part_id, 'parent_id': None if value.parent_id is None else value.parent_id, 'before': None if value.before is None else value.before, 'deformation_before': None if value.deformation_before is None else value.deformation_before})}
     elif isinstance(value, SceneEditPatch):
@@ -150,11 +130,11 @@ def encode_SceneEdit(value: SceneEdit) -> object:
     raise TypeError("Expected SceneEdit")
 
 def read_SceneEdit(value: object) -> SceneEdit:
-    from .scene import read_OrganizationCollection as read_OrganizationCollection
-    from .scene import read_SceneCollection as read_SceneCollection
-    from .scene import read_SceneCopyScope as read_SceneCopyScope
-    from .scene import read_SceneCreate as read_SceneCreate
-    from .scene import read_SceneFieldValue as read_SceneFieldValue
+    from .scene import read_OrganizationCollection
+    from .scene import read_SceneCollection
+    from .scene import read_SceneCopyScope
+    from .scene import read_SceneCreate
+    from .scene import read_SceneFieldValue
     if isinstance(value, (SceneEditCreate, SceneEditPatch, SceneEditMove, SceneEditReparent, SceneEditDuplicate, SceneEditDelete, SceneEditTransferOffscreen, SceneEditEnsureDrawingGroup, SceneEditSetDrawingRange, SceneEditDissolveDrawingGroup, SceneEditDuplicateDrawingGroup,)): return value
     r = record(value)
     tag = string(r['operation'])
@@ -194,72 +174,62 @@ def read_SceneEdit(value: object) -> SceneEdit:
     raise ValueError("Unknown SceneEdit variant")
 
 def validate_ReparentEdit(value: ReparentEdit) -> None:
-    from .scene import validate_ReparentContext as validate_ReparentContext
-    from .scene import validate_ReparentPlacement as validate_ReparentPlacement
-    from .scene import validate_ReparentStrategy as validate_ReparentStrategy
+    from .scene import validate_ReparentContext
+    from .scene import validate_ReparentPlacement
+    from .scene import validate_ReparentStrategy
     if not isinstance(value, ReparentEdit):
         raise TypeError("Expected ReparentEdit")
     if not isinstance(value.sources, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.sources:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
-    if not isinstance(value.parent_id, str):
-        raise ValueError("Expected string")
+        _check_string(v0)
+    _check_string(value.parent_id)
     validate_ReparentStrategy(value.strategy)
     if value.placement is not None:
         validate_ReparentPlacement(value.placement)
-    if isinstance(value.tolerance, bool) or not isinstance(value.tolerance, (float, int)) or not math.isfinite(value.tolerance):
-        raise ValueError("Expected f64")
-    if isinstance(value.relative_tolerance, bool) or not isinstance(value.relative_tolerance, (float, int)) or not math.isfinite(value.relative_tolerance):
-        raise ValueError("Expected f64")
+    _check_f64(value.tolerance)
+    _check_f64(value.relative_tolerance)
     if value.context is not None:
         validate_ReparentContext(value.context)
 
 def encode_ReparentEdit(value: ReparentEdit) -> object:
-    from .scene import encode_ReparentContext as encode_ReparentContext
-    from .scene import encode_ReparentPlacement as encode_ReparentPlacement
-    from .scene import encode_ReparentStrategy as encode_ReparentStrategy
+    from .scene import encode_ReparentContext
+    from .scene import encode_ReparentPlacement
+    from .scene import encode_ReparentStrategy
     return {'sources': [v0 for v0 in value.sources], 'parent_id': value.parent_id, 'strategy': encode_ReparentStrategy(value.strategy), 'placement': None if value.placement is None else encode_ReparentPlacement(value.placement), 'tolerance': value.tolerance, 'relative_tolerance': value.relative_tolerance, 'context': None if value.context is None else encode_ReparentContext(value.context)}
 
 def read_ReparentEdit(value: object) -> ReparentEdit:
-    from .scene import read_ReparentContext as read_ReparentContext
-    from .scene import read_ReparentPlacement as read_ReparentPlacement
-    from .scene import read_ReparentStrategy as read_ReparentStrategy
+    from .scene import read_ReparentContext
+    from .scene import read_ReparentPlacement
+    from .scene import read_ReparentStrategy
     if isinstance(value, ReparentEdit): return value
     r = record(value)
     return ReparentEdit(sources=tuple(string(v0) for v0 in sequence(r['sources'])), parent_id=string(r['parent_id']), strategy=read_ReparentStrategy(r['strategy']), placement=None if r.get('placement', None) is None else read_ReparentPlacement(r.get('placement', None)), tolerance=number(r['tolerance']), relative_tolerance=number(r.get('relative_tolerance', 1e-06)), context=None if r.get('context', None) is None else read_ReparentContext(r.get('context', None)))
 
 def validate_OrganizationEdit(value: OrganizationEdit) -> None:
-    from .project import validate_CdiParameterGroup as validate_CdiParameterGroup
-    from .scene import validate_OrganizationCollection as validate_OrganizationCollection
-    from .scene import validate_OrganizationDeletePolicy as validate_OrganizationDeletePolicy
-    from .parameters import validate_Parameter as validate_Parameter
-    from .scene import validate_Part as validate_Part
+    from .project import validate_CdiParameterGroup
+    from .scene import validate_OrganizationCollection
+    from .scene import validate_OrganizationDeletePolicy
+    from .parameters import validate_Parameter
+    from .scene import validate_Part
     if isinstance(value, OrganizationEditCreateParameter):
         validate_Parameter(value.parameter)
         if value.group_id is not None:
-            if not isinstance(value.group_id, str):
-                raise ValueError("Expected string")
+            _check_string(value.group_id)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, OrganizationEditCreateGroup):
         validate_CdiParameterGroup(value.group)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, OrganizationEditCreatePart):
         validate_Part(value.part)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, OrganizationEditSetParameterGroup):
-        if not isinstance(value.parameter_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.parameter_id)
         if value.group_id is not None:
-            if not isinstance(value.group_id, str):
-                raise ValueError("Expected string")
+            _check_string(value.group_id)
     elif isinstance(value, OrganizationEditPatchGroup):
         validate_CdiParameterGroup(value.expected)
         validate_CdiParameterGroup(value.group)
@@ -267,38 +237,33 @@ def validate_OrganizationEdit(value: OrganizationEdit) -> None:
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         validate_OrganizationCollection(value.destination)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, OrganizationEditDuplicate):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         validate_OrganizationCollection(value.destination)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, OrganizationEditDelete):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         validate_OrganizationDeletePolicy(value.policy)
     else:
         raise TypeError("Expected OrganizationEdit")
 
 def encode_OrganizationEdit(value: OrganizationEdit) -> object:
-    from .project import encode_CdiParameterGroup as encode_CdiParameterGroup
-    from .scene import encode_OrganizationCollection as encode_OrganizationCollection
-    from .scene import encode_OrganizationDeletePolicy as encode_OrganizationDeletePolicy
-    from .parameters import encode_Parameter as encode_Parameter
-    from .scene import encode_Part as encode_Part
+    from .project import encode_CdiParameterGroup
+    from .scene import encode_OrganizationCollection
+    from .scene import encode_OrganizationDeletePolicy
+    from .parameters import encode_Parameter
+    from .scene import encode_Part
     if isinstance(value, OrganizationEditCreateParameter):
         return {'operation': 'create_parameter', **cast(Mapping[str, object], {'parameter': encode_Parameter(value.parameter), 'group_id': None if value.group_id is None else value.group_id, 'before': None if value.before is None else value.before})}
     elif isinstance(value, OrganizationEditCreateGroup):
@@ -318,11 +283,11 @@ def encode_OrganizationEdit(value: OrganizationEdit) -> object:
     raise TypeError("Expected OrganizationEdit")
 
 def read_OrganizationEdit(value: object) -> OrganizationEdit:
-    from .project import read_CdiParameterGroup as read_CdiParameterGroup
-    from .scene import read_OrganizationCollection as read_OrganizationCollection
-    from .scene import read_OrganizationDeletePolicy as read_OrganizationDeletePolicy
-    from .parameters import read_Parameter as read_Parameter
-    from .scene import read_Part as read_Part
+    from .project import read_CdiParameterGroup
+    from .scene import read_OrganizationCollection
+    from .scene import read_OrganizationDeletePolicy
+    from .parameters import read_Parameter
+    from .scene import read_Part
     if isinstance(value, (OrganizationEditCreateParameter, OrganizationEditCreateGroup, OrganizationEditCreatePart, OrganizationEditSetParameterGroup, OrganizationEditPatchGroup, OrganizationEditMove, OrganizationEditDuplicate, OrganizationEditDelete,)): return value
     r = record(value)
     tag = string(r['operation'])
@@ -353,87 +318,71 @@ def read_OrganizationEdit(value: object) -> OrganizationEdit:
     raise ValueError("Unknown OrganizationEdit variant")
 
 def validate_SceneContentEdit(value: SceneContentEdit) -> None:
-    from .scene import validate_GlueVertexPair as validate_GlueVertexPair
-    from .mesh import validate_NewMeshVertex as validate_NewMeshVertex
-    from .scene import validate_OffscreenDeletePolicy as validate_OffscreenDeletePolicy
-    from .bindings import validate_OffscreenKeyform as validate_OffscreenKeyform
-    from .scene import validate_OffscreenMappingPatch as validate_OffscreenMappingPatch
-    from .scene import validate_ShapeTarget as validate_ShapeTarget
-    from .mesh import validate_VertexContentPatch as validate_VertexContentPatch
-    from .mesh import validate_VertexDeletePolicy as validate_VertexDeletePolicy
-    from .scene import validate_WarpBezier as validate_WarpBezier
-    from .scene import validate_WarpPointPatch as validate_WarpPointPatch
+    from .scene import validate_GlueVertexPair
+    from .mesh import validate_NewMeshVertex
+    from .scene import validate_OffscreenDeletePolicy
+    from .bindings import validate_OffscreenKeyform
+    from .scene import validate_OffscreenMappingPatch
+    from .scene import validate_ShapeTarget
+    from .mesh import validate_VertexContentPatch
+    from .mesh import validate_VertexDeletePolicy
+    from .scene import validate_WarpBezier
+    from .scene import validate_WarpPointPatch
     if isinstance(value, SceneContentEditMeshVertices):
-        if not isinstance(value.mesh_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.mesh_id)
         validate_ShapeTarget(value.target)
         if not isinstance(value.updates, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.updates:
             validate_VertexContentPatch(v0)
     elif isinstance(value, SceneContentEditInsertMeshVertices):
-        if not isinstance(value.mesh_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.mesh_id)
         if not isinstance(value.vertices, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.vertices:
             validate_NewMeshVertex(v0)
         if value.before is not None:
-            if type(value.before) is not int or not 0 <= value.before < 4294967296:
-                raise ValueError("Expected u32")
+            _check_u32(value.before)
     elif isinstance(value, SceneContentEditDeleteMeshVertices):
-        if not isinstance(value.mesh_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.mesh_id)
         if not isinstance(value.vertices, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.vertices:
-            if type(v0) is not int or not 0 <= v0 < 4294967296:
-                raise ValueError("Expected u32")
+            _check_u32(v0)
         validate_VertexDeletePolicy(value.policy)
     elif isinstance(value, SceneContentEditReorderMeshVertices):
-        if not isinstance(value.mesh_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.mesh_id)
         if not isinstance(value.order, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.order:
-            if type(v0) is not int or not 0 <= v0 < 4294967296:
-                raise ValueError("Expected u32")
+            _check_u32(v0)
     elif isinstance(value, SceneContentEditInsertTriangle):
-        if not isinstance(value.mesh_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.mesh_id)
         if not isinstance(value.vertices, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.vertices) != 3:
             raise ValueError("Invalid fixed array length")
         for v0 in value.vertices:
-            if type(v0) is not int or not 0 <= v0 < 4294967296:
-                raise ValueError("Expected u32")
+            _check_u32(v0)
         if value.before is not None:
-            if type(value.before) is not int or not 0 <= value.before < 18446744073709551616:
-                raise ValueError("Expected usize")
+            _check_usize(value.before)
     elif isinstance(value, SceneContentEditPatchTriangle):
-        if not isinstance(value.mesh_id, str):
-            raise ValueError("Expected string")
-        if type(value.slot) is not int or not 0 <= value.slot < 18446744073709551616:
-            raise ValueError("Expected usize")
+        _check_string(value.mesh_id)
+        _check_usize(value.slot)
         if not isinstance(value.vertices, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.vertices) != 3:
             raise ValueError("Invalid fixed array length")
         for v0 in value.vertices:
-            if type(v0) is not int or not 0 <= v0 < 4294967296:
-                raise ValueError("Expected u32")
+            _check_u32(v0)
     elif isinstance(value, SceneContentEditDeleteTriangles):
-        if not isinstance(value.mesh_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.mesh_id)
         if not isinstance(value.slots, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.slots:
-            if type(v0) is not int or not 0 <= v0 < 18446744073709551616:
-                raise ValueError("Expected usize")
+            _check_usize(v0)
     elif isinstance(value, SceneContentEditReplaceTriangles):
-        if not isinstance(value.mesh_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.mesh_id)
         if not isinstance(value.triangles, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.triangles:
@@ -442,130 +391,96 @@ def validate_SceneContentEdit(value: SceneContentEdit) -> None:
             if len(v0) != 3:
                 raise ValueError("Invalid fixed array length")
             for v1 in v0:
-                if type(v1) is not int or not 0 <= v1 < 4294967296:
-                    raise ValueError("Expected u32")
+                _check_u32(v1)
     elif isinstance(value, SceneContentEditWarpPoints):
-        if not isinstance(value.transform_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.transform_id)
         validate_ShapeTarget(value.target)
         if not isinstance(value.updates, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.updates:
             validate_WarpPointPatch(v0)
-        if type(value.clear_bezier) is not bool:
-            raise ValueError("Expected bool")
+        _check_bool(value.clear_bezier)
     elif isinstance(value, SceneContentEditWarpBezier):
-        if not isinstance(value.transform_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.transform_id)
         validate_ShapeTarget(value.target)
         if value.controller is not None:
             validate_WarpBezier(value.controller)
     elif isinstance(value, SceneContentEditResizeWarp):
-        if not isinstance(value.transform_id, str):
-            raise ValueError("Expected string")
-        if type(value.rows) is not int or not 0 <= value.rows < 4294967296:
-            raise ValueError("Expected u32")
-        if type(value.columns) is not int or not 0 <= value.columns < 4294967296:
-            raise ValueError("Expected u32")
-        if type(value.quad) is not bool:
-            raise ValueError("Expected bool")
+        _check_string(value.transform_id)
+        _check_u32(value.rows)
+        _check_u32(value.columns)
+        _check_bool(value.quad)
     elif isinstance(value, SceneContentEditInsertGluePair):
-        if not isinstance(value.glue_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.glue_id)
         validate_GlueVertexPair(value.pair)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, SceneContentEditPatchGluePair):
-        if not isinstance(value.glue_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.glue_id)
         validate_GlueVertexPair(value.pair)
     elif isinstance(value, SceneContentEditMoveGluePairs):
-        if not isinstance(value.glue_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.glue_id)
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, SceneContentEditTransferGluePairs):
-        if not isinstance(value.glue_id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.destination, str):
-            raise ValueError("Expected string")
+        _check_string(value.glue_id)
+        _check_string(value.destination)
         if not isinstance(value.pairs, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.pairs:
             validate_GlueVertexPair(v0)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, SceneContentEditDuplicateGluePairs):
-        if not isinstance(value.glue_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.glue_id)
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, SceneContentEditDeleteGluePairs):
-        if not isinstance(value.glue_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.glue_id)
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
     elif isinstance(value, SceneContentEditInsertOffscreenKeyform):
-        if not isinstance(value.offscreen_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.offscreen_id)
         validate_OffscreenKeyform(value.value)
         if value.before is not None:
-            if type(value.before) is not int or not 0 <= value.before < 18446744073709551616:
-                raise ValueError("Expected usize")
+            _check_usize(value.before)
     elif isinstance(value, SceneContentEditPatchOffscreenKeyform):
-        if not isinstance(value.offscreen_id, str):
-            raise ValueError("Expected string")
-        if type(value.slot) is not int or not 0 <= value.slot < 18446744073709551616:
-            raise ValueError("Expected usize")
+        _check_string(value.offscreen_id)
+        _check_usize(value.slot)
         validate_OffscreenKeyform(value.value)
     elif isinstance(value, SceneContentEditDuplicateOffscreenKeyforms):
-        if not isinstance(value.offscreen_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.offscreen_id)
         if not isinstance(value.slots, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.slots:
-            if type(v0) is not int or not 0 <= v0 < 18446744073709551616:
-                raise ValueError("Expected usize")
+            _check_usize(v0)
         if value.before is not None:
-            if type(value.before) is not int or not 0 <= value.before < 18446744073709551616:
-                raise ValueError("Expected usize")
+            _check_usize(value.before)
     elif isinstance(value, SceneContentEditReorderOffscreenKeyforms):
-        if not isinstance(value.offscreen_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.offscreen_id)
         if not isinstance(value.order, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.order:
-            if type(v0) is not int or not 0 <= v0 < 18446744073709551616:
-                raise ValueError("Expected usize")
+            _check_usize(v0)
     elif isinstance(value, SceneContentEditDeleteOffscreenKeyforms):
-        if not isinstance(value.offscreen_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.offscreen_id)
         if not isinstance(value.slots, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.slots:
-            if type(v0) is not int or not 0 <= v0 < 18446744073709551616:
-                raise ValueError("Expected usize")
+            _check_usize(v0)
         validate_OffscreenDeletePolicy(value.policy)
     elif isinstance(value, SceneContentEditSetOffscreenMapping):
-        if not isinstance(value.offscreen_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.offscreen_id)
         if not isinstance(value.updates, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.updates:
@@ -574,16 +489,16 @@ def validate_SceneContentEdit(value: SceneContentEdit) -> None:
         raise TypeError("Expected SceneContentEdit")
 
 def encode_SceneContentEdit(value: SceneContentEdit) -> object:
-    from .scene import encode_GlueVertexPair as encode_GlueVertexPair
-    from .mesh import encode_NewMeshVertex as encode_NewMeshVertex
-    from .scene import encode_OffscreenDeletePolicy as encode_OffscreenDeletePolicy
-    from .bindings import encode_OffscreenKeyform as encode_OffscreenKeyform
-    from .scene import encode_OffscreenMappingPatch as encode_OffscreenMappingPatch
-    from .scene import encode_ShapeTarget as encode_ShapeTarget
-    from .mesh import encode_VertexContentPatch as encode_VertexContentPatch
-    from .mesh import encode_VertexDeletePolicy as encode_VertexDeletePolicy
-    from .scene import encode_WarpBezier as encode_WarpBezier
-    from .scene import encode_WarpPointPatch as encode_WarpPointPatch
+    from .scene import encode_GlueVertexPair
+    from .mesh import encode_NewMeshVertex
+    from .scene import encode_OffscreenDeletePolicy
+    from .bindings import encode_OffscreenKeyform
+    from .scene import encode_OffscreenMappingPatch
+    from .scene import encode_ShapeTarget
+    from .mesh import encode_VertexContentPatch
+    from .mesh import encode_VertexDeletePolicy
+    from .scene import encode_WarpBezier
+    from .scene import encode_WarpPointPatch
     if isinstance(value, SceneContentEditMeshVertices):
         return {'operation': 'mesh_vertices', **cast(Mapping[str, object], {'mesh_id': value.mesh_id, 'target': encode_ShapeTarget(value.target), 'updates': [encode_VertexContentPatch(v0) for v0 in value.updates]})}
     elif isinstance(value, SceneContentEditInsertMeshVertices):
@@ -633,16 +548,16 @@ def encode_SceneContentEdit(value: SceneContentEdit) -> object:
     raise TypeError("Expected SceneContentEdit")
 
 def read_SceneContentEdit(value: object) -> SceneContentEdit:
-    from .scene import read_GlueVertexPair as read_GlueVertexPair
-    from .mesh import read_NewMeshVertex as read_NewMeshVertex
-    from .scene import read_OffscreenDeletePolicy as read_OffscreenDeletePolicy
-    from .bindings import read_OffscreenKeyform as read_OffscreenKeyform
-    from .scene import read_OffscreenMappingPatch as read_OffscreenMappingPatch
-    from .scene import read_ShapeTarget as read_ShapeTarget
-    from .mesh import read_VertexContentPatch as read_VertexContentPatch
-    from .mesh import read_VertexDeletePolicy as read_VertexDeletePolicy
-    from .scene import read_WarpBezier as read_WarpBezier
-    from .scene import read_WarpPointPatch as read_WarpPointPatch
+    from .scene import read_GlueVertexPair
+    from .mesh import read_NewMeshVertex
+    from .scene import read_OffscreenDeletePolicy
+    from .bindings import read_OffscreenKeyform
+    from .scene import read_OffscreenMappingPatch
+    from .scene import read_ShapeTarget
+    from .mesh import read_VertexContentPatch
+    from .mesh import read_VertexDeletePolicy
+    from .scene import read_WarpBezier
+    from .scene import read_WarpPointPatch
     if isinstance(value, (SceneContentEditMeshVertices, SceneContentEditInsertMeshVertices, SceneContentEditDeleteMeshVertices, SceneContentEditReorderMeshVertices, SceneContentEditInsertTriangle, SceneContentEditPatchTriangle, SceneContentEditDeleteTriangles, SceneContentEditReplaceTriangles, SceneContentEditWarpPoints, SceneContentEditWarpBezier, SceneContentEditResizeWarp, SceneContentEditInsertGluePair, SceneContentEditPatchGluePair, SceneContentEditMoveGluePairs, SceneContentEditTransferGluePairs, SceneContentEditDuplicateGluePairs, SceneContentEditDeleteGluePairs, SceneContentEditInsertOffscreenKeyform, SceneContentEditPatchOffscreenKeyform, SceneContentEditDuplicateOffscreenKeyforms, SceneContentEditReorderOffscreenKeyforms, SceneContentEditDeleteOffscreenKeyforms, SceneContentEditSetOffscreenMapping,)): return value
     r = record(value)
     tag = string(r['operation'])
@@ -718,44 +633,33 @@ def read_SceneContentEdit(value: object) -> SceneContentEdit:
     raise ValueError("Unknown SceneContentEdit variant")
 
 def validate_AttachmentEdit(value: AttachmentEdit) -> None:
-    from .scene import validate_AttachmentRef as validate_AttachmentRef
-    from .project import validate_PackageAttachment as validate_PackageAttachment
+    from .scene import validate_AttachmentRef
+    from .project import validate_PackageAttachment
     if isinstance(value, AttachmentEditCreate):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.path, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
+        _check_string(value.path)
     elif isinstance(value, AttachmentEditReplace):
         validate_PackageAttachment(value.expected)
         validate_PackageAttachment(value.attachment)
     elif isinstance(value, AttachmentEditDuplicate):
-        if not isinstance(value.source, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.path, str):
-            raise ValueError("Expected string")
+        _check_string(value.source)
+        _check_string(value.id)
+        _check_string(value.path)
     elif isinstance(value, AttachmentEditDelete):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
     elif isinstance(value, AttachmentEditDeleteWithReplacement):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         if value.replacement is not None:
-            if not isinstance(value.replacement, str):
-                raise ValueError("Expected string")
+            _check_string(value.replacement)
     elif isinstance(value, AttachmentEditReorder):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, AttachmentEditSetSound):
-        if not isinstance(value.registration, str):
-            raise ValueError("Expected string")
+        _check_string(value.registration)
         if value.reference is not None:
             validate_AttachmentRef(value.reference)
     elif isinstance(value, AttachmentEditSetUserData):
@@ -765,8 +669,8 @@ def validate_AttachmentEdit(value: AttachmentEdit) -> None:
         raise TypeError("Expected AttachmentEdit")
 
 def encode_AttachmentEdit(value: AttachmentEdit) -> object:
-    from .scene import encode_AttachmentRef as encode_AttachmentRef
-    from .project import encode_PackageAttachment as encode_PackageAttachment
+    from .scene import encode_AttachmentRef
+    from .project import encode_PackageAttachment
     if isinstance(value, AttachmentEditCreate):
         return {'op': 'create', **cast(Mapping[str, object], {'id': value.id, 'path': value.path})}
     elif isinstance(value, AttachmentEditReplace):
@@ -786,8 +690,8 @@ def encode_AttachmentEdit(value: AttachmentEdit) -> object:
     raise TypeError("Expected AttachmentEdit")
 
 def read_AttachmentEdit(value: object) -> AttachmentEdit:
-    from .scene import read_AttachmentRef as read_AttachmentRef
-    from .project import read_PackageAttachment as read_PackageAttachment
+    from .scene import read_AttachmentRef
+    from .project import read_PackageAttachment
     if isinstance(value, (AttachmentEditCreate, AttachmentEditReplace, AttachmentEditDuplicate, AttachmentEditDelete, AttachmentEditDeleteWithReplacement, AttachmentEditReorder, AttachmentEditSetSound, AttachmentEditSetUserData,)): return value
     r = record(value)
     tag = string(r['op'])

@@ -5,19 +5,19 @@ from ..._values import record
 from ..._values import sequence
 from ..._values import string
 from .._modeling_support import _boolean
+from .._modeling_support import _check_bool
+from .._modeling_support import _check_f32
+from .._modeling_support import _check_string
 from collections.abc import Mapping
 from collections.abc import Mapping as _Mapping
 from typing import cast
-import math
-from ..values import AxisReduction as AxisReduction, AxisReductionResample as AxisReductionResample, AxisReductionSlice as AxisReductionSlice, BindingAuthoringEdit as BindingAuthoringEdit, BindingAuthoringEditBlend as BindingAuthoringEditBlend, BindingAuthoringEditGrid as BindingAuthoringEditGrid, BindingAuthoringEditMeshGrid as BindingAuthoringEditMeshGrid, BindingAuthoringEditParameterRange as BindingAuthoringEditParameterRange, BindingAuthoringEditReparent as BindingAuthoringEditReparent, BindingAxis as BindingAxis, BindingFieldPatch as BindingFieldPatch, BindingFieldPatchAxisParameter as BindingFieldPatchAxisParameter, BindingFieldPatchConstraintSample as BindingFieldPatchConstraintSample, BindingFieldPatchSampleValue as BindingFieldPatchSampleValue, BindingGridEdit as BindingGridEdit, BindingGridEditCreate as BindingGridEditCreate, BindingGridEditDelete as BindingGridEditDelete, BindingGridEditEdit as BindingGridEditEdit, BindingGridTarget as BindingGridTarget, BindingGridTargetGlue as BindingGridTargetGlue, BindingGridTargetMesh as BindingGridTargetMesh, BindingGridTargetScene as BindingGridTargetScene, BindingSample as BindingSample, BlendAuthoringEdit as BlendAuthoringEdit, BlendAuthoringEditConstraint as BlendAuthoringEditConstraint, BlendAuthoringEditCreateBinding as BlendAuthoringEditCreateBinding, BlendAuthoringEditCreateConstraint as BlendAuthoringEditCreateConstraint, BlendAuthoringEditCreateTable as BlendAuthoringEditCreateTable, BlendAuthoringEditSetBindingTable as BlendAuthoringEditSetBindingTable, BlendAuthoringEditTable as BlendAuthoringEditTable, BlendShapeBinding as BlendShapeBinding, BlendShapeConstraint as BlendShapeConstraint, BlendShapeKeyTable as BlendShapeKeyTable, BlendShapeTargetKind as BlendShapeTargetKind, BlendTableOperation as BlendTableOperation, BlendTableOperationDelete as BlendTableOperationDelete, BlendTableOperationInsert as BlendTableOperationInsert, BlendTableOperationMove as BlendTableOperationMove, BlendTableOperationRemapParameter as BlendTableOperationRemapParameter, BlendTableOperationSetBase as BlendTableOperationSetBase, BlendTableOperationSetParameter as BlendTableOperationSetParameter, ConstraintSample as ConstraintSample, DeltaGlueKeyform as DeltaGlueKeyform, DeltaKeyforms as DeltaKeyforms, DeltaKeyformsGlue as DeltaKeyformsGlue, DeltaKeyformsMesh as DeltaKeyformsMesh, DeltaKeyformsOffscreen as DeltaKeyformsOffscreen, DeltaKeyformsPart as DeltaKeyformsPart, DeltaKeyformsRotation as DeltaKeyformsRotation, DeltaKeyformsWarp as DeltaKeyformsWarp, DeltaMeshKeyform as DeltaMeshKeyform, DeltaOffscreenKeyform as DeltaOffscreenKeyform, DeltaPartKeyform as DeltaPartKeyform, DeltaRotationKeyform as DeltaRotationKeyform, DeltaWarpKeyform as DeltaWarpKeyform, GlueBinding as GlueBinding, GlueKeyform as GlueKeyform, GridOperation as GridOperation, GridOperationAddAxis as GridOperationAddAxis, GridOperationDeleteSample as GridOperationDeleteSample, GridOperationInsertSample as GridOperationInsertSample, GridOperationMoveSample as GridOperationMoveSample, GridOperationRemapParameter as GridOperationRemapParameter, GridOperationRemoveAxis as GridOperationRemoveAxis, GridOperationReorderAxes as GridOperationReorderAxes, GridOperationSetParameter as GridOperationSetParameter, MeshBinding as MeshBinding, MeshGridEdit as MeshGridEdit, MeshGridEditAddAxis as MeshGridEditAddAxis, MeshGridEditCreate as MeshGridEditCreate, MeshGridEditDeleteSample as MeshGridEditDeleteSample, MeshGridEditInsertSample as MeshGridEditInsertSample, MeshGridEditMoveSample as MeshGridEditMoveSample, MeshGridEditRemoveAxis as MeshGridEditRemoveAxis, MeshGridEditReorderAxes as MeshGridEditReorderAxes, MeshKeyform as MeshKeyform, OffscreenKeyform as OffscreenKeyform, PartKeyform as PartKeyform, PartKeyformSlot as PartKeyformSlot, PartKeyformSlotSamples as PartKeyformSlotSamples, PartKeyformSlotStatic as PartKeyformSlotStatic, RotationKeyform as RotationKeyform, SceneBinding as SceneBinding, SceneKeyform as SceneKeyform, SceneKeyformPart as SceneKeyformPart, SceneKeyformRotation as SceneKeyformRotation, SceneKeyformWarp as SceneKeyformWarp, SceneTrack as SceneTrack, SceneTrackPart as SceneTrackPart, SceneTrackRotation as SceneTrackRotation, SceneTrackWarp as SceneTrackWarp, WarpKeyform as WarpKeyform
+from ..values import AxisReduction, AxisReductionResample, AxisReductionSlice, BindingAuthoringEdit, BindingAuthoringEditBlend, BindingAuthoringEditGrid, BindingAuthoringEditMeshGrid, BindingAuthoringEditParameterRange, BindingAuthoringEditReparent, BindingAxis, BindingFieldPatch, BindingFieldPatchAxisParameter, BindingFieldPatchConstraintSample, BindingFieldPatchSampleValue, BindingGridEdit, BindingGridEditCreate, BindingGridEditDelete, BindingGridEditEdit, BindingGridTarget, BindingGridTargetGlue, BindingGridTargetMesh, BindingGridTargetScene, BindingSample, BlendAuthoringEdit, BlendAuthoringEditConstraint, BlendAuthoringEditCreateBinding, BlendAuthoringEditCreateConstraint, BlendAuthoringEditCreateTable, BlendAuthoringEditSetBindingTable, BlendAuthoringEditTable, BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, BlendShapeTargetKind, BlendTableOperation, BlendTableOperationDelete, BlendTableOperationInsert, BlendTableOperationMove, BlendTableOperationRemapParameter, BlendTableOperationSetBase, BlendTableOperationSetParameter, ConstraintSample, DeltaGlueKeyform, DeltaKeyforms, DeltaKeyformsGlue, DeltaKeyformsMesh, DeltaKeyformsOffscreen, DeltaKeyformsPart, DeltaKeyformsRotation, DeltaKeyformsWarp, DeltaMeshKeyform, DeltaOffscreenKeyform, DeltaPartKeyform, DeltaRotationKeyform, DeltaWarpKeyform, GlueBinding, GlueKeyform, GridOperation, GridOperationAddAxis, GridOperationDeleteSample, GridOperationInsertSample, GridOperationMoveSample, GridOperationRemapParameter, GridOperationRemoveAxis, GridOperationReorderAxes, GridOperationSetParameter, MeshBinding, MeshGridEdit, MeshGridEditAddAxis, MeshGridEditCreate, MeshGridEditDeleteSample, MeshGridEditInsertSample, MeshGridEditMoveSample, MeshGridEditRemoveAxis, MeshGridEditReorderAxes, MeshKeyform, OffscreenKeyform, PartKeyform, PartKeyformSlot, PartKeyformSlotSamples, PartKeyformSlotStatic, RotationKeyform, SceneBinding, SceneKeyform, SceneKeyformPart, SceneKeyformRotation, SceneKeyformWarp, SceneTrack, SceneTrackPart, SceneTrackRotation, SceneTrackWarp, WarpKeyform
 
 def validate_MeshBinding(value: MeshBinding) -> None:
     if not isinstance(value, MeshBinding):
         raise TypeError("Expected MeshBinding")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.mesh_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
+    _check_string(value.mesh_id)
     if not isinstance(value.axes, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.axes:
@@ -38,14 +38,12 @@ def read_MeshBinding(value: object) -> MeshBinding:
 def validate_BindingAxis(value: BindingAxis) -> None:
     if not isinstance(value, BindingAxis):
         raise TypeError("Expected BindingAxis")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
     if not isinstance(value.samples, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.samples:
         validate_BindingSample(v0)
-    if not isinstance(value.parameter_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.parameter_id)
 
 def encode_BindingAxis(value: BindingAxis) -> object:
     return {'id': value.id, 'samples': [encode_BindingSample(v0) for v0 in value.samples], 'parameter_id': value.parameter_id}
@@ -58,10 +56,8 @@ def read_BindingAxis(value: object) -> BindingAxis:
 def validate_BindingSample(value: BindingSample) -> None:
     if not isinstance(value, BindingSample):
         raise TypeError("Expected BindingSample")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_string(value.id)
+    _check_f32(value.value)
 
 def encode_BindingSample(value: BindingSample) -> object:
     return {'id': value.id, 'value': value.value}
@@ -72,32 +68,30 @@ def read_BindingSample(value: object) -> BindingSample:
     return BindingSample(id=string(r['id']), value=number(r['value']))
 
 def validate_MeshKeyform(value: MeshKeyform) -> None:
-    from .scene import validate_Appearance as validate_Appearance
-    from .common import validate_Vec2 as validate_Vec2
+    from .scene import validate_Appearance
+    from .common import validate_Vec2
     if not isinstance(value, MeshKeyform):
         raise TypeError("Expected MeshKeyform")
     if not isinstance(value.samples, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.samples:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.positions, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.positions:
         validate_Vec2(v0)
     validate_Appearance(value.appearance)
     if value.draw_order is not None:
-        if isinstance(value.draw_order, bool) or not isinstance(value.draw_order, (float, int)) or not math.isfinite(value.draw_order) or abs(value.draw_order) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.draw_order)
 
 def encode_MeshKeyform(value: MeshKeyform) -> object:
-    from .scene import encode_Appearance as encode_Appearance
-    from .common import encode_Vec2 as encode_Vec2
+    from .scene import encode_Appearance
+    from .common import encode_Vec2
     return {'samples': [v0 for v0 in value.samples], 'positions': [encode_Vec2(v0) for v0 in value.positions], 'appearance': encode_Appearance(value.appearance), 'draw_order': None if value.draw_order is None else value.draw_order}
 
 def read_MeshKeyform(value: object) -> MeshKeyform:
-    from .scene import read_Appearance as read_Appearance
-    from .common import read_Vec2 as read_Vec2
+    from .scene import read_Appearance
+    from .common import read_Vec2
     if isinstance(value, MeshKeyform): return value
     r = record(value)
     return MeshKeyform(samples=tuple(string(v0) for v0 in sequence(r.get('samples', []))), positions=tuple(read_Vec2(v0) for v0 in sequence(r['positions'])), appearance=read_Appearance(r['appearance']), draw_order=None if r.get('draw_order', None) is None else number(r.get('draw_order', None)))
@@ -105,8 +99,7 @@ def read_MeshKeyform(value: object) -> MeshKeyform:
 def validate_SceneBinding(value: SceneBinding) -> None:
     if not isinstance(value, SceneBinding):
         raise TypeError("Expected SceneBinding")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
     if not isinstance(value.axes, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.axes:
@@ -122,8 +115,8 @@ def read_SceneBinding(value: object) -> SceneBinding:
     return SceneBinding(id=string(r['id']), axes=tuple(read_BindingAxis(v0) for v0 in sequence(r['axes'])), track=read_SceneTrack(r['track']))
 
 def validate_SceneTrack(value: SceneTrack) -> None:
-    from .scene import validate_PartId as validate_PartId
-    from .scene import validate_TransformId as validate_TransformId
+    from .scene import validate_PartId
+    from .scene import validate_TransformId
     if isinstance(value, SceneTrackWarp):
         validate_TransformId(value.target_id)
         if not isinstance(value.keyforms, tuple):
@@ -146,8 +139,8 @@ def validate_SceneTrack(value: SceneTrack) -> None:
         raise TypeError("Expected SceneTrack")
 
 def encode_SceneTrack(value: SceneTrack) -> object:
-    from .scene import encode_PartId as encode_PartId
-    from .scene import encode_TransformId as encode_TransformId
+    from .scene import encode_PartId
+    from .scene import encode_TransformId
     if isinstance(value, SceneTrackWarp):
         return {'Warp': {'target_id': encode_TransformId(value.target_id), 'keyforms': [encode_WarpKeyform(v0) for v0 in value.keyforms]}}
     elif isinstance(value, SceneTrackRotation):
@@ -157,8 +150,8 @@ def encode_SceneTrack(value: SceneTrack) -> object:
     raise TypeError("Expected SceneTrack")
 
 def read_SceneTrack(value: object) -> SceneTrack:
-    from .scene import read_PartId as read_PartId
-    from .scene import read_TransformId as read_TransformId
+    from .scene import read_PartId
+    from .scene import read_TransformId
     if isinstance(value, (SceneTrackWarp, SceneTrackRotation, SceneTrackPart,)): return value
     r: _Mapping[str, object] = {} if isinstance(value, str) else record(value)
     tag = string(value) if isinstance(value, str) else next(iter(r))
@@ -174,9 +167,9 @@ def read_SceneTrack(value: object) -> SceneTrack:
     raise ValueError("Unknown SceneTrack variant")
 
 def validate_WarpKeyform(value: WarpKeyform) -> None:
-    from .scene import validate_Appearance as validate_Appearance
-    from .common import validate_Vec2 as validate_Vec2
-    from .scene import validate_WarpBezier as validate_WarpBezier
+    from .scene import validate_Appearance
+    from .common import validate_Vec2
+    from .scene import validate_WarpBezier
     if not isinstance(value, WarpKeyform):
         raise TypeError("Expected WarpKeyform")
     if value.bezier is not None:
@@ -184,8 +177,7 @@ def validate_WarpKeyform(value: WarpKeyform) -> None:
     if not isinstance(value.samples, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.samples:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.positions, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.positions:
@@ -193,40 +185,39 @@ def validate_WarpKeyform(value: WarpKeyform) -> None:
     validate_Appearance(value.appearance)
 
 def encode_WarpKeyform(value: WarpKeyform) -> object:
-    from .scene import encode_Appearance as encode_Appearance
-    from .common import encode_Vec2 as encode_Vec2
-    from .scene import encode_WarpBezier as encode_WarpBezier
+    from .scene import encode_Appearance
+    from .common import encode_Vec2
+    from .scene import encode_WarpBezier
     return {'bezier': None if value.bezier is None else encode_WarpBezier(value.bezier), 'samples': [v0 for v0 in value.samples], 'positions': [encode_Vec2(v0) for v0 in value.positions], 'appearance': encode_Appearance(value.appearance)}
 
 def read_WarpKeyform(value: object) -> WarpKeyform:
-    from .scene import read_Appearance as read_Appearance
-    from .common import read_Vec2 as read_Vec2
-    from .scene import read_WarpBezier as read_WarpBezier
+    from .scene import read_Appearance
+    from .common import read_Vec2
+    from .scene import read_WarpBezier
     if isinstance(value, WarpKeyform): return value
     r = record(value)
     return WarpKeyform(bezier=None if r.get('bezier', None) is None else read_WarpBezier(r.get('bezier', None)), samples=tuple(string(v0) for v0 in sequence(r.get('samples', []))), positions=tuple(read_Vec2(v0) for v0 in sequence(r['positions'])), appearance=read_Appearance(r['appearance']))
 
 def validate_RotationKeyform(value: RotationKeyform) -> None:
-    from .scene import validate_Appearance as validate_Appearance
-    from .scene import validate_RotationPose as validate_RotationPose
+    from .scene import validate_Appearance
+    from .scene import validate_RotationPose
     if not isinstance(value, RotationKeyform):
         raise TypeError("Expected RotationKeyform")
     if not isinstance(value.samples, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.samples:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     validate_RotationPose(value.rotation)
     validate_Appearance(value.appearance)
 
 def encode_RotationKeyform(value: RotationKeyform) -> object:
-    from .scene import encode_Appearance as encode_Appearance
-    from .scene import encode_RotationPose as encode_RotationPose
+    from .scene import encode_Appearance
+    from .scene import encode_RotationPose
     return {'samples': [v0 for v0 in value.samples], 'rotation': encode_RotationPose(value.rotation), 'appearance': encode_Appearance(value.appearance)}
 
 def read_RotationKeyform(value: object) -> RotationKeyform:
-    from .scene import read_Appearance as read_Appearance
-    from .scene import read_RotationPose as read_RotationPose
+    from .scene import read_Appearance
+    from .scene import read_RotationPose
     if isinstance(value, RotationKeyform): return value
     r = record(value)
     return RotationKeyform(samples=tuple(string(v0) for v0 in sequence(r.get('samples', []))), rotation=read_RotationPose(r['rotation']), appearance=read_Appearance(r['appearance']))
@@ -237,10 +228,8 @@ def validate_PartKeyform(value: PartKeyform) -> None:
     if not isinstance(value.samples, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.samples:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
-    if isinstance(value.draw_order, bool) or not isinstance(value.draw_order, (float, int)) or not math.isfinite(value.draw_order) or abs(value.draw_order) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+        _check_string(v0)
+    _check_f32(value.draw_order)
 
 def encode_PartKeyform(value: PartKeyform) -> object:
     return {'samples': [v0 for v0 in value.samples], 'draw_order': value.draw_order}
@@ -257,12 +246,9 @@ def validate_BlendShapeKeyTable(value: BlendShapeKeyTable) -> None:
         raise TypeError("Expected an immutable tuple")
     for v0 in value.samples:
         validate_BindingSample(v0)
-    if not isinstance(value.base_sample_id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.parameter_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.base_sample_id)
+    _check_string(value.id)
+    _check_string(value.parameter_id)
 
 def encode_BlendShapeKeyTable(value: BlendShapeKeyTable) -> object:
     return {'samples': [encode_BindingSample(v0) for v0 in value.samples], 'base_sample_id': value.base_sample_id, 'id': value.id, 'parameter_id': value.parameter_id}
@@ -279,10 +265,8 @@ def validate_BlendShapeConstraint(value: BlendShapeConstraint) -> None:
         raise TypeError("Expected an immutable tuple")
     for v0 in value.samples:
         validate_ConstraintSample(v0)
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.parameter_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
+    _check_string(value.parameter_id)
 
 def encode_BlendShapeConstraint(value: BlendShapeConstraint) -> object:
     return {'samples': [encode_ConstraintSample(v0) for v0 in value.samples], 'id': value.id, 'parameter_id': value.parameter_id}
@@ -295,12 +279,9 @@ def read_BlendShapeConstraint(value: object) -> BlendShapeConstraint:
 def validate_ConstraintSample(value: ConstraintSample) -> None:
     if not isinstance(value, ConstraintSample):
         raise TypeError("Expected ConstraintSample")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.weight, bool) or not isinstance(value.weight, (float, int)) or not math.isfinite(value.weight) or abs(value.weight) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_string(value.id)
+    _check_f32(value.value)
+    _check_f32(value.weight)
 
 def encode_ConstraintSample(value: ConstraintSample) -> object:
     return {'id': value.id, 'value': value.value, 'weight': value.weight}
@@ -313,18 +294,14 @@ def read_ConstraintSample(value: object) -> ConstraintSample:
 def validate_BlendShapeBinding(value: BlendShapeBinding) -> None:
     if not isinstance(value, BlendShapeBinding):
         raise TypeError("Expected BlendShapeBinding")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.target_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
+    _check_string(value.target_id)
     validate_BlendShapeTargetKind(value.target_kind)
-    if not isinstance(value.key_table_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.key_table_id)
     if not isinstance(value.constraint_ids, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.constraint_ids:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     validate_DeltaKeyforms(value.keyforms)
 
 def encode_BlendShapeBinding(value: BlendShapeBinding) -> object:
@@ -414,128 +391,113 @@ def read_DeltaKeyforms(value: object) -> DeltaKeyforms:
     raise ValueError("Unknown DeltaKeyforms variant")
 
 def validate_DeltaMeshKeyform(value: DeltaMeshKeyform) -> None:
-    from .common import validate_Vec2 as validate_Vec2
+    from .common import validate_Vec2
     if not isinstance(value, DeltaMeshKeyform):
         raise TypeError("Expected DeltaMeshKeyform")
-    if not isinstance(value.sample_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.sample_id)
     if not isinstance(value.positions, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.positions:
         validate_Vec2(v0)
     if value.opacity is not None:
-        if isinstance(value.opacity, bool) or not isinstance(value.opacity, (float, int)) or not math.isfinite(value.opacity) or abs(value.opacity) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.opacity)
     if value.draw_order is not None:
-        if isinstance(value.draw_order, bool) or not isinstance(value.draw_order, (float, int)) or not math.isfinite(value.draw_order) or abs(value.draw_order) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.draw_order)
     if value.multiply is not None:
         if not isinstance(value.multiply, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.multiply) != 3:
             raise ValueError("Invalid fixed array length")
         for v0 in value.multiply:
-            if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-                raise ValueError("Expected f32")
+            _check_f32(v0)
     if value.screen is not None:
         if not isinstance(value.screen, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.screen) != 3:
             raise ValueError("Invalid fixed array length")
         for v0 in value.screen:
-            if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-                raise ValueError("Expected f32")
+            _check_f32(v0)
 
 def encode_DeltaMeshKeyform(value: DeltaMeshKeyform) -> object:
-    from .common import encode_Vec2 as encode_Vec2
+    from .common import encode_Vec2
     return {'sample_id': value.sample_id, 'positions': [encode_Vec2(v0) for v0 in value.positions], 'opacity': None if value.opacity is None else value.opacity, 'draw_order': None if value.draw_order is None else value.draw_order, 'multiply': None if value.multiply is None else [v0 for v0 in value.multiply], 'screen': None if value.screen is None else [v0 for v0 in value.screen]}
 
 def read_DeltaMeshKeyform(value: object) -> DeltaMeshKeyform:
-    from .common import read_Vec2 as read_Vec2
+    from .common import read_Vec2
     if isinstance(value, DeltaMeshKeyform): return value
     r = record(value)
     return DeltaMeshKeyform(sample_id=string(r.get('sample_id', '')), positions=tuple(read_Vec2(v0) for v0 in sequence(r['positions'])), opacity=None if r.get('opacity', None) is None else number(r.get('opacity', None)), draw_order=None if r.get('draw_order', None) is None else number(r.get('draw_order', None)), multiply=None if r.get('multiply', None) is None else cast('tuple[float, float, float]', tuple(number(v0) for v0 in sequence(r.get('multiply', None)))), screen=None if r.get('screen', None) is None else cast('tuple[float, float, float]', tuple(number(v0) for v0 in sequence(r.get('screen', None)))))
 
 def validate_DeltaWarpKeyform(value: DeltaWarpKeyform) -> None:
-    from .common import validate_Vec2 as validate_Vec2
+    from .common import validate_Vec2
     if not isinstance(value, DeltaWarpKeyform):
         raise TypeError("Expected DeltaWarpKeyform")
-    if not isinstance(value.sample_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.sample_id)
     if not isinstance(value.points, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.points:
         validate_Vec2(v0)
     if value.opacity is not None:
-        if isinstance(value.opacity, bool) or not isinstance(value.opacity, (float, int)) or not math.isfinite(value.opacity) or abs(value.opacity) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.opacity)
     if value.multiply is not None:
         if not isinstance(value.multiply, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.multiply) != 3:
             raise ValueError("Invalid fixed array length")
         for v0 in value.multiply:
-            if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-                raise ValueError("Expected f32")
+            _check_f32(v0)
     if value.screen is not None:
         if not isinstance(value.screen, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.screen) != 3:
             raise ValueError("Invalid fixed array length")
         for v0 in value.screen:
-            if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-                raise ValueError("Expected f32")
+            _check_f32(v0)
 
 def encode_DeltaWarpKeyform(value: DeltaWarpKeyform) -> object:
-    from .common import encode_Vec2 as encode_Vec2
+    from .common import encode_Vec2
     return {'sample_id': value.sample_id, 'points': [encode_Vec2(v0) for v0 in value.points], 'opacity': None if value.opacity is None else value.opacity, 'multiply': None if value.multiply is None else [v0 for v0 in value.multiply], 'screen': None if value.screen is None else [v0 for v0 in value.screen]}
 
 def read_DeltaWarpKeyform(value: object) -> DeltaWarpKeyform:
-    from .common import read_Vec2 as read_Vec2
+    from .common import read_Vec2
     if isinstance(value, DeltaWarpKeyform): return value
     r = record(value)
     return DeltaWarpKeyform(sample_id=string(r.get('sample_id', '')), points=tuple(read_Vec2(v0) for v0 in sequence(r['points'])), opacity=None if r.get('opacity', None) is None else number(r.get('opacity', None)), multiply=None if r.get('multiply', None) is None else cast('tuple[float, float, float]', tuple(number(v0) for v0 in sequence(r.get('multiply', None)))), screen=None if r.get('screen', None) is None else cast('tuple[float, float, float]', tuple(number(v0) for v0 in sequence(r.get('screen', None)))))
 
 def validate_DeltaRotationKeyform(value: DeltaRotationKeyform) -> None:
-    from .common import validate_Vec2 as validate_Vec2
+    from .common import validate_Vec2
     if not isinstance(value, DeltaRotationKeyform):
         raise TypeError("Expected DeltaRotationKeyform")
-    if not isinstance(value.sample_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.sample_id)
     if value.origin is not None:
         validate_Vec2(value.origin)
     if value.angle is not None:
-        if isinstance(value.angle, bool) or not isinstance(value.angle, (float, int)) or not math.isfinite(value.angle) or abs(value.angle) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.angle)
     if value.scale is not None:
-        if isinstance(value.scale, bool) or not isinstance(value.scale, (float, int)) or not math.isfinite(value.scale) or abs(value.scale) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.scale)
     if value.opacity is not None:
-        if isinstance(value.opacity, bool) or not isinstance(value.opacity, (float, int)) or not math.isfinite(value.opacity) or abs(value.opacity) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.opacity)
     if value.multiply is not None:
         if not isinstance(value.multiply, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.multiply) != 3:
             raise ValueError("Invalid fixed array length")
         for v0 in value.multiply:
-            if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-                raise ValueError("Expected f32")
+            _check_f32(v0)
     if value.screen is not None:
         if not isinstance(value.screen, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.screen) != 3:
             raise ValueError("Invalid fixed array length")
         for v0 in value.screen:
-            if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-                raise ValueError("Expected f32")
+            _check_f32(v0)
 
 def encode_DeltaRotationKeyform(value: DeltaRotationKeyform) -> object:
-    from .common import encode_Vec2 as encode_Vec2
+    from .common import encode_Vec2
     return {'sample_id': value.sample_id, 'origin': None if value.origin is None else encode_Vec2(value.origin), 'angle': None if value.angle is None else value.angle, 'scale': None if value.scale is None else value.scale, 'opacity': None if value.opacity is None else value.opacity, 'multiply': None if value.multiply is None else [v0 for v0 in value.multiply], 'screen': None if value.screen is None else [v0 for v0 in value.screen]}
 
 def read_DeltaRotationKeyform(value: object) -> DeltaRotationKeyform:
-    from .common import read_Vec2 as read_Vec2
+    from .common import read_Vec2
     if isinstance(value, DeltaRotationKeyform): return value
     r = record(value)
     return DeltaRotationKeyform(sample_id=string(r.get('sample_id', '')), origin=None if r.get('origin', None) is None else read_Vec2(r.get('origin', None)), angle=None if r.get('angle', None) is None else number(r.get('angle', None)), scale=None if r.get('scale', None) is None else number(r.get('scale', None)), opacity=None if r.get('opacity', None) is None else number(r.get('opacity', None)), multiply=None if r.get('multiply', None) is None else cast('tuple[float, float, float]', tuple(number(v0) for v0 in sequence(r.get('multiply', None)))), screen=None if r.get('screen', None) is None else cast('tuple[float, float, float]', tuple(number(v0) for v0 in sequence(r.get('screen', None)))))
@@ -543,10 +505,8 @@ def read_DeltaRotationKeyform(value: object) -> DeltaRotationKeyform:
 def validate_DeltaPartKeyform(value: DeltaPartKeyform) -> None:
     if not isinstance(value, DeltaPartKeyform):
         raise TypeError("Expected DeltaPartKeyform")
-    if not isinstance(value.sample_id, str):
-        raise ValueError("Expected string")
-    if isinstance(value.draw_order, bool) or not isinstance(value.draw_order, (float, int)) or not math.isfinite(value.draw_order) or abs(value.draw_order) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_string(value.sample_id)
+    _check_f32(value.draw_order)
 
 def encode_DeltaPartKeyform(value: DeltaPartKeyform) -> object:
     return {'sample_id': value.sample_id, 'draw_order': value.draw_order}
@@ -559,10 +519,8 @@ def read_DeltaPartKeyform(value: object) -> DeltaPartKeyform:
 def validate_DeltaGlueKeyform(value: DeltaGlueKeyform) -> None:
     if not isinstance(value, DeltaGlueKeyform):
         raise TypeError("Expected DeltaGlueKeyform")
-    if not isinstance(value.sample_id, str):
-        raise ValueError("Expected string")
-    if isinstance(value.intensity, bool) or not isinstance(value.intensity, (float, int)) or not math.isfinite(value.intensity) or abs(value.intensity) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_string(value.sample_id)
+    _check_f32(value.intensity)
 
 def encode_DeltaGlueKeyform(value: DeltaGlueKeyform) -> object:
     return {'sample_id': value.sample_id, 'intensity': value.intensity}
@@ -575,26 +533,22 @@ def read_DeltaGlueKeyform(value: object) -> DeltaGlueKeyform:
 def validate_DeltaOffscreenKeyform(value: DeltaOffscreenKeyform) -> None:
     if not isinstance(value, DeltaOffscreenKeyform):
         raise TypeError("Expected DeltaOffscreenKeyform")
-    if not isinstance(value.sample_id, str):
-        raise ValueError("Expected string")
-    if isinstance(value.opacity, bool) or not isinstance(value.opacity, (float, int)) or not math.isfinite(value.opacity) or abs(value.opacity) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_string(value.sample_id)
+    _check_f32(value.opacity)
     if value.multiply is not None:
         if not isinstance(value.multiply, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.multiply) != 3:
             raise ValueError("Invalid fixed array length")
         for v0 in value.multiply:
-            if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-                raise ValueError("Expected f32")
+            _check_f32(v0)
     if value.screen is not None:
         if not isinstance(value.screen, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.screen) != 3:
             raise ValueError("Invalid fixed array length")
         for v0 in value.screen:
-            if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-                raise ValueError("Expected f32")
+            _check_f32(v0)
 
 def encode_DeltaOffscreenKeyform(value: DeltaOffscreenKeyform) -> object:
     return {'sample_id': value.sample_id, 'opacity': value.opacity, 'multiply': None if value.multiply is None else [v0 for v0 in value.multiply], 'screen': None if value.screen is None else [v0 for v0 in value.screen]}
@@ -630,10 +584,8 @@ def validate_GlueKeyform(value: GlueKeyform) -> None:
     if not isinstance(value.samples, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.samples:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
-    if isinstance(value.intensity, bool) or not isinstance(value.intensity, (float, int)) or not math.isfinite(value.intensity) or abs(value.intensity) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+        _check_string(v0)
+    _check_f32(value.intensity)
 
 def encode_GlueKeyform(value: GlueKeyform) -> object:
     return {'samples': [v0 for v0 in value.samples], 'intensity': value.intensity}
@@ -646,24 +598,21 @@ def read_GlueKeyform(value: object) -> GlueKeyform:
 def validate_OffscreenKeyform(value: OffscreenKeyform) -> None:
     if not isinstance(value, OffscreenKeyform):
         raise TypeError("Expected OffscreenKeyform")
-    if isinstance(value.opacity, bool) or not isinstance(value.opacity, (float, int)) or not math.isfinite(value.opacity) or abs(value.opacity) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_f32(value.opacity)
     if value.multiply is not None:
         if not isinstance(value.multiply, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.multiply) != 3:
             raise ValueError("Invalid fixed array length")
         for v0 in value.multiply:
-            if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-                raise ValueError("Expected f32")
+            _check_f32(v0)
     if value.screen is not None:
         if not isinstance(value.screen, tuple):
             raise TypeError("Expected an immutable tuple")
         if len(value.screen) != 3:
             raise ValueError("Invalid fixed array length")
         for v0 in value.screen:
-            if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-                raise ValueError("Expected f32")
+            _check_f32(v0)
 
 def encode_OffscreenKeyform(value: OffscreenKeyform) -> object:
     return {'opacity': value.opacity, 'multiply': None if value.multiply is None else [v0 for v0 in value.multiply], 'screen': None if value.screen is None else [v0 for v0 in value.screen]}
@@ -674,8 +623,8 @@ def read_OffscreenKeyform(value: object) -> OffscreenKeyform:
     return OffscreenKeyform(opacity=number(r['opacity']), multiply=None if r.get('multiply', None) is None else cast('tuple[float, float, float]', tuple(number(v0) for v0 in sequence(r.get('multiply', None)))), screen=None if r.get('screen', None) is None else cast('tuple[float, float, float]', tuple(number(v0) for v0 in sequence(r.get('screen', None)))))
 
 def validate_BindingAuthoringEdit(value: BindingAuthoringEdit) -> None:
-    from .parameters import validate_ParameterRangeEdit as validate_ParameterRangeEdit
-    from .scene_edits import validate_ReparentEdit as validate_ReparentEdit
+    from .parameters import validate_ParameterRangeEdit
+    from .scene_edits import validate_ReparentEdit
     if isinstance(value, BindingAuthoringEditGrid):
         validate_BindingGridEdit(value.value)
     elif isinstance(value, BindingAuthoringEditBlend):
@@ -690,8 +639,8 @@ def validate_BindingAuthoringEdit(value: BindingAuthoringEdit) -> None:
         raise TypeError("Expected BindingAuthoringEdit")
 
 def encode_BindingAuthoringEdit(value: BindingAuthoringEdit) -> object:
-    from .parameters import encode_ParameterRangeEdit as encode_ParameterRangeEdit
-    from .scene_edits import encode_ReparentEdit as encode_ReparentEdit
+    from .parameters import encode_ParameterRangeEdit
+    from .scene_edits import encode_ReparentEdit
     if isinstance(value, BindingAuthoringEditGrid):
         return {'Grid': encode_BindingGridEdit(value.value)}
     elif isinstance(value, BindingAuthoringEditBlend):
@@ -705,8 +654,8 @@ def encode_BindingAuthoringEdit(value: BindingAuthoringEdit) -> object:
     raise TypeError("Expected BindingAuthoringEdit")
 
 def read_BindingAuthoringEdit(value: object) -> BindingAuthoringEdit:
-    from .parameters import read_ParameterRangeEdit as read_ParameterRangeEdit
-    from .scene_edits import read_ReparentEdit as read_ReparentEdit
+    from .parameters import read_ParameterRangeEdit
+    from .scene_edits import read_ReparentEdit
     if isinstance(value, (BindingAuthoringEditGrid, BindingAuthoringEditBlend, BindingAuthoringEditMeshGrid, BindingAuthoringEditParameterRange, BindingAuthoringEditReparent,)): return value
     r: _Mapping[str, object] = {} if isinstance(value, str) else record(value)
     tag = string(value) if isinstance(value, str) else next(iter(r))
@@ -724,15 +673,12 @@ def read_BindingAuthoringEdit(value: object) -> BindingAuthoringEdit:
 
 def validate_BindingGridEdit(value: BindingGridEdit) -> None:
     if isinstance(value, BindingGridEditDelete):
-        if not isinstance(value.owner, str):
-            raise ValueError("Expected string")
+        _check_string(value.owner)
     elif isinstance(value, BindingGridEditCreate):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_BindingGridTarget(value.target)
     elif isinstance(value, BindingGridEditEdit):
-        if not isinstance(value.owner, str):
-            raise ValueError("Expected string")
+        _check_string(value.owner)
         validate_GridOperation(value.operation)
     else:
         raise TypeError("Expected BindingGridEdit")
@@ -763,14 +709,11 @@ def read_BindingGridEdit(value: object) -> BindingGridEdit:
 
 def validate_BindingGridTarget(value: BindingGridTarget) -> None:
     if isinstance(value, BindingGridTargetMesh):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     elif isinstance(value, BindingGridTargetScene):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     elif isinstance(value, BindingGridTargetGlue):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     else:
         raise TypeError("Expected BindingGridTarget")
 
@@ -796,55 +739,42 @@ def read_BindingGridTarget(value: object) -> BindingGridTarget:
     raise ValueError("Unknown BindingGridTarget variant")
 
 def validate_GridOperation(value: GridOperation) -> None:
-    from .parameters import validate_ParameterRangePolicy as validate_ParameterRangePolicy
+    from .parameters import validate_ParameterRangePolicy
     if isinstance(value, GridOperationAddAxis):
         validate_BindingAxis(value.axis)
     elif isinstance(value, GridOperationRemapParameter):
-        if not isinstance(value.axis_id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.parameter_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.axis_id)
+        _check_string(value.parameter_id)
         validate_ParameterRangePolicy(value.policy)
     elif isinstance(value, GridOperationSetParameter):
-        if not isinstance(value.axis_id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.parameter_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.axis_id)
+        _check_string(value.parameter_id)
         if value.reduction is not None:
             validate_AxisReduction(value.reduction)
     elif isinstance(value, GridOperationReorderAxes):
         if not isinstance(value.axis_ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.axis_ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
     elif isinstance(value, GridOperationInsertSample):
-        if not isinstance(value.axis_id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.axis_id)
+        _check_string(value.id)
+        _check_f32(value.value)
     elif isinstance(value, GridOperationMoveSample):
-        if not isinstance(value.sample_id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.sample_id)
+        _check_f32(value.value)
     elif isinstance(value, GridOperationDeleteSample):
-        if not isinstance(value.sample_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.sample_id)
     elif isinstance(value, GridOperationRemoveAxis):
-        if not isinstance(value.axis_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.axis_id)
         if value.reduction is not None:
             validate_AxisReduction(value.reduction)
-        if type(value.keep_pending) is not bool:
-            raise ValueError("Expected bool")
+        _check_bool(value.keep_pending)
     else:
         raise TypeError("Expected GridOperation")
 
 def encode_GridOperation(value: GridOperation) -> object:
-    from .parameters import encode_ParameterRangePolicy as encode_ParameterRangePolicy
+    from .parameters import encode_ParameterRangePolicy
     if isinstance(value, GridOperationAddAxis):
         return {'AddAxis': {'axis': encode_BindingAxis(value.axis)}}
     elif isinstance(value, GridOperationRemapParameter):
@@ -864,7 +794,7 @@ def encode_GridOperation(value: GridOperation) -> object:
     raise TypeError("Expected GridOperation")
 
 def read_GridOperation(value: object) -> GridOperation:
-    from .parameters import read_ParameterRangePolicy as read_ParameterRangePolicy
+    from .parameters import read_ParameterRangePolicy
     if isinstance(value, (GridOperationAddAxis, GridOperationRemapParameter, GridOperationSetParameter, GridOperationReorderAxes, GridOperationInsertSample, GridOperationMoveSample, GridOperationDeleteSample, GridOperationRemoveAxis,)): return value
     r: _Mapping[str, object] = {} if isinstance(value, str) else record(value)
     tag = string(value) if isinstance(value, str) else next(iter(r))
@@ -896,11 +826,9 @@ def read_GridOperation(value: object) -> GridOperation:
 
 def validate_AxisReduction(value: AxisReduction) -> None:
     if isinstance(value, AxisReductionSlice):
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.value)
     elif isinstance(value, AxisReductionResample):
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.value)
     else:
         raise TypeError("Expected AxisReduction")
 
@@ -927,33 +855,24 @@ def validate_BlendAuthoringEdit(value: BlendAuthoringEdit) -> None:
     elif isinstance(value, BlendAuthoringEditCreateConstraint):
         validate_BlendShapeConstraint(value.constraint)
     elif isinstance(value, BlendAuthoringEditCreateBinding):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.target_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
+        _check_string(value.target_id)
         validate_BlendShapeTargetKind(value.target_kind)
-        if not isinstance(value.key_table_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.key_table_id)
     elif isinstance(value, BlendAuthoringEditTable):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_BlendTableOperation(value.operation)
     elif isinstance(value, BlendAuthoringEditConstraint):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.parameter_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
+        _check_string(value.parameter_id)
         if not isinstance(value.samples, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.samples:
             validate_ConstraintSample(v0)
     elif isinstance(value, BlendAuthoringEditSetBindingTable):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.key_table_id, str):
-            raise ValueError("Expected string")
-        if type(value.reset) is not bool:
-            raise ValueError("Expected bool")
+        _check_string(value.id)
+        _check_string(value.key_table_id)
+        _check_bool(value.reset)
     else:
         raise TypeError("Expected BlendAuthoringEdit")
 
@@ -997,35 +916,28 @@ def read_BlendAuthoringEdit(value: object) -> BlendAuthoringEdit:
     raise ValueError("Unknown BlendAuthoringEdit variant")
 
 def validate_BlendTableOperation(value: BlendTableOperation) -> None:
-    from .parameters import validate_ParameterRangePolicy as validate_ParameterRangePolicy
+    from .parameters import validate_ParameterRangePolicy
     if isinstance(value, BlendTableOperationInsert):
         validate_BindingSample(value.sample)
     elif isinstance(value, BlendTableOperationMove):
-        if not isinstance(value.sample_id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.sample_id)
+        _check_f32(value.value)
     elif isinstance(value, BlendTableOperationDelete):
-        if not isinstance(value.sample_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.sample_id)
         if value.replacement_base is not None:
-            if not isinstance(value.replacement_base, str):
-                raise ValueError("Expected string")
+            _check_string(value.replacement_base)
     elif isinstance(value, BlendTableOperationSetBase):
-        if not isinstance(value.sample_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.sample_id)
     elif isinstance(value, BlendTableOperationSetParameter):
-        if not isinstance(value.parameter_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.parameter_id)
     elif isinstance(value, BlendTableOperationRemapParameter):
-        if not isinstance(value.parameter_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.parameter_id)
         validate_ParameterRangePolicy(value.policy)
     else:
         raise TypeError("Expected BlendTableOperation")
 
 def encode_BlendTableOperation(value: BlendTableOperation) -> object:
-    from .parameters import encode_ParameterRangePolicy as encode_ParameterRangePolicy
+    from .parameters import encode_ParameterRangePolicy
     if isinstance(value, BlendTableOperationInsert):
         return {'Insert': {'sample': encode_BindingSample(value.sample)}}
     elif isinstance(value, BlendTableOperationMove):
@@ -1041,7 +953,7 @@ def encode_BlendTableOperation(value: BlendTableOperation) -> object:
     raise TypeError("Expected BlendTableOperation")
 
 def read_BlendTableOperation(value: object) -> BlendTableOperation:
-    from .parameters import read_ParameterRangePolicy as read_ParameterRangePolicy
+    from .parameters import read_ParameterRangePolicy
     if isinstance(value, (BlendTableOperationInsert, BlendTableOperationMove, BlendTableOperationDelete, BlendTableOperationSetBase, BlendTableOperationSetParameter, BlendTableOperationRemapParameter,)): return value
     r: _Mapping[str, object] = {} if isinstance(value, str) else record(value)
     tag = string(value) if isinstance(value, str) else next(iter(r))
@@ -1067,50 +979,33 @@ def read_BlendTableOperation(value: object) -> BlendTableOperation:
 
 def validate_MeshGridEdit(value: MeshGridEdit) -> None:
     if isinstance(value, MeshGridEditCreate):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.mesh_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
+        _check_string(value.mesh_id)
     elif isinstance(value, MeshGridEditAddAxis):
-        if not isinstance(value.binding_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.binding_id)
         validate_BindingAxis(value.axis)
     elif isinstance(value, MeshGridEditReorderAxes):
-        if not isinstance(value.binding_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.binding_id)
         if not isinstance(value.parameter_ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.parameter_ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
     elif isinstance(value, MeshGridEditInsertSample):
-        if not isinstance(value.binding_id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.parameter_id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.binding_id)
+        _check_string(value.parameter_id)
+        _check_f32(value.value)
     elif isinstance(value, MeshGridEditMoveSample):
-        if not isinstance(value.binding_id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.parameter_id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.from_, bool) or not isinstance(value.from_, (float, int)) or not math.isfinite(value.from_) or abs(value.from_) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
-        if isinstance(value.to, bool) or not isinstance(value.to, (float, int)) or not math.isfinite(value.to) or abs(value.to) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.binding_id)
+        _check_string(value.parameter_id)
+        _check_f32(value.from_)
+        _check_f32(value.to)
     elif isinstance(value, MeshGridEditDeleteSample):
-        if not isinstance(value.binding_id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.parameter_id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.binding_id)
+        _check_string(value.parameter_id)
+        _check_f32(value.value)
     elif isinstance(value, MeshGridEditRemoveAxis):
-        if not isinstance(value.binding_id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.parameter_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.binding_id)
+        _check_string(value.parameter_id)
         validate_AxisReduction(value.reduction)
     else:
         raise TypeError("Expected MeshGridEdit")
@@ -1166,8 +1061,7 @@ def validate_PartKeyformSlot(value: PartKeyformSlot) -> None:
         if not isinstance(value.samples, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.samples:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
     else:
         raise TypeError("Expected PartKeyformSlot")
 
@@ -1222,16 +1116,12 @@ def read_SceneKeyform(value: object) -> SceneKeyform:
 
 def validate_BindingFieldPatch(value: BindingFieldPatch) -> None:
     if isinstance(value, BindingFieldPatchSampleValue):
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.value)
     elif isinstance(value, BindingFieldPatchConstraintSample):
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
-        if isinstance(value.weight, bool) or not isinstance(value.weight, (float, int)) or not math.isfinite(value.weight) or abs(value.weight) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.value)
+        _check_f32(value.weight)
     elif isinstance(value, BindingFieldPatchAxisParameter):
-        if not isinstance(value.parameter_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.parameter_id)
         if value.reduction is not None:
             validate_AxisReduction(value.reduction)
     else:

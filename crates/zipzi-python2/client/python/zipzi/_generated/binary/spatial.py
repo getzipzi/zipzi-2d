@@ -5,7 +5,7 @@ from ..._values import integer
 from ..._values import number
 from typing import cast
 from functools import cache
-from .support import Reader as Reader
+from .support import Reader
 
 def _read_objecttarget(r: Reader) -> m.ObjectTarget:
     tag=r.u32()
@@ -45,7 +45,7 @@ def _read_trianglehit(r: Reader) -> m.TriangleHit:
 
 @cache
 def _dependencies__read_spatialsamples():
-    from .common import _read_version as _read_version
+    from .common import _read_version
     return _read_version,
 
 def _read_spatialsamples(r: Reader) -> m.SpatialSamples:

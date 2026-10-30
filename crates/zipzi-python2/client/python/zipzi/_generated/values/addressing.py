@@ -7,20 +7,20 @@ from typing import ClassVar as _ClassVar
 from typing import TypeAlias
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from .bindings import BindingFieldPatch as BindingFieldPatch
-    from .project import CdiParameterRef as CdiParameterRef
-    from .project import DocumentField as DocumentField
-    from .project import DocumentValue as DocumentValue
-    from .expression import ExpressionEntryFields as ExpressionEntryFields
-    from .project import ModelTargetRef as ModelTargetRef
-    from .motion import MotionRegistration as MotionRegistration
-    from .scene import OrganizationEdit as OrganizationEdit
-    from .physics import PhysicsProperty as PhysicsProperty
-    from .pose import PoseFields as PoseFields
-    from .scene import SceneContentTarget as SceneContentTarget
-    from .scene import SceneContentValue as SceneContentValue
-    from .scene import SceneField as SceneField
-    from .scene import SceneFieldValue as SceneFieldValue
+    from .bindings import BindingFieldPatch
+    from .project import CdiParameterRef
+    from .project import DocumentField
+    from .project import DocumentValue
+    from .expression import ExpressionEntryFields
+    from .project import ModelTargetRef
+    from .motion import MotionRegistration
+    from .scene import OrganizationEdit
+    from .physics import PhysicsProperty
+    from .pose import PoseFields
+    from .scene import SceneContentTarget
+    from .scene import SceneContentValue
+    from .scene import SceneField
+    from .scene import SceneFieldValue
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceEditCreateModelParameterGroup(CompactValue):

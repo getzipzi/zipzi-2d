@@ -12,10 +12,10 @@ from typing import ClassVar as _ClassVar
 from typing import TypeAlias
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from .scene import BlendMode as BlendMode
-    from .mesh import MeshMeshing as MeshMeshing
-    from .observation import TextureCoverage as TextureCoverage
-    from .common import Vec2 as Vec2
+    from .scene import BlendMode
+    from .mesh import MeshMeshing
+    from .observation import TextureCoverage
+    from .common import Vec2
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class GeometrySnapshot(CompactValue):

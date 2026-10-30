@@ -9,121 +9,92 @@ from ..._values import record
 from ..._values import sequence
 from ..._values import string
 from .._modeling_support import _boolean
+from .._modeling_support import _check_bool
+from .._modeling_support import _check_f32
+from .._modeling_support import _check_string
+from .._modeling_support import _check_u32
+from .._modeling_support import _check_usize
 from collections.abc import Mapping
 from collections.abc import Mapping as _Mapping
 from typing import cast
-import math
-from ..values import PhysicsAsset as PhysicsAsset, PhysicsAssetProperty as PhysicsAssetProperty, PhysicsAssetPropertyFps as PhysicsAssetPropertyFps, PhysicsAxis as PhysicsAxis, PhysicsCollection as PhysicsCollection, PhysicsCollectionGroups as PhysicsCollectionGroups, PhysicsCollectionInputs as PhysicsCollectionInputs, PhysicsCollectionNodes as PhysicsCollectionNodes, PhysicsCollectionOutputs as PhysicsCollectionOutputs, PhysicsDefinition as PhysicsDefinition, PhysicsDictionaryEntry as PhysicsDictionaryEntry, PhysicsEdit as PhysicsEdit, PhysicsEditCreateGroup as PhysicsEditCreateGroup, PhysicsEditCreateInput as PhysicsEditCreateInput, PhysicsEditCreateOutput as PhysicsEditCreateOutput, PhysicsEditDelete as PhysicsEditDelete, PhysicsEditDuplicate as PhysicsEditDuplicate, PhysicsEditDuplicateNode as PhysicsEditDuplicateNode, PhysicsEditInsertNode as PhysicsEditInsertNode, PhysicsEditMoveInputs as PhysicsEditMoveInputs, PhysicsEditMoveNode as PhysicsEditMoveNode, PhysicsEditMoveOutputs as PhysicsEditMoveOutputs, PhysicsEditPatch as PhysicsEditPatch, PhysicsEditReorderGroups as PhysicsEditReorderGroups, PhysicsForces as PhysicsForces, PhysicsInput as PhysicsInput, PhysicsMeta as PhysicsMeta, PhysicsNode as PhysicsNode, PhysicsNormalization as PhysicsNormalization, PhysicsOutput as PhysicsOutput, PhysicsOutputSnapshot as PhysicsOutputSnapshot, PhysicsPatch as PhysicsPatch, PhysicsProperty as PhysicsProperty, PhysicsPropertyAngleNormalization as PhysicsPropertyAngleNormalization, PhysicsPropertyInputAxis as PhysicsPropertyInputAxis, PhysicsPropertyInputParameter as PhysicsPropertyInputParameter, PhysicsPropertyInputReflect as PhysicsPropertyInputReflect, PhysicsPropertyInputWeight as PhysicsPropertyInputWeight, PhysicsPropertyName as PhysicsPropertyName, PhysicsPropertyOutputAxis as PhysicsPropertyOutputAxis, PhysicsPropertyOutputNode as PhysicsPropertyOutputNode, PhysicsPropertyOutputParameter as PhysicsPropertyOutputParameter, PhysicsPropertyOutputReflect as PhysicsPropertyOutputReflect, PhysicsPropertyOutputScale as PhysicsPropertyOutputScale, PhysicsPropertyOutputWeight as PhysicsPropertyOutputWeight, PhysicsPropertyPositionNormalization as PhysicsPropertyPositionNormalization, PhysicsPropertyVertexAcceleration as PhysicsPropertyVertexAcceleration, PhysicsPropertyVertexDelay as PhysicsPropertyVertexDelay, PhysicsPropertyVertexMobility as PhysicsPropertyVertexMobility, PhysicsPropertyVertexPosition as PhysicsPropertyVertexPosition, PhysicsPropertyVertexRadius as PhysicsPropertyVertexRadius, PhysicsRange as PhysicsRange, PhysicsRigPatch as PhysicsRigPatch, PhysicsRigSnapshot as PhysicsRigSnapshot, PhysicsSetting as PhysicsSetting, PhysicsTarget as PhysicsTarget, PhysicsTargetResolved as PhysicsTargetResolved, PhysicsTargetUnresolved as PhysicsTargetUnresolved, PhysicsTargetUnspecified as PhysicsTargetUnspecified, PhysicsVector as PhysicsVector
+from ..values import PhysicsAsset, PhysicsAssetProperty, PhysicsAssetPropertyFps, PhysicsAxis, PhysicsCollection, PhysicsCollectionGroups, PhysicsCollectionInputs, PhysicsCollectionNodes, PhysicsCollectionOutputs, PhysicsDefinition, PhysicsDictionaryEntry, PhysicsEdit, PhysicsEditCreateGroup, PhysicsEditCreateInput, PhysicsEditCreateOutput, PhysicsEditDelete, PhysicsEditDuplicate, PhysicsEditDuplicateNode, PhysicsEditInsertNode, PhysicsEditMoveInputs, PhysicsEditMoveNode, PhysicsEditMoveOutputs, PhysicsEditPatch, PhysicsEditReorderGroups, PhysicsForces, PhysicsInput, PhysicsMeta, PhysicsNode, PhysicsNormalization, PhysicsOutput, PhysicsOutputSnapshot, PhysicsPatch, PhysicsProperty, PhysicsPropertyAngleNormalization, PhysicsPropertyInputAxis, PhysicsPropertyInputParameter, PhysicsPropertyInputReflect, PhysicsPropertyInputWeight, PhysicsPropertyName, PhysicsPropertyOutputAxis, PhysicsPropertyOutputNode, PhysicsPropertyOutputParameter, PhysicsPropertyOutputReflect, PhysicsPropertyOutputScale, PhysicsPropertyOutputWeight, PhysicsPropertyPositionNormalization, PhysicsPropertyVertexAcceleration, PhysicsPropertyVertexDelay, PhysicsPropertyVertexMobility, PhysicsPropertyVertexPosition, PhysicsPropertyVertexRadius, PhysicsRange, PhysicsRigPatch, PhysicsRigSnapshot, PhysicsSetting, PhysicsTarget, PhysicsTargetResolved, PhysicsTargetUnresolved, PhysicsTargetUnspecified, PhysicsVector
 
 def validate_PhysicsEdit(value: PhysicsEdit) -> None:
     if isinstance(value, PhysicsEditCreateGroup):
-        if not isinstance(value.asset_id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.asset_id)
+        _check_string(value.id)
+        _check_string(value.name)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, PhysicsEditCreateInput):
-        if not isinstance(value.group_id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.group_id)
+        _check_string(value.id)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, PhysicsEditCreateOutput):
-        if not isinstance(value.group_id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.node_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.group_id)
+        _check_string(value.id)
+        _check_string(value.node_id)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, PhysicsEditInsertNode):
-        if not isinstance(value.group_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.group_id)
         validate_PhysicsNode(value.node)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, PhysicsEditMoveNode):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, PhysicsEditDuplicateNode):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, PhysicsEditPatch):
         validate_PhysicsPatch(value.patch)
     elif isinstance(value, PhysicsEditMoveInputs):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
-        if not isinstance(value.group_id, str):
-            raise ValueError("Expected string")
+            _check_string(v0)
+        _check_string(value.group_id)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, PhysicsEditMoveOutputs):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
-        if not isinstance(value.group_id, str):
-            raise ValueError("Expected string")
+            _check_string(v0)
+        _check_string(value.group_id)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
         for key0, v0 in value.node_replacements.items():
-            if not isinstance(key0, str):
-                raise ValueError("Expected string")
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(key0)
+            _check_string(v0)
     elif isinstance(value, PhysicsEditReorderGroups):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, PhysicsEditDuplicate):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         if value.group_id is not None:
-            if not isinstance(value.group_id, str):
-                raise ValueError("Expected string")
+            _check_string(value.group_id)
         if value.before is not None:
-            if not isinstance(value.before, str):
-                raise ValueError("Expected string")
+            _check_string(value.before)
     elif isinstance(value, PhysicsEditDelete):
         if not isinstance(value.ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.ids:
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(v0)
         for key0, v0 in value.node_replacements.items():
-            if not isinstance(key0, str):
-                raise ValueError("Expected string")
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(key0)
+            _check_string(v0)
     else:
         raise TypeError("Expected PhysicsEdit")
 
@@ -199,20 +170,14 @@ def read_PhysicsEdit(value: object) -> PhysicsEdit:
 def validate_PhysicsNode(value: PhysicsNode) -> None:
     if not isinstance(value, PhysicsNode):
         raise TypeError("Expected PhysicsNode")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
     validate_PhysicsVector(value.position)
-    if isinstance(value.mobility, bool) or not isinstance(value.mobility, (float, int)) or not math.isfinite(value.mobility) or abs(value.mobility) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.delay, bool) or not isinstance(value.delay, (float, int)) or not math.isfinite(value.delay) or abs(value.delay) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.acceleration, bool) or not isinstance(value.acceleration, (float, int)) or not math.isfinite(value.acceleration) or abs(value.acceleration) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.radius, bool) or not isinstance(value.radius, (float, int)) or not math.isfinite(value.radius) or abs(value.radius) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_f32(value.mobility)
+    _check_f32(value.delay)
+    _check_f32(value.acceleration)
+    _check_f32(value.radius)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
 
 def encode_PhysicsNode(value: PhysicsNode) -> object:
@@ -226,10 +191,8 @@ def read_PhysicsNode(value: object) -> PhysicsNode:
 def validate_PhysicsVector(value: PhysicsVector) -> None:
     if not isinstance(value, PhysicsVector):
         raise TypeError("Expected PhysicsVector")
-    if isinstance(value.X, bool) or not isinstance(value.X, (float, int)) or not math.isfinite(value.X) or abs(value.X) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.Y, bool) or not isinstance(value.Y, (float, int)) or not math.isfinite(value.Y) or abs(value.Y) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_f32(value.X)
+    _check_f32(value.Y)
 
 def encode_PhysicsVector(value: PhysicsVector) -> object:
     return {'X': value.X, 'Y': value.Y}
@@ -242,8 +205,7 @@ def read_PhysicsVector(value: object) -> PhysicsVector:
 def validate_PhysicsPatch(value: PhysicsPatch) -> None:
     if not isinstance(value, PhysicsPatch):
         raise TypeError("Expected PhysicsPatch")
-    if not isinstance(value.asset_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.asset_id)
     if not isinstance(value.asset_changes, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.asset_changes:
@@ -262,8 +224,7 @@ def read_PhysicsPatch(value: object) -> PhysicsPatch:
 def validate_PhysicsAssetProperty(value: PhysicsAssetProperty) -> None:
     if isinstance(value, PhysicsAssetPropertyFps):
         if value.value is not None:
-            if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-                raise ValueError("Expected f32")
+            _check_f32(value.value)
     else:
         raise TypeError("Expected PhysicsAssetProperty")
 
@@ -283,8 +244,7 @@ def read_PhysicsAssetProperty(value: object) -> PhysicsAssetProperty:
 def validate_PhysicsRigPatch(value: PhysicsRigPatch) -> None:
     if not isinstance(value, PhysicsRigPatch):
         raise TypeError("Expected PhysicsRigPatch")
-    if not isinstance(value.group_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.group_id)
     if not isinstance(value.changes, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.changes:
@@ -300,78 +260,52 @@ def read_PhysicsRigPatch(value: object) -> PhysicsRigPatch:
 
 def validate_PhysicsProperty(value: PhysicsProperty) -> None:
     if isinstance(value, PhysicsPropertyName):
-        if not isinstance(value.value, str):
-            raise ValueError("Expected string")
+        _check_string(value.value)
     elif isinstance(value, PhysicsPropertyInputWeight):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.id)
+        _check_f32(value.value)
     elif isinstance(value, PhysicsPropertyInputAxis):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_PhysicsAxis(value.value)
     elif isinstance(value, PhysicsPropertyInputReflect):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if type(value.value) is not bool:
-            raise ValueError("Expected bool")
+        _check_string(value.id)
+        _check_bool(value.value)
     elif isinstance(value, PhysicsPropertyInputParameter):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_PhysicsTarget(value.target)
     elif isinstance(value, PhysicsPropertyOutputWeight):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.id)
+        _check_f32(value.value)
     elif isinstance(value, PhysicsPropertyOutputScale):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.id)
+        _check_f32(value.value)
     elif isinstance(value, PhysicsPropertyOutputAxis):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_PhysicsAxis(value.value)
     elif isinstance(value, PhysicsPropertyOutputReflect):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if type(value.value) is not bool:
-            raise ValueError("Expected bool")
+        _check_string(value.id)
+        _check_bool(value.value)
     elif isinstance(value, PhysicsPropertyOutputParameter):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_PhysicsTarget(value.target)
     elif isinstance(value, PhysicsPropertyOutputNode):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.node_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
+        _check_string(value.node_id)
     elif isinstance(value, PhysicsPropertyVertexPosition):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_PhysicsVector(value.value)
     elif isinstance(value, PhysicsPropertyVertexRadius):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.id)
+        _check_f32(value.value)
     elif isinstance(value, PhysicsPropertyVertexMobility):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.id)
+        _check_f32(value.value)
     elif isinstance(value, PhysicsPropertyVertexDelay):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.id)
+        _check_f32(value.value)
     elif isinstance(value, PhysicsPropertyVertexAcceleration):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.id)
+        _check_f32(value.value)
     elif isinstance(value, PhysicsPropertyPositionNormalization):
         validate_PhysicsRange(value.value)
     elif isinstance(value, PhysicsPropertyAngleNormalization):
@@ -490,11 +424,9 @@ def validate_PhysicsTarget(value: PhysicsTarget) -> None:
     if isinstance(value, PhysicsTargetUnspecified):
         pass
     elif isinstance(value, PhysicsTargetResolved):
-        if not isinstance(value.parameter_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.parameter_id)
     elif isinstance(value, PhysicsTargetUnresolved):
-        if not isinstance(value.runtime_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.runtime_id)
     else:
         raise TypeError("Expected PhysicsTarget")
 
@@ -524,12 +456,9 @@ def read_PhysicsTarget(value: object) -> PhysicsTarget:
 def validate_PhysicsRange(value: PhysicsRange) -> None:
     if not isinstance(value, PhysicsRange):
         raise TypeError("Expected PhysicsRange")
-    if isinstance(value.Minimum, bool) or not isinstance(value.Minimum, (float, int)) or not math.isfinite(value.Minimum) or abs(value.Minimum) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.Default, bool) or not isinstance(value.Default, (float, int)) or not math.isfinite(value.Default) or abs(value.Default) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.Maximum, bool) or not isinstance(value.Maximum, (float, int)) or not math.isfinite(value.Maximum) or abs(value.Maximum) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_f32(value.Minimum)
+    _check_f32(value.Default)
+    _check_f32(value.Maximum)
 
 def encode_PhysicsRange(value: PhysicsRange) -> object:
     return {'Minimum': value.Minimum, 'Default': value.Default, 'Maximum': value.Maximum}
@@ -542,18 +471,14 @@ def read_PhysicsRange(value: object) -> PhysicsRange:
 def validate_PhysicsAsset(value: PhysicsAsset) -> None:
     if not isinstance(value, PhysicsAsset):
         raise TypeError("Expected PhysicsAsset")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
     validate_PhysicsDefinition(value.data)
     if value.opaque_source_ids is not None:
         for key0, v0 in value.opaque_source_ids.items():
-            if not isinstance(key0, str):
-                raise ValueError("Expected string")
-            if not isinstance(v0, str):
-                raise ValueError("Expected string")
+            _check_string(key0)
+            _check_string(v0)
     if value.opaque_source_content_hash is not None:
-        if not isinstance(value.opaque_source_content_hash, str):
-            raise ValueError("Expected string")
+        _check_string(value.opaque_source_content_hash)
 
 def encode_PhysicsAsset(value: PhysicsAsset) -> object:
     return {'id': value.id, 'data': encode_PhysicsDefinition(value.data), 'opaque_source_ids': None if value.opaque_source_ids is None else {str(key0): v0 for key0, v0 in value.opaque_source_ids.items()}, 'opaque_source_content_hash': None if value.opaque_source_content_hash is None else value.opaque_source_content_hash}
@@ -566,16 +491,14 @@ def read_PhysicsAsset(value: object) -> PhysicsAsset:
 def validate_PhysicsDefinition(value: PhysicsDefinition) -> None:
     if not isinstance(value, PhysicsDefinition):
         raise TypeError("Expected PhysicsDefinition")
-    if type(value.version) is not int or not 0 <= value.version < 4294967296:
-        raise ValueError("Expected u32")
+    _check_u32(value.version)
     validate_PhysicsMeta(value.meta)
     if not isinstance(value.settings, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.settings:
         validate_PhysicsSetting(v0)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
 
 def encode_PhysicsDefinition(value: PhysicsDefinition) -> object:
@@ -589,25 +512,19 @@ def read_PhysicsDefinition(value: object) -> PhysicsDefinition:
 def validate_PhysicsMeta(value: PhysicsMeta) -> None:
     if not isinstance(value, PhysicsMeta):
         raise TypeError("Expected PhysicsMeta")
-    if type(value.PhysicsSettingCount) is not int or not 0 <= value.PhysicsSettingCount < 18446744073709551616:
-        raise ValueError("Expected usize")
-    if type(value.TotalInputCount) is not int or not 0 <= value.TotalInputCount < 18446744073709551616:
-        raise ValueError("Expected usize")
-    if type(value.TotalOutputCount) is not int or not 0 <= value.TotalOutputCount < 18446744073709551616:
-        raise ValueError("Expected usize")
-    if type(value.VertexCount) is not int or not 0 <= value.VertexCount < 18446744073709551616:
-        raise ValueError("Expected usize")
+    _check_usize(value.PhysicsSettingCount)
+    _check_usize(value.TotalInputCount)
+    _check_usize(value.TotalOutputCount)
+    _check_usize(value.VertexCount)
     validate_PhysicsForces(value.EffectiveForces)
     if not isinstance(value.PhysicsDictionary, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.PhysicsDictionary:
         validate_PhysicsDictionaryEntry(v0)
     if value.Fps is not None:
-        if isinstance(value.Fps, bool) or not isinstance(value.Fps, (float, int)) or not math.isfinite(value.Fps) or abs(value.Fps) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(value.Fps)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
     if set(value.extensions).intersection(('EffectiveForces', 'Fps', 'PhysicsDictionary', 'PhysicsSettingCount', 'TotalInputCount', 'TotalOutputCount', 'VertexCount')):
         raise ValueError("Extension keys overlap declared fields")
@@ -626,8 +543,7 @@ def validate_PhysicsForces(value: PhysicsForces) -> None:
     validate_PhysicsVector(value.Gravity)
     validate_PhysicsVector(value.Wind)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
     if set(value.extensions).intersection(('Gravity', 'Wind')):
         raise ValueError("Extension keys overlap declared fields")
@@ -643,13 +559,10 @@ def read_PhysicsForces(value: object) -> PhysicsForces:
 def validate_PhysicsDictionaryEntry(value: PhysicsDictionaryEntry) -> None:
     if not isinstance(value, PhysicsDictionaryEntry):
         raise TypeError("Expected PhysicsDictionaryEntry")
-    if not isinstance(value.Id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.Name, str):
-        raise ValueError("Expected string")
+    _check_string(value.Id)
+    _check_string(value.Name)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
     if set(value.extensions).intersection(('Id', 'Name')):
         raise ValueError("Extension keys overlap declared fields")
@@ -665,10 +578,8 @@ def read_PhysicsDictionaryEntry(value: object) -> PhysicsDictionaryEntry:
 def validate_PhysicsSetting(value: PhysicsSetting) -> None:
     if not isinstance(value, PhysicsSetting):
         raise TypeError("Expected PhysicsSetting")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
-    if not isinstance(value.external_id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
+    _check_string(value.external_id)
     if not isinstance(value.inputs, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.inputs:
@@ -683,8 +594,7 @@ def validate_PhysicsSetting(value: PhysicsSetting) -> None:
         validate_PhysicsNode(v0)
     validate_PhysicsNormalization(value.normalization)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
 
 def encode_PhysicsSetting(value: PhysicsSetting) -> object:
@@ -698,21 +608,16 @@ def read_PhysicsSetting(value: object) -> PhysicsSetting:
 def validate_PhysicsInput(value: PhysicsInput) -> None:
     if not isinstance(value, PhysicsInput):
         raise TypeError("Expected PhysicsInput")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
     validate_PhysicsTarget(value.source)
     for key0, v0 in value.reference_extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
-    if isinstance(value.weight, bool) or not isinstance(value.weight, (float, int)) or not math.isfinite(value.weight) or abs(value.weight) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_f32(value.weight)
     validate_PhysicsAxis(value.kind)
-    if type(value.reflect) is not bool:
-        raise ValueError("Expected bool")
+    _check_bool(value.reflect)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
 
 def encode_PhysicsInput(value: PhysicsInput) -> object:
@@ -726,25 +631,18 @@ def read_PhysicsInput(value: object) -> PhysicsInput:
 def validate_PhysicsOutput(value: PhysicsOutput) -> None:
     if not isinstance(value, PhysicsOutput):
         raise TypeError("Expected PhysicsOutput")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
     validate_PhysicsTarget(value.destination)
     for key0, v0 in value.reference_extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
-    if not isinstance(value.node_id, str):
-        raise ValueError("Expected string")
-    if isinstance(value.scale, bool) or not isinstance(value.scale, (float, int)) or not math.isfinite(value.scale) or abs(value.scale) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.weight, bool) or not isinstance(value.weight, (float, int)) or not math.isfinite(value.weight) or abs(value.weight) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_string(value.node_id)
+    _check_f32(value.scale)
+    _check_f32(value.weight)
     validate_PhysicsAxis(value.kind)
-    if type(value.reflect) is not bool:
-        raise ValueError("Expected bool")
+    _check_bool(value.reflect)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
 
 def encode_PhysicsOutput(value: PhysicsOutput) -> object:
@@ -761,8 +659,7 @@ def validate_PhysicsNormalization(value: PhysicsNormalization) -> None:
     validate_PhysicsRange(value.Position)
     validate_PhysicsRange(value.Angle)
     for key0, v0 in value.extensions.items():
-        if not isinstance(key0, str):
-            raise ValueError("Expected string")
+        _check_string(key0)
         _validate_extension(v0)
     if set(value.extensions).intersection(('Angle', 'Position')):
         raise ValueError("Extension keys overlap declared fields")
@@ -779,14 +676,11 @@ def validate_PhysicsCollection(value: PhysicsCollection) -> None:
     if isinstance(value, PhysicsCollectionGroups):
         pass
     elif isinstance(value, PhysicsCollectionInputs):
-        if not isinstance(value.group_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.group_id)
     elif isinstance(value, PhysicsCollectionOutputs):
-        if not isinstance(value.group_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.group_id)
     elif isinstance(value, PhysicsCollectionNodes):
-        if not isinstance(value.group_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.group_id)
     else:
         raise TypeError("Expected PhysicsCollection")
 
@@ -821,23 +715,19 @@ def read_PhysicsCollection(value: object) -> PhysicsCollection:
 def validate_PhysicsRigSnapshot(value: PhysicsRigSnapshot) -> None:
     if not isinstance(value, PhysicsRigSnapshot):
         raise TypeError("Expected PhysicsRigSnapshot")
-    if not isinstance(value.id, str):
-        raise ValueError("Expected string")
+    _check_string(value.id)
     if not isinstance(value.input_ids, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.input_ids:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.output_ids, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.output_ids:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.node_ids, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.node_ids:
-        if not isinstance(v0, str):
-            raise ValueError("Expected string")
+        _check_string(v0)
     if not isinstance(value.particles, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.particles:
@@ -846,15 +736,12 @@ def validate_PhysicsRigSnapshot(value: PhysicsRigSnapshot) -> None:
         if len(v0) != 2:
             raise ValueError("Invalid fixed array length")
         for v1 in v0:
-            if isinstance(v1, bool) or not isinstance(v1, (float, int)) or not math.isfinite(v1) or abs(v1) > 3.4028234663852886e38:
-                raise ValueError("Expected f32")
-    if isinstance(value.input_angle, bool) or not isinstance(value.input_angle, (float, int)) or not math.isfinite(value.input_angle) or abs(value.input_angle) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+            _check_f32(v1)
+    _check_f32(value.input_angle)
     if not isinstance(value.inputs, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.inputs:
-        if isinstance(v0, bool) or not isinstance(v0, (float, int)) or not math.isfinite(v0) or abs(v0) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_f32(v0)
     if not isinstance(value.outputs, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.outputs:
@@ -872,14 +759,10 @@ def read_PhysicsRigSnapshot(value: object) -> PhysicsRigSnapshot:
 def validate_PhysicsOutputSnapshot(value: PhysicsOutputSnapshot) -> None:
     if not isinstance(value, PhysicsOutputSnapshot):
         raise TypeError("Expected PhysicsOutputSnapshot")
-    if isinstance(value.raw, bool) or not isinstance(value.raw, (float, int)) or not math.isfinite(value.raw) or abs(value.raw) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.before, bool) or not isinstance(value.before, (float, int)) or not math.isfinite(value.before) or abs(value.before) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.after, bool) or not isinstance(value.after, (float, int)) or not math.isfinite(value.after) or abs(value.after) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if type(value.clamped) is not bool:
-        raise ValueError("Expected bool")
+    _check_f32(value.raw)
+    _check_f32(value.before)
+    _check_f32(value.after)
+    _check_bool(value.clamped)
 
 def encode_PhysicsOutputSnapshot(value: PhysicsOutputSnapshot) -> object:
     return {'raw': value.raw, 'before': value.before, 'after': value.after, 'clamped': value.clamped}

@@ -5,52 +5,55 @@ from ..._values import number
 from ..._values import record
 from ..._values import sequence
 from ..._values import string
+from .._modeling_support import _check_f32
+from .._modeling_support import _check_string
+from .._modeling_support import _check_u32
+from .._modeling_support import _check_usize
 from collections.abc import Mapping
 from typing import cast
-import math
-from ..values import ConversionCost as ConversionCost, ConversionDomain as ConversionDomain, ModelingCommand as ModelingCommand, ModelingCommandAttachment as ModelingCommandAttachment, ModelingCommandBinding as ModelingCommandBinding, ModelingCommandContent as ModelingCommandContent, ModelingCommandCreateAsset as ModelingCommandCreateAsset, ModelingCommandCreateBinding as ModelingCommandCreateBinding, ModelingCommandCreateBlendBinding as ModelingCommandCreateBlendBinding, ModelingCommandCreateBlendConstraint as ModelingCommandCreateBlendConstraint, ModelingCommandCreateBlendKeyTable as ModelingCommandCreateBlendKeyTable, ModelingCommandCreateExpression as ModelingCommandCreateExpression, ModelingCommandCreateGlue as ModelingCommandCreateGlue, ModelingCommandCreateMesh as ModelingCommandCreateMesh, ModelingCommandCreateMotion as ModelingCommandCreateMotion, ModelingCommandCreateOffscreen as ModelingCommandCreateOffscreen, ModelingCommandCreateParameter as ModelingCommandCreateParameter, ModelingCommandCreatePart as ModelingCommandCreatePart, ModelingCommandCreateSceneBinding as ModelingCommandCreateSceneBinding, ModelingCommandCreateTransform as ModelingCommandCreateTransform, ModelingCommandDeletion as ModelingCommandDeletion, ModelingCommandDocument as ModelingCommandDocument, ModelingCommandEraseObject as ModelingCommandEraseObject, ModelingCommandExpression as ModelingCommandExpression, ModelingCommandManualMesh as ModelingCommandManualMesh, ModelingCommandMotion as ModelingCommandMotion, ModelingCommandOrganization as ModelingCommandOrganization, ModelingCommandPhysics as ModelingCommandPhysics, ModelingCommandPose as ModelingCommandPose, ModelingCommandReferences as ModelingCommandReferences, ModelingCommandRemeshRectangleGrid as ModelingCommandRemeshRectangleGrid, ModelingCommandRenameMesh as ModelingCommandRenameMesh, ModelingCommandReplaceAsset as ModelingCommandReplaceAsset, ModelingCommandReplaceBinding as ModelingCommandReplaceBinding, ModelingCommandReplaceBlendBinding as ModelingCommandReplaceBlendBinding, ModelingCommandReplaceBlendConstraint as ModelingCommandReplaceBlendConstraint, ModelingCommandReplaceBlendKeyTable as ModelingCommandReplaceBlendKeyTable, ModelingCommandReplaceDrawOrderGroups as ModelingCommandReplaceDrawOrderGroups, ModelingCommandReplaceEditorState as ModelingCommandReplaceEditorState, ModelingCommandReplaceExpression as ModelingCommandReplaceExpression, ModelingCommandReplaceGlue as ModelingCommandReplaceGlue, ModelingCommandReplaceHierarchyOrder as ModelingCommandReplaceHierarchyOrder, ModelingCommandReplaceMesh as ModelingCommandReplaceMesh, ModelingCommandReplaceModelSetup as ModelingCommandReplaceModelSetup, ModelingCommandReplaceMotion as ModelingCommandReplaceMotion, ModelingCommandReplaceOffscreen as ModelingCommandReplaceOffscreen, ModelingCommandReplaceParameter as ModelingCommandReplaceParameter, ModelingCommandReplacePart as ModelingCommandReplacePart, ModelingCommandReplaceSceneBinding as ModelingCommandReplaceSceneBinding, ModelingCommandReplaceTopology as ModelingCommandReplaceTopology, ModelingCommandReplaceTransform as ModelingCommandReplaceTransform, ModelingCommandResource as ModelingCommandResource, ModelingCommandScene as ModelingCommandScene, ModelingCommandSetMeshKeyform as ModelingCommandSetMeshKeyform, ModelingCommandSetPhysics as ModelingCommandSetPhysics, ModelingCommandSetPose as ModelingCommandSetPose, ModelingCommandSetSceneKeyform as ModelingCommandSetSceneKeyform, ModelingCommandUpdatePositions as ModelingCommandUpdatePositions
+from ..values import ConversionCost, ConversionDomain, ModelingCommand, ModelingCommandAttachment, ModelingCommandBinding, ModelingCommandContent, ModelingCommandCreateAsset, ModelingCommandCreateBinding, ModelingCommandCreateBlendBinding, ModelingCommandCreateBlendConstraint, ModelingCommandCreateBlendKeyTable, ModelingCommandCreateExpression, ModelingCommandCreateGlue, ModelingCommandCreateMesh, ModelingCommandCreateMotion, ModelingCommandCreateOffscreen, ModelingCommandCreateParameter, ModelingCommandCreatePart, ModelingCommandCreateSceneBinding, ModelingCommandCreateTransform, ModelingCommandDeletion, ModelingCommandDocument, ModelingCommandEraseObject, ModelingCommandExpression, ModelingCommandManualMesh, ModelingCommandMotion, ModelingCommandOrganization, ModelingCommandPhysics, ModelingCommandPose, ModelingCommandReferences, ModelingCommandRemeshRectangleGrid, ModelingCommandRenameMesh, ModelingCommandReplaceAsset, ModelingCommandReplaceBinding, ModelingCommandReplaceBlendBinding, ModelingCommandReplaceBlendConstraint, ModelingCommandReplaceBlendKeyTable, ModelingCommandReplaceDrawOrderGroups, ModelingCommandReplaceEditorState, ModelingCommandReplaceExpression, ModelingCommandReplaceGlue, ModelingCommandReplaceHierarchyOrder, ModelingCommandReplaceMesh, ModelingCommandReplaceModelSetup, ModelingCommandReplaceMotion, ModelingCommandReplaceOffscreen, ModelingCommandReplaceParameter, ModelingCommandReplacePart, ModelingCommandReplaceSceneBinding, ModelingCommandReplaceTopology, ModelingCommandReplaceTransform, ModelingCommandResource, ModelingCommandScene, ModelingCommandSetMeshKeyform, ModelingCommandSetPhysics, ModelingCommandSetPose, ModelingCommandSetSceneKeyform, ModelingCommandUpdatePositions
 
 def validate_ModelingCommand(value: ModelingCommand) -> None:
-    from .scene_edits import validate_AttachmentEdit as validate_AttachmentEdit
-    from .bindings import validate_BindingAuthoringEdit as validate_BindingAuthoringEdit
-    from .bindings import validate_BlendShapeBinding as validate_BlendShapeBinding
-    from .bindings import validate_BlendShapeConstraint as validate_BlendShapeConstraint
-    from .bindings import validate_BlendShapeKeyTable as validate_BlendShapeKeyTable
-    from .deletion import validate_DeletionIntent as validate_DeletionIntent
-    from .project import validate_DocumentAuthoringEdit as validate_DocumentAuthoringEdit
-    from .scene import validate_DrawOrderGroup as validate_DrawOrderGroup
-    from .project import validate_EditorState as validate_EditorState
-    from .expression import validate_ExpressionAsset as validate_ExpressionAsset
-    from .expression import validate_ExpressionEdit as validate_ExpressionEdit
-    from .sampling import validate_GeometrySnapshot as validate_GeometrySnapshot
-    from .scene import validate_Glue as validate_Glue
-    from .scene import validate_HierarchyOrder as validate_HierarchyOrder
-    from .resources import validate_ImageAsset as validate_ImageAsset
-    from .mesh import validate_ManualMeshOperation as validate_ManualMeshOperation
-    from .mesh import validate_Mesh as validate_Mesh
-    from .bindings import validate_MeshBinding as validate_MeshBinding
-    from .bindings import validate_MeshKeyform as validate_MeshKeyform
-    from .scene import validate_ModelSetup as validate_ModelSetup
-    from .motion import validate_MotionClip as validate_MotionClip
-    from .motion import validate_MotionEdit as validate_MotionEdit
-    from .scene import validate_Offscreen as validate_Offscreen
-    from .scene_edits import validate_OrganizationEdit as validate_OrganizationEdit
-    from .parameters import validate_Parameter as validate_Parameter
-    from .scene import validate_Part as validate_Part
-    from .physics import validate_PhysicsAsset as validate_PhysicsAsset
-    from .physics import validate_PhysicsEdit as validate_PhysicsEdit
-    from .pose import validate_PoseAsset as validate_PoseAsset
-    from .pose import validate_PoseEdit as validate_PoseEdit
-    from .addressing import validate_ReferenceEdit as validate_ReferenceEdit
-    from .resources import validate_ResourceEdit as validate_ResourceEdit
-    from .bindings import validate_SceneBinding as validate_SceneBinding
-    from .scene_edits import validate_SceneContentEdit as validate_SceneContentEdit
-    from .scene_edits import validate_SceneEdit as validate_SceneEdit
-    from .bindings import validate_SceneKeyform as validate_SceneKeyform
-    from .common import validate_SourceRef as validate_SourceRef
-    from .mesh import validate_TopologyReplacement as validate_TopologyReplacement
-    from .scene import validate_Transform as validate_Transform
-    from .common import validate_Vec2 as validate_Vec2
+    from .scene_edits import validate_AttachmentEdit
+    from .bindings import validate_BindingAuthoringEdit
+    from .bindings import validate_BlendShapeBinding
+    from .bindings import validate_BlendShapeConstraint
+    from .bindings import validate_BlendShapeKeyTable
+    from .deletion import validate_DeletionIntent
+    from .project import validate_DocumentAuthoringEdit
+    from .scene import validate_DrawOrderGroup
+    from .project import validate_EditorState
+    from .expression import validate_ExpressionAsset
+    from .expression import validate_ExpressionEdit
+    from .sampling import validate_GeometrySnapshot
+    from .scene import validate_Glue
+    from .scene import validate_HierarchyOrder
+    from .resources import validate_ImageAsset
+    from .mesh import validate_ManualMeshOperation
+    from .mesh import validate_Mesh
+    from .bindings import validate_MeshBinding
+    from .bindings import validate_MeshKeyform
+    from .scene import validate_ModelSetup
+    from .motion import validate_MotionClip
+    from .motion import validate_MotionEdit
+    from .scene import validate_Offscreen
+    from .scene_edits import validate_OrganizationEdit
+    from .parameters import validate_Parameter
+    from .scene import validate_Part
+    from .physics import validate_PhysicsAsset
+    from .physics import validate_PhysicsEdit
+    from .pose import validate_PoseAsset
+    from .pose import validate_PoseEdit
+    from .addressing import validate_ReferenceEdit
+    from .resources import validate_ResourceEdit
+    from .bindings import validate_SceneBinding
+    from .scene_edits import validate_SceneContentEdit
+    from .scene_edits import validate_SceneEdit
+    from .bindings import validate_SceneKeyform
+    from .common import validate_SourceRef
+    from .mesh import validate_TopologyReplacement
+    from .scene import validate_Transform
+    from .common import validate_Vec2
     if isinstance(value, ModelingCommandCreateAsset):
         validate_ImageAsset(value.asset)
     elif isinstance(value, ModelingCommandReplaceAsset):
@@ -149,92 +152,81 @@ def validate_ModelingCommand(value: ModelingCommand) -> None:
         for v0 in value.groups:
             validate_DrawOrderGroup(v0)
     elif isinstance(value, ModelingCommandEraseObject):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
     elif isinstance(value, ModelingCommandRenameMesh):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if not isinstance(value.name, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
+        _check_string(value.name)
     elif isinstance(value, ModelingCommandUpdatePositions):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         if not isinstance(value.vertex_ids, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.vertex_ids:
-            if type(v0) is not int or not 0 <= v0 < 4294967296:
-                raise ValueError("Expected u32")
+            _check_u32(v0)
         if not isinstance(value.positions, tuple):
             raise TypeError("Expected an immutable tuple")
         for v0 in value.positions:
             validate_Vec2(v0)
     elif isinstance(value, ModelingCommandSetMeshKeyform):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_MeshKeyform(value.keyform)
     elif isinstance(value, ModelingCommandSetSceneKeyform):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
+        _check_string(value.id)
         validate_SceneKeyform(value.keyform)
     elif isinstance(value, ModelingCommandRemeshRectangleGrid):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if type(value.columns) is not int or not 0 <= value.columns < 18446744073709551616:
-            raise ValueError("Expected usize")
-        if type(value.rows) is not int or not 0 <= value.rows < 18446744073709551616:
-            raise ValueError("Expected usize")
+        _check_string(value.id)
+        _check_usize(value.columns)
+        _check_usize(value.rows)
     elif isinstance(value, ModelingCommandReplaceTopology):
         validate_GeometrySnapshot(value.source)
         validate_TopologyReplacement(value.replacement)
     elif isinstance(value, ModelingCommandManualMesh):
-        if not isinstance(value.mesh_id, str):
-            raise ValueError("Expected string")
+        _check_string(value.mesh_id)
         validate_SourceRef(value.expected)
         validate_ManualMeshOperation(value.operation)
     else:
         raise TypeError("Expected ModelingCommand")
 
 def encode_ModelingCommand(value: ModelingCommand) -> object:
-    from .scene_edits import encode_AttachmentEdit as encode_AttachmentEdit
-    from .bindings import encode_BindingAuthoringEdit as encode_BindingAuthoringEdit
-    from .bindings import encode_BlendShapeBinding as encode_BlendShapeBinding
-    from .bindings import encode_BlendShapeConstraint as encode_BlendShapeConstraint
-    from .bindings import encode_BlendShapeKeyTable as encode_BlendShapeKeyTable
-    from .deletion import encode_DeletionIntent as encode_DeletionIntent
-    from .project import encode_DocumentAuthoringEdit as encode_DocumentAuthoringEdit
-    from .scene import encode_DrawOrderGroup as encode_DrawOrderGroup
-    from .project import encode_EditorState as encode_EditorState
-    from .expression import encode_ExpressionAsset as encode_ExpressionAsset
-    from .expression import encode_ExpressionEdit as encode_ExpressionEdit
-    from .sampling import encode_GeometrySnapshot as encode_GeometrySnapshot
-    from .scene import encode_Glue as encode_Glue
-    from .scene import encode_HierarchyOrder as encode_HierarchyOrder
-    from .resources import encode_ImageAsset as encode_ImageAsset
-    from .mesh import encode_ManualMeshOperation as encode_ManualMeshOperation
-    from .mesh import encode_Mesh as encode_Mesh
-    from .bindings import encode_MeshBinding as encode_MeshBinding
-    from .bindings import encode_MeshKeyform as encode_MeshKeyform
-    from .scene import encode_ModelSetup as encode_ModelSetup
-    from .motion import encode_MotionClip as encode_MotionClip
-    from .motion import encode_MotionEdit as encode_MotionEdit
-    from .scene import encode_Offscreen as encode_Offscreen
-    from .scene_edits import encode_OrganizationEdit as encode_OrganizationEdit
-    from .parameters import encode_Parameter as encode_Parameter
-    from .scene import encode_Part as encode_Part
-    from .physics import encode_PhysicsAsset as encode_PhysicsAsset
-    from .physics import encode_PhysicsEdit as encode_PhysicsEdit
-    from .pose import encode_PoseAsset as encode_PoseAsset
-    from .pose import encode_PoseEdit as encode_PoseEdit
-    from .addressing import encode_ReferenceEdit as encode_ReferenceEdit
-    from .resources import encode_ResourceEdit as encode_ResourceEdit
-    from .bindings import encode_SceneBinding as encode_SceneBinding
-    from .scene_edits import encode_SceneContentEdit as encode_SceneContentEdit
-    from .scene_edits import encode_SceneEdit as encode_SceneEdit
-    from .bindings import encode_SceneKeyform as encode_SceneKeyform
-    from .common import encode_SourceRef as encode_SourceRef
-    from .mesh import encode_TopologyReplacement as encode_TopologyReplacement
-    from .scene import encode_Transform as encode_Transform
-    from .common import encode_Vec2 as encode_Vec2
+    from .scene_edits import encode_AttachmentEdit
+    from .bindings import encode_BindingAuthoringEdit
+    from .bindings import encode_BlendShapeBinding
+    from .bindings import encode_BlendShapeConstraint
+    from .bindings import encode_BlendShapeKeyTable
+    from .deletion import encode_DeletionIntent
+    from .project import encode_DocumentAuthoringEdit
+    from .scene import encode_DrawOrderGroup
+    from .project import encode_EditorState
+    from .expression import encode_ExpressionAsset
+    from .expression import encode_ExpressionEdit
+    from .sampling import encode_GeometrySnapshot
+    from .scene import encode_Glue
+    from .scene import encode_HierarchyOrder
+    from .resources import encode_ImageAsset
+    from .mesh import encode_ManualMeshOperation
+    from .mesh import encode_Mesh
+    from .bindings import encode_MeshBinding
+    from .bindings import encode_MeshKeyform
+    from .scene import encode_ModelSetup
+    from .motion import encode_MotionClip
+    from .motion import encode_MotionEdit
+    from .scene import encode_Offscreen
+    from .scene_edits import encode_OrganizationEdit
+    from .parameters import encode_Parameter
+    from .scene import encode_Part
+    from .physics import encode_PhysicsAsset
+    from .physics import encode_PhysicsEdit
+    from .pose import encode_PoseAsset
+    from .pose import encode_PoseEdit
+    from .addressing import encode_ReferenceEdit
+    from .resources import encode_ResourceEdit
+    from .bindings import encode_SceneBinding
+    from .scene_edits import encode_SceneContentEdit
+    from .scene_edits import encode_SceneEdit
+    from .bindings import encode_SceneKeyform
+    from .common import encode_SourceRef
+    from .mesh import encode_TopologyReplacement
+    from .scene import encode_Transform
+    from .common import encode_Vec2
     if isinstance(value, ModelingCommandCreateAsset):
         return {'op': 'create_asset', **cast(Mapping[str, object], {'asset': encode_ImageAsset(value.asset)})}
     elif isinstance(value, ModelingCommandReplaceAsset):
@@ -348,46 +340,46 @@ def encode_ModelingCommand(value: ModelingCommand) -> object:
     raise TypeError("Expected ModelingCommand")
 
 def read_ModelingCommand(value: object) -> ModelingCommand:
-    from .scene_edits import read_AttachmentEdit as read_AttachmentEdit
-    from .bindings import read_BindingAuthoringEdit as read_BindingAuthoringEdit
-    from .bindings import read_BlendShapeBinding as read_BlendShapeBinding
-    from .bindings import read_BlendShapeConstraint as read_BlendShapeConstraint
-    from .bindings import read_BlendShapeKeyTable as read_BlendShapeKeyTable
-    from .deletion import read_DeletionIntent as read_DeletionIntent
-    from .project import read_DocumentAuthoringEdit as read_DocumentAuthoringEdit
-    from .scene import read_DrawOrderGroup as read_DrawOrderGroup
-    from .project import read_EditorState as read_EditorState
-    from .expression import read_ExpressionAsset as read_ExpressionAsset
-    from .expression import read_ExpressionEdit as read_ExpressionEdit
-    from .sampling import read_GeometrySnapshot as read_GeometrySnapshot
-    from .scene import read_Glue as read_Glue
-    from .scene import read_HierarchyOrder as read_HierarchyOrder
-    from .resources import read_ImageAsset as read_ImageAsset
-    from .mesh import read_ManualMeshOperation as read_ManualMeshOperation
-    from .mesh import read_Mesh as read_Mesh
-    from .bindings import read_MeshBinding as read_MeshBinding
-    from .bindings import read_MeshKeyform as read_MeshKeyform
-    from .scene import read_ModelSetup as read_ModelSetup
-    from .motion import read_MotionClip as read_MotionClip
-    from .motion import read_MotionEdit as read_MotionEdit
-    from .scene import read_Offscreen as read_Offscreen
-    from .scene_edits import read_OrganizationEdit as read_OrganizationEdit
-    from .parameters import read_Parameter as read_Parameter
-    from .scene import read_Part as read_Part
-    from .physics import read_PhysicsAsset as read_PhysicsAsset
-    from .physics import read_PhysicsEdit as read_PhysicsEdit
-    from .pose import read_PoseAsset as read_PoseAsset
-    from .pose import read_PoseEdit as read_PoseEdit
-    from .addressing import read_ReferenceEdit as read_ReferenceEdit
-    from .resources import read_ResourceEdit as read_ResourceEdit
-    from .bindings import read_SceneBinding as read_SceneBinding
-    from .scene_edits import read_SceneContentEdit as read_SceneContentEdit
-    from .scene_edits import read_SceneEdit as read_SceneEdit
-    from .bindings import read_SceneKeyform as read_SceneKeyform
-    from .common import read_SourceRef as read_SourceRef
-    from .mesh import read_TopologyReplacement as read_TopologyReplacement
-    from .scene import read_Transform as read_Transform
-    from .common import read_Vec2 as read_Vec2
+    from .scene_edits import read_AttachmentEdit
+    from .bindings import read_BindingAuthoringEdit
+    from .bindings import read_BlendShapeBinding
+    from .bindings import read_BlendShapeConstraint
+    from .bindings import read_BlendShapeKeyTable
+    from .deletion import read_DeletionIntent
+    from .project import read_DocumentAuthoringEdit
+    from .scene import read_DrawOrderGroup
+    from .project import read_EditorState
+    from .expression import read_ExpressionAsset
+    from .expression import read_ExpressionEdit
+    from .sampling import read_GeometrySnapshot
+    from .scene import read_Glue
+    from .scene import read_HierarchyOrder
+    from .resources import read_ImageAsset
+    from .mesh import read_ManualMeshOperation
+    from .mesh import read_Mesh
+    from .bindings import read_MeshBinding
+    from .bindings import read_MeshKeyform
+    from .scene import read_ModelSetup
+    from .motion import read_MotionClip
+    from .motion import read_MotionEdit
+    from .scene import read_Offscreen
+    from .scene_edits import read_OrganizationEdit
+    from .parameters import read_Parameter
+    from .scene import read_Part
+    from .physics import read_PhysicsAsset
+    from .physics import read_PhysicsEdit
+    from .pose import read_PoseAsset
+    from .pose import read_PoseEdit
+    from .addressing import read_ReferenceEdit
+    from .resources import read_ResourceEdit
+    from .bindings import read_SceneBinding
+    from .scene_edits import read_SceneContentEdit
+    from .scene_edits import read_SceneEdit
+    from .bindings import read_SceneKeyform
+    from .common import read_SourceRef
+    from .mesh import read_TopologyReplacement
+    from .scene import read_Transform
+    from .common import read_Vec2
     if isinstance(value, (ModelingCommandCreateAsset, ModelingCommandReplaceAsset, ModelingCommandCreateMesh, ModelingCommandReplaceMesh, ModelingCommandCreateParameter, ModelingCommandReplaceParameter, ModelingCommandCreatePart, ModelingCommandReplacePart, ModelingCommandCreateTransform, ModelingCommandReplaceTransform, ModelingCommandCreateBinding, ModelingCommandReplaceBinding, ModelingCommandCreateSceneBinding, ModelingCommandReplaceSceneBinding, ModelingCommandCreateBlendKeyTable, ModelingCommandReplaceBlendKeyTable, ModelingCommandCreateBlendConstraint, ModelingCommandReplaceBlendConstraint, ModelingCommandCreateBlendBinding, ModelingCommandReplaceBlendBinding, ModelingCommandCreateGlue, ModelingCommandReplaceGlue, ModelingCommandCreateOffscreen, ModelingCommandReplaceOffscreen, ModelingCommandDeletion, ModelingCommandScene, ModelingCommandOrganization, ModelingCommandBinding, ModelingCommandContent, ModelingCommandReferences, ModelingCommandResource, ModelingCommandDocument, ModelingCommandAttachment, ModelingCommandMotion, ModelingCommandExpression, ModelingCommandPhysics, ModelingCommandPose, ModelingCommandCreateMotion, ModelingCommandReplaceMotion, ModelingCommandCreateExpression, ModelingCommandReplaceExpression, ModelingCommandSetPhysics, ModelingCommandSetPose, ModelingCommandReplaceModelSetup, ModelingCommandReplaceHierarchyOrder, ModelingCommandReplaceEditorState, ModelingCommandReplaceDrawOrderGroups, ModelingCommandEraseObject, ModelingCommandRenameMesh, ModelingCommandUpdatePositions, ModelingCommandSetMeshKeyform, ModelingCommandSetSceneKeyform, ModelingCommandRemeshRectangleGrid, ModelingCommandReplaceTopology, ModelingCommandManualMesh,)): return value
     r = record(value)
     tag = string(r['op'])
@@ -561,12 +553,9 @@ def read_ModelingCommand(value: object) -> ModelingCommand:
 def validate_ConversionDomain(value: ConversionDomain) -> None:
     if not isinstance(value, ConversionDomain):
         raise TypeError("Expected ConversionDomain")
-    if not isinstance(value.parameter_id, str):
-        raise ValueError("Expected string")
-    if isinstance(value.minimum, bool) or not isinstance(value.minimum, (float, int)) or not math.isfinite(value.minimum) or abs(value.minimum) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
-    if isinstance(value.maximum, bool) or not isinstance(value.maximum, (float, int)) or not math.isfinite(value.maximum) or abs(value.maximum) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_string(value.parameter_id)
+    _check_f32(value.minimum)
+    _check_f32(value.maximum)
 
 def encode_ConversionDomain(value: ConversionDomain) -> object:
     return {'parameter_id': value.parameter_id, 'minimum': value.minimum, 'maximum': value.maximum}
@@ -579,14 +568,10 @@ def read_ConversionDomain(value: object) -> ConversionDomain:
 def validate_ConversionCost(value: ConversionCost) -> None:
     if not isinstance(value, ConversionCost):
         raise TypeError("Expected ConversionCost")
-    if type(value.sample_combinations) is not int or not 0 <= value.sample_combinations < 18446744073709551616:
-        raise ValueError("Expected usize")
-    if type(value.payload_bytes) is not int or not 0 <= value.payload_bytes < 18446744073709551616:
-        raise ValueError("Expected usize")
-    if type(value.temporary_bytes) is not int or not 0 <= value.temporary_bytes < 18446744073709551616:
-        raise ValueError("Expected usize")
-    if type(value.history_bytes) is not int or not 0 <= value.history_bytes < 18446744073709551616:
-        raise ValueError("Expected usize")
+    _check_usize(value.sample_combinations)
+    _check_usize(value.payload_bytes)
+    _check_usize(value.temporary_bytes)
+    _check_usize(value.history_bytes)
 
 def encode_ConversionCost(value: ConversionCost) -> object:
     return {'sample_combinations': value.sample_combinations, 'payload_bytes': value.payload_bytes, 'temporary_bytes': value.temporary_bytes, 'history_bytes': value.history_bytes}

@@ -1,7 +1,8 @@
 """Owned rendering requests. Rust owns image, coordinate and texture algorithms."""
 from collections.abc import Mapping,Sequence
 from ._facade_support import _DomainOwner
-from ._generated import values as m, codecs as _modeling_codec
+from ._generated import values as m
+from ._generated.codecs import observation as _modeling_codec
 from ._jobs import Job
 from ._results import Snapshot
 from ._values import Source,record

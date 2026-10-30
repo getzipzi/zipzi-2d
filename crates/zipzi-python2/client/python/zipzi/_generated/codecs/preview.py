@@ -6,44 +6,35 @@ from ..._values import record
 from ..._values import sequence
 from ..._values import string
 from .._modeling_support import _boolean
+from .._modeling_support import _check_bool
+from .._modeling_support import _check_f32
+from .._modeling_support import _check_string
+from .._modeling_support import _check_u64
+from .._modeling_support import _check_usize
 from collections.abc import Mapping
 from typing import cast
-import math
-from ..values import PreviewBatch as PreviewBatch, PreviewCommand as PreviewCommand, PreviewCommandReset as PreviewCommandReset, PreviewCommandScheduleExpression as PreviewCommandScheduleExpression, PreviewCommandScheduleMotion as PreviewCommandScheduleMotion, PreviewCommandScheduleParameter as PreviewCommandScheduleParameter, PreviewCommandScheduleRegistration as PreviewCommandScheduleRegistration, PreviewCommandSetParameter as PreviewCommandSetParameter, PreviewCommandSetPhysics as PreviewCommandSetPhysics, PreviewFrame as PreviewFrame, PreviewState as PreviewState
+from ..values import PreviewBatch, PreviewCommand, PreviewCommandReset, PreviewCommandScheduleExpression, PreviewCommandScheduleMotion, PreviewCommandScheduleParameter, PreviewCommandScheduleRegistration, PreviewCommandSetParameter, PreviewCommandSetPhysics, PreviewFrame, PreviewState
 
 def validate_PreviewCommand(value: PreviewCommand) -> None:
     if isinstance(value, PreviewCommandSetParameter):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.id)
+        _check_f32(value.value)
     elif isinstance(value, PreviewCommandScheduleMotion):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.id)
+        _check_f32(value.time)
     elif isinstance(value, PreviewCommandScheduleRegistration):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.id)
+        _check_f32(value.time)
     elif isinstance(value, PreviewCommandScheduleExpression):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.id)
+        _check_f32(value.time)
     elif isinstance(value, PreviewCommandScheduleParameter):
-        if not isinstance(value.id, str):
-            raise ValueError("Expected string")
-        if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
-        if isinstance(value.value, bool) or not isinstance(value.value, (float, int)) or not math.isfinite(value.value) or abs(value.value) > 3.4028234663852886e38:
-            raise ValueError("Expected f32")
+        _check_string(value.id)
+        _check_f32(value.time)
+        _check_f32(value.value)
     elif isinstance(value, PreviewCommandSetPhysics):
-        if type(value.enabled) is not bool:
-            raise ValueError("Expected bool")
-        if type(value.stabilized_start) is not bool:
-            raise ValueError("Expected bool")
+        _check_bool(value.enabled)
+        _check_bool(value.stabilized_start)
     elif isinstance(value, PreviewCommandReset):
         pass
     else:
@@ -95,10 +86,8 @@ def read_PreviewCommand(value: object) -> PreviewCommand:
 def validate_PreviewState(value: PreviewState) -> None:
     if not isinstance(value, PreviewState):
         raise TypeError("Expected PreviewState")
-    if type(value.sequence) is not int or not 0 <= value.sequence < 18446744073709551616:
-        raise ValueError("Expected u64")
-    if isinstance(value.time, bool) or not isinstance(value.time, (float, int)) or not math.isfinite(value.time) or abs(value.time) > 3.4028234663852886e38:
-        raise ValueError("Expected f32")
+    _check_u64(value.sequence)
+    _check_f32(value.time)
 
 def encode_PreviewState(value: PreviewState) -> object:
     return {'sequence': value.sequence, 'time': value.time}
@@ -109,8 +98,8 @@ def read_PreviewState(value: object) -> PreviewState:
     return PreviewState(sequence=integer(r['sequence']), time=number(r['time']))
 
 def validate_PreviewBatch(value: PreviewBatch) -> None:
-    from .observation import validate_ObservationView as validate_ObservationView
-    from .spatial import validate_SpatialQuery as validate_SpatialQuery
+    from .observation import validate_ObservationView
+    from .spatial import validate_SpatialQuery
     if not isinstance(value, PreviewBatch):
         raise TypeError("Expected PreviewBatch")
     if value.view is not None:
@@ -119,30 +108,29 @@ def validate_PreviewBatch(value: PreviewBatch) -> None:
         raise TypeError("Expected an immutable tuple")
     for v0 in value.queries:
         validate_SpatialQuery(v0)
-    if type(value.sequence) is not int or not 0 <= value.sequence < 18446744073709551616:
-        raise ValueError("Expected u64")
+    _check_u64(value.sequence)
     if not isinstance(value.frames, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.frames:
         validate_PreviewFrame(v0)
 
 def encode_PreviewBatch(value: PreviewBatch) -> object:
-    from .observation import encode_ObservationView as encode_ObservationView
-    from .spatial import encode_SpatialQuery as encode_SpatialQuery
+    from .observation import encode_ObservationView
+    from .spatial import encode_SpatialQuery
     return {'view': None if value.view is None else encode_ObservationView(value.view), 'queries': [encode_SpatialQuery(v0) for v0 in value.queries], 'sequence': value.sequence, 'frames': [encode_PreviewFrame(v0) for v0 in value.frames]}
 
 def read_PreviewBatch(value: object) -> PreviewBatch:
-    from .observation import read_ObservationView as read_ObservationView
-    from .spatial import read_SpatialQuery as read_SpatialQuery
+    from .observation import read_ObservationView
+    from .spatial import read_SpatialQuery
     if isinstance(value, PreviewBatch): return value
     r = record(value)
     return PreviewBatch(view=None if r.get('view', None) is None else read_ObservationView(r.get('view', None)), queries=tuple(read_SpatialQuery(v0) for v0 in sequence(r['queries'])), sequence=integer(r['sequence']), frames=tuple(read_PreviewFrame(v0) for v0 in sequence(r['frames'])))
 
 def validate_PreviewFrame(value: PreviewFrame) -> None:
-    from .sampling import validate_DrawableFrame as validate_DrawableFrame
-    from .motion import validate_MotionSnapshot as validate_MotionSnapshot
-    from .observation import validate_ObservationImage as validate_ObservationImage
-    from .spatial import validate_SpatialResult as validate_SpatialResult
+    from .sampling import validate_DrawableFrame
+    from .motion import validate_MotionSnapshot
+    from .observation import validate_ObservationImage
+    from .spatial import validate_SpatialResult
     if not isinstance(value, PreviewFrame):
         raise TypeError("Expected PreviewFrame")
     if value.observation is not None:
@@ -151,28 +139,25 @@ def validate_PreviewFrame(value: PreviewFrame) -> None:
         raise TypeError("Expected an immutable tuple")
     for v0 in value.spatial:
         validate_SpatialResult(v0)
-    if type(value.preview_id) is not int or not 0 <= value.preview_id < 18446744073709551616:
-        raise ValueError("Expected u64")
-    if type(value.sequence) is not int or not 0 <= value.sequence < 18446744073709551616:
-        raise ValueError("Expected u64")
-    if type(value.index) is not int or not 0 <= value.index < 18446744073709551616:
-        raise ValueError("Expected usize")
+    _check_u64(value.preview_id)
+    _check_u64(value.sequence)
+    _check_usize(value.index)
     validate_MotionSnapshot(value.motion)
     if value.geometry is not None:
         validate_DrawableFrame(value.geometry)
 
 def encode_PreviewFrame(value: PreviewFrame) -> object:
-    from .sampling import encode_DrawableFrame as encode_DrawableFrame
-    from .motion import encode_MotionSnapshot as encode_MotionSnapshot
-    from .observation import encode_ObservationImage as encode_ObservationImage
-    from .spatial import encode_SpatialResult as encode_SpatialResult
+    from .sampling import encode_DrawableFrame
+    from .motion import encode_MotionSnapshot
+    from .observation import encode_ObservationImage
+    from .spatial import encode_SpatialResult
     return {'observation': None if value.observation is None else encode_ObservationImage(value.observation), 'spatial': [encode_SpatialResult(v0) for v0 in value.spatial], 'preview_id': value.preview_id, 'sequence': value.sequence, 'index': value.index, 'motion': encode_MotionSnapshot(value.motion), 'geometry': None if value.geometry is None else encode_DrawableFrame(value.geometry)}
 
 def read_PreviewFrame(value: object) -> PreviewFrame:
-    from .sampling import read_DrawableFrame as read_DrawableFrame
-    from .motion import read_MotionSnapshot as read_MotionSnapshot
-    from .observation import read_ObservationImage as read_ObservationImage
-    from .spatial import read_SpatialResult as read_SpatialResult
+    from .sampling import read_DrawableFrame
+    from .motion import read_MotionSnapshot
+    from .observation import read_ObservationImage
+    from .spatial import read_SpatialResult
     if isinstance(value, PreviewFrame): return value
     r = record(value)
     return PreviewFrame(observation=None if r.get('observation', None) is None else read_ObservationImage(r.get('observation', None)), spatial=tuple(read_SpatialResult(v0) for v0 in sequence(r['spatial'])), preview_id=integer(r['preview_id']), sequence=integer(r['sequence']), index=integer(r['index']), motion=read_MotionSnapshot(r['motion']), geometry=None if r.get('geometry', None) is None else read_DrawableFrame(r.get('geometry', None)))

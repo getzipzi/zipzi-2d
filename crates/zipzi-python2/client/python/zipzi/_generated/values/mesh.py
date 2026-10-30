@@ -9,14 +9,14 @@ from typing import ClassVar as _ClassVar
 from typing import TypeAlias
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from .scene import Appearance as Appearance
-    from .scene import BlendMode as BlendMode
-    from .bindings import BlendShapeBinding as BlendShapeBinding
-    from .commands import ConversionCost as ConversionCost
-    from .scene import Glue as Glue
-    from .bindings import MeshBinding as MeshBinding
-    from .scene import SceneReference as SceneReference
-    from .common import Vec2 as Vec2
+    from .scene import Appearance
+    from .scene import BlendMode
+    from .bindings import BlendShapeBinding
+    from .commands import ConversionCost
+    from .scene import Glue
+    from .bindings import MeshBinding
+    from .scene import SceneReference
+    from .common import Vec2
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class Mesh(CompactValue):

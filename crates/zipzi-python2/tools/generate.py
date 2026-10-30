@@ -496,7 +496,7 @@ def render(contract):
     modeling = _modeling_codegen.render_modeling(graph.root['modeling'], HEADER, RUST_HEADER, graph.resolve, graph.domains)
     modeling_path = 'client/python/zipzi/_generated/modeling.py'
     modeling_source = render_python(modeling_path, modeling.pop(modeling_path))
-    split_values, _, _ = split_modeling.split(modeling_source, graph, HEADER)
+    split_values, _, codec_domains = split_modeling.split(modeling_source, graph, HEADER)
     output.update(split_values)
     accept(modeling)
     binary = _binary_codegen.render_binary(graph.root['binary'], HEADER, graph.resolve)
@@ -504,7 +504,7 @@ def render(contract):
     binary_source = render_python(binary_path, binary[binary_path])
     output.update(split_binary.split(binary_source, graph, HEADER))
     accept(_dto_codegen.render_dtos(graph.root['dtos'], HEADER, graph.resolve))
-    accept(_api_codegen.render_api(graph.root, HEADER, RUST_HEADER, graph.resolve))
+    accept(_api_codegen.render_api(graph.root, HEADER, RUST_HEADER, graph.resolve, codec_domains))
     output['src/generated/mod.rs'] += 'pub mod scene;\npub mod modeling;\npub mod discovery;\n'
     prepared = prepare(output)
     documents = _api_codegen.document_model(graph.root, prepared, PACKAGE)
