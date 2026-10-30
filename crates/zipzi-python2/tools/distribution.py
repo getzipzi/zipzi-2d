@@ -96,7 +96,8 @@ def main():
         # No Git directory, no reference back to the live workspace.
         assert not (native/'.git').exists()
         host, contract = build_source_examples(native, output, run)
-        run('source-generator-check',[sys.executable,'-I',archived/'tools/generate.py','--check','--schema',contract],cwd=native)
+        run('source-generator-check',[sys.executable,'-I',archived/'tools/generate.py','--check'],cwd=native)
+        run('source-generator-replay',[sys.executable,'-I',archived/'tools/generate.py','--check','--schema',contract],cwd=native)
         for source in (PACKAGE/'client/python/zipzi').rglob('*'):
             if not source.is_file() or '__pycache__' in source.parts:continue
             relative=source.relative_to(PACKAGE/'client')

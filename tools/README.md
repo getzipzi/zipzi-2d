@@ -65,7 +65,7 @@ from another directory. The Python tooling runner also resolves its own checkout
 ## Test coverage
 
 Run commands from the repository root. `tools/workspace/package-domains.json` assigns every
-owned workspace package to exactly one domain: 17 SDK packages (including Python2
+owned workspace package to exactly one domain: 18 SDK packages (including Python2
 and the Rust comparison runner) and 3 Editor packages. New workspace members must
 be explicitly assigned; missing, stale, duplicate or overlapping names fail the
 metadata coverage gate. Vendor packages are not workspace members.
@@ -87,7 +87,7 @@ Python environment. `fmt` selects only the domain's own packages, excluding vend
 | --- | --- |
 | SDK `fast` | zipzi-sdk library and ordinary integration; optional filter |
 | SDK `runtime` | CPU Runtime sessions, path reservations, transactions, jobs, panic, events, protocol/framing and retention contracts; optional filter |
-| SDK `mesh` / `regression` | Daily alpha mesh / all 17 SDK libraries and integrations; skip only `alpha_mesh_stress::` |
+| SDK `mesh` / `regression` | Daily alpha mesh / all 18 SDK libraries and integrations; skip only `alpha_mesh_stress::` |
 | SDK `stress` | Entire fixed-seed alpha mesh matrix |
 | SDK `python2` | New Runtime-backed package: refreshed native adapter, Local/Connected behavior, strict positive/negative types and generation drift |
 | SDK `python2-connected` | New pure wheel in an isolated environment; real cold-start/ownership/recovery; optional `--editor-host /absolute/path/to/zipzi-editor` adds production desktop acceptance |
@@ -254,6 +254,25 @@ checkout-local `target/python2/schema-cargo` build directory. Generation and
 checking share a checkout-local lock; `--check` verifies tracked outputs without
 rewriting them.
 
+`test_python2_codegen.py` checks the resolved normal/build dependency graph on
+all targets and features, then changes real Core/SDK/Runtime function bodies and
+contract declarations in a temporary source copy. It verifies Cargo freshness,
+byte-identical generated outputs, drift detection, cache deletion and compilation
+failure recovery. Compile controls also reject missing/duplicate operation
+bindings and mismatched handler types.
+
+To collect five warm samples per scenario, including export, rendering/cache and
+output comparison timings, use a new output directory:
+
+```sh
+uv run --locked python tools/python/python2_codegen_acceptance.py --output target/python2/contract-acceptance
+```
+
+The runner retains its copied sources, logs and JSON measurements in that
+directory. Run it without other builds when comparing timings. It also records
+one dedicated-target cold build and contract-field rebuilds; these have separate
+budgets from unchanged/implementation-only hot checks.
+
 Generated JSON inventories and reports belong under `target/`; plan directories
 retain Markdown acceptance results only.
 
@@ -329,7 +348,7 @@ Purism sources, records hashes and checkout status, and refuses missing gitlinks
 escaping symlinks and tracked private/generated content. Initialize Purism before
 packaging. Local models, the proprietary Cubism SDK under `third_party/`,
 target, Python caches and machine Cargo config are excluded.
-It retains all 20 crate paths, Editor crate assets, patches, docs and both license texts.
+It retains all 21 crate paths, Editor crate assets, patches, docs and both license texts.
 Extract the `zipzi-2d/` directory and build from that workspace root.
 
 Python package artifacts are built and verified by the maintained

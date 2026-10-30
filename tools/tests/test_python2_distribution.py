@@ -39,6 +39,36 @@ class Python2Distribution(unittest.TestCase):
             lock.write_text('version = 4\n[[package]]\nname="test"\nversion="1.2.3"\nsource="registry+https://example.test"\nchecksum="fixture"\n')
             self.assertEqual(self.backend().locked_versions(lock), {('test','1.2.3','registry+https://example.test')})
 
+    def test_source_archive_requires_current_contract_includes_derive_and_generator(self):
+        import shutil
+        backend = self.backend()
+        with tempfile.TemporaryDirectory() as folder:
+            checkout, archive = Path(folder) / 'checkout', Path(folder) / 'archive'
+            inputs = ('crates/zipzi-contract/Cargo.toml',
+                      'crates/zipzi-contract/src/bin/authoring_schema.rs',
+                      'crates/zipzi-contract/src/model/values.rs',
+                      'crates/zipzi-api-derive/Cargo.toml',
+                      'crates/zipzi-api-derive/src/lib.rs',
+                      'crates/zipzi-python2/tools/generate.py',
+                      'tools/workspace/dev_platform.py')
+            for name in inputs:
+                path = checkout / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(name)
+            shutil.copytree(checkout, archive)
+            backend.verify_codegen_sources(archive, checkout)
+            for name in inputs:
+                with self.subTest(name=name):
+                    path = archive / name
+                    path.unlink()
+                    with self.assertRaisesRegex(RuntimeError, 'Source archive lacks'):
+                        backend.verify_codegen_sources(archive, checkout)
+                    path.write_text('stale')
+                    if path.suffix != '.toml':
+                        with self.assertRaisesRegex(RuntimeError, 'current codegen input'):
+                            backend.verify_codegen_sources(archive, checkout)
+                    path.write_bytes((checkout / name).read_bytes())
+
 
 
 TOOLS=Path(__file__).resolve().parents[2]/'crates/zipzi-python2/tools'

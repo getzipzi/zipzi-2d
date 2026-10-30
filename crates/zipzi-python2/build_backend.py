@@ -36,6 +36,21 @@ def locked_versions(path):
     return {(p['name'], p['version'], p.get('source')) for p in tomllib.loads(path.read_text(encoding='utf-8'))['package']}
 
 
+def verify_codegen_sources(archive, checkout):
+    """Every exporter/derive include and generator input must survive the sdist."""
+    paths = [Path('tools/workspace/dev_platform.py')]
+    for name in ('zipzi-contract', 'zipzi-api-derive'):
+        package = Path('crates') / name
+        if not (archive / package / 'Cargo.toml').is_file():
+            raise RuntimeError(f'Source archive lacks {package}/Cargo.toml')
+        paths.extend(path.relative_to(checkout) for path in (checkout / package / 'src').rglob('*.rs'))
+    paths.extend(path.relative_to(checkout) for path in
+                 (checkout / 'crates/zipzi-python2/tools').glob('generate*.py'))
+    for path in paths:
+        if not (archive / path).is_file() or (archive / path).read_bytes() != (checkout / path).read_bytes():
+            raise RuntimeError(f'Source archive lacks current codegen input: {path}')
+
+
 def build_sdist(sdist_directory, config_settings=None):
     filename = maturin.build_sdist(sdist_directory, config_settings)
     destination = Path(sdist_directory) / filename
@@ -54,6 +69,7 @@ def build_sdist(sdist_directory, config_settings=None):
         support = root / 'tools/workspace/dev_platform.py'
         support.parent.mkdir(parents=True, exist_ok=True)
         support.write_bytes((Path(__file__).resolve().parents[2] / 'tools/workspace/dev_platform.py').read_bytes())
+        verify_codegen_sources(root, Path(__file__).resolve().parents[2])
         # Cargo preserves existing locked versions while removing the unused
         # desktop dependency graph. No build, generator or network is involved.
         versions = locked_versions(root / 'Cargo.lock')

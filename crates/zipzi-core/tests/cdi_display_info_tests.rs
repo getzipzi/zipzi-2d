@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use serde_json::json;
 use zipzi_core::document::{
     CdiCombinedSet, CdiParameterEntry, CdiParameterGroup, CdiParameterRef, DisplayInfo,
+    ReferenceEntry, ReferenceEntryAllocation,
 };
 use zipzi_core::preview::PreviewState;
 use zipzi_core::{Canvas, ChangeKind, Document, Parameter, Part, Vec2};
@@ -65,10 +66,9 @@ fn info() -> DisplayInfo {
         ]),
         combined_parameters: Some(vec![CdiCombinedSet {
             id: SET.into(),
-            members: vec![CdiParameterRef::Resolved {
+            members: vec![ReferenceEntry::new(CdiParameterRef::Resolved {
                 parameter_id: PARAM.into(),
-            }
-            .into()],
+            })],
         }]),
         ..Default::default()
     }

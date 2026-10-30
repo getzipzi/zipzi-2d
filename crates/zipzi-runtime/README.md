@@ -92,7 +92,9 @@ Compatibility rules for Connected clients and Editor hosts:
   `sdk_build=...` pins that exact build. Runtime identity, resume secrets, ownership
   and request deduplication are always enforced.
 
-The earlier feature-specific `rN` protocols require a coordinated upgrade to
+The contract extraction moves Rust type identities and binary layout signatures
+to `zipzi-contract`, so v1 clients and hosts require a coordinated upgrade to v2.
+The earlier feature-specific `rN` protocols also require a coordinated upgrade to
 this baseline. The in-process `zipzi-native` adapter still pairs with its Python
 package and is independent of this Connected compatibility policy.
 

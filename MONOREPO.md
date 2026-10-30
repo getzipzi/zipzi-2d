@@ -48,6 +48,13 @@ results. Python provides user-facing types, context managers, batch workflows
 and reports. New modeling rules belong in Rust even when Python is their only
 current caller; model-specific experiments remain in experiment tooling.
 
+`zipzi-contract` owns shared model/authoring/runtime value definitions, shape and
+binary metadata, and typed operation declarations. Its `authoring-schema` binary
+exports Python projections without compiling execution packages. Core, SDK and
+Runtime consume the same types; their algorithms and resource leases stay in
+the implementation crates. The dependency/freshness checks live in
+`tools/tests/test_python2_codegen.py`.
+
 `zipzi-observe` captures immutable session snapshots and validates image
 resources through `zipzi-project`. Render backends share scene planning and CPU
 geometry through `zipzi-render`: native Metal on macOS and WGPU on other

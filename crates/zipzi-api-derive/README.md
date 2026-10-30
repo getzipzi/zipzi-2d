@@ -24,5 +24,6 @@ to force a fresh render; deleting the cache is also safe.
 
 `ApiFields` exports names and concrete Rust type identities for selected lifecycle
 records and event variants. It does not traverse private state. The Python DTO
-exporter explicitly binds each supported leaf, so event/cursor field declarations
-remain in Runtime and unknown projections fail generation.
+exporter explicitly binds each supported leaf. Event/cursor field declarations
+live in `zipzi-contract`; Runtime binds their execution, and unknown projections
+fail generation.

@@ -15,17 +15,34 @@ SPEC = importlib.util.spec_from_file_location('python2_generate', PACKAGE / 'too
 gen = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(gen)
 
+
+class Python2ContractIsolation(unittest.TestCase):
+    def test_real_implementation_and_contract_changes_in_an_isolated_checkout(self):
+        spec = importlib.util.spec_from_file_location('contract_acceptance',
+            ROOT / 'tools/python/python2_codegen_acceptance.py')
+        acceptance = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(acceptance)
+        with tempfile.TemporaryDirectory(prefix='zipzi contract 中文 ') as folder:
+            report = acceptance.Acceptance(Path(folder), samples=1).run()
+        self.assertEqual(report['status'], 'passed')
+        for scenario in ('core', 'sdk', 'runtime', 'field-drift', 'default-drift',
+                         'enum-drift', 'operation-input-drift', 'operation-output-drift',
+                         'cache-deleted', 'invalid-contract', 'failure-recovered'):
+            self.assertIn(scenario, report['summary'])
+
+
 class Python2Codegen(unittest.TestCase):
     def test_exporter_dependency_closure_contains_no_implementation_packages(self):
         metadata = json.loads(subprocess.check_output(
             ['cargo', 'metadata', '--locked', '--no-deps', '--format-version', '1'], cwd=ROOT))
         owned = {p['name'] for p in metadata['packages'] if p['id'] in metadata['workspace_members']}
         tree = subprocess.check_output(
-            ['cargo', 'tree', '--locked', '-p', 'zipzi-contract', '-e', 'normal,build',
+            ['cargo', 'tree', '--locked', '-p', 'zipzi-contract', '--all-features', '--target', 'all', '-e', 'normal,build',
              '--prefix', 'none', '--format', '{p}'], cwd=ROOT, text=True)
         names = {line.split(' v', 1)[0] for line in tree.splitlines()}
         self.assertEqual(names & owned, {'zipzi-contract', 'zipzi-api-derive'})
-        self.assertFalse(names & {'pyo3', 'wgpu', 'wgpu-core', 'wgpu-hal', 'naga', 'metal'})
+        self.assertFalse({name for name in names if name.startswith(
+            ('pyo3', 'wgpu', 'naga', 'metal', 'objc2-metal', 'ash', 'glow', 'gpu-'))})
 
     def test_export_uses_checkout_target_even_with_external_cargo_target(self):
         result = unittest.mock.Mock(returncode=0, stdout='{}', stderr='')
@@ -461,7 +478,7 @@ class Python2Codegen(unittest.TestCase):
             for source, code in cases:
                 (folder / 'src/main.rs').write_text(source)
                 result = subprocess.run(['cargo', 'check', '--offline', '--manifest-path', str(folder / 'Cargo.toml'), '--message-format=json'],
-                    cwd=ROOT, env=dict(os.environ, CARGO_TARGET_DIR=str(ROOT / 'target')), capture_output=True, text=True)
+                    cwd=ROOT, env=dict(os.environ, CARGO_TARGET_DIR=os.environ.get('CARGO_TARGET_DIR', str(ROOT / 'target'))), capture_output=True, text=True)
                 errors = [r['message'] for line in result.stdout.splitlines() if (r := json.loads(line)).get('reason') == 'compiler-message' and r['message']['level'] == 'error']
                 if code is None:
                     self.assertEqual(result.returncode, 0, result.stderr + result.stdout[-4000:])

@@ -304,10 +304,11 @@ fn exported_model_import_preserves_parameter_bound_geometry_and_texture_pixels()
     settings.groups = Some(vec![zipzi_core::document::ModelParameterGroup {
         id: zipzi_core::document::ModelParameterGroup::allocate().id,
         name: "EyeBlink".into(),
-        parameters: vec![zipzi_core::document::ModelTargetRef::Resolved {
-            object_id: PARAM.into(),
-        }
-        .into()],
+        parameters: vec![zipzi_core::document::ReferenceEntry::new(
+            zipzi_core::document::ModelTargetRef::Resolved {
+                object_id: PARAM.into(),
+            },
+        )],
         extensions: Default::default(),
     }]);
     assert!(document

@@ -34,6 +34,8 @@ jobs:
           cache-bin: false
       - name: Check native Editor and platform examples
         run: cargo check --locked -p zipzi-editor -p zipzi-editor-render --all-targets --features zipzi-editor/test-support,zipzi-editor/wgpu-backend
+      - name: Check contract values and codecs on the consumer platform
+        run: cargo test --locked -p zipzi-contract
       - name: Windows presentation scheduling
         if: runner.os == 'Windows'
         run: cargo test --locked -p zipzi-editor --lib headless_tests::ui_performance
@@ -46,6 +48,16 @@ jobs:
           submodules: recursive
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: rustfmt
+      - name: Restore contract and compile-control dependencies
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: contract-tooling
+          workspaces: |
+            . -> target/ci-cargo
+            . -> target/python2/schema-cargo
+          cache-bin: false
       - uses: astral-sh/setup-uv@v6
         with:
           version: '0.10.7'
@@ -111,7 +123,9 @@ jobs:
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: python-runtime
-          workspaces: . -> target/ci-cargo
+          workspaces: |
+            . -> target/ci-cargo
+            . -> target/python2/schema-cargo
           cache-bin: false
       - uses: astral-sh/setup-uv@v6
         with:

@@ -21,3 +21,10 @@ rustfmt --edition 2021 --config skip_children=true crates/zipzi-contract/src/{mo
 
 Run focused checks with `cargo test --locked -p zipzi-contract` and
 `uv run --locked python tools/test_tools.py -p test_python2_codegen.py`.
+
+The tooling gate exercises real contract mutations and implementation isolation
+in a temporary checkout. For five-sample timing evidence, run
+`uv run --locked python tools/python/python2_codegen_acceptance.py --output target/python2/contract-acceptance`
+without competing builds. The output directory must be new; it retains source
+copies, Cargo freshness and phase timings. See the
+[integration acceptance report](../../docs/archive/plans/python2-contract-acceptance.md).

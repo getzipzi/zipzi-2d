@@ -2,6 +2,8 @@
 
 - [Repository layout](../MONOREPO.md) and [licensing](../LICENSING.md)
 - [SDK boundaries](../MONOREPO.md#sdk-and-language-boundaries), [Python SDK](../crates/zipzi-python2/README.md)
+- [Python SDK 契约拆分方案](archive/plans/python2-contract-extraction.md): 生成器脱离 Core、SDK、Runtime 实现依赖，保留 Rust 契约来源与本地独立生成
+- [Python 契约阶段 6 验收](archive/plans/python2-contract-acceptance.md): 依赖隔离、归档安装、集成回归和实际生成／native 循环耗时
 - [Editor development](../crates/zipzi-editor/README.md) and [dependencies](../vendor/README.md#dependencies)
 - [Test domains and CI](../tools/README.md#test-coverage)
 - [Source, wheel and app artifacts](../tools/README.md#local-distribution-artifacts)

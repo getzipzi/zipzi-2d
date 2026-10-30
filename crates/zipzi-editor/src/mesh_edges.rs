@@ -5,6 +5,14 @@ use zipzi_editor_core::ViewportPoint;
 // vertices each; keep ample headroom and bound the size of each temporary buffer.
 const EDGES_PER_PATH: usize = 4096;
 
+// Standalone render tests/examples also include this module. The application
+// configures its optional trace policy without coupling the renderer to it.
+static LEGACY_BOUNDS: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+pub(crate) fn configure_legacy_bounds(enabled: bool) {
+    let _ = LEGACY_BOUNDS.set(enabled);
+}
+
 /// Paint equally styled mesh edges as disjoint subpaths, before vertex handles.
 pub fn paint_edges(
     edges: &[(ViewportPoint, ViewportPoint)],
@@ -20,7 +28,7 @@ pub fn paint_edges_with_width(
     width: f32,
     paint: impl FnMut(Path<Pixels>),
 ) {
-    if crate::benchmark::parameter_overlay::legacy_edge_bounds() {
+    if LEGACY_BOUNDS.get().copied().unwrap_or(false) {
         paint_edges_impl::<false>(edges, origin, width, paint);
     } else {
         paint_edges_impl::<true>(edges, origin, width, paint);

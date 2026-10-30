@@ -66,6 +66,7 @@ pub(super) fn init(automatic: bool) -> anyhow::Result<()> {
         legacy_edge_bounds,
         eager_viewport_layout,
     });
+    mesh_edges::configure_legacy_bounds(OPTIONS.get().is_some_and(|o| o.legacy_edge_bounds));
     Ok(())
 }
 
@@ -88,10 +89,6 @@ pub(crate) fn eager_canvas() -> bool {
 
 pub(crate) fn layer_markers() -> bool {
     !OPTIONS.get().is_some_and(|o| o.unlayered_markers)
-}
-
-pub(crate) fn legacy_edge_bounds() -> bool {
-    OPTIONS.get().is_some_and(|o| o.legacy_edge_bounds)
 }
 
 pub(crate) fn eager_viewport_layout() -> bool {
