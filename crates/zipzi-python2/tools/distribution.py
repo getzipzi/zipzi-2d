@@ -17,6 +17,7 @@ import time
 import tomllib
 import zipfile
 from _support import exclusive_run, executable, executable_name, venv_python
+from codegen import schema
 
 ROOT = Path(__file__).resolve().parents[3]
 PACKAGE = ROOT / 'crates/zipzi-python2'
@@ -123,7 +124,7 @@ def main():
         report=dict(schema=1,status='passed',base_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True, encoding='utf-8').strip(),
             dirty_files=subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True, encoding='utf-8').splitlines(),commands=commands,
             artifacts=[dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest()) for p in artifacts],
-            source_contract_sha256=hashlib.sha256((archived/'schema/authoring.json').read_bytes()).hexdigest(),
+            source_contract_sha256=schema.digest(schema.read(archived/'schema/authoring.json')),
             native_source_scope='SDK dependency closure plus complete Python client, native adapter, Rust declarations, exporter and generator; pure client sdist carries the same Python sources and generated outputs')
         (output/'results.json').write_text(json.dumps(report,indent=2)+'\n')
         print(output/'results.json')

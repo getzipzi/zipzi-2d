@@ -383,7 +383,8 @@ class Python2Codegen(unittest.TestCase):
             with self.assertRaises(ValueError):gen.render(invalid)
 
     def contract(self):
-        return json.loads((PACKAGE / 'schema/authoring.json').read_text())
+        logical = gen.schema.read(PACKAGE / 'schema/authoring.json')
+        return gen.TypeGraph.from_contract(logical).legacy_contract()
 
     def files(self, folder):
         return {p.relative_to(folder).as_posix(): p.read_bytes() for p in folder.rglob('*') if p.is_file()}
@@ -423,7 +424,7 @@ class Python2Codegen(unittest.TestCase):
 
     def test_renderers_consume_graph_without_legacy_expansion(self):
         with patch.object(gen.TypeGraph,'legacy_contract',side_effect=AssertionError('legacy expansion')):
-            output=gen.render(self.contract())
+            output=gen.render(gen.schema.read(PACKAGE / 'schema/authoring.json'))
         self.assertEqual(gen.write_outputs(output,check=True),[])
 
     def test_projection_model_records_canonical_alias_and_special_reasons(self):

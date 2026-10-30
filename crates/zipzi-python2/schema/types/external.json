@@ -1,0 +1,69 @@
+{
+  "_generated_by": "zipzi-python2/tools/generate.py",
+  "definitions": {
+    "&str": {
+      "kind": "opaque",
+      "name": "&str"
+    },
+    "alloc::sync::Arc<zipzi_contract::authoring::EditReceipt>": {
+      "kind": "opaque",
+      "name": "alloc::sync::Arc<zipzi_contract::authoring::EditReceipt>"
+    },
+    "core::option::Option<zipzi_contract::runtime::ClientId>": {
+      "kind": "opaque",
+      "name": "core::option::Option<zipzi_contract::runtime::ClientId>"
+    },
+    "core::option::Option<zipzi_contract::runtime::JobId>": {
+      "kind": "opaque",
+      "name": "core::option::Option<zipzi_contract::runtime::JobId>"
+    },
+    "core::option::Option<zipzi_contract::runtime::SessionId>": {
+      "kind": "opaque",
+      "name": "core::option::Option<zipzi_contract::runtime::SessionId>"
+    },
+    "u64": {
+      "kind": "opaque",
+      "name": "u64"
+    },
+    "zipzi_contract::authoring::SaveReceipt": {
+      "kind": "opaque",
+      "name": "zipzi_contract::authoring::SaveReceipt"
+    },
+    "zipzi_contract::authoring::Version": {
+      "kind": "opaque",
+      "name": "zipzi_contract::authoring::Version"
+    },
+    "zipzi_contract::runtime::EditId": {
+      "kind": "opaque",
+      "name": "zipzi_contract::runtime::EditId"
+    },
+    "zipzi_contract::runtime::ImageId": {
+      "kind": "opaque",
+      "name": "zipzi_contract::runtime::ImageId"
+    },
+    "zipzi_contract::runtime::OperationId": {
+      "kind": "opaque",
+      "name": "zipzi_contract::runtime::OperationId"
+    },
+    "zipzi_contract::runtime::PlanId": {
+      "kind": "opaque",
+      "name": "zipzi_contract::runtime::PlanId"
+    },
+    "zipzi_contract::runtime::RuntimeInstanceId": {
+      "kind": "opaque",
+      "name": "zipzi_contract::runtime::RuntimeInstanceId"
+    },
+    "zipzi_contract::runtime::SessionId": {
+      "kind": "opaque",
+      "name": "zipzi_contract::runtime::SessionId"
+    },
+    "zipzi_contract::runtime::SessionInfo": {
+      "kind": "opaque",
+      "name": "zipzi_contract::runtime::SessionInfo"
+    },
+    "zipzi_contract::runtime::SourceRef": {
+      "kind": "opaque",
+      "name": "zipzi_contract::runtime::SourceRef"
+    }
+  }
+}

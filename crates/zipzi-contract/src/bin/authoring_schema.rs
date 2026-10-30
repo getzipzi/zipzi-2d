@@ -47,6 +47,8 @@ mod zipzi_runtime {
 }
 
 use serde::Serialize;
+use serde_json::{Map, Value};
+use std::collections::{BTreeMap, BTreeSet};
 use zipzi_core::api_shape::{ApiShape, Shape};
 
 #[derive(Serialize)]
@@ -196,7 +198,134 @@ fn main() {
             output,
         }],
     };
-    println!("{}", serde_json::to_string_pretty(&contract).unwrap());
+    let logical = normalize_contract(serde_json::to_value(contract).unwrap());
+    println!("{}", serde_json::to_string_pretty(&logical).unwrap());
+}
+
+// A shape may occur many times under roots and operations. Preserve its complete
+// Rust identity once, including generic arguments; occurrences are references.
+fn normalize_contract(contract: Value) -> Value {
+    fn named(value: &Value) -> Option<(&str, &str)> {
+        let object = value.as_object()?;
+        let kind = object.get("kind")?.as_str()?;
+        let name = object.get("name")?.as_str()?;
+        (name != "__skipped"
+            && matches!(
+                kind,
+                "record" | "serde_record" | "union" | "serde_enum" | "opaque"
+            ))
+        .then_some((kind, name))
+    }
+    fn collect(
+        value: &Value,
+        candidates: &mut BTreeMap<String, Vec<Value>>,
+        opaque: &mut BTreeSet<String>,
+    ) {
+        if let Some((kind, name)) = named(value) {
+            if kind == "opaque" {
+                opaque.insert(name.to_owned());
+            } else {
+                candidates
+                    .entry(name.to_owned())
+                    .or_default()
+                    .push(value.clone());
+            }
+        }
+        match value {
+            Value::Object(map) => {
+                for child in map.values() {
+                    collect(child, candidates, opaque);
+                }
+            }
+            Value::Array(items) => {
+                for child in items {
+                    collect(child, candidates, opaque);
+                }
+            }
+            _ => (),
+        }
+    }
+    fn refs(value: &Value) -> Value {
+        if let Some((kind, name)) = named(value) {
+            let mut reference = Map::new();
+            reference.insert("kind".into(), Value::String("ref".into()));
+            reference.insert("name".into(), Value::String(name.into()));
+            if kind == "opaque" {
+                reference.insert("opaque".into(), Value::Bool(true));
+            }
+            return Value::Object(reference);
+        }
+        match value {
+            Value::Object(map) => {
+                Value::Object(map.iter().map(|(k, v)| (k.clone(), refs(v))).collect())
+            }
+            Value::Array(items) => Value::Array(items.iter().map(refs).collect()),
+            _ => value.clone(),
+        }
+    }
+    let mut candidates = BTreeMap::new();
+    let mut opaque = BTreeSet::new();
+    collect(&contract, &mut candidates, &mut opaque);
+    let mut definitions = BTreeMap::new();
+    for (name, shapes) in candidates {
+        let mut normalized = shapes.iter().map(|shape| {
+            Value::Object(
+                shape
+                    .as_object()
+                    .unwrap()
+                    .iter()
+                    .map(|(k, v)| (k.clone(), refs(v)))
+                    .collect(),
+            )
+        });
+        let first = normalized.next().unwrap();
+        assert!(
+            normalized.all(|shape| shape == first),
+            "Conflicting complete type definitions: {name}"
+        );
+        definitions.insert(name, first);
+    }
+    for name in opaque {
+        definitions
+            .entry(name.clone())
+            .or_insert_with(|| serde_json::json!({"kind":"opaque","name":name}));
+    }
+    serde_json::json!({"format_version":2,"root":refs(&contract),"definitions":definitions})
+}
+
+#[cfg(test)]
+mod normalization_tests {
+    use super::normalize_contract;
+    use serde_json::json;
+
+    #[test]
+    fn preserves_order_and_resolves_opaque_occurrences() {
+        let leaf = json!({"kind":"record","name":"crate::Leaf", "fields":[
+            {"name":"second","shape":{"kind":"u32"}},
+            {"name":"first","shape":{"kind":"u8"}}
+        ]});
+        let result =
+            normalize_contract(json!({"roots":[leaf, {"kind":"opaque","name":"crate::Leaf"}]}));
+        assert_eq!(
+            result["root"]["roots"][0],
+            json!({"kind":"ref","name":"crate::Leaf"})
+        );
+        assert_eq!(
+            result["root"]["roots"][1],
+            json!({"kind":"ref","name":"crate::Leaf","opaque":true})
+        );
+        assert_eq!(
+            result["definitions"]["crate::Leaf"]["fields"][0]["name"],
+            "second"
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Conflicting complete type definitions")]
+    fn rejects_conflicting_complete_definitions() {
+        normalize_contract(json!([{"kind":"record","name":"crate::A","fields":[]},
+                                  {"kind":"record","name":"crate::A","fields":[1]}]));
+    }
 }
 
 fn resource_contract() -> Contract {

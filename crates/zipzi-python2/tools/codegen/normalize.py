@@ -59,8 +59,21 @@ def normalize(contract, externals):
         definitions[name] = {'kind': 'opaque', 'name': name}
     root = refs(contract)
 
+    validate_graph(root, definitions, externals)
+    return root, definitions
+
+
+def validate_graph(root, definitions, externals):
+    """Check a compiler-exported graph without expanding its references."""
+    if not isinstance(definitions, dict):
+        raise ValueError('Invalid type definitions')
+    for name, shape in definitions.items():
+        if not isinstance(name, str) or not _named(shape) or shape['name'] != name:
+            raise ValueError('Invalid type definition: '+str(name))
+        if shape['kind'] == 'opaque' and name not in externals:
+            raise ValueError('Unresolved opaque type: '+name)
     state = {}
-    def validate(value):
+    def validate(value, definition=False):
         if isinstance(value, dict):
             if value.get('kind') == 'ref':
                 name = value.get('name')
@@ -70,9 +83,11 @@ def normalize(contract, externals):
                     raise ValueError('Cyclic type definition: '+name)
                 if state.get(name) != 2:
                     state[name] = 1
-                    validate(definitions[name])
+                    validate(definitions[name], definition=True)
                     state[name] = 2
                 return
+            if _named(value) and not definition:
+                raise ValueError('Nested named type must be a reference: '+value['name'])
             for child in value.values():
                 validate(child)
         elif isinstance(value, list):
@@ -82,9 +97,8 @@ def normalize(contract, externals):
     for name in definitions:
         if name not in state:
             state[name] = 1
-            validate(definitions[name])
+            validate(definitions[name], definition=True)
             state[name] = 2
-    return root, definitions
 
 
 def expand(root, definitions):

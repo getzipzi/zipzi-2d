@@ -1,0 +1,934 @@
+{
+  "_generated_by": "zipzi-python2/tools/generate.py",
+  "definitions": {
+    "zipzi_contract::authoring::ModelingQuery": {
+      "fields": [
+        {
+          "default": [],
+          "doc": "Explicit IDs of image assets to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.",
+          "name": "assets",
+          "rust_name": "assets",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Explicit IDs of meshes to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.",
+          "name": "meshes",
+          "rust_name": "meshes",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Explicit IDs of parameters to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.",
+          "name": "parameters",
+          "rust_name": "parameters",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Explicit IDs of Parts to read, in result-slot order; an empty list requests no payloads,\nwhile collection IDs remain discoverable.",
+          "name": "parts",
+          "rust_name": "parts",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Explicit IDs of deformation transforms to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.",
+          "name": "transforms",
+          "rust_name": "transforms",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Explicit IDs of ordinary mesh bindings to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.",
+          "name": "bindings",
+          "rust_name": "bindings",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Explicit IDs of scene bindings to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.",
+          "name": "scene_bindings",
+          "rust_name": "scene_bindings",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Explicit IDs of BlendShape key tables to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.",
+          "name": "blend_key_tables",
+          "rust_name": "blend_key_tables",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Explicit IDs of BlendShape constraints to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.",
+          "name": "blend_constraints",
+          "rust_name": "blend_constraints",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Explicit IDs of BlendShape bindings to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.",
+          "name": "blend_bindings",
+          "rust_name": "blend_bindings",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Explicit IDs of Glue objects to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.",
+          "name": "glues",
+          "rust_name": "glues",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Explicit IDs of Offscreen objects to read, in result-slot order; an empty list requests\nno payloads, while collection IDs remain discoverable.",
+          "name": "offscreens",
+          "rust_name": "offscreens",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Explicit IDs of CDI parameter groups to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.",
+          "name": "parameter_groups",
+          "rust_name": "parameter_groups",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Explicit IDs of package attachments to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.",
+          "name": "attachments",
+          "rust_name": "attachments",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Explicit motion clip IDs; payload slots follow order and retain missing IDs.",
+          "name": "motions",
+          "rust_name": "motions",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Explicit motion registration-group IDs; group payloads include their ordered entries.",
+          "name": "motion_groups",
+          "rust_name": "motion_groups",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Explicit registration IDs, including root and grouped registrations.",
+          "name": "motion_registrations",
+          "rust_name": "motion_registrations",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Explicit expression asset IDs; entries are owned by the selected asset.",
+          "name": "expressions",
+          "rust_name": "expressions",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Request the Physics singleton payload; false requests no Physics content.",
+          "name": "physics",
+          "rust_name": "physics",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Request the Pose singleton payload; false requests no Pose content.",
+          "name": "pose",
+          "rust_name": "pose",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::ModelingQuery",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::OwnedModelingRecords": {
+      "fields": [
+        {
+          "doc": "Stable document UUID; not a Runtime Session handle.",
+          "name": "document_id",
+          "rust_name": "document_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Model source-canvas and export-frame configuration.",
+          "name": "setup",
+          "rust_name": "setup",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::ModelSetup"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Independent organization/deformation palette ranks; does not alter model relationships.",
+          "name": "hierarchy_order",
+          "rust_name": "hierarchy_order",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::document::HierarchyOrder"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned authoring visibility/lock metadata; separate from evaluated model appearance.",
+          "name": "editor_state",
+          "rust_name": "editor_state",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::document::EditorState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned CDI display metadata, including explicit imported unresolved references.",
+          "name": "display_info",
+          "rust_name": "display_info",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::document::DisplayInfo"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned model3 export metadata and reference registrations.",
+          "name": "model3_settings",
+          "rust_name": "model3_settings",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::document::Model3Settings"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional drawing-order groups; None leaves grouping absent instead of supplying an empty\ngroup list.",
+          "name": "draw_order_groups",
+          "rust_name": "draw_order_groups",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::DrawOrderGroup"
+              },
+              "kind": "sequence"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Domain-name-to-ID directory of document collections; identities remain available even\nwhen no record payloads were requested.",
+          "name": "ids",
+          "rust_name": "ids",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "item": {
+                "kind": "string"
+              },
+              "kind": "sequence"
+            }
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned image assets aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.",
+          "name": "assets",
+          "rust_name": "assets",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::ImageAsset"
+              },
+              "kind": "optional"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned meshes aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.",
+          "name": "meshes",
+          "rust_name": "meshes",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Mesh"
+              },
+              "kind": "optional"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned parameters aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.",
+          "name": "parameters",
+          "rust_name": "parameters",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Parameter"
+              },
+              "kind": "optional"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned Parts aligned with the corresponding query ID list; None marks a missing requested\nID and an empty query returns no payloads.",
+          "name": "parts",
+          "rust_name": "parts",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Part"
+              },
+              "kind": "optional"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned deformation transforms aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.",
+          "name": "transforms",
+          "rust_name": "transforms",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Transform"
+              },
+              "kind": "optional"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned ordinary mesh bindings aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.",
+          "name": "bindings",
+          "rust_name": "bindings",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::MeshBinding"
+              },
+              "kind": "optional"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned scene bindings aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.",
+          "name": "scene_bindings",
+          "rust_name": "scene_bindings",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::SceneBinding"
+              },
+              "kind": "optional"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned BlendShape key tables aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.",
+          "name": "blend_key_tables",
+          "rust_name": "blend_key_tables",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::BlendShapeKeyTable"
+              },
+              "kind": "optional"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned BlendShape constraints aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.",
+          "name": "blend_constraints",
+          "rust_name": "blend_constraints",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::BlendShapeConstraint"
+              },
+              "kind": "optional"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned BlendShape bindings aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.",
+          "name": "blend_bindings",
+          "rust_name": "blend_bindings",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::BlendShapeBinding"
+              },
+              "kind": "optional"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned Glue objects aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.",
+          "name": "glues",
+          "rust_name": "glues",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Glue"
+              },
+              "kind": "optional"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned Offscreen objects aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.",
+          "name": "offscreens",
+          "rust_name": "offscreens",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Offscreen"
+              },
+              "kind": "optional"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned CDI parameter groups aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.",
+          "name": "parameter_groups",
+          "rust_name": "parameter_groups",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::CdiParameterGroup"
+              },
+              "kind": "optional"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned package attachments aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.",
+          "name": "attachments",
+          "rust_name": "attachments",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::PackageAttachment"
+              },
+              "kind": "optional"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned selected motions aligned with query IDs; None marks a missing ID.",
+          "name": "motions",
+          "rust_name": "motions",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::MotionClip"
+              },
+              "kind": "optional"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned selected motion_groups aligned with query IDs; None marks a missing ID.",
+          "name": "motion_groups",
+          "rust_name": "motion_groups",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::MotionGroup"
+              },
+              "kind": "optional"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned selected motion_registrations aligned with query IDs; None marks a missing ID.",
+          "name": "motion_registrations",
+          "rust_name": "motion_registrations",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::MotionRegistration"
+              },
+              "kind": "optional"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned selected expressions aligned with query IDs; None marks a missing ID.",
+          "name": "expressions",
+          "rust_name": "expressions",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ExpressionAsset"
+              },
+              "kind": "optional"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Owned Physics singleton when requested and present; None otherwise.",
+          "name": "physics",
+          "rust_name": "physics",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::physics_document::PhysicsAsset"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Owned Pose singleton when requested and present; None otherwise.",
+          "name": "pose",
+          "rust_name": "pose",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::document::PoseAsset"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::OwnedModelingRecords",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::CollectionQuery": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::runtime::CollectionQuery",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Explicit native collection selector; it does not imply loading every object payload.",
+              "name": "collection",
+              "rust_name": "collection",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::SceneCollection"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "scene",
+          "rust_name": "Scene"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Explicit native collection selector; it does not imply loading every object payload.",
+              "name": "collection",
+              "rust_name": "collection",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::OrganizationCollection"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "organization",
+          "rust_name": "Organization"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Explicit native collection selector; it does not imply loading every object payload.",
+              "name": "collection",
+              "rust_name": "collection",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ReferenceCollection"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "references",
+          "rust_name": "References"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "resources",
+          "rust_name": "Resources"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "attachments",
+          "rust_name": "Attachments"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Explicit field discriminator; must match the addressed object/domain.",
+              "name": "field",
+              "rust_name": "field",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::DocumentField"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "document",
+          "rust_name": "Document"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Root or stable motion-group container for library registrations.",
+              "name": "collection",
+              "rust_name": "collection",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::MotionContainer"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "motion",
+          "rust_name": "Motion"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "motion_groups",
+          "rust_name": "MotionGroups"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "clips",
+          "rust_name": "Clips"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "expressions",
+          "rust_name": "Expressions"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable expression asset ID owning the entry collection.",
+              "name": "expression_id",
+              "rust_name": "expression_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "expression_entries",
+          "rust_name": "ExpressionEntries"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Native Physics group/input/output/node collection selector.",
+              "name": "collection",
+              "rust_name": "collection",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::PhysicsCollection"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "physics",
+          "rust_name": "Physics"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Native Pose group/entry/link collection selector.",
+              "name": "collection",
+              "rust_name": "collection",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::PoseCollection"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "pose",
+          "rust_name": "Pose"
+        }
+      ]
+    },
+    "zipzi_contract::runtime::MeshQuery": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Runtime Session handle; distinct from the persistent document UUID.",
+          "name": "session",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::SessionId",
+            "opaque": true
+          }
+        },
+        {
+          "default": null,
+          "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+          "name": "id",
+          "shape": {
+            "kind": "string"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Edit candidate handle; None selects formal document state.",
+          "name": "edit",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::runtime::EditId",
+              "opaque": true
+            },
+            "kind": "optional"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::runtime::MeshQuery"
+    },
+    "zipzi_contract::runtime::PlanQuery": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Runtime Session handle; distinct from the persistent document UUID.",
+          "name": "session",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::SessionId",
+            "opaque": true
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Edit candidate handle; None selects formal document state.",
+          "name": "edit",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::runtime::EditId",
+              "opaque": true
+            },
+            "kind": "optional"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.",
+          "name": "intent",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::PlanIntent"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::runtime::PlanQuery"
+    }
+  }
+}

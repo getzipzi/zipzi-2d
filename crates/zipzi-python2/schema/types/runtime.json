@@ -1,0 +1,822 @@
+{
+  "_generated_by": "zipzi-python2/tools/generate.py",
+  "definitions": {
+    "zipzi_contract::runtime::ClientId": {
+      "fields": [
+        {
+          "doc": "Runtime instance that allocated this handle; handles are invalid across instances.",
+          "name": "runtime",
+          "rust_name": "runtime",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::RuntimeInstanceId",
+            "opaque": true
+          },
+          "skip": false
+        },
+        {
+          "doc": "Runtime-allocated serial, meaningful only together with the instance and handle kind.",
+          "name": "serial",
+          "rust_name": "serial",
+          "shape": {
+            "kind": "ref",
+            "name": "u64",
+            "opaque": true
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::ClientId",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::EditorContext": {
+      "fields": [
+        {
+          "doc": "Exact SDK version captured for this value; not a best-effort latest-version marker.",
+          "name": "version",
+          "rust_name": "version",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::Version",
+            "opaque": true
+          },
+          "skip": false
+        },
+        {
+          "doc": "Identity of the Editor view that supplied this UI context.",
+          "name": "view_id",
+          "rust_name": "view_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable document IDs selected in that Editor view, in its selection order.",
+          "name": "selected_ids",
+          "rust_name": "selected_ids",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Editor workspace name captured with the context.",
+          "name": "workspace",
+          "rust_name": "workspace",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Active Editor editing context captured with the view.",
+          "name": "editing_context",
+          "rust_name": "editing_context",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Editor tool name captured with the context.",
+          "name": "active_tool",
+          "rust_name": "active_tool",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether an unfinished UI interaction was present when the context was captured.",
+          "name": "pending_interaction",
+          "rust_name": "pending_interaction",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::EditorContext",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::EventCursor": {
+      "fields": [
+        {
+          "doc": "Runtime instance identity; handles and cursors from another instance cannot be substituted.",
+          "name": "runtime",
+          "rust_name": "runtime",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::RuntimeInstanceId",
+            "opaque": true
+          },
+          "skip": false
+        },
+        {
+          "doc": "None is the registry stream; it has no cross-session ordering guarantee.",
+          "name": "session",
+          "rust_name": "session",
+          "shape": {
+            "kind": "ref",
+            "name": "core::option::Option<zipzi_contract::runtime::SessionId>",
+            "opaque": true
+          },
+          "skip": false
+        },
+        {
+          "doc": "Monotonic sequence within the selected registry or Session stream; no cross-stream\nordering is implied.",
+          "name": "sequence",
+          "rust_name": "sequence",
+          "shape": {
+            "kind": "ref",
+            "name": "u64",
+            "opaque": true
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::EventCursor",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::EventKind": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::runtime::EventKind",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Confirmed edit publication receipt, including before/after versions and changes.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "ref",
+                "name": "alloc::sync::Arc<zipzi_contract::authoring::EditReceipt>",
+                "opaque": true
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Published",
+          "rust_name": "Published"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Save receipt with persistence paths, warnings and durability status.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::SaveReceipt",
+                "opaque": true
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Saved",
+          "rust_name": "Saved"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Session metadata captured at this lifecycle state transition.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::runtime::SessionInfo",
+                "opaque": true
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "StateChanged",
+          "rust_name": "StateChanged"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Session metadata captured when the Session was created.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::runtime::SessionInfo",
+                "opaque": true
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Created",
+          "rust_name": "Created"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Final Session metadata captured when the document closed.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::runtime::SessionInfo",
+                "opaque": true
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Closed",
+          "rust_name": "Closed"
+        }
+      ]
+    },
+    "zipzi_contract::runtime::ObjectSummary": {
+      "fields": [
+        {
+          "doc": "Persistent canonical UUID in the selected document.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Exact, case-sensitive display name; binding names use their mesh name.",
+          "name": "name",
+          "rust_name": "name",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable SDK kind tag, e.g. mesh, parameter, mesh_binding or image.",
+          "name": "object_kind",
+          "rust_name": "object_kind",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "SDK runtime label; empty when this kind has no runtime label.",
+          "name": "runtime_id",
+          "rust_name": "runtime_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Owning Part UUID when applicable; None means no Part ownership.",
+          "name": "part_id",
+          "rust_name": "part_id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Deformation or organization parent UUID when applicable.",
+          "name": "parent_id",
+          "rust_name": "parent_id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether the scene object is enabled; true for metadata without that field.",
+          "name": "enabled",
+          "rust_name": "enabled",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Bound mesh UUID for mesh bindings; None for other collections.",
+          "name": "mesh_id",
+          "rust_name": "mesh_id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Decoded image width in pixels when known, without reading pixels.",
+          "name": "width",
+          "rust_name": "width",
+          "shape": {
+            "item": {
+              "kind": "u32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Decoded image height in pixels when known, without reading pixels.",
+          "name": "height",
+          "rust_name": "height",
+          "shape": {
+            "item": {
+              "kind": "u32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Number of mesh vertices, without cloning vertex data.",
+          "name": "vertex_count",
+          "rust_name": "vertex_count",
+          "shape": {
+            "item": {
+              "kind": "usize"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::ObjectSummary",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::RuntimeCapabilities": {
+      "fields": [
+        {
+          "doc": "Finite domain names supported by this host; absence means the domain is unavailable.",
+          "name": "domains",
+          "rust_name": "domains",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether this host supports source-bound bounded collection pagination.",
+          "name": "pagination",
+          "rust_name": "pagination",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether selected reads accept an exact expected Source.",
+          "name": "source_checked_reads",
+          "rust_name": "source_checked_reads",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether this host supports explicit Session detach/close.",
+          "name": "session_close",
+          "rust_name": "session_close",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether this host supports the paired binary array transport.",
+          "name": "binary_arrays",
+          "rust_name": "binary_arrays",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether Session window display is supported by this host.",
+          "name": "editor_windows",
+          "rust_name": "editor_windows",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "GPU availability: false without GPU support; otherwise None before probing, true after rendering, false after adapter/device failure.\nThis cached observation is not a guarantee for a later render; CPU sampling is independent.",
+          "name": "gpu",
+          "rust_name": "gpu",
+          "shape": {
+            "item": {
+              "kind": "bool"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Compiled observation backend family: Metal on macOS, WGPU elsewhere, or None without GPU support. No device is initialized by this read.",
+          "name": "gpu_backend",
+          "rust_name": "gpu_backend",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "GPU_UNAVAILABLE without GPU support; otherwise the last adapter/device failure code, or None before probing or after a successful render.",
+          "name": "gpu_error",
+          "rust_name": "gpu_error",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::RuntimeCapabilities",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::RuntimeEvent": {
+      "fields": [
+        {
+          "doc": "Exact event-stream position captured for this event; cursors are scoped to Runtime and\nstream.",
+          "name": "cursor",
+          "rust_name": "cursor",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::EventCursor",
+            "opaque": true
+          },
+          "skip": false
+        },
+        {
+          "doc": "Originating client identity; None means no client was attributed to the event.",
+          "name": "client",
+          "rust_name": "client",
+          "shape": {
+            "kind": "ref",
+            "name": "core::option::Option<zipzi_contract::runtime::ClientId>",
+            "opaque": true
+          },
+          "skip": false
+        },
+        {
+          "doc": "Related Job identity; None means this event has no associated Job.",
+          "name": "job",
+          "rust_name": "job",
+          "shape": {
+            "kind": "ref",
+            "name": "core::option::Option<zipzi_contract::runtime::JobId>",
+            "opaque": true
+          },
+          "skip": false
+        },
+        {
+          "doc": "Runtime operation identity used to correlate a published event with its original operation.",
+          "name": "operation",
+          "rust_name": "operation",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::OperationId",
+            "opaque": true
+          },
+          "skip": false
+        },
+        {
+          "doc": "Typed event payload; publication, save and lifecycle events have different payload types.",
+          "name": "kind",
+          "rust_name": "kind",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::EventKind",
+            "opaque": true
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::RuntimeEvent",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::RuntimeLimits": {
+      "fields": [
+        {
+          "doc": "Maximum independent frozen animation Previews owned by one client.",
+          "name": "previews_per_client",
+          "rust_name": "previews_per_client",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Conservative aggregate Preview storage limit, including replay/cache workspace.",
+          "name": "preview_bytes",
+          "rust_name": "preview_bytes",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum retained activations per Preview; Reset retains schedules.",
+          "name": "preview_schedule_entries",
+          "rust_name": "preview_schedule_entries",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "SDK checkpoint-cache budget per Preview; transient replay state is charged separately.",
+          "name": "preview_seek_cache_bytes",
+          "rust_name": "preview_seek_cache_bytes",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum records returned by one collection page or selected batch.",
+          "name": "collection_records",
+          "rust_name": "collection_records",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum escaped metadata bytes in one collection page.",
+          "name": "collection_bytes",
+          "rust_name": "collection_bytes",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum entries examined by one collection page.",
+          "name": "collection_scan",
+          "rust_name": "collection_scan",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum registered clients; this is a count, not a byte limit.",
+          "name": "clients",
+          "rust_name": "clients",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum resident document Sessions; this is a count, not a byte limit.",
+          "name": "sessions",
+          "rust_name": "sessions",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum simultaneous candidates per client/Session pair; this is a count, not a byte limit.",
+          "name": "edits_per_client_session",
+          "rust_name": "edits_per_client_session",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum simultaneous candidates per Session; this is a count, not a byte limit.",
+          "name": "edits_per_session",
+          "rust_name": "edits_per_session",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum simultaneous candidates in this Runtime; this is a count, not a byte limit.",
+          "name": "edits_total",
+          "rust_name": "edits_total",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Conservative byte limit for candidate document storage; not RSS or GPU memory.",
+          "name": "candidate_bytes",
+          "rust_name": "candidate_bytes",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Conservative byte limit for frozen snapshots and queued work; not RSS or GPU memory.",
+          "name": "frozen_bytes",
+          "rust_name": "frozen_bytes",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Conservative byte limit for aggregate Runtime-accounted storage; not RSS or GPU memory.",
+          "name": "accounted_bytes",
+          "rust_name": "accounted_bytes",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Conservative byte limit for retained image storage; not RSS or GPU memory.",
+          "name": "image_bytes",
+          "rust_name": "image_bytes",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum retained plans per client; this is a count, not a byte limit.",
+          "name": "plans_per_client",
+          "rust_name": "plans_per_client",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum retained object/field references per client; this is a count, not a byte limit.",
+          "name": "references_per_client",
+          "rust_name": "references_per_client",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum prepared images per client; this is a count, not a byte limit.",
+          "name": "prepared_images_per_client",
+          "rust_name": "prepared_images_per_client",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Conservative byte limit for retained plan storage; not RSS or GPU memory.",
+          "name": "plan_bytes",
+          "rust_name": "plan_bytes",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Conservative byte limit for retained binary blob storage; not RSS or GPU memory.",
+          "name": "blob_bytes",
+          "rust_name": "blob_bytes",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum retained binary blobs per client; this is a count, not a byte limit.",
+          "name": "blobs_per_client",
+          "rust_name": "blobs_per_client",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Conservative byte limit for retained undo/redo history; not RSS or GPU memory.",
+          "name": "history_bytes",
+          "rust_name": "history_bytes",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum retained Jobs in the Runtime; this is a count, not a byte limit.",
+          "name": "jobs_total",
+          "rust_name": "jobs_total",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum retained Jobs per client; this is a count, not a byte limit.",
+          "name": "jobs_per_client",
+          "rust_name": "jobs_per_client",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum concurrently running host Jobs; this is a count, not a byte limit.",
+          "name": "running_jobs",
+          "rust_name": "running_jobs",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum retained events per Session stream; this is a count, not a byte limit.",
+          "name": "session_events",
+          "rust_name": "session_events",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Conservative byte limit for event payloads per Session stream; not RSS or GPU memory.",
+          "name": "session_event_bytes",
+          "rust_name": "session_event_bytes",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum retained events in the registry stream; this is a count, not a byte limit.",
+          "name": "registry_events",
+          "rust_name": "registry_events",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Conservative byte limit for registry event payloads; not RSS or GPU memory.",
+          "name": "registry_event_bytes",
+          "rust_name": "registry_event_bytes",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::RuntimeLimits",
+      "transparent": false,
+      "tuple": false
+    }
+  }
+}

@@ -1,0 +1,2879 @@
+{
+  "_generated_by": "zipzi-python2/tools/generate.py",
+  "definitions": {
+    "zipzi_contract::authoring::BindingAuthoringEdit": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::authoring::BindingAuthoringEdit",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Typed intent for ordinary binding-grid edits; apply/plan it against a Session/Edit\nsource rather than mutating this value.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::BindingGridEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Grid",
+          "rust_name": "Grid"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed intent for BlendShape authoring; apply/plan it against a Session/Edit source\nrather than mutating this value.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::BlendAuthoringEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Blend",
+          "rust_name": "Blend"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed intent for mesh binding grid edits; apply/plan it against a Session/Edit\nsource rather than mutating this value.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::MeshGridEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "MeshGrid",
+          "rust_name": "MeshGrid"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed intent for parameter range conversion; apply/plan it against a Session/Edit\nsource rather than mutating this value.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ParameterRangeEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "ParameterRange",
+          "rust_name": "ParameterRange"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed intent for deformation reparenting; apply/plan it against a Session/Edit\nsource rather than mutating this value.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ReparentEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Reparent",
+          "rust_name": "Reparent"
+        }
+      ]
+    },
+    "zipzi_contract::authoring::BindingFieldPatch": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::authoring::BindingFieldPatch",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Scalar value in the referenced parameter domain.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "SampleValue",
+          "rust_name": "SampleValue"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Scalar value in the referenced parameter domain.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Dimensionless interpolation weight applied to the referenced source vertex.",
+              "name": "weight",
+              "rust_name": "weight",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "ConstraintSample",
+          "rust_name": "ConstraintSample"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document parameter ID, not its exported runtime identifier.",
+              "name": "parameter_id",
+              "rust_name": "parameter_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Explicit parameter-domain reduction used when removing or replacing an axis.",
+              "name": "reduction",
+              "rust_name": "reduction",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::document::AxisReduction"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "AxisParameter",
+          "rust_name": "AxisParameter"
+        }
+      ]
+    },
+    "zipzi_contract::authoring::MeshBindingAxisSpec": {
+      "fields": [
+        {
+          "doc": "Stable document parameter ID, not its exported runtime identifier.",
+          "name": "parameter_id",
+          "rust_name": "parameter_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Strictly increasing finite parameter sample values for this axis, in parameter units;\nnot sample indices.",
+          "name": "keys",
+          "rust_name": "keys",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::MeshBindingAxisSpec",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::MeshBindingCreateSpec": {
+      "fields": [
+        {
+          "doc": "Stable ID of the target mesh in this document.",
+          "name": "mesh_id",
+          "rust_name": "mesh_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Ordered parameter axes; keyform coordinates follow this order and samples retain their\nown identities.",
+          "name": "axes",
+          "rust_name": "axes",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::authoring::MeshBindingAxisSpec"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Shape samples for this binding; coordinate/sample identities must match its axes or key\ntable.",
+          "name": "keyforms",
+          "rust_name": "keyforms",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::authoring::MeshKeyformSpec"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional new binding UUID; None allocates a fresh UUID when the create operation executes.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::MeshBindingCreateSpec",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::MeshBindingOperation": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::authoring::MeshBindingOperation",
+      "tag": "op",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Creation specification; native admission supplies identities/defaults and rejects\ninvalid input.",
+              "name": "spec",
+              "rust_name": "spec",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::MeshBindingCreateSpec"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create",
+          "rust_name": "Create"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Complete shape sample to insert or replace; unrelated samples are retained.",
+              "name": "keyform",
+              "rust_name": "keyform",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::MeshKeyformSpec"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "set_keyform",
+          "rust_name": "SetKeyform"
+        }
+      ]
+    },
+    "zipzi_contract::authoring::MeshKeyformSpec": {
+      "fields": [
+        {
+          "doc": "One actual parameter sample value per binding axis, in axis order; each must match a\ndeclared axis sample.",
+          "name": "keys",
+          "rust_name": "keys",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Absolute mesh-local positions, one per target mesh vertex in vertex_ids order; not\ndisplacement vectors.",
+          "name": "positions",
+          "rust_name": "positions",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::Vec2"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional finite nonnegative opacity factor; None uses the native neutral default 1.\nValues above 1 are retained for import roundtrips.",
+          "name": "opacity",
+          "rust_name": "opacity",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional RGB multiply factors; None uses neutral (1, 1, 1).",
+          "name": "multiply",
+          "rust_name": "multiply",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "f32"
+              },
+              "kind": "array",
+              "length": 3
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional RGB screen factors; None uses neutral (0, 0, 0).",
+          "name": "screen",
+          "rust_name": "screen",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "f32"
+              },
+              "kind": "array",
+              "length": 3
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional keyform drawing-order coordinate; None leaves the order unspecified for native\nevaluation.",
+          "name": "draw_order",
+          "rust_name": "draw_order",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::MeshKeyformSpec",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::ScalarSample": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Stable UUID assigned to this parameter sample.",
+          "name": "id",
+          "shape": {
+            "kind": "string"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Finite parameter sample coordinate in the driving parameter domain.",
+          "name": "value",
+          "shape": {
+            "kind": "f32"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::authoring::ScalarSample"
+    },
+    "zipzi_contract::document::AxisReduction": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::AxisReduction",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Parameter coordinate at which to slice the old grid while removing an axis.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Slice",
+          "rust_name": "Slice"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Parameter coordinate used to resample the old grid while reducing an axis.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Resample",
+          "rust_name": "Resample"
+        }
+      ]
+    },
+    "zipzi_contract::document::BindingGridEdit": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::BindingGridEdit",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Stable owner ID for the addressed drawing group, collection or reference selection.",
+              "name": "owner",
+              "rust_name": "owner",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "Delete",
+          "rust_name": "Delete"
+        },
+        {
+          "fields": [
+            {
+              "doc": "New stable UUID for this object; it must not conflict with an existing identity.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.",
+              "name": "target",
+              "rust_name": "target",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::BindingGridTarget"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "Create",
+          "rust_name": "Create"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable owner ID for the addressed drawing group, collection or reference selection.",
+              "name": "owner",
+              "rust_name": "owner",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Typed axis/sample grid edit to perform on this owner; not a Runtime operation ID.",
+              "name": "operation",
+              "rust_name": "operation",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::GridOperation"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "Edit",
+          "rust_name": "Edit"
+        }
+      ]
+    },
+    "zipzi_contract::document::BindingGridTarget": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::BindingGridTarget",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Stable ID of the target mesh whose ordinary grid is being created.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Mesh",
+          "rust_name": "Mesh"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable ID of the target scene transform or Part whose ordinary grid is being created.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Scene",
+          "rust_name": "Scene"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable ID of the target Glue whose ordinary grid is being created.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Glue",
+          "rust_name": "Glue"
+        }
+      ]
+    },
+    "zipzi_contract::document::BlendAuthoringEdit": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::BlendAuthoringEdit",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Complete BlendShape key table with stable sample IDs and an explicit base sample.",
+              "name": "table",
+              "rust_name": "table",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::BlendShapeKeyTable"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "CreateTable",
+          "rust_name": "CreateTable"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete BlendShape constraint with its driving parameter and weighted samples.",
+              "name": "constraint",
+              "rust_name": "constraint",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::BlendShapeConstraint"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "CreateConstraint",
+          "rust_name": "CreateConstraint"
+        },
+        {
+          "fields": [
+            {
+              "doc": "New stable UUID for this object; it must not conflict with an existing identity.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable object ID driven by this binding; the declared target kind determines its domain.",
+              "name": "target_id",
+              "rust_name": "target_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Category of the BlendShape target; must agree with target_id and keyform payload kind.",
+              "name": "target_kind",
+              "rust_name": "target_kind",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::BlendShapeTargetKind"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable BlendShape key-table ID controlling the binding.",
+              "name": "key_table_id",
+              "rust_name": "key_table_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "CreateBinding",
+          "rust_name": "CreateBinding"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Typed sample/base/parameter edit to perform on this BlendShape key table.",
+              "name": "operation",
+              "rust_name": "operation",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::BlendTableOperation"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "Table",
+          "rust_name": "Table"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable document parameter ID, not its exported runtime identifier.",
+              "name": "parameter_id",
+              "rust_name": "parameter_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Replacement ordered parameter samples and constraint weights.",
+              "name": "samples",
+              "rust_name": "samples",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::model::ConstraintSample"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "Constraint",
+          "rust_name": "Constraint"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable BlendShape key-table ID controlling the binding.",
+              "name": "key_table_id",
+              "rust_name": "key_table_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Whether to reset shape data when switching the binding to another key table.",
+              "name": "reset",
+              "rust_name": "reset",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "SetBindingTable",
+          "rust_name": "SetBindingTable"
+        }
+      ]
+    },
+    "zipzi_contract::document::BlendTableOperation": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::BlendTableOperation",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "New stable sample UUID and finite parameter coordinate to insert into this key table.",
+              "name": "sample",
+              "rust_name": "sample",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::BindingSample"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "Insert",
+          "rust_name": "Insert"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.",
+              "name": "sample_id",
+              "rust_name": "sample_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Scalar value in the referenced parameter domain.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "Move",
+          "rust_name": "Move"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.",
+              "name": "sample_id",
+              "rust_name": "sample_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Replacement base sample ID when deleting the current base; None supplies no replacement.",
+              "name": "replacement_base",
+              "rust_name": "replacement_base",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "Delete",
+          "rust_name": "Delete"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.",
+              "name": "sample_id",
+              "rust_name": "sample_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "SetBase",
+          "rust_name": "SetBase"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document parameter ID, not its exported runtime identifier.",
+              "name": "parameter_id",
+              "rust_name": "parameter_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "SetParameter",
+          "rust_name": "SetParameter"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document parameter ID, not its exported runtime identifier.",
+              "name": "parameter_id",
+              "rust_name": "parameter_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit native conflict/conversion policy; no implicit removal or remapping is\nrequested.",
+              "name": "policy",
+              "rust_name": "policy",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ParameterRangePolicy"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "RemapParameter",
+          "rust_name": "RemapParameter"
+        }
+      ]
+    },
+    "zipzi_contract::document::GridOperation": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::GridOperation",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Axis definition with a parameter ID and ordered samples; axis identity is distinct\nfrom the parameter ID.",
+              "name": "axis",
+              "rust_name": "axis",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::BindingAxis"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "AddAxis",
+          "rust_name": "AddAxis"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable axis ID owned by this binding, not a parameter or sample ID.",
+              "name": "axis_id",
+              "rust_name": "axis_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable document parameter ID, not its exported runtime identifier.",
+              "name": "parameter_id",
+              "rust_name": "parameter_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit native conflict/conversion policy; no implicit removal or remapping is\nrequested.",
+              "name": "policy",
+              "rust_name": "policy",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ParameterRangePolicy"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "RemapParameter",
+          "rust_name": "RemapParameter"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable axis ID owned by this binding, not a parameter or sample ID.",
+              "name": "axis_id",
+              "rust_name": "axis_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable document parameter ID, not its exported runtime identifier.",
+              "name": "parameter_id",
+              "rust_name": "parameter_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Explicit parameter-domain reduction used when removing or replacing an axis.",
+              "name": "reduction",
+              "rust_name": "reduction",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::document::AxisReduction"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "SetParameter",
+          "rust_name": "SetParameter"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Axis IDs in the requested new axis order; IDs refer to axes, not parameters.",
+              "name": "axis_ids",
+              "rust_name": "axis_ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "ReorderAxes",
+          "rust_name": "ReorderAxes"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable axis ID owned by this binding, not a parameter or sample ID.",
+              "name": "axis_id",
+              "rust_name": "axis_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "New stable UUID for this object; it must not conflict with an existing identity.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Scalar value in the referenced parameter domain.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "InsertSample",
+          "rust_name": "InsertSample"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.",
+              "name": "sample_id",
+              "rust_name": "sample_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Scalar value in the referenced parameter domain.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "MoveSample",
+          "rust_name": "MoveSample"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.",
+              "name": "sample_id",
+              "rust_name": "sample_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "DeleteSample",
+          "rust_name": "DeleteSample"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable axis ID owned by this binding, not a parameter or sample ID.",
+              "name": "axis_id",
+              "rust_name": "axis_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Explicit parameter-domain reduction used when removing or replacing an axis.",
+              "name": "reduction",
+              "rust_name": "reduction",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::document::AxisReduction"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Keep an axis with no parameter as pending instead of removing it from the binding.",
+              "name": "keep_pending",
+              "rust_name": "keep_pending",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "RemoveAxis",
+          "rust_name": "RemoveAxis"
+        }
+      ]
+    },
+    "zipzi_contract::document::MeshGridEdit": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::MeshGridEdit",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "New stable UUID for this object; it must not conflict with an existing identity.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable ID of the target mesh in this document.",
+              "name": "mesh_id",
+              "rust_name": "mesh_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "Create",
+          "rust_name": "Create"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable binding ID owning the addressed axes or keyforms.",
+              "name": "binding_id",
+              "rust_name": "binding_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Axis definition with a parameter ID and ordered samples; axis identity is distinct\nfrom the parameter ID.",
+              "name": "axis",
+              "rust_name": "axis",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::BindingAxis"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "AddAxis",
+          "rust_name": "AddAxis"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable binding ID owning the addressed axes or keyforms.",
+              "name": "binding_id",
+              "rust_name": "binding_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Document parameter IDs in the requested axis order.",
+              "name": "parameter_ids",
+              "rust_name": "parameter_ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "ReorderAxes",
+          "rust_name": "ReorderAxes"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable binding ID owning the addressed axes or keyforms.",
+              "name": "binding_id",
+              "rust_name": "binding_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable document parameter ID, not its exported runtime identifier.",
+              "name": "parameter_id",
+              "rust_name": "parameter_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Scalar value in the referenced parameter domain.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "InsertSample",
+          "rust_name": "InsertSample"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable binding ID owning the addressed axes or keyforms.",
+              "name": "binding_id",
+              "rust_name": "binding_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable document parameter ID, not its exported runtime identifier.",
+              "name": "parameter_id",
+              "rust_name": "parameter_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Existing sample value in the parameter domain, not a sample-array index.",
+              "name": "from",
+              "rust_name": "from",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            },
+            {
+              "doc": "New sample value in the same parameter domain.",
+              "name": "to",
+              "rust_name": "to",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "MoveSample",
+          "rust_name": "MoveSample"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable binding ID owning the addressed axes or keyforms.",
+              "name": "binding_id",
+              "rust_name": "binding_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable document parameter ID, not its exported runtime identifier.",
+              "name": "parameter_id",
+              "rust_name": "parameter_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Scalar value in the referenced parameter domain.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "DeleteSample",
+          "rust_name": "DeleteSample"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable binding ID owning the addressed axes or keyforms.",
+              "name": "binding_id",
+              "rust_name": "binding_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable document parameter ID, not its exported runtime identifier.",
+              "name": "parameter_id",
+              "rust_name": "parameter_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit parameter-domain reduction used when removing or replacing an axis.",
+              "name": "reduction",
+              "rust_name": "reduction",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::AxisReduction"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "RemoveAxis",
+          "rust_name": "RemoveAxis"
+        }
+      ]
+    },
+    "zipzi_contract::document::PartKeyformSlot": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::PartKeyformSlot",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "static",
+          "rust_name": "Static"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable sample IDs selecting one ordinary-binding combination, in active axis order.",
+              "name": "samples",
+              "rust_name": "samples",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "samples",
+          "rust_name": "Samples"
+        }
+      ]
+    },
+    "zipzi_contract::model::BindingAxis": {
+      "fields": [
+        {
+          "default": "",
+          "doc": "Stable axis UUID; an empty ID is allocated during native binding normalization.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Ordered stable samples with strictly increasing finite parameter values.",
+          "name": "samples",
+          "rust_name": "samples",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::BindingSample"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Document parameter ID driving the axis; an empty string represents a pending/unassigned\naxis.",
+          "name": "parameter_id",
+          "rust_name": "parameter_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "",
+          "name": "keys",
+          "rust_name": "keys",
+          "shape": {
+            "kind": "opaque",
+            "name": "__skipped"
+          },
+          "skip": true
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::BindingAxis",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::BindingSample": {
+      "fields": [
+        {
+          "doc": "Stable sample UUID within the binding axis; distinct from its numeric value.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Finite sample coordinate in the driving parameter domain; axis samples are strictly\nincreasing.",
+          "name": "value",
+          "rust_name": "value",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::BindingSample",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::BlendShapeBinding": {
+      "fields": [
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable object ID driven by this binding; the declared target kind determines its domain.",
+          "name": "target_id",
+          "rust_name": "target_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Category of the BlendShape target; must agree with target_id and keyform payload kind.",
+          "name": "target_kind",
+          "rust_name": "target_kind",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::BlendShapeTargetKind"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable BlendShape key-table ID controlling the binding.",
+          "name": "key_table_id",
+          "rust_name": "key_table_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Ordered IDs of BlendShape constraints applied to this binding.",
+          "name": "constraint_ids",
+          "rust_name": "constraint_ids",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Shape samples for this binding; coordinate/sample identities must match its axes or key\ntable.",
+          "name": "keyforms",
+          "rust_name": "keyforms",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::DeltaKeyforms"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::BlendShapeBinding",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::BlendShapeConstraint": {
+      "fields": [
+        {
+          "default": [],
+          "doc": "Ordered parameter samples with weights used to attenuate the BlendShape contribution.",
+          "name": "samples",
+          "rust_name": "samples",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::ConstraintSample"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable document parameter ID, not its exported runtime identifier.",
+          "name": "parameter_id",
+          "rust_name": "parameter_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "",
+          "name": "keys",
+          "rust_name": "keys",
+          "shape": {
+            "kind": "opaque",
+            "name": "__skipped"
+          },
+          "skip": true
+        },
+        {
+          "doc": "",
+          "name": "weights",
+          "rust_name": "weights",
+          "shape": {
+            "kind": "opaque",
+            "name": "__skipped"
+          },
+          "skip": true
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::BlendShapeConstraint",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::BlendShapeKeyTable": {
+      "fields": [
+        {
+          "default": [],
+          "doc": "Ordered stable parameter samples with strictly increasing finite values; base_sample_id\nnames the neutral sample.",
+          "name": "samples",
+          "rust_name": "samples",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::BindingSample"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": "",
+          "doc": "Sample ID defining the neutral/base shape in this key table.",
+          "name": "base_sample_id",
+          "rust_name": "base_sample_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable document parameter ID, not its exported runtime identifier.",
+          "name": "parameter_id",
+          "rust_name": "parameter_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "",
+          "name": "keys",
+          "rust_name": "keys",
+          "shape": {
+            "kind": "opaque",
+            "name": "__skipped"
+          },
+          "skip": true
+        },
+        {
+          "doc": "",
+          "name": "base_key_idx",
+          "rust_name": "base_key_idx",
+          "shape": {
+            "kind": "opaque",
+            "name": "__skipped"
+          },
+          "skip": true
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::BlendShapeKeyTable",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::BlendShapeTargetKind": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::model::BlendShapeTargetKind",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "mesh",
+          "rust_name": "Mesh"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "warp",
+          "rust_name": "Warp"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "rotation",
+          "rust_name": "Rotation"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "part",
+          "rust_name": "Part"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "glue",
+          "rust_name": "Glue"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "offscreen",
+          "rust_name": "Offscreen"
+        }
+      ]
+    },
+    "zipzi_contract::model::ConstraintSample": {
+      "fields": [
+        {
+          "doc": "Stable constraint-sample UUID.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Finite parameter coordinate for this constraint sample.",
+          "name": "value",
+          "rust_name": "value",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Dimensionless BlendShape constraint weight at this parameter sample.",
+          "name": "weight",
+          "rust_name": "weight",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::ConstraintSample",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::DeltaGlueKeyform": {
+      "fields": [
+        {
+          "default": "",
+          "doc": "Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.",
+          "name": "sample_id",
+          "rust_name": "sample_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Additive Glue intensity delta; zero is neutral.",
+          "name": "intensity",
+          "rust_name": "intensity",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::DeltaGlueKeyform",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::DeltaKeyforms": {
+      "content": "items",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::model::DeltaKeyforms",
+      "tag": "type",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Ordered Mesh BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::model::DeltaMeshKeyform"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "mesh",
+          "rust_name": "Mesh"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered Warp BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::model::DeltaWarpKeyform"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "warp",
+          "rust_name": "Warp"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered Rotation BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::model::DeltaRotationKeyform"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "rotation",
+          "rust_name": "Rotation"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered Part BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::model::DeltaPartKeyform"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "part",
+          "rust_name": "Part"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered Glue BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::model::DeltaGlueKeyform"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "glue",
+          "rust_name": "Glue"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered Offscreen BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::model::DeltaOffscreenKeyform"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "offscreen",
+          "rust_name": "Offscreen"
+        }
+      ]
+    },
+    "zipzi_contract::model::DeltaMeshKeyform": {
+      "fields": [
+        {
+          "default": "",
+          "doc": "Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.",
+          "name": "sample_id",
+          "rust_name": "sample_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Per-vertex XY displacement vectors in mesh vertex order.",
+          "name": "positions",
+          "rust_name": "positions",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::Vec2"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Additive opacity delta; zero is neutral. None supplies no delta for this channel.",
+          "name": "opacity",
+          "rust_name": "opacity",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Additive drawing-order delta; zero is neutral. None supplies no delta for this channel.",
+          "name": "draw_order",
+          "rust_name": "draw_order",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Additive RGB multiply-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.",
+          "name": "multiply",
+          "rust_name": "multiply",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "f32"
+              },
+              "kind": "array",
+              "length": 3
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.",
+          "name": "screen",
+          "rust_name": "screen",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "f32"
+              },
+              "kind": "array",
+              "length": 3
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::DeltaMeshKeyform",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::DeltaOffscreenKeyform": {
+      "fields": [
+        {
+          "default": "",
+          "doc": "Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.",
+          "name": "sample_id",
+          "rust_name": "sample_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Additive opacity delta; zero is neutral.",
+          "name": "opacity",
+          "rust_name": "opacity",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "RGB multiply factors stored as multipliers with neutral (1, 1, 1); None supplies\nno multiply-color delta. Native conversion subtracts 1 before additive blending.",
+          "name": "multiply",
+          "rust_name": "multiply",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "f32"
+              },
+              "kind": "array",
+              "length": 3
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.",
+          "name": "screen",
+          "rust_name": "screen",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "f32"
+              },
+              "kind": "array",
+              "length": 3
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::DeltaOffscreenKeyform",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::DeltaPartKeyform": {
+      "fields": [
+        {
+          "default": "",
+          "doc": "Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.",
+          "name": "sample_id",
+          "rust_name": "sample_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Additive drawing-order delta; zero is neutral.",
+          "name": "draw_order",
+          "rust_name": "draw_order",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::DeltaPartKeyform",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::DeltaRotationKeyform": {
+      "fields": [
+        {
+          "default": "",
+          "doc": "Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.",
+          "name": "sample_id",
+          "rust_name": "sample_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Translation delta of the rotation origin in parent coordinates. None supplies no delta\nfor this channel.",
+          "name": "origin",
+          "rust_name": "origin",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::Vec2"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Additive rotation-angle delta in degrees. None supplies no delta for this channel.",
+          "name": "angle",
+          "rust_name": "angle",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Additive scale delta; zero is neutral. None supplies no delta for this channel.",
+          "name": "scale",
+          "rust_name": "scale",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Additive opacity delta; zero is neutral. None supplies no delta for this channel.",
+          "name": "opacity",
+          "rust_name": "opacity",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Additive RGB multiply-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.",
+          "name": "multiply",
+          "rust_name": "multiply",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "f32"
+              },
+              "kind": "array",
+              "length": 3
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.",
+          "name": "screen",
+          "rust_name": "screen",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "f32"
+              },
+              "kind": "array",
+              "length": 3
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::DeltaRotationKeyform",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::DeltaWarpKeyform": {
+      "fields": [
+        {
+          "default": "",
+          "doc": "Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.",
+          "name": "sample_id",
+          "rust_name": "sample_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Per-point XY displacement vectors in row-major warp point order.",
+          "name": "points",
+          "rust_name": "points",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::Vec2"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Additive opacity delta; zero is neutral. None supplies no delta for this channel.",
+          "name": "opacity",
+          "rust_name": "opacity",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Additive RGB multiply-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.",
+          "name": "multiply",
+          "rust_name": "multiply",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "f32"
+              },
+              "kind": "array",
+              "length": 3
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.",
+          "name": "screen",
+          "rust_name": "screen",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "f32"
+              },
+              "kind": "array",
+              "length": 3
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::DeltaWarpKeyform",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::GlueBinding": {
+      "fields": [
+        {
+          "doc": "Ordered parameter axes; keyform coordinates follow this order and samples retain their\nown identities.",
+          "name": "axes",
+          "rust_name": "axes",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::BindingAxis"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "First axis varies fastest, as in MOC3 ordinary bindings.",
+          "name": "keyforms",
+          "rust_name": "keyforms",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::GlueKeyform"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::GlueBinding",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::GlueKeyform": {
+      "fields": [
+        {
+          "default": [],
+          "doc": "Stable sample IDs in active binding-axis order; not numeric coordinates.",
+          "name": "samples",
+          "rust_name": "samples",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Glue influence factor; 0 disables the connection and 1 applies its full influence.",
+          "name": "intensity",
+          "rust_name": "intensity",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::GlueKeyform",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::MeshBinding": {
+      "fields": [
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable ID of the target mesh in this document.",
+          "name": "mesh_id",
+          "rust_name": "mesh_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Ordered parameter axes; keyform coordinates follow this order and samples retain their\nown identities.",
+          "name": "axes",
+          "rust_name": "axes",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::BindingAxis"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Shape samples for this binding; coordinate/sample identities must match its axes or key\ntable.",
+          "name": "keyforms",
+          "rust_name": "keyforms",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::MeshKeyform"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::MeshBinding",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::MeshKeyform": {
+      "fields": [
+        {
+          "doc": "Import-only numeric coordinates; canonical documents derive these from samples.",
+          "name": "keys",
+          "rust_name": "keys",
+          "shape": {
+            "kind": "opaque",
+            "name": "__skipped"
+          },
+          "skip": true
+        },
+        {
+          "default": [],
+          "doc": "Stable sample IDs, one per active binding axis in axis order; not numeric sample\ncoordinates.",
+          "name": "samples",
+          "rust_name": "samples",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Absolute mesh-local shape positions in target mesh vertex order; not displacement vectors.",
+          "name": "positions",
+          "rust_name": "positions",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::Vec2"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Opacity and multiply/screen color factors for this object or shape.",
+          "name": "appearance",
+          "rust_name": "appearance",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::Appearance"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional keyform drawing-order coordinate; None lets native evaluation use its\nunoverridden order.",
+          "name": "draw_order",
+          "rust_name": "draw_order",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::MeshKeyform",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::OffscreenKeyform": {
+      "fields": [
+        {
+          "doc": "Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.",
+          "name": "opacity",
+          "rust_name": "opacity",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.",
+          "name": "multiply",
+          "rust_name": "multiply",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "f32"
+              },
+              "kind": "array",
+              "length": 3
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.",
+          "name": "screen",
+          "rust_name": "screen",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "f32"
+              },
+              "kind": "array",
+              "length": 3
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::OffscreenKeyform",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::PartKeyform": {
+      "fields": [
+        {
+          "doc": "Import-only numeric coordinates; canonical documents derive these from samples.",
+          "name": "keys",
+          "rust_name": "keys",
+          "shape": {
+            "kind": "opaque",
+            "name": "__skipped"
+          },
+          "skip": true
+        },
+        {
+          "default": [],
+          "doc": "Stable sample IDs in active binding-axis order; not numeric coordinates.",
+          "name": "samples",
+          "rust_name": "samples",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Drawing-order coordinate; distinct from the final evaluated render_order.",
+          "name": "draw_order",
+          "rust_name": "draw_order",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::PartKeyform",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::RotationKeyform": {
+      "fields": [
+        {
+          "doc": "Import-only numeric coordinates; canonical documents derive these from samples.",
+          "name": "keys",
+          "rust_name": "keys",
+          "shape": {
+            "kind": "opaque",
+            "name": "__skipped"
+          },
+          "skip": true
+        },
+        {
+          "default": [],
+          "doc": "Stable sample IDs in active binding-axis order; not numeric coordinates.",
+          "name": "samples",
+          "rust_name": "samples",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Rotation pose containing origin, angle in degrees, scale and axis reflections.",
+          "name": "rotation",
+          "rust_name": "rotation",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::RotationPose"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Opacity and multiply/screen color factors for this object or shape.",
+          "name": "appearance",
+          "rust_name": "appearance",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::Appearance"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::RotationKeyform",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::SceneBinding": {
+      "fields": [
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Ordered parameter axes; keyform coordinates follow this order and samples retain their\nown identities.",
+          "name": "axes",
+          "rust_name": "axes",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::BindingAxis"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Typed Warp, Rotation or Part keyform track; the track target determines shape\ninterpretation.",
+          "name": "track",
+          "rust_name": "track",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::SceneTrack"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::SceneBinding",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::SceneKeyform": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::model::SceneKeyform",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Complete Warp ordinary-binding keyform; samples identify the active axis combination.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::WarpKeyform"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Warp",
+          "rust_name": "Warp"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete Rotation ordinary-binding keyform; samples identify the active axis\ncombination.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::RotationKeyform"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Rotation",
+          "rust_name": "Rotation"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete Part ordinary-binding keyform; samples identify the active axis combination.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::PartKeyform"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Part",
+          "rust_name": "Part"
+        }
+      ]
+    },
+    "zipzi_contract::model::SceneTrack": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::model::SceneTrack",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Stable warp transform ID driven by this ordinary binding.",
+              "name": "target_id",
+              "rust_name": "target_id",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::TransformId"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Ordered Warp shape records whose samples refer to this binding's active axes.",
+              "name": "keyforms",
+              "rust_name": "keyforms",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::model::WarpKeyform"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "Warp",
+          "rust_name": "Warp"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable rotation transform ID driven by this ordinary binding.",
+              "name": "target_id",
+              "rust_name": "target_id",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::TransformId"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Ordered Rotation shape records whose samples refer to this binding's active axes.",
+              "name": "keyforms",
+              "rust_name": "keyforms",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::model::RotationKeyform"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "Rotation",
+          "rust_name": "Rotation"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Part ID driven by this ordinary binding.",
+              "name": "target_id",
+              "rust_name": "target_id",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::PartId"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Ordered Part shape records whose samples refer to this binding's active axes.",
+              "name": "keyforms",
+              "rust_name": "keyforms",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::model::PartKeyform"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "Part",
+          "rust_name": "Part"
+        }
+      ]
+    },
+    "zipzi_contract::model::WarpKeyform": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Optional Bezier controller for this warp shape; None means this shape has no controller.",
+          "name": "bezier",
+          "rust_name": "bezier",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::warp_bezier::WarpBezier"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Import-only numeric coordinates; canonical documents derive these from samples.",
+          "name": "keys",
+          "rust_name": "keys",
+          "shape": {
+            "kind": "opaque",
+            "name": "__skipped"
+          },
+          "skip": true
+        },
+        {
+          "default": [],
+          "doc": "Stable sample IDs in active binding-axis order.",
+          "name": "samples",
+          "rust_name": "samples",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Absolute warp lattice positions in row-major point order; not displacement vectors.",
+          "name": "positions",
+          "rust_name": "positions",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::Vec2"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Opacity and multiply/screen color factors for this object or shape.",
+          "name": "appearance",
+          "rust_name": "appearance",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::Appearance"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::WarpKeyform",
+      "transparent": false,
+      "tuple": false
+    }
+  }
+}

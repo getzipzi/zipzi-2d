@@ -1,0 +1,5518 @@
+{
+  "_generated_by": "zipzi-python2/tools/generate.py",
+  "definitions": {
+    "zipzi_contract::authoring::GluePairSpec": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Dimensionless contribution of endpoint A; default Glue pair weight is 0.5.",
+          "name": "weight_a",
+          "shape": {
+            "kind": "f32"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Dimensionless contribution of endpoint B; default Glue pair weight is 0.5.",
+          "name": "weight_b",
+          "shape": {
+            "kind": "f32"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Optional new Glue-pair UUID; None allocates a fresh pair identity in the SDK.",
+          "name": "id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Vertex ID in endpoint mesh A; None explicitly leaves this endpoint unattached.",
+          "name": "vertex_a",
+          "shape": {
+            "item": {
+              "kind": "u32"
+            },
+            "kind": "optional"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Vertex ID in endpoint mesh B; None explicitly leaves this endpoint unattached.",
+          "name": "vertex_b",
+          "shape": {
+            "item": {
+              "kind": "u32"
+            },
+            "kind": "optional"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::authoring::GluePairSpec"
+    },
+    "zipzi_contract::authoring::OffscreenFormSpec": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.",
+          "name": "opacity",
+          "shape": {
+            "kind": "f32"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.",
+          "name": "multiply",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "f32"
+              },
+              "kind": "array",
+              "length": 3
+            },
+            "kind": "optional"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.",
+          "name": "screen",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "f32"
+              },
+              "kind": "array",
+              "length": 3
+            },
+            "kind": "optional"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::authoring::OffscreenFormSpec"
+    },
+    "zipzi_contract::authoring::PartCreateSpec": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+          "name": "name",
+          "shape": {
+            "kind": "string"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.",
+          "name": "id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.",
+          "name": "parent_id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+          "name": "before",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::authoring::PartCreateSpec"
+    },
+    "zipzi_contract::authoring::SceneOperation": {
+      "kind": "union",
+      "name": "zipzi_contract::authoring::SceneOperation",
+      "tag": "op",
+      "variants": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Creation specification; native admission supplies identities/defaults and\nrejects invalid input.",
+              "name": "spec",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::PartCreateSpec"
+              }
+            }
+          ],
+          "rust_name": "CreatePart",
+          "wire_name": "create_part"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Creation specification; native admission supplies identities/defaults and\nrejects invalid input.",
+              "name": "spec",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::ParameterGroupCreateSpec"
+              }
+            }
+          ],
+          "rust_name": "CreateParameterGroup",
+          "wire_name": "create_parameter_group"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Human-readable display name; use the stable ID for identity because names can\nchange.",
+              "name": "name",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Explicit organizational and deformation placement, with independent ordering\nanchors.",
+              "name": "placement",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::ScenePlacement"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Optional [left, bottom, right, top] warp bounds in parent coordinates; None\nrequests native defaults.",
+              "name": "bounds",
+              "shape": {
+                "item": {
+                  "item": {
+                    "kind": "f32"
+                  },
+                  "kind": "array",
+                  "length": 4
+                },
+                "kind": "optional"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Optional new object UUID; None allocates a fresh identity in the SDK.",
+              "name": "id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            }
+          ],
+          "rust_name": "CreateWarp",
+          "wire_name": "create_warp"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Human-readable display name; use the stable ID for identity because names can\nchange.",
+              "name": "name",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Explicit organizational and deformation placement, with independent ordering\nanchors.",
+              "name": "placement",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::ScenePlacement"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Optional new object UUID; None allocates a fresh identity in the SDK.",
+              "name": "id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            }
+          ],
+          "rust_name": "CreateRotation",
+          "wire_name": "create_rotation"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Human-readable display name; use the stable ID for identity because names can\nchange.",
+              "name": "name",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Mesh A endpoint of the Glue; resolved references use stable mesh IDs and\nunresolved references retain runtime identifiers.",
+              "name": "a",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Mesh B endpoint of the Glue; resolved references use stable mesh IDs and\nunresolved references retain runtime identifiers.",
+              "name": "b",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Organizational Part owner ID; independent of the deformation parent. None\nselects the root/unassigned container.",
+              "name": "part_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Optional new object UUID; None allocates a fresh identity in the SDK.",
+              "name": "id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            }
+          ],
+          "rust_name": "CreateGlue",
+          "wire_name": "create_glue"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Human-readable display name; use the stable ID for identity because names can\nchange.",
+              "name": "name",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Owning Part object ID; it must name an existing Part.",
+              "name": "part_id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Optional new object UUID; None allocates a fresh identity in the SDK.",
+              "name": "id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            }
+          ],
+          "rust_name": "CreateOffscreen",
+          "wire_name": "create_offscreen"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row\nnumbers are not identities.",
+              "name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Organizational Part owner ID; independent of the deformation parent. None\nselects the root/unassigned container.",
+              "name": "part_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong\nto the selected destination.",
+              "name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            }
+          ],
+          "rust_name": "MoveToPart",
+          "wire_name": "move_to_part"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row\nnumbers are not identities.",
+              "name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Parent object ID in this hierarchy; independent of storage and drawing order.\nNone selects the root/unassigned container.",
+              "name": "parent_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong\nto the selected destination.",
+              "name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            }
+          ],
+          "rust_name": "MoveDeformation",
+          "wire_name": "move_deformation"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row\nnumbers are not identities.",
+              "name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Parameter-group ID in the document metadata hierarchy. None selects the\nroot/unassigned container.",
+              "name": "group_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong\nto the selected destination.",
+              "name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            }
+          ],
+          "rust_name": "MoveParameters",
+          "wire_name": "move_parameters"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row\nnumbers are not identities.",
+              "name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Parent object ID in this hierarchy; independent of storage and drawing order.\nNone selects the root/unassigned container.",
+              "name": "parent_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong\nto the selected destination.",
+              "name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            }
+          ],
+          "rust_name": "MoveParameterGroups",
+          "wire_name": "move_parameter_groups"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row\nnumbers are not identities.",
+              "name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Include the deformation subtree when true; false affects only the selected objects.",
+              "name": "subtree",
+              "shape": {
+                "kind": "bool"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Organizational Part owner ID; independent of the deformation parent. None\nselects the root/unassigned container.",
+              "name": "part_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong\nto the selected destination.",
+              "name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            }
+          ],
+          "rust_name": "DuplicateScene",
+          "wire_name": "duplicate_scene"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row\nnumbers are not identities.",
+              "name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Include the deformation subtree when true; false affects only the selected objects.",
+              "name": "subtree",
+              "shape": {
+                "kind": "bool"
+              }
+            }
+          ],
+          "rust_name": "DeleteScene",
+          "wire_name": "delete_scene"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row\nnumbers are not identities.",
+              "name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Preserve contained objects by dissolving their organization container instead of\ndeleting its contents.",
+              "name": "dissolve",
+              "shape": {
+                "kind": "bool"
+              }
+            }
+          ],
+          "rust_name": "DeleteOrganization",
+          "wire_name": "delete_organization"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Exact current field value used as an optimistic precondition; stale values\nreject the edit.",
+              "name": "expected",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Human-readable display name; use the stable ID for identity because names can\nchange.",
+              "name": "name",
+              "shape": {
+                "kind": "string"
+              }
+            }
+          ],
+          "rust_name": "SetSceneLabel",
+          "wire_name": "set_scene_label"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Exact current field value used as an optimistic precondition; stale values\nreject the edit.",
+              "name": "expected",
+              "shape": {
+                "kind": "bool"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Whether this object participates in evaluation; editor hiding is a separate state.",
+              "name": "enabled",
+              "shape": {
+                "kind": "bool"
+              }
+            }
+          ],
+          "rust_name": "SetSceneEnabled",
+          "wire_name": "set_scene_enabled"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row\nnumbers are not identities.",
+              "name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Parent object ID in this hierarchy; independent of storage and drawing order.\nNone selects the root/unassigned container.",
+              "name": "parent_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong\nto the selected destination.",
+              "name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            }
+          ],
+          "rust_name": "ReparentLocal",
+          "wire_name": "reparent_local"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Stable ID of the target mesh in this document.",
+              "name": "mesh_id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Triangle triples of stable vertex IDs; preserve winding and do not substitute\nposition-array offsets.",
+              "name": "triangles",
+              "shape": {
+                "item": {
+                  "item": {
+                    "kind": "u32"
+                  },
+                  "kind": "array",
+                  "length": 3
+                },
+                "kind": "sequence"
+              }
+            }
+          ],
+          "rust_name": "ReplaceTriangles",
+          "wire_name": "replace_triangles"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Stable ID of the target mesh in this document.",
+              "name": "mesh_id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Complete new order of stable vertex IDs; preserves identities and associated\nper-vertex payload.",
+              "name": "order",
+              "shape": {
+                "item": {
+                  "kind": "u32"
+                },
+                "kind": "sequence"
+              }
+            }
+          ],
+          "rust_name": "ReorderMeshVertices",
+          "wire_name": "reorder_mesh_vertices"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Stable ID of the target mesh in this document.",
+              "name": "mesh_id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Stable u32 vertex ID within the mesh, not an offset into its position array.",
+              "name": "vertex_id",
+              "shape": {
+                "kind": "u32"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Absolute XY authoring position for this vertex, not a displacement.",
+              "name": "position",
+              "shape": {
+                "item": {
+                  "kind": "f32"
+                },
+                "kind": "array",
+                "length": 2
+              }
+            },
+            {
+              "default": null,
+              "doc": "Texture UV pair for this vertex; not a model-space position.",
+              "name": "uv",
+              "shape": {
+                "item": {
+                  "kind": "f32"
+                },
+                "kind": "array",
+                "length": 2
+              }
+            },
+            {
+              "default": null,
+              "doc": "Source vertex IDs and interpolation weights used to seed dependent shape content.",
+              "name": "weights",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::authoring::VertexWeightSpec"
+                },
+                "kind": "sequence"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Optional stable vertex ID before which to insert new vertices; None appends.\nThis is not a position-array index.",
+              "name": "before",
+              "shape": {
+                "item": {
+                  "kind": "u32"
+                },
+                "kind": "optional"
+              }
+            }
+          ],
+          "rust_name": "InsertMeshVertex",
+          "wire_name": "insert_mesh_vertex"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Stable ID of the target mesh in this document.",
+              "name": "mesh_id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Stable vertex IDs in this mesh, not offsets into positions.",
+              "name": "vertices",
+              "shape": {
+                "item": {
+                  "kind": "u32"
+                },
+                "kind": "sequence"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Explicitly remove dependent topology/keyform/Glue content; false rejects\nreferenced-vertex deletion.",
+              "name": "remove_dependents",
+              "shape": {
+                "kind": "bool"
+              }
+            }
+          ],
+          "rust_name": "DeleteMeshVertices",
+          "wire_name": "delete_mesh_vertices"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Stable document parameter ID, not its exported runtime identifier.",
+              "name": "parameter_id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Strictly increasing finite parameter samples with stable IDs; base_sample_id\nmust name one of them.",
+              "name": "samples",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::authoring::ScalarSample"
+                },
+                "kind": "sequence"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Sample ID defining the neutral/base shape in this key table.",
+              "name": "base_sample_id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Optional new object UUID; None allocates a fresh identity in the SDK.",
+              "name": "id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            }
+          ],
+          "rust_name": "CreateBlendTable",
+          "wire_name": "create_blend_table"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Stable ID of the target mesh in this document.",
+              "name": "mesh_id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Stable BlendShape key-table ID in this document.",
+              "name": "table_id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Optional new object UUID; None allocates a fresh identity in the SDK.",
+              "name": "id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            }
+          ],
+          "rust_name": "CreateMeshBlend",
+          "wire_name": "create_mesh_blend"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Stable ID of the target mesh in this document.",
+              "name": "mesh_id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Stable binding ID owning the addressed axes or keyforms.",
+              "name": "binding_id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.",
+              "name": "sample_id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Ordered content patches applied together by the native edit.",
+              "name": "updates",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::authoring::VertexPatchSpec"
+                },
+                "kind": "sequence"
+              }
+            }
+          ],
+          "rust_name": "SetMeshBlendVertices",
+          "wire_name": "set_mesh_blend_vertices"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Stable Glue object ID owning the affected vertex pairs.",
+              "name": "glue_id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Complete Glue pair to insert or replace; endpoint IDs belong to the two\nconnected meshes.",
+              "name": "pair",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::GluePairSpec"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong\nto the selected destination.",
+              "name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            }
+          ],
+          "rust_name": "InsertGluePair",
+          "wire_name": "insert_glue_pair"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Stable Glue object ID owning the affected vertex pairs.",
+              "name": "glue_id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row\nnumbers are not identities.",
+              "name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              }
+            }
+          ],
+          "rust_name": "DeleteGluePairs",
+          "wire_name": "delete_glue_pairs"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Stable Offscreen object ID; not a texture asset ID.",
+              "name": "offscreen_id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.",
+              "name": "slot",
+              "shape": {
+                "kind": "u32"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Scalar value in the referenced parameter domain.",
+              "name": "value",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::OffscreenFormSpec"
+              }
+            }
+          ],
+          "rust_name": "PatchOffscreenKeyform",
+          "wire_name": "patch_offscreen_keyform"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Stable Offscreen object ID; not a texture asset ID.",
+              "name": "offscreen_id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Scalar value in the referenced parameter domain.",
+              "name": "value",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::OffscreenFormSpec"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Optional stable vertex ID before which to insert new vertices; None appends.\nThis is not a position-array index.",
+              "name": "before",
+              "shape": {
+                "item": {
+                  "kind": "u32"
+                },
+                "kind": "optional"
+              }
+            }
+          ],
+          "rust_name": "InsertOffscreenKeyform",
+          "wire_name": "insert_offscreen_keyform"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Stable Offscreen object ID; not a texture asset ID.",
+              "name": "offscreen_id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Complete shape sample to insert or replace; unrelated samples are retained.",
+              "name": "keyform",
+              "shape": {
+                "kind": "i32"
+              }
+            }
+          ],
+          "rust_name": "SetOffscreenStaticKeyform",
+          "wire_name": "set_offscreen_static_keyform"
+        }
+      ]
+    },
+    "zipzi_contract::authoring::ScenePlacement": {
+      "fields": [
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Optional organizational Part ID; None uses the root organization.",
+          "name": "part_id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Optional deformation-parent transform ID; None uses model space.",
+          "name": "parent_id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Optional organization-order sibling ID; None appends in the selected organization\ncollection.",
+          "name": "before",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Optional deformation-order sibling ID; None appends in the selected deformation\ncollection.",
+          "name": "deformation_before",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::authoring::ScenePlacement"
+    },
+    "zipzi_contract::authoring::SceneSummary": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+          "name": "id",
+          "shape": {
+            "kind": "string"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+          "name": "name",
+          "shape": {
+            "kind": "string"
+          }
+        },
+        {
+          "default": null,
+          "doc": "External format/runtime identifier retained for import/export; not the document\nobject ID.",
+          "name": "runtime_id",
+          "shape": {
+            "kind": "string"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Object category for this metadata record; use it to select the corresponding domain API.",
+          "name": "object_kind",
+          "shape": {
+            "kind": "string"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Optional organizational Part ID; None means root or not applicable for this object kind.",
+          "name": "part_id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Optional deformation parent for meshes/transforms or organization parent for\nParts/groups; None means root or not applicable.",
+          "name": "parent_id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Whether this object participates in evaluation; editor hiding is a separate state.",
+          "name": "enabled",
+          "shape": {
+            "kind": "bool"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::authoring::SceneSummary"
+    },
+    "zipzi_contract::document::AttachmentEdit": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::AttachmentEdit",
+      "tag": "op",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "New stable UUID for this object; it must not conflict with an existing identity.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Normalized package-relative attachment path using forward slashes; absolute paths\nand .. components are invalid.",
+              "name": "path",
+              "rust_name": "path",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create",
+          "rust_name": "Create"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Exact current field value used as an optimistic precondition; stale values reject\nthe edit.",
+              "name": "expected",
+              "rust_name": "expected",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::PackageAttachment"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Complete package attachment record to replace; bytes may be explicitly unavailable.",
+              "name": "attachment",
+              "rust_name": "attachment",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::PackageAttachment"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace",
+          "rust_name": "Replace"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable ID of the existing source object to duplicate, not a filesystem path.",
+              "name": "source",
+              "rust_name": "source",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "New stable UUID for this object; it must not conflict with an existing identity.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Normalized package-relative attachment path using forward slashes; absolute paths\nand .. components are invalid.",
+              "name": "path",
+              "rust_name": "path",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "duplicate",
+          "rust_name": "Duplicate"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "delete",
+          "rust_name": "Delete"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Replacement attachment ID for existing references; None explicitly removes those\nreferences.",
+              "name": "replacement",
+              "rust_name": "replacement",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "delete_with_replacement",
+          "rust_name": "DeleteWithReplacement"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
+              "name": "ids",
+              "rust_name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "reorder",
+          "rust_name": "Reorder"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Motion-registration ID whose sound attachment is being changed.",
+              "name": "registration",
+              "rust_name": "registration",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Resolved attachment identity or explicitly unresolved package path.",
+              "name": "reference",
+              "rust_name": "reference",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::document::AttachmentRef"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "set_sound",
+          "rust_name": "SetSound"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Resolved attachment identity or explicitly unresolved package path.",
+              "name": "reference",
+              "rust_name": "reference",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::document::AttachmentRef"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "set_user_data",
+          "rust_name": "SetUserData"
+        }
+      ]
+    },
+    "zipzi_contract::document::AttachmentRef": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::AttachmentRef",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Stable package-attachment ID, distinct from its relative package path.",
+              "name": "attachment_id",
+              "rust_name": "attachment_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "resolved",
+          "rust_name": "Resolved"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Normalized package-relative attachment path using forward slashes; absolute paths\nand .. components are invalid.",
+              "name": "path",
+              "rust_name": "path",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "unresolved",
+          "rust_name": "Unresolved"
+        }
+      ]
+    },
+    "zipzi_contract::document::DrawOrderGroup": {
+      "fields": [
+        {
+          "doc": "Empty for the root; otherwise the stable ID of the Part driving this group.",
+          "name": "owner",
+          "rust_name": "owner",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable mesh/Part IDs, in tie-breaking order. A Part references its group.",
+          "name": "items",
+          "rust_name": "items",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Inclusive lower drawing-order bound for this group.",
+          "name": "min_order",
+          "rust_name": "min_order",
+          "shape": {
+            "kind": "i32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Inclusive upper drawing-order bound for this group.",
+          "name": "max_order",
+          "rust_name": "max_order",
+          "shape": {
+            "kind": "i32"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::DrawOrderGroup",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::HierarchyOrder": {
+      "fields": [
+        {
+          "default": [],
+          "doc": "Partial organization-palette order expressed as object IDs; unlisted IDs keep their\nsource order.",
+          "name": "organization",
+          "rust_name": "organization",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Partial deformation-palette order expressed as object IDs; does not reparent objects.",
+          "name": "deformation",
+          "rust_name": "deformation",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "Management order only. Glue evaluation retains its native execution order.",
+          "name": "glues",
+          "rust_name": "glues",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::HierarchyOrder",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::OffscreenDeletePolicy": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::OffscreenDeletePolicy",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "reject_references",
+          "rust_name": "RejectReferences"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "neutral",
+          "rust_name": "Neutral"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Deleted-keyform-slot to replacement-slot map; None selects neutral/unmapped for that\nslot.",
+              "name": "replacements",
+              "rust_name": "replacements",
+              "shape": {
+                "key": {
+                  "kind": "usize"
+                },
+                "kind": "index_map",
+                "value": {
+                  "item": {
+                    "kind": "usize"
+                  },
+                  "kind": "optional"
+                }
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "remap",
+          "rust_name": "Remap"
+        }
+      ]
+    },
+    "zipzi_contract::document::OffscreenMappingPatch": {
+      "fields": [
+        {
+          "doc": "Static Part slot or stable Part-binding sample combination to remap.",
+          "name": "slot",
+          "rust_name": "slot",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::document::PartKeyformSlot"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Offscreen keyform-array index; -1 explicitly selects the neutral/unmapped state.",
+          "name": "keyform",
+          "rust_name": "keyform",
+          "shape": {
+            "kind": "i32"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::OffscreenMappingPatch",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::OrganizationCollection": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::OrganizationCollection",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Parameter-group ID in the document metadata hierarchy. None selects the\nroot/unassigned container.",
+              "name": "group_id",
+              "rust_name": "group_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "parameters",
+          "rust_name": "Parameters"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.",
+              "name": "parent_id",
+              "rust_name": "parent_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "parameter_groups",
+          "rust_name": "ParameterGroups"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Organizational Part owner ID; independent of the deformation parent. None selects\nthe root/unassigned container.",
+              "name": "part_id",
+              "rust_name": "part_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "part_members",
+          "rust_name": "PartMembers"
+        }
+      ]
+    },
+    "zipzi_contract::document::OrganizationDeletePolicy": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::OrganizationDeletePolicy",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "contents",
+          "rust_name": "Contents"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "dissolve",
+          "rust_name": "Dissolve"
+        }
+      ]
+    },
+    "zipzi_contract::document::OrganizationEdit": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::OrganizationEdit",
+      "tag": "operation",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Complete parameter record with identity, finite range, default and runtime behavior.",
+              "name": "parameter",
+              "rust_name": "parameter",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Parameter"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Parameter-group ID in the document metadata hierarchy. None selects the\nroot/unassigned container.",
+              "name": "group_id",
+              "rust_name": "group_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_parameter",
+          "rust_name": "CreateParameter"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete CDI parameter-group metadata record to create or replace.",
+              "name": "group",
+              "rust_name": "group",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::CdiParameterGroup"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_group",
+          "rust_name": "CreateGroup"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete Part record, including identity, hierarchy context and enabled/drawing state.",
+              "name": "part",
+              "rust_name": "part",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Part"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_part",
+          "rust_name": "CreatePart"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document parameter ID, not its exported runtime identifier.",
+              "name": "parameter_id",
+              "rust_name": "parameter_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Parameter-group ID in the document metadata hierarchy. None selects the\nroot/unassigned container.",
+              "name": "group_id",
+              "rust_name": "group_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "set_parameter_group",
+          "rust_name": "SetParameterGroup"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Exact current field value used as an optimistic precondition; stale values reject\nthe edit.",
+              "name": "expected",
+              "rust_name": "expected",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::CdiParameterGroup"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Complete CDI parameter-group metadata record to create or replace.",
+              "name": "group",
+              "rust_name": "group",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::CdiParameterGroup"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "patch_group",
+          "rust_name": "PatchGroup"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
+              "name": "ids",
+              "rust_name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit destination collection; organization, deformation and drawing memberships\nare independent.",
+              "name": "destination",
+              "rust_name": "destination",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::OrganizationCollection"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "move",
+          "rust_name": "Move"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
+              "name": "ids",
+              "rust_name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit destination collection; organization, deformation and drawing memberships\nare independent.",
+              "name": "destination",
+              "rust_name": "destination",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::OrganizationCollection"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "duplicate",
+          "rust_name": "Duplicate"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
+              "name": "ids",
+              "rust_name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit native conflict/conversion policy; no implicit removal or remapping is\nrequested.",
+              "name": "policy",
+              "rust_name": "policy",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::OrganizationDeletePolicy"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "delete",
+          "rust_name": "Delete"
+        }
+      ]
+    },
+    "zipzi_contract::document::ReparentContext": {
+      "fields": [
+        {
+          "doc": "Parameter-ID-to-value map used for the reparenting reference pose; values use each\nparameter domain.",
+          "name": "parameter_values",
+          "rust_name": "parameter_values",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "f32"
+            }
+          },
+          "skip": false
+        },
+        {
+          "doc": "Empty for PreserveEditState. For domain preservation every unfixed\ndependency must have an explicit finite interval.",
+          "name": "parameter_domain",
+          "rust_name": "parameter_domain",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::document::ConversionDomain"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Finite reference pose time in seconds; zero is the default reference time.",
+          "name": "edit_time_seconds",
+          "rust_name": "edit_time_seconds",
+          "shape": {
+            "kind": "f64"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::ReparentContext",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::ReparentEdit": {
+      "fields": [
+        {
+          "doc": "Stable IDs of objects to reparent; source order is retained in the planned selection.",
+          "name": "sources",
+          "rust_name": "sources",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Empty means the model root. Part organization is an independent relation.",
+          "name": "parent_id",
+          "rust_name": "parent_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Explicit reparenting/conversion strategy, including how shape differences are preserved\nor reported.",
+          "name": "strategy",
+          "rust_name": "strategy",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::document::ReparentStrategy"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional placement in the resulting deformation collection.",
+          "name": "placement",
+          "rust_name": "placement",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::document::ReparentPlacement"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Absolute position error in model units, before Glue postprocessing.",
+          "name": "tolerance",
+          "rust_name": "tolerance",
+          "shape": {
+            "kind": "f64"
+          },
+          "skip": false
+        },
+        {
+          "default": 1e-06,
+          "doc": "Relative error times the original affected geometry's model-space scale.",
+          "name": "relative_tolerance",
+          "rust_name": "relative_tolerance",
+          "shape": {
+            "kind": "f64"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Required for preservation. These are frozen native parameter inputs;\nMotion/Physics must first be resolved to parameters by the caller.",
+          "name": "context",
+          "rust_name": "context",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::document::ReparentContext"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::ReparentEdit",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::ReparentPlacement": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "None appends; Some names an unselected member of the destination.",
+          "name": "before",
+          "rust_name": "before",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::ReparentPlacement",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::ReparentStrategy": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::ReparentStrategy",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "KeepLocalData",
+          "rust_name": "KeepLocalData"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "PreserveEditState",
+          "rust_name": "PreserveEditState"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "PreserveParameterDomain",
+          "rust_name": "PreserveParameterDomain"
+        }
+      ]
+    },
+    "zipzi_contract::document::SceneCollection": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::SceneCollection",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Organizational Part owner ID; independent of the deformation parent. None selects\nthe root/unassigned container.",
+              "name": "part_id",
+              "rust_name": "part_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "organization",
+          "rust_name": "Organization"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.",
+              "name": "parent_id",
+              "rust_name": "parent_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "deformation",
+          "rust_name": "Deformation"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "glues",
+          "rust_name": "Glues"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "drawing_groups",
+          "rust_name": "DrawingGroups"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable owner ID for the addressed drawing group, collection or reference selection.",
+              "name": "owner",
+              "rust_name": "owner",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "drawing",
+          "rust_name": "Drawing"
+        }
+      ]
+    },
+    "zipzi_contract::document::SceneContentEdit": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::SceneContentEdit",
+      "tag": "operation",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Stable ID of the target mesh in this document.",
+              "name": "mesh_id",
+              "rust_name": "mesh_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": {
+                "kind": "base"
+              },
+              "doc": "Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.",
+              "name": "target",
+              "rust_name": "target",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ShapeTarget"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Ordered content patches applied together by the native edit.",
+              "name": "updates",
+              "rust_name": "updates",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::document::VertexContentPatch"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "mesh_vertices",
+          "rust_name": "MeshVertices"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable ID of the target mesh in this document.",
+              "name": "mesh_id",
+              "rust_name": "mesh_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "New vertex records in insertion order; each has a stable vertex ID and explicit\ndependent-shape seed.",
+              "name": "vertices",
+              "rust_name": "vertices",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::document::NewMeshVertex"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional stable vertex ID before which to insert new vertices; None appends. This is\nnot a position-array index.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "u32"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "insert_mesh_vertices",
+          "rust_name": "InsertMeshVertices"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable ID of the target mesh in this document.",
+              "name": "mesh_id",
+              "rust_name": "mesh_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable vertex IDs in this mesh, not offsets into positions.",
+              "name": "vertices",
+              "rust_name": "vertices",
+              "shape": {
+                "item": {
+                  "kind": "u32"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit native conflict/conversion policy; no implicit removal or remapping is\nrequested.",
+              "name": "policy",
+              "rust_name": "policy",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::VertexDeletePolicy"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "delete_mesh_vertices",
+          "rust_name": "DeleteMeshVertices"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable ID of the target mesh in this document.",
+              "name": "mesh_id",
+              "rust_name": "mesh_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Complete new order of stable vertex IDs; preserves identities and associated per-\nvertex payload.",
+              "name": "order",
+              "rust_name": "order",
+              "shape": {
+                "item": {
+                  "kind": "u32"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "reorder_mesh_vertices",
+          "rust_name": "ReorderMeshVertices"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable ID of the target mesh in this document.",
+              "name": "mesh_id",
+              "rust_name": "mesh_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Triangle corners as three stable vertex IDs; not position-array indices.",
+              "name": "vertices",
+              "rust_name": "vertices",
+              "shape": {
+                "item": {
+                  "kind": "u32"
+                },
+                "kind": "array",
+                "length": 3
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional zero-based array slot before which to insert; None appends. The anchor must\nbelong to the selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "usize"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "insert_triangle",
+          "rust_name": "InsertTriangle"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable ID of the target mesh in this document.",
+              "name": "mesh_id",
+              "rust_name": "mesh_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Zero-based position within the addressed content array; not a stable object ID.",
+              "name": "slot",
+              "rust_name": "slot",
+              "shape": {
+                "kind": "usize"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Triangle corners as three stable vertex IDs; not position-array indices.",
+              "name": "vertices",
+              "rust_name": "vertices",
+              "shape": {
+                "item": {
+                  "kind": "u32"
+                },
+                "kind": "array",
+                "length": 3
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "patch_triangle",
+          "rust_name": "PatchTriangle"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable ID of the target mesh in this document.",
+              "name": "mesh_id",
+              "rust_name": "mesh_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Zero-based content-array positions selected by this operation.",
+              "name": "slots",
+              "rust_name": "slots",
+              "shape": {
+                "item": {
+                  "kind": "usize"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "delete_triangles",
+          "rust_name": "DeleteTriangles"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable ID of the target mesh in this document.",
+              "name": "mesh_id",
+              "rust_name": "mesh_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Triangle triples of stable vertex IDs; preserve winding and do not substitute\nposition-array offsets.",
+              "name": "triangles",
+              "rust_name": "triangles",
+              "shape": {
+                "item": {
+                  "item": {
+                    "kind": "u32"
+                  },
+                  "kind": "array",
+                  "length": 3
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_triangles",
+          "rust_name": "ReplaceTriangles"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable deformation-transform ID in this document.",
+              "name": "transform_id",
+              "rust_name": "transform_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": {
+                "kind": "base"
+              },
+              "doc": "Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.",
+              "name": "target",
+              "rust_name": "target",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ShapeTarget"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Ordered content patches applied together by the native edit.",
+              "name": "updates",
+              "rust_name": "updates",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::document::WarpPointPatch"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "default": false,
+              "doc": "Explicitly remove the authoring Bezier controller when editing baked lattice points.",
+              "name": "clear_bezier",
+              "rust_name": "clear_bezier",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "warp_points",
+          "rust_name": "WarpPoints"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable deformation-transform ID in this document.",
+              "name": "transform_id",
+              "rust_name": "transform_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": {
+                "kind": "base"
+              },
+              "doc": "Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.",
+              "name": "target",
+              "rust_name": "target",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ShapeTarget"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Complete authoring Bezier controller; its baked lattice is updated by the native edit.",
+              "name": "controller",
+              "rust_name": "controller",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::warp_bezier::WarpBezier"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "warp_bezier",
+          "rust_name": "WarpBezier"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable deformation-transform ID in this document.",
+              "name": "transform_id",
+              "rust_name": "transform_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Number of warp lattice cells vertically; a lattice has rows + 1 point rows.",
+              "name": "rows",
+              "rust_name": "rows",
+              "shape": {
+                "kind": "u32"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.",
+              "name": "columns",
+              "rust_name": "columns",
+              "shape": {
+                "kind": "u32"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Whether to use the quad warp interpolation mode for the lattice.",
+              "name": "quad",
+              "rust_name": "quad",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "resize_warp",
+          "rust_name": "ResizeWarp"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Glue object ID owning the affected vertex pairs.",
+              "name": "glue_id",
+              "rust_name": "glue_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Complete Glue pair to insert or replace; endpoint IDs belong to the two connected\nmeshes.",
+              "name": "pair",
+              "rust_name": "pair",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::GlueVertexPair"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "insert_glue_pair",
+          "rust_name": "InsertGluePair"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Glue object ID owning the affected vertex pairs.",
+              "name": "glue_id",
+              "rust_name": "glue_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Complete Glue pair to insert or replace; endpoint IDs belong to the two connected\nmeshes.",
+              "name": "pair",
+              "rust_name": "pair",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::GlueVertexPair"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "patch_glue_pair",
+          "rust_name": "PatchGluePair"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Glue object ID owning the affected vertex pairs.",
+              "name": "glue_id",
+              "rust_name": "glue_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
+              "name": "ids",
+              "rust_name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "move_glue_pairs",
+          "rust_name": "MoveGluePairs"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Glue object ID owning the affected vertex pairs.",
+              "name": "glue_id",
+              "rust_name": "glue_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit destination collection; organization, deformation and drawing memberships\nare independent.",
+              "name": "destination",
+              "rust_name": "destination",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Ordered Glue vertex pairs with stable pair identities and endpoint vertex IDs.",
+              "name": "pairs",
+              "rust_name": "pairs",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::model::GlueVertexPair"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "transfer_glue_pairs",
+          "rust_name": "TransferGluePairs"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Glue object ID owning the affected vertex pairs.",
+              "name": "glue_id",
+              "rust_name": "glue_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
+              "name": "ids",
+              "rust_name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "duplicate_glue_pairs",
+          "rust_name": "DuplicateGluePairs"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Glue object ID owning the affected vertex pairs.",
+              "name": "glue_id",
+              "rust_name": "glue_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
+              "name": "ids",
+              "rust_name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "delete_glue_pairs",
+          "rust_name": "DeleteGluePairs"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Offscreen object ID; not a texture asset ID.",
+              "name": "offscreen_id",
+              "rust_name": "offscreen_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Scalar value in the referenced parameter domain.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::OffscreenKeyform"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional zero-based array slot before which to insert; None appends. The anchor must\nbelong to the selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "usize"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "insert_offscreen_keyform",
+          "rust_name": "InsertOffscreenKeyform"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Offscreen object ID; not a texture asset ID.",
+              "name": "offscreen_id",
+              "rust_name": "offscreen_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.",
+              "name": "slot",
+              "rust_name": "slot",
+              "shape": {
+                "kind": "usize"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Scalar value in the referenced parameter domain.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::OffscreenKeyform"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "patch_offscreen_keyform",
+          "rust_name": "PatchOffscreenKeyform"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Offscreen object ID; not a texture asset ID.",
+              "name": "offscreen_id",
+              "rust_name": "offscreen_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Zero-based Offscreen keyform slots; native execution checks/remaps dependent Part\nmappings.",
+              "name": "slots",
+              "rust_name": "slots",
+              "shape": {
+                "item": {
+                  "kind": "usize"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional zero-based array slot before which to insert; None appends. The anchor must\nbelong to the selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "usize"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "duplicate_offscreen_keyforms",
+          "rust_name": "DuplicateOffscreenKeyforms"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Offscreen object ID; not a texture asset ID.",
+              "name": "offscreen_id",
+              "rust_name": "offscreen_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Permutation of zero-based Offscreen keyform slots; native execution remaps\nreferences consistently.",
+              "name": "order",
+              "rust_name": "order",
+              "shape": {
+                "item": {
+                  "kind": "usize"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "reorder_offscreen_keyforms",
+          "rust_name": "ReorderOffscreenKeyforms"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Offscreen object ID; not a texture asset ID.",
+              "name": "offscreen_id",
+              "rust_name": "offscreen_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Zero-based Offscreen keyform slots; native execution checks/remaps dependent Part\nmappings.",
+              "name": "slots",
+              "rust_name": "slots",
+              "shape": {
+                "item": {
+                  "kind": "usize"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit native conflict/conversion policy; no implicit removal or remapping is\nrequested.",
+              "name": "policy",
+              "rust_name": "policy",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::OffscreenDeletePolicy"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "delete_offscreen_keyforms",
+          "rust_name": "DeleteOffscreenKeyforms"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Offscreen object ID; not a texture asset ID.",
+              "name": "offscreen_id",
+              "rust_name": "offscreen_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Ordered content patches applied together by the native edit.",
+              "name": "updates",
+              "rust_name": "updates",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::document::OffscreenMappingPatch"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "set_offscreen_mapping",
+          "rust_name": "SetOffscreenMapping"
+        }
+      ]
+    },
+    "zipzi_contract::document::SceneContentTarget": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::SceneContentTarget",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Stable u32 vertex ID within the mesh, not an offset into its position array.",
+              "name": "vertex_id",
+              "rust_name": "vertex_id",
+              "shape": {
+                "kind": "u32"
+              },
+              "skip": false
+            },
+            {
+              "default": {
+                "kind": "base"
+              },
+              "doc": "Base, ordinary-sample or BlendShape-sample target; omitted/default selects the base\nshape.",
+              "name": "shape",
+              "rust_name": "shape",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ShapeTarget"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "vertex_position",
+          "rust_name": "VertexPosition"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable u32 vertex ID within the mesh, not an offset into its position array.",
+              "name": "vertex_id",
+              "rust_name": "vertex_id",
+              "shape": {
+                "kind": "u32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "vertex_uv",
+          "rust_name": "VertexUv"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.",
+              "name": "slot",
+              "rust_name": "slot",
+              "shape": {
+                "kind": "usize"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "triangle",
+          "rust_name": "Triangle"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Zero-based lattice point row, in the inclusive range 0..rows.",
+              "name": "row",
+              "rust_name": "row",
+              "shape": {
+                "kind": "u32"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Zero-based lattice point column, in the inclusive range 0..columns.",
+              "name": "column",
+              "rust_name": "column",
+              "shape": {
+                "kind": "u32"
+              },
+              "skip": false
+            },
+            {
+              "default": {
+                "kind": "base"
+              },
+              "doc": "Base, ordinary-sample or BlendShape-sample target; omitted/default selects the base\nshape.",
+              "name": "shape",
+              "rust_name": "shape",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ShapeTarget"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "warp_point",
+          "rust_name": "WarpPoint"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Zero-based Bezier node offset in the row-major controller array.",
+              "name": "node",
+              "rust_name": "node",
+              "shape": {
+                "kind": "usize"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Bezier component: 0 is the anchor, 1..4 are left, right, up and down handles.",
+              "name": "component",
+              "rust_name": "component",
+              "shape": {
+                "kind": "usize"
+              },
+              "skip": false
+            },
+            {
+              "default": {
+                "kind": "base"
+              },
+              "doc": "Base, ordinary-sample or BlendShape-sample target; omitted/default selects the base\nshape.",
+              "name": "shape",
+              "rust_name": "shape",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ShapeTarget"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "warp_bezier_control",
+          "rust_name": "WarpBezierControl"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Glue pair ID, not its offset in the pair array.",
+              "name": "pair_id",
+              "rust_name": "pair_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "glue_pair",
+          "rust_name": "GluePair"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.",
+              "name": "slot",
+              "rust_name": "slot",
+              "shape": {
+                "kind": "usize"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "offscreen_keyform",
+          "rust_name": "OffscreenKeyform"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Static Part slot or stable Part-binding sample combination, not an Offscreen array\noffset.",
+              "name": "slot",
+              "rust_name": "slot",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::PartKeyformSlot"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "offscreen_mapping",
+          "rust_name": "OffscreenMapping"
+        }
+      ]
+    },
+    "zipzi_contract::document::SceneContentValue": {
+      "content": "value",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::SceneContentValue",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Replacement XY value in the selected shape/UV space; BlendShape targets use deltas.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Vec2"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "point",
+          "rust_name": "Point"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Replacement triangle as three stable vertex IDs, not position-array indices.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "item": {
+                  "kind": "u32"
+                },
+                "kind": "array",
+                "length": 3
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "triangle",
+          "rust_name": "Triangle"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete replacement Glue pair with its identity and endpoint vertices.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::GlueVertexPair"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "glue_pair",
+          "rust_name": "GluePair"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete replacement Offscreen appearance sample.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::OffscreenKeyform"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "offscreen_keyform",
+          "rust_name": "OffscreenKeyform"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Replacement Offscreen keyform-array index; -1 selects neutral/unmapped.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "i32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "mapping",
+          "rust_name": "Mapping"
+        }
+      ]
+    },
+    "zipzi_contract::document::SceneCopyScope": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::SceneCopyScope",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "selected",
+          "rust_name": "Selected"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "deformation_subtree",
+          "rust_name": "DeformationSubtree"
+        }
+      ]
+    },
+    "zipzi_contract::document::SceneCreate": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::SceneCreate",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [
+            {
+              "default": {
+                "kind": "unspecified"
+              },
+              "doc": "Image-asset reference; resolved values use asset IDs and unresolved values retain\nexternal texture identifiers.",
+              "name": "texture",
+              "rust_name": "texture",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::scene_reference::SceneReference"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "mesh",
+          "rust_name": "Mesh"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Optional [left, bottom, right, top] warp bounds in parent coordinates; None requests\nnative defaults.",
+              "name": "bounds",
+              "rust_name": "bounds",
+              "shape": {
+                "item": {
+                  "item": {
+                    "kind": "f32"
+                  },
+                  "kind": "array",
+                  "length": 4
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "warp",
+          "rust_name": "Warp"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "rotation",
+          "rust_name": "Rotation"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "offscreen",
+          "rust_name": "Offscreen"
+        },
+        {
+          "fields": [
+            {
+              "default": {
+                "kind": "unspecified"
+              },
+              "doc": "Mesh A endpoint of the Glue; resolved references use stable mesh IDs and unresolved\nreferences retain runtime identifiers.",
+              "name": "a",
+              "rust_name": "a",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::scene_reference::SceneReference"
+              },
+              "skip": false
+            },
+            {
+              "default": {
+                "kind": "unspecified"
+              },
+              "doc": "Mesh B endpoint of the Glue; resolved references use stable mesh IDs and unresolved\nreferences retain runtime identifiers.",
+              "name": "b",
+              "rust_name": "b",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::scene_reference::SceneReference"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "glue",
+          "rust_name": "Glue"
+        }
+      ]
+    },
+    "zipzi_contract::document::SceneEdit": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::SceneEdit",
+      "tag": "operation",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "New stable UUID for this object; it must not conflict with an existing identity.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+              "name": "name",
+              "rust_name": "name",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Native scene object kind and its creation options; not a persisted full object record.",
+              "name": "object",
+              "rust_name": "object",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::SceneCreate"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Organizational Part owner ID; independent of the deformation parent. None selects\nthe root/unassigned container.",
+              "name": "part_id",
+              "rust_name": "part_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.",
+              "name": "parent_id",
+              "rust_name": "parent_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Stable anchor in the organization collection (`part_id`), or the\nconnection collection for Glue. None appends to that collection.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Independent stable anchor in the deformation collection (`parent_id`).\nOnly Mesh/Warp/Rotation support this position; None appends.",
+              "name": "deformation_before",
+              "rust_name": "deformation_before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create",
+          "rust_name": "Create"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Exact current field value used as an optimistic precondition; stale values reject\nthe edit.",
+              "name": "expected",
+              "rust_name": "expected",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::SceneFieldValue"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Scalar value in the referenced parameter domain.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::SceneFieldValue"
+              },
+              "skip": false
+            },
+            {
+              "default": false,
+              "doc": "Explicitly clear existing Glue vertex pairs when changing Glue endpoints.",
+              "name": "clear_glue_pairs",
+              "rust_name": "clear_glue_pairs",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "patch",
+          "rust_name": "Patch"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
+              "name": "ids",
+              "rust_name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit destination collection; organization, deformation and drawing memberships\nare independent.",
+              "name": "destination",
+              "rust_name": "destination",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::SceneCollection"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "move",
+          "rust_name": "Move"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Edit candidate handle; None selects formal document state.",
+              "name": "edit",
+              "rust_name": "edit",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ReparentEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "reparent",
+          "rust_name": "Reparent"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
+              "name": "ids",
+              "rust_name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "default": "selected",
+              "doc": "Native copy/delete scope specifying whether dependent deformation descendants are\nincluded.",
+              "name": "scope",
+              "rust_name": "scope",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::SceneCopyScope"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Explicit destination collection; organization, deformation and drawing memberships\nare independent.",
+              "name": "destination",
+              "rust_name": "destination",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::document::OrganizationCollection"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "duplicate",
+          "rust_name": "Duplicate"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
+              "name": "ids",
+              "rust_name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "default": "selected",
+              "doc": "Native copy/delete scope specifying whether dependent deformation descendants are\nincluded.",
+              "name": "scope",
+              "rust_name": "scope",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::SceneCopyScope"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "delete",
+          "rust_name": "Delete"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Destination Part object ID; it must name an existing Part.",
+              "name": "part_id",
+              "rust_name": "part_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Part-keyform-to-Offscreen-keyform mapping; entries are keyform slots, not object IDs.",
+              "name": "part_keyform_indices",
+              "rust_name": "part_keyform_indices",
+              "shape": {
+                "item": {
+                  "kind": "i32"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "transfer_offscreen",
+          "rust_name": "TransferOffscreen"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable owner ID for the addressed drawing group, collection or reference selection.",
+              "name": "owner",
+              "rust_name": "owner",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Drawing-group parent owner; an empty string selects the root drawing group.",
+              "name": "parent",
+              "rust_name": "parent",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "ensure_drawing_group",
+          "rust_name": "EnsureDrawingGroup"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable owner ID for the addressed drawing group, collection or reference selection.",
+              "name": "owner",
+              "rust_name": "owner",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Exact current field value used as an optimistic precondition; stale values reject\nthe edit.",
+              "name": "expected",
+              "rust_name": "expected",
+              "shape": {
+                "item": {
+                  "kind": "i32"
+                },
+                "kind": "array",
+                "length": 2
+              },
+              "skip": false
+            },
+            {
+              "doc": "Inclusive lower and upper drawing-order bounds, in that order.",
+              "name": "range",
+              "rust_name": "range",
+              "shape": {
+                "item": {
+                  "kind": "i32"
+                },
+                "kind": "array",
+                "length": 2
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "set_drawing_range",
+          "rust_name": "SetDrawingRange"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable owner ID for the addressed drawing group, collection or reference selection.",
+              "name": "owner",
+              "rust_name": "owner",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "dissolve_drawing_group",
+          "rust_name": "DissolveDrawingGroup"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Exact formal or candidate source captured for this result; later host changes do not\nrewrite it.",
+              "name": "source",
+              "rust_name": "source",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.",
+              "name": "target",
+              "rust_name": "target",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "duplicate_drawing_group",
+          "rust_name": "DuplicateDrawingGroup"
+        }
+      ]
+    },
+    "zipzi_contract::document::SceneField": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::SceneField",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "label",
+          "rust_name": "Label"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "runtime_id",
+          "rust_name": "RuntimeId"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "enabled",
+          "rust_name": "Enabled"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "appearance",
+          "rust_name": "Appearance"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "texture",
+          "rust_name": "Texture"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "masks",
+          "rust_name": "Masks"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "mesh_drawing",
+          "rust_name": "MeshDrawing"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "warp",
+          "rust_name": "Warp"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "rotation",
+          "rust_name": "Rotation"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "glue_endpoints",
+          "rust_name": "GlueEndpoints"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "glue_intensity",
+          "rust_name": "GlueIntensity"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "offscreen",
+          "rust_name": "Offscreen"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "context",
+          "rust_name": "Context"
+        }
+      ]
+    },
+    "zipzi_contract::document::SceneFieldValue": {
+      "content": "value",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::SceneFieldValue",
+      "tag": "field",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Replacement display label.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "label",
+          "rust_name": "Label"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Replacement external runtime identifier; an empty string explicitly clears it.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "runtime_id",
+          "rust_name": "RuntimeId"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Replacement model evaluation enabled flag.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "enabled",
+          "rust_name": "Enabled"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Replacement opacity and RGB color factors.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Appearance"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "appearance",
+          "rust_name": "Appearance"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Resolved image-asset reference or explicitly unresolved texture runtime identifier.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::scene_reference::SceneReference"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "texture",
+          "rust_name": "Texture"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete ordered clipping-mask mesh selection.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "masks",
+          "rust_name": "Masks"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Drawing-order coordinate; distinct from the final evaluated render_order. None\nleaves this channel unspecified for native evaluation.",
+              "name": "draw_order",
+              "rust_name": "draw_order",
+              "shape": {
+                "item": {
+                  "kind": "f32"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Compositing mode used when drawing this object.",
+              "name": "blend_mode",
+              "rust_name": "blend_mode",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::BlendMode"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Original format-specific blend-mode code; None means no preserved raw code.",
+              "name": "raw_blend_mode",
+              "rust_name": "raw_blend_mode",
+              "shape": {
+                "item": {
+                  "kind": "u32"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Whether both triangle faces contribute to drawing.",
+              "name": "double_sided",
+              "rust_name": "double_sided",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Whether to invert the combined clipping mask for this drawable.",
+              "name": "inverted_mask",
+              "rust_name": "inverted_mask",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "mesh_drawing",
+          "rust_name": "MeshDrawing"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete replacement warp lattice and controller definition.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::WarpTransform"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "warp",
+          "rust_name": "Warp"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete replacement rotation definition.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::RotationTransform"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "rotation",
+          "rust_name": "Rotation"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Mesh A endpoint of the Glue; resolved references use stable mesh IDs and unresolved\nreferences retain runtime identifiers.",
+              "name": "a",
+              "rust_name": "a",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::scene_reference::SceneReference"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Mesh B endpoint of the Glue; resolved references use stable mesh IDs and unresolved\nreferences retain runtime identifiers.",
+              "name": "b",
+              "rust_name": "b",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::scene_reference::SceneReference"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "glue_endpoints",
+          "rust_name": "GlueEndpoints"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Replacement Glue influence factor.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "glue_intensity",
+          "rust_name": "GlueIntensity"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Compositing mode used when drawing this object.",
+              "name": "blend_mode",
+              "rust_name": "blend_mode",
+              "shape": {
+                "kind": "u32"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Preserved format-specific Offscreen compositing flags.",
+              "name": "flags",
+              "rust_name": "flags",
+              "shape": {
+                "kind": "u8"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Shape samples for this binding; coordinate/sample identities must match its axes or\nkey table.",
+              "name": "keyforms",
+              "rust_name": "keyforms",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::model::OffscreenKeyform"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Part-keyform-to-Offscreen-keyform mapping; entries are keyform slots, not object IDs.",
+              "name": "part_keyform_indices",
+              "rust_name": "part_keyform_indices",
+              "shape": {
+                "item": {
+                  "kind": "i32"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "offscreen",
+          "rust_name": "Offscreen"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Organizational Part owner ID; independent of the deformation parent. None selects\nthe root/unassigned container.",
+              "name": "part_id",
+              "rust_name": "part_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.",
+              "name": "parent_id",
+              "rust_name": "parent_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "context",
+          "rust_name": "Context"
+        }
+      ]
+    },
+    "zipzi_contract::document::ShapeTarget": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::ShapeTarget",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "base",
+          "rust_name": "Base"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable binding ID owning the addressed axes or keyforms.",
+              "name": "binding_id",
+              "rust_name": "binding_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable sample IDs selecting one ordinary-binding combination, in active axis order.",
+              "name": "samples",
+              "rust_name": "samples",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "ordinary",
+          "rust_name": "Ordinary"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable binding ID owning the addressed axes or keyforms.",
+              "name": "binding_id",
+              "rust_name": "binding_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.",
+              "name": "sample_id",
+              "rust_name": "sample_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "blend",
+          "rust_name": "Blend"
+        }
+      ]
+    },
+    "zipzi_contract::document::WarpPointPatch": {
+      "fields": [
+        {
+          "doc": "Zero-based lattice point row, in the inclusive range 0..rows.",
+          "name": "row",
+          "rust_name": "row",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Zero-based lattice point column, in the inclusive range 0..columns.",
+          "name": "column",
+          "rust_name": "column",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Replacement lattice XY value: absolute for Base/Ordinary, displacement for BlendShape.",
+          "name": "point",
+          "rust_name": "point",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::Vec2"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::WarpPointPatch",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::Appearance": {
+      "fields": [
+        {
+          "doc": "Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.",
+          "name": "opacity",
+          "rust_name": "opacity",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.",
+          "name": "multiply",
+          "rust_name": "multiply",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "array",
+            "length": 3
+          },
+          "skip": false
+        },
+        {
+          "doc": "RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.",
+          "name": "screen",
+          "rust_name": "screen",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "array",
+            "length": 3
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::Appearance",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::BlendMode": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::model::BlendMode",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "normal",
+          "rust_name": "Normal"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "additive",
+          "rust_name": "Additive"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "multiplicative",
+          "rust_name": "Multiplicative"
+        }
+      ]
+    },
+    "zipzi_contract::model::Canvas": {
+      "fields": [
+        {
+          "doc": "Source canvas width in pixels.",
+          "name": "width",
+          "rust_name": "width",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Source canvas height in pixels.",
+          "name": "height",
+          "rust_name": "height",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Source canvas origin in the imported pixel coordinate system; this metadata does not\nredefine model space.",
+          "name": "origin",
+          "rust_name": "origin",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::Vec2"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Positive pixels-per-unit value retained from the source format for import/export;\nthis metadata does not rescale model geometry or change evaluation.",
+          "name": "pixels_per_unit",
+          "rust_name": "pixels_per_unit",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "default": 1,
+          "doc": "Preserved imported source-canvas flag; no implicit interpretation is applied by this DTO.",
+          "name": "flag",
+          "rust_name": "flag",
+          "shape": {
+            "kind": "u8"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::Canvas",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::Glue": {
+      "fields": [
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "External format/runtime identifier retained for import/export; not the document object ID.",
+          "name": "runtime_id",
+          "rust_name": "runtime_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+          "name": "name",
+          "rust_name": "name",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable mesh ID for the A endpoint of this Glue.",
+          "name": "mesh_a_id",
+          "rust_name": "mesh_a_id",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::scene_reference::SceneReference"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable mesh ID for the B endpoint of this Glue.",
+          "name": "mesh_b_id",
+          "rust_name": "mesh_b_id",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::scene_reference::SceneReference"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Ordered Glue vertex pairs with stable pair identities and endpoint vertex IDs.",
+          "name": "pairs",
+          "rust_name": "pairs",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::GlueVertexPair"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Glue influence factor; 0 disables the connection and 1 applies its full influence.",
+          "name": "intensity",
+          "rust_name": "intensity",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional parameter-driven Glue binding; None leaves the Glue intensity static.",
+          "name": "binding",
+          "rust_name": "binding",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::GlueBinding"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::Glue",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::GlueVertexPair": {
+      "fields": [
+        {
+          "doc": "Stable UUID of this Glue pair; not the identity of its target.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Vertex ID in endpoint mesh A; None explicitly leaves this endpoint unattached.",
+          "name": "vertex_a",
+          "rust_name": "vertex_a",
+          "shape": {
+            "item": {
+              "kind": "u32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Vertex ID in endpoint mesh B; None explicitly leaves this endpoint unattached.",
+          "name": "vertex_b",
+          "rust_name": "vertex_b",
+          "shape": {
+            "item": {
+              "kind": "u32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Dimensionless contribution of endpoint A; default Glue pair weight is 0.5.",
+          "name": "weight_a",
+          "rust_name": "weight_a",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Dimensionless contribution of endpoint B; default Glue pair weight is 0.5.",
+          "name": "weight_b",
+          "rust_name": "weight_b",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::GlueVertexPair",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::ModelSetup": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Optional imported canvas metadata; None means this model has no source-canvas provenance.",
+          "name": "source_canvas",
+          "rust_name": "source_canvas",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::Canvas"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Export-frame settings; padding is applied when computing an exported frame.",
+          "name": "export",
+          "rust_name": "export",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::ExportSettings"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::ModelSetup",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::Offscreen": {
+      "fields": [
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "External format/runtime identifier retained for import/export; not the document object ID.",
+          "name": "runtime_id",
+          "rust_name": "runtime_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+          "name": "name",
+          "rust_name": "name",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owning Part object ID; it must name an existing Part rather than a root sentinel.",
+          "name": "part_id",
+          "rust_name": "part_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "default": true,
+          "doc": "Controls visibility of the composited group without changing its contents.",
+          "name": "enabled",
+          "rust_name": "enabled",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Compositing mode used when drawing this object.",
+          "name": "blend_mode",
+          "rust_name": "blend_mode",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Preserved format-specific Offscreen compositing flags.",
+          "name": "flags",
+          "rust_name": "flags",
+          "shape": {
+            "kind": "u8"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.",
+          "name": "masks",
+          "rust_name": "masks",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Part-keyform-to-Offscreen-keyform mapping; entries are keyform slots, not object IDs.",
+          "name": "part_keyform_indices",
+          "rust_name": "part_keyform_indices",
+          "shape": {
+            "item": {
+              "kind": "i32"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Shape samples for this binding; coordinate/sample identities must match its axes or key\ntable.",
+          "name": "keyforms",
+          "rust_name": "keyforms",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::OffscreenKeyform"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::Offscreen",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::Part": {
+      "fields": [
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "External format/runtime identifier retained for import/export; not the document object ID.",
+          "name": "runtime_id",
+          "rust_name": "runtime_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+          "name": "name",
+          "rust_name": "name",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Parent object ID in this hierarchy; independent of storage and drawing order. An empty\nstring represents the root/unassigned container.",
+          "name": "parent_id",
+          "rust_name": "parent_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether this object participates in evaluation; editor hiding is a separate state.",
+          "name": "enabled",
+          "rust_name": "enabled",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Drawing-order coordinate; distinct from the final evaluated render_order.",
+          "name": "draw_order",
+          "rust_name": "draw_order",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::Part",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::PartId": {
+      "fields": [
+        {
+          "doc": "Persistent scene object identifier.",
+          "name": "value",
+          "rust_name": "0",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::PartId",
+      "transparent": true,
+      "tuple": true
+    },
+    "zipzi_contract::model::RotationPose": {
+      "fields": [
+        {
+          "doc": "Rotation origin in parent authoring coordinates, stored at f64 precision; default is (0, 0).",
+          "name": "origin",
+          "rust_name": "origin",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::PreciseVec2"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Rotation angle in degrees; not radians.",
+          "name": "angle",
+          "rust_name": "angle",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Dimensionless rotation-transform scale; 1 is identity.",
+          "name": "scale",
+          "rust_name": "scale",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Reflect the local X axis about the rotation origin when true.",
+          "name": "reflect_x",
+          "rust_name": "reflect_x",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Reflect the local Y axis about the rotation origin when true.",
+          "name": "reflect_y",
+          "rust_name": "reflect_y",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::RotationPose",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::RotationTransform": {
+      "fields": [
+        {
+          "doc": "Reference angle in degrees used to orient the rotation control.",
+          "name": "base_angle",
+          "rust_name": "base_angle",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Base rotation pose; its origin is expressed in the parent authoring space.",
+          "name": "pose",
+          "rust_name": "pose",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::RotationPose"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::RotationTransform",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::Transform": {
+      "fields": [
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "External format/runtime identifier retained for import/export; not the document object ID.",
+          "name": "runtime_id",
+          "rust_name": "runtime_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+          "name": "name",
+          "rust_name": "name",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Organizational Part owner ID; independent of the deformation parent. None selects the\nroot/unassigned container.",
+          "name": "part_id",
+          "rust_name": "part_id",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::PartId"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.",
+          "name": "parent_id",
+          "rust_name": "parent_id",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::TransformId"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Typed Warp or Rotation deformation definition; its variant determines lattice versus\nrotation-pose interpretation.",
+          "name": "data",
+          "rust_name": "data",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::TransformData"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether this object participates in evaluation; editor hiding is a separate state.",
+          "name": "enabled",
+          "rust_name": "enabled",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Opacity and multiply/screen color factors for this object or shape.",
+          "name": "appearance",
+          "rust_name": "appearance",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::Appearance"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::Transform",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::TransformData": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::model::TransformData",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Warp deformation definition with its baked lattice and optional authoring controller.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::WarpTransform"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Warp",
+          "rust_name": "Warp"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Rotation deformation definition with its reference angle and base pose.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::RotationTransform"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Rotation",
+          "rust_name": "Rotation"
+        }
+      ]
+    },
+    "zipzi_contract::model::TransformId": {
+      "fields": [
+        {
+          "doc": "Persistent scene object identifier.",
+          "name": "value",
+          "rust_name": "0",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::TransformId",
+      "transparent": true,
+      "tuple": true
+    },
+    "zipzi_contract::model::WarpTransform": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Optional authoring Bezier controller; None leaves the baked lattice without a controller.",
+          "name": "bezier",
+          "rust_name": "bezier",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::warp_bezier::WarpBezier"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Number of warp lattice cells vertically; a lattice has rows + 1 point rows.",
+          "name": "rows",
+          "rust_name": "rows",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.",
+          "name": "columns",
+          "rust_name": "columns",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether to use the quad warp interpolation mode for the lattice.",
+          "name": "quad",
+          "rust_name": "quad",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Absolute lattice points in row-major order; index = row * (columns + 1) + column.",
+          "name": "points",
+          "rust_name": "points",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::Vec2"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::WarpTransform",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::scene_reference::SceneReference": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::scene_reference::SceneReference",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "unspecified",
+          "rust_name": "Unspecified"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document ID of the object described or selected by this value.",
+              "name": "object_id",
+              "rust_name": "object_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "resolved",
+          "rust_name": "Resolved"
+        },
+        {
+          "fields": [
+            {
+              "doc": "External format/runtime identifier retained for import/export; not the document\nobject ID.",
+              "name": "runtime_id",
+              "rust_name": "runtime_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "unresolved",
+          "rust_name": "Unresolved"
+        }
+      ]
+    },
+    "zipzi_contract::warp_bezier::WarpBezier": {
+      "fields": [
+        {
+          "doc": "Number of warp lattice cells vertically; a lattice has rows + 1 point rows.",
+          "name": "rows",
+          "rust_name": "rows",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.",
+          "name": "columns",
+          "rust_name": "columns",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Bezier nodes in row-major order; exactly (rows + 1) * (columns + 1) nodes.",
+          "name": "nodes",
+          "rust_name": "nodes",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::warp_bezier::WarpBezierNode"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::warp_bezier::WarpBezier",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::warp_bezier::WarpBezierNode": {
+      "fields": [
+        {
+          "doc": "Absolute Bezier anchor position in lattice coordinates; not a handle offset.",
+          "name": "position",
+          "rust_name": "position",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::Vec2"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Absolute positions: left, right, up, down in lattice coordinates.",
+          "name": "handles",
+          "rust_name": "handles",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::Vec2"
+            },
+            "kind": "array",
+            "length": 4
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::warp_bezier::WarpBezierNode",
+      "transparent": false,
+      "tuple": false
+    }
+  }
+}

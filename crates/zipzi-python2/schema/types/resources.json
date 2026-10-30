@@ -1,0 +1,713 @@
+{
+  "_generated_by": "zipzi-python2/tools/generate.py",
+  "definitions": {
+    "zipzi_contract::authoring::ImageCreateSpec": {
+      "fields": [
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.",
+          "name": "id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+          "name": "name",
+          "shape": {
+            "kind": "string"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::authoring::ImageCreateSpec"
+    },
+    "zipzi_contract::document::ResourceEdit": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::ResourceEdit",
+      "tag": "operation",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "New stable UUID for this object; it must not conflict with an existing identity.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+              "name": "name",
+              "rust_name": "name",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create",
+          "rust_name": "Create"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Exact current field value used as an optimistic precondition; stale values reject\nthe edit.",
+              "name": "expected",
+              "rust_name": "expected",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+              "name": "name",
+              "rust_name": "name",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "patch_name",
+          "rust_name": "PatchName"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Exact current image-content metadata precondition; None requires the asset to have\nno loaded content.",
+              "name": "expected",
+              "rust_name": "expected",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::model::ImageContent"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Image content metadata; None explicitly represents an asset with no loaded image\ncontent.",
+              "name": "content",
+              "rust_name": "content",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::model::ImageContent"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "set_content",
+          "rust_name": "SetContent"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
+              "name": "ids",
+              "rust_name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "reorder",
+          "rust_name": "Reorder"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable ID of the existing source object to duplicate, not a filesystem path.",
+              "name": "source",
+              "rust_name": "source",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "New stable UUID for this object; it must not conflict with an existing identity.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+              "name": "name",
+              "rust_name": "name",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "duplicate",
+          "rust_name": "Duplicate"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "None rejects deletion while referenced; Some explicitly redirects users to a\nresolved target or an unresolved/detached reference.",
+              "name": "replacement",
+              "rust_name": "replacement",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::scene_reference::SceneReference"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "delete",
+          "rust_name": "Delete"
+        }
+      ]
+    },
+    "zipzi_contract::model::ImageAsset": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Original imported path or external slot when no decoded content exists.",
+          "name": "unresolved_source",
+          "rust_name": "unresolved_source",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+          "name": "name",
+          "rust_name": "name",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Image content metadata; None explicitly represents an asset with no loaded image content.",
+          "name": "content",
+          "rust_name": "content",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::ImageContent"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::ImageAsset",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::ImageContent": {
+      "fields": [
+        {
+          "doc": "Stored resource location, normally a package-relative path or generated memory-resource\nlocator; reading metadata does not open it.",
+          "name": "source",
+          "rust_name": "source",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Image width in pixels; prepared image content requires a positive dimension.",
+          "name": "width",
+          "rust_name": "width",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Image height in pixels; prepared image content requires a positive dimension.",
+          "name": "height",
+          "rust_name": "height",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Hexadecimal SHA-256 of the stored image content; an empty string means no recorded digest.",
+          "name": "sha256",
+          "rust_name": "sha256",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::ImageContent",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::ImagePixels": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Image width in pixels; prepared image content requires a positive dimension.",
+          "name": "width",
+          "shape": {
+            "kind": "u32"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Image height in pixels; prepared image content requires a positive dimension.",
+          "name": "height",
+          "shape": {
+            "kind": "u32"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Owned tightly packed RGBA8 pixels in row-major order, top row first; length is width *\nheight * 4 bytes, with straight alpha.",
+          "name": "rgba",
+          "shape": {
+            "kind": "bytes"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::runtime::ImagePixels"
+    },
+    "zipzi_contract::runtime::ImageQuery": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Runtime Session handle; distinct from the persistent document UUID.",
+          "name": "session",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::SessionId",
+            "opaque": true
+          }
+        },
+        {
+          "default": null,
+          "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+          "name": "id",
+          "shape": {
+            "kind": "string"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Edit candidate handle; None selects formal document state.",
+          "name": "edit",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::runtime::EditId",
+              "opaque": true
+            },
+            "kind": "optional"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::runtime::ImageQuery"
+    },
+    "zipzi_contract::runtime::ImageSnapshot": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Exact formal or candidate source captured for this result; later host changes do not\nrewrite it.",
+          "name": "source",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::SourceRef",
+            "opaque": true
+          }
+        },
+        {
+          "default": null,
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "shape": {
+            "kind": "string"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+          "name": "name",
+          "shape": {
+            "kind": "string"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Owned decoded image pixels; reading this value does not perform another host request.",
+          "name": "pixels",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::ImagePixels"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::runtime::ImageSnapshot"
+    },
+    "zipzi_contract::runtime::PreparedImageInfo": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Client-owned prepared-image handle; creating an operation value does not transfer ownership.",
+          "name": "image",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::ImageId",
+            "opaque": true
+          }
+        },
+        {
+          "default": null,
+          "doc": "Image width in pixels; prepared image content requires a positive dimension.",
+          "name": "width",
+          "shape": {
+            "kind": "u32"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Image height in pixels; prepared image content requires a positive dimension.",
+          "name": "height",
+          "shape": {
+            "kind": "u32"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::runtime::PreparedImageInfo"
+    },
+    "zipzi_contract::runtime::PreparedPixelsQuery": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Client-owned prepared-image handle; creating an operation value does not transfer\nownership.",
+          "name": "image",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::ImageId",
+            "opaque": true
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::runtime::PreparedPixelsQuery"
+    },
+    "zipzi_contract::runtime::ResourceOperation": {
+      "kind": "union",
+      "name": "zipzi_contract::runtime::ResourceOperation",
+      "tag": "domain",
+      "variants": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Creation specification; native admission supplies identities/defaults and rejects\ninvalid input.",
+              "name": "spec",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::ImageCreateSpec"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Client-owned prepared-image handle; creating an operation value does not transfer\nownership.",
+              "name": "image",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::runtime::ImageId",
+                "opaque": true
+              }
+            }
+          ],
+          "rust_name": "CreateImage",
+          "wire_name": "create_image"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Client-owned prepared-image handle; creating an operation value does not transfer\nownership.",
+              "name": "image",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::runtime::ImageId",
+                "opaque": true
+              }
+            }
+          ],
+          "rust_name": "ReplaceImage",
+          "wire_name": "replace_image"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+              "name": "name",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Required current display name; None disables this name precondition.",
+              "name": "expected_name",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            }
+          ],
+          "rust_name": "RenameImage",
+          "wire_name": "rename_image"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Client-owned plan handle, valid only for its captured source and owning client.",
+              "name": "plan",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::runtime::PlanId",
+                "opaque": true
+              }
+            }
+          ],
+          "rust_name": "ApplyPlan",
+          "wire_name": "apply_plan"
+        }
+      ]
+    },
+    "zipzi_contract::runtime::ResourceUsage": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Runtime-wide retained independent Preview leases; active Jobs can retain workspace after release.",
+          "name": "previews",
+          "shape": {
+            "kind": "usize"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Number of distinct retained allocations counted by Runtime resource accounting.",
+          "name": "allocations",
+          "shape": {
+            "kind": "usize"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Number of retained resource-accounting entries, including history/lease holders.",
+          "name": "resource_entries",
+          "shape": {
+            "kind": "usize"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Runtime-wide number of retained client-owned prepared image handles.",
+          "name": "prepared_images",
+          "shape": {
+            "kind": "usize"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Runtime-wide number of retained client-owned plans, not operations inside each plan.",
+          "name": "plans",
+          "shape": {
+            "kind": "usize"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Retained decoded RGBA storage in bytes under Runtime accounting.",
+          "name": "rgba_bytes",
+          "shape": {
+            "kind": "usize"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Retained encoded PNG storage in bytes under Runtime accounting.",
+          "name": "png_bytes",
+          "shape": {
+            "kind": "usize"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Retained immutable binary blob storage in bytes under Runtime accounting.",
+          "name": "blob_bytes",
+          "shape": {
+            "kind": "usize"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Reserved bytes for resource preparation that has not yet finished.",
+          "name": "preparing_bytes",
+          "shape": {
+            "kind": "usize"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Reserved bytes for in-progress binary transfers.",
+          "name": "transfer_bytes",
+          "shape": {
+            "kind": "usize"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::runtime::ResourceUsage"
+    }
+  }
+}

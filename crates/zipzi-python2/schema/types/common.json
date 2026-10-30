@@ -1,0 +1,53 @@
+{
+  "_generated_by": "zipzi-python2/tools/generate.py",
+  "definitions": {
+    "zipzi_contract::model::PreciseVec2": {
+      "fields": [
+        {
+          "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+          "name": "x",
+          "rust_name": "x",
+          "shape": {
+            "kind": "f64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+          "name": "y",
+          "rust_name": "y",
+          "shape": {
+            "kind": "f64"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::PreciseVec2",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::Vec2": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",
+          "name": "x",
+          "shape": {
+            "kind": "f32"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Vertical coordinate; its space and units are determined by the containing geometry or pose.",
+          "name": "y",
+          "shape": {
+            "kind": "f32"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::model::Vec2"
+    }
+  }
+}

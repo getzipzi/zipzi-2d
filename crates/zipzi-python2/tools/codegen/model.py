@@ -48,7 +48,11 @@ class TypeGraph:
 
     @classmethod
     def from_contract(cls, contract: Any) -> 'TypeGraph':
-        root, definitions = normalize.normalize(contract, projections.EXTERNAL_TYPES)
+        if isinstance(contract, dict) and contract.get('format_version') == 2:
+            root, definitions = contract['root'], contract['definitions']
+            normalize.validate_graph(root, definitions, projections.EXTERNAL_TYPES)
+        else:
+            root, definitions = normalize.normalize(contract, projections.EXTERNAL_TYPES)
         complete = {name for name, shape in definitions.items() if shape['kind'] != 'opaque'}
         missing = sorted(complete - projections.OWNERS.keys())
         if missing:

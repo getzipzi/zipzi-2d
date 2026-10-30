@@ -1,0 +1,705 @@
+{
+  "_generated_by": "zipzi-python2/tools/generate.py",
+  "definitions": {
+    "zipzi_contract::authoring::TextureCoverage": {
+      "fields": [
+        {
+          "doc": "Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.",
+          "name": "alpha_threshold",
+          "rust_name": "alpha_threshold",
+          "shape": {
+            "kind": "u8"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Top-down source-pixel grid spacing. Values above 1 mean an approximate report.",
+          "name": "pixel_step",
+          "rust_name": "pixel_step",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Number of source pixel centers tested on the regular grid.",
+          "name": "sampled_pixels",
+          "rust_name": "sampled_pixels",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Tested pixel centers covered by the union of UV triangles inside [0,1].",
+          "name": "covered_pixels",
+          "rust_name": "covered_pixels",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Covered centers whose source alpha is below the threshold.",
+          "name": "transparent_covered_pixels",
+          "rust_name": "transparent_covered_pixels",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Tested centers whose source alpha is at least the threshold.",
+          "name": "opaque_pixels",
+          "rust_name": "opaque_pixels",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Opaque centers outside the UV triangle union: a contour coverage error, not a distance.",
+          "name": "uncovered_opaque_pixels",
+          "rust_name": "uncovered_opaque_pixels",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Transparent covered / covered; None if no tested center is covered.",
+          "name": "transparent_coverage_fraction",
+          "rust_name": "transparent_coverage_fraction",
+          "shape": {
+            "item": {
+              "kind": "f64"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Uncovered opaque / opaque; None for an entirely transparent sampled image.",
+          "name": "uncovered_opaque_fraction",
+          "rust_name": "uncovered_opaque_fraction",
+          "shape": {
+            "item": {
+              "kind": "f64"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Number of UV triangles with vertices outside [0,1]; repeat-sampled coverage is not measured.",
+          "name": "out_of_bounds_triangles",
+          "rust_name": "out_of_bounds_triangles",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::TextureCoverage",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::TopologyOverlay": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Diagnostic selection only; the textured context image is unchanged. None selects all\nmeshes, Some([]) selects none. Mesh/Part targets are unioned and deduplicated;\nParts include nested Parts. Missing targets fail explicitly. Maximum 256 selectors.",
+          "name": "targets",
+          "rust_name": "targets",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::spatial::ObjectTarget"
+              },
+              "kind": "sequence"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": true,
+          "doc": "Draw triangle edges in cyan, in final evaluated model coordinates.",
+          "name": "wireframe",
+          "rust_name": "wireframe",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Draw vertex positions as yellow dots.",
+          "name": "vertices",
+          "rust_name": "vertices",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Draw stable authoring vertex IDs in yellow, rather than transient array offsets.",
+          "name": "vertex_ids",
+          "rust_name": "vertex_ids",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Draw meshing boundary edges in green and internal constraints in magenta.",
+          "name": "constraints",
+          "rust_name": "constraints",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Fill triangles by symmetric edge stretch relative to the default pose: blue=1,\norange=2, red>=4; flipped or collapsed triangles are magenta.",
+          "name": "strain",
+          "rust_name": "strain",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Include disabled, hidden and zero-opacity meshes. Default draws visible meshes only.",
+          "name": "include_hidden",
+          "rust_name": "include_hidden",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Clear the textured image before diagnostic drawing, retaining the exact same view.",
+          "name": "topology_only",
+          "rust_name": "topology_only",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": 0.25,
+          "doc": "Heat fill opacity in [0,1]. Applied once per pixel using the most severe overlapping\ntriangle, so overlapping layers cannot accumulate opacity. Lines and labels stay opaque.",
+          "name": "heat_opacity",
+          "rust_name": "heat_opacity",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Restrict every diagnostic layer to anomalous triangles and their incident vertices/edges.\nDegenerate, flipped and undefined-reference triangles always count as anomalies.",
+          "name": "anomalies_only",
+          "rust_name": "anomalies_only",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": {
+            "max_aspect_ratio": 20.0,
+            "max_edge_stretch": 2.0,
+            "min_angle_degrees": 10.0
+          },
+          "doc": "Thresholds used by anomalies_only; reports themselves are never threshold-filtered.",
+          "name": "thresholds",
+          "rust_name": "thresholds",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::TopologyThresholds"
+          },
+          "skip": false
+        },
+        {
+          "default": 2,
+          "doc": "Decimal glyph scale in output pixels, 1..4. Labels avoid other labels globally;\nan ID is omitted when no nearby in-view position has enough space.",
+          "name": "label_scale",
+          "rust_name": "label_scale",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "default": 3,
+          "doc": "Minimum clear gap between label rectangles in pixels, 0..32.",
+          "name": "label_spacing",
+          "rust_name": "label_spacing",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "default": 256,
+          "doc": "Maximum labels per image, 0..4096. Vertex dots remain independent of this limit.",
+          "name": "max_labels",
+          "rust_name": "max_labels",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::TopologyOverlay",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::TopologyThresholds": {
+      "fields": [
+        {
+          "default": 10.0,
+          "doc": "An angle below this value is anomalous; finite degrees in [0,60]. Default 10.",
+          "name": "min_angle_degrees",
+          "rust_name": "min_angle_degrees",
+          "shape": {
+            "kind": "f64"
+          },
+          "skip": false
+        },
+        {
+          "default": 20.0,
+          "doc": "A longest-edge/altitude ratio above this is anomalous; finite and >= 1. Default 20.",
+          "name": "max_aspect_ratio",
+          "rust_name": "max_aspect_ratio",
+          "shape": {
+            "kind": "f64"
+          },
+          "skip": false
+        },
+        {
+          "default": 2.0,
+          "doc": "A symmetric edge-length ratio above this is anomalous; finite and >= 1. Default 2.",
+          "name": "max_edge_stretch",
+          "rust_name": "max_edge_stretch",
+          "shape": {
+            "kind": "f64"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::TopologyThresholds",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::ObservationBatch": {
+      "fields": [
+        {
+          "doc": "Owned explicit view shared by these ordered frames.",
+          "name": "view",
+          "rust_name": "view",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::ObservationView"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned requested parameter maps in input order, including duplicates.",
+          "name": "requested",
+          "rust_name": "requested",
+          "shape": {
+            "item": {
+              "kind": "string_map",
+              "value": {
+                "kind": "f32"
+              }
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Rendered frames in requested pose order, sharing one resolved texture acquisition.",
+          "name": "frames",
+          "rust_name": "frames",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::runtime::ObservationImage"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::ObservationBatch",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::ObservationImage": {
+      "fields": [
+        {
+          "doc": "Output image width in pixels.",
+          "name": "width",
+          "rust_name": "width",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Output image height in pixels.",
+          "name": "height",
+          "rust_name": "height",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Raw renderer RGBA8, row-major, top-left image origin. Renderer alpha convention is preserved.",
+          "name": "rgba",
+          "rust_name": "rgba",
+          "shape": {
+            "item": {
+              "kind": "u8"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "PNG encoding of exactly the returned RGBA8; encoded by Rust, never by Python.",
+          "name": "png",
+          "rust_name": "png",
+          "shape": {
+            "item": {
+              "kind": "u8"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Captured authoring document UUID.",
+          "name": "document_id",
+          "rust_name": "document_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Captured geometry evaluation revision, distinct from the outer formal/candidate Source.",
+          "name": "evaluation_revision",
+          "rust_name": "evaluation_revision",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Shared acquisition UUID for this batch's once-resolved immutable texture set.",
+          "name": "capture_id",
+          "rust_name": "capture_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Digest of captured evaluated geometry, authoring records and resolved texture content.",
+          "name": "scene_digest",
+          "rust_name": "scene_digest",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Digest of the exact source scene and explicit rendering settings.",
+          "name": "render_digest",
+          "rust_name": "render_digest",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Renderer hash of evaluated input, texture content and output view.",
+          "name": "input_sha256",
+          "rust_name": "input_sha256",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Actual GPU adapter name, obtained only when a render executes.",
+          "name": "adapter_name",
+          "rust_name": "adapter_name",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Actual renderer backend, Metal on macOS or the selected WGPU backend elsewhere.",
+          "name": "adapter_backend",
+          "rust_name": "adapter_backend",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Effective evaluated parameters keyed by stable document UUID.",
+          "name": "parameters",
+          "rust_name": "parameters",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "f32"
+            }
+          },
+          "skip": false
+        },
+        {
+          "doc": "Actual viewport model extent [min_x,min_y,max_x,max_y], including aspect-ratio expansion.",
+          "name": "visible_roi",
+          "rust_name": "visible_roi",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "array",
+            "length": 4
+          },
+          "skip": false
+        },
+        {
+          "doc": "Model-to-image scale. Image X=x*scale+offset[0], Y=-y*scale+offset[1].",
+          "name": "scale",
+          "rust_name": "scale",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Translation in top-left image pixels, parallel to the documented scale formula.",
+          "name": "offset",
+          "rust_name": "offset",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "array",
+            "length": 2
+          },
+          "skip": false
+        },
+        {
+          "doc": "Source texture identities and exact content hashes shared across this batch.",
+          "name": "textures",
+          "rust_name": "textures",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::runtime::ObservedTexture"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.",
+          "name": "drawable_bounds",
+          "rust_name": "drawable_bounds",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::runtime::ObservedBounds"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Mesh quality in evaluated drawable order when View.quality is true; empty otherwise.\nTexture coverage uses alpha >= 8, pixel centers, at most a 256x256 grid, ignoring masks,\nfiltering and UV repeat outside [0,1]. A step above 1 denotes approximate coverage.",
+          "name": "quality",
+          "rust_name": "quality",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::authoring::MeshQuality"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::ObservationImage",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::ObservationView": {
+      "fields": [
+        {
+          "doc": "Output width in pixels, 1..4096, subject to device and Runtime budgets.",
+          "name": "width",
+          "rust_name": "width",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Output height in pixels, 1..4096, subject to device and Runtime budgets.",
+          "name": "height",
+          "rust_name": "height",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.",
+          "name": "roi",
+          "rust_name": "roi",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "array",
+            "length": 4
+          },
+          "skip": false
+        },
+        {
+          "default": 0.0,
+          "doc": "Nonnegative padding around the ROI in model units; aspect ratio is preserved.",
+          "name": "padding_model",
+          "rust_name": "padding_model",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional topology overlay in the same frozen Source and ROI mapping. It ignores\nmasks and occlusion; None preserves the ordinary GPU image.",
+          "name": "topology",
+          "rust_name": "topology",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::authoring::TopologyOverlay"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Include per-mesh evaluated quality and approximate source-alpha coverage.\nUses default parameters of the same source as reference; checks requested frames only.",
+          "name": "quality",
+          "rust_name": "quality",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::ObservationView",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::ObservedBounds": {
+      "fields": [
+        {
+          "doc": "Stable authoring drawable UUID.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Evaluated visibility; geometric bounds do not prove unoccluded painted pixels.",
+          "name": "visible",
+          "rust_name": "visible",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Clipped image bounds [min_x,min_y,max_x,max_y], exclusive maximum; None if empty.",
+          "name": "bounds",
+          "rust_name": "bounds",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "u32"
+              },
+              "kind": "array",
+              "length": 4
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::ObservedBounds",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::ObservedTexture": {
+      "fields": [
+        {
+          "doc": "Stable asset UUID resolved from the frozen authoring source.",
+          "name": "asset_id",
+          "rust_name": "asset_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "SHA256 of the exact immutable texture content uploaded by this capture.",
+          "name": "sha256",
+          "rust_name": "sha256",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::ObservedTexture",
+      "transparent": false,
+      "tuple": false
+    }
+  }
+}

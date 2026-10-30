@@ -90,6 +90,8 @@ def inspect(package):
             elif isinstance(value, list):
                 for child in value:visit(child)
         visit(json.loads(schema_file.read_text(encoding='utf-8')))
+        for shard in sorted((package / 'schema/types').glob('*.json')):
+            visit(json.loads(shard.read_text(encoding='utf-8')))
         projection_total = len(types)
         projection_assigned = len(types & owners)
     over_review_threshold = {path: info['lines'] for path, info in files.items()

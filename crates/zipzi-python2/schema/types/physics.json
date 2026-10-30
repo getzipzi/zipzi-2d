@@ -1,0 +1,2009 @@
+{
+  "_generated_by": "zipzi-python2/tools/generate.py",
+  "definitions": {
+    "zipzi_contract::animation::PhysicsOutputSnapshot": {
+      "fields": [
+        {
+          "doc": "Raw output value before weight and parameter clamping.",
+          "name": "raw",
+          "rust_name": "raw",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Parameter value immediately before this output.",
+          "name": "before",
+          "rust_name": "before",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Parameter value after applying this output and clamping.",
+          "name": "after",
+          "rust_name": "after",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether the SDK clamped this output to the target parameter range.",
+          "name": "clamped",
+          "rust_name": "clamped",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::animation::PhysicsOutputSnapshot",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::animation::PhysicsRigSnapshot": {
+      "fields": [
+        {
+          "doc": "Native physics group UUID.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Input channel UUIDs aligned with inputs.",
+          "name": "input_ids",
+          "rust_name": "input_ids",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Output channel UUIDs aligned with outputs.",
+          "name": "output_ids",
+          "rust_name": "output_ids",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Particle node UUIDs aligned with particles.",
+          "name": "node_ids",
+          "rust_name": "node_ids",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Latest solved particle XY positions in the SDK solver coordinate system.",
+          "name": "particles",
+          "rust_name": "particles",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "f32"
+              },
+              "kind": "array",
+              "length": 2
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Weighted, normalized angle in degrees used by the latest solved step.\nRotate the Y-down solver coordinates by this angle to display a fixed\ngravity direction with rotating input axes.",
+          "name": "input_angle",
+          "rust_name": "input_angle",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Latest normalized input values in channel order.",
+          "name": "inputs",
+          "rust_name": "inputs",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Latest output observations; None marks an unavailable channel.",
+          "name": "outputs",
+          "rust_name": "outputs",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::animation::PhysicsOutputSnapshot"
+              },
+              "kind": "optional"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::animation::PhysicsRigSnapshot",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::PhysicsCollection": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::authoring::PhysicsCollection",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "groups",
+          "rust_name": "Groups"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Physics rig ID owning the selected rows.",
+              "name": "group_id",
+              "rust_name": "group_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "inputs",
+          "rust_name": "Inputs"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Physics rig ID owning the selected rows.",
+              "name": "group_id",
+              "rust_name": "group_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "outputs",
+          "rust_name": "Outputs"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Physics rig ID owning the selected rows.",
+              "name": "group_id",
+              "rust_name": "group_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "nodes",
+          "rust_name": "Nodes"
+        }
+      ]
+    },
+    "zipzi_contract::physics::PhysicsAxis": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::physics::PhysicsAxis",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "X",
+          "rust_name": "X"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "Y",
+          "rust_name": "Y"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "Angle",
+          "rust_name": "Angle"
+        }
+      ]
+    },
+    "zipzi_contract::physics::PhysicsDictionaryEntry": {
+      "fields": [
+        {
+          "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+          "name": "Id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Human-readable display or registration name; distinct from persistent object identity.",
+          "name": "Name",
+          "rust_name": "name",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.",
+          "flatten": true,
+          "name": "extensions",
+          "rust_name": "extensions",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "json"
+            }
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::physics::PhysicsDictionaryEntry",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::physics::PhysicsForces": {
+      "fields": [
+        {
+          "doc": "Effective gravity vector in the native Physics coordinate convention.",
+          "name": "Gravity",
+          "rust_name": "gravity",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::physics::PhysicsVector"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Effective wind vector in the native Physics coordinate convention.",
+          "name": "Wind",
+          "rust_name": "wind",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::physics::PhysicsVector"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.",
+          "flatten": true,
+          "name": "extensions",
+          "rust_name": "extensions",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "json"
+            }
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::physics::PhysicsForces",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::physics::PhysicsMeta": {
+      "fields": [
+        {
+          "doc": "Exported count of Physics settings, maintained by native validation.",
+          "name": "PhysicsSettingCount",
+          "rust_name": "setting_count",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Exported count of Physics inputs, maintained by native validation.",
+          "name": "TotalInputCount",
+          "rust_name": "input_count",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Exported count of Physics outputs, maintained by native validation.",
+          "name": "TotalOutputCount",
+          "rust_name": "output_count",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Exported count of Physics nodes, maintained by native validation.",
+          "name": "VertexCount",
+          "rust_name": "vertex_count",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Native effective gravity and wind vectors.",
+          "name": "EffectiveForces",
+          "rust_name": "forces",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::physics::PhysicsForces"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Ordered exported Physics rig ID/name metadata.",
+          "name": "PhysicsDictionary",
+          "rust_name": "dictionary",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::physics::PhysicsDictionaryEntry"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Nominal motion frames per second or explicit Physics fixed-step frequency, as declared by the owner.",
+          "name": "Fps",
+          "rust_name": "fps",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.",
+          "flatten": true,
+          "name": "extensions",
+          "rust_name": "extensions",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "json"
+            }
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::physics::PhysicsMeta",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::physics::PhysicsNormalization": {
+      "fields": [
+        {
+          "doc": "Authored two-dimensional Physics node position or normalization domain, as declared by the field.",
+          "name": "Position",
+          "rust_name": "position",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::physics::PhysicsRange"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Angle normalization range, in the native Physics coordinate convention.",
+          "name": "Angle",
+          "rust_name": "angle",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::physics::PhysicsRange"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.",
+          "flatten": true,
+          "name": "extensions",
+          "rust_name": "extensions",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "json"
+            }
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::physics::PhysicsNormalization",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::physics::PhysicsRange": {
+      "fields": [
+        {
+          "doc": "Lower normalization bound in the declared position or angle domain.",
+          "name": "Minimum",
+          "rust_name": "minimum",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Neutral normalization coordinate between the declared bounds.",
+          "name": "Default",
+          "rust_name": "default",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Upper normalization bound in the declared position or angle domain.",
+          "name": "Maximum",
+          "rust_name": "maximum",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::physics::PhysicsRange",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::physics::PhysicsVector": {
+      "fields": [
+        {
+          "doc": "Horizontal component in the native Physics coordinate convention.",
+          "name": "X",
+          "rust_name": "x",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Vertical component in the native Physics coordinate convention.",
+          "name": "Y",
+          "rust_name": "y",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::physics::PhysicsVector",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::physics_document::PhysicsAsset": {
+      "fields": [
+        {
+          "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Complete persistent Physics definition; simulation state lives outside the document.",
+          "name": "data",
+          "rust_name": "data",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::physics_document::PhysicsDefinition"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Original runtime-ID namespace used to validate preservation of opaque imported fields.",
+          "name": "opaque_source_ids",
+          "rust_name": "opaque_source_ids",
+          "shape": {
+            "item": {
+              "kind": "string_map",
+              "value": {
+                "kind": "string"
+              }
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Original imported-content hash used to detect unsupported changes to opaque fields.",
+          "name": "opaque_source_content_hash",
+          "rust_name": "opaque_source_content_hash",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::physics_document::PhysicsAsset",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::physics_document::PhysicsAssetProperty": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::physics_document::PhysicsAssetProperty",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Optional Physics fixed-step frequency; None follows the evaluation delta.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "item": {
+                  "kind": "f32"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Fps",
+          "rust_name": "Fps"
+        }
+      ]
+    },
+    "zipzi_contract::physics_document::PhysicsDefinition": {
+      "fields": [
+        {
+          "doc": "Native Physics format version number.",
+          "name": "version",
+          "rust_name": "version",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Physics format metadata and counts maintained by native authoring validation.",
+          "name": "meta",
+          "rust_name": "meta",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::physics::PhysicsMeta"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Ordered shared Physics rig definitions.",
+          "name": "settings",
+          "rust_name": "settings",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::physics_document::PhysicsSetting"
+              },
+              "kind": "shared"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.",
+          "name": "extensions",
+          "rust_name": "extensions",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "json"
+            }
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::physics_document::PhysicsDefinition",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::physics_document::PhysicsEdit": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::physics_document::PhysicsEdit",
+      "tag": "operation",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Stable Physics singleton ID owning these changes.",
+              "name": "asset_id",
+              "rust_name": "asset_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Human-readable display or registration name; distinct from persistent object identity.",
+              "name": "name",
+              "rust_name": "name",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional stable sibling ID before which to insert; None appends.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_group",
+          "rust_name": "CreateGroup"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable ID of the group owning the affected rows or node chain.",
+              "name": "group_id",
+              "rust_name": "group_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional stable sibling ID before which to insert; None appends.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_input",
+          "rust_name": "CreateInput"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable ID of the group owning the affected rows or node chain.",
+              "name": "group_id",
+              "rust_name": "group_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable node identity, independent of the node index used by exported Physics JSON.",
+              "name": "node_id",
+              "rust_name": "node_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional stable sibling ID before which to insert; None appends.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_output",
+          "rust_name": "CreateOutput"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable ID of the group owning the affected rows or node chain.",
+              "name": "group_id",
+              "rust_name": "group_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Complete Physics node to insert, including its stable identity and authored dynamics.",
+              "name": "node",
+              "rust_name": "node",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::physics_document::PhysicsNode"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional stable sibling ID before which to insert; None appends.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "insert_node",
+          "rust_name": "InsertNode"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional stable sibling ID before which to insert; None appends.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "move_node",
+          "rust_name": "MoveNode"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional stable sibling ID before which to insert; None appends.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "duplicate_node",
+          "rust_name": "DuplicateNode"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed atomic Physics changes validated against the current candidate.",
+              "name": "patch",
+              "rust_name": "patch",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::physics_document::PhysicsPatch"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "patch",
+          "rust_name": "Patch"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered stable IDs selected by this operation; names and row numbers are not identities.",
+              "name": "ids",
+              "rust_name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable ID of the group owning the affected rows or node chain.",
+              "name": "group_id",
+              "rust_name": "group_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional stable sibling ID before which to insert; None appends.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "move_inputs",
+          "rust_name": "MoveInputs"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered stable IDs selected by this operation; names and row numbers are not identities.",
+              "name": "ids",
+              "rust_name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable ID of the group owning the affected rows or node chain.",
+              "name": "group_id",
+              "rust_name": "group_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional stable sibling ID before which to insert; None appends.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit old-node to replacement-node identities used when repairing output references.",
+              "name": "node_replacements",
+              "rust_name": "node_replacements",
+              "shape": {
+                "kind": "string_map",
+                "value": {
+                  "kind": "string"
+                }
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "move_outputs",
+          "rust_name": "MoveOutputs"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered stable IDs selected by this operation; names and row numbers are not identities.",
+              "name": "ids",
+              "rust_name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional stable sibling ID before which to insert; None appends.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "reorder_groups",
+          "rust_name": "ReorderGroups"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered stable IDs selected by this operation; names and row numbers are not identities.",
+              "name": "ids",
+              "rust_name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Stable ID of the group owning the affected rows or node chain.",
+              "name": "group_id",
+              "rust_name": "group_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional stable sibling ID before which to insert; None appends.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "duplicate",
+          "rust_name": "Duplicate"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered stable IDs selected by this operation; names and row numbers are not identities.",
+              "name": "ids",
+              "rust_name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit old-node to replacement-node identities used when repairing output references.",
+              "name": "node_replacements",
+              "rust_name": "node_replacements",
+              "shape": {
+                "kind": "string_map",
+                "value": {
+                  "kind": "string"
+                }
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "delete",
+          "rust_name": "Delete"
+        }
+      ]
+    },
+    "zipzi_contract::physics_document::PhysicsInput": {
+      "fields": [
+        {
+          "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Typed parameter reference or stable source object ID, as declared by the enclosing operation.",
+          "name": "source",
+          "rust_name": "source",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::physics_document::PhysicsTarget"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned opaque fields attached to an imported Physics parameter reference.",
+          "name": "reference_extensions",
+          "rust_name": "reference_extensions",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "json"
+            }
+          },
+          "skip": false
+        },
+        {
+          "doc": "Native Physics influence weight, expressed as a percentage.",
+          "name": "weight",
+          "rust_name": "weight",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Native Physics axis/channel discriminator; distinct from an object identity.",
+          "name": "kind",
+          "rust_name": "kind",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::physics::PhysicsAxis"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether the native Physics mapping reflects the selected axis.",
+          "name": "reflect",
+          "rust_name": "reflect",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.",
+          "name": "extensions",
+          "rust_name": "extensions",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "json"
+            }
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::physics_document::PhysicsInput",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::physics_document::PhysicsNode": {
+      "fields": [
+        {
+          "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Authored two-dimensional Physics node position or normalization domain, as declared by the field.",
+          "name": "position",
+          "rust_name": "position",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::physics::PhysicsVector"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Native Physics node mobility coefficient.",
+          "name": "mobility",
+          "rust_name": "mobility",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Native Physics node delay coefficient.",
+          "name": "delay",
+          "rust_name": "delay",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Native Physics node acceleration coefficient.",
+          "name": "acceleration",
+          "rust_name": "acceleration",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Native Physics node segment length/radius.",
+          "name": "radius",
+          "rust_name": "radius",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.",
+          "name": "extensions",
+          "rust_name": "extensions",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "json"
+            }
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::physics_document::PhysicsNode",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::physics_document::PhysicsOutput": {
+      "fields": [
+        {
+          "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Explicit destination owner/container; order is controlled separately by before.",
+          "name": "destination",
+          "rust_name": "destination",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::physics_document::PhysicsTarget"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned opaque fields attached to an imported Physics parameter reference.",
+          "name": "reference_extensions",
+          "rust_name": "reference_extensions",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "json"
+            }
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable node identity, independent of the node index used by exported Physics JSON.",
+          "name": "node_id",
+          "rust_name": "node_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Native Physics output multiplier applied to the selected axis.",
+          "name": "scale",
+          "rust_name": "scale",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Native Physics influence weight, expressed as a percentage.",
+          "name": "weight",
+          "rust_name": "weight",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Native Physics axis/channel discriminator; distinct from an object identity.",
+          "name": "kind",
+          "rust_name": "kind",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::physics::PhysicsAxis"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether the native Physics mapping reflects the selected axis.",
+          "name": "reflect",
+          "rust_name": "reflect",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.",
+          "name": "extensions",
+          "rust_name": "extensions",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "json"
+            }
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::physics_document::PhysicsOutput",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::physics_document::PhysicsPatch": {
+      "fields": [
+        {
+          "doc": "Stable Physics singleton ID owning these changes.",
+          "name": "asset_id",
+          "rust_name": "asset_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Ordered changes to Physics asset metadata; rig-local changes are separate.",
+          "name": "asset_changes",
+          "rust_name": "asset_changes",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::physics_document::PhysicsAssetProperty"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional atomic changes to one owned Physics rig/group.",
+          "name": "rig",
+          "rust_name": "rig",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::physics_document::PhysicsRigPatch"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::physics_document::PhysicsPatch",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::physics_document::PhysicsProperty": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::physics_document::PhysicsProperty",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Replacement display name of the Physics group.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "Name",
+          "rust_name": "Name"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "InputWeight",
+          "rust_name": "InputWeight"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::physics::PhysicsAxis"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "InputAxis",
+          "rust_name": "InputAxis"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "InputReflect",
+          "rust_name": "InputReflect"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Typed target reference; unresolved imported runtime labels remain explicit.",
+              "name": "target",
+              "rust_name": "target",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::physics_document::PhysicsTarget"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "InputParameter",
+          "rust_name": "InputParameter"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "OutputWeight",
+          "rust_name": "OutputWeight"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "OutputScale",
+          "rust_name": "OutputScale"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::physics::PhysicsAxis"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "OutputAxis",
+          "rust_name": "OutputAxis"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "OutputReflect",
+          "rust_name": "OutputReflect"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Typed target reference; unresolved imported runtime labels remain explicit.",
+              "name": "target",
+              "rust_name": "target",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::physics_document::PhysicsTarget"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "OutputParameter",
+          "rust_name": "OutputParameter"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable node identity, independent of the node index used by exported Physics JSON.",
+              "name": "node_id",
+              "rust_name": "node_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "OutputNode",
+          "rust_name": "OutputNode"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::physics::PhysicsVector"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "VertexPosition",
+          "rust_name": "VertexPosition"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "VertexRadius",
+          "rust_name": "VertexRadius"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "VertexMobility",
+          "rust_name": "VertexMobility"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "VertexDelay",
+          "rust_name": "VertexDelay"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "VertexAcceleration",
+          "rust_name": "VertexAcceleration"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Replacement minimum/default/maximum range for position normalization.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::physics::PhysicsRange"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "PositionNormalization",
+          "rust_name": "PositionNormalization"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Replacement minimum/default/maximum range for angle normalization.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::physics::PhysicsRange"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "AngleNormalization",
+          "rust_name": "AngleNormalization"
+        }
+      ]
+    },
+    "zipzi_contract::physics_document::PhysicsRigPatch": {
+      "fields": [
+        {
+          "doc": "Stable ID of the group owning the affected rows or node chain.",
+          "name": "group_id",
+          "rust_name": "group_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Ordered typed property changes validated as one native operation.",
+          "name": "changes",
+          "rust_name": "changes",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::physics_document::PhysicsProperty"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::physics_document::PhysicsRigPatch",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::physics_document::PhysicsSetting": {
+      "fields": [
+        {
+          "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Imported/exported Physics rig label, distinct from its persistent group UUID.",
+          "name": "external_id",
+          "rust_name": "external_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Ordered Physics input rows, each with a stable identity and typed parameter source.",
+          "name": "inputs",
+          "rust_name": "inputs",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::physics_document::PhysicsInput"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Ordered Physics output rows, each with a stable identity and node reference.",
+          "name": "outputs",
+          "rust_name": "outputs",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::physics_document::PhysicsOutput"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Ordered Physics node chain; outputs refer to stable node IDs.",
+          "name": "vertices",
+          "rust_name": "vertices",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::physics_document::PhysicsNode"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Native position and angle normalization ranges for this Physics rig.",
+          "name": "normalization",
+          "rust_name": "normalization",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::physics::PhysicsNormalization"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.",
+          "name": "extensions",
+          "rust_name": "extensions",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "json"
+            }
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::physics_document::PhysicsSetting",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::physics_document::PhysicsTarget": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::physics_document::PhysicsTarget",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "unspecified",
+          "rust_name": "Unspecified"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document parameter UUID; evaluation uses its declared range and default.",
+              "name": "parameter_id",
+              "rust_name": "parameter_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "resolved",
+          "rust_name": "Resolved"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Imported/exported runtime label, distinct from the document object UUID.",
+              "name": "runtime_id",
+              "rust_name": "runtime_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "unresolved",
+          "rust_name": "Unresolved"
+        }
+      ]
+    }
+  }
+}

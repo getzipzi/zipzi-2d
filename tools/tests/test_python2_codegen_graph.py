@@ -13,6 +13,7 @@ SPEC.loader.exec_module(normal)
 sys.path.insert(0, str(ROOT / 'crates/zipzi-python2/tools'))
 from codegen.model import TypeGraph as CheckedTypeGraph, Projection, validate_projections, DocEntry
 from codegen import projections
+from codegen import schema
 from codegen.dependencies import domain_dependencies, strong_components
 
 
@@ -53,12 +54,15 @@ class TypeGraph(unittest.TestCase):
         self.assertEqual(list(types), ['crate::Box<crate::A>', 'crate::Box<crate::B>'])
 
     def test_committed_export_normalizes_without_changing_legacy_render_inputs(self):
-        contract = json.loads((ROOT / 'crates/zipzi-python2/schema/authoring.json').read_text())
+        logical = schema.read(ROOT / 'crates/zipzi-python2/schema/authoring.json')
+        contract = normal.expand(logical['root'], logical['definitions'])
         from importlib.util import spec_from_file_location, module_from_spec
         spec = spec_from_file_location('python2_projections', ROOT / 'crates/zipzi-python2/tools/codegen/projections.py')
         projections = module_from_spec(spec)
         spec.loader.exec_module(projections)
         root, types = normal.normalize(contract, projections.EXTERNAL_TYPES)
+        self.assertEqual(root, logical['root'])
+        self.assertEqual(types, logical['definitions'])
         self.assertGreater(len(types), 300)
         self.assertEqual(normal.expand(root, types), contract)
         graph = CheckedTypeGraph.from_contract(contract)

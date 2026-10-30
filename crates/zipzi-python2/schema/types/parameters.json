@@ -1,0 +1,532 @@
+{
+  "_generated_by": "zipzi-python2/tools/generate.py",
+  "definitions": {
+    "zipzi_contract::authoring::ParameterCreateSpec": {
+      "fields": [
+        {
+          "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+          "name": "name",
+          "rust_name": "name",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Lower endpoint of the parameter domain, in model-defined parameter units.",
+          "name": "minimum",
+          "rust_name": "minimum",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Upper endpoint of the parameter domain, in the same units as minimum.",
+          "name": "maximum",
+          "rust_name": "maximum",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Default parameter value in its declared domain; native validation checks it against\nminimum and maximum.",
+          "name": "default_value",
+          "rust_name": "default_value",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional new parameter UUID; None allocates a fresh UUID when the create operation executes.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional external runtime identifier; None uses the native default empty string.",
+          "name": "runtime_id",
+          "rust_name": "runtime_id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional parameter kind; None uses Normal.",
+          "name": "kind",
+          "rust_name": "kind",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::ParameterKind"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional decimal precision for runtime parameter handling; None uses the native default\nof 6.",
+          "name": "decimal_places",
+          "rust_name": "decimal_places",
+          "shape": {
+            "item": {
+              "kind": "i32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional range-repeat flag; None uses the native default false.",
+          "name": "repeat",
+          "rust_name": "repeat",
+          "shape": {
+            "item": {
+              "kind": "bool"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::ParameterCreateSpec",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::ParameterGroupCreateSpec": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+          "name": "name",
+          "shape": {
+            "kind": "string"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.",
+          "name": "id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Optional external group identifier; None uses the native default empty string.",
+          "name": "runtime_id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.",
+          "name": "parent_id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+          "name": "before",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::authoring::ParameterGroupCreateSpec"
+    },
+    "zipzi_contract::authoring::ParameterOperation": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::authoring::ParameterOperation",
+      "tag": "op",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Creation specification; native admission supplies identities/defaults and rejects\ninvalid input.",
+              "name": "spec",
+              "rust_name": "spec",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::ParameterCreateSpec"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create",
+          "rust_name": "Create"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Typed patch for the addressed object; apply through the Edit to mutate candidate state.",
+              "name": "patch",
+              "rust_name": "patch",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::ParameterPatch"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "patch",
+          "rust_name": "Patch"
+        }
+      ]
+    },
+    "zipzi_contract::authoring::ParameterPatch": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Human-readable display name; use the stable ID for identity because names can change.\nNone preserves the current value; it does not reset the field to its default.",
+          "name": "name",
+          "rust_name": "name",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Lower endpoint of the parameter domain, in model-defined parameter units. None preserves\nthe current value; it does not reset the field to its default.",
+          "name": "minimum",
+          "rust_name": "minimum",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Upper endpoint of the parameter domain, in the same units as minimum. None preserves the\ncurrent value; it does not reset the field to its default.",
+          "name": "maximum",
+          "rust_name": "maximum",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Default parameter value in its declared domain; native validation checks it against\nminimum and maximum. None preserves the current value; it does not reset the field to\nits default.",
+          "name": "default_value",
+          "rust_name": "default_value",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Replacement external runtime identifier; an empty string explicitly clears it. None\npreserves the current value; it does not reset the field to its default.",
+          "name": "runtime_id",
+          "rust_name": "runtime_id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Replacement parameter kind. None preserves the current value; it does not reset the\nfield to its default.",
+          "name": "kind",
+          "rust_name": "kind",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::ParameterKind"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Replacement decimal precision for runtime parameter handling. None preserves the current\nvalue; it does not reset the field to its default.",
+          "name": "decimal_places",
+          "rust_name": "decimal_places",
+          "shape": {
+            "item": {
+              "kind": "i32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Replacement repeat flag; false explicitly disables repeating. None preserves the current\nvalue; it does not reset the field to its default.",
+          "name": "repeat",
+          "rust_name": "repeat",
+          "shape": {
+            "item": {
+              "kind": "bool"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::ParameterPatch",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::ParameterRangeEdit": {
+      "fields": [
+        {
+          "doc": "Stable document parameter ID, not its exported runtime identifier.",
+          "name": "parameter_id",
+          "rust_name": "parameter_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Lower endpoint of the parameter domain, in parameter units.",
+          "name": "minimum",
+          "rust_name": "minimum",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Upper endpoint of the parameter domain, in parameter units.",
+          "name": "maximum",
+          "rust_name": "maximum",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Default parameter value within the declared domain.",
+          "name": "default_value",
+          "rust_name": "default_value",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Explicit native conflict/conversion policy; no implicit removal or remapping is requested.",
+          "name": "policy",
+          "rust_name": "policy",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::document::ParameterRangePolicy"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::ParameterRangeEdit",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::ParameterRangePolicy": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::ParameterRangePolicy",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "KeepKeyValues",
+          "rust_name": "KeepKeyValues"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "MapKeyValues",
+          "rust_name": "MapKeyValues"
+        }
+      ]
+    },
+    "zipzi_contract::model::Parameter": {
+      "fields": [
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "External format/runtime identifier retained for import/export; not the document object ID.",
+          "name": "runtime_id",
+          "rust_name": "runtime_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+          "name": "name",
+          "rust_name": "name",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Lower endpoint of the parameter domain, in model-defined parameter units.",
+          "name": "minimum",
+          "rust_name": "minimum",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Upper endpoint of the parameter domain, in the same units as minimum.",
+          "name": "maximum",
+          "rust_name": "maximum",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Default parameter value used when no override is supplied.",
+          "name": "default_value",
+          "rust_name": "default_value",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "default": 6,
+          "doc": "Decimal precision used for runtime parameter handling; native default is 6.",
+          "name": "decimal_places",
+          "rust_name": "decimal_places",
+          "shape": {
+            "kind": "i32"
+          },
+          "skip": false
+        },
+        {
+          "default": "normal",
+          "doc": "Normal or BlendShape parameter behavior; native default is Normal.",
+          "name": "kind",
+          "rust_name": "kind",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::ParameterKind"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Whether parameter values repeat across the declared range; native default is false.",
+          "name": "repeat",
+          "rust_name": "repeat",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::Parameter",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::ParameterKind": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::model::ParameterKind",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "normal",
+          "rust_name": "Normal"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "blend_shape",
+          "rust_name": "BlendShape"
+        }
+      ]
+    }
+  }
+}

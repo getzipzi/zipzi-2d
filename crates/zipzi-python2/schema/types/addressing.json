@@ -1,0 +1,2663 @@
+{
+  "_generated_by": "zipzi-python2/tools/generate.py",
+  "definitions": {
+    "zipzi_contract::authoring::AttachmentCapabilities": {
+      "fields": [
+        {
+          "doc": "Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.",
+          "name": "inspect",
+          "rust_name": "inspect",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to modify fields through a captured address; inspect its state/reason\nbefore invoking the operation.",
+          "name": "patch",
+          "rust_name": "patch",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to duplicate this object; inspect its state/reason before invoking\nthe operation.",
+          "name": "duplicate",
+          "rust_name": "duplicate",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to delete this object; inspect its state/reason before invoking the\noperation.",
+          "name": "delete",
+          "rust_name": "delete",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to load the referenced resource contents; inspect its state/reason\nbefore invoking the operation.",
+          "name": "load_content",
+          "rust_name": "load_content",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::AttachmentCapabilities",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::BindingCapabilities": {
+      "fields": [
+        {
+          "doc": "Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.",
+          "name": "inspect",
+          "rust_name": "inspect",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to modify fields through a captured address; inspect its state/reason\nbefore invoking the operation.",
+          "name": "patch",
+          "rust_name": "patch",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to create children in this collection; inspect its state/reason\nbefore invoking the operation.",
+          "name": "create_child",
+          "rust_name": "create_child",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to change its collection order; inspect its state/reason before\ninvoking the operation.",
+          "name": "reorder",
+          "rust_name": "reorder",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to delete this object; inspect its state/reason before invoking the\noperation.",
+          "name": "delete",
+          "rust_name": "delete",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to repair an unresolved or unavailable binding; inspect its\nstate/reason before invoking the operation.",
+          "name": "repair",
+          "rust_name": "repair",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to evaluate a conversion preview; inspect its state/reason before\ninvoking the operation.",
+          "name": "preview",
+          "rust_name": "preview",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::BindingCapabilities",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::CapabilityState": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::authoring::CapabilityState",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "Available",
+          "rust_name": "Available"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable reason code explaining why this operation is unsupported for this object/domain.",
+              "name": "code",
+              "rust_name": "code",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "Unsupported",
+          "rust_name": "Unsupported"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable reason code explaining why this operation is currently unavailable.",
+              "name": "code",
+              "rust_name": "code",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "Unavailable",
+          "rust_name": "Unavailable"
+        }
+      ]
+    },
+    "zipzi_contract::authoring::CollectionCapabilities": {
+      "fields": [
+        {
+          "doc": "Current capability to create objects in this collection; inspect its state/reason before\ninvoking the operation.",
+          "name": "create",
+          "rust_name": "create",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to move existing objects into this collection; inspect its\nstate/reason before invoking the operation.",
+          "name": "move_into",
+          "rust_name": "move_into",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to change its collection order; inspect its state/reason before\ninvoking the operation.",
+          "name": "reorder",
+          "rust_name": "reorder",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::CollectionCapabilities",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::ExpressionCapabilities": {
+      "fields": [
+        {
+          "doc": "Read this object while its identity/context remains valid.",
+          "name": "inspect",
+          "rust_name": "inspect",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Create an owned expression entry.",
+          "name": "create_entry",
+          "rust_name": "create_entry",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Modify typed fields through a validated native intent/address.",
+          "name": "patch",
+          "rust_name": "patch",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Transfer expression entries between compatible owners.",
+          "name": "move_entry",
+          "rust_name": "move_entry",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Duplicate the selected object while allocating fresh owned identities.",
+          "name": "duplicate",
+          "rust_name": "duplicate",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Delete the selected object subject to native reference and lock rules.",
+          "name": "delete",
+          "rust_name": "delete",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Repair an explicitly unresolved native reference.",
+          "name": "repair",
+          "rust_name": "repair",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Native preview eligibility; host preview API availability is advertised separately.",
+          "name": "preview",
+          "rust_name": "preview",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::ExpressionCapabilities",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::MotionCapabilities": {
+      "fields": [
+        {
+          "doc": "Read this object while its identity/context remains valid.",
+          "name": "inspect",
+          "rust_name": "inspect",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Modify typed fields through a validated native intent/address.",
+          "name": "patch",
+          "rust_name": "patch",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Duplicate the selected object while allocating fresh owned identities.",
+          "name": "duplicate",
+          "rust_name": "duplicate",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Delete the selected object subject to native reference and lock rules.",
+          "name": "delete",
+          "rust_name": "delete",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Move the selected object between compatible native owners.",
+          "name": "move_object",
+          "rust_name": "move_object",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Native preview eligibility; host preview API availability is advertised separately.",
+          "name": "preview",
+          "rust_name": "preview",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Create owned child rows in this object.",
+          "name": "create_child",
+          "rust_name": "create_child",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Change ordered sibling membership without changing identity.",
+          "name": "reorder",
+          "rust_name": "reorder",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Repair an explicitly unresolved native reference.",
+          "name": "repair",
+          "rust_name": "repair",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Edit the owning clip content, preserving stable track/key/event identities.",
+          "name": "edit_content",
+          "rust_name": "edit_content",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::MotionCapabilities",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::ObjectKind": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::authoring::ObjectKind",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "asset",
+          "rust_name": "Asset"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "mesh",
+          "rust_name": "Mesh"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "parameter",
+          "rust_name": "Parameter"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "mesh_binding",
+          "rust_name": "MeshBinding"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "binding_axis",
+          "rust_name": "BindingAxis"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "binding_sample",
+          "rust_name": "BindingSample"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "part",
+          "rust_name": "Part"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "transform",
+          "rust_name": "Transform"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "scene_binding",
+          "rust_name": "SceneBinding"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "blend_key_table",
+          "rust_name": "BlendKeyTable"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "blend_constraint",
+          "rust_name": "BlendConstraint"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "blend_binding",
+          "rust_name": "BlendBinding"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "glue",
+          "rust_name": "Glue"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "glue_vertex_pair",
+          "rust_name": "GlueVertexPair"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "offscreen",
+          "rust_name": "Offscreen"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "draw_order_group",
+          "rust_name": "DrawOrderGroup"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "cdi_parameter_group",
+          "rust_name": "CdiParameterGroup"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "cdi_combined_set",
+          "rust_name": "CdiCombinedSet"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "cdi_combined_member",
+          "rust_name": "CdiCombinedMember"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "model_parameter_group",
+          "rust_name": "ModelParameterGroup"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "model_parameter_member",
+          "rust_name": "ModelParameterMember"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "model_hit_area",
+          "rust_name": "ModelHitArea"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "expression",
+          "rust_name": "Expression"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "expression_entry",
+          "rust_name": "ExpressionEntry"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "motion",
+          "rust_name": "Motion"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "motion_group",
+          "rust_name": "MotionGroup"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "motion_registration",
+          "rust_name": "MotionRegistration"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "motion_track",
+          "rust_name": "MotionTrack"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "motion_key",
+          "rust_name": "MotionKey"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "motion_event",
+          "rust_name": "MotionEvent"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "attachment",
+          "rust_name": "Attachment"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "pose",
+          "rust_name": "Pose"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "pose_group",
+          "rust_name": "PoseGroup"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "pose_entry",
+          "rust_name": "PoseEntry"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "pose_link",
+          "rust_name": "PoseLink"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "physics",
+          "rust_name": "Physics"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "physics_group",
+          "rust_name": "PhysicsGroup"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "physics_input",
+          "rust_name": "PhysicsInput"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "physics_output",
+          "rust_name": "PhysicsOutput"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "physics_node",
+          "rust_name": "PhysicsNode"
+        }
+      ]
+    },
+    "zipzi_contract::authoring::OrganizationCapabilities": {
+      "fields": [
+        {
+          "doc": "Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.",
+          "name": "inspect",
+          "rust_name": "inspect",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to modify fields through a captured address; inspect its state/reason\nbefore invoking the operation.",
+          "name": "patch",
+          "rust_name": "patch",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to create children in this collection; inspect its state/reason\nbefore invoking the operation.",
+          "name": "create_child",
+          "rust_name": "create_child",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to move this object between collections; inspect its state/reason\nbefore invoking the operation.",
+          "name": "move_object",
+          "rust_name": "move_object",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to change its collection order; inspect its state/reason before\ninvoking the operation.",
+          "name": "reorder",
+          "rust_name": "reorder",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to duplicate this object; inspect its state/reason before invoking\nthe operation.",
+          "name": "duplicate",
+          "rust_name": "duplicate",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to delete this object; inspect its state/reason before invoking the\noperation.",
+          "name": "delete",
+          "rust_name": "delete",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to remove its container while preserving contents; inspect its\nstate/reason before invoking the operation.",
+          "name": "dissolve",
+          "rust_name": "dissolve",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::OrganizationCapabilities",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::PhysicsCapabilities": {
+      "fields": [
+        {
+          "doc": "Read this object while its identity/context remains valid.",
+          "name": "inspect",
+          "rust_name": "inspect",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Modify typed fields through a validated native intent/address.",
+          "name": "patch",
+          "rust_name": "patch",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Create owned child rows in this object.",
+          "name": "create_child",
+          "rust_name": "create_child",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Duplicate the selected object while allocating fresh owned identities.",
+          "name": "duplicate",
+          "rust_name": "duplicate",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Delete the selected object subject to native reference and lock rules.",
+          "name": "delete",
+          "rust_name": "delete",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Move the selected object between compatible native owners.",
+          "name": "move_object",
+          "rust_name": "move_object",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Change ordered sibling membership without changing identity.",
+          "name": "reorder",
+          "rust_name": "reorder",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Repair an explicitly unresolved native reference.",
+          "name": "repair",
+          "rust_name": "repair",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Native preview eligibility; host preview API availability is advertised separately.",
+          "name": "preview",
+          "rust_name": "preview",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::PhysicsCapabilities",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::PoseCapabilities": {
+      "fields": [
+        {
+          "doc": "Read this object while its identity/context remains valid.",
+          "name": "inspect",
+          "rust_name": "inspect",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Modify typed fields through a validated native intent/address.",
+          "name": "patch",
+          "rust_name": "patch",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Create owned child rows in this object.",
+          "name": "create_child",
+          "rust_name": "create_child",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Duplicate the selected object while allocating fresh owned identities.",
+          "name": "duplicate",
+          "rust_name": "duplicate",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Delete the selected object subject to native reference and lock rules.",
+          "name": "delete",
+          "rust_name": "delete",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Move the selected object between compatible native owners.",
+          "name": "move_object",
+          "rust_name": "move_object",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Change ordered sibling membership without changing identity.",
+          "name": "reorder",
+          "rust_name": "reorder",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Repair an explicitly unresolved native reference.",
+          "name": "repair",
+          "rust_name": "repair",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Remove this container while moving owned content to an explicit destination.",
+          "name": "dissolve",
+          "rust_name": "dissolve",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Native preview eligibility; host preview API availability is advertised separately.",
+          "name": "preview",
+          "rust_name": "preview",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::PoseCapabilities",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::ReferenceCapabilities": {
+      "fields": [
+        {
+          "doc": "Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.",
+          "name": "inspect",
+          "rust_name": "inspect",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to modify fields through a captured address; inspect its state/reason\nbefore invoking the operation.",
+          "name": "patch",
+          "rust_name": "patch",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to create children in this collection; inspect its state/reason\nbefore invoking the operation.",
+          "name": "create_child",
+          "rust_name": "create_child",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to move this object between collections; inspect its state/reason\nbefore invoking the operation.",
+          "name": "move_object",
+          "rust_name": "move_object",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to duplicate this object; inspect its state/reason before invoking\nthe operation.",
+          "name": "duplicate",
+          "rust_name": "duplicate",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to delete this object; inspect its state/reason before invoking the\noperation.",
+          "name": "delete",
+          "rust_name": "delete",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to remove its container while preserving contents; inspect its\nstate/reason before invoking the operation.",
+          "name": "dissolve",
+          "rust_name": "dissolve",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::ReferenceCapabilities",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::ResourceCapabilities": {
+      "fields": [
+        {
+          "doc": "Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.",
+          "name": "inspect",
+          "rust_name": "inspect",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to modify fields through a captured address; inspect its state/reason\nbefore invoking the operation.",
+          "name": "patch",
+          "rust_name": "patch",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to load the referenced resource contents; inspect its state/reason\nbefore invoking the operation.",
+          "name": "load_content",
+          "rust_name": "load_content",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to duplicate this object; inspect its state/reason before invoking\nthe operation.",
+          "name": "duplicate",
+          "rust_name": "duplicate",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to delete this object; inspect its state/reason before invoking the\noperation.",
+          "name": "delete",
+          "rust_name": "delete",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to change its collection order; inspect its state/reason before\ninvoking the operation.",
+          "name": "reorder",
+          "rust_name": "reorder",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::ResourceCapabilities",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::SceneCapabilities": {
+      "fields": [
+        {
+          "doc": "Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.",
+          "name": "inspect",
+          "rust_name": "inspect",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to modify fields through a captured address; inspect its state/reason\nbefore invoking the operation.",
+          "name": "patch",
+          "rust_name": "patch",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to move this object between collections; inspect its state/reason\nbefore invoking the operation.",
+          "name": "move_object",
+          "rust_name": "move_object",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to change its deformation parent; inspect its state/reason before\ninvoking the operation.",
+          "name": "reparent",
+          "rust_name": "reparent",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to change its collection order; inspect its state/reason before\ninvoking the operation.",
+          "name": "reorder",
+          "rust_name": "reorder",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to duplicate this object; inspect its state/reason before invoking\nthe operation.",
+          "name": "duplicate",
+          "rust_name": "duplicate",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to delete this object; inspect its state/reason before invoking the\noperation.",
+          "name": "delete",
+          "rust_name": "delete",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to remove its container while preserving contents; inspect its\nstate/reason before invoking the operation.",
+          "name": "dissolve",
+          "rust_name": "dissolve",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::SceneCapabilities",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::SceneContentCapabilities": {
+      "fields": [
+        {
+          "doc": "Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.",
+          "name": "inspect",
+          "rust_name": "inspect",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to edit geometry/content through this address; inspect its\nstate/reason before invoking the operation.",
+          "name": "edit",
+          "rust_name": "edit",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Current capability to change topology while preserving or explicitly resolving\ndependencies; inspect its state/reason before invoking the operation.",
+          "name": "topology",
+          "rust_name": "topology",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::CapabilityState"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::SceneContentCapabilities",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::ReferenceCollection": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::ReferenceCollection",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "model_parameter_groups",
+          "rust_name": "ModelParameterGroups"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "model_hit_areas",
+          "rust_name": "ModelHitAreas"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "cdi_combined_sets",
+          "rust_name": "CdiCombinedSets"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Existing model3 parameter-group object ID; this collection has no root/unassigned group.",
+              "name": "group_id",
+              "rust_name": "group_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "model_parameter_members",
+          "rust_name": "ModelParameterMembers"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable CDI combined-parameter set ID owning the selected members.",
+              "name": "set_id",
+              "rust_name": "set_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "cdi_combined_members",
+          "rust_name": "CdiCombinedMembers"
+        }
+      ]
+    },
+    "zipzi_contract::document::ReferenceEdit": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::ReferenceEdit",
+      "tag": "operation",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "New stable UUID for this object; it must not conflict with an existing identity.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+              "name": "name",
+              "rust_name": "name",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_model_parameter_group",
+          "rust_name": "CreateModelParameterGroup"
+        },
+        {
+          "fields": [
+            {
+              "doc": "New stable UUID for this object; it must not conflict with an existing identity.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+              "name": "name",
+              "rust_name": "name",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_model_hit_area",
+          "rust_name": "CreateModelHitArea"
+        },
+        {
+          "fields": [
+            {
+              "doc": "New stable UUID for this object; it must not conflict with an existing identity.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_cdi_combined_set",
+          "rust_name": "CreateCdiCombinedSet"
+        },
+        {
+          "fields": [
+            {
+              "doc": "New stable UUID for this object; it must not conflict with an existing identity.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit native collection selector; it does not imply loading every object payload.",
+              "name": "collection",
+              "rust_name": "collection",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ReferenceCollection"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_member",
+          "rust_name": "CreateMember"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Exact current field value used as an optimistic precondition; stale values reject\nthe edit.",
+              "name": "expected",
+              "rust_name": "expected",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ReferenceFields"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Typed replacement metadata fields; their variant must match the addressed reference\nkind.",
+              "name": "fields",
+              "rust_name": "fields",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ReferenceFields"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "patch",
+          "rust_name": "Patch"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
+              "name": "ids",
+              "rust_name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit destination collection; organization, deformation and drawing memberships\nare independent.",
+              "name": "destination",
+              "rust_name": "destination",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ReferenceCollection"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "move",
+          "rust_name": "Move"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
+              "name": "ids",
+              "rust_name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit destination collection; organization, deformation and drawing memberships\nare independent.",
+              "name": "destination",
+              "rust_name": "destination",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ReferenceCollection"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "duplicate",
+          "rust_name": "Duplicate"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
+              "name": "ids",
+              "rust_name": "ids",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "delete",
+          "rust_name": "Delete"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit destination collection; organization, deformation and drawing memberships\nare independent.",
+              "name": "destination",
+              "rust_name": "destination",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.",
+              "name": "before",
+              "rust_name": "before",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "dissolve",
+          "rust_name": "Dissolve"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable owner ID for the addressed drawing group, collection or reference selection.",
+              "name": "owner",
+              "rust_name": "owner",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit field discriminator; must match the addressed object/domain.",
+              "name": "field",
+              "rust_name": "field",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ReferenceSelectionField"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Exact current ordered target-ID selection; a mismatch rejects the edit.",
+              "name": "expected",
+              "rust_name": "expected",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Complete replacement ordered target-ID selection; an empty list explicitly clears it.",
+              "name": "targets",
+              "rust_name": "targets",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_selection",
+          "rust_name": "ReplaceSelection"
+        }
+      ]
+    },
+    "zipzi_contract::document::ReferenceEntry<zipzi_contract::document::CdiParameterRef>": {
+      "fields": [
+        {
+          "doc": "Stable UUID of this reference entry; not the identity of its target.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Resolved document target or preserved unresolved runtime identifier; entry identity\nremains independent of the target.",
+          "name": "target",
+          "rust_name": "target",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::document::CdiParameterRef"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::ReferenceEntry<zipzi_contract::document::CdiParameterRef>",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::ReferenceEntry<zipzi_contract::document::ModelTargetRef>": {
+      "fields": [
+        {
+          "doc": "Stable UUID of this reference entry; not the identity of its target.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Resolved document target or preserved unresolved runtime identifier; entry identity\nremains independent of the target.",
+          "name": "target",
+          "rust_name": "target",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::document::ModelTargetRef"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::ReferenceEntry<zipzi_contract::document::ModelTargetRef>",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::ReferenceFields": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::ReferenceFields",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+              "name": "name",
+              "rust_name": "name",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "model_parameter_group",
+          "rust_name": "ModelParameterGroup"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+              "name": "name",
+              "rust_name": "name",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Resolved mesh target or preserved unresolved mesh runtime identifier.",
+              "name": "mesh",
+              "rust_name": "mesh",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ModelTargetRef"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "model_hit_area",
+          "rust_name": "ModelHitArea"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Resolved document target or preserved unresolved runtime identifier; entry identity\nremains independent of the target.",
+              "name": "target",
+              "rust_name": "target",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ModelTargetRef"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "model_parameter_member",
+          "rust_name": "ModelParameterMember"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Resolved document target or preserved unresolved runtime identifier; entry identity\nremains independent of the target.",
+              "name": "target",
+              "rust_name": "target",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::CdiParameterRef"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "cdi_combined_member",
+          "rust_name": "CdiCombinedMember"
+        }
+      ]
+    },
+    "zipzi_contract::document::ReferenceSelectionField": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::ReferenceSelectionField",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "mesh_masks",
+          "rust_name": "MeshMasks"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "offscreen_masks",
+          "rust_name": "OffscreenMasks"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "blend_constraints",
+          "rust_name": "BlendConstraints"
+        }
+      ]
+    },
+    "zipzi_contract::runtime::AddressPatch": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::runtime::AddressPatch",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Scalar value in the referenced parameter domain.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::SceneFieldValue"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicitly clear existing Glue vertex pairs when changing Glue endpoints.",
+              "name": "clear_glue_pairs",
+              "rust_name": "clear_glue_pairs",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "scene",
+          "rust_name": "Scene"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Inclusive lower and upper drawing-order bounds, in that order.",
+              "name": "range",
+              "rust_name": "range",
+              "shape": {
+                "item": {
+                  "kind": "i32"
+                },
+                "kind": "array",
+                "length": 2
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "drawing_range",
+          "rust_name": "DrawingRange"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed patch for the addressed object; apply through the Edit to mutate candidate state.",
+              "name": "patch",
+              "rust_name": "patch",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::BindingFieldPatch"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "binding",
+          "rust_name": "Binding"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.",
+              "name": "intent",
+              "rust_name": "intent",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::OrganizationEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "organization",
+          "rust_name": "Organization"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Scalar value in the referenced parameter domain.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::SceneContentValue"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "content",
+          "rust_name": "Content"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed replacement metadata fields; their variant must match the addressed reference\nkind.",
+              "name": "fields",
+              "rust_name": "fields",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ReferenceFields"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "reference",
+          "rust_name": "Reference"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete replacement ordered target-ID selection; an empty list explicitly clears it.",
+              "name": "targets",
+              "rust_name": "targets",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "selection",
+          "rust_name": "Selection"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+              "name": "name",
+              "rust_name": "name",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "resource_name",
+          "rust_name": "ResourceName"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Normalized package-relative attachment path using forward slashes; absolute paths\nand .. components are invalid.",
+              "name": "path",
+              "rust_name": "path",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "attachment_path",
+          "rust_name": "AttachmentPath"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Scalar value in the referenced parameter domain.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::DocumentValue"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "document",
+          "rust_name": "Document"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete replacement registration with its existing stable identity.",
+              "name": "entry",
+              "rust_name": "entry",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::MotionRegistration"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "motion_registration",
+          "rust_name": "MotionRegistration"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Replacement expression target/value/blend fields, under captured owner epochs.",
+              "name": "fields",
+              "rust_name": "fields",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ExpressionEntryFields"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "expression_entry",
+          "rust_name": "ExpressionEntry"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Atomic property changes targeting only the captured Physics entity.",
+              "name": "changes",
+              "rust_name": "changes",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::physics_document::PhysicsProperty"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "physics",
+          "rust_name": "Physics"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Replacement fields for the captured Pose singleton/group/entry/link.",
+              "name": "fields",
+              "rust_name": "fields",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::PoseFields"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "pose",
+          "rust_name": "Pose"
+        }
+      ]
+    },
+    "zipzi_contract::runtime::AddressSelector": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::runtime::AddressSelector",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit field discriminator; must match the addressed object/domain.",
+              "name": "field",
+              "rust_name": "field",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::SceneField"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "scene",
+          "rust_name": "Scene"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable owner ID for the addressed drawing group, collection or reference selection.",
+              "name": "owner",
+              "rust_name": "owner",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "drawing_group",
+          "rust_name": "DrawingGroup"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "binding",
+          "rust_name": "Binding"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "organization",
+          "rust_name": "Organization"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.",
+              "name": "target",
+              "rust_name": "target",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::SceneContentTarget"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "content",
+          "rust_name": "Content"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "reference",
+          "rust_name": "Reference"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable owner ID for the addressed drawing group, collection or reference selection.",
+              "name": "owner",
+              "rust_name": "owner",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit field discriminator; must match the addressed object/domain.",
+              "name": "field",
+              "rust_name": "field",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ReferenceSelectionField"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "selection",
+          "rust_name": "Selection"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "resource_name",
+          "rust_name": "ResourceName"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "attachment_path",
+          "rust_name": "AttachmentPath"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Explicit field discriminator; must match the addressed object/domain.",
+              "name": "field",
+              "rust_name": "field",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::DocumentField"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "document",
+          "rust_name": "Document"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity of the addressed native animation object.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "motion_registration",
+          "rust_name": "MotionRegistration"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity of the addressed native animation object.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "expression_entry",
+          "rust_name": "ExpressionEntry"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity of the addressed native animation object.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "physics",
+          "rust_name": "Physics"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable identity of the addressed native animation object.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "pose",
+          "rust_name": "Pose"
+        }
+      ]
+    },
+    "zipzi_contract::runtime::Capabilities": {
+      "content": "values",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::runtime::Capabilities",
+      "tag": "domain",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Current scene lifecycle, hierarchy and drawing capability states and reasons; do not\ninfer support from method presence.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::SceneCapabilities"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "scene",
+          "rust_name": "Scene"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Current organization and parameter groups capability states and reasons; do not\ninfer support from method presence.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::OrganizationCapabilities"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "organization",
+          "rust_name": "Organization"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Current parameter bindings and grid conversions capability states and reasons; do\nnot infer support from method presence.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::BindingCapabilities"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "binding",
+          "rust_name": "Binding"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Current geometry and topology content capability states and reasons; do not infer\nsupport from method presence.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::SceneContentCapabilities"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "content",
+          "rust_name": "Content"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Current metadata references and selections capability states and reasons; do not\ninfer support from method presence.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::ReferenceCapabilities"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "references",
+          "rust_name": "References"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Current image asset metadata and references capability states and reasons; do not\ninfer support from method presence.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::ResourceCapabilities"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "resource",
+          "rust_name": "Resource"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Current package attachments and their references capability states and reasons; do\nnot infer support from method presence.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::AttachmentCapabilities"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "attachment",
+          "rust_name": "Attachment"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Current collection capability states and reasons; do not infer support from method\npresence.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::CollectionCapabilities"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "collection",
+          "rust_name": "Collection"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Current document configuration and metadata repair capability states and reasons; do\nnot infer support from method presence.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::CapabilityState"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "document",
+          "rust_name": "Document"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Current native motion eligibility; host Preview support is advertised separately.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::MotionCapabilities"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "motion",
+          "rust_name": "Motion"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Current native expression eligibility; host Preview support is advertised separately.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::ExpressionCapabilities"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "expression",
+          "rust_name": "Expression"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Current native physics eligibility; host Preview support is advertised separately.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::PhysicsCapabilities"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "physics",
+          "rust_name": "Physics"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Current native pose eligibility; host Preview support is advertised separately.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::PoseCapabilities"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "pose",
+          "rust_name": "Pose"
+        }
+      ]
+    },
+    "zipzi_contract::runtime::CapabilityDomain": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::runtime::CapabilityDomain",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "scene",
+          "rust_name": "Scene"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "organization",
+          "rust_name": "Organization"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "binding",
+          "rust_name": "Binding"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "content",
+          "rust_name": "Content"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "references",
+          "rust_name": "References"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "resource",
+          "rust_name": "Resource"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "attachment",
+          "rust_name": "Attachment"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "motion",
+          "rust_name": "Motion"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "expression",
+          "rust_name": "Expression"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "physics",
+          "rust_name": "Physics"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "pose",
+          "rust_name": "Pose"
+        }
+      ]
+    }
+  }
+}

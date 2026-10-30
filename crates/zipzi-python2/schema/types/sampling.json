@@ -1,0 +1,1228 @@
+{
+  "_generated_by": "zipzi-python2/tools/generate.py",
+  "definitions": {
+    "zipzi_contract::authoring::GeometryBounds": {
+      "fields": [
+        {
+          "doc": "Minimum XY corner of the geometry bounds in the snapshot coordinate space.",
+          "name": "min",
+          "rust_name": "min",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::Vec2"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum XY corner of the geometry bounds in the snapshot coordinate space.",
+          "name": "max",
+          "rust_name": "max",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::Vec2"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::GeometryBounds",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::GeometryChecks": {
+      "fields": [
+        {
+          "default": 0.0,
+          "doc": "Area in authored coordinates: model units squared at the root, or\nthe appropriate rotation-local / Warp-parameter units under a parent.",
+          "name": "min_triangle_area",
+          "rust_name": "min_triangle_area",
+          "shape": {
+            "kind": "f64"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional expected model bounds for root meshes only.",
+          "name": "model_bounds",
+          "rust_name": "model_bounds",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::authoring::GeometryBounds"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Include per-pose mesh quality in evaluated Y-up model space, relative to this\nsnapshot evaluated with default parameters. Only the requested poses are checked.",
+          "name": "quality",
+          "rust_name": "quality",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::GeometryChecks",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::GeometryDiagnostic": {
+      "fields": [
+        {
+          "doc": "Typed geometry diagnostic category.",
+          "name": "kind",
+          "rust_name": "kind",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::GeometryDiagnosticKind"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable ID of the target mesh in this document.",
+          "name": "mesh_id",
+          "rust_name": "mesh_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional zero-based index of the offending triangle; None means the diagnostic is not\ntriangle-specific.",
+          "name": "triangle_index",
+          "rust_name": "triangle_index",
+          "shape": {
+            "item": {
+              "kind": "usize"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::GeometryDiagnostic",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::GeometryDiagnosticKind": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::authoring::GeometryDiagnosticKind",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "SmallTriangle",
+          "rust_name": "SmallTriangle"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "InconsistentWinding",
+          "rust_name": "InconsistentWinding"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "OutsideModelBounds",
+          "rust_name": "OutsideModelBounds"
+        }
+      ]
+    },
+    "zipzi_contract::authoring::GeometrySnapshot": {
+      "fields": [
+        {
+          "doc": "Exact SDK version captured for this value; not a best-effort latest-version marker.",
+          "name": "version",
+          "rust_name": "version",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::Version",
+            "opaque": true
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable ID of the target mesh in this document.",
+          "name": "mesh_id",
+          "rust_name": "mesh_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable u32 vertex IDs in the same order as positions and UVs; IDs need not be contiguous.",
+          "name": "vertex_ids",
+          "rust_name": "vertex_ids",
+          "shape": {
+            "item": {
+              "kind": "u32"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Absolute XY vertices in the explicitly recorded GeometrySpace, aligned with vertex_ids.",
+          "name": "positions",
+          "rust_name": "positions",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::Vec2"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Texture UV pairs ordered by vertex_ids; keep one UV for each position.",
+          "name": "uvs",
+          "rust_name": "uvs",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::Vec2"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Triangle triples of stable vertex IDs; preserve winding and do not substitute position-\narray offsets.",
+          "name": "triangles",
+          "rust_name": "triangles",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "u32"
+              },
+              "kind": "array",
+              "length": 3
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional canonical UV boundary and retained internal structure edges.",
+          "name": "meshing",
+          "rust_name": "meshing",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::MeshMeshing"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Coordinate space of positions; local-space variants carry the controlling transform ID.",
+          "name": "space",
+          "rust_name": "space",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::GeometrySpace"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::GeometrySnapshot",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::GeometrySpace": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::authoring::GeometrySpace",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "Model",
+          "rust_name": "Model"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable rotation-transform ID defining the local position space.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "RotationLocal",
+          "rust_name": "RotationLocal"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable warp-transform ID defining the parameter/lattice position space.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "WarpParameter",
+          "rust_name": "WarpParameter"
+        }
+      ]
+    },
+    "zipzi_contract::authoring::MeshQuality": {
+      "fields": [
+        {
+          "doc": "Stable document mesh ID, in evaluated drawable order.",
+          "name": "mesh_id",
+          "rust_name": "mesh_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Evaluated enabled/visible/positive-opacity state. Metrics are geometric and ignore occlusion.",
+          "name": "visible",
+          "rust_name": "visible",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Number of evaluated vertices.",
+          "name": "vertex_count",
+          "rust_name": "vertex_count",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Per-triangle metrics in evaluated Y-up model coordinates, relative to default parameters\nof the same frozen authoring source. This does not certify unsampled parameter intervals.",
+          "name": "triangles",
+          "rust_name": "triangles",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::authoring::TriangleQuality"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Smallest angle over this mesh; None for an empty mesh.",
+          "name": "min_angle_degrees",
+          "rust_name": "min_angle_degrees",
+          "shape": {
+            "item": {
+              "kind": "f64"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Largest finite aspect ratio; collapsed triangles are counted separately.",
+          "name": "max_aspect_ratio",
+          "rust_name": "max_aspect_ratio",
+          "shape": {
+            "item": {
+              "kind": "f64"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Largest finite symmetric edge-length ratio relative to the default pose.",
+          "name": "max_edge_stretch",
+          "rust_name": "max_edge_stretch",
+          "shape": {
+            "item": {
+              "kind": "f64"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Number of exactly zero-area evaluated triangles.",
+          "name": "degenerate_triangles",
+          "rust_name": "degenerate_triangles",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Number of negative relative-area triangles. Degenerate references are excluded.",
+          "name": "flipped_triangles",
+          "rust_name": "flipped_triangles",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional source-texture coverage. CPU-only sampling does not resolve image pixels.",
+          "name": "texture_coverage",
+          "rust_name": "texture_coverage",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::authoring::TextureCoverage"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::MeshQuality",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::ModelingSamples": {
+      "fields": [
+        {
+          "doc": "Exact SDK version captured for this value; not a best-effort latest-version marker.",
+          "name": "version",
+          "rust_name": "version",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::Version",
+            "opaque": true
+          },
+          "skip": false
+        },
+        {
+          "doc": "Effective parameter maps in the same order as requested poses; each map is keyed by\ndocument parameter ID.",
+          "name": "parameters",
+          "rust_name": "parameters",
+          "shape": {
+            "item": {
+              "kind": "string_map",
+              "value": {
+                "kind": "f32"
+              }
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "CPU-evaluated frames in the same order as requested parameter maps.",
+          "name": "frames",
+          "rust_name": "frames",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::evaluation::DrawableFrame"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Structured diagnostics from this query or operation; an empty list means none were reported.",
+          "name": "diagnostics",
+          "rust_name": "diagnostics",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::authoring::GeometryDiagnostic"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Per-pose evaluated mesh quality in frame order when Checks.quality is true; empty otherwise.\nUses default parameters of this same frozen source as the reference, without image coverage.",
+          "name": "quality",
+          "rust_name": "quality",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::MeshQuality"
+              },
+              "kind": "sequence"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::ModelingSamples",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::authoring::TriangleQuality": {
+      "fields": [
+        {
+          "doc": "Zero-based triangle offset, in the sampled drawable's index order.",
+          "name": "triangle_index",
+          "rust_name": "triangle_index",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Unsigned evaluated area in model units squared.",
+          "name": "area",
+          "rust_name": "area",
+          "shape": {
+            "kind": "f64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Smallest interior angle in degrees; zero for a collapsed triangle.",
+          "name": "min_angle_degrees",
+          "rust_name": "min_angle_degrees",
+          "shape": {
+            "kind": "f64"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Longest edge divided by its altitude. None for a collapsed triangle.",
+          "name": "aspect_ratio",
+          "rust_name": "aspect_ratio",
+          "shape": {
+            "item": {
+              "kind": "f64"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Signed area / signed default-pose area. Negative means flipped; None if the reference is degenerate.",
+          "name": "relative_area",
+          "rust_name": "relative_area",
+          "shape": {
+            "item": {
+              "kind": "f64"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Largest symmetric edge-length ratio max(current/reference, reference/current).\nNone if any reference or sampled edge is collapsed. A rigid transform gives 1.",
+          "name": "edge_stretch",
+          "rust_name": "edge_stretch",
+          "shape": {
+            "item": {
+              "kind": "f64"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::TriangleQuality",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::evaluation::Drawable": {
+      "fields": [
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "External format/runtime identifier retained for import/export; not the document object ID.",
+          "name": "runtime_id",
+          "rust_name": "runtime_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Organizational Part owner ID; independent of the deformation parent. An empty string\nrepresents the root/unassigned container.",
+          "name": "part_id",
+          "rust_name": "part_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Original format-specific blend-mode code; None means no preserved raw code.",
+          "name": "raw_blend_mode",
+          "rust_name": "raw_blend_mode",
+          "shape": {
+            "item": {
+              "kind": "u32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Resolved image-asset object ID used by this drawable; separate from its evaluated\ntexture slot.",
+          "name": "texture_asset_id",
+          "rust_name": "texture_asset_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Resolved texture slot index; separate from the persistent texture asset ID.",
+          "name": "texture_slot",
+          "rust_name": "texture_slot",
+          "shape": {
+            "kind": "i32"
+          },
+          "skip": false
+        },
+        {
+          "default": true,
+          "doc": "Geometry remains editable when this resource cannot contribute color.",
+          "name": "renderable",
+          "rust_name": "renderable",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Final evaluated XY vertex positions in Y-up model units; ordered for indices and UVs.",
+          "name": "positions",
+          "rust_name": "positions",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::Vec2"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Texture UV pairs ordered by vertex_ids; keep one UV for each position.",
+          "name": "uvs",
+          "rust_name": "uvs",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Vec2"
+              },
+              "kind": "sequence"
+            },
+            "kind": "shared"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Flattened triangle indices into evaluated positions/UVs; these are offsets, not\nauthoring vertex IDs.",
+          "name": "indices",
+          "rust_name": "indices",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "u32"
+              },
+              "kind": "sequence"
+            },
+            "kind": "shared"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Evaluated integer drawing-order coordinate before final render sorting.",
+          "name": "draw_order",
+          "rust_name": "draw_order",
+          "shape": {
+            "kind": "i32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Final evaluated drawing sequence rank after hierarchy and group ordering.",
+          "name": "render_order",
+          "rust_name": "render_order",
+          "shape": {
+            "kind": "i32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.",
+          "name": "opacity",
+          "rust_name": "opacity",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Evaluated RGBA multiply factors, channel order R, G, B, A.",
+          "name": "multiply_color",
+          "rust_name": "multiply_color",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "array",
+            "length": 4
+          },
+          "skip": false
+        },
+        {
+          "doc": "Evaluated RGBA screen factors, channel order R, G, B, A.",
+          "name": "screen_color",
+          "rust_name": "screen_color",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "array",
+            "length": 4
+          },
+          "skip": false
+        },
+        {
+          "doc": "Compositing mode used when drawing this object.",
+          "name": "blend_mode",
+          "rust_name": "blend_mode",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::BlendMode"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether this object participates in evaluation; editor hiding is a separate state.",
+          "name": "enabled",
+          "rust_name": "enabled",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether the evaluated object is visible after hierarchical visibility rules.",
+          "name": "visible",
+          "rust_name": "visible",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether both triangle faces contribute to drawing.",
+          "name": "double_sided",
+          "rust_name": "double_sided",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether to invert the combined clipping mask for this drawable.",
+          "name": "inverted_mask",
+          "rust_name": "inverted_mask",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.",
+          "name": "masks",
+          "rust_name": "masks",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::evaluation::Drawable",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::evaluation::DrawableFrame": {
+      "fields": [
+        {
+          "doc": "Revision used to evaluate this immutable snapshot; later name edits may reuse it.",
+          "name": "source_revision",
+          "rust_name": "source_revision",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Requested/effective/clamped parameter records for this evaluated pose.",
+          "name": "parameters",
+          "rust_name": "parameters",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::evaluation::EvaluatedParameter"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Evaluated drawable records in this pose, including their immutable geometry and appearance.",
+          "name": "drawables",
+          "rust_name": "drawables",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::evaluation::Drawable"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Evaluated Offscreen compositing records for this pose.",
+          "name": "offscreens",
+          "rust_name": "offscreens",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::evaluation::OffscreenFrame"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Ordered render commands; Offscreen begin/end delimit the compositing scopes.",
+          "name": "render_plan",
+          "rust_name": "render_plan",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::evaluation::RenderCommand"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Editor controls evaluated in the same pose as the drawables.",
+          "name": "deformers",
+          "rust_name": "deformers",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::evaluation::EvaluatedDeformer"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::evaluation::DrawableFrame",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::evaluation::EvaluatedDeformer": {
+      "fields": [
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether this object participates in evaluation; editor hiding is a separate state.",
+          "name": "enabled",
+          "rust_name": "enabled",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Final model coordinates (X-right/Y-up), matching\nDrawable::positions. Warp points are row-major; rotation points are the\ntransformed origin and unit X/Y axes.",
+          "name": "points",
+          "rust_name": "points",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::Vec2"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Unit direction of the rotation's local X axis in model space, evaluated\nwithout translation or scale so tiny imported scales retain their angle.",
+          "name": "rotation_axis",
+          "rust_name": "rotation_axis",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::Vec2"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Local X/Y basis vectors with evaluated scale and reflections, before\ntranslation. Unlike subtracting points, these retain small rotation\ncoefficients at large model origins.",
+          "name": "rotation_basis",
+          "rust_name": "rotation_basis",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Vec2"
+              },
+              "kind": "array",
+              "length": 2
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::evaluation::EvaluatedDeformer",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::evaluation::EvaluatedParameter": {
+      "fields": [
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Requested parameter value before range/repeat handling, in the parameter domain.",
+          "name": "requested",
+          "rust_name": "requested",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Effective parameter value after native range/repeat handling, in the parameter domain.",
+          "name": "value",
+          "rust_name": "value",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether the effective parameter value differs due to range clamping.",
+          "name": "clamped",
+          "rust_name": "clamped",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::evaluation::EvaluatedParameter",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::evaluation::OffscreenFrame": {
+      "fields": [
+        {
+          "default": true,
+          "doc": "Whether required content is available for rendering; unavailable textures do not make\ngeometry uneditable.",
+          "name": "renderable",
+          "rust_name": "renderable",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "External format/runtime identifier retained for import/export; not the document object ID.",
+          "name": "runtime_id",
+          "rust_name": "runtime_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable Part ID whose contents are composited by this Offscreen.",
+          "name": "owner_part_id",
+          "rust_name": "owner_part_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Enclosing Offscreen ID; None means output is composited directly to the main target.",
+          "name": "parent_offscreen_id",
+          "rust_name": "parent_offscreen_id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Final evaluated drawing sequence rank after hierarchy and group ordering.",
+          "name": "render_order",
+          "rust_name": "render_order",
+          "shape": {
+            "kind": "i32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.",
+          "name": "opacity",
+          "rust_name": "opacity",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether this object participates in evaluation; editor hiding is a separate state.",
+          "name": "enabled",
+          "rust_name": "enabled",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Compositing mode used when drawing this object.",
+          "name": "blend_mode",
+          "rust_name": "blend_mode",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Preserved format-specific Offscreen compositing flags.",
+          "name": "flags",
+          "rust_name": "flags",
+          "shape": {
+            "kind": "u8"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.",
+          "name": "masks",
+          "rust_name": "masks",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Evaluated RGBA multiply factors, channel order R, G, B, A.",
+          "name": "multiply_color",
+          "rust_name": "multiply_color",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "array",
+            "length": 4
+          },
+          "skip": false
+        },
+        {
+          "doc": "Evaluated RGBA screen factors, channel order R, G, B, A.",
+          "name": "screen_color",
+          "rust_name": "screen_color",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "array",
+            "length": 4
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::evaluation::OffscreenFrame",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::evaluation::RenderCommand": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::evaluation::RenderCommand",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Stable Offscreen object ID; not a texture asset ID.",
+              "name": "offscreen_id",
+              "rust_name": "offscreen_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "BeginOffscreen",
+          "rust_name": "BeginOffscreen"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable ID of the target mesh in this document.",
+              "name": "mesh_id",
+              "rust_name": "mesh_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "DrawMesh",
+          "rust_name": "DrawMesh"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Offscreen object ID; not a texture asset ID.",
+              "name": "offscreen_id",
+              "rust_name": "offscreen_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "EndOffscreen",
+          "rust_name": "EndOffscreen"
+        }
+      ]
+    },
+    "zipzi_contract::runtime::ModelingSampleData": {
+      "fields": [
+        {
+          "doc": "Exact formal or candidate source captured for this result; later host changes do not\nrewrite it.",
+          "name": "source",
+          "rust_name": "source",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::SourceRef",
+            "opaque": true
+          },
+          "skip": false
+        },
+        {
+          "doc": "Captured sampling source state, distinguishing formal content from an Edit candidate.",
+          "name": "state",
+          "rust_name": "state",
+          "shape": {
+            "kind": "ref",
+            "name": "&str",
+            "opaque": true
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned CPU sampling result captured from this frozen source.",
+          "name": "samples",
+          "rust_name": "samples",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::ModelingSamples",
+            "opaque": true
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::ModelingSampleData",
+      "transparent": false,
+      "tuple": false
+    }
+  }
+}

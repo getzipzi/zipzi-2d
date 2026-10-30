@@ -1,0 +1,1551 @@
+{
+  "_generated_by": "zipzi-python2/tools/generate.py",
+  "definitions": {
+    "zipzi_contract::authoring::ModelingIntent": {
+      "content": "intent",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::authoring::ModelingIntent",
+      "tag": "domain",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Shared dependency-cleaning deletion request and explicit resolutions.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::DeletionIntent"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "deletion",
+          "rust_name": "Deletion"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed intent for scene lifecycle, hierarchy and drawing; apply/plan it against a\nSession/Edit source rather than mutating this value.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::SceneEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "scene",
+          "rust_name": "Scene"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed intent for organization and parameter groups; apply/plan it against a\nSession/Edit source rather than mutating this value.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::OrganizationEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "organization",
+          "rust_name": "Organization"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed intent for parameter bindings and grid conversions; apply/plan it against a\nSession/Edit source rather than mutating this value.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::BindingAuthoringEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "binding",
+          "rust_name": "Binding"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed intent for geometry and topology content; apply/plan it against a Session/Edit\nsource rather than mutating this value.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::SceneContentEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "content",
+          "rust_name": "Content"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed intent for metadata references and selections; apply/plan it against a\nSession/Edit source rather than mutating this value.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ReferenceEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "references",
+          "rust_name": "References"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed intent for image asset metadata and references; apply/plan it against a\nSession/Edit source rather than mutating this value.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ResourceEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "resource",
+          "rust_name": "Resource"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed intent for document configuration and metadata repair; apply/plan it against a\nSession/Edit source rather than mutating this value.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::DocumentAuthoringEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "document",
+          "rust_name": "Document"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed intent for package attachments and their references; apply/plan it against a\nSession/Edit source rather than mutating this value.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::AttachmentEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "attachment",
+          "rust_name": "Attachment"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed native motion operation against this captured source.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::MotionEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "motion",
+          "rust_name": "Motion"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed native expression operation against this captured source.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ExpressionEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "expression",
+          "rust_name": "Expression"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed native physics operation against this captured source.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::physics_document::PhysicsEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "physics",
+          "rust_name": "Physics"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed native pose operation against this captured source.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::PoseEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "pose",
+          "rust_name": "Pose"
+        }
+      ]
+    },
+    "zipzi_contract::authoring::ModelingPlanReport": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Exact SDK version captured for this value; not a best-effort latest-version marker.",
+          "name": "version",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::Version",
+            "opaque": true
+          }
+        },
+        {
+          "default": null,
+          "doc": "Stable IDs conservatively affected by the planned operation.",
+          "name": "affected_ids",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Mapping from original object IDs to the new IDs allocated for copied objects.",
+          "name": "copied_ids",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Native plan cost estimates; inspect losses separately before applying the plan.",
+          "name": "cost",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::document::ConversionCost"
+            },
+            "kind": "optional"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Explicit semantic losses predicted by conversion; empty means no losses were reported.",
+          "name": "losses",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Whether applying the plan would leave the document unchanged.",
+          "name": "no_op",
+          "shape": {
+            "item": {
+              "kind": "bool"
+            },
+            "kind": "optional"
+          }
+        },
+        {
+          "default": {
+            "kind": "null"
+          },
+          "doc": "Bounded deletion readiness/count summary; detailed rows use frozen report pages.",
+          "name": "deletion",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::authoring::DeletionSummary"
+            },
+            "kind": "optional"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::authoring::ModelingPlanReport"
+    },
+    "zipzi_contract::document::ConversionCost": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Number of shape-sample combinations the conversion must process.",
+          "name": "sample_combinations",
+          "shape": {
+            "kind": "usize"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Estimated owned result payload in bytes; not total process RSS.",
+          "name": "payload_bytes",
+          "shape": {
+            "kind": "usize"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Estimated temporary working storage in bytes; not total process RSS.",
+          "name": "temporary_bytes",
+          "shape": {
+            "kind": "usize"
+          }
+        },
+        {
+          "default": null,
+          "doc": "Includes the SDK's complete previous checkpoint and new candidate.",
+          "name": "history_bytes",
+          "shape": {
+            "kind": "usize"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::document::ConversionCost"
+    },
+    "zipzi_contract::document::ConversionDomain": {
+      "fields": [
+        {
+          "doc": "Stable document parameter ID, not its exported runtime identifier.",
+          "name": "parameter_id",
+          "rust_name": "parameter_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Lower endpoint of the parameter domain, in parameter units.",
+          "name": "minimum",
+          "rust_name": "minimum",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Upper endpoint of the parameter domain, in parameter units.",
+          "name": "maximum",
+          "rust_name": "maximum",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::ConversionDomain",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::ModelingCommand": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::runtime::ModelingCommand",
+      "tag": "op",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Complete asset record to create with native identity validation; this DTO alone does\nnot publish.",
+              "name": "asset",
+              "rust_name": "asset",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::ImageAsset"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_asset",
+          "rust_name": "CreateAsset"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete asset record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.",
+              "name": "asset",
+              "rust_name": "asset",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::ImageAsset"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_asset",
+          "rust_name": "ReplaceAsset"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete mesh record to create with native identity validation; this DTO alone does\nnot publish.",
+              "name": "mesh",
+              "rust_name": "mesh",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Mesh"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_mesh",
+          "rust_name": "CreateMesh"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete mesh record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.",
+              "name": "mesh",
+              "rust_name": "mesh",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Mesh"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_mesh",
+          "rust_name": "ReplaceMesh"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete parameter record to create with native identity validation; this DTO alone\ndoes not publish.",
+              "name": "parameter",
+              "rust_name": "parameter",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Parameter"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_parameter",
+          "rust_name": "CreateParameter"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete parameter record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.",
+              "name": "parameter",
+              "rust_name": "parameter",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Parameter"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_parameter",
+          "rust_name": "ReplaceParameter"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete part record to create with native identity validation; this DTO alone does\nnot publish.",
+              "name": "part",
+              "rust_name": "part",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Part"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_part",
+          "rust_name": "CreatePart"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete part record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.",
+              "name": "part",
+              "rust_name": "part",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Part"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_part",
+          "rust_name": "ReplacePart"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete transform record to create with native identity validation; this DTO alone\ndoes not publish.",
+              "name": "transform",
+              "rust_name": "transform",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Transform"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_transform",
+          "rust_name": "CreateTransform"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete transform record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.",
+              "name": "transform",
+              "rust_name": "transform",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Transform"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_transform",
+          "rust_name": "ReplaceTransform"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete binding record to create with native identity validation; this DTO alone\ndoes not publish.",
+              "name": "binding",
+              "rust_name": "binding",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::MeshBinding"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_binding",
+          "rust_name": "CreateBinding"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete binding record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.",
+              "name": "binding",
+              "rust_name": "binding",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::MeshBinding"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_binding",
+          "rust_name": "ReplaceBinding"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete scene binding record to create with native identity validation; this DTO\nalone does not publish.",
+              "name": "binding",
+              "rust_name": "binding",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::SceneBinding"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_scene_binding",
+          "rust_name": "CreateSceneBinding"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete scene binding record to replace the existing object while preserving its\nstable identity; this DTO alone does not publish.",
+              "name": "binding",
+              "rust_name": "binding",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::SceneBinding"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_scene_binding",
+          "rust_name": "ReplaceSceneBinding"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete blend key table record to create with native identity validation; this DTO\nalone does not publish.",
+              "name": "table",
+              "rust_name": "table",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::BlendShapeKeyTable"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_blend_key_table",
+          "rust_name": "CreateBlendKeyTable"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete blend key table record to replace the existing object while preserving its\nstable identity; this DTO alone does not publish.",
+              "name": "table",
+              "rust_name": "table",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::BlendShapeKeyTable"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_blend_key_table",
+          "rust_name": "ReplaceBlendKeyTable"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete blend constraint record to create with native identity validation; this DTO\nalone does not publish.",
+              "name": "constraint",
+              "rust_name": "constraint",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::BlendShapeConstraint"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_blend_constraint",
+          "rust_name": "CreateBlendConstraint"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete blend constraint record to replace the existing object while preserving its\nstable identity; this DTO alone does not publish.",
+              "name": "constraint",
+              "rust_name": "constraint",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::BlendShapeConstraint"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_blend_constraint",
+          "rust_name": "ReplaceBlendConstraint"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete blend binding record to create with native identity validation; this DTO\nalone does not publish.",
+              "name": "binding",
+              "rust_name": "binding",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::BlendShapeBinding"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_blend_binding",
+          "rust_name": "CreateBlendBinding"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete blend binding record to replace the existing object while preserving its\nstable identity; this DTO alone does not publish.",
+              "name": "binding",
+              "rust_name": "binding",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::BlendShapeBinding"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_blend_binding",
+          "rust_name": "ReplaceBlendBinding"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete glue record to create with native identity validation; this DTO alone does\nnot publish.",
+              "name": "glue",
+              "rust_name": "glue",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Glue"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_glue",
+          "rust_name": "CreateGlue"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete glue record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.",
+              "name": "glue",
+              "rust_name": "glue",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Glue"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_glue",
+          "rust_name": "ReplaceGlue"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete offscreen record to create with native identity validation; this DTO alone\ndoes not publish.",
+              "name": "offscreen",
+              "rust_name": "offscreen",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Offscreen"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_offscreen",
+          "rust_name": "CreateOffscreen"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete offscreen record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.",
+              "name": "offscreen",
+              "rust_name": "offscreen",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::Offscreen"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_offscreen",
+          "rust_name": "ReplaceOffscreen"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Dependency-cleaning deletion request; plan first to inspect choices and bounded report pages.",
+              "name": "intent",
+              "rust_name": "intent",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::DeletionIntent"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "deletion",
+          "rust_name": "Deletion"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.",
+              "name": "intent",
+              "rust_name": "intent",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::SceneEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "scene",
+          "rust_name": "Scene"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.",
+              "name": "intent",
+              "rust_name": "intent",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::OrganizationEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "organization",
+          "rust_name": "Organization"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.",
+              "name": "intent",
+              "rust_name": "intent",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::BindingAuthoringEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "binding",
+          "rust_name": "Binding"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.",
+              "name": "intent",
+              "rust_name": "intent",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::SceneContentEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "content",
+          "rust_name": "Content"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.",
+              "name": "intent",
+              "rust_name": "intent",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ReferenceEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "references",
+          "rust_name": "References"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.",
+              "name": "intent",
+              "rust_name": "intent",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ResourceEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "resource",
+          "rust_name": "Resource"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.",
+              "name": "intent",
+              "rust_name": "intent",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::DocumentAuthoringEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "document",
+          "rust_name": "Document"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.",
+              "name": "intent",
+              "rust_name": "intent",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::AttachmentEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "attachment",
+          "rust_name": "Attachment"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Motion library/track/key/event intent; use a Plan or apply to an Edit.",
+              "name": "intent",
+              "rust_name": "intent",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::MotionEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "motion",
+          "rust_name": "Motion"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Expression asset/entry intent, validated by the shared SDK planner.",
+              "name": "intent",
+              "rust_name": "intent",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ExpressionEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "expression",
+          "rust_name": "Expression"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Physics rig/row/node intent with native ownership and reference checks.",
+              "name": "intent",
+              "rust_name": "intent",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::physics_document::PhysicsEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "physics",
+          "rust_name": "Physics"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Pose singleton/group/entry/link intent, independent of playback state.",
+              "name": "intent",
+              "rust_name": "intent",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::PoseEdit"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "pose",
+          "rust_name": "Pose"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete owned clip with stable track/key/event identities.",
+              "name": "clip",
+              "rust_name": "clip",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::MotionClip"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_motion",
+          "rust_name": "CreateMotion"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete replacement clip preserving its stable object ID.",
+              "name": "clip",
+              "rust_name": "clip",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::MotionClip"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_motion",
+          "rust_name": "ReplaceMotion"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete expression asset with ordered owned entries.",
+              "name": "expression",
+              "rust_name": "expression",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ExpressionAsset"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_expression",
+          "rust_name": "CreateExpression"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete replacement expression preserving its object ID.",
+              "name": "expression",
+              "rust_name": "expression",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ExpressionAsset"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_expression",
+          "rust_name": "ReplaceExpression"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete Physics singleton and ordered rig data.",
+              "name": "physics",
+              "rust_name": "physics",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::physics_document::PhysicsAsset"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "set_physics",
+          "rust_name": "SetPhysics"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete Pose singleton and owned part/link references.",
+              "name": "pose",
+              "rust_name": "pose",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::PoseAsset"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "set_pose",
+          "rust_name": "SetPose"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Model source-canvas and export-frame configuration.",
+              "name": "setup",
+              "rust_name": "setup",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::ModelSetup"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_model_setup",
+          "rust_name": "ReplaceModelSetup"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Replacement organization/deformation palette order; not runtime draw order.",
+              "name": "order",
+              "rust_name": "order",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::HierarchyOrder"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_hierarchy_order",
+          "rust_name": "ReplaceHierarchyOrder"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete Editor visibility/lock metadata to replace.",
+              "name": "state",
+              "rust_name": "state",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::EditorState"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_editor_state",
+          "rust_name": "ReplaceEditorState"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Complete drawing-order group list; native validation checks root/owner membership\nand ranges. This is a required list, not an optional grouping override.",
+              "name": "groups",
+              "rust_name": "groups",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::document::DrawOrderGroup"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_draw_order_groups",
+          "rust_name": "ReplaceDrawOrderGroups"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "erase_object",
+          "rust_name": "EraseObject"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+              "name": "name",
+              "rust_name": "name",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "rename_mesh",
+          "rust_name": "RenameMesh"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Stable vertex IDs selecting which positions to replace; values are paired with\npositions in the supplied order.",
+              "name": "vertex_ids",
+              "rust_name": "vertex_ids",
+              "shape": {
+                "item": {
+                  "kind": "u32"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Absolute XY shape positions in mesh vertex order; these are positions, not vertex IDs.",
+              "name": "positions",
+              "rust_name": "positions",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::model::Vec2"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "update_positions",
+          "rust_name": "UpdatePositions"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Complete shape sample to insert or replace; unrelated samples are retained.",
+              "name": "keyform",
+              "rust_name": "keyform",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::MeshKeyform"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "set_mesh_keyform",
+          "rust_name": "SetMeshKeyform"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Complete shape sample to insert or replace; unrelated samples are retained.",
+              "name": "keyform",
+              "rust_name": "keyform",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::SceneKeyform"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "set_scene_keyform",
+          "rust_name": "SetSceneKeyform"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Positive rectangle-grid subdivision count horizontally; resulting geometry must\nsatisfy native vertex/working-set limits.",
+              "name": "columns",
+              "rust_name": "columns",
+              "shape": {
+                "kind": "usize"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Positive rectangle-grid subdivision count vertically; resulting geometry must\nsatisfy native vertex/working-set limits.",
+              "name": "rows",
+              "rust_name": "rows",
+              "shape": {
+                "kind": "usize"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "remesh_rectangle_grid",
+          "rust_name": "RemeshRectangleGrid"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Exact geometry snapshot the topology replacement was planned against; stale source\nversions are rejected.",
+              "name": "source",
+              "rust_name": "source",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::GeometrySnapshot"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Coordinated replacement geometry, bindings, Glues and vertex mapping from the\nremeshing plan.",
+              "name": "replacement",
+              "rust_name": "replacement",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::TopologyReplacement"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_topology",
+          "rust_name": "ReplaceTopology"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable mesh UUID whose editable UV triangulation is changed.",
+              "name": "mesh_id",
+              "rust_name": "mesh_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Exact candidate source before this operation; submit it alone in a batch.",
+              "name": "expected",
+              "rust_name": "expected",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::runtime::SourceRef",
+                "opaque": true
+              },
+              "skip": false
+            },
+            {
+              "doc": "Atomic UV topology intent; the SDK preserves dependent geometry and identities.",
+              "name": "operation",
+              "rust_name": "operation",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::authoring::ManualMeshOperation"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "manual_mesh",
+          "rust_name": "ManualMesh"
+        }
+      ]
+    },
+    "zipzi_contract::runtime::PlanIntent": {
+      "kind": "union",
+      "name": "zipzi_contract::runtime::PlanIntent",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Required current display name; None disables this name precondition.",
+              "name": "expected_name",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+              "name": "name",
+              "shape": {
+                "kind": "string"
+              }
+            }
+          ],
+          "rust_name": "MeshRename",
+          "wire_name": "mesh_rename"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
+              "name": "id",
+              "shape": {
+                "kind": "string"
+              }
+            },
+            {
+              "default": {
+                "kind": "null"
+              },
+              "doc": "Required current display name; None disables this name precondition.",
+              "name": "expected_name",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              }
+            },
+            {
+              "default": null,
+              "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+              "name": "name",
+              "shape": {
+                "kind": "string"
+              }
+            }
+          ],
+          "rust_name": "ImageRename",
+          "wire_name": "image_rename"
+        }
+      ]
+    },
+    "zipzi_contract::runtime::PlanSnapshot": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Client-owned plan handle, valid only for its captured source and owning client.",
+          "name": "plan",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::PlanId",
+            "opaque": true
+          }
+        },
+        {
+          "default": null,
+          "doc": "Exact formal or candidate source captured for this result; later host changes do not\nrewrite it.",
+          "name": "source",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::SourceRef",
+            "opaque": true
+          }
+        },
+        {
+          "default": null,
+          "doc": "Cached native plan report containing source, estimated costs and predicted losses.",
+          "name": "report",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::ModelingPlanReport"
+          }
+        }
+      ],
+      "kind": "record",
+      "name": "zipzi_contract::runtime::PlanSnapshot"
+    }
+  }
+}

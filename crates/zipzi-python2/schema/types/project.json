@@ -1,0 +1,1720 @@
+{
+  "_generated_by": "zipzi-python2/tools/generate.py",
+  "definitions": {
+    "zipzi_contract::document::CdiCombinedSet": {
+      "fields": [
+        {
+          "doc": "Stable UUID of this CDI combined set; not the identity of its target.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Ordered stable reference-entry records; entry identity is distinct from the referenced\nobject identity.",
+          "name": "members",
+          "rust_name": "members",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::document::ReferenceEntry<zipzi_contract::document::CdiParameterRef>"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::CdiCombinedSet",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::CdiNamespaceIds": {
+      "fields": [
+        {
+          "doc": "Imported parameter document-ID to runtime-ID map, retained to validate opaque metadata.",
+          "name": "parameters",
+          "rust_name": "parameters",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "string"
+            }
+          },
+          "skip": false
+        },
+        {
+          "doc": "Imported Part document-ID to runtime-ID map, retained to validate opaque metadata.",
+          "name": "parts",
+          "rust_name": "parts",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "string"
+            }
+          },
+          "skip": false
+        },
+        {
+          "doc": "Imported group document-ID to runtime-ID map, retained to validate opaque metadata.",
+          "name": "groups",
+          "rust_name": "groups",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "string"
+            }
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::CdiNamespaceIds",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::CdiParameterEntry": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::CdiParameterEntry",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Stable document parameter ID, not its exported runtime identifier.",
+              "name": "parameter_id",
+              "rust_name": "parameter_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Parameter-group ID in the document metadata hierarchy. None selects the\nroot/unassigned container.",
+              "name": "group_id",
+              "rust_name": "group_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Preserved opaque import/export extension fields; retain unknown keys when editing\nknown fields.",
+              "name": "extensions",
+              "rust_name": "extensions",
+              "shape": {
+                "kind": "string_map",
+                "value": {
+                  "kind": "json"
+                }
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "resolved",
+          "rust_name": "Resolved"
+        },
+        {
+          "fields": [
+            {
+              "doc": "External format/runtime identifier retained for import/export; not the document\nobject ID.",
+              "name": "runtime_id",
+              "rust_name": "runtime_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+              "name": "name",
+              "rust_name": "name",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Parameter-group ID in the document metadata hierarchy. None selects the\nroot/unassigned container.",
+              "name": "group_id",
+              "rust_name": "group_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Preserved opaque import/export extension fields; retain unknown keys when editing\nknown fields.",
+              "name": "extensions",
+              "rust_name": "extensions",
+              "shape": {
+                "kind": "string_map",
+                "value": {
+                  "kind": "json"
+                }
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "unresolved",
+          "rust_name": "Unresolved"
+        }
+      ]
+    },
+    "zipzi_contract::document::CdiParameterGroup": {
+      "fields": [
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "External format/runtime identifier retained for import/export; not the document object ID.",
+          "name": "runtime_id",
+          "rust_name": "runtime_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+          "name": "name",
+          "rust_name": "name",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.",
+          "name": "parent_id",
+          "rust_name": "parent_id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Preserved opaque import/export extension fields; retain unknown keys when editing known\nfields.",
+          "name": "extensions",
+          "rust_name": "extensions",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "json"
+            }
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::CdiParameterGroup",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::CdiParameterRef": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::CdiParameterRef",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "unspecified",
+          "rust_name": "Unspecified"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document parameter ID, not its exported runtime identifier.",
+              "name": "parameter_id",
+              "rust_name": "parameter_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "resolved",
+          "rust_name": "Resolved"
+        },
+        {
+          "fields": [
+            {
+              "doc": "External format/runtime identifier retained for import/export; not the document\nobject ID.",
+              "name": "runtime_id",
+              "rust_name": "runtime_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "unresolved",
+          "rust_name": "Unresolved"
+        }
+      ]
+    },
+    "zipzi_contract::document::CdiPartEntry": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::CdiPartEntry",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Resolved stable document Part ID; use an Unresolved entry to preserve an external runtime identifier.",
+              "name": "part_id",
+              "rust_name": "part_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Preserved opaque import/export extension fields; retain unknown keys when editing\nknown fields.",
+              "name": "extensions",
+              "rust_name": "extensions",
+              "shape": {
+                "kind": "string_map",
+                "value": {
+                  "kind": "json"
+                }
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "resolved",
+          "rust_name": "Resolved"
+        },
+        {
+          "fields": [
+            {
+              "doc": "External format/runtime identifier retained for import/export; not the document\nobject ID.",
+              "name": "runtime_id",
+              "rust_name": "runtime_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+              "name": "name",
+              "rust_name": "name",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Preserved opaque import/export extension fields; retain unknown keys when editing\nknown fields.",
+              "name": "extensions",
+              "rust_name": "extensions",
+              "shape": {
+                "kind": "string_map",
+                "value": {
+                  "kind": "json"
+                }
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "unresolved",
+          "rust_name": "Unresolved"
+        }
+      ]
+    },
+    "zipzi_contract::document::DisplayInfo": {
+      "fields": [
+        {
+          "doc": "Import/generation provenance of these display metadata records.",
+          "name": "origin",
+          "rust_name": "origin",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::document::DisplayInfoOrigin"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "`None` and `Some([])` retain CDI collection omission and emptiness.",
+          "name": "parameters",
+          "rust_name": "parameters",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::CdiParameterEntry"
+              },
+              "kind": "sequence"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional ordered CDI parameter groups metadata; None preserves omission and an empty\nlist explicitly preserves emptiness.",
+          "name": "parameter_groups",
+          "rust_name": "parameter_groups",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::CdiParameterGroup"
+              },
+              "kind": "sequence"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional ordered CDI parts metadata; None preserves omission and an empty list\nexplicitly preserves emptiness.",
+          "name": "parts",
+          "rust_name": "parts",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::CdiPartEntry"
+              },
+              "kind": "sequence"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional ordered CDI combined parameters metadata; None preserves omission and an empty\nlist explicitly preserves emptiness.",
+          "name": "combined_parameters",
+          "rust_name": "combined_parameters",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::CdiCombinedSet"
+              },
+              "kind": "sequence"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Preserved opaque import/export extension fields; retain unknown keys when editing known\nfields.",
+          "name": "extensions",
+          "rust_name": "extensions",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "json"
+            }
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Complete namespace identity at import when opaque extensions exist.",
+          "name": "opaque_source_ids",
+          "rust_name": "opaque_source_ids",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::document::CdiNamespaceIds"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::DisplayInfo",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::DisplayInfoOrigin": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::DisplayInfoOrigin",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "generated",
+          "rust_name": "Generated"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "imported",
+          "rust_name": "Imported"
+        }
+      ]
+    },
+    "zipzi_contract::document::DocumentAuthoringEdit": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::DocumentAuthoringEdit",
+      "tag": "operation",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Exact current field value used as an optimistic precondition; stale values reject\nthe edit.",
+              "name": "expected",
+              "rust_name": "expected",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::DocumentValue"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Scalar value in the referenced parameter domain.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::DocumentValue"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "patch",
+          "rust_name": "Patch"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Unresolved imported attachment path to repair; this command does not read client-\nside files.",
+              "name": "path",
+              "rust_name": "path",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Stable package-attachment ID, distinct from its relative package path.",
+              "name": "attachment_id",
+              "rust_name": "attachment_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "repair_missing_attachment",
+          "rust_name": "RepairMissingAttachment"
+        },
+        {
+          "fields": [
+            {
+              "doc": "External format/runtime identifier retained for import/export; not the document\nobject ID.",
+              "name": "runtime_id",
+              "rust_name": "runtime_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Stable document parameter ID, not its exported runtime identifier.",
+              "name": "parameter_id",
+              "rust_name": "parameter_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "repair_cdi_parameter",
+          "rust_name": "RepairCdiParameter"
+        },
+        {
+          "fields": [
+            {
+              "doc": "External format/runtime identifier retained for import/export; not the document\nobject ID.",
+              "name": "runtime_id",
+              "rust_name": "runtime_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Organizational Part owner ID; independent of the deformation parent. None selects\nthe root/unassigned container.",
+              "name": "part_id",
+              "rust_name": "part_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "repair_cdi_part",
+          "rust_name": "RepairCdiPart"
+        }
+      ]
+    },
+    "zipzi_contract::document::DocumentField": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::DocumentField",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "layout",
+          "rust_name": "Layout"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "export_settings",
+          "rust_name": "ExportSettings"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "source_canvas",
+          "rust_name": "SourceCanvas"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "opaque_metadata",
+          "rust_name": "OpaqueMetadata"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "missing_attachments",
+          "rust_name": "MissingAttachments"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "display_info",
+          "rust_name": "DisplayInfo"
+        }
+      ]
+    },
+    "zipzi_contract::document::DocumentValue": {
+      "content": "value",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::DocumentValue",
+      "tag": "field",
+      "variants": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Replacement model3 layout map; None explicitly removes the layout.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "item": {
+                  "kind": "string_map",
+                  "value": {
+                    "kind": "f64"
+                  }
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "layout",
+          "rust_name": "Layout"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Replacement export-frame scale and padding settings.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::ExportSettings"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "export_settings",
+          "rust_name": "ExportSettings"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Replacement source-canvas metadata; None explicitly removes the canvas provenance.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::model::Canvas"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "source_canvas",
+          "rust_name": "SourceCanvas"
+        }
+      ]
+    },
+    "zipzi_contract::document::EditorState": {
+      "fields": [
+        {
+          "default": {},
+          "doc": "Explicit flags only, keyed by globally unique object ID. Defaults are omitted.",
+          "name": "objects",
+          "rust_name": "objects",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "ref",
+              "name": "zipzi_contract::document::ObjectEditorState"
+            }
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::EditorState",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::Model3Settings": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Optional ordered model3 parameter groups; None preserves omission rather than an empty list.",
+          "name": "groups",
+          "rust_name": "groups",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ModelParameterGroup"
+              },
+              "kind": "sequence"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional model3 numeric layout map; None preserves omission and an empty map is\nexplicitly empty.",
+          "name": "layout",
+          "rust_name": "layout",
+          "shape": {
+            "item": {
+              "kind": "string_map",
+              "value": {
+                "kind": "f64"
+              }
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional ordered named hit-area records with stable mesh references; None preserves\nomission.",
+          "name": "hit_areas",
+          "rust_name": "hit_areas",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ModelHitArea"
+              },
+              "kind": "sequence"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional model3 user-data attachment reference; None means the field was omitted.",
+          "name": "user_data",
+          "rust_name": "user_data",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::document::AttachmentRef"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Preserved opaque import/export extension fields; retain unknown keys when editing known\nfields.",
+          "name": "extensions",
+          "rust_name": "extensions",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "json"
+            }
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Provenance is needed only for opaque metadata and unmanaged IDs inside UserData.",
+          "name": "source_runtime_ids",
+          "rust_name": "source_runtime_ids",
+          "shape": {
+            "item": {
+              "kind": "string_map",
+              "value": {
+                "kind": "string"
+              }
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Preserved opaque imported model3 source metadata; None means none was retained.",
+          "name": "source_content",
+          "rust_name": "source_content",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::Model3Settings",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::ModelHitArea": {
+      "fields": [
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+          "name": "name",
+          "rust_name": "name",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Resolved mesh target or preserved unresolved mesh runtime identifier.",
+          "name": "mesh",
+          "rust_name": "mesh",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::document::ModelTargetRef"
+          },
+          "skip": false
+        },
+        {
+          "default": {},
+          "doc": "Preserved opaque import/export extension fields; retain unknown keys when editing known\nfields.",
+          "name": "extensions",
+          "rust_name": "extensions",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "json"
+            }
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::ModelHitArea",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::ModelParameterGroup": {
+      "fields": [
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+          "name": "name",
+          "rust_name": "name",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Ordered stable reference-entry records selecting model parameters; entry IDs are\ndistinct from parameter IDs.",
+          "name": "parameters",
+          "rust_name": "parameters",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::document::ReferenceEntry<zipzi_contract::document::ModelTargetRef>"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": {},
+          "doc": "Preserved opaque import/export extension fields; retain unknown keys when editing known\nfields.",
+          "name": "extensions",
+          "rust_name": "extensions",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "json"
+            }
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::ModelParameterGroup",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::ModelTargetRef": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::ModelTargetRef",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "unspecified",
+          "rust_name": "Unspecified"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document ID of the object described or selected by this value.",
+              "name": "object_id",
+              "rust_name": "object_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "resolved",
+          "rust_name": "Resolved"
+        },
+        {
+          "fields": [
+            {
+              "doc": "External format/runtime identifier retained for import/export; not the document\nobject ID.",
+              "name": "runtime_id",
+              "rust_name": "runtime_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "unresolved",
+          "rust_name": "Unresolved"
+        }
+      ]
+    },
+    "zipzi_contract::document::ObjectEditorState": {
+      "fields": [
+        {
+          "default": false,
+          "doc": "Editor-only hiding flag; does not replace the model enabled/visibility state.",
+          "name": "hidden_in_editor",
+          "rust_name": "hidden_in_editor",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Authoring lock state; native edit admission and capabilities enforce the lock.",
+          "name": "locked",
+          "rust_name": "locked",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::ObjectEditorState",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::document::PackageAttachment": {
+      "fields": [
+        {
+          "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Normalized package-relative path using forward slashes; absolute paths, empty components\nand .. are invalid.",
+          "name": "path",
+          "rust_name": "path",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional owned file contents; None preserves an unavailable attachment, not an empty file.",
+          "name": "bytes",
+          "rust_name": "bytes",
+          "shape": {
+            "item": {
+              "item": {
+                "item": {
+                  "kind": "u8"
+                },
+                "kind": "sequence"
+              },
+              "kind": "shared"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::PackageAttachment",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::ExportSettings": {
+      "fields": [
+        {
+          "doc": "Positive model-length to Cubism-runtime-unit conversion scale at the file boundary;\nmodel units themselves remain canvas-pixel lengths.",
+          "name": "pixels_per_unit",
+          "rust_name": "pixels_per_unit",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional stable rectangle [left, bottom, right, top] in model units.\nSpecified bounds bypass automatic padding; pixel edges round outwards.",
+          "name": "bounds",
+          "rust_name": "bounds",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "f32"
+              },
+              "kind": "array",
+              "length": 4
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Fractional export padding relative to the frame extent; dimensionless.",
+          "name": "padding_fraction",
+          "rust_name": "padding_fraction",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Additional export padding measured in pixels.",
+          "name": "padding_pixels",
+          "rust_name": "padding_pixels",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Finite nonnegative minimum automatic export extent in model units; native default is 256.",
+          "name": "minimum_extent",
+          "rust_name": "minimum_extent",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::ExportSettings",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::project::ExportFormat": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::project::ExportFormat",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "package",
+          "rust_name": "Package"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "cmo3",
+          "rust_name": "Cmo3"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "can3",
+          "rust_name": "Can3"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "cubism",
+          "rust_name": "Cubism"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "motion3",
+          "rust_name": "Motion3"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "expression3",
+          "rust_name": "Expression3"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "physics3",
+          "rust_name": "Physics3"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "pose3",
+          "rust_name": "Pose3"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "cdi3",
+          "rust_name": "Cdi3"
+        }
+      ]
+    },
+    "zipzi_contract::project::ImportFormat": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::project::ImportFormat",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "model3",
+          "rust_name": "Model3"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "psd",
+          "rust_name": "Psd"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "cubism",
+          "rust_name": "Cubism"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "moc3",
+          "rust_name": "Moc3"
+        }
+      ]
+    },
+    "zipzi_contract::project::OpaqueExportIssue": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::project::OpaqueExportIssue",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "Model3NamespaceChanged",
+          "rust_name": "Model3NamespaceChanged"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Exact native opaque-field guard violated by this retained resource.",
+              "name": "problem",
+              "rust_name": "problem",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::project::OpaqueExportProblem"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "Cdi",
+          "rust_name": "Cdi"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Persistent retained resource UUID in the frozen source.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Exact native opaque-field guard violated by this retained resource.",
+              "name": "problem",
+              "rust_name": "problem",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::project::OpaqueExportProblem"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "Motion",
+          "rust_name": "Motion"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Persistent retained resource UUID in the frozen source.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Exact native opaque-field guard violated by this retained resource.",
+              "name": "problem",
+              "rust_name": "problem",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::project::OpaqueExportProblem"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "Expression",
+          "rust_name": "Expression"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Persistent retained resource UUID in the frozen source.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Exact native opaque-field guard violated by this retained resource.",
+              "name": "problem",
+              "rust_name": "problem",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::project::OpaqueExportProblem"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "Pose",
+          "rust_name": "Pose"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Persistent retained resource UUID in the frozen source.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Exact native opaque-field guard violated by this retained resource.",
+              "name": "problem",
+              "rust_name": "problem",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::project::OpaqueExportProblem"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "Physics",
+          "rust_name": "Physics"
+        }
+      ]
+    },
+    "zipzi_contract::project::OpaqueExportProblem": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::project::OpaqueExportProblem",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "NamespaceChanged",
+          "rust_name": "NamespaceChanged"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "ContentChanged",
+          "rust_name": "ContentChanged"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "ProvenanceMissing",
+          "rust_name": "ProvenanceMissing"
+        }
+      ]
+    },
+    "zipzi_contract::project::ProjectDiagnostic": {
+      "fields": [
+        {
+          "doc": "Diagnostic severity label; inspect code for stable programmatic handling.",
+          "name": "severity",
+          "rust_name": "severity",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Machine-readable reason or diagnostic code; use it instead of matching human-readable text.",
+          "name": "code",
+          "rust_name": "code",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Stable document object ID related to this diagnostic; empty if no object was attributed.",
+          "name": "object_id",
+          "rust_name": "object_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Human-readable diagnostic detail; code is the stable programmatic discriminator.",
+          "name": "message",
+          "rust_name": "message",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::project::ProjectDiagnostic",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::project::ProjectReport": {
+      "fields": [
+        {
+          "doc": "Exact SDK version before the operation.",
+          "name": "before",
+          "rust_name": "before",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::Version",
+            "opaque": true
+          },
+          "skip": false
+        },
+        {
+          "doc": "Exact SDK version after the operation; may equal before for a no-op or nonpublishing\noperation.",
+          "name": "after",
+          "rust_name": "after",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::authoring::Version",
+            "opaque": true
+          },
+          "skip": false
+        },
+        {
+          "doc": "Nonfatal operation warnings retained even when an output was produced.",
+          "name": "warnings",
+          "rust_name": "warnings",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Structured diagnostics from this query or operation; an empty list means none were reported.",
+          "name": "diagnostics",
+          "rust_name": "diagnostics",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::project::ProjectDiagnostic"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether the operation published its result; inspect durable separately for persistence\nguarantees.",
+          "name": "published",
+          "rust_name": "published",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether the reported persistence step achieved its durability guarantee; job completion\nalone does not imply true.",
+          "name": "durable",
+          "rust_name": "durable",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Host-side output paths actually reported by the operation; no client-side path\ntranslation is implied.",
+          "name": "paths",
+          "rust_name": "paths",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::project::ProjectReport",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::project::ProjectRequest": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::project::ProjectRequest",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "diagnose",
+          "rust_name": "Diagnose"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Host-side filesystem path for this IO request; resolve it explicitly on the host.",
+              "name": "path",
+              "rust_name": "path",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit import/export format; does not change based on the installed backend.",
+              "name": "format",
+              "rust_name": "format",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::project::ImportFormat"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit external texture-slot to host-file mappings used by imports requiring\nseparate images.",
+              "name": "textures",
+              "rust_name": "textures",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::project::TextureSlot"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "import",
+          "rust_name": "Import"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Host-side filesystem path for this IO request; resolve it explicitly on the host.",
+              "name": "path",
+              "rust_name": "path",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "open",
+          "rust_name": "Open"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable document UUID; not a Runtime Session handle.",
+              "name": "document_id",
+              "rust_name": "document_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Model source-canvas and export-frame configuration.",
+              "name": "setup",
+              "rust_name": "setup",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::ModelSetup"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "new",
+          "rust_name": "New"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Host-side filesystem path for this IO request; resolve it explicitly on the host.",
+              "name": "path",
+              "rust_name": "path",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit import/export format; does not change based on the installed backend.",
+              "name": "format",
+              "rust_name": "format",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::project::ExportFormat"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Human-readable display name; use the stable ID for identity because names can change.",
+              "name": "name",
+              "rust_name": "name",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": null,
+              "doc": "Stable document ID of the object described or selected by this value.",
+              "name": "object_id",
+              "rust_name": "object_id",
+              "shape": {
+                "item": {
+                  "kind": "string"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit permission to export despite format-conversion losses; false rejects\nunsupported loss.",
+              "name": "allow_loss",
+              "rust_name": "allow_loss",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Whether export may bake animation into the destination representation.",
+              "name": "bake_animation",
+              "rust_name": "bake_animation",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Whether export may choose a frame rate automatically instead of requiring an\nexplicit one.",
+              "name": "auto_frame_rate",
+              "rust_name": "auto_frame_rate",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "export",
+          "rust_name": "Export"
+        }
+      ]
+    },
+    "zipzi_contract::project::TextureSlot": {
+      "fields": [
+        {
+          "doc": "Zero-based external texture slot number used by the import format.",
+          "name": "slot",
+          "rust_name": "slot",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Host-side image file path supplying this external texture slot.",
+          "name": "path",
+          "rust_name": "path",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::project::TextureSlot",
+      "transparent": false,
+      "tuple": false
+    }
+  }
+}

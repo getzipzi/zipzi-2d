@@ -1,0 +1,347 @@
+{
+  "_generated_by": "zipzi-python2/tools/generate.py",
+  "definitions": {
+    "zipzi_contract::runtime::PreviewBatch": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Explicit image view when GPU observation was requested; None keeps CPU-only behavior.",
+          "name": "view",
+          "rust_name": "view",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::runtime::ObservationView"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned geometric query descriptors aligned with every frame.spatial slot.",
+          "name": "queries",
+          "rust_name": "queries",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::spatial::SpatialQuery"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Accepted sample request ordinal shared by these ordered frames.",
+          "name": "sequence",
+          "rust_name": "sequence",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Owned frames in requested target order, retaining duplicate and backward targets.",
+          "name": "frames",
+          "rust_name": "frames",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::runtime::PreviewFrame"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::PreviewBatch",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::PreviewCommand": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::runtime::PreviewCommand",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Document parameter UUID; the SDK validates existence and domain.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Finite base value in the parameter's authored domain.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "set_parameter",
+          "rust_name": "SetParameter"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Clip UUID; uses the clip's own fades.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Absolute activation time in seconds on this Preview's clock.",
+              "name": "time",
+              "rust_name": "time",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "schedule_motion",
+          "rust_name": "ScheduleMotion"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Registration UUID; uses the registration's SDK fade overrides.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Absolute activation time in seconds on this Preview's clock.",
+              "name": "time",
+              "rust_name": "time",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "schedule_registration",
+          "rust_name": "ScheduleRegistration"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Native expression asset UUID.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Absolute activation time in seconds on this Preview's clock.",
+              "name": "time",
+              "rust_name": "time",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "schedule_expression",
+          "rust_name": "ScheduleExpression"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Document parameter UUID for an SDK input activation.",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Absolute activation time in seconds on this Preview's clock.",
+              "name": "time",
+              "rust_name": "time",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Finite parameter input in the authored parameter domain.",
+              "name": "value",
+              "rust_name": "value",
+              "shape": {
+                "kind": "f32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "schedule_parameter",
+          "rust_name": "ScheduleParameter"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Enable the SDK Physics stage in this Preview only.",
+              "name": "enabled",
+              "rust_name": "enabled",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Use the SDK stabilized-start policy on canonical replay.",
+              "name": "stabilized_start",
+              "rust_name": "stabilized_start",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "set_physics",
+          "rust_name": "SetPhysics"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "reset",
+          "rust_name": "Reset"
+        }
+      ]
+    },
+    "zipzi_contract::runtime::PreviewFrame": {
+      "fields": [
+        {
+          "default": null,
+          "doc": "Optional GPU image from this exact animation state and once-resolved batch textures.",
+          "name": "observation",
+          "rust_name": "observation",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::runtime::ObservationImage"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Geometric query results in the corresponding request order, from this exact SDK state.",
+          "name": "spatial",
+          "rust_name": "spatial",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::spatial::SpatialResult"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.",
+          "name": "preview_id",
+          "rust_name": "preview_id",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Accepted sample request ordinal; pair with the outer Source and Preview identity.",
+          "name": "sequence",
+          "rust_name": "sequence",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Zero-based target slot in the ordered sample request.",
+          "name": "index",
+          "rust_name": "index",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "SDK Motion/Expression/Physics/Pose result and actual sample coordinates.",
+          "name": "motion",
+          "rust_name": "motion",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::animation::MotionSnapshot"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Evaluated CPU geometry when requested; model_opacity remains a separate SDK channel.",
+          "name": "geometry",
+          "rust_name": "geometry",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::evaluation::DrawableFrame"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::PreviewFrame",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::PreviewState": {
+      "fields": [
+        {
+          "doc": "Monotonic accepted operation ordinal, including cancelled sample requests.",
+          "name": "sequence",
+          "rust_name": "sequence",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Actual SDK clock after the last completed operation, in seconds.",
+          "name": "time",
+          "rust_name": "time",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::PreviewState",
+      "transparent": false,
+      "tuple": false
+    }
+  }
+}
