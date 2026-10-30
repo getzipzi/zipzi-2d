@@ -110,6 +110,45 @@ GPU observation is optional. CPU-only hosts reject image requests with
 `GPU_UNAVAILABLE`, while CPU sampling and previews remain available. Read jobs
 cooperate with cancellation and scheduling so publication can make progress.
 
+`estimate_observation` is a synchronous metadata read available on CPU-only hosts.
+Session/Edit use their selected source; `estimate_preview_observation` uses the
+Preview's frozen source and current controls without replay, clock/sequence changes
+or GPU initialization. Busy Previews reject estimates. Results distinguish static
+feasibility, current Runtime availability and unverified source/device conditions;
+an estimate does not reserve capacity. Admission generates a trusted plan again,
+then passes it to capture. Clients cannot submit trusted dimension tables.
+
+`RuntimeLimits` exposes these observation defaults (configurable by the host):
+
+| Field | Default |
+| --- | --- |
+| `observation_texture_rgba_bytes` | 256 MiB base RGBA |
+| `observation_output_bytes` | 128 MiB aggregate RGBA + bounded PNG |
+| `observation_frames` | 64 |
+| `observation_max_dimension` | 4096 output width/height |
+| `observation_encoded_bytes` | 64 MiB per PNG |
+| `observation_workspace_bytes` | 1 GiB per-source preparation workspace |
+| `observation_metadata_bytes` | 8 MiB planning/report metadata |
+
+The workspace accounts for encoded input, bounded decoder state, RGBA conversion,
+downsampling and source-alpha sampling. Its default admits the conservative
+single-source bound at the base/encoded defaults for source axes up to 16K,
+including row and fixed decoder overhead. More extreme aspect ratios can exceed
+that workspace bound independently of their base RGBA size. Full single-image decoding is allowed; oversized decode peaks fail even
+when a requested thumbnail is small. GPU working sets, mips, output/serialization,
+frozen source and retained results also enter aggregate task admission. Byte
+counts are logical conservative estimates, not measured RSS or driver memory.
+
+Jobs retain the preparation/render peak until worker resources have been dropped.
+Completion atomically exchanges that peak for a retained-result lease; an external
+Rust result Arc keeps its charge after the Job slot is released. Cancellation
+alone never frees entered workspace. A Preview without a View performs CPU work
+and has no texture report. Inspection schema 2 stores one report per batch.
+
+CPU planning depends on `zipzi-observe` with GPU features disabled. GPU builds
+select native Metal on macOS through `zipzi-observe-backend` without WGPU;
+`wgpu-backend` explicitly opts macOS into WGPU, while other platforms use WGPU.
+
 ## Tests
 
 From the repository root:

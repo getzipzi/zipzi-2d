@@ -5,6 +5,20 @@
       "fields": [
         {
           "default": null,
+          "doc": "Verified texture content for a View; None for CPU-only sampling.",
+          "name": "texture_report",
+          "rust_name": "texture_report",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::runtime::ObservationTextureReport"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
           "doc": "Explicit image view when GPU observation was requested; None keeps CPU-only behavior.",
           "name": "view",
           "rust_name": "view",

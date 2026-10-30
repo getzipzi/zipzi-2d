@@ -98,10 +98,13 @@ def read_PreviewState(value: object) -> PreviewState:
     return PreviewState(sequence=integer(r['sequence']), time=number(r['time']))
 
 def validate_PreviewBatch(value: PreviewBatch) -> None:
+    from .observation import validate_ObservationTextureReport
     from .observation import validate_ObservationView
     from .spatial import validate_SpatialQuery
     if not isinstance(value, PreviewBatch):
         raise TypeError("Expected PreviewBatch")
+    if value.texture_report is not None:
+        validate_ObservationTextureReport(value.texture_report)
     if value.view is not None:
         validate_ObservationView(value.view)
     if not isinstance(value.queries, tuple):
@@ -115,16 +118,18 @@ def validate_PreviewBatch(value: PreviewBatch) -> None:
         validate_PreviewFrame(v0)
 
 def encode_PreviewBatch(value: PreviewBatch) -> object:
+    from .observation import encode_ObservationTextureReport
     from .observation import encode_ObservationView
     from .spatial import encode_SpatialQuery
-    return {'view': None if value.view is None else encode_ObservationView(value.view), 'queries': [encode_SpatialQuery(v0) for v0 in value.queries], 'sequence': value.sequence, 'frames': [encode_PreviewFrame(v0) for v0 in value.frames]}
+    return {'texture_report': None if value.texture_report is None else encode_ObservationTextureReport(value.texture_report), 'view': None if value.view is None else encode_ObservationView(value.view), 'queries': [encode_SpatialQuery(v0) for v0 in value.queries], 'sequence': value.sequence, 'frames': [encode_PreviewFrame(v0) for v0 in value.frames]}
 
 def read_PreviewBatch(value: object) -> PreviewBatch:
+    from .observation import read_ObservationTextureReport
     from .observation import read_ObservationView
     from .spatial import read_SpatialQuery
     if isinstance(value, PreviewBatch): return value
     r = record(value)
-    return PreviewBatch(view=None if r.get('view', None) is None else read_ObservationView(r.get('view', None)), queries=tuple(read_SpatialQuery(v0) for v0 in sequence(r['queries'])), sequence=integer(r['sequence']), frames=tuple(read_PreviewFrame(v0) for v0 in sequence(r['frames'])))
+    return PreviewBatch(texture_report=None if r.get('texture_report', None) is None else read_ObservationTextureReport(r.get('texture_report', None)), view=None if r.get('view', None) is None else read_ObservationView(r.get('view', None)), queries=tuple(read_SpatialQuery(v0) for v0 in sequence(r['queries'])), sequence=integer(r['sequence']), frames=tuple(read_PreviewFrame(v0) for v0 in sequence(r['frames'])))
 
 def validate_PreviewFrame(value: PreviewFrame) -> None:
     from .sampling import validate_DrawableFrame

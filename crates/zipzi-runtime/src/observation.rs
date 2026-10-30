@@ -6,12 +6,10 @@ use zipzi_sdk::TopologyOverlayValidation;
 
 pub use zipzi_contract::runtime::ObservationView;
 pub(crate) trait ObservationViewRuntime {
-    #[cfg(feature = "gpu-observation")]
     fn request(&self) -> zipzi_observe::RenderRequest;
     fn validate(&self) -> crate::Result<()>;
 }
 impl ObservationViewRuntime for ObservationView {
-    #[cfg(feature = "gpu-observation")]
     fn request(&self) -> zipzi_observe::RenderRequest {
         let [x0, y0, x1, y1] = self.roi;
         zipzi_observe::RenderRequest {
@@ -27,22 +25,24 @@ impl ObservationViewRuntime for ObservationView {
         if let Some(overlay) = &self.topology {
             overlay.validate()?;
         }
-        if self.width > 4096 || self.height > 4096 {
-            return Err(crate::RuntimeError::Budget("observation dimensions"));
-        }
-        require_gpu_observation()?;
-        #[cfg(feature = "gpu-observation")]
         self.request().mapping().map_err(error)?;
         Ok(())
     }
 }
 
-pub use zipzi_contract::runtime::{ObservationImage, ObservedBounds, ObservedTexture};
+pub use zipzi_contract::runtime::{ObservationImage, ObservedBounds};
 
 pub use zipzi_contract::runtime::ObservationBatch;
+pub use zipzi_contract::runtime::{
+    ObservationEstimate, ObservationEstimateIssue, ObservationTexturePlan,
+    ObservationTexturePlanning, ObservationTexturePolicy, ObservationTextureReport,
+};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ObservationSampleBatch {
+    #[serde(skip)]
+    pub(crate) lease:
+        std::sync::Arc<std::sync::OnceLock<std::sync::Arc<zipzi_project::TransferReservation>>>,
     pub source: crate::SourceRef,
     pub samples: ObservationBatch,
 }
@@ -66,7 +66,6 @@ pub(crate) fn gpu_unavailable() -> crate::RuntimeError {
         referrers: Box::new([]),
     })
 }
-#[cfg(feature = "gpu-observation")]
 pub(crate) fn error(e: zipzi_observe::ObservationError) -> crate::RuntimeError {
     crate::RuntimeError::Sdk(zipzi_sdk::SdkError {
         code: e.code.into(),
@@ -78,6 +77,25 @@ pub(crate) fn error(e: zipzi_observe::ObservationError) -> crate::RuntimeError {
         actual_version: None,
         referrers: Box::new([]),
     })
+}
+
+pub(crate) fn capture_limits(
+    limits: &crate::RuntimeLimits,
+) -> zipzi_observe::ObservationCaptureLimits {
+    zipzi_observe::ObservationCaptureLimits {
+        max_frames: limits.observation_frames,
+        max_rgba_bytes: limits.observation_texture_rgba_bytes,
+        png: zipzi_core::image::PngDecodeLimits {
+            max_encoded_bytes: limits.observation_encoded_bytes,
+            max_workspace_bytes: limits.observation_workspace_bytes,
+        },
+    }
+}
+
+#[cfg_attr(not(feature = "gpu-observation"), allow(dead_code))]
+pub(crate) struct ObservationWork {
+    pub plan: ObservationTexturePlan,
+    pub limits: zipzi_observe::ObservationCaptureLimits,
 }
 pub(crate) fn check(cancel: &std::sync::atomic::AtomicBool) -> crate::Result<()> {
     if cancel.load(std::sync::atomic::Ordering::Acquire) {
@@ -122,14 +140,6 @@ pub(crate) fn render(
         visible_roi: [roi.x0, roi.y0, roi.x1, roi.y1],
         scale: mapping.scale,
         offset: [mapping.offset.0, mapping.offset.1],
-        textures: frame
-            .textures
-            .into_iter()
-            .map(|t| ObservedTexture {
-                asset_id: t.asset_id,
-                sha256: t.sha256,
-            })
-            .collect(),
         drawable_bounds: frame
             .drawable_bounds
             .into_iter()

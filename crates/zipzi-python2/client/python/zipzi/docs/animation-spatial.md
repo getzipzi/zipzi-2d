@@ -89,3 +89,52 @@ between capture/render units; entered decoding/GPU work can finish. Images need
 no close. `capabilities().gpu` is None before probing, then caches success or
 adapter/device failure; later renders can still fail. `inspection.save` writes
 PNG and JSON locally into a new directory, even after Runtime closure.
+
+## Observation texture budgets
+
+Observation defaults to original source pixels. Select a smaller logical base
+RGBA budget explicitly; changing screenshot dimensions alone does not resize
+textures:
+
+```python
+from zipzi import observation as o
+
+view = o.View(width=1024, height=1024, roi=(0., 0., 10., 10.),
+              texture_policy=o.FitBudget(max_rgba_bytes=128 << 20))
+estimate = session.modeling.estimate_observation(({},), view)
+if estimate.static_feasible and estimate.runtime_available:
+    result = session.modeling.observe(({},), view, expected=estimate.source).wait()
+    report = result.value.texture_report
+    print(report.source_rgba_bytes, report.render_rgba_bytes, report.resized_count)
+```
+
+Edit provides the same methods on its candidate. For animation use
+`preview.estimate_observation(times, view=view, geometry=False)` before
+`preview.sample(times, view=view, geometry=False)`. Estimates read metadata without
+image IO, PNG encoding, animation replay, GPU initialization or task reservation.
+A busy Preview rejects estimates; reading an estimate leaves its clock and ordinal
+unchanged. CPU-only hosts can estimate and report their missing GPU support.
+
+`Original()` fails if referenced source RGBA exceeds the host ceiling.
+`FitBudget` requires a positive integer at most
+`runtime.limits().observation_texture_rgba_bytes`; booleans, strings and dictionaries
+are rejected. Every referenced asset counts separately, including hidden/mask
+sources; unused images do not enter the texture budget. Budgets below four bytes
+per referenced asset return an insufficient-budget estimate. Invalid metadata or
+policy returns an error. Execution never lowers the requested screenshot size.
+
+The budget covers base RGBA only. Mips, one-source decode/downsample workspace,
+GPU uploads/rendering, output and source/result ownership have separate accounting.
+Host limits expose their bounds; estimates are conservative logical counts, not
+RSS measurements. Source/device verification flags remain false until execution;
+a successful estimate does not guarantee later capacity or device support.
+Source freezes the document/candidate, while external files can still change.
+Execution validates their dimensions and declared hashes without adapting its plan.
+
+Each batch contains one `texture_report` with policy, sorted source/render sizes,
+verified typed source identities, render pixel hashes and algorithm versions.
+Preview without a View has no report. Source-alpha quality remains based on the
+original pixels even when rendering uses thumbnails. Equivalent rendering inputs
+have the same render digest regardless of policy/budget; source scene digests do
+not change with thumbnail size. `inspection.save()` writes schema 2 with this
+report once at the manifest top level and per-frame PNG/pose provenance below it.

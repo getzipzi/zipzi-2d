@@ -66,7 +66,7 @@ from another directory. The Python tooling runner also resolves its own checkout
 ## Test coverage
 
 Run commands from the repository root. `tools/workspace/package-domains.json` assigns every
-owned workspace package to exactly one domain: 18 SDK packages (including Python2
+owned workspace package to exactly one domain: 19 SDK packages (including Python2
 and the Rust comparison runner) and 3 Editor packages. New workspace members must
 be explicitly assigned; missing, stale, duplicate or overlapping names fail the
 metadata coverage gate. Vendor packages are not workspace members.
@@ -88,7 +88,7 @@ Python environment. `fmt` selects only the domain's own packages, excluding vend
 | --- | --- |
 | SDK `fast` | zipzi-sdk library and ordinary integration; optional filter |
 | SDK `runtime` | CPU Runtime sessions, path reservations, transactions, jobs, panic, events, protocol/framing and retention contracts; optional filter |
-| SDK `mesh` / `regression` | Daily alpha mesh / all 18 SDK libraries and integrations; skip only `alpha_mesh_stress::` |
+| SDK `mesh` / `regression` | Daily alpha mesh / all 19 SDK libraries and integrations; skip only `alpha_mesh_stress::` |
 | SDK `stress` | Entire fixed-seed alpha mesh matrix |
 | SDK `python2` | New Runtime-backed package: refreshed native adapter, Local/Connected behavior, strict positive/negative types and generation drift |
 | SDK `python2-connected` | New pure wheel in an isolated environment; real cold-start/ownership/recovery; optional `--editor-host /absolute/path/to/zipzi-editor` adds production desktop acceptance |

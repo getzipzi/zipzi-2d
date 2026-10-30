@@ -2,6 +2,13 @@
 use crate::{EditSession, PreparedImageContent, SdkError};
 
 pub use zipzi_contract::authoring::ImageCreateSpec;
+impl crate::AuthoringSession {
+    /// Pin already-prepared formal pixels without reading files, encoding PNG,
+    /// copying RGBA, or creating a document snapshot.
+    pub fn memory_image(&self, id: &str) -> Option<PreparedImageContent> {
+        self.project.memory_image(self.document().get_asset(id)?)
+    }
+}
 impl EditSession<'_> {
     pub fn create_image_spec(
         &mut self,

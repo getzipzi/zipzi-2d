@@ -17,6 +17,7 @@ members = [
     "crates/zipzi-sdk",
     "crates/zipzi-runtime",
     "crates/zipzi-observe",
+    "crates/zipzi-observe-backend",
     "crates/zipzi-python2",
     "crates/cubism-matrix-zipzi",
     "crates/zipzi-editor",

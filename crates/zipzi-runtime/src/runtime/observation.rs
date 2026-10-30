@@ -1,12 +1,77 @@
 use super::*;
 #[cfg(feature = "gpu-observation")]
 use crate::jobs::ReadTask;
-use crate::observation::ObservationViewRuntime;
 use crate::observation::*;
 
 #[cfg(all(test, feature = "gpu-observation"))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn admission_plans_only_referenced_textures_without_gpu_or_image_io() {
+        use zipzi_core::{Canvas, ImageAsset, ImageContent, Mesh, Vec2};
+        let id = |n| format!("00000000-0000-4000-8000-{n:012}");
+        let mut doc = Document::new();
+        assert!(doc
+            .initialize(&id(1), Canvas::new(100., 100., Vec2::new(50., 50.), 10.))
+            .is_ok());
+        let add = |doc: &mut Document, n, size| {
+            assert!(doc
+                .add_asset(ImageAsset {
+                    id: id(n),
+                    name: String::new(),
+                    unresolved_source: None,
+                    content: Some(ImageContent {
+                        source: format!("/missing/{n}.png"),
+                        width: size,
+                        height: size,
+                        sha256: String::new()
+                    }),
+                })
+                .status
+                .is_ok());
+        };
+        add(&mut doc, 2, 2);
+        // The unreferenced asset exceeds both the policy limit and u64 RGBA.
+        add(&mut doc, 3, u32::MAX);
+        assert!(doc
+            .create_mesh(Mesh {
+                id: id(4),
+                texture_asset_id: id(2).into(),
+                enabled: false,
+                ..Default::default()
+            })
+            .status
+            .is_ok());
+        let view = ObservationView {
+            texture_policy: Default::default(),
+            width: 8,
+            height: 8,
+            roi: [0., 0., 1., 1.],
+            padding_model: 0.,
+            topology: None,
+            quality: false,
+        };
+        assert!(Runtime::default().observation_bytes(&doc, 1, &view).is_ok());
+        // Hidden references still count, even when they are only used for masks.
+        assert!(doc
+            .create_mesh(Mesh {
+                id: id(5),
+                texture_asset_id: id(3).into(),
+                enabled: false,
+                ..Default::default()
+            })
+            .status
+            .is_ok());
+        let RuntimeError::Sdk(error) = Runtime::default()
+            .observation_bytes(&doc, 1, &view)
+            .unwrap_err()
+        else {
+            panic!("Malformed resource dimensions must be diagnosed")
+        };
+        assert_eq!(error.code.as_ref(), "RESOURCE_DIMENSIONS");
+        assert_eq!(error.object_ids, [id(3)]);
+    }
     #[derive(Default)]
     struct Manual(Vec<Work>);
     impl Executor for Manual {
@@ -29,6 +94,7 @@ mod tests {
         let before = rt.session_info(s).unwrap();
         assert_eq!(rt.runtime_capabilities().gpu, None);
         let view = ObservationView {
+            texture_policy: Default::default(),
             width: 8,
             height: 8,
             roi: [0., 0., 1., 1.],
@@ -76,69 +142,16 @@ mod tests {
 }
 
 impl Runtime {
+    #[cfg(all(test, feature = "gpu-observation"))]
     pub(super) fn observation_bytes(
+        &self,
         doc: &Document,
         frames: usize,
         view: &ObservationView,
     ) -> Result<usize> {
-        view.validate()?;
-        if frames == 0 || frames > 64 {
-            return Err(RuntimeError::Budget("observation samples"));
-        }
-        let output = (view.width as usize)
-            .saturating_mul(view.height as usize)
-            .saturating_mul(8)
-            .saturating_mul(frames);
-        let overlay_workspace = view.topology.as_ref().map_or(0, |overlay| {
-            (view.width as usize)
-                .saturating_mul(view.height as usize)
-                .saturating_mul(if overlay.strain && overlay.heat_opacity > 0. {
-                    8
-                } else {
-                    0
-                })
-                .saturating_add(overlay.max_labels.saturating_mul(1024))
-                .saturating_add(
-                    overlay
-                        .targets
-                        .as_ref()
-                        .map_or(0, |targets| targets.len())
-                        .saturating_mul(256),
-                )
-        });
-        if output > 128 << 20 {
-            return Err(RuntimeError::Budget("observation output"));
-        }
-        let textures = doc
-            .asset_order()
-            .iter()
-            .filter_map(|id| doc.get_asset(id)?.content.as_ref())
-            .fold(0usize, |n, c| {
-                n.saturating_add(
-                    (c.width as usize)
-                        .saturating_mul(c.height as usize)
-                        .saturating_mul(4),
-                )
-            });
-        if textures > 256 << 20 {
-            return Err(RuntimeError::Budget("observation textures"));
-        }
-        Ok(Self::sample_bytes(doc, frames)
-            .saturating_add(overlay_workspace)
-            .saturating_add(if view.needs_quality() {
-                Self::quality_bytes(doc, frames)
-            } else {
-                0
-            })
-            .saturating_mul(4)
-            .saturating_add(
-                doc.estimated_content_bytes()
-                    .saturating_mul(frames)
-                    .saturating_mul(8),
-            )
-            .saturating_add(textures.saturating_mul(10))
-            .saturating_add(output.saturating_mul(4))
-            .saturating_add(1 << 20))
+        let cost = self.observation_cost(doc, frames, view, |_| false)?;
+        cost.require_plan()?;
+        Ok(cost.task)
     }
     #[cfg(not(feature = "gpu-observation"))]
     pub fn request_observation(
@@ -146,11 +159,12 @@ impl Runtime {
         client: ClientId,
         session: SessionId,
         edit: Option<EditId>,
-        _parameters: Vec<zipzi_core::PreviewValues>,
-        _view: ObservationView,
+        parameters: Vec<zipzi_core::PreviewValues>,
+        view: ObservationView,
         expected: Option<SourceRef>,
     ) -> Result<JobId> {
         self.check_authoring_source(client, session, edit, expected)?;
+        self.estimate_observation(client, session, edit, parameters, view)?;
         Err(gpu_unavailable())
     }
     #[cfg(feature = "gpu-observation")]
@@ -168,17 +182,24 @@ impl Runtime {
         if parameters.iter().any(|p| p.len() > 256) {
             return Err(RuntimeError::Budget("observation parameters"));
         }
-        let (document, bytes) =
+        let (document, bytes, plan) =
             self.with_authoring_source(client, session, edit, |doc, source| {
                 if expected.is_some_and(|s| s != source) {
                     return Err(RuntimeError::InvalidReference);
                 }
-                Ok((
-                    doc.estimated_content_bytes(),
-                    Self::observation_bytes(doc, parameters.len(), &view)?,
-                ))
+                let cost = self.observation_cost(doc, parameters.len(), &view, |id| {
+                    self.observation_memory_image(source, id).is_some()
+                })?;
+                let plan = cost.require_plan()?.clone();
+                Ok((doc.estimated_content_bytes(), cost.task, plan))
             })?;
-        self.check_bytes(bytes.saturating_add(document), 0, document)?;
+        self.check_bytes(
+            bytes
+                .saturating_add(document.saturating_mul(2))
+                .saturating_add(1536),
+            0,
+            document,
+        )?;
         let source = if let Some(edit) = edit {
             self.edit_snapshot(client, edit)?
         } else {
@@ -188,6 +209,10 @@ impl Runtime {
             source: source.clone(),
             parameters,
             view,
+            observation: crate::observation::ObservationWork {
+                plan,
+                limits: crate::observation::capture_limits(&self.limits),
+            },
         };
         self.queue_read(client, source, task, bytes, false)
     }

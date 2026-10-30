@@ -63,13 +63,6 @@ pub struct PreviewState {
 }
 
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
-pub struct ObservedTexture {
-    /// Stable asset UUID resolved from the frozen authoring source.
-    pub asset_id: String,
-    /// SHA256 of the exact immutable texture content uploaded by this capture.
-    pub sha256: String,
-}
-#[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct ObservedBounds {
     /// Stable authoring drawable UUID.
     pub id: String,
@@ -112,8 +105,6 @@ pub struct ObservationImage {
     pub scale: f32,
     /// Translation in top-left image pixels, parallel to the documented scale formula.
     pub offset: [f32; 2],
-    /// Source texture identities and exact content hashes shared across this batch.
-    pub textures: Vec<ObservedTexture>,
     /// Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.
     pub drawable_bounds: Vec<ObservedBounds>,
     /// Mesh quality in evaluated drawable order when View.quality is true; empty otherwise.
@@ -127,9 +118,12 @@ pub struct ObservationImage {
 )]
 #[serde(deny_unknown_fields)]
 pub struct ObservationView {
-    /// Output width in pixels, 1..4096, subject to device and Runtime budgets.
+    /// Explicit texture policy; Original preserves source pixels and dimensions.
+    #[serde(default)]
+    pub texture_policy: ObservationTexturePolicy,
+    /// Output width in pixels, positive and subject to host/device limits (host default 4096).
     pub width: u32,
-    /// Output height in pixels, 1..4096, subject to device and Runtime budgets.
+    /// Output height in pixels, positive and subject to host/device limits (host default 4096).
     pub height: u32,
     /// Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.
     pub roi: [f32; 4],
@@ -158,6 +152,8 @@ impl ObservationView {
 
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct ObservationBatch {
+    /// Verified once-per-batch source and rendering texture content.
+    pub texture_report: ObservationTextureReport,
     /// Owned explicit view shared by these ordered frames.
     pub view: ObservationView,
     /// Owned requested parameter maps in input order, including duplicates.
@@ -186,6 +182,8 @@ pub struct PreviewFrame {
 
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct PreviewBatch {
+    /// Verified texture content for a View; None for CPU-only sampling.
+    pub texture_report: Option<ObservationTextureReport>,
     /// Explicit image view when GPU observation was requested; None keeps CPU-only behavior.
     pub view: Option<ObservationView>,
     /// Owned geometric query descriptors aligned with every frame.spatial slot.

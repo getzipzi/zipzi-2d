@@ -20,6 +20,7 @@ use uuid::Uuid;
 
 // Include the domain files in this module to retain type paths and wire signatures.
 include!("runtime/limits_context.rs");
+include!("runtime/observation_textures.rs");
 include!("runtime/identity.rs");
 include!("runtime/snapshots.rs");
 include!("runtime/sampling_preview.rs");

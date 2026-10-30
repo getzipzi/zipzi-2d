@@ -52,12 +52,14 @@ measure_addresspatch measure_addressselector measure_capabilitydomain
 measure_collectionquery measure_deletionsection measure_meshbindingoperation
 measure_modelingcommand measure_modelingintent measure_modelingquery
 measure_parameteroperation measure_previewcommand measure_projectrequest measure_spatialquery
+measure_observationview
 read_addresspatch read_addressselector read_capabilitydomain read_collectionquery
 read_deletionsection read_geometrychecks read_meshbindingoperation read_modelingcommand
 read_modelingintent read_modelingquery read_objectkind_name read_observationview
 read_parameteroperation read_previewcommand read_projectrequest read_spatialquery
 write_capabilities write_deletionpage write_deletionsummary write_editorcontext
 write_manualmeshtransferreport write_meshbinding write_modelingsamples write_observationbatch
+write_observationestimate
 write_ownedmodelingrecords write_parameter write_previewbatch write_previewstate
 write_projectreport write_spatialsamples
 '''.split())
@@ -144,7 +146,7 @@ DOMAIN_MEMBERS = {
         'mesh': 'MeshSnapshot',
         'commands': 'ModelingCommand PlanIntent PlanSnapshot',
         'sampling': 'ModelingSampleData',
-        'observation': 'ObservationBatch ObservationImage ObservationView ObservedBounds ObservedTexture',
+        'observation': 'ObservationBatch ObservationImage ObservationView ObservedBounds ObservationTexturePolicy ObservationTextureSize ObservationContentIdentity ObservationTextureSource ObservationTextureTarget ObservationTexturePlan ObservationTexturePlanning ObservationTextureReport ObservationTextureReportEntry ObservationEstimate ObservationEstimateIssue',
         'preview': 'PreviewBatch PreviewCommand PreviewFrame PreviewState',
     },
     'zipzi_contract::scene_reference': {'scene': 'SceneReference'},

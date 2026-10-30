@@ -75,8 +75,8 @@ class Preview(Owned):
             view=view_input(view)
         targets=tuple(times)
         import math
-        if not targets or len(targets)>64 or any(isinstance(t,bool) or not isinstance(t,(float,int)) or not math.isfinite(t) or not 0<=t<=1_000_000/60 for t in targets):
-            raise ValueError("Expected 1..64 finite nonnegative SDK sample times")
+        if not targets or view is None and len(targets)>64 or any(isinstance(t,bool) or not isinstance(t,(float,int)) or not math.isfinite(t) or not 0<=t<=1_000_000/60 for t in targets):
+            raise ValueError("Expected finite nonnegative SDK sample times; CPU-only batches require 1..64 targets")
         if type(geometry) is not bool:raise TypeError("Expected geometry bool")
         def decode(raw: object) -> Snapshot[m.PreviewBatch]:
             value=record(raw)
@@ -87,9 +87,10 @@ class Preview(Owned):
             lambda owner:self._backend.sample_preview(self._token,targets,geometry,incremental,selected,view,owner),"preview",decode)
 
     def sample(self, times: Sequence[float], *, geometry: bool = True, queries: Sequence[m.SpatialQuery] = (), view: m.ObservationView | None = None) -> Job[Snapshot[m.PreviewBatch]]:
-        """Submit 1..64 canonical seeks in target order; wait for a frozen-source batch.
+        """Submit canonical seeks in target order; wait for a frozen-source batch.
 
-        Duplicates/backward times are retained. CPU geometry is optional.
+        View batches use the host observation frame limit; CPU-only batches allow
+        1..64 frames. Duplicates/backward times are retained. CPU geometry is optional.
         view requests GPU RGBA/PNG from each exact state using once-resolved batch
         textures and applies SDK Model opacity. Missing devices fail explicitly;
         image/capture failure may retain completed seeks. No view keeps CPU-only work.
@@ -101,6 +102,27 @@ class Preview(Owned):
         result slot. Cancellation never changes authored content or another view.
         """
         return self._sample(times,geometry,False,queries,view)
+
+    def estimate_observation(self, times: Sequence[float], *, view: m.ObservationView, geometry: bool = True, queries: Sequence[m.SpatialQuery] = ()) -> m.ObservationEstimate:
+        """Estimate frozen-source observation using metadata and current controls.
+
+        This synchronous read does not replay, advance the clock/sequence, decode
+        images, initialize a device or reserve a Job. Busy Previews refuse it.
+        The result reports static feasibility and current availability separately;
+        it does not reserve capacity for a later sample/seek/advance_to.
+        """
+        self._check(self._backend)
+        from ._observation import view_input
+        from ._spatial import inputs
+        from ._generated.codecs.observation import read_ObservationEstimate
+        import math
+        targets=tuple(times);selected=inputs(queries);view=view_input(view)
+        if not targets or any(isinstance(t,bool) or not isinstance(t,(float,int)) or not math.isfinite(t) or not 0<=t<=1_000_000/60 for t in targets):
+            raise ValueError("Expected nonempty finite nonnegative SDK sample times")
+        if type(geometry) is not bool:raise TypeError("Expected geometry bool")
+        def decode(raw:object)->m.ObservationEstimate:
+            return raw if isinstance(raw,m.ObservationEstimate) else read_ObservationEstimate(raw)
+        return self._request("estimate_observation",lambda:self._backend.estimate_preview_observation(self._token,targets,view,geometry,selected,self),decode)
 
     def seek(self, time: float, *, geometry: bool = True, queries: Sequence[m.SpatialQuery] = (), view: m.ObservationView | None = None) -> Job[Snapshot[m.PreviewBatch]]:
         """Submit one canonical seek and return a one-frame batch Job; an interrupted SDK seek preserves its prior state; late cancellation reports the completed outcome."""

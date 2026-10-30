@@ -183,11 +183,18 @@ Arguments have the semantics of meshes.SetPositions; inspect that operation and 
 Immutable typed value. See field semantics and the linked workflow.
 
 
+## zipzi.Edit.modeling.estimate_observation
+
+`(poses: Sequence[Mapping[str, float]], view: observation.View) -> observation.Estimate`
+
+Estimate an observation from metadata and return its exact Source, texture plan, logical bytes, workspace, static feasibility and current Runtime capacity. No images are decoded, no GPU is initialized and no Job or plan handle is reserved. Source freezes document/candidate identity, not external file bytes; declared identities remain unverified until capture. Use estimate.source as observe(expected=...) to reject document changes. Host and resource conditions are checked again on submission and execution.
+
+
 ## zipzi.Edit.modeling.observe
 
 `(poses: Sequence[Mapping[str, float]], view: observation.View, *, expected: Source | None=None) -> '_lifecycle.Job[Snapshot[observation.Batch]]'`
 
-Render 1..64 explicit parameter poses from an exact frozen Source. The explicit Y-up model ROI preserves aspect ratio; frames contain GPU RGBA8, Rust-encoded PNG, view mapping, actual adapter and texture hashes. view.quality includes per-mesh geometry and sampled source-alpha coverage; view.topology enables wireframe, persistent vertex IDs, constraints and strain overlays with the same frozen mapping. Rendering resolves one immutable texture set per batch, never publishes history and does not abort an Edit on failure. Device initialization occurs on the worker; missing GPU produces a structured failure, independently of CPU operations. Runtime count/byte/device budgets apply. Recover a lost submission or result through its original Call; wait/close the Job to release its result slot.
+Render explicit parameter poses within host observation limits from an exact frozen Source. The explicit Y-up model ROI preserves aspect ratio; frames contain GPU RGBA8, Rust-encoded PNG, view mapping, actual adapter and texture hashes. view.quality includes per-mesh geometry and sampled source-alpha coverage; view.topology enables wireframe, persistent vertex IDs, constraints and strain overlays with the same frozen mapping. Rendering resolves one immutable texture set per batch, never publishes history and does not abort an Edit on failure. Device initialization occurs on the worker; missing GPU produces a structured failure, independently of CPU operations. Runtime count/byte/device budgets apply. Recover a lost submission or result through its original Call; wait/close the Job to release its result slot.
 
 
 ## zipzi.Edit.modeling.records

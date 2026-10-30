@@ -22,7 +22,7 @@ pub use scene::{
 pub use validation::validate_frame;
 
 /// Default attachment budget for render planning.
-pub const OFFSCREEN_BUDGET_BYTES: i64 = 512 * 1024 * 1024;
+pub const OFFSCREEN_BUDGET_BYTES: i64 = zipzi_core::OFFSCREEN_BUDGET_BYTES;
 
 /// A 2D affine transform in target-space coordinates.
 #[derive(Clone, Copy, Debug, PartialEq)]

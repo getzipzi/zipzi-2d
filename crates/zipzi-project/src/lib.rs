@@ -52,9 +52,9 @@ pub use pose::{
 pub use resources::{content_sha256, decode_png, is_valid_asset_path, AssetData, TextureData};
 pub use store::{
     prepare_image_content, prepare_image_content_with_budget, prepare_png_content,
-    prepare_project_image, project_identity, project_manifest, read_project_asset, DocumentSession,
-    DocumentSnapshot, DocumentStore, ImageResourceStore, PreparedImageContent, ProjectResult,
-    ResourceDiagnostic,
+    prepare_project_image, project_identity, project_manifest, read_project_asset,
+    read_project_texture_bounded, DocumentSession, DocumentSnapshot, DocumentStore,
+    ImageResourceStore, PreparedImageContent, ProjectResult, ResourceDiagnostic, VerifiedTexture,
 };
 pub use transfer::{resolve_model3_entry, TransferFormat, TransferSnapshot};
 pub use zipzi_cmo3::{

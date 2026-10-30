@@ -12,17 +12,75 @@ Canonical observation modeling values.
 
 ## zipzi.modeling.observation.ObservationBatch
 
-`(*, view: ObservationView, requested: tuple[_Mapping[str, float], ...], frames: tuple[ObservationImage, ...])`
+`(*, texture_report: ObservationTextureReport, view: ObservationView, requested: tuple[_Mapping[str, float], ...], frames: tuple[ObservationImage, ...])`
 
 Immutable owned ObservationBatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
+- `texture_report`: Verified once-per-batch source and rendering texture content.
 - `view`: Owned explicit view shared by these ordered frames.
 - `requested`: Owned requested parameter maps in input order, including duplicates.
 - `frames`: Rendered frames in requested pose order, sharing one resolved texture acquisition.
 
+## zipzi.modeling.observation.ObservationContentIdentity
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.observation.ObservationContentIdentityPngSha256
+
+`(*, hash: str)`
+
+Immutable owned ObservationContentIdentityPngSha256 value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `hash`: SHA256 of encoded source PNG bytes; verification is a separate state.
+
+## zipzi.modeling.observation.ObservationContentIdentityRgba8Sha256
+
+`(*, hash: str)`
+
+Immutable owned ObservationContentIdentityRgba8Sha256 value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `hash`: Domain-separated hash including dimensions and pixel conventions.
+
+## zipzi.modeling.observation.ObservationEstimate
+
+`(*, source: _Source, preview_id: int | None = None, sequence: int | None = None, texture_planning: ObservationTexturePlanning, texture_workspace_bytes: int, gpu_working_set_bytes: int, output_bytes: int, task_bytes: int, static_feasible: bool, runtime_available: bool, gpu_supported: bool, device_max_texture_dimension: int | None = None, device_verified: bool, source_identities_verified: bool, issues: tuple[ObservationEstimateIssue, ...])`
+
+Immutable owned ObservationEstimate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `source`: Formal/candidate snapshot identity; external file bytes are not frozen.
+- `preview_id`: Preview serial when estimated through a Preview, otherwise None.
+- `sequence`: Preview operation ordinal observed without advancing playback.
+- `texture_planning`: Deterministic metadata plan or an insufficient-base-budget diagnostic.
+- `texture_workspace_bytes`: Conservative peak for one bounded decode/downsample phase, in bytes.
+- `gpu_working_set_bytes`: Conservative logical GPU texture, mipmap and rendering working set.
+- `output_bytes`: Conservative RGBA plus PNG result bytes for all frames.
+- `task_bytes`: Conservative total task reservation, not measured RSS or GPU allocation.
+- `static_feasible`: Whether metadata and host policy permit execution, excluding current availability.
+- `runtime_available`: Whether current Runtime byte, frozen-source and Job capacity can admit this request.
+- `gpu_supported`: Whether this host was compiled with GPU observation support.
+- `device_max_texture_dimension`: None until the executing worker has a device; querying never initializes one.
+- `device_verified`: Whether actual device checks were performed for this estimate; currently false.
+- `source_identities_verified`: Declared identities in texture_planning are not verified against image bytes.
+- `issues`: Static or availability causes; a successful estimate is not a reservation.
+
+## zipzi.modeling.observation.ObservationEstimateIssue
+
+`(*, code: str, message: str, asset_id: str | None = None, requested: int | None = None, limit: int | None = None)`
+
+Immutable owned ObservationEstimateIssue value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `code`: Structured feasibility category, using observation execution error codes.
+- `message`: Human-readable cause; estimates do not silently change the request.
+- `asset_id`: Asset responsible for this diagnostic, if applicable.
+- `requested`: Requested or minimally necessary logical byte/count value, if known.
+- `limit`: Applicable host or Runtime bound, if any.
+
 ## zipzi.modeling.observation.ObservationImage
 
-`(*, width: int, height: int, rgba: _Bytes, png: _Bytes, document_id: str, evaluation_revision: int, capture_id: str, scene_digest: str, render_digest: str, input_sha256: str, adapter_name: str, adapter_backend: str, parameters: _Mapping[str, float], visible_roi: tuple[float, float, float, float], scale: float, offset: tuple[float, float], textures: tuple[ObservedTexture, ...], drawable_bounds: tuple[ObservedBounds, ...], quality: tuple[MeshQuality, ...])`
+`(*, width: int, height: int, rgba: _Bytes, png: _Bytes, document_id: str, evaluation_revision: int, capture_id: str, scene_digest: str, render_digest: str, input_sha256: str, adapter_name: str, adapter_backend: str, parameters: _Mapping[str, float], visible_roi: tuple[float, float, float, float], scale: float, offset: tuple[float, float], drawable_bounds: tuple[ObservedBounds, ...], quality: tuple[MeshQuality, ...])`
 
 Immutable owned ObservationImage value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -42,20 +100,145 @@ Immutable owned ObservationImage value. Construction owns declared collections; 
 - `visible_roi`: Actual viewport model extent [min_x,min_y,max_x,max_y], including aspect-ratio expansion.
 - `scale`: Model-to-image scale. Image X=x*scale+offset[0], Y=-y*scale+offset[1].
 - `offset`: Translation in top-left image pixels, parallel to the documented scale formula.
-- `textures`: Source texture identities and exact content hashes shared across this batch.
 - `drawable_bounds`: Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.
 - `quality`: Mesh quality in evaluated drawable order when View.quality is true; empty otherwise.
 Texture coverage uses alpha >= 8, pixel centers, at most a 256x256 grid, ignoring masks,
 filtering and UV repeat outside [0,1]. A step above 1 denotes approximate coverage.
 
+## zipzi.modeling.observation.ObservationTexturePlan
+
+`(*, policy: ObservationTexturePolicy, effective_max_rgba_bytes: int, longest_edge_limit: int | None = None, source_rgba_bytes: int, render_rgba_bytes: int, estimated_mipmap_bytes: int, resized_count: int, planning_version: int, mipmap_version: int, textures: tuple[ObservationTextureTarget, ...])`
+
+Immutable owned ObservationTexturePlan value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `policy`: Requested policy; equivalent actual pixels may have different policies.
+- `effective_max_rgba_bytes`: Requested FitBudget bound or the host base RGBA limit for Original.
+- `longest_edge_limit`: Maximum permitted longest edge; None only for an empty reference set.
+- `source_rgba_bytes`: Logical RGBA bytes of referenced source images, excluding unused assets.
+- `render_rgba_bytes`: Logical RGBA bytes of planned base levels.
+- `estimated_mipmap_bytes`: Sum of every non-base mip level, halving each axis down to 1x1.
+- `resized_count`: Number of assets with changed base dimensions.
+- `planning_version`: Version of reference collection, integer scaling and search semantics.
+- `mipmap_version`: Version of mip dimensions and byte-count semantics.
+- `textures`: Complete reference set and targets sorted by asset ID.
+
+## zipzi.modeling.observation.ObservationTexturePlanning
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.observation.ObservationTexturePlanningInsufficientBudget
+
+`(*, policy: ObservationTexturePolicy, effective_max_rgba_bytes: int, source_rgba_bytes: int, minimum_required_rgba_bytes: int, textures: tuple[ObservationTextureSource, ...])`
+
+Immutable owned ObservationTexturePlanningInsufficientBudget value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `policy`: Requested policy.
+- `effective_max_rgba_bytes`: Effective base RGBA bound.
+- `source_rgba_bytes`: Total logical source bytes, without decoding.
+- `minimum_required_rgba_bytes`: Source bytes for Original, or four bytes per texture for FitBudget.
+- `textures`: Source metadata in asset ID order; no target plan exists.
+
+## zipzi.modeling.observation.ObservationTexturePlanningReady
+
+`(*, plan: ObservationTexturePlan)`
+
+Immutable owned ObservationTexturePlanningReady value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `plan`: Feasible CPU dimensions; device limits remain unverified.
+
+## zipzi.modeling.observation.ObservationTexturePolicy
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.observation.ObservationTexturePolicyFitBudget
+
+`(*, max_rgba_bytes: int)`
+
+Immutable owned ObservationTexturePolicyFitBudget value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `max_rgba_bytes`: Positive integer no greater than the host's base RGBA limit.
+
+## zipzi.modeling.observation.ObservationTexturePolicyOriginal
+
+`()`
+
+Immutable owned ObservationTexturePolicyOriginal value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.observation.ObservationTextureReport
+
+`(*, policy: ObservationTexturePolicy, effective_max_rgba_bytes: int, longest_edge_limit: int | None = None, source_rgba_bytes: int, render_rgba_bytes: int, estimated_mipmap_bytes: int, resized_count: int, filter: str, algorithm_version: int, planning_version: int, mipmap_version: int, textures: tuple[ObservationTextureReportEntry, ...])`
+
+Immutable owned ObservationTextureReport value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `policy`: Requested texture policy; not part of rendering-content digests.
+- `effective_max_rgba_bytes`: Effective host or caller base RGBA bound, in logical bytes.
+- `longest_edge_limit`: Common planned integer longest-edge bound; None for an empty set.
+- `source_rgba_bytes`: Logical RGBA source bytes of the referenced asset set.
+- `render_rgba_bytes`: Actual logical base RGBA bytes; excludes mipmaps.
+- `estimated_mipmap_bytes`: Exact logical non-base mip bytes, not driver allocation measurements.
+- `resized_count`: Number of assets whose base dimensions changed.
+- `filter`: Fixed straight RGBA alpha-weighted area-average filter name.
+- `algorithm_version`: Area filter and rounding version.
+- `planning_version`: Reference collection and integer planning version.
+- `mipmap_version`: Mipmap dimension and filtering version.
+- `textures`: Verified source and derived content, in asset ID order, once per batch.
+
+## zipzi.modeling.observation.ObservationTextureReportEntry
+
+`(*, asset_id: str, source_size: ObservationTextureSize, render_size: ObservationTextureSize, source_content_identity: ObservationContentIdentity, render_rgba_hash: str)`
+
+Immutable owned ObservationTextureReportEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `asset_id`: Stable image asset ID; distinct IDs count separately even for equal pixels.
+- `source_size`: Verified source pixel dimensions before any observation downsampling.
+- `render_size`: Actual straight RGBA8 rendering base dimensions.
+- `source_content_identity`: Verified PNG-byte or domain-separated source-pixel identity.
+- `render_rgba_hash`: Domain-separated hash of actual top-left row-major straight RGBA8 base pixels.
+
+## zipzi.modeling.observation.ObservationTextureSize
+
+`(*, width: int, height: int)`
+
+Immutable owned ObservationTextureSize value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `width`: Width in pixels.
+- `height`: Height in pixels.
+
+## zipzi.modeling.observation.ObservationTextureSource
+
+`(*, asset_id: str, source_size: ObservationTextureSize, source_content_identity: ObservationContentIdentity | None = None)`
+
+Immutable owned ObservationTextureSource value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `asset_id`: Stable image asset ID, counted once across all batch frames.
+- `source_size`: Declared source dimensions, without opening or decoding the image.
+- `source_content_identity`: Declared representation-specific identity, if available in metadata.
+
+## zipzi.modeling.observation.ObservationTextureTarget
+
+`(*, source: ObservationTextureSource, render_size: ObservationTextureSize)`
+
+Immutable owned ObservationTextureTarget value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `source`: Declared source metadata; the executor must validate it again.
+- `render_size`: Planned base-level rendering dimensions.
+
 ## zipzi.modeling.observation.ObservationView
 
-`(*, width: int, height: int, roi: tuple[float, float, float, float], padding_model: float = 0.0, topology: TopologyOverlay | None = None, quality: bool = False)`
+`(*, texture_policy: ObservationTexturePolicy = <factory>, width: int, height: int, roi: tuple[float, float, float, float], padding_model: float = 0.0, topology: TopologyOverlay | None = None, quality: bool = False)`
 
 Immutable owned ObservationView value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
-- `width`: Output width in pixels, 1..4096, subject to device and Runtime budgets.
-- `height`: Output height in pixels, 1..4096, subject to device and Runtime budgets.
+- `texture_policy`: Explicit texture policy; Original preserves source pixels and dimensions.
+- `width`: Output width in pixels, positive and subject to host/device limits (host default 4096).
+- `height`: Output height in pixels, positive and subject to host/device limits (host default 4096).
 - `roi`: Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.
 - `padding_model`: Nonnegative padding around the ROI in model units; aspect ratio is preserved.
 - `topology`: Optional topology overlay in the same frozen Source and ROI mapping. It ignores
@@ -72,15 +255,6 @@ Immutable owned ObservedBounds value. Construction owns declared collections; re
 - `id`: Stable authoring drawable UUID.
 - `visible`: Evaluated visibility; geometric bounds do not prove unoccluded painted pixels.
 - `bounds`: Clipped image bounds [min_x,min_y,max_x,max_y], exclusive maximum; None if empty.
-
-## zipzi.modeling.observation.ObservedTexture
-
-`(*, asset_id: str, sha256: str)`
-
-Immutable owned ObservedTexture value. Construction owns declared collections; reading fields, repr and summary performs no IO.
-
-- `asset_id`: Stable asset UUID resolved from the frozen authoring source.
-- `sha256`: SHA256 of the exact immutable texture content uploaded by this capture.
 
 ## zipzi.modeling.observation.TextureCoverage
 

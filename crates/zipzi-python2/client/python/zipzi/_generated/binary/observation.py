@@ -10,8 +10,33 @@ from .support import Reader
 def _read_texturecoverage(r: Reader) -> m.TextureCoverage:
     return m.TextureCoverage(alpha_threshold=integer(r.scalar('B')), pixel_step=integer(r.scalar('I')), sampled_pixels=integer(r.scalar('Q')), covered_pixels=integer(r.scalar('Q')), transparent_covered_pixels=integer(r.scalar('Q')), opaque_pixels=integer(r.scalar('Q')), uncovered_opaque_pixels=integer(r.scalar('Q')), transparent_coverage_fraction=(number(r.scalar('d')) if r.optional() else None), uncovered_opaque_fraction=(number(r.scalar('d')) if r.optional() else None), out_of_bounds_triangles=integer(r.scalar('Q')))
 
+def _read_observationtexturereport(r: Reader) -> m.ObservationTextureReport:
+    return m.ObservationTextureReport(policy=_read_observationtexturepolicy(r), effective_max_rgba_bytes=integer(r.scalar('Q')), longest_edge_limit=(integer(r.scalar('I')) if r.optional() else None), source_rgba_bytes=integer(r.scalar('Q')), render_rgba_bytes=integer(r.scalar('Q')), estimated_mipmap_bytes=integer(r.scalar('Q')), resized_count=integer(r.scalar('Q')), filter=r.text(), algorithm_version=integer(r.scalar('I')), planning_version=integer(r.scalar('I')), mipmap_version=integer(r.scalar('I')), textures=tuple(_read_observationtexturereportentry(r) for _ in range(r.count())))
+
+def _read_observationtexturepolicy(r: Reader) -> m.ObservationTexturePolicy:
+    tag=r.u32()
+    if tag==0:
+        return m.ObservationTexturePolicyOriginal()
+    elif tag==1:
+        return m.ObservationTexturePolicyFitBudget(max_rgba_bytes=integer(r.scalar('Q')))
+    raise ValueError("Unknown binary ObservationTexturePolicy variant")
+
+def _read_observationtexturereportentry(r: Reader) -> m.ObservationTextureReportEntry:
+    return m.ObservationTextureReportEntry(asset_id=r.text(), source_size=_read_observationtexturesize(r), render_size=_read_observationtexturesize(r), source_content_identity=_read_observationcontentidentity(r), render_rgba_hash=r.text())
+
+def _read_observationtexturesize(r: Reader) -> m.ObservationTextureSize:
+    return m.ObservationTextureSize(width=integer(r.scalar('I')), height=integer(r.scalar('I')))
+
+def _read_observationcontentidentity(r: Reader) -> m.ObservationContentIdentity:
+    tag=r.u32()
+    if tag==0:
+        return m.ObservationContentIdentityPngSha256(hash=r.text())
+    elif tag==1:
+        return m.ObservationContentIdentityRgba8Sha256(hash=r.text())
+    raise ValueError("Unknown binary ObservationContentIdentity variant")
+
 def _read_observationview(r: Reader) -> m.ObservationView:
-    return m.ObservationView(width=integer(r.scalar('I')), height=integer(r.scalar('I')), roi=cast('tuple[float, float, float, float]', tuple(v[0] for v in r.numeric('f', 4))), padding_model=number(r.scalar('f')), topology=(_read_topologyoverlay(r) if r.optional() else None), quality=r.boolean())
+    return m.ObservationView(texture_policy=_read_observationtexturepolicy(r), width=integer(r.scalar('I')), height=integer(r.scalar('I')), roi=cast('tuple[float, float, float, float]', tuple(v[0] for v in r.numeric('f', 4))), padding_model=number(r.scalar('f')), topology=(_read_topologyoverlay(r) if r.optional() else None), quality=r.boolean())
 
 @cache
 def _dependencies__read_topologyoverlay():
@@ -32,22 +57,19 @@ def _dependencies__read_observationimage():
 
 def _read_observationimage(r: Reader) -> m.ObservationImage:
     _read_meshquality, = _dependencies__read_observationimage()
-    return m.ObservationImage(width=integer(r.scalar('I')), height=integer(r.scalar('I')), rgba=r.bytes(), png=r.bytes(), document_id=r.text(), evaluation_revision=integer(r.scalar('Q')), capture_id=r.text(), scene_digest=r.text(), render_digest=r.text(), input_sha256=r.text(), adapter_name=r.text(), adapter_backend=r.text(), parameters={r.text(): number(r.scalar('f')) for _ in range(r.count())}, visible_roi=cast('tuple[float, float, float, float]', tuple(v[0] for v in r.numeric('f', 4))), scale=number(r.scalar('f')), offset=cast('tuple[float, float]', tuple(v[0] for v in r.numeric('f', 2))), textures=tuple(_read_observedtexture(r) for _ in range(r.count())), drawable_bounds=tuple(_read_observedbounds(r) for _ in range(r.count())), quality=tuple(_read_meshquality(r) for _ in range(r.count())))
-
-def _read_observedtexture(r: Reader) -> m.ObservedTexture:
-    return m.ObservedTexture(asset_id=r.text(), sha256=r.text())
+    return m.ObservationImage(width=integer(r.scalar('I')), height=integer(r.scalar('I')), rgba=r.bytes(), png=r.bytes(), document_id=r.text(), evaluation_revision=integer(r.scalar('Q')), capture_id=r.text(), scene_digest=r.text(), render_digest=r.text(), input_sha256=r.text(), adapter_name=r.text(), adapter_backend=r.text(), parameters={r.text(): number(r.scalar('f')) for _ in range(r.count())}, visible_roi=cast('tuple[float, float, float, float]', tuple(v[0] for v in r.numeric('f', 4))), scale=number(r.scalar('f')), offset=cast('tuple[float, float]', tuple(v[0] for v in r.numeric('f', 2))), drawable_bounds=tuple(_read_observedbounds(r) for _ in range(r.count())), quality=tuple(_read_meshquality(r) for _ in range(r.count())))
 
 def _read_observedbounds(r: Reader) -> m.ObservedBounds:
     return m.ObservedBounds(id=r.text(), visible=r.boolean(), bounds=(cast('tuple[int, int, int, int]', tuple(v[0] for v in r.numeric('I', 4))) if r.optional() else None))
 
 def _read_observationbatch(r: Reader) -> m.ObservationBatch:
-    return m.ObservationBatch(view=_read_observationview(r), requested=tuple({r.text(): number(r.scalar('f')) for _ in range(r.count())} for _ in range(r.count())), frames=tuple(_read_observationimage(r) for _ in range(r.count())))
+    return m.ObservationBatch(texture_report=_read_observationtexturereport(r), view=_read_observationview(r), requested=tuple({r.text(): number(r.scalar('f')) for _ in range(r.count())} for _ in range(r.count())), frames=tuple(_read_observationimage(r) for _ in range(r.count())))
 
 def decode_observation(value: bytes, signature: str) -> m.ObservationBatch:
-    if signature!='cbbc2519950ba423722739d22a6944d0': raise ValueError("Binary observation contract differs")
+    if signature!='1ae17387c3769738f50f4bba4d24ab7b': raise ValueError("Binary observation contract differs")
     r=Reader(value)
     result=_read_observationbatch(r)
     r.finish()
     return result
 
-__all__ = ['_read_observationbatch', '_read_observationimage', '_read_observationview', '_read_observedbounds', '_read_observedtexture', '_read_texturecoverage', '_read_topologyoverlay', '_read_topologythresholds', 'decode_observation']
+__all__ = ['_read_observationbatch', '_read_observationcontentidentity', '_read_observationimage', '_read_observationtexturepolicy', '_read_observationtexturereport', '_read_observationtexturereportentry', '_read_observationtexturesize', '_read_observationview', '_read_observedbounds', '_read_texturecoverage', '_read_topologyoverlay', '_read_topologythresholds', 'decode_observation']

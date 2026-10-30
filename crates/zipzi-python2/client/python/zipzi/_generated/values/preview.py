@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from .sampling import DrawableFrame
     from .motion import MotionSnapshot
     from .observation import ObservationImage
+    from .observation import ObservationTextureReport
     from .observation import ObservationView
     from .spatial import SpatialQuery
     from .spatial import SpatialResult
@@ -87,7 +88,8 @@ PreviewState.__module__ = "zipzi.modeling.preview"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PreviewBatch(CompactValue):
-    'Immutable owned PreviewBatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nview: Explicit image view when GPU observation was requested; None keeps CPU-only behavior.\nqueries: Owned geometric query descriptors aligned with every frame.spatial slot.\nsequence: Accepted sample request ordinal shared by these ordered frames.\nframes: Owned frames in requested target order, retaining duplicate and backward targets.'
+    'Immutable owned PreviewBatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntexture_report: Verified texture content for a View; None for CPU-only sampling.\nview: Explicit image view when GPU observation was requested; None keeps CPU-only behavior.\nqueries: Owned geometric query descriptors aligned with every frame.spatial slot.\nsequence: Accepted sample request ordinal shared by these ordered frames.\nframes: Owned frames in requested target order, retaining duplicate and backward targets.'
+    texture_report: (ObservationTextureReport | None) = None
     view: (ObservationView | None) = None
     queries: tuple[SpatialQuery, ...]
     sequence: int

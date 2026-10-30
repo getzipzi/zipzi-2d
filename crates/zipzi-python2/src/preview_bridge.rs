@@ -27,6 +27,39 @@ fn info<'py>(
 }
 #[pymethods]
 impl NativeRuntime {
+    fn estimate_preview_observation(
+        &self,
+        py: Python<'_>,
+        preview: &PreviewToken,
+        times: &Bound<'_, PyAny>,
+        view: &Bound<'_, PyAny>,
+        geometry: bool,
+        queries: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyDict>> {
+        let _lease = input_lease!(
+            self,
+            py,
+            times
+                .len()?
+                .saturating_mul(16)
+                .saturating_add(spatial_bridge::measure_queries(queries)?)
+                .saturating_add(generated::modeling::measure_observationview(view)?),
+            "preview.estimate",
+            None
+        );
+        let times = times.extract::<Vec<f32>>()?;
+        let view = generated::modeling::read_observationview(view)?;
+        let queries = spatial_bridge::read_queries(queries)?;
+        let (client, id) = (self.client, preview.id);
+        let result = py.detach(|| {
+            self.host.call(move |rt| {
+                rt.estimate_preview_observation(client, id, times, view, geometry, queries)
+            })
+        });
+        reply(py, result, "preview.estimate", |value| {
+            Ok(generated::modeling::write_observationestimate(py, &value)?.into_bound(py))
+        })
+    }
     fn create_preview(
         &self,
         py: Python<'_>,
@@ -94,7 +127,12 @@ impl NativeRuntime {
             times
                 .len()?
                 .saturating_mul(16)
-                .saturating_add(spatial_bridge::measure_queries(queries)?),
+                .saturating_add(spatial_bridge::measure_queries(queries)?)
+                .saturating_add(
+                    view.map(generated::modeling::measure_observationview)
+                        .transpose()?
+                        .unwrap_or(0)
+                ),
             "preview.sample",
             None
         );

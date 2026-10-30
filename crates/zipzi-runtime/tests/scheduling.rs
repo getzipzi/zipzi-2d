@@ -252,6 +252,7 @@ fn gpu_admission_survives_yields_and_cleanup_without_blocking_cpu_work() {
     let (mut rt, a, s) = fixture(2);
     let b = rt.register_client().unwrap();
     let view = observation::ObservationView {
+        texture_policy: Default::default(),
         width: 8,
         height: 8,
         roi: [0., 0., 1., 1.],

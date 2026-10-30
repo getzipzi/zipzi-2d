@@ -249,3 +249,13 @@ def deletion_review(session: zipzi.Session, mesh_id: str) -> modeling.deletion.D
         assert_type(page, modeling.deletion.DeletionPage)
         assert_type(page.rows, tuple[modeling.deletion.DeletionRow, ...])
         return page
+
+def observation_budget_estimate(session: zipzi.Session, edit: zipzi.Edit) -> observation.Estimate:
+    view=observation.View(width=512,height=512,roi=(0.,0.,1.,1.),texture_policy=observation.FitBudget(max_rgba_bytes=128<<20))
+    estimate=session.modeling.estimate_observation(({},),view)
+    assert_type(estimate,observation.Estimate)
+    assert_type(edit.modeling.estimate_observation(({},),view),observation.Estimate)
+    assert_type(session.modeling.observe(({},),view,expected=estimate.source),zipzi.Job[zipzi.Snapshot[observation.Batch]])
+    with session.preview() as preview:
+        assert_type(preview.estimate_observation((0.,),view=view,geometry=False),observation.Estimate)
+    return estimate

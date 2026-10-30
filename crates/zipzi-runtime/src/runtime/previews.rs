@@ -24,6 +24,9 @@ pub(crate) struct PreviewSampling {
     incremental: bool,
     queries: Vec<zipzi_sdk::SpatialQuery>,
     view: Option<crate::observation::ObservationView>,
+    #[cfg_attr(not(feature = "gpu-observation"), allow(dead_code))]
+    observation: Option<crate::observation::ObservationWork>,
+    texture_report: Option<crate::observation::ObservationTextureReport>,
     initialized: bool,
     #[cfg(feature = "gpu-observation")]
     observer: Option<zipzi_observe::Observer>,
@@ -43,6 +46,7 @@ impl PreviewSampling {
         incremental: bool,
         queries: Vec<zipzi_sdk::SpatialQuery>,
         view: Option<crate::observation::ObservationView>,
+        observation: Option<crate::observation::ObservationWork>,
     ) -> Self {
         Self {
             preview_id,
@@ -53,6 +57,8 @@ impl PreviewSampling {
             incremental,
             queries,
             view,
+            observation,
+            texture_report: None,
             initialized: false,
             #[cfg(feature = "gpu-observation")]
             observer: None,
@@ -78,14 +84,6 @@ impl PreviewSampling {
             )?;
             if self.view.is_some() {
                 crate::observation::require_gpu_observation()?;
-            }
-            #[cfg(feature = "gpu-observation")]
-            {
-                self.observer = self
-                    .view
-                    .as_ref()
-                    .map(crate::observation::observer)
-                    .transpose()?;
             }
             self.initialized = true;
         }
@@ -150,8 +148,10 @@ impl PreviewSampling {
             }
         }
         Ok(Some(JobValue::Previewed(Arc::new(PreviewSampleBatch {
+            lease: Default::default(),
             source: source.source,
             samples: PreviewBatch {
+                texture_report: self.texture_report.take(),
                 view: self.view.clone(),
                 sequence: self.sequence,
                 frames: std::mem::take(&mut self.frames),
@@ -163,15 +163,24 @@ impl PreviewSampling {
     fn render_step(&mut self, control: &zipzi_sdk::ConversionControl) -> Result<bool> {
         let view = self.view.as_ref().expect("observation view");
         if self.captures.is_none() {
-            self.captures = Some(
-                zipzi_observe::ResolvedObservation::capture_many_with_control(
-                    std::mem::take(&mut self.inputs),
-                    control,
-                )
-                .map_err(crate::observation::error)?
-                .into(),
-            );
+            let observation = self
+                .observation
+                .as_ref()
+                .expect("admitted observation plan");
+            let resolved = zipzi_observe::ResolvedObservation::capture_many_with_plan(
+                std::mem::take(&mut self.inputs),
+                &observation.plan,
+                observation.limits,
+                view.quality,
+                control,
+            )
+            .map_err(crate::observation::error)?;
+            self.texture_report = Some(resolved[0].texture_report().clone());
+            self.captures = Some(resolved.into());
             return Ok(false);
+        }
+        if self.observer.is_none() {
+            self.observer = Some(crate::observation::observer(view)?);
         }
         let captures = self.captures.as_mut().unwrap();
         if let Some(capture) = captures.pop_front() {
@@ -376,6 +385,105 @@ impl Runtime {
     ) -> Result<JobId> {
         self.request_preview_frames(client, id, times, geometry, incremental, queries, None)
     }
+    fn preview_sampling_bytes(
+        &self,
+        entry: &PreviewEntry,
+        frames: usize,
+        geometry: bool,
+        queries: &[zipzi_sdk::SpatialQuery],
+    ) -> Result<(usize, usize, usize)> {
+        let motion_output = entry
+            .state
+            .try_lock()
+            .map_err(|_| RuntimeError::WorkerPanic("preview state unavailable".into()))?
+            .canonical_motion_output_bytes();
+        let retained_output = motion_output
+            .saturating_mul(2)
+            .max(entry.motion_output_bytes);
+        let output_growth = retained_output.saturating_sub(entry.motion_output_bytes);
+        let spatial = Self::spatial_bytes(entry.source.snapshot.document(), frames, queries)?;
+        let geometry_bytes = if geometry || !queries.is_empty() {
+            spatial
+        } else {
+            // Every frame retains a MotionSnapshot even without geometry.
+            // Bound its maps/IDs by the frozen document, plus one replay copy;
+            // canonical_motion_output_bytes only covers Motion-specific output.
+            entry
+                .source
+                .snapshot
+                .document()
+                .estimated_content_bytes()
+                .saturating_mul(4)
+                .saturating_add(4096)
+                .saturating_mul(frames.saturating_add(1))
+        };
+        let bytes = geometry_bytes
+            .saturating_add(
+                motion_output
+                    .saturating_mul(frames.saturating_add(1))
+                    .saturating_mul(4),
+            )
+            .saturating_add(
+                entry
+                    .schedule_entries
+                    .saturating_mul(1024)
+                    .saturating_mul(frames),
+            );
+        Ok((bytes, retained_output, output_growth))
+    }
+
+    pub fn estimate_preview_observation(
+        &self,
+        client: ClientId,
+        id: PreviewId,
+        times: Vec<f32>,
+        view: crate::ObservationView,
+        geometry: bool,
+        queries: Vec<zipzi_sdk::SpatialQuery>,
+    ) -> Result<crate::observation::ObservationEstimate> {
+        let entry = self.preview(client, id)?;
+        if times.is_empty()
+            || times
+                .iter()
+                .any(|t| !t.is_finite() || *t < 0.0 || *t > 1_000_000.0 / 60.0)
+        {
+            return Err(RuntimeError::Budget("preview sample targets"));
+        }
+        zipzi_sdk::validate_spatial_queries(
+            entry.source.snapshot.document(),
+            &queries,
+            &Default::default(),
+        )?;
+        let (extra, _, growth) =
+            self.preview_sampling_bytes(entry, times.len(), geometry, &queries)?;
+        let cost =
+            self.observation_cost(entry.source.snapshot.document(), times.len(), &view, |id| {
+                entry.source.snapshot.memory_image(id).is_some()
+            })?;
+        let mut estimate = self.observation_estimate_for(
+            client,
+            entry.source.snapshot.document(),
+            entry.source.source,
+            cost,
+            extra.saturating_add(growth),
+            Some((id.serial(), entry.sequence)),
+        );
+        if self.preview_bytes().saturating_add(growth) > self.limits.preview_bytes {
+            estimate.runtime_available = false;
+            estimate
+                .issues
+                .push(zipzi_contract::runtime::ObservationEstimateIssue {
+                    code: "RESOURCE_BUDGET_EXCEEDED".into(),
+                    message: "Preview retained motion output exceeds current Preview capacity"
+                        .into(),
+                    asset_id: None,
+                    requested: Some(self.preview_bytes().saturating_add(growth) as u64),
+                    limit: Some(self.limits.preview_bytes as u64),
+                });
+        }
+        Ok(estimate)
+    }
+
     pub fn request_preview_frames(
         &mut self,
         client: ClientId,
@@ -388,7 +496,7 @@ impl Runtime {
     ) -> Result<JobId> {
         self.check_job_slot(client)?;
         if times.is_empty()
-            || times.len() > 64
+            || times.len() > view.as_ref().map_or(64, |_| self.limits.observation_frames)
             || times
                 .iter()
                 .any(|t| !t.is_finite() || *t < 0.0 || *t > 1_000_000.0 / 60.0)
@@ -400,42 +508,35 @@ impl Runtime {
             .sequence
             .checked_add(1)
             .ok_or(RuntimeError::Budget("preview sequence"))?;
-        let motion_output = entry
-            .state
-            .try_lock()
-            .map_err(|_| RuntimeError::WorkerPanic("preview state unavailable".into()))?
-            .canonical_motion_output_bytes();
-        // Keep the live snapshot and fractional checkpoint charged after the
-        // Job is released. A failed/cancelled replay may retain completed state.
-        let retained_output = motion_output
-            .saturating_mul(2)
-            .max(entry.motion_output_bytes);
-        let output_growth = retained_output.saturating_sub(entry.motion_output_bytes);
+        let (extra_bytes, retained_output, output_growth) =
+            self.preview_sampling_bytes(entry, times.len(), geometry, &queries)?;
         if self.preview_bytes().saturating_add(output_growth) > self.limits.preview_bytes {
             return Err(RuntimeError::Budget("preview motion output bytes"));
         }
-        let bytes = Self::spatial_bytes(entry.source.snapshot.document(), times.len(), &queries)?
-            .saturating_add(if let Some(view) = &view {
-                Self::observation_bytes(entry.source.snapshot.document(), times.len(), view)?
-            } else {
-                0
-            })
-            // Output, transactional replay, observation captures and digest
-            // serialization can all own copies of the same Motion output strings.
-            .saturating_add(
-                motion_output
-                    .saturating_mul(times.len().saturating_add(1))
-                    .saturating_mul(4),
+        let (observation, observation_bytes) = if let Some(view) = &view {
+            let cost =
+                self.observation_cost(entry.source.snapshot.document(), times.len(), view, |id| {
+                    entry.source.snapshot.memory_image(id).is_some()
+                })?;
+            let plan = cost.require_plan()?.clone();
+            crate::observation::require_gpu_observation()?;
+            (
+                Some(crate::observation::ObservationWork {
+                    plan,
+                    limits: crate::observation::capture_limits(&self.limits),
+                }),
+                cost.task,
             )
-            .saturating_add(
-                entry
-                    .schedule_entries
-                    .saturating_mul(1024)
-                    .saturating_mul(times.len()),
-            );
+        } else {
+            (None, 0)
+        };
+        let bytes = extra_bytes.saturating_add(observation_bytes);
         let document = entry.source.snapshot.document().estimated_content_bytes();
         self.check_bytes(
-            bytes.saturating_add(document).saturating_add(output_growth),
+            bytes
+                .saturating_add(document)
+                .saturating_add(output_growth)
+                .saturating_add(512),
             0,
             document,
         )?;
@@ -450,6 +551,7 @@ impl Runtime {
             incremental,
             queries,
             view,
+            observation,
         };
         let job = self.queue_read(client, source, task, bytes, false)?;
         let entry = self.previews.get_mut(&id).unwrap();

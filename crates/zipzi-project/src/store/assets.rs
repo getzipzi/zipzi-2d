@@ -9,6 +9,9 @@ use std::{
 };
 use zipzi_core::{Document, ImageAsset, Status};
 
+mod texture;
+pub use texture::{read_project_texture_bounded, VerifiedTexture};
+
 pub fn read_project_asset(root: &Path, asset: &ImageAsset) -> Result<AssetData, Status> {
     read_project_asset_if_changed(root, asset, None).map(|data| data.unwrap())
 }

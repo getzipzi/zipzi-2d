@@ -39,6 +39,19 @@ pub(crate) fn write_runtimelimits<'py>(
     v: &zipzi_runtime::RuntimeLimits,
 ) -> PyResult<Bound<'py, PyDict>> {
     let d = PyDict::new(py);
+    d.set_item(
+        "observation_texture_rgba_bytes",
+        &v.observation_texture_rgba_bytes,
+    )?;
+    d.set_item("observation_output_bytes", &v.observation_output_bytes)?;
+    d.set_item("observation_frames", &v.observation_frames)?;
+    d.set_item("observation_max_dimension", &v.observation_max_dimension)?;
+    d.set_item("observation_encoded_bytes", &v.observation_encoded_bytes)?;
+    d.set_item(
+        "observation_workspace_bytes",
+        &v.observation_workspace_bytes,
+    )?;
+    d.set_item("observation_metadata_bytes", &v.observation_metadata_bytes)?;
     d.set_item("previews_per_client", &v.previews_per_client)?;
     d.set_item("preview_bytes", &v.preview_bytes)?;
     d.set_item("preview_schedule_entries", &v.preview_schedule_entries)?;

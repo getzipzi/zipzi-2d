@@ -308,6 +308,16 @@
     "zipzi_contract::runtime::ObservationBatch": {
       "fields": [
         {
+          "doc": "Verified once-per-batch source and rendering texture content.",
+          "name": "texture_report",
+          "rust_name": "texture_report",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::ObservationTextureReport"
+          },
+          "skip": false
+        },
+        {
           "doc": "Owned explicit view shared by these ordered frames.",
           "name": "view",
           "rust_name": "view",
@@ -348,6 +358,273 @@
       ],
       "kind": "serde_record",
       "name": "zipzi_contract::runtime::ObservationBatch",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::ObservationContentIdentity": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::runtime::ObservationContentIdentity",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "SHA256 of encoded source PNG bytes; verification is a separate state.",
+              "name": "hash",
+              "rust_name": "hash",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "png_sha256",
+          "rust_name": "PngSha256"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Domain-separated hash including dimensions and pixel conventions.",
+              "name": "hash",
+              "rust_name": "hash",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "rgba8_sha256",
+          "rust_name": "Rgba8Sha256"
+        }
+      ]
+    },
+    "zipzi_contract::runtime::ObservationEstimate": {
+      "fields": [
+        {
+          "doc": "Formal/candidate snapshot identity; external file bytes are not frozen.",
+          "name": "source",
+          "rust_name": "source",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::SourceRef",
+            "opaque": true
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Preview serial when estimated through a Preview, otherwise None.",
+          "name": "preview_id",
+          "rust_name": "preview_id",
+          "shape": {
+            "item": {
+              "kind": "u64"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Preview operation ordinal observed without advancing playback.",
+          "name": "sequence",
+          "rust_name": "sequence",
+          "shape": {
+            "item": {
+              "kind": "u64"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Deterministic metadata plan or an insufficient-base-budget diagnostic.",
+          "name": "texture_planning",
+          "rust_name": "texture_planning",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::ObservationTexturePlanning"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Conservative peak for one bounded decode/downsample phase, in bytes.",
+          "name": "texture_workspace_bytes",
+          "rust_name": "texture_workspace_bytes",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Conservative logical GPU texture, mipmap and rendering working set.",
+          "name": "gpu_working_set_bytes",
+          "rust_name": "gpu_working_set_bytes",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Conservative RGBA plus PNG result bytes for all frames.",
+          "name": "output_bytes",
+          "rust_name": "output_bytes",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Conservative total task reservation, not measured RSS or GPU allocation.",
+          "name": "task_bytes",
+          "rust_name": "task_bytes",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether metadata and host policy permit execution, excluding current availability.",
+          "name": "static_feasible",
+          "rust_name": "static_feasible",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether current Runtime byte, frozen-source and Job capacity can admit this request.",
+          "name": "runtime_available",
+          "rust_name": "runtime_available",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether this host was compiled with GPU observation support.",
+          "name": "gpu_supported",
+          "rust_name": "gpu_supported",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "None until the executing worker has a device; querying never initializes one.",
+          "name": "device_max_texture_dimension",
+          "rust_name": "device_max_texture_dimension",
+          "shape": {
+            "item": {
+              "kind": "u32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Whether actual device checks were performed for this estimate; currently false.",
+          "name": "device_verified",
+          "rust_name": "device_verified",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Declared identities in texture_planning are not verified against image bytes.",
+          "name": "source_identities_verified",
+          "rust_name": "source_identities_verified",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Static or availability causes; a successful estimate is not a reservation.",
+          "name": "issues",
+          "rust_name": "issues",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::runtime::ObservationEstimateIssue"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::ObservationEstimate",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::ObservationEstimateIssue": {
+      "fields": [
+        {
+          "doc": "Structured feasibility category, using observation execution error codes.",
+          "name": "code",
+          "rust_name": "code",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Human-readable cause; estimates do not silently change the request.",
+          "name": "message",
+          "rust_name": "message",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Asset responsible for this diagnostic, if applicable.",
+          "name": "asset_id",
+          "rust_name": "asset_id",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Requested or minimally necessary logical byte/count value, if known.",
+          "name": "requested",
+          "rust_name": "requested",
+          "shape": {
+            "item": {
+              "kind": "u64"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Applicable host or Runtime bound, if any.",
+          "name": "limit",
+          "rust_name": "limit",
+          "shape": {
+            "item": {
+              "kind": "u64"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::ObservationEstimateIssue",
       "transparent": false,
       "tuple": false
     },
@@ -515,19 +792,6 @@
           "skip": false
         },
         {
-          "doc": "Source texture identities and exact content hashes shared across this batch.",
-          "name": "textures",
-          "rust_name": "textures",
-          "shape": {
-            "item": {
-              "kind": "ref",
-              "name": "zipzi_contract::runtime::ObservedTexture"
-            },
-            "kind": "sequence"
-          },
-          "skip": false
-        },
-        {
           "doc": "Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.",
           "name": "drawable_bounds",
           "rust_name": "drawable_bounds",
@@ -559,10 +823,410 @@
       "transparent": false,
       "tuple": false
     },
-    "zipzi_contract::runtime::ObservationView": {
+    "zipzi_contract::runtime::ObservationTexturePlan": {
       "fields": [
         {
-          "doc": "Output width in pixels, 1..4096, subject to device and Runtime budgets.",
+          "doc": "Requested policy; equivalent actual pixels may have different policies.",
+          "name": "policy",
+          "rust_name": "policy",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::ObservationTexturePolicy"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Requested FitBudget bound or the host base RGBA limit for Original.",
+          "name": "effective_max_rgba_bytes",
+          "rust_name": "effective_max_rgba_bytes",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Maximum permitted longest edge; None only for an empty reference set.",
+          "name": "longest_edge_limit",
+          "rust_name": "longest_edge_limit",
+          "shape": {
+            "item": {
+              "kind": "u32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Logical RGBA bytes of referenced source images, excluding unused assets.",
+          "name": "source_rgba_bytes",
+          "rust_name": "source_rgba_bytes",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Logical RGBA bytes of planned base levels.",
+          "name": "render_rgba_bytes",
+          "rust_name": "render_rgba_bytes",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Sum of every non-base mip level, halving each axis down to 1x1.",
+          "name": "estimated_mipmap_bytes",
+          "rust_name": "estimated_mipmap_bytes",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Number of assets with changed base dimensions.",
+          "name": "resized_count",
+          "rust_name": "resized_count",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Version of reference collection, integer scaling and search semantics.",
+          "name": "planning_version",
+          "rust_name": "planning_version",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Version of mip dimensions and byte-count semantics.",
+          "name": "mipmap_version",
+          "rust_name": "mipmap_version",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Complete reference set and targets sorted by asset ID.",
+          "name": "textures",
+          "rust_name": "textures",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::runtime::ObservationTextureTarget"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::ObservationTexturePlan",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::ObservationTexturePlanning": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::runtime::ObservationTexturePlanning",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Feasible CPU dimensions; device limits remain unverified.",
+              "name": "plan",
+              "rust_name": "plan",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::runtime::ObservationTexturePlan"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "ready",
+          "rust_name": "Ready"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Requested policy.",
+              "name": "policy",
+              "rust_name": "policy",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::runtime::ObservationTexturePolicy"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Effective base RGBA bound.",
+              "name": "effective_max_rgba_bytes",
+              "rust_name": "effective_max_rgba_bytes",
+              "shape": {
+                "kind": "u64"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Total logical source bytes, without decoding.",
+              "name": "source_rgba_bytes",
+              "rust_name": "source_rgba_bytes",
+              "shape": {
+                "kind": "u64"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Source bytes for Original, or four bytes per texture for FitBudget.",
+              "name": "minimum_required_rgba_bytes",
+              "rust_name": "minimum_required_rgba_bytes",
+              "shape": {
+                "kind": "u64"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Source metadata in asset ID order; no target plan exists.",
+              "name": "textures",
+              "rust_name": "textures",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::runtime::ObservationTextureSource"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "insufficient_budget",
+          "rust_name": "InsufficientBudget"
+        }
+      ]
+    },
+    "zipzi_contract::runtime::ObservationTexturePolicy": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::runtime::ObservationTexturePolicy",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [],
+          "form": "record",
+          "name": "original",
+          "rust_name": "Original"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Positive integer no greater than the host's base RGBA limit.",
+              "name": "max_rgba_bytes",
+              "rust_name": "max_rgba_bytes",
+              "shape": {
+                "kind": "u64"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "fit_budget",
+          "rust_name": "FitBudget"
+        }
+      ]
+    },
+    "zipzi_contract::runtime::ObservationTextureReport": {
+      "fields": [
+        {
+          "doc": "Requested texture policy; not part of rendering-content digests.",
+          "name": "policy",
+          "rust_name": "policy",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::ObservationTexturePolicy"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Effective host or caller base RGBA bound, in logical bytes.",
+          "name": "effective_max_rgba_bytes",
+          "rust_name": "effective_max_rgba_bytes",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Common planned integer longest-edge bound; None for an empty set.",
+          "name": "longest_edge_limit",
+          "rust_name": "longest_edge_limit",
+          "shape": {
+            "item": {
+              "kind": "u32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Logical RGBA source bytes of the referenced asset set.",
+          "name": "source_rgba_bytes",
+          "rust_name": "source_rgba_bytes",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Actual logical base RGBA bytes; excludes mipmaps.",
+          "name": "render_rgba_bytes",
+          "rust_name": "render_rgba_bytes",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Exact logical non-base mip bytes, not driver allocation measurements.",
+          "name": "estimated_mipmap_bytes",
+          "rust_name": "estimated_mipmap_bytes",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Number of assets whose base dimensions changed.",
+          "name": "resized_count",
+          "rust_name": "resized_count",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Fixed straight RGBA alpha-weighted area-average filter name.",
+          "name": "filter",
+          "rust_name": "filter",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Area filter and rounding version.",
+          "name": "algorithm_version",
+          "rust_name": "algorithm_version",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Reference collection and integer planning version.",
+          "name": "planning_version",
+          "rust_name": "planning_version",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Mipmap dimension and filtering version.",
+          "name": "mipmap_version",
+          "rust_name": "mipmap_version",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Verified source and derived content, in asset ID order, once per batch.",
+          "name": "textures",
+          "rust_name": "textures",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::runtime::ObservationTextureReportEntry"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::ObservationTextureReport",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::ObservationTextureReportEntry": {
+      "fields": [
+        {
+          "doc": "Stable image asset ID; distinct IDs count separately even for equal pixels.",
+          "name": "asset_id",
+          "rust_name": "asset_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Verified source pixel dimensions before any observation downsampling.",
+          "name": "source_size",
+          "rust_name": "source_size",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::ObservationTextureSize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Actual straight RGBA8 rendering base dimensions.",
+          "name": "render_size",
+          "rust_name": "render_size",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::ObservationTextureSize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Verified PNG-byte or domain-separated source-pixel identity.",
+          "name": "source_content_identity",
+          "rust_name": "source_content_identity",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::ObservationContentIdentity"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Domain-separated hash of actual top-left row-major straight RGBA8 base pixels.",
+          "name": "render_rgba_hash",
+          "rust_name": "render_rgba_hash",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::ObservationTextureReportEntry",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::ObservationTextureSize": {
+      "fields": [
+        {
+          "doc": "Width in pixels.",
           "name": "width",
           "rust_name": "width",
           "shape": {
@@ -571,7 +1235,115 @@
           "skip": false
         },
         {
-          "doc": "Output height in pixels, 1..4096, subject to device and Runtime budgets.",
+          "doc": "Height in pixels.",
+          "name": "height",
+          "rust_name": "height",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::ObservationTextureSize",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::ObservationTextureSource": {
+      "fields": [
+        {
+          "doc": "Stable image asset ID, counted once across all batch frames.",
+          "name": "asset_id",
+          "rust_name": "asset_id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Declared source dimensions, without opening or decoding the image.",
+          "name": "source_size",
+          "rust_name": "source_size",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::ObservationTextureSize"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Declared representation-specific identity, if available in metadata.",
+          "name": "source_content_identity",
+          "rust_name": "source_content_identity",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::runtime::ObservationContentIdentity"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::ObservationTextureSource",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::ObservationTextureTarget": {
+      "fields": [
+        {
+          "doc": "Declared source metadata; the executor must validate it again.",
+          "name": "source",
+          "rust_name": "source",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::ObservationTextureSource"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Planned base-level rendering dimensions.",
+          "name": "render_size",
+          "rust_name": "render_size",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::ObservationTextureSize"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::ObservationTextureTarget",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::runtime::ObservationView": {
+      "fields": [
+        {
+          "default": {
+            "kind": "original"
+          },
+          "doc": "Explicit texture policy; Original preserves source pixels and dimensions.",
+          "name": "texture_policy",
+          "rust_name": "texture_policy",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::ObservationTexturePolicy"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Output width in pixels, positive and subject to host/device limits (host default 4096).",
+          "name": "width",
+          "rust_name": "width",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Output height in pixels, positive and subject to host/device limits (host default 4096).",
           "name": "height",
           "rust_name": "height",
           "shape": {
@@ -672,32 +1444,6 @@
       ],
       "kind": "serde_record",
       "name": "zipzi_contract::runtime::ObservedBounds",
-      "transparent": false,
-      "tuple": false
-    },
-    "zipzi_contract::runtime::ObservedTexture": {
-      "fields": [
-        {
-          "doc": "Stable asset UUID resolved from the frozen authoring source.",
-          "name": "asset_id",
-          "rust_name": "asset_id",
-          "shape": {
-            "kind": "string"
-          },
-          "skip": false
-        },
-        {
-          "doc": "SHA256 of the exact immutable texture content uploaded by this capture.",
-          "name": "sha256",
-          "rust_name": "sha256",
-          "shape": {
-            "kind": "string"
-          },
-          "skip": false
-        }
-      ],
-      "kind": "serde_record",
-      "name": "zipzi_contract::runtime::ObservedTexture",
       "transparent": false,
       "tuple": false
     }

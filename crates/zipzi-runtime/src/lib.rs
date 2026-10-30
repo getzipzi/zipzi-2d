@@ -33,7 +33,8 @@ pub use events::{EventCursor, EventKind, RuntimeEvent};
 pub use jobs::{Completion, Executor, PreparedModelingPlan, Work};
 pub use modeling::ModelingCommand;
 pub use observation::{
-    ObservationBatch, ObservationImage, ObservationView, ObservedBounds, ObservedTexture,
+    ObservationBatch, ObservationEstimate, ObservationImage, ObservationTexturePolicy,
+    ObservationTextureReport, ObservationView, ObservedBounds,
 };
 pub use preview::{PreviewBatch, PreviewCommand, PreviewFrame, PreviewState};
 pub use project_io::{
@@ -45,6 +46,11 @@ pub use runtime::{
     SessionSubscription, AUTHORING_MAGIC,
 };
 pub use types::*;
+pub use zipzi_contract::runtime::{
+    ObservationContentIdentity, ObservationEstimateIssue, ObservationTexturePlan,
+    ObservationTexturePlanning, ObservationTextureReportEntry, ObservationTextureSize,
+    ObservationTextureSource, ObservationTextureTarget,
+};
 pub use zipzi_project::TransferReservation;
 
 #[cfg(feature = "test-support")]

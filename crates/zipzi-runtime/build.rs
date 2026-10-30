@@ -29,6 +29,7 @@ fn main() {
     for name in [
         "zipzi-runtime",
         "zipzi-observe",
+        "zipzi-observe-backend",
         "zipzi-render",
         "zipzi-render-metal",
         "zipzi-render-wgpu",

@@ -49,9 +49,10 @@ def save(result:Snapshot[m.ObservationBatch]|Snapshot[m.PreviewBatch],directory:
             input_sha256=image.input_sha256,document_id=image.document_id,evaluation_revision=image.evaluation_revision,
             adapter_name=image.adapter_name,adapter_backend=image.adapter_backend,parameters=dict(image.parameters),
             visible_roi=image.visible_roi,scale=image.scale,offset=image.offset,
-            textures=[dict(asset_id=t.asset_id,sha256=t.sha256) for t in image.textures],
             quality=[asdict(q) for q in image.quality],playback=motion))
-    metadata=json.dumps(dict(schema=1,source=result.source._wire(),view=_modeling_codec.encode_ObservationView(view),frames=manifest_frames),
+    if batch.texture_report is None:raise ValueError("Observation batch must contain a texture report")
+    metadata=json.dumps(dict(schema=2,source=result.source._wire(),view=_modeling_codec.encode_ObservationView(view),
+        texture_report=_modeling_codec.encode_ObservationTextureReport(batch.texture_report),frames=manifest_frames),
         ensure_ascii=False,allow_nan=False,sort_keys=True,indent=2)+"\n"
     directory=directory.absolute();directory.mkdir(parents=True,exist_ok=False)
     paths=tuple(directory/str(frame['file']) for frame in manifest_frames)

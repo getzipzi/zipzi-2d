@@ -74,6 +74,20 @@ enum Operation {
         view: crate::observation::ObservationView,
         expected: Option<SourceRef>,
     },
+    EstimateObservation {
+        session: SessionId,
+        edit: Option<EditId>,
+        parameters: Vec<zipzi_core::PreviewValues>,
+        view: crate::observation::ObservationView,
+    },
+    EstimatePreviewObservation {
+        preview: PreviewId,
+        times: Vec<f32>,
+        view: crate::observation::ObservationView,
+        geometry: bool,
+        #[serde(default)]
+        queries: Vec<zipzi_sdk::SpatialQuery>,
+    },
     RequestSpatialSamples {
         session: SessionId,
         edit: Option<EditId>,
@@ -1196,6 +1210,21 @@ impl Protocol {
             } => {
                 json!({"job":rt.request_observation(client,session,edit,parameters,view,expected)?})
             }
+            Operation::EstimateObservation {
+                session,
+                edit,
+                parameters,
+                view,
+            } => json!(rt.estimate_observation(client, session, edit, parameters, view)?),
+            Operation::EstimatePreviewObservation {
+                preview,
+                times,
+                view,
+                geometry,
+                queries,
+            } => json!(
+                rt.estimate_preview_observation(client, preview, times, view, geometry, queries)?
+            ),
             Operation::CreatePreview {
                 session,
                 edit,

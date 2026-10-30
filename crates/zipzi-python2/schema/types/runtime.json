@@ -543,6 +543,69 @@
     "zipzi_contract::runtime::RuntimeLimits": {
       "fields": [
         {
+          "doc": "Maximum logical observation base RGBA bytes per referenced asset set.",
+          "name": "observation_texture_rgba_bytes",
+          "rust_name": "observation_texture_rgba_bytes",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum aggregate RGBA plus conservative PNG output bytes per batch.",
+          "name": "observation_output_bytes",
+          "rust_name": "observation_output_bytes",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum frames in an observation batch; a Preview without a View uses SDK CPU limits.",
+          "name": "observation_frames",
+          "rust_name": "observation_frames",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum output width or height under host policy, distinct from device capabilities.",
+          "name": "observation_max_dimension",
+          "rust_name": "observation_max_dimension",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum encoded bytes read for any one observation PNG resource.",
+          "name": "observation_encoded_bytes",
+          "rust_name": "observation_encoded_bytes",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum simultaneous single-image decode/downsample workspace; default 1 GiB.",
+          "name": "observation_workspace_bytes",
+          "rust_name": "observation_workspace_bytes",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Maximum temporary metadata estimate/plan storage; limits metadata-only requests.",
+          "name": "observation_metadata_bytes",
+          "rust_name": "observation_metadata_bytes",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        },
+        {
           "doc": "Maximum independent frozen animation Previews owned by one client.",
           "name": "previews_per_client",
           "rust_name": "previews_per_client",

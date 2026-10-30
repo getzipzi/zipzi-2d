@@ -7,6 +7,9 @@ pub use zipzi_contract::runtime::{PreviewBatch, PreviewFrame};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PreviewSampleBatch {
+    #[serde(skip)]
+    pub(crate) lease:
+        std::sync::Arc<std::sync::OnceLock<std::sync::Arc<zipzi_project::TransferReservation>>>,
     pub source: crate::SourceRef,
     pub samples: PreviewBatch,
 }

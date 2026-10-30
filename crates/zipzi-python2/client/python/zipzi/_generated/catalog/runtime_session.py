@@ -124,6 +124,7 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
  'zipzi.Session.meshes.get_many': {'alias': 'zipzi.Edit.meshes.get_many'},
  'zipzi.Session.meshes.list': {'alias': 'zipzi.Edit.meshes.list'},
  'zipzi.Session.modeling': {'alias': 'zipzi.Edit.modeling'},
+ 'zipzi.Session.modeling.estimate_observation': {'alias': 'zipzi.Edit.modeling.estimate_observation'},
  'zipzi.Session.modeling.observe': {'alias': 'zipzi.Edit.modeling.observe'},
  'zipzi.Session.modeling.records': {'alias': 'zipzi.Edit.modeling.records'},
  'zipzi.Session.modeling.sample': {'alias': 'zipzi.Edit.modeling.sample'},

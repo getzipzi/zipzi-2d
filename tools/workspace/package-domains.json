@@ -17,6 +17,7 @@
     "zipzi-sdk",
     "zipzi-runtime",
     "zipzi-observe",
+    "zipzi-observe-backend",
     "zipzi-api-derive"
   ],
   "editor": [

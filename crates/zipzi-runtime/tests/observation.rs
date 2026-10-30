@@ -15,6 +15,7 @@ fn id(n: u32) -> String {
 }
 fn view() -> ObservationView {
     ObservationView {
+        texture_policy: Default::default(),
         width: 16,
         height: 16,
         roi: [0., 0., 1., 1.],
@@ -128,10 +129,7 @@ fn frozen_formal_and_candidate_images_never_mix_texture_replacements() {
     assert_eq!(pixel(a), [255, 0, 0, 255]);
     assert_eq!(a.png[..8], [137, 80, 78, 71, 13, 10, 26, 10]);
     assert_eq!(a.capture_id, batch.samples.frames[1].capture_id);
-    assert_eq!(
-        a.textures[0].sha256,
-        batch.samples.frames[1].textures[0].sha256
-    );
+    assert_eq!(batch.samples.texture_report.textures.len(), 1);
     assert_eq!(a.scale, 16.);
     assert_eq!(a.offset, [0., 16.]);
     let e = rt.begin_edit(c, s, "blue candidate", None).unwrap();
@@ -152,8 +150,8 @@ fn frozen_formal_and_candidate_images_never_mix_texture_replacements() {
         SourceRef::Edit { sequence: 1, .. }
     ));
     assert_ne!(
-        a.textures[0].sha256,
-        candidate.samples.frames[0].textures[0].sha256
+        batch.samples.texture_report.textures[0].render_rgba_hash,
+        candidate.samples.texture_report.textures[0].render_rgba_hash
     );
     assert_eq!(rt.session_info(s).unwrap().history_lengths, (2, 0));
 }

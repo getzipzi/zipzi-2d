@@ -69,6 +69,55 @@ fn view() -> RenderRequest {
 }
 
 #[test]
+fn fit_budget_gpu_cache_uses_actual_render_content() {
+    use zipzi_observe::{planning::*, ObservationCaptureLimits};
+    let session = fixture(&texture_path());
+    let snapshot = session.read_snapshot();
+    let capture = |budget: Option<u64>| {
+        let policy = budget.map_or_else(Default::default, |max_rgba_bytes| {
+            ObservationTexturePolicy::FitBudget { max_rgba_bytes }
+        });
+        let ObservationTexturePlanning::Ready { plan } = plan_textures(
+            texture_sources(snapshot.document()).unwrap(),
+            policy,
+            DEFAULT_OBSERVATION_TEXTURE_RGBA_BYTES,
+        )
+        .unwrap() else {
+            panic!("fixture must fit")
+        };
+        let input =
+            ObservationInput::capture_from_snapshot(&snapshot, &Default::default()).unwrap();
+        ResolvedObservation::capture_many_with_plan(
+            vec![input],
+            &plan,
+            ObservationCaptureLimits::default(),
+            false,
+            &Default::default(),
+        )
+        .unwrap()
+        .remove(0)
+    };
+    let original = capture(None);
+    let fit = capture(Some(4));
+    let equivalent_fit = capture(Some(5));
+    let equivalent_original = capture(Some(16));
+    let mut observer = Observer::new(ObserverConfig {
+        width: 64,
+        height: 64,
+    })
+    .unwrap();
+    let a = observer.render(&original, view()).unwrap();
+    let b = observer.render(&fit, view()).unwrap();
+    let c = observer.render(&equivalent_fit, view()).unwrap();
+    let d = observer.render(&equivalent_original, view()).unwrap();
+    assert_ne!(a.input_sha256, b.input_sha256);
+    assert_eq!(b.input_sha256, c.input_sha256);
+    assert_eq!(b.rgba, c.rgba);
+    assert_eq!(a.input_sha256, d.input_sha256);
+    assert_eq!(a.rgba, d.rgba);
+}
+
+#[test]
 fn candidate_animation_uses_snapshot_identity_not_formal_or_branch_revision_counters() {
     let session =
         AuthoringSession::new(DOCUMENT, Canvas::new(100., 100., Vec2::new(50., 50.), 10.)).unwrap();
@@ -337,7 +386,9 @@ fn resolved_capture_renders_after_source_disappears() {
             .render(
                 &scene,
                 RenderRequest {
-                    width: 4097,
+                    // Host policy is configurable in Runtime. The low-level
+                    // observer rejects the actual device bound before allocation.
+                    width: u32::MAX,
                     ..view()
                 }
             )

@@ -340,6 +340,7 @@ fn repeated_motion_events_are_admitted_before_advancing_or_allocating_results() 
     for view in [
         None,
         Some(observation::ObservationView {
+            texture_policy: Default::default(),
             width: 8,
             height: 8,
             roi: [0., 0., 1., 1.],
@@ -410,4 +411,58 @@ fn sampled_events_remain_charged_until_the_preview_is_released() {
     drop(result);
     rt.release_preview(c, p).unwrap();
     assert_eq!(rt.accounted_bytes(), base);
+}
+
+#[test]
+fn snapshot_only_batches_reserve_their_retained_output() {
+    for incremental in [false, true] {
+        let (mut rt, c, s) = fixture();
+        let base = rt.accounted_bytes();
+        let (p, _) = rt.create_preview(c, s, None, None).unwrap();
+        let before = rt.accounted_bytes();
+        let job = rt
+            .request_preview_samples(c, p, vec![0.; 64], false, incremental)
+            .unwrap();
+        let admitted = rt.accounted_bytes();
+        let result = finish(&mut rt, c, job);
+        assert_eq!(result.samples.frames.len(), 64);
+        for frame in &result.samples.frames {
+            assert!(frame.geometry.is_none());
+            assert_eq!(frame.motion.parameters[&id(2)], 0.);
+        }
+        assert!(rt.accounted_bytes() > before);
+        assert!(rt.accounted_bytes() <= admitted);
+        drop(result);
+        rt.release_preview(c, p).unwrap();
+        assert_eq!(rt.accounted_bytes(), base);
+    }
+}
+
+#[test]
+fn snapshot_only_batches_reject_insufficient_budget_before_advancing() {
+    let mut rt = Runtime::default();
+    let c = rt.register_client().unwrap();
+    let s = rt
+        .create_session(c, &id(1), zipzi_core::ModelSetup::default())
+        .unwrap();
+    let (p, _) = rt.create_preview(c, s, None, None).unwrap();
+    // This fits the old frame-independent reservation, but cannot retain even
+    // an empty model's 64 snapshots. Rejection must happen before any playback.
+    rt.set_external_bytes(RuntimeLimits::default().accounted_bytes - rt.accounted_bytes() - 70_000);
+    let before = rt.preview_state(c, p).unwrap();
+    let accounted = rt.accounted_bytes();
+    for incremental in [false, true] {
+        assert!(matches!(
+            rt.request_preview_samples(c, p, vec![1.; 64], false, incremental),
+            Err(RuntimeError::Budget(_))
+        ));
+        let after = rt.preview_state(c, p).unwrap();
+        assert_eq!(after.0, before.0);
+        assert_eq!(after.1.sequence, before.1.sequence);
+        assert_eq!(after.1.time, before.1.time);
+        assert_eq!(rt.accounted_bytes(), accounted);
+    }
+    let mut workers = Manual::default();
+    rt.dispatch(&mut workers);
+    assert!(workers.0.is_empty());
 }

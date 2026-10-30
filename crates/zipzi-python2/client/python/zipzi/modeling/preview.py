@@ -14,6 +14,7 @@ from .._generated.values.preview import PreviewState as PreviewState
 from .._generated.values.sampling import DrawableFrame as DrawableFrame
 from .._generated.values.motion import MotionSnapshot as MotionSnapshot
 from .._generated.values.observation import ObservationImage as ObservationImage
+from .._generated.values.observation import ObservationTextureReport as ObservationTextureReport
 from .._generated.values.observation import ObservationView as ObservationView
 from .._generated.values.spatial import SpatialQuery as SpatialQuery
 from .._generated.values.spatial import SpatialResult as SpatialResult

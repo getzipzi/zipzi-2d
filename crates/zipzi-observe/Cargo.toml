@@ -7,29 +7,31 @@ license.workspace = true
 description = "Frozen snapshot capture and GPU observation for Zipzi Runtime"
 
 [features]
-wgpu-backend = ["dep:zipzi-render-wgpu", "dep:wgpu"]
+default = ["gpu"]
+gpu = ["dep:zipzi-render", "dep:zipzi-observe-backend"]
+wgpu-backend = ["gpu", "zipzi-observe-backend/wgpu-backend"]
 
 [dependencies]
+zipzi-contract.workspace = true
 zipzi-animation = { version = "=0.1.0-alpha.4", path = "../zipzi-animation" }
 zipzi-core = { version = "=0.1.0-alpha.4", path = "../zipzi-core" }
 zipzi-sdk = { version = "=0.1.0-alpha.4", path = "../zipzi-sdk" }
 zipzi-project = { version = "=0.1.0-alpha.4", path = "../zipzi-project" }
-zipzi-render = { version = "=0.1.0-alpha.4", path = "../zipzi-render" }
+zipzi-render = { version = "=0.1.0-alpha.4", path = "../zipzi-render", optional = true }
+zipzi-observe-backend = { version = "=0.1.0-alpha.4", path = "../zipzi-observe-backend", optional = true }
 png = { workspace = true }
 sha2 = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { version = "1", features = ["v4"] }
 
-zipzi-render-wgpu = { version = "=0.1.0-alpha.4", path = "../zipzi-render-wgpu", optional = true }
-wgpu = { workspace = true, optional = true }
-
 [dev-dependencies]
 tempfile.workspace = true
 
-[target.'cfg(target_os = "macos")'.dependencies]
-zipzi-render-metal = { version = "=0.1.0-alpha.4", path = "../zipzi-render-metal" }
+[[test]]
+name = "capture"
+required-features = ["gpu"]
 
-[target.'cfg(not(target_os = "macos"))'.dependencies]
-zipzi-render-wgpu = { version = "=0.1.0-alpha.4", path = "../zipzi-render-wgpu" }
-wgpu = { workspace = true }
+[[example]]
+name = "animation_gpu_frame"
+required-features = ["gpu"]

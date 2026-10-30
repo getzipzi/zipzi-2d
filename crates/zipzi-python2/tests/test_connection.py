@@ -47,6 +47,27 @@ class InstalledConnection(unittest.TestCase):
     def connect(self, **options):
         return connect(endpoint=self.endpoint, start=True, host=self.host, **options)
 
+    def test_installed_texture_estimates_need_no_native_adapter_or_device(self):
+        from zipzi import observation as o
+        with self.connect() as runtime:
+            session=runtime.sessions.create()
+            before=session.info();gpu=runtime.capabilities().gpu
+            view=o.View(width=8,height=8,roi=(0.,0.,1.,1.),texture_policy=o.FitBudget(max_rgba_bytes=4))
+            estimate=session.modeling.estimate_observation(({},),view)
+            self.assertIsInstance(estimate,o.Estimate)
+            self.assertIsInstance(estimate.texture_planning,o.TexturePlanReady)
+            self.assertEqual(estimate.texture_planning.plan.render_rgba_bytes,0)
+            self.assertFalse(estimate.device_verified or estimate.source_identities_verified)
+            self.assertEqual(runtime.capabilities().gpu,gpu)
+            self.assertEqual(runtime.limits().observation_metadata_bytes,8<<20)
+            with session.preview(expected=estimate.source) as preview:
+                state=preview.info()
+                predicted=preview.estimate_observation((0.,),view=view,geometry=False)
+                self.assertEqual(predicted.source,preview.source)
+                self.assertEqual(predicted.preview_id,preview.id)
+                self.assertEqual(preview.info(),state)
+            self.assertEqual(session.info(),before)
+
     def test_installed_complete_calls_keep_projection_job_and_cached_edit_state(self):
         geometry = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
                                    ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))

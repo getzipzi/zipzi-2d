@@ -273,21 +273,56 @@ impl Runtime {
                 result = Ok(JobValue::ImagePrepared(value));
             }
         }
+        let retained = result.as_ref().ok().and_then(|value| match value {
+            JobValue::Observed(batch) => Some((batch.lease.clone(), value.retained_bytes())),
+            JobValue::Previewed(batch) => Some((batch.lease.clone(), value.retained_bytes())),
+            _ => None,
+        });
         let record = self.jobs.get_mut(&job).unwrap();
-        if result.is_err() || matches!(&result, Ok(JobValue::Planned(_))) {
+        if result.is_err()
+            || matches!(
+                &result,
+                Ok(JobValue::Planned(_) | JobValue::Observed(_) | JobValue::Previewed(_))
+            )
+        {
             record.read_source = None;
             record.read_bytes = 512;
         }
+        let result_is_leased = if let Some((lease, bytes)) = retained {
+            if lease.get().is_some() {
+                true
+            } else {
+                match self.image_budget.reserve_transfer_with_host_budget(
+                    bytes,
+                    self.non_resource_bytes(),
+                    self.limits.accounted_bytes,
+                ) {
+                    Ok(reservation) => {
+                        let _ = lease.set(Arc::new(reservation));
+                        true
+                    }
+                    Err(_) => {
+                        result = Err(RuntimeError::Budget("retained observation result"));
+                        false
+                    }
+                }
+            }
+        } else {
+            false
+        };
+        let record = self.jobs.get_mut(&job).unwrap();
         record.info.state = match &result {
             Ok(_) => JobState::Succeeded,
             Err(RuntimeError::Cancelled) => JobState::Cancelled,
             Err(_) => JobState::Failed,
         };
-        record.read_bytes = record.read_bytes.max(
+        record.read_bytes = record.read_bytes.max(if result_is_leased {
+            512
+        } else {
             result
                 .as_ref()
-                .map_or_else(|e| e.retained_bytes(), JobValue::retained_bytes),
-        );
+                .map_or_else(|e| e.retained_bytes(), JobValue::retained_bytes)
+        });
         record.info.result = Some(result);
         self.refresh_memory_budget();
         true

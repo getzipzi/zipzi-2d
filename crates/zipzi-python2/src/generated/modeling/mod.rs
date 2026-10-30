@@ -133,12 +133,22 @@ mod motion_write_unions;
 pub(crate) use motion_write_unions::*;
 #[path = "observation/measure_records.rs"]
 mod observation_measure_records;
+pub(crate) use observation_measure_records::*;
+#[path = "observation/measure_unions.rs"]
+mod observation_measure_unions;
+pub(crate) use observation_measure_unions::*;
 #[path = "observation/read_records.rs"]
 mod observation_read_records;
 pub(crate) use observation_read_records::*;
+#[path = "observation/read_unions.rs"]
+mod observation_read_unions;
+pub(crate) use observation_read_unions::*;
 #[path = "observation/write_records.rs"]
 mod observation_write_records;
 pub(crate) use observation_write_records::*;
+#[path = "observation/write_unions.rs"]
+mod observation_write_unions;
+pub(crate) use observation_write_unions::*;
 #[path = "parameters/measure_records.rs"]
 mod parameters_measure_records;
 pub(crate) use parameters_measure_records::*;

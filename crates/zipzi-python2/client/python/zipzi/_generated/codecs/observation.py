@@ -15,8 +15,9 @@ from .._modeling_support import _check_u32
 from .._modeling_support import _check_u64
 from .._modeling_support import _check_u8
 from .._modeling_support import _check_usize
+from collections.abc import Mapping
 from typing import cast
-from ..values import ObservationBatch, ObservationImage, ObservationView, ObservedBounds, ObservedTexture, TextureCoverage, TopologyOverlay, TopologyThresholds
+from ..values import ObservationBatch, ObservationContentIdentity, ObservationContentIdentityPngSha256, ObservationContentIdentityRgba8Sha256, ObservationEstimate, ObservationEstimateIssue, ObservationImage, ObservationTexturePlan, ObservationTexturePlanning, ObservationTexturePlanningInsufficientBudget, ObservationTexturePlanningReady, ObservationTexturePolicy, ObservationTexturePolicyFitBudget, ObservationTexturePolicyOriginal, ObservationTextureReport, ObservationTextureReportEntry, ObservationTextureSize, ObservationTextureSource, ObservationTextureTarget, ObservationView, ObservedBounds, TextureCoverage, TopologyOverlay, TopologyThresholds
 
 def validate_TextureCoverage(value: TextureCoverage) -> None:
     if not isinstance(value, TextureCoverage):
@@ -42,9 +43,123 @@ def read_TextureCoverage(value: object) -> TextureCoverage:
     r = record(value)
     return TextureCoverage(alpha_threshold=integer(r['alpha_threshold']), pixel_step=integer(r['pixel_step']), sampled_pixels=integer(r['sampled_pixels']), covered_pixels=integer(r['covered_pixels']), transparent_covered_pixels=integer(r['transparent_covered_pixels']), opaque_pixels=integer(r['opaque_pixels']), uncovered_opaque_pixels=integer(r['uncovered_opaque_pixels']), transparent_coverage_fraction=None if r.get('transparent_coverage_fraction', None) is None else number(r.get('transparent_coverage_fraction', None)), uncovered_opaque_fraction=None if r.get('uncovered_opaque_fraction', None) is None else number(r.get('uncovered_opaque_fraction', None)), out_of_bounds_triangles=integer(r['out_of_bounds_triangles']))
 
+def validate_ObservationTextureReport(value: ObservationTextureReport) -> None:
+    if not isinstance(value, ObservationTextureReport):
+        raise TypeError("Expected ObservationTextureReport")
+    validate_ObservationTexturePolicy(value.policy)
+    _check_u64(value.effective_max_rgba_bytes)
+    if value.longest_edge_limit is not None:
+        _check_u32(value.longest_edge_limit)
+    _check_u64(value.source_rgba_bytes)
+    _check_u64(value.render_rgba_bytes)
+    _check_u64(value.estimated_mipmap_bytes)
+    _check_usize(value.resized_count)
+    _check_string(value.filter)
+    _check_u32(value.algorithm_version)
+    _check_u32(value.planning_version)
+    _check_u32(value.mipmap_version)
+    if not isinstance(value.textures, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.textures:
+        validate_ObservationTextureReportEntry(v0)
+
+def encode_ObservationTextureReport(value: ObservationTextureReport) -> object:
+    return {'policy': encode_ObservationTexturePolicy(value.policy), 'effective_max_rgba_bytes': value.effective_max_rgba_bytes, 'longest_edge_limit': None if value.longest_edge_limit is None else value.longest_edge_limit, 'source_rgba_bytes': value.source_rgba_bytes, 'render_rgba_bytes': value.render_rgba_bytes, 'estimated_mipmap_bytes': value.estimated_mipmap_bytes, 'resized_count': value.resized_count, 'filter': value.filter, 'algorithm_version': value.algorithm_version, 'planning_version': value.planning_version, 'mipmap_version': value.mipmap_version, 'textures': [encode_ObservationTextureReportEntry(v0) for v0 in value.textures]}
+
+def read_ObservationTextureReport(value: object) -> ObservationTextureReport:
+    if isinstance(value, ObservationTextureReport): return value
+    r = record(value)
+    return ObservationTextureReport(policy=read_ObservationTexturePolicy(r['policy']), effective_max_rgba_bytes=integer(r['effective_max_rgba_bytes']), longest_edge_limit=None if r.get('longest_edge_limit', None) is None else integer(r.get('longest_edge_limit', None)), source_rgba_bytes=integer(r['source_rgba_bytes']), render_rgba_bytes=integer(r['render_rgba_bytes']), estimated_mipmap_bytes=integer(r['estimated_mipmap_bytes']), resized_count=integer(r['resized_count']), filter=string(r['filter']), algorithm_version=integer(r['algorithm_version']), planning_version=integer(r['planning_version']), mipmap_version=integer(r['mipmap_version']), textures=tuple(read_ObservationTextureReportEntry(v0) for v0 in sequence(r['textures'])))
+
+def validate_ObservationTexturePolicy(value: ObservationTexturePolicy) -> None:
+    if isinstance(value, ObservationTexturePolicyOriginal):
+        pass
+    elif isinstance(value, ObservationTexturePolicyFitBudget):
+        _check_u64(value.max_rgba_bytes)
+    else:
+        raise TypeError("Expected ObservationTexturePolicy")
+
+def encode_ObservationTexturePolicy(value: ObservationTexturePolicy) -> object:
+    if isinstance(value, ObservationTexturePolicyOriginal):
+        return {'kind': 'original', **cast(Mapping[str, object], {})}
+    elif isinstance(value, ObservationTexturePolicyFitBudget):
+        return {'kind': 'fit_budget', **cast(Mapping[str, object], {'max_rgba_bytes': value.max_rgba_bytes})}
+    raise TypeError("Expected ObservationTexturePolicy")
+
+def read_ObservationTexturePolicy(value: object) -> ObservationTexturePolicy:
+    if isinstance(value, (ObservationTexturePolicyOriginal, ObservationTexturePolicyFitBudget,)): return value
+    r = record(value)
+    tag = string(r['kind'])
+    if tag == 'original':
+        f = record(r)
+        return ObservationTexturePolicyOriginal()
+    elif tag == 'fit_budget':
+        f = record(r)
+        return ObservationTexturePolicyFitBudget(max_rgba_bytes=integer(f['max_rgba_bytes']))
+    raise ValueError("Unknown ObservationTexturePolicy variant")
+
+def validate_ObservationTextureReportEntry(value: ObservationTextureReportEntry) -> None:
+    if not isinstance(value, ObservationTextureReportEntry):
+        raise TypeError("Expected ObservationTextureReportEntry")
+    _check_string(value.asset_id)
+    validate_ObservationTextureSize(value.source_size)
+    validate_ObservationTextureSize(value.render_size)
+    validate_ObservationContentIdentity(value.source_content_identity)
+    _check_string(value.render_rgba_hash)
+
+def encode_ObservationTextureReportEntry(value: ObservationTextureReportEntry) -> object:
+    return {'asset_id': value.asset_id, 'source_size': encode_ObservationTextureSize(value.source_size), 'render_size': encode_ObservationTextureSize(value.render_size), 'source_content_identity': encode_ObservationContentIdentity(value.source_content_identity), 'render_rgba_hash': value.render_rgba_hash}
+
+def read_ObservationTextureReportEntry(value: object) -> ObservationTextureReportEntry:
+    if isinstance(value, ObservationTextureReportEntry): return value
+    r = record(value)
+    return ObservationTextureReportEntry(asset_id=string(r['asset_id']), source_size=read_ObservationTextureSize(r['source_size']), render_size=read_ObservationTextureSize(r['render_size']), source_content_identity=read_ObservationContentIdentity(r['source_content_identity']), render_rgba_hash=string(r['render_rgba_hash']))
+
+def validate_ObservationTextureSize(value: ObservationTextureSize) -> None:
+    if not isinstance(value, ObservationTextureSize):
+        raise TypeError("Expected ObservationTextureSize")
+    _check_u32(value.width)
+    _check_u32(value.height)
+
+def encode_ObservationTextureSize(value: ObservationTextureSize) -> object:
+    return {'width': value.width, 'height': value.height}
+
+def read_ObservationTextureSize(value: object) -> ObservationTextureSize:
+    if isinstance(value, ObservationTextureSize): return value
+    r = record(value)
+    return ObservationTextureSize(width=integer(r['width']), height=integer(r['height']))
+
+def validate_ObservationContentIdentity(value: ObservationContentIdentity) -> None:
+    if isinstance(value, ObservationContentIdentityPngSha256):
+        _check_string(value.hash)
+    elif isinstance(value, ObservationContentIdentityRgba8Sha256):
+        _check_string(value.hash)
+    else:
+        raise TypeError("Expected ObservationContentIdentity")
+
+def encode_ObservationContentIdentity(value: ObservationContentIdentity) -> object:
+    if isinstance(value, ObservationContentIdentityPngSha256):
+        return {'kind': 'png_sha256', **cast(Mapping[str, object], {'hash': value.hash})}
+    elif isinstance(value, ObservationContentIdentityRgba8Sha256):
+        return {'kind': 'rgba8_sha256', **cast(Mapping[str, object], {'hash': value.hash})}
+    raise TypeError("Expected ObservationContentIdentity")
+
+def read_ObservationContentIdentity(value: object) -> ObservationContentIdentity:
+    if isinstance(value, (ObservationContentIdentityPngSha256, ObservationContentIdentityRgba8Sha256,)): return value
+    r = record(value)
+    tag = string(r['kind'])
+    if tag == 'png_sha256':
+        f = record(r)
+        return ObservationContentIdentityPngSha256(hash=string(f['hash']))
+    elif tag == 'rgba8_sha256':
+        f = record(r)
+        return ObservationContentIdentityRgba8Sha256(hash=string(f['hash']))
+    raise ValueError("Unknown ObservationContentIdentity variant")
+
 def validate_ObservationView(value: ObservationView) -> None:
     if not isinstance(value, ObservationView):
         raise TypeError("Expected ObservationView")
+    validate_ObservationTexturePolicy(value.texture_policy)
     _check_u32(value.width)
     _check_u32(value.height)
     if not isinstance(value.roi, tuple):
@@ -59,12 +174,12 @@ def validate_ObservationView(value: ObservationView) -> None:
     _check_bool(value.quality)
 
 def encode_ObservationView(value: ObservationView) -> object:
-    return {'width': value.width, 'height': value.height, 'roi': [v0 for v0 in value.roi], 'padding_model': value.padding_model, 'topology': None if value.topology is None else encode_TopologyOverlay(value.topology), 'quality': value.quality}
+    return {'texture_policy': encode_ObservationTexturePolicy(value.texture_policy), 'width': value.width, 'height': value.height, 'roi': [v0 for v0 in value.roi], 'padding_model': value.padding_model, 'topology': None if value.topology is None else encode_TopologyOverlay(value.topology), 'quality': value.quality}
 
 def read_ObservationView(value: object) -> ObservationView:
     if isinstance(value, ObservationView): return value
     r = record(value)
-    return ObservationView(width=integer(r['width']), height=integer(r['height']), roi=cast('tuple[float, float, float, float]', tuple(number(v0) for v0 in sequence(r['roi']))), padding_model=number(r.get('padding_model', 0.0)), topology=None if r.get('topology', None) is None else read_TopologyOverlay(r.get('topology', None)), quality=_boolean(r.get('quality', False)))
+    return ObservationView(texture_policy=read_ObservationTexturePolicy(r.get('texture_policy', {'kind': 'original'})), width=integer(r['width']), height=integer(r['height']), roi=cast('tuple[float, float, float, float]', tuple(number(v0) for v0 in sequence(r['roi']))), padding_model=number(r.get('padding_model', 0.0)), topology=None if r.get('topology', None) is None else read_TopologyOverlay(r.get('topology', None)), quality=_boolean(r.get('quality', False)))
 
 def validate_TopologyOverlay(value: TopologyOverlay) -> None:
     from .spatial import validate_ObjectTarget
@@ -148,10 +263,6 @@ def validate_ObservationImage(value: ObservationImage) -> None:
         raise ValueError("Invalid fixed array length")
     for v0 in value.offset:
         _check_f32(v0)
-    if not isinstance(value.textures, tuple):
-        raise TypeError("Expected an immutable tuple")
-    for v0 in value.textures:
-        validate_ObservedTexture(v0)
     if not isinstance(value.drawable_bounds, tuple):
         raise TypeError("Expected an immutable tuple")
     for v0 in value.drawable_bounds:
@@ -163,27 +274,13 @@ def validate_ObservationImage(value: ObservationImage) -> None:
 
 def encode_ObservationImage(value: ObservationImage) -> object:
     from .sampling import encode_MeshQuality
-    return {'width': value.width, 'height': value.height, 'rgba': [v0 for v0 in value.rgba], 'png': [v0 for v0 in value.png], 'document_id': value.document_id, 'evaluation_revision': value.evaluation_revision, 'capture_id': value.capture_id, 'scene_digest': value.scene_digest, 'render_digest': value.render_digest, 'input_sha256': value.input_sha256, 'adapter_name': value.adapter_name, 'adapter_backend': value.adapter_backend, 'parameters': {str(key0): v0 for key0, v0 in value.parameters.items()}, 'visible_roi': [v0 for v0 in value.visible_roi], 'scale': value.scale, 'offset': [v0 for v0 in value.offset], 'textures': [encode_ObservedTexture(v0) for v0 in value.textures], 'drawable_bounds': [encode_ObservedBounds(v0) for v0 in value.drawable_bounds], 'quality': [encode_MeshQuality(v0) for v0 in value.quality]}
+    return {'width': value.width, 'height': value.height, 'rgba': [v0 for v0 in value.rgba], 'png': [v0 for v0 in value.png], 'document_id': value.document_id, 'evaluation_revision': value.evaluation_revision, 'capture_id': value.capture_id, 'scene_digest': value.scene_digest, 'render_digest': value.render_digest, 'input_sha256': value.input_sha256, 'adapter_name': value.adapter_name, 'adapter_backend': value.adapter_backend, 'parameters': {str(key0): v0 for key0, v0 in value.parameters.items()}, 'visible_roi': [v0 for v0 in value.visible_roi], 'scale': value.scale, 'offset': [v0 for v0 in value.offset], 'drawable_bounds': [encode_ObservedBounds(v0) for v0 in value.drawable_bounds], 'quality': [encode_MeshQuality(v0) for v0 in value.quality]}
 
 def read_ObservationImage(value: object) -> ObservationImage:
     from .sampling import read_MeshQuality
     if isinstance(value, ObservationImage): return value
     r = record(value)
-    return ObservationImage(width=integer(r['width']), height=integer(r['height']), rgba=_bytes(r['rgba']), png=_bytes(r['png']), document_id=string(r['document_id']), evaluation_revision=integer(r['evaluation_revision']), capture_id=string(r['capture_id']), scene_digest=string(r['scene_digest']), render_digest=string(r['render_digest']), input_sha256=string(r['input_sha256']), adapter_name=string(r['adapter_name']), adapter_backend=string(r['adapter_backend']), parameters={key0: number(v0) for key0, v0 in record(r['parameters']).items()}, visible_roi=cast('tuple[float, float, float, float]', tuple(number(v0) for v0 in sequence(r['visible_roi']))), scale=number(r['scale']), offset=cast('tuple[float, float]', tuple(number(v0) for v0 in sequence(r['offset']))), textures=tuple(read_ObservedTexture(v0) for v0 in sequence(r['textures'])), drawable_bounds=tuple(read_ObservedBounds(v0) for v0 in sequence(r['drawable_bounds'])), quality=tuple(read_MeshQuality(v0) for v0 in sequence(r['quality'])))
-
-def validate_ObservedTexture(value: ObservedTexture) -> None:
-    if not isinstance(value, ObservedTexture):
-        raise TypeError("Expected ObservedTexture")
-    _check_string(value.asset_id)
-    _check_string(value.sha256)
-
-def encode_ObservedTexture(value: ObservedTexture) -> object:
-    return {'asset_id': value.asset_id, 'sha256': value.sha256}
-
-def read_ObservedTexture(value: object) -> ObservedTexture:
-    if isinstance(value, ObservedTexture): return value
-    r = record(value)
-    return ObservedTexture(asset_id=string(r['asset_id']), sha256=string(r['sha256']))
+    return ObservationImage(width=integer(r['width']), height=integer(r['height']), rgba=_bytes(r['rgba']), png=_bytes(r['png']), document_id=string(r['document_id']), evaluation_revision=integer(r['evaluation_revision']), capture_id=string(r['capture_id']), scene_digest=string(r['scene_digest']), render_digest=string(r['render_digest']), input_sha256=string(r['input_sha256']), adapter_name=string(r['adapter_name']), adapter_backend=string(r['adapter_backend']), parameters={key0: number(v0) for key0, v0 in record(r['parameters']).items()}, visible_roi=cast('tuple[float, float, float, float]', tuple(number(v0) for v0 in sequence(r['visible_roi']))), scale=number(r['scale']), offset=cast('tuple[float, float]', tuple(number(v0) for v0 in sequence(r['offset']))), drawable_bounds=tuple(read_ObservedBounds(v0) for v0 in sequence(r['drawable_bounds'])), quality=tuple(read_MeshQuality(v0) for v0 in sequence(r['quality'])))
 
 def validate_ObservedBounds(value: ObservedBounds) -> None:
     if not isinstance(value, ObservedBounds):
@@ -209,6 +306,7 @@ def read_ObservedBounds(value: object) -> ObservedBounds:
 def validate_ObservationBatch(value: ObservationBatch) -> None:
     if not isinstance(value, ObservationBatch):
         raise TypeError("Expected ObservationBatch")
+    validate_ObservationTextureReport(value.texture_report)
     validate_ObservationView(value.view)
     if not isinstance(value.requested, tuple):
         raise TypeError("Expected an immutable tuple")
@@ -222,9 +320,155 @@ def validate_ObservationBatch(value: ObservationBatch) -> None:
         validate_ObservationImage(v0)
 
 def encode_ObservationBatch(value: ObservationBatch) -> object:
-    return {'view': encode_ObservationView(value.view), 'requested': [{str(key1): v1 for key1, v1 in v0.items()} for v0 in value.requested], 'frames': [encode_ObservationImage(v0) for v0 in value.frames]}
+    return {'texture_report': encode_ObservationTextureReport(value.texture_report), 'view': encode_ObservationView(value.view), 'requested': [{str(key1): v1 for key1, v1 in v0.items()} for v0 in value.requested], 'frames': [encode_ObservationImage(v0) for v0 in value.frames]}
 
 def read_ObservationBatch(value: object) -> ObservationBatch:
     if isinstance(value, ObservationBatch): return value
     r = record(value)
-    return ObservationBatch(view=read_ObservationView(r['view']), requested=tuple({key1: number(v1) for key1, v1 in record(v0).items()} for v0 in sequence(r['requested'])), frames=tuple(read_ObservationImage(v0) for v0 in sequence(r['frames'])))
+    return ObservationBatch(texture_report=read_ObservationTextureReport(r['texture_report']), view=read_ObservationView(r['view']), requested=tuple({key1: number(v1) for key1, v1 in record(v0).items()} for v0 in sequence(r['requested'])), frames=tuple(read_ObservationImage(v0) for v0 in sequence(r['frames'])))
+
+def validate_ObservationEstimate(value: ObservationEstimate) -> None:
+    from .common import validate_SourceRef
+    if not isinstance(value, ObservationEstimate):
+        raise TypeError("Expected ObservationEstimate")
+    validate_SourceRef(value.source)
+    if value.preview_id is not None:
+        _check_u64(value.preview_id)
+    if value.sequence is not None:
+        _check_u64(value.sequence)
+    validate_ObservationTexturePlanning(value.texture_planning)
+    _check_u64(value.texture_workspace_bytes)
+    _check_u64(value.gpu_working_set_bytes)
+    _check_u64(value.output_bytes)
+    _check_u64(value.task_bytes)
+    _check_bool(value.static_feasible)
+    _check_bool(value.runtime_available)
+    _check_bool(value.gpu_supported)
+    if value.device_max_texture_dimension is not None:
+        _check_u32(value.device_max_texture_dimension)
+    _check_bool(value.device_verified)
+    _check_bool(value.source_identities_verified)
+    if not isinstance(value.issues, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.issues:
+        validate_ObservationEstimateIssue(v0)
+
+def encode_ObservationEstimate(value: ObservationEstimate) -> object:
+    from .common import encode_SourceRef
+    return {'source': encode_SourceRef(value.source), 'preview_id': None if value.preview_id is None else value.preview_id, 'sequence': None if value.sequence is None else value.sequence, 'texture_planning': encode_ObservationTexturePlanning(value.texture_planning), 'texture_workspace_bytes': value.texture_workspace_bytes, 'gpu_working_set_bytes': value.gpu_working_set_bytes, 'output_bytes': value.output_bytes, 'task_bytes': value.task_bytes, 'static_feasible': value.static_feasible, 'runtime_available': value.runtime_available, 'gpu_supported': value.gpu_supported, 'device_max_texture_dimension': None if value.device_max_texture_dimension is None else value.device_max_texture_dimension, 'device_verified': value.device_verified, 'source_identities_verified': value.source_identities_verified, 'issues': [encode_ObservationEstimateIssue(v0) for v0 in value.issues]}
+
+def read_ObservationEstimate(value: object) -> ObservationEstimate:
+    from .common import read_SourceRef
+    if isinstance(value, ObservationEstimate): return value
+    r = record(value)
+    return ObservationEstimate(source=read_SourceRef(r['source']), preview_id=None if r.get('preview_id', None) is None else integer(r.get('preview_id', None)), sequence=None if r.get('sequence', None) is None else integer(r.get('sequence', None)), texture_planning=read_ObservationTexturePlanning(r['texture_planning']), texture_workspace_bytes=integer(r['texture_workspace_bytes']), gpu_working_set_bytes=integer(r['gpu_working_set_bytes']), output_bytes=integer(r['output_bytes']), task_bytes=integer(r['task_bytes']), static_feasible=_boolean(r['static_feasible']), runtime_available=_boolean(r['runtime_available']), gpu_supported=_boolean(r['gpu_supported']), device_max_texture_dimension=None if r.get('device_max_texture_dimension', None) is None else integer(r.get('device_max_texture_dimension', None)), device_verified=_boolean(r['device_verified']), source_identities_verified=_boolean(r['source_identities_verified']), issues=tuple(read_ObservationEstimateIssue(v0) for v0 in sequence(r['issues'])))
+
+def validate_ObservationTexturePlanning(value: ObservationTexturePlanning) -> None:
+    if isinstance(value, ObservationTexturePlanningReady):
+        validate_ObservationTexturePlan(value.plan)
+    elif isinstance(value, ObservationTexturePlanningInsufficientBudget):
+        validate_ObservationTexturePolicy(value.policy)
+        _check_u64(value.effective_max_rgba_bytes)
+        _check_u64(value.source_rgba_bytes)
+        _check_u64(value.minimum_required_rgba_bytes)
+        if not isinstance(value.textures, tuple):
+            raise TypeError("Expected an immutable tuple")
+        for v0 in value.textures:
+            validate_ObservationTextureSource(v0)
+    else:
+        raise TypeError("Expected ObservationTexturePlanning")
+
+def encode_ObservationTexturePlanning(value: ObservationTexturePlanning) -> object:
+    if isinstance(value, ObservationTexturePlanningReady):
+        return {'kind': 'ready', **cast(Mapping[str, object], {'plan': encode_ObservationTexturePlan(value.plan)})}
+    elif isinstance(value, ObservationTexturePlanningInsufficientBudget):
+        return {'kind': 'insufficient_budget', **cast(Mapping[str, object], {'policy': encode_ObservationTexturePolicy(value.policy), 'effective_max_rgba_bytes': value.effective_max_rgba_bytes, 'source_rgba_bytes': value.source_rgba_bytes, 'minimum_required_rgba_bytes': value.minimum_required_rgba_bytes, 'textures': [encode_ObservationTextureSource(v0) for v0 in value.textures]})}
+    raise TypeError("Expected ObservationTexturePlanning")
+
+def read_ObservationTexturePlanning(value: object) -> ObservationTexturePlanning:
+    if isinstance(value, (ObservationTexturePlanningReady, ObservationTexturePlanningInsufficientBudget,)): return value
+    r = record(value)
+    tag = string(r['kind'])
+    if tag == 'ready':
+        f = record(r)
+        return ObservationTexturePlanningReady(plan=read_ObservationTexturePlan(f['plan']))
+    elif tag == 'insufficient_budget':
+        f = record(r)
+        return ObservationTexturePlanningInsufficientBudget(policy=read_ObservationTexturePolicy(f['policy']), effective_max_rgba_bytes=integer(f['effective_max_rgba_bytes']), source_rgba_bytes=integer(f['source_rgba_bytes']), minimum_required_rgba_bytes=integer(f['minimum_required_rgba_bytes']), textures=tuple(read_ObservationTextureSource(v0) for v0 in sequence(f['textures'])))
+    raise ValueError("Unknown ObservationTexturePlanning variant")
+
+def validate_ObservationTexturePlan(value: ObservationTexturePlan) -> None:
+    if not isinstance(value, ObservationTexturePlan):
+        raise TypeError("Expected ObservationTexturePlan")
+    validate_ObservationTexturePolicy(value.policy)
+    _check_u64(value.effective_max_rgba_bytes)
+    if value.longest_edge_limit is not None:
+        _check_u32(value.longest_edge_limit)
+    _check_u64(value.source_rgba_bytes)
+    _check_u64(value.render_rgba_bytes)
+    _check_u64(value.estimated_mipmap_bytes)
+    _check_usize(value.resized_count)
+    _check_u32(value.planning_version)
+    _check_u32(value.mipmap_version)
+    if not isinstance(value.textures, tuple):
+        raise TypeError("Expected an immutable tuple")
+    for v0 in value.textures:
+        validate_ObservationTextureTarget(v0)
+
+def encode_ObservationTexturePlan(value: ObservationTexturePlan) -> object:
+    return {'policy': encode_ObservationTexturePolicy(value.policy), 'effective_max_rgba_bytes': value.effective_max_rgba_bytes, 'longest_edge_limit': None if value.longest_edge_limit is None else value.longest_edge_limit, 'source_rgba_bytes': value.source_rgba_bytes, 'render_rgba_bytes': value.render_rgba_bytes, 'estimated_mipmap_bytes': value.estimated_mipmap_bytes, 'resized_count': value.resized_count, 'planning_version': value.planning_version, 'mipmap_version': value.mipmap_version, 'textures': [encode_ObservationTextureTarget(v0) for v0 in value.textures]}
+
+def read_ObservationTexturePlan(value: object) -> ObservationTexturePlan:
+    if isinstance(value, ObservationTexturePlan): return value
+    r = record(value)
+    return ObservationTexturePlan(policy=read_ObservationTexturePolicy(r['policy']), effective_max_rgba_bytes=integer(r['effective_max_rgba_bytes']), longest_edge_limit=None if r.get('longest_edge_limit', None) is None else integer(r.get('longest_edge_limit', None)), source_rgba_bytes=integer(r['source_rgba_bytes']), render_rgba_bytes=integer(r['render_rgba_bytes']), estimated_mipmap_bytes=integer(r['estimated_mipmap_bytes']), resized_count=integer(r['resized_count']), planning_version=integer(r['planning_version']), mipmap_version=integer(r['mipmap_version']), textures=tuple(read_ObservationTextureTarget(v0) for v0 in sequence(r['textures'])))
+
+def validate_ObservationTextureTarget(value: ObservationTextureTarget) -> None:
+    if not isinstance(value, ObservationTextureTarget):
+        raise TypeError("Expected ObservationTextureTarget")
+    validate_ObservationTextureSource(value.source)
+    validate_ObservationTextureSize(value.render_size)
+
+def encode_ObservationTextureTarget(value: ObservationTextureTarget) -> object:
+    return {'source': encode_ObservationTextureSource(value.source), 'render_size': encode_ObservationTextureSize(value.render_size)}
+
+def read_ObservationTextureTarget(value: object) -> ObservationTextureTarget:
+    if isinstance(value, ObservationTextureTarget): return value
+    r = record(value)
+    return ObservationTextureTarget(source=read_ObservationTextureSource(r['source']), render_size=read_ObservationTextureSize(r['render_size']))
+
+def validate_ObservationTextureSource(value: ObservationTextureSource) -> None:
+    if not isinstance(value, ObservationTextureSource):
+        raise TypeError("Expected ObservationTextureSource")
+    _check_string(value.asset_id)
+    validate_ObservationTextureSize(value.source_size)
+    if value.source_content_identity is not None:
+        validate_ObservationContentIdentity(value.source_content_identity)
+
+def encode_ObservationTextureSource(value: ObservationTextureSource) -> object:
+    return {'asset_id': value.asset_id, 'source_size': encode_ObservationTextureSize(value.source_size), 'source_content_identity': None if value.source_content_identity is None else encode_ObservationContentIdentity(value.source_content_identity)}
+
+def read_ObservationTextureSource(value: object) -> ObservationTextureSource:
+    if isinstance(value, ObservationTextureSource): return value
+    r = record(value)
+    return ObservationTextureSource(asset_id=string(r['asset_id']), source_size=read_ObservationTextureSize(r['source_size']), source_content_identity=None if r.get('source_content_identity', None) is None else read_ObservationContentIdentity(r.get('source_content_identity', None)))
+
+def validate_ObservationEstimateIssue(value: ObservationEstimateIssue) -> None:
+    if not isinstance(value, ObservationEstimateIssue):
+        raise TypeError("Expected ObservationEstimateIssue")
+    _check_string(value.code)
+    _check_string(value.message)
+    if value.asset_id is not None:
+        _check_string(value.asset_id)
+    if value.requested is not None:
+        _check_u64(value.requested)
+    if value.limit is not None:
+        _check_u64(value.limit)
+
+def encode_ObservationEstimateIssue(value: ObservationEstimateIssue) -> object:
+    return {'code': value.code, 'message': value.message, 'asset_id': None if value.asset_id is None else value.asset_id, 'requested': None if value.requested is None else value.requested, 'limit': None if value.limit is None else value.limit}
+
+def read_ObservationEstimateIssue(value: object) -> ObservationEstimateIssue:
+    if isinstance(value, ObservationEstimateIssue): return value
+    r = record(value)
+    return ObservationEstimateIssue(code=string(r['code']), message=string(r['message']), asset_id=None if r.get('asset_id', None) is None else string(r.get('asset_id', None)), requested=None if r.get('requested', None) is None else integer(r.get('requested', None)), limit=None if r.get('limit', None) is None else integer(r.get('limit', None)))

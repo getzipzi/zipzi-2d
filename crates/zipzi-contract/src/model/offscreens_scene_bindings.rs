@@ -210,3 +210,5 @@ impl SceneBinding {
         self.track.target_id()
     }
 }
+/// Shared renderer attachment ceiling, also used by metadata-only observation estimates.
+pub const OFFSCREEN_BUDGET_BYTES: i64 = 512 * 1024 * 1024;

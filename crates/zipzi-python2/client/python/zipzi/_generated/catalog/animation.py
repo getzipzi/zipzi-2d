@@ -27,6 +27,7 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
                                           'zipzi.animation.Preview.advance_to',
                                           'zipzi.animation.Preview.apply',
                                           'zipzi.animation.Preview.close',
+                                          'zipzi.animation.Preview.estimate_observation',
                                           'zipzi.animation.Preview.id',
                                           'zipzi.animation.Preview.info',
                                           'zipzi.animation.Preview.pending_request',
@@ -75,6 +76,24 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
                                    'kind': 'callable',
                                    'signature': '(command: m.PreviewCommand) -> Snapshot[m.PreviewState]'},
  'zipzi.animation.Preview.close': {'alias': 'zipzi.Buffer.close'},
+ 'zipzi.animation.Preview.estimate_observation': {'children': (),
+                                                  'documentation': 'Estimate frozen-source observation using metadata '
+                                                                   'and current controls.\n'
+                                                                   '\n'
+                                                                   'This synchronous read does not replay, advance the '
+                                                                   'clock/sequence, decode\n'
+                                                                   'images, initialize a device or reserve a Job. Busy '
+                                                                   'Previews refuse it.\n'
+                                                                   'The result reports static feasibility and current '
+                                                                   'availability separately;\n'
+                                                                   'it does not reserve capacity for a later '
+                                                                   'sample/seek/advance_to.',
+                                                  'example': 'docs/recipes.py',
+                                                  'fields': [],
+                                                  'kind': 'callable',
+                                                  'signature': '(times: Sequence[float], *, view: m.ObservationView, '
+                                                               'geometry: bool=True, queries: '
+                                                               'Sequence[m.SpatialQuery]=()) -> m.ObservationEstimate'},
  'zipzi.animation.Preview.id': {'children': (),
                                 'documentation': 'Read the Runtime-wide serial without IO; combine with source.runtime '
                                                  'to compare returned frames across views.',
@@ -91,11 +110,13 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
                                   'signature': '() -> Snapshot[m.PreviewState]'},
  'zipzi.animation.Preview.pending_request': {'alias': 'zipzi.Buffer.pending_request'},
  'zipzi.animation.Preview.sample': {'children': (),
-                                    'documentation': 'Submit 1..64 canonical seeks in target order; wait for a '
-                                                     'frozen-source batch.\n'
+                                    'documentation': 'Submit canonical seeks in target order; wait for a frozen-source '
+                                                     'batch.\n'
                                                      '\n'
-                                                     'Duplicates/backward times are retained. CPU geometry is '
-                                                     'optional.\n'
+                                                     'View batches use the host observation frame limit; CPU-only '
+                                                     'batches allow\n'
+                                                     '1..64 frames. Duplicates/backward times are retained. CPU '
+                                                     'geometry is optional.\n'
                                                      'view requests GPU RGBA/PNG from each exact state using '
                                                      'once-resolved batch\n'
                                                      'textures and applies SDK Model opacity. Missing devices fail '

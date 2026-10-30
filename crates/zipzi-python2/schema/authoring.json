@@ -1,6 +1,6 @@
 {
   "_generated_by": "zipzi-python2/tools/generate.py",
-  "contract_sha256": "2df96ed0b34f86aad2379262e93c8a3a5a2f3874ef1ab4fcc5869c4f2f44e5fb",
+  "contract_sha256": "7bfaddf5a39a1ef29f4de0fdb71ee93cd667a6b99ca55b9d10e324137958f403",
   "format_version": 2,
   "root": {
     "binary": {
@@ -54,7 +54,7 @@
         "kind": "ref",
         "name": "zipzi_contract::runtime::ObservationBatch"
       },
-      "observation_signature": "cbbc2519950ba423722739d22a6944d0",
+      "observation_signature": "1ae17387c3769738f50f4bba4d24ab7b",
       "output": {
         "kind": "ref",
         "name": "zipzi_contract::authoring::OwnedModelingRecords"
@@ -64,7 +64,7 @@
         "kind": "ref",
         "name": "zipzi_contract::runtime::PreviewBatch"
       },
-      "preview_signature": "b17767ffe39f8046634ab6a887897558",
+      "preview_signature": "524a7adb4389f52840391c8e502a5414",
       "sample_signature": "ef5b4e5a2e2a2c42e9845480d6815742",
       "samples": {
         "kind": "ref",
@@ -378,6 +378,10 @@
         {
           "kind": "ref",
           "name": "zipzi_contract::authoring::DeletionSection"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::ObservationEstimate"
         }
       ],
       "version": 1
@@ -769,7 +773,7 @@
     },
     {
       "path": "types/observation.json",
-      "sha256": "1579b8d2e7da1dbf4618b7b674dcf8a836723158975d1bda373f84d4ff6976e5"
+      "sha256": "b4cf6978d0b4f37d5813b9569afae4e367bce8231b054347459c0117ad590852"
     },
     {
       "path": "types/parameters.json",
@@ -785,7 +789,7 @@
     },
     {
       "path": "types/preview.json",
-      "sha256": "625d8db36a35ed4e0c3e1b8d4193d517cd10a1f9bf06b0f2bf0ef3c4e618ef07"
+      "sha256": "09ff2c6dc712e1804446b52a9fb18640799537f6129ad5d8ac772b40cf9f03af"
     },
     {
       "path": "types/project.json",
@@ -801,7 +805,7 @@
     },
     {
       "path": "types/runtime.json",
-      "sha256": "fa2169c9eed4d4b8d01e888da21a755886de09f47f9c1d61ce3153cb0bbe8dc5"
+      "sha256": "a8546354e6671b52845f3440e2528a214550a90162c2f004d9587eb4a853e611"
     },
     {
       "path": "types/sampling.json",

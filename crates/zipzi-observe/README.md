@@ -6,8 +6,9 @@ jobs. The public surface follows the paths used by `zipzi-runtime`:
 - `ObservationInput::capture_from_snapshot` evaluates one parameter pose.
 - `ObservationInput::capture_motion_from_snapshot` captures the matching frozen
   animation state and applies Model opacity before mask / Offscreen composition.
-- `ResolvedObservation::capture_many_with_control` validates 1..64 inputs from one
-  snapshot, resolves each texture once, and shares decoded content across frames.
+- `ResolvedObservation::capture_many_with_control` validates inputs from one
+  snapshot, resolves each referenced texture once, and shares render pixels across frames.
+  `capture_many_with_plan` executes a host-generated plan with explicit limits.
   Cancellation is checked between samples, decodes and scene digests; an entered
   decode can finish.
 - `Observer::new` and `render` reuse a device, renderer and texture cache across
@@ -27,6 +28,42 @@ keeps its resolved textures until rendering finishes, without revisiting live
 asset paths. Authoring records remain internal inputs to content digests and
 batch validation. There is no scene save/open API or automatic fitted-view path.
 Python inspection exports images and metadata, not a reloadable scene.
+
+`planning::texture_sources` collects the frozen document's mesh texture references,
+including hidden meshes and mesh/Offscreen mask sources, deduplicated by asset ID.
+Unused assets do not enter the base RGBA budget. `planning::plan_textures` accepts
+the shared `ObservationTexturePolicy` contract and an explicit host base-byte
+limit. It uses checked integer dimensions, returns a sorted target table and exact
+non-base mipmap byte totals, or retains source metadata in an insufficient-budget
+diagnostic. Metadata identities are declarations until execution verifies them.
+The planner does not read images, evaluate poses, reserve resources or initialize
+a GPU; compile with `--no-default-features` to exclude all renderer dependencies.
+The default `gpu` feature retains capture rendering through `zipzi-observe-backend`:
+macOS uses Metal without a WGPU dependency; other platforms use WGPU.
+`wgpu-backend` explicitly enables WGPU on macOS as well.
+Runtime and Python expose `Original` (default) and explicit `FitBudget` policies.
+The latter chooses the greatest integer longest-edge cap that satisfies the base
+RGBA budget. Preparation executes the admitted table without silently replanning:
+it reads/decompresses one source at a time under encoded/workspace limits,
+verifies dimensions and declared hashes, and filters directly from original
+straight RGBA8 pixels. Memory images reuse immutable pixel Arcs without encoding
+PNG or copying the full source. A tiny target does not bypass a source decode
+workspace limit. Alpha-weighted area filtering and each-axis floor-halved mips
+have separately versioned rules.
+
+`texture_report()` shares one sorted report across a resolved batch. Runtime
+returns that report once on its observation/Preview batch; individual images do
+not repeat its texture table. Source identities distinguish verified PNG hashes
+from dimension/domain-tagged RGBA hashes. Scene digest v3 describes source content;
+render/input digest v2 includes actual render dimensions/pixels and algorithm
+versions, and stays equal for policies producing equivalent rendering inputs.
+A Source freezes document identity, not external file bytes; estimates report
+unverified declarations and execution checks the acquired resource.
+
+Source alpha samples are extracted before downsampling only for coverage quality,
+with original dimensions and the existing at-most-256x256 sample grid. Strain
+alone does not retain them. Original/FitBudget share coverage results. The output
+PNG writer enforces the same conservative capacity used by Runtime admission.
 
 `RenderRequest.topology` optionally composites diagnostic wireframe, vertices,
 persistent vertex IDs, stored boundary/constraint edges and default-pose edge
@@ -54,6 +91,7 @@ Focused CPU checks:
 
 ```sh
 cargo test --locked -p zipzi-observe --lib
+cargo test --locked -p zipzi-observe --no-default-features --lib
 cargo test --locked -p zipzi-observe --test capture cancelled_capture
 cargo test --locked -p zipzi-observe --test capture candidate_animation
 cargo test --locked -p zipzi-observe --test capture batch_samples

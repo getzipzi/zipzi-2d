@@ -52,6 +52,12 @@ pub(crate) fn write_previewbatch_in(
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
+    out.set_item("texture_report", {
+        match (&value.texture_report).as_ref() {
+            Some(item) => write_observationtexturereport(py, (item))?,
+            None => py.None(),
+        }
+    })?;
     out.set_item("view", {
         match (&value.view).as_ref() {
             Some(item) => write_observationview(py, (item))?,

@@ -25,6 +25,8 @@ enum BatchKind {
     Spatial(zipzi_sdk::SpatialSampler<Arc<zipzi_sdk::AuthoringSnapshot>>),
     #[cfg(feature = "gpu-observation")]
     Observe {
+        observation: crate::observation::ObservationWork,
+        texture_report: Option<crate::observation::ObservationTextureReport>,
         view: crate::observation::ObservationView,
         requested: Vec<zipzi_core::PreviewValues>,
         inputs: Vec<ObservationInput>,
@@ -61,9 +63,12 @@ impl ReadBatch {
                 source,
                 parameters,
                 view,
+                observation,
             } => (
                 source,
                 BatchKind::Observe {
+                    observation,
+                    texture_report: None,
                     view,
                     requested: parameters,
                     inputs: vec![],
@@ -82,6 +87,7 @@ impl ReadBatch {
                 incremental,
                 queries,
                 view,
+                observation,
             } => (
                 source,
                 BatchKind::Preview(crate::runtime::previews::PreviewSampling::new(
@@ -93,6 +99,7 @@ impl ReadBatch {
                     incremental,
                     queries,
                     view,
+                    observation,
                 )),
             ),
             task => return Err(task),
@@ -142,6 +149,8 @@ impl ReadBatch {
             }
             #[cfg(feature = "gpu-observation")]
             BatchKind::Observe {
+                observation,
+                texture_report,
                 view,
                 requested,
                 inputs,
@@ -160,14 +169,16 @@ impl ReadBatch {
                             .map_err(crate::observation::error)?,
                         );
                     } else {
-                        *captures = Some(
-                            ResolvedObservation::capture_many_with_control(
-                                std::mem::take(inputs),
-                                control,
-                            )
-                            .map_err(crate::observation::error)?
-                            .into(),
-                        );
+                        let resolved = ResolvedObservation::capture_many_with_plan(
+                            std::mem::take(inputs),
+                            &observation.plan,
+                            observation.limits,
+                            view.quality,
+                            control,
+                        )
+                        .map_err(crate::observation::error)?;
+                        *texture_report = Some(resolved[0].texture_report().clone());
+                        *captures = Some(resolved.into());
                     }
                     return Ok(None);
                 }
@@ -186,8 +197,10 @@ impl ReadBatch {
                     return Ok(None);
                 }
                 JobValue::Observed(Arc::new(crate::observation::ObservationSampleBatch {
+                    lease: Default::default(),
                     source: source.source,
                     samples: crate::observation::ObservationBatch {
+                        texture_report: texture_report.take().expect("resolved texture report"),
                         view: view.clone(),
                         requested: std::mem::take(requested),
                         frames: std::mem::take(frames),

@@ -27,6 +27,7 @@ struct SceneContent {
 #[serde(deny_unknown_fields)]
 struct TextureContent {
     asset: ImageAsset,
+    source_content_identity: zipzi_contract::runtime::ObservationContentIdentity,
 }
 
 fn failure(code: &'static str, message: impl Into<String>) -> ObservationError {
@@ -91,7 +92,7 @@ fn scene_hash(scene: &SceneContent) -> Result<String, ObservationError> {
             "Scene has a nonfinite or non-roundtrippable value",
         ));
     }
-    let mut bytes = b"zipzi-observe-scene-digest-v2\0".to_vec();
+    let mut bytes = b"zipzi-observe-scene-digest-v3\0".to_vec();
     canonical_json(&value, &mut bytes)?;
     Ok(zipzi_project::content_sha256(&bytes))
 }
@@ -113,11 +114,8 @@ impl ResolvedObservation {
                 .textures
                 .iter()
                 .map(|texture| TextureContent {
-                    asset: {
-                        let mut asset = texture.asset.clone();
-                        asset.content.as_mut().unwrap().sha256 = texture.data.sha256.clone();
-                        asset
-                    },
+                    asset: texture.asset.clone(),
+                    source_content_identity: texture.source_content_identity.clone(),
                 })
                 .collect(),
         }
@@ -130,7 +128,7 @@ impl ResolvedObservation {
     /// Digest of the captured scene and explicit raw context render settings.
     pub fn render_digest(&self, request: RenderRequest) -> Result<String, ObservationError> {
         request.mapping()?;
-        let mut bytes = b"zipzi-observe-render-digest-v1\0".to_vec();
+        let mut bytes = b"zipzi-observe-render-digest-v2\0".to_vec();
         let mut request = serde_json::json!({
             "scene_digest": self.scene_digest,
             "width": request.width,
@@ -142,6 +140,12 @@ impl ResolvedObservation {
             "mode": "context",
             "output": "raw_rgba8_renderer_default",
             "sample_policy": "single_evaluated_frame",
+            "render_textures": self.texture_report.textures.iter().map(|t| serde_json::json!({
+                "asset_id": t.asset_id, "render_size": t.render_size, "render_rgba_hash": t.render_rgba_hash,
+            })).collect::<Vec<_>>(),
+            "area_filter_version": self.texture_report.algorithm_version,
+            "mipmap_version": self.texture_report.mipmap_version,
+            "source_alpha_sampling_version": crate::alpha::SOURCE_ALPHA_SAMPLING_VERSION,
         });
         request["texture_sampling"] = "linear_mipmap_linear_repeat".into();
         request["mipmap_generation"] = "area_box_v2".into();

@@ -20,7 +20,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
                                                           'declared collections; reading fields, repr and summary '
                                                           'performs no IO.',
                                          'example': 'docs/recipes.py',
-                                         'fields': [('view',
+                                         'fields': [('texture_report',
+                                                     'Verified texture content for a View; None for CPU-only '
+                                                     'sampling.'),
+                                                    ('view',
                                                      'Explicit image view when GPU observation was requested; None '
                                                      'keeps CPU-only behavior.'),
                                                     ('queries',
@@ -32,7 +35,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
                                                      'Owned frames in requested target order, retaining duplicate and '
                                                      'backward targets.')],
                                          'kind': 'type',
-                                         'signature': '(*, view: ObservationView | None = None, queries: '
+                                         'signature': '(*, texture_report: ObservationTextureReport | None = None, '
+                                                      'view: ObservationView | None = None, queries: '
                                                       'tuple[SpatialQuery, ...], sequence: int, frames: '
                                                       'tuple[PreviewFrame, ...])'},
  'zipzi.modeling.preview.PreviewBatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},

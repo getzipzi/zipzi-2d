@@ -2,6 +2,20 @@
 /// shared document content per holder; these are not RSS or GPU limits.
 #[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
 pub struct RuntimeLimits {
+    /// Maximum logical observation base RGBA bytes per referenced asset set.
+    pub observation_texture_rgba_bytes: u64,
+    /// Maximum aggregate RGBA plus conservative PNG output bytes per batch.
+    pub observation_output_bytes: u64,
+    /// Maximum frames in an observation batch; a Preview without a View uses SDK CPU limits.
+    pub observation_frames: usize,
+    /// Maximum output width or height under host policy, distinct from device capabilities.
+    pub observation_max_dimension: u32,
+    /// Maximum encoded bytes read for any one observation PNG resource.
+    pub observation_encoded_bytes: usize,
+    /// Maximum simultaneous single-image decode/downsample workspace; default 1 GiB.
+    pub observation_workspace_bytes: usize,
+    /// Maximum temporary metadata estimate/plan storage; limits metadata-only requests.
+    pub observation_metadata_bytes: usize,
     /// Maximum independent frozen animation Previews owned by one client.
     pub previews_per_client: usize,
     /// Conservative aggregate Preview storage limit, including replay/cache workspace.
@@ -66,6 +80,13 @@ pub struct RuntimeLimits {
 impl Default for RuntimeLimits {
     fn default() -> Self {
         Self {
+            observation_texture_rgba_bytes: DEFAULT_OBSERVATION_TEXTURE_RGBA_BYTES,
+            observation_output_bytes: 128 << 20,
+            observation_frames: 64,
+            observation_max_dimension: 4096,
+            observation_encoded_bytes: 64 << 20,
+            observation_workspace_bytes: 1 << 30,
+            observation_metadata_bytes: 8 << 20,
             previews_per_client: 8,
             preview_bytes: 128 << 20,
             preview_schedule_entries: 4096,

@@ -52,14 +52,21 @@ impl ResolvedObservation {
                     .iter()
                     .find(|t| t.asset.id == d.texture_asset_id)
                 {
-                    report.texture_coverage = Some(coverage(
-                        &d.uvs,
-                        &d.indices,
-                        texture.data.width,
-                        texture.data.height,
-                        &texture.data.rgba,
-                        &mut work,
-                    )?);
+                    let samples =
+                        texture
+                            .source_alpha
+                            .as_ref()
+                            .ok_or_else(|| {
+                                ObservationError {
+                            code: "SOURCE_ALPHA_REQUIRED".into(),
+                            message:
+                                "Capture source alpha samples before requesting texture coverage"
+                                    .into(),
+                            asset_id: Some(texture.asset.id.clone()),
+                        }
+                            })?;
+                    report.texture_coverage =
+                        Some(coverage_samples(&d.uvs, &d.indices, samples, &mut work)?);
                 }
             }
         }
@@ -67,6 +74,7 @@ impl ResolvedObservation {
     }
 }
 
+#[cfg(test)]
 fn coverage(
     uvs: &[zipzi_core::Vec2],
     indices: &[u32],
@@ -75,11 +83,31 @@ fn coverage(
     rgba: &[u8],
     work: &mut usize,
 ) -> Result<TextureCoverage, ObservationError> {
-    let step = width.max(height).div_ceil(256).max(1);
-    let (cols, rows) = (
-        width.div_ceil(step) as usize,
-        height.div_ceil(step) as usize,
-    );
+    coverage_samples(
+        uvs,
+        indices,
+        &crate::alpha::SourceAlphaSamples::extract(width, height, rgba, &Default::default())?,
+        work,
+    )
+}
+
+fn coverage_samples(
+    uvs: &[zipzi_core::Vec2],
+    indices: &[u32],
+    samples: &crate::alpha::SourceAlphaSamples,
+    work: &mut usize,
+) -> Result<TextureCoverage, ObservationError> {
+    let crate::alpha::SourceAlphaSamples {
+        source_size,
+        step,
+        cols,
+        rows,
+        alpha,
+        version,
+    } = samples;
+    assert_eq!(*version, crate::alpha::SOURCE_ALPHA_SAMPLING_VERSION);
+    let (width, height, step, cols, rows) =
+        (source_size.width, source_size.height, *step, *cols, *rows);
     let mut covered = vec![false; cols * rows];
     let mut outside = 0;
     for tri in indices.chunks_exact(3) {
@@ -138,8 +166,7 @@ fn coverage(
     ) = (0, 0, 0, 0);
     for gy in 0..rows {
         for gx in 0..cols {
-            let alpha = rgba[((gy as u32 * step * width + gx as u32 * step) as usize) * 4 + 3];
-            let opaque = alpha >= 8;
+            let opaque = alpha[gy * cols + gx] >= 8;
             let inside = covered[gy * cols + gx];
             covered_pixels += usize::from(inside);
             transparent_covered_pixels += usize::from(inside && !opaque);

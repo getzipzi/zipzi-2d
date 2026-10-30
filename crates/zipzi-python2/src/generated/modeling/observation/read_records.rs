@@ -5,6 +5,7 @@ use crate::*;
 
 pub fn read_observationview(value: &Bound<'_, PyAny>) -> PyResult<zipzi_runtime::ObservationView> {
     Ok(zipzi_runtime::ObservationView {
+        texture_policy: read_observationtexturepolicy(&value.getattr("texture_policy")?)?,
         width: value.getattr("width")?.extract()?,
         height: value.getattr("height")?.extract()?,
         roi: value

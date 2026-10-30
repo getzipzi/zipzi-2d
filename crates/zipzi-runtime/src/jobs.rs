@@ -358,6 +358,7 @@ pub(crate) enum ReadTask {
         source: crate::SourceSnapshot,
         parameters: Vec<zipzi_core::PreviewValues>,
         view: crate::observation::ObservationView,
+        observation: crate::observation::ObservationWork,
     },
     Spatial {
         source: crate::SourceSnapshot,
@@ -374,6 +375,7 @@ pub(crate) enum ReadTask {
         incremental: bool,
         queries: Vec<zipzi_sdk::SpatialQuery>,
         view: Option<crate::observation::ObservationView>,
+        observation: Option<crate::observation::ObservationWork>,
     },
     Image {
         path: Option<PathBuf>,

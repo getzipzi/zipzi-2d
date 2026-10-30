@@ -1,0 +1,19 @@
+[package]
+name = "zipzi-observe-backend"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Platform GPU dependency selection for Zipzi observation"
+
+[features]
+wgpu-backend = ["dep:zipzi-render-wgpu"]
+
+[dependencies]
+zipzi-render-wgpu = { version = "=0.1.0-alpha.4", path = "../zipzi-render-wgpu", optional = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+zipzi-render-metal = { version = "=0.1.0-alpha.4", path = "../zipzi-render-metal" }
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+zipzi-render-wgpu = { version = "=0.1.0-alpha.4", path = "../zipzi-render-wgpu" }

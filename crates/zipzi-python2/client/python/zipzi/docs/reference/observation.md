@@ -18,6 +18,14 @@ Alias of [zipzi.modeling.observation.ObservationBatch](modeling_observation.md#z
 
 Alias of [zipzi.modeling.observation.ObservedBounds](modeling_observation.md#zipzimodelingobservationobservedbounds).
 
+## zipzi.observation.Estimate
+
+Alias of [zipzi.modeling.observation.ObservationEstimate](modeling_observation.md#zipzimodelingobservationobservationestimate).
+
+## zipzi.observation.FitBudget
+
+Alias of [zipzi.modeling.observation.ObservationTexturePolicyFitBudget](modeling_observation.md#zipzimodelingobservationobservationtexturepolicyfitbudget).
+
 ## zipzi.observation.Image
 
 Alias of [zipzi.modeling.observation.ObservationImage](modeling_observation.md#zipzimodelingobservationobservationimage).
@@ -30,6 +38,10 @@ Alias of [zipzi.modeling.sampling.MeshQuality](modeling_sampling.md#zipzimodelin
 
 Alias of [zipzi.modeling.spatial.ObjectTargetMesh](modeling_spatial.md#zipzimodelingspatialobjecttargetmesh).
 
+## zipzi.observation.Original
+
+Alias of [zipzi.modeling.observation.ObservationTexturePolicyOriginal](modeling_observation.md#zipzimodelingobservationobservationtexturepolicyoriginal).
+
 ## zipzi.observation.Overlay
 
 Alias of [zipzi.modeling.observation.TopologyOverlay](modeling_observation.md#zipzimodelingobservationtopologyoverlay).
@@ -40,11 +52,31 @@ Alias of [zipzi.modeling.spatial.ObjectTargetPart](modeling_spatial.md#zipzimode
 
 ## zipzi.observation.Texture
 
-Alias of [zipzi.modeling.observation.ObservedTexture](modeling_observation.md#zipzimodelingobservationobservedtexture).
+Alias of [zipzi.modeling.observation.ObservationTextureReportEntry](modeling_observation.md#zipzimodelingobservationobservationtexturereportentry).
+
+## zipzi.observation.TextureBudgetInsufficient
+
+Alias of [zipzi.modeling.observation.ObservationTexturePlanningInsufficientBudget](modeling_observation.md#zipzimodelingobservationobservationtextureplanninginsufficientbudget).
 
 ## zipzi.observation.TextureCoverage
 
 Alias of [zipzi.modeling.observation.TextureCoverage](modeling_observation.md#zipzimodelingobservationtexturecoverage).
+
+## zipzi.observation.TexturePlan
+
+Alias of [zipzi.modeling.observation.ObservationTexturePlan](modeling_observation.md#zipzimodelingobservationobservationtextureplan).
+
+## zipzi.observation.TexturePlanReady
+
+Alias of [zipzi.modeling.observation.ObservationTexturePlanningReady](modeling_observation.md#zipzimodelingobservationobservationtextureplanningready).
+
+## zipzi.observation.TexturePolicy
+
+Alias of [zipzi.modeling.observation.ObservationTexturePolicy](modeling_observation.md#zipzimodelingobservationobservationtexturepolicy).
+
+## zipzi.observation.TextureReport
+
+Alias of [zipzi.modeling.observation.ObservationTextureReport](modeling_observation.md#zipzimodelingobservationobservationtexturereport).
 
 ## zipzi.observation.Thresholds
 

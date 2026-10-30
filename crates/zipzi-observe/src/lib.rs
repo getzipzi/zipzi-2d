@@ -3,7 +3,7 @@
 //! Evaluation uses detached authoring snapshots. Texture decoding and GPU work
 //! never borrow the live editing session.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -14,16 +14,24 @@ use zipzi_core::{
     BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, DrawableFrame, Glue, ImageAsset,
     Mesh, MeshBinding, Offscreen, Parameter, Part, PreviewValues, SceneBinding, Transform,
 };
-use zipzi_project::{read_project_asset, AssetData};
+use zipzi_project::{read_project_texture_bounded, TextureData};
 use zipzi_sdk::{AuthoringSnapshot, Version};
 
+mod alpha;
 mod digest;
+#[cfg(feature = "gpu")]
 mod gpu;
+pub mod planning;
+mod preparation;
+#[cfg(feature = "gpu")]
 mod quality;
+#[cfg(feature = "gpu")]
 mod topology;
 mod view;
+#[cfg(feature = "gpu")]
 pub use gpu::{DrawableBounds, ObservedFrame, ObservedTexture, Observer, ObserverConfig};
 pub use view::{ModelRoi, RenderRequest, ViewMapping};
+pub use zipzi_contract::runtime::{ObservationTextureReport, ObservationTextureReportEntry};
 
 #[derive(Clone, Debug)]
 pub struct ObservationInput {
@@ -37,6 +45,7 @@ pub struct ObservationInput {
     memory_images: BTreeMap<String, zipzi_project::PreparedImageContent>,
     source: ObservationSource,
     authoring: CapturedAuthoring,
+    #[cfg_attr(not(feature = "gpu"), allow(dead_code))]
     reference_frame: Option<DrawableFrame>,
 }
 
@@ -77,7 +86,33 @@ enum ObservationSource {
 #[derive(Clone, Debug)]
 struct ResolvedTexture {
     asset: ImageAsset,
-    data: AssetData,
+    data: TextureData,
+    source_content_identity: planning::ObservationContentIdentity,
+    render_rgba_hash: String,
+    #[cfg_attr(not(feature = "gpu"), allow(dead_code))]
+    source_alpha: Option<alpha::SourceAlphaSamples>,
+}
+
+/// Host limits applied before texture reads and allocations. The workspace cap
+/// covers both single-image decode and direct downsampling/conversion phases.
+#[derive(Clone, Copy, Debug)]
+pub struct ObservationCaptureLimits {
+    pub max_frames: usize,
+    pub max_rgba_bytes: u64,
+    pub png: zipzi_core::image::PngDecodeLimits,
+}
+impl Default for ObservationCaptureLimits {
+    fn default() -> Self {
+        let limits = zipzi_contract::runtime::RuntimeLimits::default();
+        Self {
+            max_frames: limits.observation_frames,
+            max_rgba_bytes: limits.observation_texture_rgba_bytes,
+            png: zipzi_core::image::PngDecodeLimits {
+                max_encoded_bytes: limits.observation_encoded_bytes,
+                max_workspace_bytes: limits.observation_workspace_bytes,
+            },
+        }
+    }
 }
 
 /// A captured evaluated frame and its decoded textures. Rendering this value
@@ -88,9 +123,8 @@ pub struct ResolvedObservation {
     textures: Arc<[ResolvedTexture]>,
     capture_id: String,
     scene_digest: String,
+    texture_report: Arc<ObservationTextureReport>,
 }
-
-pub(crate) const MAX_CAPTURE_TEXTURE_BYTES: u64 = 256 * 1024 * 1024;
 
 fn check_capture(control: &zipzi_sdk::ConversionControl) -> Result<(), ObservationError> {
     if control.is_cancelled() {
@@ -112,11 +146,40 @@ impl ResolvedObservation {
         inputs: Vec<ObservationInput>,
         control: &zipzi_sdk::ConversionControl,
     ) -> Result<Vec<Self>, ObservationError> {
+        let source_alpha = inputs.iter().any(|i| i.reference_frame.is_some());
+        Self::capture_many(
+            inputs,
+            None,
+            ObservationCaptureLimits::default(),
+            source_alpha,
+            control,
+        )
+    }
+
+    /// Execute a host-created frozen plan, rejecting a mismatch rather than
+    /// adding unplanned textures or silently adapting to changed resources.
+    pub fn capture_many_with_plan(
+        inputs: Vec<ObservationInput>,
+        plan: &planning::ObservationTexturePlan,
+        limits: ObservationCaptureLimits,
+        source_alpha: bool,
+        control: &zipzi_sdk::ConversionControl,
+    ) -> Result<Vec<Self>, ObservationError> {
+        Self::capture_many(inputs, Some(plan), limits, source_alpha, control)
+    }
+
+    fn capture_many(
+        inputs: Vec<ObservationInput>,
+        supplied_plan: Option<&planning::ObservationTexturePlan>,
+        limits: ObservationCaptureLimits,
+        source_alpha: bool,
+        control: &zipzi_sdk::ConversionControl,
+    ) -> Result<Vec<Self>, ObservationError> {
         check_capture(control)?;
-        if inputs.is_empty() || inputs.len() > 64 {
+        if inputs.is_empty() || inputs.len() > limits.max_frames {
             return Err(ObservationError {
                 code: "OBSERVATION_BUDGET_EXCEEDED".into(),
-                message: "Sample count must be 1..64".into(),
+                message: format!("Sample count must be 1..={}", limits.max_frames),
                 asset_id: None,
             });
         }
@@ -154,27 +217,46 @@ impl ResolvedObservation {
                 }
             }
         }
-        let expected_rgba = assets.values().try_fold(0u64, |total, asset| {
-            total.checked_add(
-                u64::from(asset.content.as_ref().unwrap().width)
-                    .checked_mul(u64::from(asset.content.as_ref().unwrap().height))?
-                    .checked_mul(4)?,
-            )
-        });
-        if expected_rgba.is_none_or(|bytes| bytes > MAX_CAPTURE_TEXTURE_BYTES) {
-            return Err(ObservationError {
+        let assets: Vec<_> = assets.into_values().collect();
+        let planned = planning::plan_textures(
+            planning::sources_from_assets(&assets)?,
+            supplied_plan.map_or_else(Default::default, |p| p.policy.clone()),
+            limits.max_rgba_bytes,
+        )?;
+        let plan = match planned {
+            planning::ObservationTexturePlanning::Ready { plan } => plan,
+            planning::ObservationTexturePlanning::InsufficientBudget { minimum_required_rgba_bytes, .. } => return Err(ObservationError {
                 code: "OBSERVATION_BUDGET_EXCEEDED".into(),
-                message: "Captured texture RGBA exceeds 256 MiB".into(),
+                message: format!("Captured texture RGBA requires at least {minimum_required_rgba_bytes} bytes, host limit {}", limits.max_rgba_bytes),
+                asset_id: None,
+            }),
+        };
+        if supplied_plan.is_some_and(|supplied| *supplied != plan) {
+            return Err(ObservationError {
+                code: "TEXTURE_PLAN_MISMATCH".into(),
+                message: "Frozen texture plan differs from captured source descriptors".into(),
                 asset_id: None,
             });
         }
+        // The equality check above validates the plan. No resource-driven
+        // replanning takes place; actual dimensions/hashes are checked below.
+        let plan = supplied_plan.unwrap_or(&plan);
         let textures: Vec<ResolvedTexture> = assets
-            .into_values()
-            .map(|asset| {
+            .into_iter()
+            .zip(&plan.textures)
+            .map(|(asset, target)| {
                 check_capture(control)?;
-                let data = match first.memory_images.get(&asset.id) {
-                    Some(image) => image.read_asset(),
-                    None => read_project_asset(&first.root, &asset),
+                Self::check_preparation_workspace(
+                    target,
+                    limits,
+                    source_alpha,
+                    first.memory_images.contains_key(&asset.id),
+                )?;
+                let verified = match first.memory_images.get(&asset.id) {
+                    Some(image) => image.verified_texture_with_control(|| !control.is_cancelled()),
+                    None => read_project_texture_bounded(&first.root, &asset, limits.png, || {
+                        !control.is_cancelled()
+                    }),
                 }
                 .map_err(|status| ObservationError {
                     code: status.code,
@@ -182,21 +264,10 @@ impl ResolvedObservation {
                     asset_id: Some(asset.id.clone()),
                 })?;
                 check_capture(control)?;
-                Ok(ResolvedTexture { asset, data })
+                Self::prepare_texture(asset, target, verified, source_alpha, control)
             })
             .collect::<Result<_, _>>()?;
-        let retained = textures.iter().try_fold(0u64, |total, texture| {
-            total
-                .checked_add(texture.data.bytes.len() as u64)?
-                .checked_add(texture.data.rgba.len() as u64)
-        });
-        if retained.is_none_or(|bytes| bytes > MAX_CAPTURE_TEXTURE_BYTES) {
-            return Err(ObservationError {
-                code: "OBSERVATION_BUDGET_EXCEEDED".into(),
-                message: "Captured texture bytes exceed 256 MiB".into(),
-                asset_id: None,
-            });
-        }
+        let texture_report = Arc::new(Self::report(plan, &textures));
         let shared: Arc<[ResolvedTexture]> = textures.into();
         let capture_id = uuid::Uuid::new_v4().to_string();
         inputs
@@ -208,6 +279,7 @@ impl ResolvedObservation {
                     textures: Arc::clone(&shared),
                     capture_id: capture_id.clone(),
                     scene_digest: String::new(),
+                    texture_report: texture_report.clone(),
                 };
                 capture.scene_digest = capture.compute_scene_digest()?;
                 check_capture(control)?;
@@ -222,6 +294,10 @@ impl ResolvedObservation {
 
     pub fn scene_digest(&self) -> &str {
         &self.scene_digest
+    }
+
+    pub fn texture_report(&self) -> &ObservationTextureReport {
+        &self.texture_report
     }
 }
 
@@ -338,23 +414,8 @@ impl ObservationInput {
         let version = snapshot.version();
         let document = snapshot.document();
         let evaluation_revision = document.evaluation_revision();
-        let required: BTreeSet<_> = frame
-            .drawables
-            .iter()
-            .map(|drawable| drawable.texture_asset_id.as_str())
-            .collect();
-        let mut assets = Vec::with_capacity(required.len());
-        for id in required {
-            let asset = document
-                .get_asset(id)
-                .cloned()
-                .ok_or_else(|| ObservationError {
-                    code: "MISSING_ASSET".into(),
-                    message: "Drawable references an absent asset".into(),
-                    asset_id: Some(id.to_owned()),
-                })?;
-            assets.push(asset);
-        }
+        let assets = planning::referenced_assets(document)?;
+        planning::validate_frame_references(&frame, &assets)?;
         let root = snapshot
             .project_path()
             .and_then(|path| path.parent())

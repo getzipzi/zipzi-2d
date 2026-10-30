@@ -7,7 +7,7 @@ See [common behavior](common.md) for inherited owned-value methods.
 
 ``
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a4; protocol zipzi-runtime-v2; client source SHA-256 45e380e59a4bbc388c497128429cef09b5b5a4184f02ff85271dda263678b7bc.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a4; protocol zipzi-runtime-v2; client source SHA-256 52cacd9e5d9eb6dd65884e035a9a7ee8a4e5f03739d731b1197f8125fffdf8b1.
 
 
 ## zipzi.ApiDescription
@@ -619,10 +619,17 @@ This cached observation is not a guarantee for a later render; CPU sampling is i
 
 ## zipzi.RuntimeLimits
 
-`(previews_per_client: int, preview_bytes: int, preview_schedule_entries: int, preview_seek_cache_bytes: int, collection_records: int, collection_bytes: int, collection_scan: int, clients: int, sessions: int, edits_per_client_session: int, edits_per_session: int, edits_total: int, candidate_bytes: int, frozen_bytes: int, accounted_bytes: int, image_bytes: int, plans_per_client: int, references_per_client: int, prepared_images_per_client: int, plan_bytes: int, blob_bytes: int, blobs_per_client: int, history_bytes: int, jobs_total: int, jobs_per_client: int, running_jobs: int, session_events: int, session_event_bytes: int, registry_events: int, registry_event_bytes: int)`
+`(observation_texture_rgba_bytes: int, observation_output_bytes: int, observation_frames: int, observation_max_dimension: int, observation_encoded_bytes: int, observation_workspace_bytes: int, observation_metadata_bytes: int, previews_per_client: int, preview_bytes: int, preview_schedule_entries: int, preview_seek_cache_bytes: int, collection_records: int, collection_bytes: int, collection_scan: int, clients: int, sessions: int, edits_per_client_session: int, edits_per_session: int, edits_total: int, candidate_bytes: int, frozen_bytes: int, accounted_bytes: int, image_bytes: int, plans_per_client: int, references_per_client: int, prepared_images_per_client: int, plan_bytes: int, blob_bytes: int, blobs_per_client: int, history_bytes: int, jobs_total: int, jobs_per_client: int, running_jobs: int, session_events: int, session_event_bytes: int, registry_events: int, registry_event_bytes: int)`
 
 Immutable owned RuntimeLimits value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
+- `observation_texture_rgba_bytes`: Maximum logical observation base RGBA bytes per referenced asset set.
+- `observation_output_bytes`: Maximum aggregate RGBA plus conservative PNG output bytes per batch.
+- `observation_frames`: Maximum frames in an observation batch; a Preview without a View uses SDK CPU limits.
+- `observation_max_dimension`: Maximum output width or height under host policy, distinct from device capabilities.
+- `observation_encoded_bytes`: Maximum encoded bytes read for any one observation PNG resource.
+- `observation_workspace_bytes`: Maximum simultaneous single-image decode/downsample workspace; default 1 GiB.
+- `observation_metadata_bytes`: Maximum temporary metadata estimate/plan storage; limits metadata-only requests.
 - `previews_per_client`: Maximum independent frozen animation Previews owned by one client.
 - `preview_bytes`: Conservative aggregate Preview storage limit, including replay/cache workspace.
 - `preview_schedule_entries`: Maximum retained activations per Preview; Reset retains schedules.

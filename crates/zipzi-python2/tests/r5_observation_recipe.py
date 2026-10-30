@@ -46,7 +46,7 @@ def run(runtime:zipzi.Runtime,folder:Path)->dict[str,object]:
     images=observed.value.frames
     assert pixel(images[0])==bytes((255,0,0,255)) and pixel(images[1],48)==bytes((255,0,0,255))
     assert pixel(images[1])==bytes(4) and images[0].rgba==images[2].rgba
-    assert images[0].capture_id==images[1].capture_id and images[0].textures==images[1].textures
+    assert images[0].capture_id==images[1].capture_id and len(observed.value.texture_report.textures)==1
     assert images[0].render_digest==images[2].render_digest!=images[1].render_digest
     assert images[0].visible_roi==(0.,0.,2.,1.) and images[0].scale==32. and images[0].offset==(0.,32.)
     assert images[0].png[:8]==b"\x89PNG\r\n\x1a\n" and len(images[0].rgba)==64*32*4
@@ -62,7 +62,7 @@ def run(runtime:zipzi.Runtime,folder:Path)->dict[str,object]:
     candidate_frame=candidate_preview.seek(.25,geometry=False,view=VIEW).wait()
     assert candidate_frame.source==source and pixel(candidate_frame.value.frames[0].observation)==bytes((0,0,255,255))
     candidate_preview.close()
-    assert candidate.value.frames[0].textures[0].sha256!=images[0].textures[0].sha256
+    assert candidate.value.texture_report.textures[0].render_rgba_hash!=observed.value.texture_report.textures[0].render_rgba_hash
     after=session.info()
     preview.apply(a.ScheduleMotion(id=uid(10),time=0.))
     moving=preview.sample((0.,.25,.5,.25),geometry=False,view=VIEW).wait()
@@ -73,7 +73,7 @@ def run(runtime:zipzi.Runtime,folder:Path)->dict[str,object]:
         image=frame.observation;local=frame.motion.motion_positions[0].local_time;positions.append(local)
         assert abs(image.parameters[uid(4)]-local)<1e-6
         assert pixel(image,int((local+.5)*32))==bytes((255,0,0,255))
-        assert image.textures==images[0].textures
+        assert moving.value.texture_report.textures==observed.value.texture_report.textures
     preview.apply(a.Reset());preview.apply(a.ScheduleMotion(id=uid(20),time=0.))
     transparent=preview.seek(.25,geometry=False,view=VIEW).wait().value.frames[0]
     assert transparent.motion.model_opacity==0. and transparent.observation.rgba==bytes(64*32*4)
@@ -88,4 +88,4 @@ def run(runtime:zipzi.Runtime,folder:Path)->dict[str,object]:
     assert report.images[0].read_bytes()==images[0].png and len(animated.images)==4
     assert report.manifest.is_file() and animated.manifest.is_file()
     return dict(adapter_backend=images[0].adapter_backend,red_rgba_sha256=hashlib.sha256(images[0].rgba).hexdigest(),png_sha256=hashlib.sha256(images[0].png).hexdigest(),
-        frozen_candidate=True,frozen_candidate_preview=True,preview_times=positions,texture_hash=images[0].textures[0].sha256,model_opacity_zero=True,artifacts=(len(report.images),len(animated.images)))
+        frozen_candidate=True,frozen_candidate_preview=True,preview_times=positions,texture_hash=observed.value.texture_report.textures[0].render_rgba_hash,model_opacity_zero=True,artifacts=(len(report.images),len(animated.images)))

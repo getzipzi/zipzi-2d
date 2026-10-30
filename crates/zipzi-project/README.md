@@ -46,3 +46,17 @@ codec shares these wire rules and uses `project.zipzi.cbor`.
 Motion initial keys and segment endpoints carry persistent UUIDs; Bezier
 controls remain anonymous points. Key IDs are excluded from motion3 arrays and
 opaque-content fingerprints; reimporting a motion allocates fresh key identities.
+
+## Bounded observation resources
+
+`read_project_texture_bounded` checks file length, fixed PNG header dimensions,
+encoded/workspace limits and declared SHA256 before returning verified pixels.
+Reads remain bounded if the file grows; truncation, corruption and content changes
+fail explicitly. Cancellation is checked between read/hash chunks and after decode.
+`PreparedImageContent::verified_texture` validates memory metadata and shares the
+existing immutable pixel Arc without populating its PNG cache. Memory identities
+use domain-tagged straight RGBA8 hashes with dimensions; file identities use the
+verified PNG hash. Estimates do not verify external resource contents.
+
+Focused checks: `cargo test --locked -p zipzi-project --lib texture::tests` and
+`cargo test --locked -p zipzi-project --lib resource_budget`.

@@ -23,6 +23,7 @@ fn cpu_host_rejects_images_before_admission_and_keeps_preview_usable() {
     let preview = rt.preview_state(c, p).unwrap();
     let bytes = rt.accounted_bytes();
     let view = ObservationView {
+        texture_policy: Default::default(),
         width: 16,
         height: 16,
         roi: [0., 0., 1., 1.],

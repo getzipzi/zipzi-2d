@@ -117,6 +117,10 @@ Alias of [zipzi.Edit.meshes.list](runtime_edit.md#zipzieditmesheslist).
 
 Alias of [zipzi.Edit.modeling](runtime_edit.md#zipzieditmodeling).
 
+## zipzi.Session.modeling.estimate_observation
+
+Alias of [zipzi.Edit.modeling.estimate_observation](runtime_edit.md#zipzieditmodelingestimate_observation).
+
 ## zipzi.Session.modeling.observe
 
 Alias of [zipzi.Edit.modeling.observe](runtime_edit.md#zipzieditmodelingobserve).

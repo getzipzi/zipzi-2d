@@ -300,7 +300,8 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                      'kind': 'callable',
                                      'signature': '(id: str, *, vertex_ids: Sequence[int], positions: '
                                                   'Sequence[meshes.Point]) -> WriteResult'},
- 'zipzi.Edit.modeling': {'children': ('zipzi.Edit.modeling.observe',
+ 'zipzi.Edit.modeling': {'children': ('zipzi.Edit.modeling.estimate_observation',
+                                      'zipzi.Edit.modeling.observe',
                                       'zipzi.Edit.modeling.records',
                                       'zipzi.Edit.modeling.sample',
                                       'zipzi.Edit.modeling.sample_async',
@@ -310,20 +311,36 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                          'fields': [],
                          'kind': 'type',
                          'signature': "(session: '_lifecycle.Session', edit: '_lifecycle.Edit | None'=None)"},
+ 'zipzi.Edit.modeling.estimate_observation': {'children': (),
+                                              'documentation': 'Estimate an observation from metadata and return its '
+                                                               'exact Source, texture plan, logical bytes, workspace, '
+                                                               'static feasibility and current Runtime capacity. No '
+                                                               'images are decoded, no GPU is initialized and no Job '
+                                                               'or plan handle is reserved. Source freezes '
+                                                               'document/candidate identity, not external file bytes; '
+                                                               'declared identities remain unverified until capture. '
+                                                               'Use estimate.source as observe(expected=...) to reject '
+                                                               'document changes. Host and resource conditions are '
+                                                               'checked again on submission and execution.',
+                                              'example': 'docs/recipes.py',
+                                              'fields': [],
+                                              'kind': 'callable',
+                                              'signature': '(poses: Sequence[Mapping[str, float]], view: '
+                                                           'observation.View) -> observation.Estimate'},
  'zipzi.Edit.modeling.observe': {'children': (),
-                                 'documentation': 'Render 1..64 explicit parameter poses from an exact frozen Source. '
-                                                  'The explicit Y-up model ROI preserves aspect ratio; frames contain '
-                                                  'GPU RGBA8, Rust-encoded PNG, view mapping, actual adapter and '
-                                                  'texture hashes. view.quality includes per-mesh geometry and sampled '
-                                                  'source-alpha coverage; view.topology enables wireframe, persistent '
-                                                  'vertex IDs, constraints and strain overlays with the same frozen '
-                                                  'mapping. Rendering resolves one immutable texture set per batch, '
-                                                  'never publishes history and does not abort an Edit on failure. '
-                                                  'Device initialization occurs on the worker; missing GPU produces a '
-                                                  'structured failure, independently of CPU operations. Runtime '
-                                                  'count/byte/device budgets apply. Recover a lost submission or '
-                                                  'result through its original Call; wait/close the Job to release its '
-                                                  'result slot.',
+                                 'documentation': 'Render explicit parameter poses within host observation limits from '
+                                                  'an exact frozen Source. The explicit Y-up model ROI preserves '
+                                                  'aspect ratio; frames contain GPU RGBA8, Rust-encoded PNG, view '
+                                                  'mapping, actual adapter and texture hashes. view.quality includes '
+                                                  'per-mesh geometry and sampled source-alpha coverage; view.topology '
+                                                  'enables wireframe, persistent vertex IDs, constraints and strain '
+                                                  'overlays with the same frozen mapping. Rendering resolves one '
+                                                  'immutable texture set per batch, never publishes history and does '
+                                                  'not abort an Edit on failure. Device initialization occurs on the '
+                                                  'worker; missing GPU produces a structured failure, independently of '
+                                                  'CPU operations. Runtime count/byte/device budgets apply. Recover a '
+                                                  'lost submission or result through its original Call; wait/close the '
+                                                  'Job to release its result slot.',
                                  'example': 'docs/recipes.py',
                                  'fields': [],
                                  'kind': 'callable',

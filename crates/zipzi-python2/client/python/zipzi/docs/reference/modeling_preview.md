@@ -12,10 +12,11 @@ Canonical preview modeling values.
 
 ## zipzi.modeling.preview.PreviewBatch
 
-`(*, view: ObservationView | None = None, queries: tuple[SpatialQuery, ...], sequence: int, frames: tuple[PreviewFrame, ...])`
+`(*, texture_report: ObservationTextureReport | None = None, view: ObservationView | None = None, queries: tuple[SpatialQuery, ...], sequence: int, frames: tuple[PreviewFrame, ...])`
 
 Immutable owned PreviewBatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
+- `texture_report`: Verified texture content for a View; None for CPU-only sampling.
 - `view`: Explicit image view when GPU observation was requested; None keeps CPU-only behavior.
 - `queries`: Owned geometric query descriptors aligned with every frame.spatial slot.
 - `sequence`: Accepted sample request ordinal shared by these ordered frames.

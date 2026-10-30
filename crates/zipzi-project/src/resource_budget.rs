@@ -151,6 +151,38 @@ impl ImageMemoryBudget {
             bytes,
         })
     }
+    /// Atomically replace a completed task's host reservation with retained
+    /// result storage. Other allocating threads never observe the old peak as
+    /// free space before the result lease has been charged.
+    pub fn reserve_transfer_with_host_budget(
+        &self,
+        bytes: usize,
+        host_bytes: usize,
+        host_limit: usize,
+    ) -> Result<TransferReservation, Status> {
+        let mut state = self.0.lock().unwrap_or_else(|p| p.into_inner());
+        if state
+            .usage()
+            .total_bytes()
+            .checked_add(host_bytes)
+            .and_then(|n| n.checked_add(bytes))
+            .is_none_or(|n| n > host_limit)
+        {
+            return Err(Status::error(
+                "BUDGET_EXCEEDED",
+                "Retained result exceeds host memory budget",
+            ));
+        }
+        state.transfer = state.transfer.checked_add(bytes).ok_or_else(|| {
+            Status::error("BUDGET_EXCEEDED", "Retained result byte count overflows")
+        })?;
+        state.host_bytes = host_bytes;
+        state.host_limit = host_limit;
+        Ok(TransferReservation {
+            budget: self.clone(),
+            bytes,
+        })
+    }
     pub fn reserve(&self, bytes: usize) -> Result<ImageMemoryReservation, Status> {
         let mut state = self.0.lock().unwrap_or_else(|p| p.into_inner());
         let usage = state.usage();
@@ -327,6 +359,24 @@ pub fn rgba_copy_bytes(reset: bool) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn completed_peak_is_atomically_replaced_by_a_retained_result_lease() {
+        let budget = ImageMemoryBudget::new(1024);
+        budget.bind_host_budget(100, 128);
+        assert!(budget.reserve_transfer(80).is_err());
+        let result = budget
+            .reserve_transfer_with_host_budget(80, 20, 128)
+            .unwrap();
+        assert_eq!(budget.usage().transfer_bytes, 80);
+        assert!(budget.reserve_transfer(29).is_err());
+        assert!(budget
+            .reserve_transfer_with_host_budget(129, 0, 128)
+            .is_err());
+        assert_eq!(budget.usage().transfer_bytes, 80);
+        drop(result);
+        assert_eq!(budget.usage().transfer_bytes, 0);
+        assert!(budget.reserve_transfer(108).is_ok());
+    }
     #[test]
     fn transport_and_resource_reservations_share_the_aggregate_ceiling() {
         let budget = ImageMemoryBudget::new(8);

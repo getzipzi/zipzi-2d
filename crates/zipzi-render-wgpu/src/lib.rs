@@ -1,4 +1,7 @@
 //! ScenePlan-driven cross-platform GPU renderer. Source textures store premultiplied RGBA.
+/// The backend types used by this renderer's public API.
+pub use wgpu;
+
 mod api;
 mod context;
 mod encoding;

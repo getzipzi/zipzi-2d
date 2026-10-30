@@ -9315,14 +9315,21 @@ dependencies = [
  "sha2 0.11.0",
  "tempfile",
  "uuid",
- "wgpu",
  "zipzi-animation",
+ "zipzi-contract",
  "zipzi-core",
+ "zipzi-observe-backend",
  "zipzi-project",
  "zipzi-render",
+ "zipzi-sdk",
+]
+
+[[package]]
+name = "zipzi-observe-backend"
+version = "0.1.0-alpha.4"
+dependencies = [
  "zipzi-render-metal",
  "zipzi-render-wgpu",
- "zipzi-sdk",
 ]
 
 [[package]]

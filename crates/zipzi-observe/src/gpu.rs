@@ -4,19 +4,19 @@ use std::fmt::Write as _;
 
 use sha2::{Digest, Sha256};
 use zipzi_core::Vec2;
-use zipzi_render::{texture::straight_rgba_mipmaps, Affine2, ViewportConfig};
 #[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
-use zipzi_render_metal::{
+use zipzi_observe_backend::metal::{
     metal, read_rgba8, MetalContext, MetalOutputMode as BackendOutputMode,
     MetalRenderer as BackendRenderer, MetalTargetConfig as BackendTargetConfig,
     MetalTexture as BackendTexture, MetalTextureCatalog as BackendTextureCatalog,
 };
 #[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
-use zipzi_render_wgpu::{
-    WgpuContext, WgpuEncodeTarget, WgpuOutputMode as BackendOutputMode,
+use zipzi_observe_backend::wgpu::{
+    wgpu, WgpuContext, WgpuEncodeTarget, WgpuOutputMode as BackendOutputMode,
     WgpuRenderer as BackendRenderer, WgpuTargetConfig as BackendTargetConfig,
     WgpuTexture as BackendTexture, WgpuTextureCatalog as BackendTextureCatalog,
 };
+use zipzi_render::{texture::straight_rgba_mipmaps, Affine2, ViewportConfig};
 
 use crate::{ObservationError, RenderRequest, ResolvedObservation, ResolvedTexture, ViewMapping};
 
@@ -60,18 +60,58 @@ pub struct ObservedFrame {
 
 impl ObservedFrame {
     pub fn png_bytes(&self) -> Result<Vec<u8>, ObservationError> {
-        let mut output = Vec::new();
-        {
-            let mut encoder = png::Encoder::new(&mut output, self.width, self.height);
-            encoder.set_color(png::ColorType::Rgba);
-            encoder.set_depth(png::BitDepth::Eight);
-            encoder
-                .write_header()
-                .and_then(|mut writer| writer.write_image_data(&self.rgba))
-                .map_err(|failure| error("PNG_ENCODE", failure.to_string()))?;
-        }
-        Ok(output)
+        encode_rgba_png(self.width, self.height, &self.rgba)
     }
+}
+
+struct BoundedPng {
+    bytes: Vec<u8>,
+    limit: usize,
+}
+
+impl std::io::Write for BoundedPng {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        if self
+            .bytes
+            .len()
+            .checked_add(bytes.len())
+            .is_none_or(|n| n > self.limit)
+        {
+            return Err(std::io::Error::other(
+                "PNG exceeds admitted output capacity",
+            ));
+        }
+        self.bytes
+            .try_reserve_exact(bytes.len())
+            .map_err(std::io::Error::other)?;
+        self.bytes.extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+fn encode_rgba_png(width: u32, height: u32, rgba: &[u8]) -> Result<Vec<u8>, ObservationError> {
+    let limit = zipzi_core::image::rgba_png_capacity(width, height)
+        .map_err(|s| error(&s.code, s.message))?;
+    let mut output = BoundedPng {
+        bytes: Vec::new(),
+        limit,
+    };
+    {
+        let mut encoder = png::Encoder::new(&mut output, width, height);
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        encoder
+            .write_header()
+            .and_then(|mut writer| {
+                writer.write_image_data(rgba)?;
+                writer.finish()
+            })
+            .map_err(|failure| error("PNG_ENCODE", failure.to_string()))?;
+    }
+    Ok(output.bytes)
 }
 
 struct OwnedTexture {
@@ -207,7 +247,7 @@ impl Observer {
         for texture in resolved {
             let id = texture.asset.id.clone();
             if self.textures.get(&id).is_some_and(|cached| {
-                cached.sha256 == texture.data.sha256
+                cached.sha256 == texture.render_rgba_hash
                     && cached.width == texture.data.width
                     && cached.height == texture.data.height
             }) {
@@ -249,7 +289,7 @@ impl Observer {
                     view,
                     width: texture.data.width,
                     height: texture.data.height,
-                    sha256: texture.data.sha256.clone(),
+                    sha256: texture.render_rgba_hash.clone(),
                     revision,
                 },
             );
@@ -276,7 +316,7 @@ impl Observer {
         let limit = self.context.max_texture_dimension();
         #[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
         let limit = self.context.device().limits().max_texture_dimension_2d;
-        if width > limit || height > limit || width > 4096 || height > 4096 {
+        if width > limit || height > limit {
             return Err(error(
                 "OUTPUT_SIZE_LIMIT",
                 format!("Output size exceeds the inspection or device limit {limit}x{limit}"),
@@ -287,11 +327,18 @@ impl Observer {
             let mut digest_writer = DigestWriter(&mut digest);
             let texture_hashes = resolved
                 .iter()
-                .map(|texture| (&texture.asset.id, &texture.data.sha256))
+                .map(|texture| {
+                    (
+                        &texture.asset.id,
+                        texture.data.width,
+                        texture.data.height,
+                        &texture.render_rgba_hash,
+                    )
+                })
                 .collect::<Vec<_>>();
             write!(
                 digest_writer,
-                "zipzi-observation-explicit-v1:{:?}:{:?}",
+                "zipzi-observation-explicit-v2:{:?}:{:?}",
                 input.frame, texture_hashes,
             )
             .expect("digest writer is infallible");
@@ -308,7 +355,10 @@ impl Observer {
         ] {
             digest.update(value.to_bits().to_le_bytes());
         }
-        digest.update(b"source-texture:linear-mipmap-linear-repeat-area-v2");
+        digest.update(b"source-texture:linear-mipmap-linear-repeat");
+        digest.update(crate::preparation::AREA_FILTER_VERSION.to_le_bytes());
+        digest.update(crate::planning::MIPMAP_VERSION.to_le_bytes());
+        digest.update(crate::alpha::SOURCE_ALPHA_SAMPLING_VERSION.to_le_bytes());
         digest.update(
             serde_json::to_vec(&(&request.topology, request.quality))
                 .map_err(|e| error("OVERLAY_OPTIONS", e.to_string()))?,
@@ -553,6 +603,31 @@ fn render_sample(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn png_output_is_bounded_and_roundtrips_incompressible_and_thin_images() {
+        use std::io::Write;
+        for (width, height) in [(1, 1), (1, 4096), (4096, 1), (73, 91)] {
+            let mut seed = 13u32;
+            let rgba: Vec<u8> = (0..width * height * 4)
+                .map(|_| {
+                    seed ^= seed << 13;
+                    seed ^= seed >> 17;
+                    seed ^= seed << 5;
+                    seed as u8
+                })
+                .collect();
+            let png = super::encode_rgba_png(width, height, &rgba).unwrap();
+            assert!(png.len() <= zipzi_core::image::rgba_png_capacity(width, height).unwrap());
+            assert_eq!(zipzi_core::image::decode_png(&png).unwrap().rgba, rgba);
+        }
+        let mut output = super::BoundedPng {
+            bytes: Vec::new(),
+            limit: 3,
+        };
+        output.write_all(b"abc").unwrap();
+        assert!(output.write_all(b"d").is_err());
+        assert_eq!(output.bytes, b"abc");
+    }
     use super::straight_rgba_mipmaps;
 
     #[test]

@@ -7,13 +7,14 @@ from .support import Reader
 
 @cache
 def _dependencies__read_previewbatch():
+    from .observation import _read_observationtexturereport
     from .observation import _read_observationview
     from .spatial import _read_spatialquery
-    return _read_observationview, _read_spatialquery,
+    return _read_observationtexturereport, _read_observationview, _read_spatialquery,
 
 def _read_previewbatch(r: Reader) -> m.PreviewBatch:
-    _read_observationview, _read_spatialquery, = _dependencies__read_previewbatch()
-    return m.PreviewBatch(view=(_read_observationview(r) if r.optional() else None), queries=tuple(_read_spatialquery(r) for _ in range(r.count())), sequence=integer(r.scalar('Q')), frames=tuple(_read_previewframe(r) for _ in range(r.count())))
+    _read_observationtexturereport, _read_observationview, _read_spatialquery, = _dependencies__read_previewbatch()
+    return m.PreviewBatch(texture_report=(_read_observationtexturereport(r) if r.optional() else None), view=(_read_observationview(r) if r.optional() else None), queries=tuple(_read_spatialquery(r) for _ in range(r.count())), sequence=integer(r.scalar('Q')), frames=tuple(_read_previewframe(r) for _ in range(r.count())))
 
 @cache
 def _dependencies__read_previewframe():
@@ -28,7 +29,7 @@ def _read_previewframe(r: Reader) -> m.PreviewFrame:
     return m.PreviewFrame(observation=(_read_observationimage(r) if r.optional() else None), spatial=tuple(_read_spatialresult(r) for _ in range(r.count())), preview_id=integer(r.scalar('Q')), sequence=integer(r.scalar('Q')), index=integer(r.scalar('Q')), motion=_read_motionsnapshot(r), geometry=(_read_drawableframe(r) if r.optional() else None))
 
 def decode_preview(value: bytes, signature: str) -> m.PreviewBatch:
-    if signature!='b17767ffe39f8046634ab6a887897558': raise ValueError("Binary preview contract differs")
+    if signature!='524a7adb4389f52840391c8e502a5414': raise ValueError("Binary preview contract differs")
     r=Reader(value)
     result=_read_previewbatch(r)
     r.finish()

@@ -99,6 +99,200 @@ pub(crate) fn write_texturecoverage_in(
         .unbind())
 }
 
+pub fn write_observationtexturereport(
+    py: Python<'_>,
+    value: &zipzi_runtime::ObservationTextureReport,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.values.observation")?;
+    write_observationtexturereport_in(py, value, &classes)
+}
+pub(crate) fn write_observationtexturereport_in(
+    py: Python<'_>,
+    value: &zipzi_runtime::ObservationTextureReport,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "policy",
+        write_observationtexturepolicy_in(py, (&value.policy), classes)?,
+    )?;
+    out.set_item(
+        "effective_max_rgba_bytes",
+        (&value.effective_max_rgba_bytes)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("longest_edge_limit", {
+        match (&value.longest_edge_limit).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item(
+        "source_rgba_bytes",
+        (&value.source_rgba_bytes)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "render_rgba_bytes",
+        (&value.render_rgba_bytes)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "estimated_mipmap_bytes",
+        (&value.estimated_mipmap_bytes)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "resized_count",
+        (&value.resized_count)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "filter",
+        (&value.filter)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "algorithm_version",
+        (&value.algorithm_version)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "planning_version",
+        (&value.planning_version)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "mipmap_version",
+        (&value.mipmap_version)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("textures", {
+        let out = PyList::empty(py);
+        for item0 in (&value.textures) {
+            out.append(write_observationtexturereportentry_in(
+                py,
+                (item0),
+                classes,
+            )?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("ObservationTextureReport")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_observationtexturereportentry(
+    py: Python<'_>,
+    value: &zipzi_runtime::ObservationTextureReportEntry,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.values.observation")?;
+    write_observationtexturereportentry_in(py, value, &classes)
+}
+pub(crate) fn write_observationtexturereportentry_in(
+    py: Python<'_>,
+    value: &zipzi_runtime::ObservationTextureReportEntry,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "asset_id",
+        (&value.asset_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "source_size",
+        write_observationtexturesize_in(py, (&value.source_size), classes)?,
+    )?;
+    out.set_item(
+        "render_size",
+        write_observationtexturesize_in(py, (&value.render_size), classes)?,
+    )?;
+    out.set_item(
+        "source_content_identity",
+        write_observationcontentidentity_in(py, (&value.source_content_identity), classes)?,
+    )?;
+    out.set_item(
+        "render_rgba_hash",
+        (&value.render_rgba_hash)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("ObservationTextureReportEntry")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_observationtexturesize(
+    py: Python<'_>,
+    value: &zipzi_runtime::ObservationTextureSize,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.values.observation")?;
+    write_observationtexturesize_in(py, value, &classes)
+}
+pub(crate) fn write_observationtexturesize_in(
+    py: Python<'_>,
+    value: &zipzi_runtime::ObservationTextureSize,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "width",
+        (&value.width)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "height",
+        (&value.height)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("ObservationTextureSize")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
 pub fn write_observationview(
     py: Python<'_>,
     value: &zipzi_runtime::ObservationView,
@@ -112,6 +306,10 @@ pub(crate) fn write_observationview_in(
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
+    out.set_item(
+        "texture_policy",
+        write_observationtexturepolicy_in(py, (&value.texture_policy), classes)?,
+    )?;
     out.set_item(
         "width",
         (&value.width)
@@ -464,13 +662,6 @@ pub(crate) fn write_observationimage_in(
         }
         out.into_any().unbind()
     })?;
-    out.set_item("textures", {
-        let out = PyList::empty(py);
-        for item0 in (&value.textures) {
-            out.append(write_observedtexture_in(py, (item0), classes)?)?;
-        }
-        out.into_any().unbind()
-    })?;
     out.set_item("drawable_bounds", {
         let out = PyList::empty(py);
         for item0 in (&value.drawable_bounds) {
@@ -487,41 +678,6 @@ pub(crate) fn write_observationimage_in(
     })?;
     Ok(classes
         .getattr("ObservationImage")?
-        .call((), Some(&out))?
-        .unbind())
-}
-
-pub fn write_observedtexture(
-    py: Python<'_>,
-    value: &zipzi_runtime::ObservedTexture,
-) -> PyResult<Py<PyAny>> {
-    let classes = PyModule::import(py, "zipzi._generated.values.observation")?;
-    write_observedtexture_in(py, value, &classes)
-}
-pub(crate) fn write_observedtexture_in(
-    py: Python<'_>,
-    value: &zipzi_runtime::ObservedTexture,
-    classes: &Bound<'_, PyModule>,
-) -> PyResult<Py<PyAny>> {
-    let out = PyDict::new(py);
-    out.set_item(
-        "asset_id",
-        (&value.asset_id)
-            .into_pyobject(py)?
-            .into_bound()
-            .into_any()
-            .unbind(),
-    )?;
-    out.set_item(
-        "sha256",
-        (&value.sha256)
-            .into_pyobject(py)?
-            .into_bound()
-            .into_any()
-            .unbind(),
-    )?;
-    Ok(classes
-        .getattr("ObservedTexture")?
         .call((), Some(&out))?
         .unbind())
 }
@@ -587,6 +743,10 @@ pub(crate) fn write_observationbatch_in(
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
     out.set_item(
+        "texture_report",
+        write_observationtexturereport_in(py, (&value.texture_report), classes)?,
+    )?;
+    out.set_item(
         "view",
         write_observationview_in(py, (&value.view), classes)?,
     )?;
@@ -615,6 +775,336 @@ pub(crate) fn write_observationbatch_in(
     })?;
     Ok(classes
         .getattr("ObservationBatch")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_observationestimate(
+    py: Python<'_>,
+    value: &zipzi_runtime::ObservationEstimate,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.values.observation")?;
+    write_observationestimate_in(py, value, &classes)
+}
+pub(crate) fn write_observationestimate_in(
+    py: Python<'_>,
+    value: &zipzi_runtime::ObservationEstimate,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item("source", write_sourceref(py, (&value.source))?)?;
+    out.set_item("preview_id", {
+        match (&value.preview_id).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("sequence", {
+        match (&value.sequence).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item(
+        "texture_planning",
+        write_observationtextureplanning_in(py, (&value.texture_planning), classes)?,
+    )?;
+    out.set_item(
+        "texture_workspace_bytes",
+        (&value.texture_workspace_bytes)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "gpu_working_set_bytes",
+        (&value.gpu_working_set_bytes)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "output_bytes",
+        (&value.output_bytes)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "task_bytes",
+        (&value.task_bytes)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "static_feasible",
+        (&value.static_feasible)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "runtime_available",
+        (&value.runtime_available)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "gpu_supported",
+        (&value.gpu_supported)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("device_max_texture_dimension", {
+        match (&value.device_max_texture_dimension).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item(
+        "device_verified",
+        (&value.device_verified)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "source_identities_verified",
+        (&value.source_identities_verified)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("issues", {
+        let out = PyList::empty(py);
+        for item0 in (&value.issues) {
+            out.append(write_observationestimateissue_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("ObservationEstimate")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_observationtextureplan(
+    py: Python<'_>,
+    value: &zipzi_runtime::ObservationTexturePlan,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.values.observation")?;
+    write_observationtextureplan_in(py, value, &classes)
+}
+pub(crate) fn write_observationtextureplan_in(
+    py: Python<'_>,
+    value: &zipzi_runtime::ObservationTexturePlan,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "policy",
+        write_observationtexturepolicy_in(py, (&value.policy), classes)?,
+    )?;
+    out.set_item(
+        "effective_max_rgba_bytes",
+        (&value.effective_max_rgba_bytes)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("longest_edge_limit", {
+        match (&value.longest_edge_limit).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item(
+        "source_rgba_bytes",
+        (&value.source_rgba_bytes)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "render_rgba_bytes",
+        (&value.render_rgba_bytes)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "estimated_mipmap_bytes",
+        (&value.estimated_mipmap_bytes)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "resized_count",
+        (&value.resized_count)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "planning_version",
+        (&value.planning_version)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "mipmap_version",
+        (&value.mipmap_version)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("textures", {
+        let out = PyList::empty(py);
+        for item0 in (&value.textures) {
+            out.append(write_observationtexturetarget_in(py, (item0), classes)?)?;
+        }
+        out.into_any().unbind()
+    })?;
+    Ok(classes
+        .getattr("ObservationTexturePlan")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_observationtexturetarget(
+    py: Python<'_>,
+    value: &zipzi_runtime::ObservationTextureTarget,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.values.observation")?;
+    write_observationtexturetarget_in(py, value, &classes)
+}
+pub(crate) fn write_observationtexturetarget_in(
+    py: Python<'_>,
+    value: &zipzi_runtime::ObservationTextureTarget,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "source",
+        write_observationtexturesource_in(py, (&value.source), classes)?,
+    )?;
+    out.set_item(
+        "render_size",
+        write_observationtexturesize_in(py, (&value.render_size), classes)?,
+    )?;
+    Ok(classes
+        .getattr("ObservationTextureTarget")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_observationtexturesource(
+    py: Python<'_>,
+    value: &zipzi_runtime::ObservationTextureSource,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.values.observation")?;
+    write_observationtexturesource_in(py, value, &classes)
+}
+pub(crate) fn write_observationtexturesource_in(
+    py: Python<'_>,
+    value: &zipzi_runtime::ObservationTextureSource,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "asset_id",
+        (&value.asset_id)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "source_size",
+        write_observationtexturesize_in(py, (&value.source_size), classes)?,
+    )?;
+    out.set_item("source_content_identity", {
+        match (&value.source_content_identity).as_ref() {
+            Some(item) => write_observationcontentidentity_in(py, (item), classes)?,
+            None => py.None(),
+        }
+    })?;
+    Ok(classes
+        .getattr("ObservationTextureSource")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_observationestimateissue(
+    py: Python<'_>,
+    value: &zipzi_runtime::ObservationEstimateIssue,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.values.observation")?;
+    write_observationestimateissue_in(py, value, &classes)
+}
+pub(crate) fn write_observationestimateissue_in(
+    py: Python<'_>,
+    value: &zipzi_runtime::ObservationEstimateIssue,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "code",
+        (&value.code)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "message",
+        (&value.message)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("asset_id", {
+        match (&value.asset_id).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("requested", {
+        match (&value.requested).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    out.set_item("limit", {
+        match (&value.limit).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    Ok(classes
+        .getattr("ObservationEstimateIssue")?
         .call((), Some(&out))?
         .unbind())
 }

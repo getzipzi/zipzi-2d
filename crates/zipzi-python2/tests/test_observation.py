@@ -8,6 +8,110 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from test_api import PythonSdk,zipzi,uid,GEOMETRY,meshes
 
 class Observation(PythonSdk):
+    def test_estimate_call_recovery_keeps_projection_and_preview_state(self):
+        from zipzi import observation as o
+        view=o.View(width=8,height=8,roi=(0.,0.,1.,1.),texture_policy=o.FitBudget(max_rgba_bytes=4))
+        for candidate in (False,True):
+            with self.subTest(candidate=candidate):
+                runtime=self.runtime("connected",drop="estimate_observation")
+                session=runtime.sessions.create(uid(1))
+                if candidate:
+                    with session.edit("Estimate recovery") as edit:
+                        result=zipzi.recover_call(edit.modeling.estimate_observation,({},),view)
+                        self.assertIsInstance(result,o.Estimate)
+                        self.assertEqual(result.source,edit.modeling.sample(({},)).source)
+                        edit.cancel()
+                else:
+                    result=zipzi.recover_call(session.modeling.estimate_observation,({},),view)
+                    self.assertIsInstance(result,o.Estimate)
+                    self.assertEqual(result.source,session.modeling.sample(({},)).source)
+        runtime=self.runtime("connected",drop="estimate_preview_observation")
+        session=runtime.sessions.create(uid(1))
+        with session.preview() as preview:
+            before=preview.info()
+            result=zipzi.recover_call(preview.estimate_observation,(0.,),view=view,geometry=False)
+            self.assertIsInstance(result,o.Estimate)
+            self.assertEqual(result.source,preview.source)
+            self.assertEqual(preview.info(),before)
+
+    def test_texture_policy_estimates_reports_and_source_alpha_on_both_backends(self):
+        from dataclasses import replace
+        import json
+        from zipzi import observation as o, inspection
+        for mode in ("local","connected"):
+            with self.subTest(mode=mode):
+                runtime=self.runtime(mode);session=runtime.sessions.create(uid(1))
+                pixels=bytes(v for i in range(35) for v in (255,(i*3)%256,19,0 if i%3==0 else 255))
+                with runtime.resources.prepare_image(7,5,pixels) as image:
+                    with session.edit("Texture policy") as edit:
+                        asset=edit.resources.create_image("Color",image,id=uid(2))
+                        edit.meshes.create(meshes.MeshSpec("Triangle",GEOMETRY,texture_asset_id=asset,id=uid(3)))
+                before=session.info();gpu=runtime.capabilities().gpu
+                original=o.View(width=64,height=64,roi=(0.,0.,1.,1.),quality=True)
+                fitted=replace(original,texture_policy=o.FitBudget(max_rgba_bytes=4))
+                estimate=session.modeling.estimate_observation(({},{}),fitted)
+                self.assertEqual(runtime.capabilities().gpu,gpu)
+                self.assertIsInstance(estimate.texture_planning,o.TexturePlanReady)
+                self.assertEqual(estimate.texture_planning.plan.render_rgba_bytes,4)
+                self.assertFalse(estimate.device_verified or estimate.source_identities_verified)
+                self.assertIsNone(estimate.device_max_texture_dimension)
+                limits=runtime.limits()
+                self.assertEqual(limits.observation_texture_rgba_bytes,256<<20)
+                with patch.object(runtime._backend,"estimate_observation",side_effect=AssertionError("invalid client input reached host")):
+                    for invalid in ("original",{"kind":"original"},o.FitBudget(max_rgba_bytes=True),o.FitBudget(max_rgba_bytes=0),o.FitBudget(max_rgba_bytes=-1)):
+                        with self.assertRaises((ValueError,TypeError)):
+                            session.modeling.estimate_observation(({},),replace(original,texture_policy=invalid))
+                for budget in (1,3):
+                    diagnostic=session.modeling.estimate_observation(({},),replace(original,texture_policy=o.FitBudget(max_rgba_bytes=budget)))
+                    self.assertFalse(diagnostic.static_feasible)
+                    self.assertIsInstance(diagnostic.texture_planning,o.TextureBudgetInsufficient)
+                    self.assertEqual(diagnostic.texture_planning.minimum_required_rgba_bytes,4)
+                with self.assertRaises(zipzi.SdkFailure) as invalid:
+                    session.modeling.estimate_observation(({},),replace(original,texture_policy=o.FitBudget(max_rgba_bytes=limits.observation_texture_rgba_bytes+1)))
+                self.assertEqual(invalid.exception.code,"INVALID_TEXTURE_POLICY")
+                too_many=session.modeling.estimate_observation(tuple({} for _ in range(limits.observation_frames+1)),fitted)
+                self.assertFalse(too_many.static_feasible)
+                self.assertIn("OBSERVATION_FRAME_LIMIT",tuple(issue.code for issue in too_many.issues))
+                a=session.modeling.observe(({},{}),original,expected=estimate.source).wait()
+                b=session.modeling.observe(({},{}),fitted,expected=estimate.source).wait()
+                equivalent=session.modeling.observe(({},),replace(fitted,texture_policy=o.FitBudget(max_rgba_bytes=5))).wait()
+                same_size=session.modeling.observe(({},),replace(original,texture_policy=o.FitBudget(max_rgba_bytes=140))).wait()
+                self.assertEqual(a.value.frames[0].scene_digest,b.value.frames[0].scene_digest)
+                self.assertEqual(a.value.frames[0].quality,b.value.frames[0].quality)
+                self.assertNotEqual(a.value.frames[0].render_digest,b.value.frames[0].render_digest)
+                self.assertEqual(b.value.frames[0].render_digest,equivalent.value.frames[0].render_digest)
+                self.assertEqual(b.value.frames[0].input_sha256,equivalent.value.frames[0].input_sha256)
+                self.assertEqual(a.value.frames[0].render_digest,same_size.value.frames[0].render_digest)
+                report=b.value.texture_report
+                self.assertEqual((report.source_rgba_bytes,report.render_rgba_bytes,report.resized_count),(140,4,1))
+                self.assertEqual(report.textures[0].source_size.width,7)
+                self.assertEqual(report.textures[0].render_size.width,1)
+                with session.preview(expected=estimate.source) as preview:
+                    state=preview.info()
+                    predicted=preview.estimate_observation((0.,.25),view=fitted,geometry=False)
+                    self.assertEqual(predicted.source,preview.source)
+                    self.assertEqual(predicted.preview_id,preview.id)
+                    self.assertEqual(predicted.sequence,state.value.sequence)
+                    self.assertEqual(preview.info(),state)
+                    animation=preview.sample((0.,.25),view=fitted,geometry=False).wait()
+                    self.assertEqual(animation.value.texture_report.render_rgba_bytes,4)
+                    self.assertEqual(animation.value.frames[0].observation.quality,b.value.frames[0].quality)
+                    self.assertIsNone(preview.seek(0.,geometry=False).wait().value.texture_report)
+                exported=inspection.save(b,self.folder/(mode+"-budget"))
+                manifest=json.loads(exported.manifest.read_text())
+                self.assertEqual(manifest["schema"],2)
+                self.assertEqual(manifest["texture_report"]["render_rgba_bytes"],4)
+                self.assertNotIn("textures",manifest["frames"][0])
+                self.assertEqual(session.info(),before)
+                with session.edit("Candidate estimate") as edit:
+                    edit.meshes.rename(uid(3),"candidate")
+                    candidate=edit.modeling.estimate_observation(({},),fitted)
+                    self.assertEqual(candidate.source,edit.meshes.get(uid(3)).source)
+                    observed=edit.modeling.observe(({},),fitted,expected=candidate.source).wait()
+                    self.assertEqual(observed.source,candidate.source)
+                    edit.cancel()
+                self.assertEqual(session.info(),before)
+
     def test_topology_selection_anomalies_opacity_and_invalid_options(self):
         from dataclasses import replace
         from zipzi import observation as o, scene

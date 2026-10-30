@@ -63,6 +63,18 @@ Apply one typed animation control in this Preview. SDK validation errors preserv
 
 Alias of [zipzi.Buffer.close](runtime.md#zipzibufferclose).
 
+## zipzi.animation.Preview.estimate_observation
+
+`(times: Sequence[float], *, view: m.ObservationView, geometry: bool=True, queries: Sequence[m.SpatialQuery]=()) -> m.ObservationEstimate`
+
+Estimate frozen-source observation using metadata and current controls.
+
+This synchronous read does not replay, advance the clock/sequence, decode
+images, initialize a device or reserve a Job. Busy Previews refuse it.
+The result reports static feasibility and current availability separately;
+it does not reserve capacity for a later sample/seek/advance_to.
+
+
 ## zipzi.animation.Preview.id
 
 `() -> int`
@@ -85,9 +97,10 @@ Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 
 `(times: Sequence[float], *, geometry: bool=True, queries: Sequence[m.SpatialQuery]=(), view: m.ObservationView | None=None) -> Job[Snapshot[m.PreviewBatch]]`
 
-Submit 1..64 canonical seeks in target order; wait for a frozen-source batch.
+Submit canonical seeks in target order; wait for a frozen-source batch.
 
-Duplicates/backward times are retained. CPU geometry is optional.
+View batches use the host observation frame limit; CPU-only batches allow
+1..64 frames. Duplicates/backward times are retained. CPU geometry is optional.
 view requests GPU RGBA/PNG from each exact state using once-resolved batch
 textures and applies SDK Model opacity. Missing devices fail explicitly;
 image/capture failure may retain completed seeks. No view keeps CPU-only work.

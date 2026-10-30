@@ -14,6 +14,33 @@ pub(crate) fn samples<'py>(
 }
 #[pymethods]
 impl NativeRuntime {
+    fn estimate_observation(
+        &self,
+        py: Python<'_>,
+        session: &SessionToken,
+        edit: Option<&EditToken>,
+        poses: &Bound<'_, PyAny>,
+        view: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyDict>> {
+        let _lease = input_lease!(
+            self,
+            py,
+            input_budget::poses(poses)?
+                .saturating_add(generated::modeling::measure_observationview(view)?),
+            "observation.estimate",
+            None
+        );
+        let poses = poses.extract()?;
+        let view = generated::modeling::read_observationview(view)?;
+        let (client, session, edit) = (self.client, session.id, edit.map(|e| e.id));
+        let result = py.detach(|| {
+            self.host
+                .call(move |rt| rt.estimate_observation(client, session, edit, poses, view))
+        });
+        reply(py, result, "observation.estimate", |value| {
+            Ok(generated::modeling::write_observationestimate(py, &value)?.into_bound(py))
+        })
+    }
     fn observation_job(
         &self,
         py: Python<'_>,
@@ -26,7 +53,8 @@ impl NativeRuntime {
         let _lease = input_lease!(
             self,
             py,
-            input_budget::poses(poses)?.saturating_add(1024),
+            input_budget::poses(poses)?
+                .saturating_add(generated::modeling::measure_observationview(view)?),
             "observation",
             None
         );

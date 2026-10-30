@@ -1,4 +1,5 @@
 extern crate self as zipzi_core;
+pub use zipzi_contract::model::OFFSCREEN_BUDGET_BYTES;
 pub use zipzi_contract::{api_field, api_record, api_record_attributes, api_union};
 pub use zipzi_contract::{api_shape, binary_wire, serde_maps, SharedVec};
 #[cfg(feature = "bench-instrumentation")]

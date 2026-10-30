@@ -5,6 +5,9 @@ use crate::*;
 
 pub fn measure_observationview(value: &Bound<'_, PyAny>) -> PyResult<usize> {
     Ok(256usize
+        .saturating_add(measure_observationtexturepolicy(
+            &(value.getattr("texture_policy")?),
+        )?)
         .saturating_add(16usize)
         .saturating_add(16usize)
         .saturating_add({
