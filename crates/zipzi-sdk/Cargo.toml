@@ -20,10 +20,10 @@ bench-instrumentation = ["zipzi-core/bench-instrumentation"]
 
 [dependencies]
 zipzi-contract.workspace = true
-zipzi-api-derive = { version = "=0.1.0-alpha.4", path = "../zipzi-api-derive" }
-zipzi-core = { version = "=0.1.0-alpha.4", path = "../zipzi-core" }
-zipzi-animation = { version = "=0.1.0-alpha.4", path = "../zipzi-animation" }
-zipzi-project = { version = "=0.1.0-alpha.4", path = "../zipzi-project" }
+zipzi-api-derive = { version = "=0.1.0-alpha.5", path = "../zipzi-api-derive" }
+zipzi-core = { version = "=0.1.0-alpha.5", path = "../zipzi-core" }
+zipzi-animation = { version = "=0.1.0-alpha.5", path = "../zipzi-animation" }
+zipzi-project = { version = "=0.1.0-alpha.5", path = "../zipzi-project" }
 serde = { workspace = true }
 uuid.workspace = true
 geo = { version = "0.33.1", default-features = false }

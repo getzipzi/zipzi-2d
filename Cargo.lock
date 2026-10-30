@@ -1271,7 +1271,7 @@ dependencies = [
 
 [[package]]
 name = "cubism-matrix-zipzi"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "png 0.17.16",
  "serde",
@@ -9138,7 +9138,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-animation"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "serde",
  "serde_json",
@@ -9152,7 +9152,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-api-derive"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -9161,7 +9161,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-cmo3"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -9179,7 +9179,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-contract"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "serde",
  "serde_json",
@@ -9190,7 +9190,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-core"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "png 0.17.16",
  "robust",
@@ -9205,7 +9205,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-editor"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -9236,7 +9236,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-editor-core"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -9256,7 +9256,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-editor-render"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "anyhow",
  "gpui-fast",
@@ -9274,7 +9274,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-live2d"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "serde",
  "serde_json",
@@ -9285,7 +9285,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-moc3"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "cc",
  "serde",
@@ -9298,7 +9298,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-moc3-psd"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "ag-psd",
  "zipzi-core",
@@ -9307,7 +9307,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-observe"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "png 0.17.16",
  "serde",
@@ -9326,7 +9326,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-observe-backend"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "zipzi-render-metal",
  "zipzi-render-wgpu",
@@ -9334,7 +9334,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-project"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "ciborium",
  "png 0.17.16",
@@ -9355,7 +9355,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-psd"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "ag-psd",
  "png 0.17.16",
@@ -9368,7 +9368,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-python2"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "pyo3",
  "serde",
@@ -9381,7 +9381,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-render"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "bytemuck",
  "zipzi-core",
@@ -9389,7 +9389,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-render-metal"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "bytemuck",
  "metal",
@@ -9400,7 +9400,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-render-wgpu"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "bytemuck",
  "png 0.17.16",
@@ -9412,7 +9412,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-runtime"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "async-channel",
  "libc",
@@ -9433,7 +9433,7 @@ dependencies = [
 
 [[package]]
 name = "zipzi-sdk"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 dependencies = [
  "geo",
  "png 0.17.16",

@@ -27,4 +27,4 @@ thiserror.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
-zipzi-cmo3 = { version = "=0.1.0-alpha.4", path = "../zipzi-cmo3", features = ["test-support"] }
+zipzi-cmo3 = { version = "=0.1.0-alpha.5", path = "../zipzi-cmo3", features = ["test-support"] }

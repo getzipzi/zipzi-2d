@@ -14,11 +14,11 @@ bench-instrumentation = ["zipzi-project/bench-instrumentation"]
 
 [dependencies]
 zipzi-contract.workspace = true
-zipzi-api-derive = { version = "=0.1.0-alpha.4", path = "../zipzi-api-derive" }
+zipzi-api-derive = { version = "=0.1.0-alpha.5", path = "../zipzi-api-derive" }
 zipzi-core.workspace = true
 zipzi-sdk.workspace = true
 zipzi-project.workspace = true
-zipzi-observe = { version = "=0.1.0-alpha.4", path = "../zipzi-observe", default-features = false }
+zipzi-observe = { version = "=0.1.0-alpha.5", path = "../zipzi-observe", default-features = false }
 uuid.workspace = true
 thiserror.workspace = true
 serde.workspace = true

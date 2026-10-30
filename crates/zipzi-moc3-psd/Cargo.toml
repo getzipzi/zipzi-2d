@@ -9,5 +9,5 @@ description = "Export MOC3 ArtMeshes and textures as a layered PSD"
 
 [dependencies]
 ag-psd = "=0.3.0"
-zipzi-core = { version = "=0.1.0-alpha.4", path = "../zipzi-core" }
-zipzi-moc3 = { version = "=0.1.0-alpha.4", path = "../zipzi-moc3" }
+zipzi-core = { version = "=0.1.0-alpha.5", path = "../zipzi-core" }
+zipzi-moc3 = { version = "=0.1.0-alpha.5", path = "../zipzi-moc3" }

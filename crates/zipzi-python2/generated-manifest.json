@@ -339,7 +339,7 @@
     {
       "path": "client/python/zipzi/_generated/catalog/runtime.py",
       "owner": "zipzi-python2/tools/generate.py",
-      "sha256": "4a678ecb7ccda4cfa9f96edd2be0baf30b3e81d8efadc32a70fb7bd8cdc92989"
+      "sha256": "5877c6eb86e02a6fbfa3663167cdeb3aa443ee1f3088b1cb8accad665f2ada6c"
     },
     {
       "path": "client/python/zipzi/_generated/catalog/runtime_edit.py",
@@ -504,7 +504,7 @@
     {
       "path": "client/python/zipzi/_generated/metadata.py",
       "owner": "zipzi-python2/tools/generate.py",
-      "sha256": "2cd40135f5e2946163792eec56e486a87a0ad2f4e02c87dedb6c089cc4ac9ce7"
+      "sha256": "915d9e058cbdc3f8ba5fcfbb4bc1a182ca87cd7449d34f0a5282f0eef72bfd31"
     },
     {
       "path": "client/python/zipzi/_generated/parameter_values.py",
@@ -884,7 +884,7 @@
     {
       "path": "client/python/zipzi/docs/reference/runtime.md",
       "owner": "zipzi-python2/tools/generate.py",
-      "sha256": "0c4fd578295c9a0d28790cf0a2e5ce9670af0970c610fd18493fea4fac890f44"
+      "sha256": "fdb0b59c467c2cbcea3f5331a8aee22b2dd0680e14a62625595c150207d55d84"
     },
     {
       "path": "client/python/zipzi/docs/reference/runtime_edit.md",

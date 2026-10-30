@@ -12,7 +12,7 @@ serde_json.workspace = true
 uuid.workspace = true
 thiserror.workspace = true
 
-zipzi-api-derive = { version = "=0.1.0-alpha.4", path = "../zipzi-api-derive" }
+zipzi-api-derive = { version = "=0.1.0-alpha.5", path = "../zipzi-api-derive" }
 
 [[bin]]
 name = "authoring-schema"

@@ -13,12 +13,12 @@ binary-prototype = ["dep:ciborium"]
 
 [dependencies]
 zipzi-contract.workspace = true
-zipzi-api-derive = { version = "=0.1.0-alpha.4", path = "../zipzi-api-derive" }
-zipzi-core = { version = "=0.1.0-alpha.4", path = "../zipzi-core" }
-zipzi-live2d = { version = "=0.1.0-alpha.4", path = "../zipzi-live2d" }
-zipzi-cmo3 = { version = "=0.1.0-alpha.4", path = "../zipzi-cmo3" }
-zipzi-moc3 = { version = "=0.1.0-alpha.4", path = "../zipzi-moc3" }
-zipzi-psd = { version = "=0.1.0-alpha.4", path = "../zipzi-psd" }
+zipzi-api-derive = { version = "=0.1.0-alpha.5", path = "../zipzi-api-derive" }
+zipzi-core = { version = "=0.1.0-alpha.5", path = "../zipzi-core" }
+zipzi-live2d = { version = "=0.1.0-alpha.5", path = "../zipzi-live2d" }
+zipzi-cmo3 = { version = "=0.1.0-alpha.5", path = "../zipzi-cmo3" }
+zipzi-moc3 = { version = "=0.1.0-alpha.5", path = "../zipzi-moc3" }
+zipzi-psd = { version = "=0.1.0-alpha.5", path = "../zipzi-psd" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

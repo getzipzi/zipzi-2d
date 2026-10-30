@@ -17,7 +17,7 @@ zipzi-editor-core.workspace = true
 zipzi-core.workspace = true
 zipzi-render.workspace = true
 
-zipzi-render-wgpu = { version = "=0.1.0-alpha.4", path = "../zipzi-render-wgpu", optional = true }
+zipzi-render-wgpu = { version = "=0.1.0-alpha.5", path = "../zipzi-render-wgpu", optional = true }
 wgpu = { workspace = true, optional = true }
 
 [dev-dependencies]

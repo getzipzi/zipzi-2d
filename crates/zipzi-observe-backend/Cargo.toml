@@ -10,10 +10,10 @@ description = "Platform GPU dependency selection for Zipzi observation"
 wgpu-backend = ["dep:zipzi-render-wgpu"]
 
 [dependencies]
-zipzi-render-wgpu = { version = "=0.1.0-alpha.4", path = "../zipzi-render-wgpu", optional = true }
+zipzi-render-wgpu = { version = "=0.1.0-alpha.5", path = "../zipzi-render-wgpu", optional = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-zipzi-render-metal = { version = "=0.1.0-alpha.4", path = "../zipzi-render-metal" }
+zipzi-render-metal = { version = "=0.1.0-alpha.5", path = "../zipzi-render-metal" }
 
 [target.'cfg(not(target_os = "macos"))'.dependencies]
-zipzi-render-wgpu = { version = "=0.1.0-alpha.4", path = "../zipzi-render-wgpu" }
+zipzi-render-wgpu = { version = "=0.1.0-alpha.5", path = "../zipzi-render-wgpu" }

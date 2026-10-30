@@ -13,12 +13,12 @@ wgpu-backend = ["gpu", "zipzi-observe-backend/wgpu-backend"]
 
 [dependencies]
 zipzi-contract.workspace = true
-zipzi-animation = { version = "=0.1.0-alpha.4", path = "../zipzi-animation" }
-zipzi-core = { version = "=0.1.0-alpha.4", path = "../zipzi-core" }
-zipzi-sdk = { version = "=0.1.0-alpha.4", path = "../zipzi-sdk" }
-zipzi-project = { version = "=0.1.0-alpha.4", path = "../zipzi-project" }
-zipzi-render = { version = "=0.1.0-alpha.4", path = "../zipzi-render", optional = true }
-zipzi-observe-backend = { version = "=0.1.0-alpha.4", path = "../zipzi-observe-backend", optional = true }
+zipzi-animation = { version = "=0.1.0-alpha.5", path = "../zipzi-animation" }
+zipzi-core = { version = "=0.1.0-alpha.5", path = "../zipzi-core" }
+zipzi-sdk = { version = "=0.1.0-alpha.5", path = "../zipzi-sdk" }
+zipzi-project = { version = "=0.1.0-alpha.5", path = "../zipzi-project" }
+zipzi-render = { version = "=0.1.0-alpha.5", path = "../zipzi-render", optional = true }
+zipzi-observe-backend = { version = "=0.1.0-alpha.5", path = "../zipzi-observe-backend", optional = true }
 png = { workspace = true }
 sha2 = { workspace = true }
 serde = { workspace = true }
