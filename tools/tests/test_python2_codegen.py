@@ -17,6 +17,17 @@ PACKAGE = ROOT / 'crates/zipzi-python2'
 SPEC = importlib.util.spec_from_file_location('python2_generate', PACKAGE / 'tools/generate.py')
 gen = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(gen)
+from codegen import projections
+
+FIXTURE_SPEC = importlib.util.spec_from_file_location('python2_shape_fixture', ROOT / 'tools/tests/_python2_shape_fixture.py')
+fixture = importlib.util.module_from_spec(FIXTURE_SPEC)
+FIXTURE_SPEC.loader.exec_module(fixture)
+
+def render_fixture(contract):
+    if contract.get('format_version') == 2:
+        return gen.render(contract)
+    root, definitions = fixture.normalize(contract, projections.EXTERNAL_TYPES)
+    return gen.render({'format_version': 2, 'root': root, 'definitions': definitions})
 
 
 def catalog_from_output(output):
@@ -147,7 +158,7 @@ class Python2Codegen(unittest.TestCase):
                 self.assertEqual(cache.read_text(), '{invalid')
 
     def test_catalog_navigation_and_public_query_defaults(self):
-        output=gen.render(self.contract())
+        output=render_fixture(self.contract())
         catalog=catalog_from_output(output)
         for path in catalog:
             parent=path.rpartition('.')[0]
@@ -183,7 +194,7 @@ class Python2Codegen(unittest.TestCase):
             self.assertIs(query.pose,False)
 
     def test_modeling_freezes_only_values_requiring_conversion(self):
-        output=gen.render(self.contract())
+        output=render_fixture(self.contract())
         for path,source in output.items():
             if not path.startswith('client/python/zipzi/_generated/values/') or not path.endswith('.py'):continue
             for node in ast.walk(ast.parse(source)):
@@ -217,7 +228,7 @@ class Python2Codegen(unittest.TestCase):
                 codec.validate_PhysicsNormalization(shadow)
 
     def test_single_variant_type_alias_keeps_fields_and_public_methods_in_catalog(self):
-        output=gen.render(self.contract())
+        output=render_fixture(self.contract())
         catalog=catalog_from_output(output)
         alias='zipzi.modeling.physics.PhysicsAssetProperty'
         concrete='zipzi.modeling.physics.PhysicsAssetPropertyFps'
@@ -230,7 +241,7 @@ class Python2Codegen(unittest.TestCase):
                              catalog[concrete+'.'+method]['documentation'])
 
     def test_catalog_version_follows_distribution_metadata(self):
-        output=gen.render(self.contract())
+        output=render_fixture(self.contract())
         namespace={}
         exec(output['client/python/zipzi/_generated/metadata.py'],namespace)
         import tomllib
@@ -239,18 +250,18 @@ class Python2Codegen(unittest.TestCase):
         self.assertIn('Package '+version+';',catalog_from_output(output)['zipzi']['documentation'])
         self.assertEqual(namespace['CONTRACT'],self.contract()['protocol'])
         changed_protocol=deepcopy(self.contract());changed_protocol['protocol']='test-runtime-contract'
-        protocol_output=gen.render(changed_protocol)
+        protocol_output=render_fixture(changed_protocol)
         exec(protocol_output['client/python/zipzi/_generated/metadata.py'],namespace)
         self.assertEqual(namespace['CONTRACT'],'test-runtime-contract')
         self.assertIn('protocol test-runtime-contract;',catalog_from_output(protocol_output)['zipzi']['documentation'])
         with patch.object(gen._api_codegen._python_api.tomllib,'loads',return_value={'project':{'version':'9.8.7a6'}}):
-            changed=gen.render(self.contract())
+            changed=render_fixture(self.contract())
         exec(changed['client/python/zipzi/_generated/metadata.py'],namespace)
         self.assertEqual(namespace['PACKAGE_VERSION'],'9.8.7a6')
         self.assertIn('Package 9.8.7a6;',changed['client/python/zipzi/docs/reference/runtime.md'])
 
     def test_handwritten_context_and_representation_methods_have_public_entries(self):
-        output=gen.render(self.contract())
+        output=render_fixture(self.contract())
         catalog=catalog_from_output(output)
         for path in ('zipzi.Runtime.__enter__','zipzi.Runtime.__exit__',
                      'zipzi.Edit.__enter__','zipzi.Edit.__exit__','zipzi.Job.__exit__',
@@ -272,10 +283,10 @@ class Python2Codegen(unittest.TestCase):
                     remove(value)
         remove(contract)
         with self.assertRaisesRegex(ValueError, r'Missing semantic field documentation: .*ParameterPatch.repeat'):
-            gen.render(contract)
+            render_fixture(contract)
 
     def test_field_semantics_are_shared_by_docstrings_catalog_and_reference(self):
-        output=gen.render(self.contract())
+        output=render_fixture(self.contract())
         catalog=catalog_from_output(output)
         examples={
             'zipzi.parameters.ParameterPatch':('repeat','None preserves the current value'),
@@ -316,7 +327,7 @@ class Python2Codegen(unittest.TestCase):
             elif isinstance(node,list):
                 for value in node:describe(value)
         describe(contract)
-        output=gen.render(contract)
+        output=render_fixture(contract)
         mesh=output['client/python/zipzi/_generated/mesh_ops.py']
         parameter=output['client/python/zipzi/_generated/parameter_values.py']
         self.assertIn('Mesh-only specification semantics.',mesh)
@@ -343,7 +354,7 @@ class Python2Codegen(unittest.TestCase):
 
     def test_scene_contract_protects_shapes_and_generates_nested_ownership_and_typed_native_inputs(self):
         contract = self.contract()
-        output = gen.render(contract)
+        output = render_fixture(contract)
         python = output['client/python/zipzi/_generated/scene.py']
         native = output['src/generated/scene.rs']
         self.assertIn('triangles: tuple[tuple[int, int, int], ...]', python)
@@ -361,10 +372,10 @@ class Python2Codegen(unittest.TestCase):
             invalid = deepcopy(contract)
             mutate(invalid)
             with self.assertRaises(ValueError):
-                gen.render(invalid)
+                render_fixture(invalid)
     def test_binary_contract_guards_compiled_source_layout_and_typed_array_outputs(self):
         contract=self.contract()
-        output=gen.render(contract)
+        output=render_fixture(contract)
         binary='\n'.join(value for path,value in output.items() if path.startswith('client/python/zipzi/_generated/binary/') and path.endswith('.py'))
         self.assertIn('def decode_meshes(',binary)
         self.assertIn('def decode_samples(',binary)
@@ -380,24 +391,24 @@ class Python2Codegen(unittest.TestCase):
             lambda c:c['binary']['edit_variants'].append('Unreviewed'),
         ):
             invalid=deepcopy(contract);mutate(invalid)
-            with self.assertRaises(ValueError):gen.render(invalid)
+            with self.assertRaises(ValueError):render_fixture(invalid)
 
     def contract(self):
         logical = gen.schema.read(PACKAGE / 'schema/authoring.json')
-        return gen.TypeGraph.from_contract(logical).legacy_contract()
+        return fixture.expand(logical['root'], logical['definitions'])
 
     def files(self, folder):
         return {p.relative_to(folder).as_posix(): p.read_bytes() for p in folder.rglob('*') if p.is_file()}
 
     def test_compiled_contract_matches_committed_outputs_without_writing(self):
         contract = gen.export()
-        output = gen.render(contract)
+        output = render_fixture(contract)
         self.assertEqual(gen.write_outputs(output, check=True), [])
-        self.assertEqual(output, gen.render(self.contract()))
+        self.assertEqual(output, render_fixture(self.contract()))
 
     def test_generation_is_deterministic_and_check_only_never_repairs_drift(self):
-        output = gen.render(self.contract())
-        self.assertEqual(output, gen.render(self.contract()))
+        output = render_fixture(self.contract())
+        self.assertEqual(output, render_fixture(self.contract()))
         with tempfile.TemporaryDirectory() as folder:
             folder = Path(folder)
             gen.write_outputs(output, package=folder)
@@ -411,7 +422,7 @@ class Python2Codegen(unittest.TestCase):
 
     def test_render_ignores_stale_generated_python_in_checkout(self):
         contract=self.contract()
-        expected=gen.render(contract)
+        expected=render_fixture(contract)
         with tempfile.TemporaryDirectory() as folder:
             package=Path(folder)
             shutil.copytree(PACKAGE/'client',package/'client')
@@ -420,11 +431,11 @@ class Python2Codegen(unittest.TestCase):
             old=package/'client/python/zipzi/_generated/obsolete.py'
             old.write_text('also not Python !!!\n')
             with patch.object(gen,'PACKAGE',package):
-                self.assertEqual(gen.render(contract),expected)
+                self.assertEqual(render_fixture(contract),expected)
 
     def test_renderers_consume_graph_without_legacy_expansion(self):
-        with patch.object(gen.TypeGraph,'legacy_contract',side_effect=AssertionError('legacy expansion')):
-            output=gen.render(gen.schema.read(PACKAGE / 'schema/authoring.json'))
+        with patch.object(fixture,'expand',side_effect=AssertionError('legacy expansion')):
+            output=render_fixture(gen.schema.read(PACKAGE / 'schema/authoring.json'))
         self.assertEqual(gen.write_outputs(output,check=True),[])
 
     def test_projection_model_records_canonical_alias_and_special_reasons(self):
@@ -435,7 +446,7 @@ class Python2Codegen(unittest.TestCase):
             projected.extend(model[-1])
             return model
         with patch.object(gen._api_codegen,'document_model',side_effect=capture):
-            gen.render(self.contract())
+            render_fixture(self.contract())
         canonical=next(item for item in projected if item.rust_type_id=='zipzi_contract::model::MeshConstraintKind' and item.projection_id=='canonical')
         self.assertIn('zipzi.meshes.ConstraintKind',canonical.aliases)
         special=[item for item in projected if item.projection_id!='canonical']
@@ -443,7 +454,7 @@ class Python2Codegen(unittest.TestCase):
         self.assertTrue(all(item.reason for item in special))
 
     def test_handwritten_files_unowned_paths_and_symlinks_fail_before_any_write(self):
-        output = gen.render(self.contract())
+        output = render_fixture(self.contract())
         with tempfile.TemporaryDirectory() as folder:
             folder = Path(folder)
             protected = folder / 'src/generated/queries.rs'
@@ -489,7 +500,7 @@ class Python2Codegen(unittest.TestCase):
             contract = self.contract()
             mutate(contract)
             with self.assertRaises(ValueError):
-                gen.render(contract)
+                render_fixture(contract)
 
     def test_union_fields_cannot_shadow_operation_kind_but_records_can_use_it(self):
         contract = self.contract()
@@ -518,7 +529,7 @@ class Python2Codegen(unittest.TestCase):
             elif isinstance(value,list):
                 for item in value:change(item)
         change(contract)
-        output = gen.render(contract)
+        output = render_fixture(contract)
         self.assertIn('min_triangle_area: float = 0.5',
                       output['client/python/zipzi/_generated/sampling_values.py'])
         self.assertIn('min_triangle_area: float=0.5',
@@ -538,7 +549,7 @@ class Python2Codegen(unittest.TestCase):
                 for value in node:
                     change(value)
         change(contract)
-        output = gen.render(contract)
+        output = render_fixture(contract)
         self.assertIn('segments: int', output['client/python/zipzi/_generated/meshes.py'])
         self.assertIn('segments=op.spec.geometry.segments', output['client/python/zipzi/_generated/mesh_ops.py'])
         self.assertIn('value.getattr("segments")', output['src/generated/mesh.rs'])
@@ -609,7 +620,7 @@ class Python2Codegen(unittest.TestCase):
                 for value in node:
                     change(value)
         change(contract)
-        output = gen.render(contract)
+        output = render_fixture(contract)
         self.assertIn('label: str', output['client/python/zipzi/_generated/resource_ops.py'])
         self.assertIn('label=op.label', output['client/python/zipzi/_generated/resource_ops.py'])
         self.assertIn('label: str', output['client/python/zipzi/_generated/facades.py'])
@@ -640,7 +651,7 @@ class Python2Codegen(unittest.TestCase):
             contract = self.contract()
             mutate(contract)
             with self.assertRaises(ValueError):
-                gen.render(contract)
+                render_fixture(contract)
 
 if __name__ == '__main__':
     unittest.main()

@@ -3,6 +3,7 @@ from __future__ import annotations
 from .. import values as m
 from ..._values import sequence
 from ..._values import string
+from functools import cache
 from .support import Reader as Reader, Writer as Writer, _field as _field
 
 def _write_referenceedit(value: object, w: Writer) -> None:
@@ -118,9 +119,14 @@ def _write_referencecollection(value: object, w: Writer) -> None:
     else:
         raise TypeError("Unexpected ReferenceCollection variant")
 
-def _write_referencefields(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_referencefields():
     from .project import _write_cdiparameterref as _write_cdiparameterref
     from .project import _write_modeltargetref as _write_modeltargetref
+    return _write_cdiparameterref, _write_modeltargetref,
+
+def _write_referencefields(value: object, w: Writer) -> None:
+    _write_cdiparameterref, _write_modeltargetref, = _dependencies__write_referencefields()
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
     if tag=='model_parameter_group':
         w.u32(0)
@@ -149,12 +155,22 @@ def _write_referenceselectionfield(value: object, w: Writer) -> None:
     else:
         raise TypeError("Unexpected ReferenceSelectionField variant")
 
-def _read_referenceentrycdiparameterref(r: Reader) -> m.ReferenceEntryCdiParameterRef:
+@cache
+def _dependencies__read_referenceentrycdiparameterref():
     from .project import _read_cdiparameterref as _read_cdiparameterref
+    return _read_cdiparameterref,
+
+def _read_referenceentrycdiparameterref(r: Reader) -> m.ReferenceEntryCdiParameterRef:
+    _read_cdiparameterref, = _dependencies__read_referenceentrycdiparameterref()
     return m.ReferenceEntryCdiParameterRef(id=r.text(), target=_read_cdiparameterref(r))
 
-def _read_referenceentrymodeltargetref(r: Reader) -> m.ReferenceEntryModelTargetRef:
+@cache
+def _dependencies__read_referenceentrymodeltargetref():
     from .project import _read_modeltargetref as _read_modeltargetref
+    return _read_modeltargetref,
+
+def _read_referenceentrymodeltargetref(r: Reader) -> m.ReferenceEntryModelTargetRef:
+    _read_modeltargetref, = _dependencies__read_referenceentrymodeltargetref()
     return m.ReferenceEntryModelTargetRef(id=r.text(), target=_read_modeltargetref(r))
 
 __all__ = ['_read_referenceentrycdiparameterref', '_read_referenceentrymodeltargetref', '_write_referencecollection', '_write_referenceedit', '_write_referencefields', '_write_referenceselectionfield']

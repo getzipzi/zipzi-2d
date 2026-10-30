@@ -6,6 +6,7 @@ from ..._results import Snapshot
 from ..._values import integer
 from ..._values import sequence
 from ..._values import string
+from functools import cache
 from .support import Reader as Reader, Writer as Writer, _field as _field
 
 def _write_imageasset(value: object, w: Writer) -> None:
@@ -34,8 +35,13 @@ def _write_imagecontent(value: object, w: Writer) -> None:
 def _read_imagecontent(r: Reader) -> m.ImageContent:
     return m.ImageContent(source=r.text(), width=integer(r.scalar('I')), height=integer(r.scalar('I')), sha256=r.text())
 
-def _write_resourceedit(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_resourceedit():
     from .scene import _write_scenereference as _write_scenereference
+    return _write_scenereference,
+
+def _write_resourceedit(value: object, w: Writer) -> None:
+    _write_scenereference, = _dependencies__write_resourceedit()
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
     if tag=='create':
         w.u32(0)
@@ -104,8 +110,13 @@ def _write_imagecreatespec(value: object, w: Writer) -> None:
         w.text(_field(value, 'id'))
     w.text(_field(value, 'name'))
 
-def _read_imagesnapshot(r: Reader) -> Snapshot[resources.Image]:
+@cache
+def _dependencies__read_imagesnapshot():
     from .common import _read_sourceref as _read_sourceref
+    return _read_sourceref,
+
+def _read_imagesnapshot(r: Reader) -> Snapshot[resources.Image]:
+    _read_sourceref, = _dependencies__read_imagesnapshot()
     return Snapshot(_read_sourceref(r), resources.Image(id=r.text(), name=r.text(), pixels=_read_imagepixels(r)))
 
 def _read_imagepixels(r: Reader) -> resources.ImagePixels:

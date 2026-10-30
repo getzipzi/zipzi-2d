@@ -6,6 +6,7 @@ from ..._values import number
 from ..._values import sequence
 from ..._values import string
 from typing import cast
+from functools import cache
 from .support import Reader as Reader, Writer as Writer, _field as _field, _mapping as _mapping, _point as _point
 
 def _write_scenereference(value: object, w: Writer) -> None:
@@ -154,15 +155,25 @@ def _write_warpbezier(value: object, w: Writer) -> None:
 def _read_warpbezier(r: Reader) -> m.WarpBezier:
     return m.WarpBezier(rows=integer(r.scalar('I')), columns=integer(r.scalar('I')), nodes=tuple(_read_warpbeziernode(r) for _ in range(r.count())))
 
-def _write_warpbeziernode(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_warpbeziernode():
     from .common import _write_vec2 as _write_vec2
+    return _write_vec2,
+
+def _write_warpbeziernode(value: object, w: Writer) -> None:
+    _write_vec2, = _dependencies__write_warpbeziernode()
     _write_vec2(_field(value, 'position'), w)
     items0=sequence(_field(value, 'handles'))
     if len(items0)!=4: raise ValueError("Invalid binary array length")
     w.numeric('f', tuple(v for item in items0 for v in _point(item)))
 
-def _read_warpbeziernode(r: Reader) -> m.WarpBezierNode:
+@cache
+def _dependencies__read_warpbeziernode():
     from .common import _read_vec2 as _read_vec2
+    return _read_vec2,
+
+def _read_warpbeziernode(r: Reader) -> m.WarpBezierNode:
+    _read_vec2, = _dependencies__read_warpbeziernode()
     return m.WarpBezierNode(position=_read_vec2(r), handles=cast('tuple[m.Vec2, m.Vec2, m.Vec2, m.Vec2]', tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', 4))))
 
 def _write_rotationtransform(value: object, w: Writer) -> None:
@@ -172,20 +183,35 @@ def _write_rotationtransform(value: object, w: Writer) -> None:
 def _read_rotationtransform(r: Reader) -> m.RotationTransform:
     return m.RotationTransform(base_angle=number(r.scalar('f')), pose=_read_rotationpose(r))
 
-def _write_rotationpose(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_rotationpose():
     from .common import _write_precisevec2 as _write_precisevec2
+    return _write_precisevec2,
+
+def _write_rotationpose(value: object, w: Writer) -> None:
+    _write_precisevec2, = _dependencies__write_rotationpose()
     _write_precisevec2(_field(value, 'origin'), w)
     w.scalar('f', _field(value, 'angle'))
     w.scalar('f', _field(value, 'scale'))
     w.boolean(_field(value, 'reflect_x'))
     w.boolean(_field(value, 'reflect_y'))
 
-def _read_rotationpose(r: Reader) -> m.RotationPose:
+@cache
+def _dependencies__read_rotationpose():
     from .common import _read_precisevec2 as _read_precisevec2
+    return _read_precisevec2,
+
+def _read_rotationpose(r: Reader) -> m.RotationPose:
+    _read_precisevec2, = _dependencies__read_rotationpose()
     return m.RotationPose(origin=_read_precisevec2(r), angle=number(r.scalar('f')), scale=number(r.scalar('f')), reflect_x=r.boolean(), reflect_y=r.boolean())
 
-def _write_glue(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_glue():
     from .bindings import _write_gluebinding as _write_gluebinding
+    return _write_gluebinding,
+
+def _write_glue(value: object, w: Writer) -> None:
+    _write_gluebinding, = _dependencies__write_glue()
     w.text(_field(value, 'id'))
     w.text(_field(value, 'runtime_id'))
     w.text(_field(value, 'name'))
@@ -202,8 +228,13 @@ def _write_glue(value: object, w: Writer) -> None:
         w.raw(b"\1")
         _write_gluebinding(_field(value, 'binding'), w)
 
-def _read_glue(r: Reader) -> m.Glue:
+@cache
+def _dependencies__read_glue():
     from .bindings import _read_gluebinding as _read_gluebinding
+    return _read_gluebinding,
+
+def _read_glue(r: Reader) -> m.Glue:
+    _read_gluebinding, = _dependencies__read_glue()
     return m.Glue(id=r.text(), runtime_id=r.text(), name=r.text(), mesh_a_id=_read_scenereference(r), mesh_b_id=_read_scenereference(r), pairs=tuple(_read_gluevertexpair(r) for _ in range(r.count())), intensity=number(r.scalar('f')), binding=(_read_gluebinding(r) if r.optional() else None))
 
 def _write_gluevertexpair(value: object, w: Writer) -> None:
@@ -224,8 +255,13 @@ def _write_gluevertexpair(value: object, w: Writer) -> None:
 def _read_gluevertexpair(r: Reader) -> m.GlueVertexPair:
     return m.GlueVertexPair(id=r.text(), vertex_a=(integer(r.scalar('I')) if r.optional() else None), vertex_b=(integer(r.scalar('I')) if r.optional() else None), weight_a=number(r.scalar('f')), weight_b=number(r.scalar('f')))
 
-def _write_offscreen(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_offscreen():
     from .bindings import _write_offscreenkeyform as _write_offscreenkeyform
+    return _write_offscreenkeyform,
+
+def _write_offscreen(value: object, w: Writer) -> None:
+    _write_offscreenkeyform, = _dependencies__write_offscreen()
     w.text(_field(value, 'id'))
     w.text(_field(value, 'runtime_id'))
     w.text(_field(value, 'name'))
@@ -245,8 +281,13 @@ def _write_offscreen(value: object, w: Writer) -> None:
     for item0 in items0:
         _write_offscreenkeyform(item0, w)
 
-def _read_offscreen(r: Reader) -> m.Offscreen:
+@cache
+def _dependencies__read_offscreen():
     from .bindings import _read_offscreenkeyform as _read_offscreenkeyform
+    return _read_offscreenkeyform,
+
+def _read_offscreen(r: Reader) -> m.Offscreen:
+    _read_offscreenkeyform, = _dependencies__read_offscreen()
     return m.Offscreen(id=r.text(), runtime_id=r.text(), name=r.text(), part_id=r.text(), enabled=r.boolean(), blend_mode=integer(r.scalar('I')), flags=integer(r.scalar('B')), masks=tuple(r.text() for _ in range(r.count())), part_keyform_indices=cast('tuple[int, ...]', tuple(v[0] for v in r.numeric('i', r.count()))), keyforms=tuple(_read_offscreenkeyform(r) for _ in range(r.count())))
 
 def _write_reparentstrategy(value: object, w: Writer) -> None:
@@ -260,8 +301,13 @@ def _write_reparentstrategy(value: object, w: Writer) -> None:
     else:
         raise TypeError("Unexpected ReparentStrategy variant")
 
-def _write_reparentcontext(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_reparentcontext():
     from .commands import _write_conversiondomain as _write_conversiondomain
+    return _write_conversiondomain,
+
+def _write_reparentcontext(value: object, w: Writer) -> None:
+    _write_conversiondomain, = _dependencies__write_reparentcontext()
     items0=_mapping(_field(value, 'parameter_values'))
     w.u32(len(items0))
     for key0, value0 in items0.items():
@@ -272,113 +318,6 @@ def _write_reparentcontext(value: object, w: Writer) -> None:
     for item0 in items0:
         _write_conversiondomain(item0, w)
     w.scalar('d', _field(value, 'edit_time_seconds'))
-
-def _write_sceneedit(value: object, w: Writer) -> None:
-    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
-    if tag=='create':
-        w.u32(0)
-        w.text(_field(value, 'id'))
-        w.text(_field(value, 'name'))
-        _write_scenecreate(_field(value, 'object'), w)
-        if _field(value, 'part_id') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'part_id'))
-        if _field(value, 'parent_id') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'parent_id'))
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-        if _field(value, 'deformation_before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'deformation_before'))
-    elif tag=='patch':
-        w.u32(1)
-        w.text(_field(value, 'id'))
-        _write_scenefieldvalue(_field(value, 'expected'), w)
-        _write_scenefieldvalue(_field(value, 'value'), w)
-        w.boolean(_field(value, 'clear_glue_pairs'))
-    elif tag=='move':
-        w.u32(2)
-        items0=sequence(_field(value, 'ids'))
-        w.u32(len(items0))
-        for item0 in items0:
-            w.text(item0)
-        _write_scenecollection(_field(value, 'destination'), w)
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='reparent':
-        w.u32(3)
-        _write_reparentedit(_field(value, 'edit'), w)
-    elif tag=='duplicate':
-        w.u32(4)
-        items0=sequence(_field(value, 'ids'))
-        w.u32(len(items0))
-        for item0 in items0:
-            w.text(item0)
-        _write_scenecopyscope(_field(value, 'scope'), w)
-        if _field(value, 'destination') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            _write_organizationcollection(_field(value, 'destination'), w)
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='delete':
-        w.u32(5)
-        items0=sequence(_field(value, 'ids'))
-        w.u32(len(items0))
-        for item0 in items0:
-            w.text(item0)
-        _write_scenecopyscope(_field(value, 'scope'), w)
-    elif tag=='transfer_offscreen':
-        w.u32(6)
-        w.text(_field(value, 'id'))
-        w.text(_field(value, 'part_id'))
-        items0=sequence(_field(value, 'part_keyform_indices'))
-        w.u32(len(items0))
-        w.numeric('i', tuple(items0))
-    elif tag=='ensure_drawing_group':
-        w.u32(7)
-        w.text(_field(value, 'owner'))
-        w.text(_field(value, 'parent'))
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='set_drawing_range':
-        w.u32(8)
-        w.text(_field(value, 'owner'))
-        items0=sequence(_field(value, 'expected'))
-        if len(items0)!=2: raise ValueError("Invalid binary array length")
-        w.numeric('i', tuple(items0))
-        items0=sequence(_field(value, 'range'))
-        if len(items0)!=2: raise ValueError("Invalid binary array length")
-        w.numeric('i', tuple(items0))
-    elif tag=='dissolve_drawing_group':
-        w.u32(9)
-        w.text(_field(value, 'owner'))
-    elif tag=='duplicate_drawing_group':
-        w.u32(10)
-        w.text(_field(value, 'source'))
-        w.text(_field(value, 'target'))
-    else:
-        raise TypeError("Unexpected SceneEdit variant")
 
 def _write_scenecreate(value: object, w: Writer) -> None:
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
@@ -405,8 +344,13 @@ def _write_scenecreate(value: object, w: Writer) -> None:
     else:
         raise TypeError("Unexpected SceneCreate variant")
 
-def _write_scenefieldvalue(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_scenefieldvalue():
     from .bindings import _write_offscreenkeyform as _write_offscreenkeyform
+    return _write_offscreenkeyform,
+
+def _write_scenefieldvalue(value: object, w: Writer) -> None:
+    _write_offscreenkeyform, = _dependencies__write_scenefieldvalue()
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
     if tag=='label':
         w.u32(0)
@@ -509,26 +453,6 @@ def _write_scenecollection(value: object, w: Writer) -> None:
     else:
         raise TypeError("Unexpected SceneCollection variant")
 
-def _write_reparentedit(value: object, w: Writer) -> None:
-    items0=sequence(_field(value, 'sources'))
-    w.u32(len(items0))
-    for item0 in items0:
-        w.text(item0)
-    w.text(_field(value, 'parent_id'))
-    _write_reparentstrategy(_field(value, 'strategy'), w)
-    if _field(value, 'placement') is None:
-        w.raw(b"\0")
-    else:
-        w.raw(b"\1")
-        _write_reparentplacement(_field(value, 'placement'), w)
-    w.scalar('d', _field(value, 'tolerance'))
-    w.scalar('d', _field(value, 'relative_tolerance'))
-    if _field(value, 'context') is None:
-        w.raw(b"\0")
-    else:
-        w.raw(b"\1")
-        _write_reparentcontext(_field(value, 'context'), w)
-
 def _write_reparentplacement(value: object, w: Writer) -> None:
     if _field(value, 'before') is None:
         w.raw(b"\0")
@@ -571,85 +495,6 @@ def _write_organizationcollection(value: object, w: Writer) -> None:
     else:
         raise TypeError("Unexpected OrganizationCollection variant")
 
-def _write_organizationedit(value: object, w: Writer) -> None:
-    from .project import _write_cdiparametergroup as _write_cdiparametergroup
-    from .parameters import _write_parameter as _write_parameter
-    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
-    if tag=='create_parameter':
-        w.u32(0)
-        _write_parameter(_field(value, 'parameter'), w)
-        if _field(value, 'group_id') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'group_id'))
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='create_group':
-        w.u32(1)
-        _write_cdiparametergroup(_field(value, 'group'), w)
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='create_part':
-        w.u32(2)
-        _write_part(_field(value, 'part'), w)
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='set_parameter_group':
-        w.u32(3)
-        w.text(_field(value, 'parameter_id'))
-        if _field(value, 'group_id') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'group_id'))
-    elif tag=='patch_group':
-        w.u32(4)
-        _write_cdiparametergroup(_field(value, 'expected'), w)
-        _write_cdiparametergroup(_field(value, 'group'), w)
-    elif tag=='move':
-        w.u32(5)
-        items0=sequence(_field(value, 'ids'))
-        w.u32(len(items0))
-        for item0 in items0:
-            w.text(item0)
-        _write_organizationcollection(_field(value, 'destination'), w)
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='duplicate':
-        w.u32(6)
-        items0=sequence(_field(value, 'ids'))
-        w.u32(len(items0))
-        for item0 in items0:
-            w.text(item0)
-        _write_organizationcollection(_field(value, 'destination'), w)
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='delete':
-        w.u32(7)
-        items0=sequence(_field(value, 'ids'))
-        w.u32(len(items0))
-        for item0 in items0:
-            w.text(item0)
-        _write_organizationdeletepolicy(_field(value, 'policy'), w)
-    else:
-        raise TypeError("Unexpected OrganizationEdit variant")
-
 def _write_organizationdeletepolicy(value: object, w: Writer) -> None:
     tag=string(_field(value,"value"))
     if tag=='contents':
@@ -658,204 +503,6 @@ def _write_organizationdeletepolicy(value: object, w: Writer) -> None:
         w.u32(1)
     else:
         raise TypeError("Unexpected OrganizationDeletePolicy variant")
-
-def _write_scenecontentedit(value: object, w: Writer) -> None:
-    from .mesh import _write_newmeshvertex as _write_newmeshvertex
-    from .bindings import _write_offscreenkeyform as _write_offscreenkeyform
-    from .mesh import _write_vertexcontentpatch as _write_vertexcontentpatch
-    from .mesh import _write_vertexdeletepolicy as _write_vertexdeletepolicy
-    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
-    if tag=='mesh_vertices':
-        w.u32(0)
-        w.text(_field(value, 'mesh_id'))
-        _write_shapetarget(_field(value, 'target'), w)
-        items0=sequence(_field(value, 'updates'))
-        w.u32(len(items0))
-        for item0 in items0:
-            _write_vertexcontentpatch(item0, w)
-    elif tag=='insert_mesh_vertices':
-        w.u32(1)
-        w.text(_field(value, 'mesh_id'))
-        items0=sequence(_field(value, 'vertices'))
-        w.u32(len(items0))
-        for item0 in items0:
-            _write_newmeshvertex(item0, w)
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.scalar('I', _field(value, 'before'))
-    elif tag=='delete_mesh_vertices':
-        w.u32(2)
-        w.text(_field(value, 'mesh_id'))
-        items0=sequence(_field(value, 'vertices'))
-        w.u32(len(items0))
-        w.numeric('I', tuple(items0))
-        _write_vertexdeletepolicy(_field(value, 'policy'), w)
-    elif tag=='reorder_mesh_vertices':
-        w.u32(3)
-        w.text(_field(value, 'mesh_id'))
-        items0=sequence(_field(value, 'order'))
-        w.u32(len(items0))
-        w.numeric('I', tuple(items0))
-    elif tag=='insert_triangle':
-        w.u32(4)
-        w.text(_field(value, 'mesh_id'))
-        items0=sequence(_field(value, 'vertices'))
-        if len(items0)!=3: raise ValueError("Invalid binary array length")
-        w.numeric('I', tuple(items0))
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.scalar('Q', _field(value, 'before'))
-    elif tag=='patch_triangle':
-        w.u32(5)
-        w.text(_field(value, 'mesh_id'))
-        w.scalar('Q', _field(value, 'slot'))
-        items0=sequence(_field(value, 'vertices'))
-        if len(items0)!=3: raise ValueError("Invalid binary array length")
-        w.numeric('I', tuple(items0))
-    elif tag=='delete_triangles':
-        w.u32(6)
-        w.text(_field(value, 'mesh_id'))
-        items0=sequence(_field(value, 'slots'))
-        w.u32(len(items0))
-        w.numeric('Q', tuple(items0))
-    elif tag=='replace_triangles':
-        w.u32(7)
-        w.text(_field(value, 'mesh_id'))
-        items0=sequence(_field(value, 'triangles'))
-        w.u32(len(items0))
-        w.numeric('I', tuple(v for item in items0 for v in sequence(item)))
-    elif tag=='warp_points':
-        w.u32(8)
-        w.text(_field(value, 'transform_id'))
-        _write_shapetarget(_field(value, 'target'), w)
-        items0=sequence(_field(value, 'updates'))
-        w.u32(len(items0))
-        for item0 in items0:
-            _write_warppointpatch(item0, w)
-        w.boolean(_field(value, 'clear_bezier'))
-    elif tag=='warp_bezier':
-        w.u32(9)
-        w.text(_field(value, 'transform_id'))
-        _write_shapetarget(_field(value, 'target'), w)
-        if _field(value, 'controller') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            _write_warpbezier(_field(value, 'controller'), w)
-    elif tag=='resize_warp':
-        w.u32(10)
-        w.text(_field(value, 'transform_id'))
-        w.scalar('I', _field(value, 'rows'))
-        w.scalar('I', _field(value, 'columns'))
-        w.boolean(_field(value, 'quad'))
-    elif tag=='insert_glue_pair':
-        w.u32(11)
-        w.text(_field(value, 'glue_id'))
-        _write_gluevertexpair(_field(value, 'pair'), w)
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='patch_glue_pair':
-        w.u32(12)
-        w.text(_field(value, 'glue_id'))
-        _write_gluevertexpair(_field(value, 'pair'), w)
-    elif tag=='move_glue_pairs':
-        w.u32(13)
-        w.text(_field(value, 'glue_id'))
-        items0=sequence(_field(value, 'ids'))
-        w.u32(len(items0))
-        for item0 in items0:
-            w.text(item0)
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='transfer_glue_pairs':
-        w.u32(14)
-        w.text(_field(value, 'glue_id'))
-        w.text(_field(value, 'destination'))
-        items0=sequence(_field(value, 'pairs'))
-        w.u32(len(items0))
-        for item0 in items0:
-            _write_gluevertexpair(item0, w)
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='duplicate_glue_pairs':
-        w.u32(15)
-        w.text(_field(value, 'glue_id'))
-        items0=sequence(_field(value, 'ids'))
-        w.u32(len(items0))
-        for item0 in items0:
-            w.text(item0)
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='delete_glue_pairs':
-        w.u32(16)
-        w.text(_field(value, 'glue_id'))
-        items0=sequence(_field(value, 'ids'))
-        w.u32(len(items0))
-        for item0 in items0:
-            w.text(item0)
-    elif tag=='insert_offscreen_keyform':
-        w.u32(17)
-        w.text(_field(value, 'offscreen_id'))
-        _write_offscreenkeyform(_field(value, 'value'), w)
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.scalar('Q', _field(value, 'before'))
-    elif tag=='patch_offscreen_keyform':
-        w.u32(18)
-        w.text(_field(value, 'offscreen_id'))
-        w.scalar('Q', _field(value, 'slot'))
-        _write_offscreenkeyform(_field(value, 'value'), w)
-    elif tag=='duplicate_offscreen_keyforms':
-        w.u32(19)
-        w.text(_field(value, 'offscreen_id'))
-        items0=sequence(_field(value, 'slots'))
-        w.u32(len(items0))
-        w.numeric('Q', tuple(items0))
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.scalar('Q', _field(value, 'before'))
-    elif tag=='reorder_offscreen_keyforms':
-        w.u32(20)
-        w.text(_field(value, 'offscreen_id'))
-        items0=sequence(_field(value, 'order'))
-        w.u32(len(items0))
-        w.numeric('Q', tuple(items0))
-    elif tag=='delete_offscreen_keyforms':
-        w.u32(21)
-        w.text(_field(value, 'offscreen_id'))
-        items0=sequence(_field(value, 'slots'))
-        w.u32(len(items0))
-        w.numeric('Q', tuple(items0))
-        _write_offscreendeletepolicy(_field(value, 'policy'), w)
-    elif tag=='set_offscreen_mapping':
-        w.u32(22)
-        w.text(_field(value, 'offscreen_id'))
-        items0=sequence(_field(value, 'updates'))
-        w.u32(len(items0))
-        for item0 in items0:
-            _write_offscreenmappingpatch(item0, w)
-    else:
-        raise TypeError("Unexpected SceneContentEdit variant")
 
 def _write_shapetarget(value: object, w: Writer) -> None:
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
@@ -875,8 +522,13 @@ def _write_shapetarget(value: object, w: Writer) -> None:
     else:
         raise TypeError("Unexpected ShapeTarget variant")
 
-def _write_warppointpatch(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_warppointpatch():
     from .common import _write_vec2 as _write_vec2
+    return _write_vec2,
+
+def _write_warppointpatch(value: object, w: Writer) -> None:
+    _write_vec2, = _dependencies__write_warppointpatch()
     w.scalar('I', _field(value, 'row'))
     w.scalar('I', _field(value, 'column'))
     _write_vec2(_field(value, 'point'), w)
@@ -901,78 +553,37 @@ def _write_offscreendeletepolicy(value: object, w: Writer) -> None:
     else:
         raise TypeError("Unexpected OffscreenDeletePolicy variant")
 
-def _write_offscreenmappingpatch(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_offscreenmappingpatch():
     from .bindings import _write_partkeyformslot as _write_partkeyformslot
+    return _write_partkeyformslot,
+
+def _write_offscreenmappingpatch(value: object, w: Writer) -> None:
+    _write_partkeyformslot, = _dependencies__write_offscreenmappingpatch()
     _write_partkeyformslot(_field(value, 'slot'), w)
     w.scalar('i', _field(value, 'keyform'))
 
-def _write_canvas(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_canvas():
     from .common import _write_vec2 as _write_vec2
+    return _write_vec2,
+
+def _write_canvas(value: object, w: Writer) -> None:
+    _write_vec2, = _dependencies__write_canvas()
     w.scalar('f', _field(value, 'width'))
     w.scalar('f', _field(value, 'height'))
     _write_vec2(_field(value, 'origin'), w)
     w.scalar('f', _field(value, 'pixels_per_unit'))
     w.scalar('B', _field(value, 'flag'))
 
-def _read_canvas(r: Reader) -> m.Canvas:
+@cache
+def _dependencies__read_canvas():
     from .common import _read_vec2 as _read_vec2
-    return m.Canvas(width=number(r.scalar('f')), height=number(r.scalar('f')), origin=_read_vec2(r), pixels_per_unit=number(r.scalar('f')), flag=integer(r.scalar('B')))
+    return _read_vec2,
 
-def _write_attachmentedit(value: object, w: Writer) -> None:
-    from .project import _write_packageattachment as _write_packageattachment
-    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
-    if tag=='create':
-        w.u32(0)
-        w.text(_field(value, 'id'))
-        w.text(_field(value, 'path'))
-    elif tag=='replace':
-        w.u32(1)
-        _write_packageattachment(_field(value, 'expected'), w)
-        _write_packageattachment(_field(value, 'attachment'), w)
-    elif tag=='duplicate':
-        w.u32(2)
-        w.text(_field(value, 'source'))
-        w.text(_field(value, 'id'))
-        w.text(_field(value, 'path'))
-    elif tag=='delete':
-        w.u32(3)
-        w.text(_field(value, 'id'))
-    elif tag=='delete_with_replacement':
-        w.u32(4)
-        w.text(_field(value, 'id'))
-        if _field(value, 'replacement') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'replacement'))
-    elif tag=='reorder':
-        w.u32(5)
-        items0=sequence(_field(value, 'ids'))
-        w.u32(len(items0))
-        for item0 in items0:
-            w.text(item0)
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='set_sound':
-        w.u32(6)
-        w.text(_field(value, 'registration'))
-        if _field(value, 'reference') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            _write_attachmentref(_field(value, 'reference'), w)
-    elif tag=='set_user_data':
-        w.u32(7)
-        if _field(value, 'reference') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            _write_attachmentref(_field(value, 'reference'), w)
-    else:
-        raise TypeError("Unexpected AttachmentEdit variant")
+def _read_canvas(r: Reader) -> m.Canvas:
+    _read_vec2, = _dependencies__read_canvas()
+    return m.Canvas(width=number(r.scalar('f')), height=number(r.scalar('f')), origin=_read_vec2(r), pixels_per_unit=number(r.scalar('f')), flag=integer(r.scalar('B')))
 
 def _write_attachmentref(value: object, w: Writer) -> None:
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
@@ -993,8 +604,13 @@ def _read_attachmentref(r: Reader) -> m.AttachmentRef:
         return m.AttachmentRefUnresolved(path=r.text())
     raise ValueError("Unknown binary AttachmentRef variant")
 
-def _write_modelsetup(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_modelsetup():
     from .project import _write_exportsettings as _write_exportsettings
+    return _write_exportsettings,
+
+def _write_modelsetup(value: object, w: Writer) -> None:
+    _write_exportsettings, = _dependencies__write_modelsetup()
     if _field(value, 'source_canvas') is None:
         w.raw(b"\0")
     else:
@@ -1002,8 +618,13 @@ def _write_modelsetup(value: object, w: Writer) -> None:
         _write_canvas(_field(value, 'source_canvas'), w)
     _write_exportsettings(_field(value, 'export'), w)
 
-def _read_modelsetup(r: Reader) -> m.ModelSetup:
+@cache
+def _dependencies__read_modelsetup():
     from .project import _read_exportsettings as _read_exportsettings
+    return _read_exportsettings,
+
+def _read_modelsetup(r: Reader) -> m.ModelSetup:
+    _read_exportsettings, = _dependencies__read_modelsetup()
     return m.ModelSetup(source_canvas=(_read_canvas(r) if r.optional() else None), export=_read_exportsettings(r))
 
 def _write_hierarchyorder(value: object, w: Writer) -> None:
@@ -1034,295 +655,6 @@ def _write_drawordergroup(value: object, w: Writer) -> None:
 
 def _read_drawordergroup(r: Reader) -> m.DrawOrderGroup:
     return m.DrawOrderGroup(owner=r.text(), items=tuple(r.text() for _ in range(r.count())), min_order=integer(r.scalar('i')), max_order=integer(r.scalar('i')))
-
-def _write_sceneoperation(value: object, w: Writer) -> None:
-    from .parameters import _write_parametergroupcreatespec as _write_parametergroupcreatespec
-    from .bindings import _write_scalarsample as _write_scalarsample
-    from .mesh import _write_vertexpatchspec as _write_vertexpatchspec
-    from .mesh import _write_vertexweightspec as _write_vertexweightspec
-    tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
-    tag=tag.removeprefix("scene_")
-    if tag=='create_part':
-        w.u32(0)
-        _write_partcreatespec(_field(value, 'spec'), w)
-    elif tag=='create_parameter_group':
-        w.u32(1)
-        _write_parametergroupcreatespec(_field(value, 'spec'), w)
-    elif tag=='create_warp':
-        w.u32(2)
-        w.text(_field(value, 'name'))
-        _write_sceneplacement(_field(value, 'placement'), w)
-        if _field(value, 'bounds') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            items0=sequence(_field(value, 'bounds'))
-            if len(items0)!=4: raise ValueError("Invalid binary array length")
-            w.numeric('f', tuple(items0))
-        if _field(value, 'id') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'id'))
-    elif tag=='create_rotation':
-        w.u32(3)
-        w.text(_field(value, 'name'))
-        _write_sceneplacement(_field(value, 'placement'), w)
-        if _field(value, 'id') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'id'))
-    elif tag=='create_glue':
-        w.u32(4)
-        w.text(_field(value, 'name'))
-        w.text(_field(value, 'a'))
-        w.text(_field(value, 'b'))
-        if _field(value, 'part_id') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'part_id'))
-        if _field(value, 'id') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'id'))
-    elif tag=='create_offscreen':
-        w.u32(5)
-        w.text(_field(value, 'name'))
-        w.text(_field(value, 'part_id'))
-        if _field(value, 'id') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'id'))
-    elif tag=='move_to_part':
-        w.u32(6)
-        items0=sequence(_field(value, 'ids'))
-        w.u32(len(items0))
-        for item0 in items0:
-            w.text(item0)
-        if _field(value, 'part_id') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'part_id'))
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='move_deformation':
-        w.u32(7)
-        items0=sequence(_field(value, 'ids'))
-        w.u32(len(items0))
-        for item0 in items0:
-            w.text(item0)
-        if _field(value, 'parent_id') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'parent_id'))
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='move_parameters':
-        w.u32(8)
-        items0=sequence(_field(value, 'ids'))
-        w.u32(len(items0))
-        for item0 in items0:
-            w.text(item0)
-        if _field(value, 'group_id') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'group_id'))
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='move_parameter_groups':
-        w.u32(9)
-        items0=sequence(_field(value, 'ids'))
-        w.u32(len(items0))
-        for item0 in items0:
-            w.text(item0)
-        if _field(value, 'parent_id') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'parent_id'))
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='duplicate_scene':
-        w.u32(10)
-        items0=sequence(_field(value, 'ids'))
-        w.u32(len(items0))
-        for item0 in items0:
-            w.text(item0)
-        w.boolean(_field(value, 'subtree'))
-        if _field(value, 'part_id') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'part_id'))
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='delete_scene':
-        w.u32(11)
-        items0=sequence(_field(value, 'ids'))
-        w.u32(len(items0))
-        for item0 in items0:
-            w.text(item0)
-        w.boolean(_field(value, 'subtree'))
-    elif tag=='delete_organization':
-        w.u32(12)
-        items0=sequence(_field(value, 'ids'))
-        w.u32(len(items0))
-        for item0 in items0:
-            w.text(item0)
-        w.boolean(_field(value, 'dissolve'))
-    elif tag=='set_scene_label':
-        w.u32(13)
-        w.text(_field(value, 'id'))
-        w.text(_field(value, 'expected'))
-        w.text(_field(value, 'name'))
-    elif tag=='set_scene_enabled':
-        w.u32(14)
-        w.text(_field(value, 'id'))
-        w.boolean(_field(value, 'expected'))
-        w.boolean(_field(value, 'enabled'))
-    elif tag=='reparent_local':
-        w.u32(15)
-        items0=sequence(_field(value, 'ids'))
-        w.u32(len(items0))
-        for item0 in items0:
-            w.text(item0)
-        if _field(value, 'parent_id') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'parent_id'))
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='replace_triangles':
-        w.u32(16)
-        w.text(_field(value, 'mesh_id'))
-        items0=sequence(_field(value, 'triangles'))
-        w.u32(len(items0))
-        w.numeric('I', tuple(v for item in items0 for v in sequence(item)))
-    elif tag=='reorder_mesh_vertices':
-        w.u32(17)
-        w.text(_field(value, 'mesh_id'))
-        items0=sequence(_field(value, 'order'))
-        w.u32(len(items0))
-        w.numeric('I', tuple(items0))
-    elif tag=='insert_mesh_vertex':
-        w.u32(18)
-        w.text(_field(value, 'mesh_id'))
-        w.scalar('I', _field(value, 'vertex_id'))
-        items0=sequence(_field(value, 'position'))
-        if len(items0)!=2: raise ValueError("Invalid binary array length")
-        w.numeric('f', tuple(items0))
-        items0=sequence(_field(value, 'uv'))
-        if len(items0)!=2: raise ValueError("Invalid binary array length")
-        w.numeric('f', tuple(items0))
-        items0=sequence(_field(value, 'weights'))
-        w.u32(len(items0))
-        for item0 in items0:
-            _write_vertexweightspec(item0, w)
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.scalar('I', _field(value, 'before'))
-    elif tag=='delete_mesh_vertices':
-        w.u32(19)
-        w.text(_field(value, 'mesh_id'))
-        items0=sequence(_field(value, 'vertices'))
-        w.u32(len(items0))
-        w.numeric('I', tuple(items0))
-        w.boolean(_field(value, 'remove_dependents'))
-    elif tag=='create_blend_table':
-        w.u32(20)
-        w.text(_field(value, 'parameter_id'))
-        items0=sequence(_field(value, 'samples'))
-        w.u32(len(items0))
-        for item0 in items0:
-            _write_scalarsample(item0, w)
-        w.text(_field(value, 'base_sample_id'))
-        if _field(value, 'id') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'id'))
-    elif tag=='create_mesh_blend':
-        w.u32(21)
-        w.text(_field(value, 'mesh_id'))
-        w.text(_field(value, 'table_id'))
-        if _field(value, 'id') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'id'))
-    elif tag=='set_mesh_blend_vertices':
-        w.u32(22)
-        w.text(_field(value, 'mesh_id'))
-        w.text(_field(value, 'binding_id'))
-        w.text(_field(value, 'sample_id'))
-        items0=sequence(_field(value, 'updates'))
-        w.u32(len(items0))
-        for item0 in items0:
-            _write_vertexpatchspec(item0, w)
-    elif tag=='insert_glue_pair':
-        w.u32(23)
-        w.text(_field(value, 'glue_id'))
-        _write_gluepairspec(_field(value, 'pair'), w)
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.text(_field(value, 'before'))
-    elif tag=='delete_glue_pairs':
-        w.u32(24)
-        w.text(_field(value, 'glue_id'))
-        items0=sequence(_field(value, 'ids'))
-        w.u32(len(items0))
-        for item0 in items0:
-            w.text(item0)
-    elif tag=='patch_offscreen_keyform':
-        w.u32(25)
-        w.text(_field(value, 'offscreen_id'))
-        w.scalar('I', _field(value, 'slot'))
-        _write_offscreenformspec(_field(value, 'value'), w)
-    elif tag=='insert_offscreen_keyform':
-        w.u32(26)
-        w.text(_field(value, 'offscreen_id'))
-        _write_offscreenformspec(_field(value, 'value'), w)
-        if _field(value, 'before') is None:
-            w.raw(b"\0")
-        else:
-            w.raw(b"\1")
-            w.scalar('I', _field(value, 'before'))
-    elif tag=='set_offscreen_static_keyform':
-        w.u32(27)
-        w.text(_field(value, 'offscreen_id'))
-        w.scalar('i', _field(value, 'keyform'))
-    else:
-        raise TypeError("Unexpected SceneOperation variant")
 
 def _write_partcreatespec(value: object, w: Writer) -> None:
     w.text(_field(value, 'name'))
@@ -1400,4 +732,4 @@ def _write_offscreenformspec(value: object, w: Writer) -> None:
         if len(items0)!=3: raise ValueError("Invalid binary array length")
         w.numeric('f', tuple(items0))
 
-__all__ = ['_read_appearance', '_read_attachmentref', '_read_blendmode', '_read_canvas', '_read_drawordergroup', '_read_glue', '_read_gluevertexpair', '_read_hierarchyorder', '_read_modelsetup', '_read_offscreen', '_read_part', '_read_partid', '_read_rotationpose', '_read_rotationtransform', '_read_scenereference', '_read_transform', '_read_transformdata', '_read_transformid', '_read_warpbezier', '_read_warpbeziernode', '_read_warptransform', '_write_appearance', '_write_attachmentedit', '_write_attachmentref', '_write_blendmode', '_write_canvas', '_write_drawordergroup', '_write_glue', '_write_gluepairspec', '_write_gluevertexpair', '_write_hierarchyorder', '_write_modelsetup', '_write_offscreen', '_write_offscreendeletepolicy', '_write_offscreenformspec', '_write_offscreenmappingpatch', '_write_organizationcollection', '_write_organizationdeletepolicy', '_write_organizationedit', '_write_part', '_write_partcreatespec', '_write_partid', '_write_reparentcontext', '_write_reparentedit', '_write_reparentplacement', '_write_reparentstrategy', '_write_rotationpose', '_write_rotationtransform', '_write_scenecollection', '_write_scenecontentedit', '_write_scenecopyscope', '_write_scenecreate', '_write_sceneedit', '_write_scenefieldvalue', '_write_sceneoperation', '_write_sceneplacement', '_write_scenereference', '_write_shapetarget', '_write_transform', '_write_transformdata', '_write_transformid', '_write_warpbezier', '_write_warpbeziernode', '_write_warppointpatch', '_write_warptransform']
+__all__ = ['_read_appearance', '_read_attachmentref', '_read_blendmode', '_read_canvas', '_read_drawordergroup', '_read_glue', '_read_gluevertexpair', '_read_hierarchyorder', '_read_modelsetup', '_read_offscreen', '_read_part', '_read_partid', '_read_rotationpose', '_read_rotationtransform', '_read_scenereference', '_read_transform', '_read_transformdata', '_read_transformid', '_read_warpbezier', '_read_warpbeziernode', '_read_warptransform', '_write_appearance', '_write_attachmentref', '_write_blendmode', '_write_canvas', '_write_drawordergroup', '_write_glue', '_write_gluepairspec', '_write_gluevertexpair', '_write_hierarchyorder', '_write_modelsetup', '_write_offscreen', '_write_offscreendeletepolicy', '_write_offscreenformspec', '_write_offscreenmappingpatch', '_write_organizationcollection', '_write_organizationdeletepolicy', '_write_part', '_write_partcreatespec', '_write_partid', '_write_reparentcontext', '_write_reparentplacement', '_write_reparentstrategy', '_write_rotationpose', '_write_rotationtransform', '_write_scenecollection', '_write_scenecopyscope', '_write_scenecreate', '_write_scenefieldvalue', '_write_sceneplacement', '_write_scenereference', '_write_shapetarget', '_write_transform', '_write_transformdata', '_write_transformid', '_write_warpbezier', '_write_warpbeziernode', '_write_warppointpatch', '_write_warptransform']

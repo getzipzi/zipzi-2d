@@ -139,6 +139,23 @@ discovery checks. See [development and test coverage](https://github.com/getzipz
 and the [release guide](https://github.com/getzipzi/zipzi-2d/blob/main/docs/RELEASING.md)
 for source builds and packaging.
 
+The Rust contract exporter supplies a normalized type graph to the Python
+generator. `schema/authoring.json` indexes the checked domain shards in
+`schema/types/`; the generator also maintains `generated-manifest.json` for
+its owned outputs. After changing a contract or projection, regenerate and
+verify from the repository root:
+
+```sh
+uv run --locked python crates/zipzi-python2/tools/generate.py
+uv run --locked python crates/zipzi-python2/tools/generate.py --check --no-cache
+```
+
+Public modeling types live in `zipzi.modeling.<domain>`, while the generated
+values, codecs, binary adapters and native bridges are organized by domain.
+For a packaged schema replay, add `--schema path/to/schema/authoring.json` to
+the verification command. The replay validates each shard and the complete
+contract digest before rendering.
+
 The Python client and Runtime components are MIT licensed. Editor-provided
 services run in the GPL-3.0-only Editor; see the [licensing guide](https://github.com/getzipzi/zipzi-2d/blob/main/LICENSING.md).
 

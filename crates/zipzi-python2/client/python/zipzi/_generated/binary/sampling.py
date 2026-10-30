@@ -6,11 +6,17 @@ from ..._values import number
 from ..._values import sequence
 from ..._values import string
 from typing import cast
+from functools import cache
 from .support import Reader as Reader, SAMPLE_SIGNATURE as SAMPLE_SIGNATURE, Writer as Writer, _field as _field, _point as _point
 
-def _write_geometrysnapshot(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_geometrysnapshot():
     from .mesh import _write_meshmeshing as _write_meshmeshing
     from .common import _write_version as _write_version
+    return _write_meshmeshing, _write_version,
+
+def _write_geometrysnapshot(value: object, w: Writer) -> None:
+    _write_meshmeshing, _write_version, = _dependencies__write_geometrysnapshot()
     _write_version(_field(value, 'version'), w)
     w.text(_field(value, 'mesh_id'))
     items0=sequence(_field(value, 'vertex_ids'))
@@ -45,8 +51,13 @@ def _write_geometryspace(value: object, w: Writer) -> None:
     else:
         raise TypeError("Unexpected GeometrySpace variant")
 
-def _read_modelingsamples(r: Reader) -> m.ModelingSamples:
+@cache
+def _dependencies__read_modelingsamples():
     from .common import _read_version as _read_version
+    return _read_version,
+
+def _read_modelingsamples(r: Reader) -> m.ModelingSamples:
+    _read_version, = _dependencies__read_modelingsamples()
     return m.ModelingSamples(version=_read_version(r), parameters=tuple({r.text(): number(r.scalar('f')) for _ in range(r.count())} for _ in range(r.count())), frames=tuple(_read_drawableframe(r) for _ in range(r.count())), diagnostics=tuple(_read_geometrydiagnostic(r) for _ in range(r.count())), quality=tuple(tuple(_read_meshquality(r) for _ in range(r.count())) for _ in range(r.count())))
 
 def _read_drawableframe(r: Reader) -> m.DrawableFrame:
@@ -55,8 +66,13 @@ def _read_drawableframe(r: Reader) -> m.DrawableFrame:
 def _read_evaluatedparameter(r: Reader) -> m.EvaluatedParameter:
     return m.EvaluatedParameter(id=r.text(), requested=number(r.scalar('f')), value=number(r.scalar('f')), clamped=r.boolean())
 
-def _read_drawable(r: Reader) -> m.Drawable:
+@cache
+def _dependencies__read_drawable():
     from .scene import _read_blendmode as _read_blendmode
+    return _read_blendmode,
+
+def _read_drawable(r: Reader) -> m.Drawable:
+    _read_blendmode, = _dependencies__read_drawable()
     return m.Drawable(id=r.text(), runtime_id=r.text(), part_id=r.text(), raw_blend_mode=(integer(r.scalar('I')) if r.optional() else None), texture_asset_id=r.text(), texture_slot=integer(r.scalar('i')), renderable=r.boolean(), positions=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), uvs=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), indices=cast('tuple[int, ...]', tuple(v[0] for v in r.numeric('I', r.count()))), draw_order=integer(r.scalar('i')), render_order=integer(r.scalar('i')), opacity=number(r.scalar('f')), multiply_color=cast('tuple[float, float, float, float]', tuple(v[0] for v in r.numeric('f', 4))), screen_color=cast('tuple[float, float, float, float]', tuple(v[0] for v in r.numeric('f', 4))), blend_mode=_read_blendmode(r), enabled=r.boolean(), visible=r.boolean(), double_sided=r.boolean(), inverted_mask=r.boolean(), masks=tuple(r.text() for _ in range(r.count())))
 
 def _read_offscreenframe(r: Reader) -> m.OffscreenFrame:
@@ -72,8 +88,13 @@ def _read_rendercommand(r: Reader) -> m.RenderCommand:
         return m.RenderCommandEndOffscreen(offscreen_id=r.text())
     raise ValueError("Unknown binary RenderCommand variant")
 
-def _read_evaluateddeformer(r: Reader) -> m.EvaluatedDeformer:
+@cache
+def _dependencies__read_evaluateddeformer():
     from .common import _read_vec2 as _read_vec2
+    return _read_vec2,
+
+def _read_evaluateddeformer(r: Reader) -> m.EvaluatedDeformer:
+    _read_vec2, = _dependencies__read_evaluateddeformer()
     return m.EvaluatedDeformer(id=r.text(), enabled=r.boolean(), points=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), rotation_axis=(_read_vec2(r) if r.optional() else None), rotation_basis=(cast('tuple[m.Vec2, m.Vec2]', tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', 2))) if r.optional() else None))
 
 def _read_geometrydiagnostic(r: Reader) -> m.GeometryDiagnostic:
@@ -89,8 +110,13 @@ def _read_geometrydiagnostickind(r: Reader) -> m.GeometryDiagnosticKind:
         return m.GeometryDiagnosticKind('OutsideModelBounds')
     raise ValueError("Unknown binary GeometryDiagnosticKind variant")
 
-def _read_meshquality(r: Reader) -> m.MeshQuality:
+@cache
+def _dependencies__read_meshquality():
     from .observation import _read_texturecoverage as _read_texturecoverage
+    return _read_texturecoverage,
+
+def _read_meshquality(r: Reader) -> m.MeshQuality:
+    _read_texturecoverage, = _dependencies__read_meshquality()
     return m.MeshQuality(mesh_id=r.text(), visible=r.boolean(), vertex_count=integer(r.scalar('Q')), triangles=tuple(_read_trianglequality(r) for _ in range(r.count())), min_angle_degrees=(number(r.scalar('d')) if r.optional() else None), max_aspect_ratio=(number(r.scalar('d')) if r.optional() else None), max_edge_stretch=(number(r.scalar('d')) if r.optional() else None), degenerate_triangles=integer(r.scalar('Q')), flipped_triangles=integer(r.scalar('Q')), texture_coverage=(_read_texturecoverage(r) if r.optional() else None))
 
 def _read_trianglequality(r: Reader) -> m.TriangleQuality:

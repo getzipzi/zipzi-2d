@@ -9,6 +9,9 @@ def split(source, graph, header):
     lines=source.splitlines(keepends=True)
     owners={_name(identity).lower():domain for identity,domain in graph.domains.items()}
     owners.update({name:'common' for name in ('version','sourceref','imageid','planid')})
+    # Scene edit unions are an independent authoring concern from scene values.
+    owners.update({name:'scene_edits' for name in ('sceneoperation', 'sceneedit',
+                  'scenecontentedit', 'organizationedit', 'reparentedit', 'attachmentedit')})
     functions={}
     groups=defaultdict(list)
     support=[]
@@ -72,14 +75,20 @@ def split(source, graph, header):
         if 'sequence' in used and not any(isinstance(call,ast.Call) and isinstance(call.func,ast.Name) and call.func.id=='sequence' for node in nodes for call in ast.walk(node)):
             used.remove('sequence')
         parts=[header.rstrip(),'from __future__ import annotations',*external(used)]
+        if any(any(name in functions and functions[name]!=domain for name in _uses([node])) for node in nodes):
+            parts.append('from functools import cache')
         required=sorted(used & support_names)
         if required:parts.append('from .support import '+', '.join(name+' as '+name for name in required))
         parts.append('')
         for node in nodes:
             dependencies=sorted(name for name in _uses([node]) if name in functions and functions[name]!=domain)
             original=text(node).splitlines()
-            for name in reversed(dependencies):
-                original.insert(1,'    from .'+functions[name]+' import '+name+' as '+name)
+            if dependencies:
+                loader='_dependencies_'+node.name
+                parts.extend(['@cache', 'def '+loader+'():',
+                              *['    from .'+functions[name]+' import '+name+' as '+name for name in dependencies],
+                              '    return '+', '.join(dependencies)+',', ''])
+                original.insert(1,'    '+', '.join(dependencies)+', = '+loader+'()')
             parts.extend(['\n'.join(original),''])
         parts.append('__all__ = '+repr(sorted(node.name for node in nodes)))
         output[prefix+domain+'.py']='\n'.join(parts).rstrip()+'\n'

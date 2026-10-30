@@ -5,6 +5,7 @@ from ..._values import number
 from ..._values import sequence
 from ..._values import string
 from typing import cast
+from functools import cache
 from .support import Reader as Reader, Writer as Writer, _field as _field, _mapping as _mapping
 
 def _write_opaqueexportissue(value: object, w: Writer) -> None:
@@ -141,8 +142,13 @@ def _write_documentauthoringedit(value: object, w: Writer) -> None:
     else:
         raise TypeError("Unexpected DocumentAuthoringEdit variant")
 
-def _write_documentvalue(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_documentvalue():
     from .scene import _write_canvas as _write_canvas
+    return _write_canvas,
+
+def _write_documentvalue(value: object, w: Writer) -> None:
+    _write_canvas, = _dependencies__write_documentvalue()
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
     if tag=='layout':
         w.u32(0)
@@ -240,19 +246,34 @@ def _read_cdipartentry(r: Reader) -> m.CdiPartEntry:
         return m.CdiPartEntryUnresolved(runtime_id=r.text(), name=r.text(), extensions={r.text(): r.extension() for _ in range(r.count())})
     raise ValueError("Unknown binary CdiPartEntry variant")
 
-def _read_cdicombinedset(r: Reader) -> m.CdiCombinedSet:
+@cache
+def _dependencies__read_cdicombinedset():
     from .addressing import _read_referenceentrycdiparameterref as _read_referenceentrycdiparameterref
+    return _read_referenceentrycdiparameterref,
+
+def _read_cdicombinedset(r: Reader) -> m.CdiCombinedSet:
+    _read_referenceentrycdiparameterref, = _dependencies__read_cdicombinedset()
     return m.CdiCombinedSet(id=r.text(), members=tuple(_read_referenceentrycdiparameterref(r) for _ in range(r.count())))
 
 def _read_cdinamespaceids(r: Reader) -> m.CdiNamespaceIds:
     return m.CdiNamespaceIds(parameters={r.text(): r.text() for _ in range(r.count())}, parts={r.text(): r.text() for _ in range(r.count())}, groups={r.text(): r.text() for _ in range(r.count())})
 
-def _read_model3settings(r: Reader) -> m.Model3Settings:
+@cache
+def _dependencies__read_model3settings():
     from .scene import _read_attachmentref as _read_attachmentref
+    return _read_attachmentref,
+
+def _read_model3settings(r: Reader) -> m.Model3Settings:
+    _read_attachmentref, = _dependencies__read_model3settings()
     return m.Model3Settings(groups=(tuple(_read_modelparametergroup(r) for _ in range(r.count())) if r.optional() else None), layout=({r.text(): number(r.scalar('d')) for _ in range(r.count())} if r.optional() else None), hit_areas=(tuple(_read_modelhitarea(r) for _ in range(r.count())) if r.optional() else None), user_data=(_read_attachmentref(r) if r.optional() else None), extensions={r.text(): r.extension() for _ in range(r.count())}, source_runtime_ids=({r.text(): r.text() for _ in range(r.count())} if r.optional() else None), source_content=(r.text() if r.optional() else None))
 
-def _read_modelparametergroup(r: Reader) -> m.ModelParameterGroup:
+@cache
+def _dependencies__read_modelparametergroup():
     from .addressing import _read_referenceentrymodeltargetref as _read_referenceentrymodeltargetref
+    return _read_referenceentrymodeltargetref,
+
+def _read_modelparametergroup(r: Reader) -> m.ModelParameterGroup:
+    _read_referenceentrymodeltargetref, = _dependencies__read_modelparametergroup()
     return m.ModelParameterGroup(id=r.text(), name=r.text(), parameters=tuple(_read_referenceentrymodeltargetref(r) for _ in range(r.count())), extensions={r.text(): r.extension() for _ in range(r.count())})
 
 def _read_modelhitarea(r: Reader) -> m.ModelHitArea:

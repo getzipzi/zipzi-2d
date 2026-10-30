@@ -4,6 +4,7 @@ from .. import values as m
 from ..._values import integer
 from ..._values import number
 from typing import cast
+from functools import cache
 from .support import Reader as Reader
 
 def _read_objecttarget(r: Reader) -> m.ObjectTarget:
@@ -42,8 +43,13 @@ def _read_geometryhit(r: Reader) -> m.GeometryHit:
 def _read_trianglehit(r: Reader) -> m.TriangleHit:
     return m.TriangleHit(triangle_index=integer(r.scalar('Q')), vertex_indices=cast('tuple[int, int, int]', tuple(v[0] for v in r.numeric('I', 3))), vertex_ids=(cast('tuple[int, int, int]', tuple(v[0] for v in r.numeric('I', 3))) if r.optional() else None), barycentric=cast('tuple[float, float, float]', tuple(v[0] for v in r.numeric('d', 3))), uv=(cast('tuple[float, float]', tuple(v[0] for v in r.numeric('d', 2))) if r.optional() else None))
 
-def _read_spatialsamples(r: Reader) -> m.SpatialSamples:
+@cache
+def _dependencies__read_spatialsamples():
     from .common import _read_version as _read_version
+    return _read_version,
+
+def _read_spatialsamples(r: Reader) -> m.SpatialSamples:
+    _read_version, = _dependencies__read_spatialsamples()
     return m.SpatialSamples(version=_read_version(r), requested=tuple({r.text(): number(r.scalar('f')) for _ in range(r.count())} for _ in range(r.count())), queries=tuple(_read_spatialquery(r) for _ in range(r.count())), frames=tuple(_read_spatialframe(r) for _ in range(r.count())))
 
 def _read_spatialframe(r: Reader) -> m.SpatialFrame:

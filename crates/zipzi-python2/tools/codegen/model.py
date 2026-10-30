@@ -48,11 +48,10 @@ class TypeGraph:
 
     @classmethod
     def from_contract(cls, contract: Any) -> 'TypeGraph':
-        if isinstance(contract, dict) and contract.get('format_version') == 2:
-            root, definitions = contract['root'], contract['definitions']
-            normalize.validate_graph(root, definitions, projections.EXTERNAL_TYPES)
-        else:
-            root, definitions = normalize.normalize(contract, projections.EXTERNAL_TYPES)
+        if not isinstance(contract, dict) or contract.get('format_version') != 2:
+            raise ValueError('Unsupported schema format')
+        root, definitions = contract['root'], contract['definitions']
+        normalize.validate_graph(root, definitions, projections.EXTERNAL_TYPES)
         complete = {name for name, shape in definitions.items() if shape['kind'] != 'opaque'}
         missing = sorted(complete - projections.OWNERS.keys())
         if missing:
@@ -83,9 +82,6 @@ class TypeGraph:
             return {'kind': 'opaque', 'name': shape['name']}
         return self.definition(shape['name'])
 
-    def legacy_contract(self) -> Any:
-        """Expand the checked graph for renderers not yet migrated to references."""
-        return normalize.expand(self.root, self.definitions)
 
 
 @dataclass(frozen=True)

@@ -6,12 +6,37 @@ import importlib.util
 import inspect
 import typing
 import re
+from urllib.parse import unquote
 from importlib import metadata,resources
 import zipzi
 from zipzi._generated.catalog import lookup,iter_paths
 from zipzi._generated import facades
 from zipzi._lifecycle import Sessions,Project
 from zipzi.resources import Resources
+
+
+def markdown_anchors(text:str)->set[str]:
+    """Resolve Markdown heading anchors, including repeated headings and HTML ids."""
+    anchors=set(re.findall(r'<[\w-]+\b[^>]*\bid=["\']([^"\']+)["\']',text))
+    counts:dict[str,int]={}
+    for heading in re.findall(r'^#{1,6}\s+(.+?)\s*#*\s*$',text,re.MULTILINE):
+        heading=re.sub(r'\[([^]]+)\]\([^)]+\)',r'\1',heading).lower()
+        base=re.sub(r'\s+','-',re.sub(r'[^\w\-\s]','',heading)).strip('-')
+        count=counts.get(base,0);counts[base]=count+1
+        anchors.add(base if count==0 else base+'-'+str(count))
+    return anchors
+
+
+def markdown_link_failures(document:Path)->list[str]:
+    failures=[]
+    for link in re.findall(r'(?<!!)\[[^\]]+\]\(([^)]+)\)',document.read_text(encoding='utf-8')):
+        if '://' in link or link.startswith('mailto:'):continue
+        destination,separator,fragment=link.partition('#')
+        target=document.parent/unquote(destination) if destination else document
+        if not target.is_file():failures.append('invalid installed link '+link)
+        elif separator and unquote(fragment) not in markdown_anchors(target.read_text(encoding='utf-8')):
+            failures.append('invalid installed anchor '+link)
+    return failures
 
 
 def audit()->dict[str,object]:
@@ -99,9 +124,7 @@ def audit()->dict[str,object]:
     if len(guide.split())>1500:failures['D08'].append('Short workflow exceeds 1500 words')
     for document in (package_path/'docs').rglob('*.md'):
         name=document.relative_to(package_path/'docs').as_posix()
-        for link in re.findall(r'(?<!!)\[[^\]]+\]\(([^)]+)\)',document.read_text()):
-            if '://' in link or link.startswith('#'):continue
-            if not (document.parent/link.split('#',1)[0]).is_file():failures['D08'].append(name+': invalid installed link '+link)
+        failures['D08'].extend(name+': '+failure for failure in markdown_link_failures(document))
     return {'counts':counts,'failures':{k:sorted(set(v)) for k,v in failures.items()}}
 
 

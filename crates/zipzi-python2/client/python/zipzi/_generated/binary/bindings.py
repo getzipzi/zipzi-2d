@@ -5,6 +5,7 @@ from ..._values import number
 from ..._values import sequence
 from ..._values import string
 from typing import cast
+from functools import cache
 from .support import BINDING_SIGNATURE as BINDING_SIGNATURE, Reader as Reader, Writer as Writer, _field as _field, _point as _point
 
 def _write_meshbinding(value: object, w: Writer) -> None:
@@ -40,8 +41,13 @@ def _write_bindingsample(value: object, w: Writer) -> None:
 def _read_bindingsample(r: Reader) -> m.BindingSample:
     return m.BindingSample(id=r.text(), value=number(r.scalar('f')))
 
-def _write_meshkeyform(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_meshkeyform():
     from .scene import _write_appearance as _write_appearance
+    return _write_appearance,
+
+def _write_meshkeyform(value: object, w: Writer) -> None:
+    _write_appearance, = _dependencies__write_meshkeyform()
     items0=sequence(_field(value, 'samples'))
     w.u32(len(items0))
     for item0 in items0:
@@ -56,8 +62,13 @@ def _write_meshkeyform(value: object, w: Writer) -> None:
         w.raw(b"\1")
         w.scalar('f', _field(value, 'draw_order'))
 
-def _read_meshkeyform(r: Reader) -> m.MeshKeyform:
+@cache
+def _dependencies__read_meshkeyform():
     from .scene import _read_appearance as _read_appearance
+    return _read_appearance,
+
+def _read_meshkeyform(r: Reader) -> m.MeshKeyform:
+    _read_appearance, = _dependencies__read_meshkeyform()
     return m.MeshKeyform(samples=tuple(r.text() for _ in range(r.count())), positions=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), appearance=_read_appearance(r), draw_order=(number(r.scalar('f')) if r.optional() else None))
 
 def _write_scenebinding(value: object, w: Writer) -> None:
@@ -71,9 +82,14 @@ def _write_scenebinding(value: object, w: Writer) -> None:
 def _read_scenebinding(r: Reader) -> m.SceneBinding:
     return m.SceneBinding(id=r.text(), axes=tuple(_read_bindingaxis(r) for _ in range(r.count())), track=_read_scenetrack(r))
 
-def _write_scenetrack(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_scenetrack():
     from .scene import _write_partid as _write_partid
     from .scene import _write_transformid as _write_transformid
+    return _write_partid, _write_transformid,
+
+def _write_scenetrack(value: object, w: Writer) -> None:
+    _write_partid, _write_transformid, = _dependencies__write_scenetrack()
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
     if tag=='Warp':
         w.u32(0)
@@ -99,9 +115,14 @@ def _write_scenetrack(value: object, w: Writer) -> None:
     else:
         raise TypeError("Unexpected SceneTrack variant")
 
-def _read_scenetrack(r: Reader) -> m.SceneTrack:
+@cache
+def _dependencies__read_scenetrack():
     from .scene import _read_partid as _read_partid
     from .scene import _read_transformid as _read_transformid
+    return _read_partid, _read_transformid,
+
+def _read_scenetrack(r: Reader) -> m.SceneTrack:
+    _read_partid, _read_transformid, = _dependencies__read_scenetrack()
     tag=r.u32()
     if tag==0:
         return m.SceneTrackWarp(target_id=_read_transformid(r), keyforms=tuple(_read_warpkeyform(r) for _ in range(r.count())))
@@ -111,9 +132,14 @@ def _read_scenetrack(r: Reader) -> m.SceneTrack:
         return m.SceneTrackPart(target_id=_read_partid(r), keyforms=tuple(_read_partkeyform(r) for _ in range(r.count())))
     raise ValueError("Unknown binary SceneTrack variant")
 
-def _write_warpkeyform(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_warpkeyform():
     from .scene import _write_appearance as _write_appearance
     from .scene import _write_warpbezier as _write_warpbezier
+    return _write_appearance, _write_warpbezier,
+
+def _write_warpkeyform(value: object, w: Writer) -> None:
+    _write_appearance, _write_warpbezier, = _dependencies__write_warpkeyform()
     if _field(value, 'bezier') is None:
         w.raw(b"\0")
     else:
@@ -128,14 +154,24 @@ def _write_warpkeyform(value: object, w: Writer) -> None:
     w.numeric('f', tuple(v for item in items0 for v in _point(item)))
     _write_appearance(_field(value, 'appearance'), w)
 
-def _read_warpkeyform(r: Reader) -> m.WarpKeyform:
+@cache
+def _dependencies__read_warpkeyform():
     from .scene import _read_appearance as _read_appearance
     from .scene import _read_warpbezier as _read_warpbezier
+    return _read_appearance, _read_warpbezier,
+
+def _read_warpkeyform(r: Reader) -> m.WarpKeyform:
+    _read_appearance, _read_warpbezier, = _dependencies__read_warpkeyform()
     return m.WarpKeyform(bezier=(_read_warpbezier(r) if r.optional() else None), samples=tuple(r.text() for _ in range(r.count())), positions=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), appearance=_read_appearance(r))
 
-def _write_rotationkeyform(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_rotationkeyform():
     from .scene import _write_appearance as _write_appearance
     from .scene import _write_rotationpose as _write_rotationpose
+    return _write_appearance, _write_rotationpose,
+
+def _write_rotationkeyform(value: object, w: Writer) -> None:
+    _write_appearance, _write_rotationpose, = _dependencies__write_rotationkeyform()
     items0=sequence(_field(value, 'samples'))
     w.u32(len(items0))
     for item0 in items0:
@@ -143,9 +179,14 @@ def _write_rotationkeyform(value: object, w: Writer) -> None:
     _write_rotationpose(_field(value, 'rotation'), w)
     _write_appearance(_field(value, 'appearance'), w)
 
-def _read_rotationkeyform(r: Reader) -> m.RotationKeyform:
+@cache
+def _dependencies__read_rotationkeyform():
     from .scene import _read_appearance as _read_appearance
     from .scene import _read_rotationpose as _read_rotationpose
+    return _read_appearance, _read_rotationpose,
+
+def _read_rotationkeyform(r: Reader) -> m.RotationKeyform:
+    _read_appearance, _read_rotationpose, = _dependencies__read_rotationkeyform()
     return m.RotationKeyform(samples=tuple(r.text() for _ in range(r.count())), rotation=_read_rotationpose(r), appearance=_read_appearance(r))
 
 def _write_partkeyform(value: object, w: Writer) -> None:
@@ -354,8 +395,13 @@ def _write_deltawarpkeyform(value: object, w: Writer) -> None:
 def _read_deltawarpkeyform(r: Reader) -> m.DeltaWarpKeyform:
     return m.DeltaWarpKeyform(sample_id=r.text(), points=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), opacity=(number(r.scalar('f')) if r.optional() else None), multiply=(cast('tuple[float, float, float]', tuple(v[0] for v in r.numeric('f', 3))) if r.optional() else None), screen=(cast('tuple[float, float, float]', tuple(v[0] for v in r.numeric('f', 3))) if r.optional() else None))
 
-def _write_deltarotationkeyform(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_deltarotationkeyform():
     from .common import _write_vec2 as _write_vec2
+    return _write_vec2,
+
+def _write_deltarotationkeyform(value: object, w: Writer) -> None:
+    _write_vec2, = _dependencies__write_deltarotationkeyform()
     w.text(_field(value, 'sample_id'))
     if _field(value, 'origin') is None:
         w.raw(b"\0")
@@ -392,8 +438,13 @@ def _write_deltarotationkeyform(value: object, w: Writer) -> None:
         if len(items0)!=3: raise ValueError("Invalid binary array length")
         w.numeric('f', tuple(items0))
 
-def _read_deltarotationkeyform(r: Reader) -> m.DeltaRotationKeyform:
+@cache
+def _dependencies__read_deltarotationkeyform():
     from .common import _read_vec2 as _read_vec2
+    return _read_vec2,
+
+def _read_deltarotationkeyform(r: Reader) -> m.DeltaRotationKeyform:
+    _read_vec2, = _dependencies__read_deltarotationkeyform()
     return m.DeltaRotationKeyform(sample_id=r.text(), origin=(_read_vec2(r) if r.optional() else None), angle=(number(r.scalar('f')) if r.optional() else None), scale=(number(r.scalar('f')) if r.optional() else None), opacity=(number(r.scalar('f')) if r.optional() else None), multiply=(cast('tuple[float, float, float]', tuple(v[0] for v in r.numeric('f', 3))) if r.optional() else None), screen=(cast('tuple[float, float, float]', tuple(v[0] for v in r.numeric('f', 3))) if r.optional() else None))
 
 def _write_deltapartkeyform(value: object, w: Writer) -> None:
@@ -474,9 +525,14 @@ def _write_offscreenkeyform(value: object, w: Writer) -> None:
 def _read_offscreenkeyform(r: Reader) -> m.OffscreenKeyform:
     return m.OffscreenKeyform(opacity=number(r.scalar('f')), multiply=(cast('tuple[float, float, float]', tuple(v[0] for v in r.numeric('f', 3))) if r.optional() else None), screen=(cast('tuple[float, float, float]', tuple(v[0] for v in r.numeric('f', 3))) if r.optional() else None))
 
-def _write_bindingauthoringedit(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_bindingauthoringedit():
     from .parameters import _write_parameterrangeedit as _write_parameterrangeedit
-    from .scene import _write_reparentedit as _write_reparentedit
+    from .scene_edits import _write_reparentedit as _write_reparentedit
+    return _write_parameterrangeedit, _write_reparentedit,
+
+def _write_bindingauthoringedit(value: object, w: Writer) -> None:
+    _write_parameterrangeedit, _write_reparentedit, = _dependencies__write_bindingauthoringedit()
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
     if tag=='Grid':
         w.u32(0)
@@ -526,8 +582,13 @@ def _write_bindinggridtarget(value: object, w: Writer) -> None:
     else:
         raise TypeError("Unexpected BindingGridTarget variant")
 
-def _write_gridoperation(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_gridoperation():
     from .parameters import _write_parameterrangepolicy as _write_parameterrangepolicy
+    return _write_parameterrangepolicy,
+
+def _write_gridoperation(value: object, w: Writer) -> None:
+    _write_parameterrangepolicy, = _dependencies__write_gridoperation()
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
     if tag=='AddAxis':
         w.u32(0)
@@ -621,8 +682,13 @@ def _write_blendauthoringedit(value: object, w: Writer) -> None:
     else:
         raise TypeError("Unexpected BlendAuthoringEdit variant")
 
-def _write_blendtableoperation(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_blendtableoperation():
     from .parameters import _write_parameterrangepolicy as _write_parameterrangepolicy
+    return _write_parameterrangepolicy,
+
+def _write_blendtableoperation(value: object, w: Writer) -> None:
+    _write_parameterrangepolicy, = _dependencies__write_blendtableoperation()
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
     if tag=='Insert':
         w.u32(0)

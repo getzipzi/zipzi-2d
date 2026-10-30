@@ -5,6 +5,7 @@ from ..._values import integer
 from ..._values import number
 from ..._values import sequence
 from ..._values import string
+from functools import cache
 from .support import Reader as Reader, Writer as Writer, _field as _field, _mapping as _mapping
 
 def _write_motionedit(value: object, w: Writer) -> None:
@@ -171,8 +172,13 @@ def _write_motioncontainer(value: object, w: Writer) -> None:
     else:
         raise TypeError("Unexpected MotionContainer variant")
 
-def _write_motionregistration(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_motionregistration():
     from .scene import _write_attachmentref as _write_attachmentref
+    return _write_attachmentref,
+
+def _write_motionregistration(value: object, w: Writer) -> None:
+    _write_attachmentref, = _dependencies__write_motionregistration()
     w.text(_field(value, 'id'))
     w.text(_field(value, 'clip_id'))
     if _field(value, 'fade_in') is None:
@@ -196,8 +202,13 @@ def _write_motionregistration(value: object, w: Writer) -> None:
         w.text(key0)
         w.extension(value0)
 
-def _read_motionregistration(r: Reader) -> m.MotionRegistration:
+@cache
+def _dependencies__read_motionregistration():
     from .scene import _read_attachmentref as _read_attachmentref
+    return _read_attachmentref,
+
+def _read_motionregistration(r: Reader) -> m.MotionRegistration:
+    _read_attachmentref, = _dependencies__read_motionregistration()
     return m.MotionRegistration(id=r.text(), clip_id=r.text(), fade_in=(number(r.scalar('f')) if r.optional() else None), fade_out=(number(r.scalar('f')) if r.optional() else None), sound=(_read_attachmentref(r) if r.optional() else None), extensions={r.text(): r.extension() for _ in range(r.count())})
 
 def _write_motiontracktarget(value: object, w: Writer) -> None:
@@ -380,8 +391,13 @@ def _read_motionpoint(r: Reader) -> m.MotionPoint:
 def _read_motiongroup(r: Reader) -> m.MotionGroup:
     return m.MotionGroup(id=r.text(), name=r.text(), entries=tuple(_read_motionregistration(r) for _ in range(r.count())))
 
-def _read_motionsnapshot(r: Reader) -> m.MotionSnapshot:
+@cache
+def _dependencies__read_motionsnapshot():
     from .physics import _read_physicsrigsnapshot as _read_physicsrigsnapshot
+    return _read_physicsrigsnapshot,
+
+def _read_motionsnapshot(r: Reader) -> m.MotionSnapshot:
+    _read_physicsrigsnapshot, = _dependencies__read_motionsnapshot()
     return m.MotionSnapshot(physics=tuple(_read_physicsrigsnapshot(r) for _ in range(r.count())), time=number(r.scalar('f')), parameters={r.text(): number(r.scalar('f')) for _ in range(r.count())}, part_opacity_channels={r.text(): number(r.scalar('f')) for _ in range(r.count())}, part_opacities={r.text(): number(r.scalar('f')) for _ in range(r.count())}, model_opacity=number(r.scalar('f')), active_motions=tuple(r.text() for _ in range(r.count())), active_expressions=tuple(r.text() for _ in range(r.count())), fired_events=tuple(_read_motioneventfired(r) for _ in range(r.count())), coverage=tuple(r.text() for _ in range(r.count())), motion_positions=tuple(_read_motionplaybackposition(r) for _ in range(r.count())))
 
 def _read_motioneventfired(r: Reader) -> m.MotionEventFired:

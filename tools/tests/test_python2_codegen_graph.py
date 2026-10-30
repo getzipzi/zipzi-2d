@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
-SPEC = importlib.util.spec_from_file_location('python2_normalize', ROOT / 'crates/zipzi-python2/tools/codegen/normalize.py')
+SPEC = importlib.util.spec_from_file_location('python2_normalize', ROOT / 'tools/tests/_python2_shape_fixture.py')
 normal = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(normal)
 sys.path.insert(0, str(ROOT / 'crates/zipzi-python2/tools'))
@@ -65,7 +65,7 @@ class TypeGraph(unittest.TestCase):
         self.assertEqual(types, logical['definitions'])
         self.assertGreater(len(types), 300)
         self.assertEqual(normal.expand(root, types), contract)
-        graph = CheckedTypeGraph.from_contract(contract)
+        graph = CheckedTypeGraph.from_contract(logical)
         self.assertEqual(len(graph.domains), 311)
         self.assertEqual(graph.domains['zipzi_contract::document::DeletionRequest'], 'deletion')
         self.assertEqual(graph.domains['zipzi_contract::model::Vec2'], 'common')
@@ -73,7 +73,7 @@ class TypeGraph(unittest.TestCase):
 
     def test_projection_coverage_and_conflicting_ownership_are_checked(self):
         with self.assertRaisesRegex(ValueError, 'Missing domain projection'):
-            CheckedTypeGraph.from_contract(record('crate::Unreviewed'))
+            CheckedTypeGraph.from_contract({'format_version':2, 'root':{'kind':'ref','name':'crate::Unreviewed'}, 'definitions':{'crate::Unreviewed':record('crate::Unreviewed')}})
         with patch.object(projections, 'DOMAIN_MEMBERS', {'crate': {'mesh': 'Shared', 'scene': 'Shared'}}):
             with self.assertRaisesRegex(ValueError, 'Conflicting domain projection'):
                 projections._build_owners()

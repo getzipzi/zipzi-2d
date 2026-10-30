@@ -5,10 +5,12 @@ from .. import values as m
 from ... import _operations as ops
 from ..._values import sequence
 from ..._values import string
+from functools import cache
 from .support import INPUT_SIGNATURE as INPUT_SIGNATURE, Writer as Writer, _field as _field, _point as _point
 
-def _write_modelingcommand(value: object, w: Writer) -> None:
-    from .scene import _write_attachmentedit as _write_attachmentedit
+@cache
+def _dependencies__write_modelingcommand():
+    from .scene_edits import _write_attachmentedit as _write_attachmentedit
     from .bindings import _write_bindingauthoringedit as _write_bindingauthoringedit
     from .bindings import _write_blendshapebinding as _write_blendshapebinding
     from .bindings import _write_blendshapeconstraint as _write_blendshapeconstraint
@@ -31,7 +33,7 @@ def _write_modelingcommand(value: object, w: Writer) -> None:
     from .motion import _write_motionclip as _write_motionclip
     from .motion import _write_motionedit as _write_motionedit
     from .scene import _write_offscreen as _write_offscreen
-    from .scene import _write_organizationedit as _write_organizationedit
+    from .scene_edits import _write_organizationedit as _write_organizationedit
     from .parameters import _write_parameter as _write_parameter
     from .scene import _write_part as _write_part
     from .physics import _write_physicsasset as _write_physicsasset
@@ -41,12 +43,16 @@ def _write_modelingcommand(value: object, w: Writer) -> None:
     from .addressing import _write_referenceedit as _write_referenceedit
     from .resources import _write_resourceedit as _write_resourceedit
     from .bindings import _write_scenebinding as _write_scenebinding
-    from .scene import _write_scenecontentedit as _write_scenecontentedit
-    from .scene import _write_sceneedit as _write_sceneedit
+    from .scene_edits import _write_scenecontentedit as _write_scenecontentedit
+    from .scene_edits import _write_sceneedit as _write_sceneedit
     from .bindings import _write_scenekeyform as _write_scenekeyform
     from .common import _write_sourceref as _write_sourceref
     from .mesh import _write_topologyreplacement as _write_topologyreplacement
     from .scene import _write_transform as _write_transform
+    return _write_attachmentedit, _write_bindingauthoringedit, _write_blendshapebinding, _write_blendshapeconstraint, _write_blendshapekeytable, _write_deletionintent, _write_documentauthoringedit, _write_drawordergroup, _write_editorstate, _write_expressionasset, _write_expressionedit, _write_geometrysnapshot, _write_glue, _write_hierarchyorder, _write_imageasset, _write_manualmeshoperation, _write_mesh, _write_meshbinding, _write_meshkeyform, _write_modelsetup, _write_motionclip, _write_motionedit, _write_offscreen, _write_organizationedit, _write_parameter, _write_part, _write_physicsasset, _write_physicsedit, _write_poseasset, _write_poseedit, _write_referenceedit, _write_resourceedit, _write_scenebinding, _write_scenecontentedit, _write_sceneedit, _write_scenekeyform, _write_sourceref, _write_topologyreplacement, _write_transform,
+
+def _write_modelingcommand(value: object, w: Writer) -> None:
+    _write_attachmentedit, _write_bindingauthoringedit, _write_blendshapebinding, _write_blendshapeconstraint, _write_blendshapekeytable, _write_deletionintent, _write_documentauthoringedit, _write_drawordergroup, _write_editorstate, _write_expressionasset, _write_expressionedit, _write_geometrysnapshot, _write_glue, _write_hierarchyorder, _write_imageasset, _write_manualmeshoperation, _write_mesh, _write_meshbinding, _write_meshkeyform, _write_modelsetup, _write_motionclip, _write_motionedit, _write_offscreen, _write_organizationedit, _write_parameter, _write_part, _write_physicsasset, _write_physicsedit, _write_poseasset, _write_poseedit, _write_referenceedit, _write_resourceedit, _write_scenebinding, _write_scenecontentedit, _write_sceneedit, _write_scenekeyform, _write_sourceref, _write_topologyreplacement, _write_transform, = _dependencies__write_modelingcommand()
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
     if tag=='create_asset':
         w.u32(0)
@@ -238,7 +244,8 @@ def _write_conversiondomain(value: object, w: Writer) -> None:
     w.scalar('f', _field(value, 'minimum'))
     w.scalar('f', _field(value, 'maximum'))
 
-def encode_operations(operations: tuple[ops.WireOperation, ...]) -> bytes:
+@cache
+def _dependencies_encode_operations():
     from .resources import _write_imagecreatespec as _write_imagecreatespec
     from .common import _write_imageid as _write_imageid
     from .bindings import _write_meshbindingcreatespec as _write_meshbindingcreatespec
@@ -247,7 +254,11 @@ def encode_operations(operations: tuple[ops.WireOperation, ...]) -> bytes:
     from .parameters import _write_parametercreatespec as _write_parametercreatespec
     from .parameters import _write_parameterpatch as _write_parameterpatch
     from .common import _write_planid as _write_planid
-    from .scene import _write_sceneoperation as _write_sceneoperation
+    from .scene_edits import _write_sceneoperation as _write_sceneoperation
+    return _write_imagecreatespec, _write_imageid, _write_meshbindingcreatespec, _write_meshkeyformspec, _write_meshoperation, _write_parametercreatespec, _write_parameterpatch, _write_planid, _write_sceneoperation,
+
+def encode_operations(operations: tuple[ops.WireOperation, ...]) -> bytes:
+    _write_imagecreatespec, _write_imageid, _write_meshbindingcreatespec, _write_meshkeyformspec, _write_meshoperation, _write_parametercreatespec, _write_parameterpatch, _write_planid, _write_sceneoperation, = _dependencies_encode_operations()
     if len(operations)>1024: raise ValueError("Too many authoring operations")
     w=Writer()
     w.raw(b"ZZA1"); w.raw(int(INPUT_SIGNATURE,16).to_bytes(16,"little")); w.u32(len(operations))

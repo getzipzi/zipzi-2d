@@ -2,19 +2,30 @@
 from __future__ import annotations
 from ..._values import sequence
 from ..._values import string
+from functools import cache
 from .support import Writer as Writer, _field as _field, _mapping as _mapping
 
-def _write_deletionintent(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_deletionintent():
     from .project import _write_opaqueexportissue as _write_opaqueexportissue
+    return _write_opaqueexportissue,
+
+def _write_deletionintent(value: object, w: Writer) -> None:
+    _write_opaqueexportissue, = _dependencies__write_deletionintent()
     _write_deletionrequest(_field(value, 'request'), w)
     items0=sequence(_field(value, 'accepted_export_failures'))
     w.u32(len(items0))
     for item0 in items0:
         _write_opaqueexportissue(item0, w)
 
-def _write_deletionrequest(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_deletionrequest():
     from .scene import _write_reparentcontext as _write_reparentcontext
     from .scene import _write_reparentstrategy as _write_reparentstrategy
+    return _write_reparentcontext, _write_reparentstrategy,
+
+def _write_deletionrequest(value: object, w: Writer) -> None:
+    _write_reparentcontext, _write_reparentstrategy, = _dependencies__write_deletionrequest()
     items0=sequence(_field(value, 'roots'))
     w.u32(len(items0))
     for item0 in items0:

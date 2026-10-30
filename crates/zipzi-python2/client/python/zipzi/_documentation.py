@@ -1,5 +1,6 @@
 """Offline public API descriptions; importing or describing never starts a host."""
 from dataclasses import dataclass
+from functools import lru_cache
 from ._presentation import CompactValue
 
 @dataclass(frozen=True,repr=False)
@@ -42,8 +43,13 @@ def describe(path:str)->ApiDescription:
     This describes the installed API, while runtime.capabilities() describes
     the connected host. No resource is constructed or RPC sent by this query.
     """
-    from ._generated.catalog import lookup
     if not isinstance(path,str):raise TypeError('Expected a public API path')
     key=path if path=='zipzi' or path.startswith('zipzi.') else 'zipzi.'+path
+    return _describe(key)
+
+
+@lru_cache(maxsize=512)
+def _describe(key:str)->ApiDescription:
+    from ._generated.catalog import lookup
     raw=lookup(key)
     return ApiDescription(key,raw['kind'],raw.get('signature',''),raw.get('documentation',''),tuple(raw.get('fields',())),tuple(raw.get('children',())),raw.get('example',''))

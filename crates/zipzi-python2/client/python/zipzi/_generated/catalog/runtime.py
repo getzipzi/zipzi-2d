@@ -55,7 +55,7 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
            'documentation': 'Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or '
                             'connect(), explicitly select sessions, read before editing, verify confirmed results, '
                             'then save and release. Package 0.1.0a3; protocol zipzi-runtime-v2; client source SHA-256 '
-                            '8a36318353eb29a0d75b8e4840e1679c39711275bb104abb6a2760bc0d51fead.',
+                            '49cd7caa0d6303d1dbd19226e3af6edbdcd60589a0643c35985c0d7e4b8ecc26.',
            'example': 'docs/recipes.py',
            'kind': 'module',
            'signature': ''},

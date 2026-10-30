@@ -8,12 +8,18 @@ from ..._values import number
 from ..._values import sequence
 from ..._values import string
 from typing import cast
+from functools import cache
 from .support import MESH_SIGNATURE as MESH_SIGNATURE, Reader as Reader, Writer as Writer, _field as _field, _mapping as _mapping, _mesh_meshing as _mesh_meshing, _point as _point
 
-def _write_mesh(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_mesh():
     from .scene import _write_appearance as _write_appearance
     from .scene import _write_blendmode as _write_blendmode
     from .scene import _write_scenereference as _write_scenereference
+    return _write_appearance, _write_blendmode, _write_scenereference,
+
+def _write_mesh(value: object, w: Writer) -> None:
+    _write_appearance, _write_blendmode, _write_scenereference, = _dependencies__write_mesh()
     w.text(_field(value, 'id'))
     w.text(_field(value, 'name'))
     _write_scenereference(_field(value, 'texture_asset_id'), w)
@@ -57,10 +63,15 @@ def _write_mesh(value: object, w: Writer) -> None:
         w.raw(b"\1")
         w.scalar('I', _field(value, 'raw_blend_mode'))
 
-def _read_mesh(r: Reader) -> m.Mesh:
+@cache
+def _dependencies__read_mesh():
     from .scene import _read_appearance as _read_appearance
     from .scene import _read_blendmode as _read_blendmode
     from .scene import _read_scenereference as _read_scenereference
+    return _read_appearance, _read_blendmode, _read_scenereference,
+
+def _read_mesh(r: Reader) -> m.Mesh:
+    _read_appearance, _read_blendmode, _read_scenereference, = _dependencies__read_mesh()
     return m.Mesh(id=r.text(), name=r.text(), texture_asset_id=_read_scenereference(r), vertex_ids=cast('tuple[int, ...]', tuple(v[0] for v in r.numeric('I', r.count()))), base_positions=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), uvs=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), triangles=cast('tuple[tuple[int, int, int], ...]', r.numeric('III', r.count())), meshing=(_read_meshmeshing(r) if r.optional() else None), runtime_id=r.text(), part_id=r.text(), deformer_id=r.text(), appearance=_read_appearance(r), draw_order=(number(r.scalar('f')) if r.optional() else None), blend_mode=_read_blendmode(r), enabled=r.boolean(), double_sided=r.boolean(), inverted_mask=r.boolean(), masks=tuple(r.text() for _ in range(r.count())), raw_blend_mode=(integer(r.scalar('I')) if r.optional() else None))
 
 def _write_meshmeshing(value: object, w: Writer) -> None:
@@ -101,8 +112,13 @@ def _read_meshconstraintkind(r: Reader) -> m.MeshConstraintKind:
         return m.MeshConstraintKind('edge_support')
     raise ValueError("Unknown binary MeshConstraintKind variant")
 
-def _write_vertexcontentpatch(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_vertexcontentpatch():
     from .common import _write_vec2 as _write_vec2
+    return _write_vec2,
+
+def _write_vertexcontentpatch(value: object, w: Writer) -> None:
+    _write_vec2, = _dependencies__write_vertexcontentpatch()
     w.scalar('I', _field(value, 'vertex_id'))
     if _field(value, 'position') is None:
         w.raw(b"\0")
@@ -115,8 +131,13 @@ def _write_vertexcontentpatch(value: object, w: Writer) -> None:
         w.raw(b"\1")
         _write_vec2(_field(value, 'uv'), w)
 
-def _write_newmeshvertex(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_newmeshvertex():
     from .common import _write_vec2 as _write_vec2
+    return _write_vec2,
+
+def _write_newmeshvertex(value: object, w: Writer) -> None:
+    _write_vec2, = _dependencies__write_newmeshvertex()
     w.scalar('I', _field(value, 'vertex_id'))
     _write_vec2(_field(value, 'position'), w)
     _write_vec2(_field(value, 'uv'), w)
@@ -148,10 +169,15 @@ def _write_vertexdeletepolicy(value: object, w: Writer) -> None:
     else:
         raise TypeError("Unexpected VertexDeletePolicy variant")
 
-def _write_topologyreplacement(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_topologyreplacement():
     from .bindings import _write_blendshapebinding as _write_blendshapebinding
     from .scene import _write_glue as _write_glue
     from .bindings import _write_meshbinding as _write_meshbinding
+    return _write_blendshapebinding, _write_glue, _write_meshbinding,
+
+def _write_topologyreplacement(value: object, w: Writer) -> None:
+    _write_blendshapebinding, _write_glue, _write_meshbinding, = _dependencies__write_topologyreplacement()
     _write_mesh(_field(value, 'mesh'), w)
     if _field(value, 'binding') is None:
         w.raw(b"\0")
@@ -176,8 +202,13 @@ def _write_topologyreplacement(value: object, w: Writer) -> None:
             w.raw(b"\1")
             w.scalar('I', value0)
 
-def _write_manualmeshoperation(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_manualmeshoperation():
     from .common import _write_vec2 as _write_vec2
+    return _write_vec2,
+
+def _write_manualmeshoperation(value: object, w: Writer) -> None:
+    _write_vec2, = _dependencies__write_manualmeshoperation()
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
     if tag=='insert_vertex':
         w.u32(0)
@@ -224,8 +255,13 @@ def _write_manualmeshoperation(value: object, w: Writer) -> None:
     else:
         raise TypeError("Unexpected ManualMeshOperation variant")
 
-def _write_manualvertextarget(value: object, w: Writer) -> None:
+@cache
+def _dependencies__write_manualvertextarget():
     from .common import _write_vec2 as _write_vec2
+    return _write_vec2,
+
+def _write_manualvertextarget(value: object, w: Writer) -> None:
+    _write_vec2, = _dependencies__write_manualvertextarget()
     w.scalar('I', _field(value, 'id'))
     _write_vec2(_field(value, 'uv'), w)
 
@@ -308,8 +344,13 @@ def _write_meshgeometry(value: object, w: Writer) -> None:
 def _read_meshgeometry(r: Reader) -> meshes.Geometry:
     return meshes.Geometry(vertex_ids=cast('tuple[int, ...]', tuple(v[0] for v in r.numeric('I', r.count()))), positions=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), uvs=tuple(m.Vec2(x=number(v[0]), y=number(v[1])) for v in r.numeric('ff', r.count())), triangles=cast('tuple[tuple[int, int, int], ...]', r.numeric('III', r.count())), meshing=_mesh_meshing((_read_meshmeshing(r) if r.optional() else None)))
 
-def _read_meshsnapshot(r: Reader) -> Snapshot[meshes.Mesh]:
+@cache
+def _dependencies__read_meshsnapshot():
     from .common import _read_sourceref as _read_sourceref
+    return _read_sourceref,
+
+def _read_meshsnapshot(r: Reader) -> Snapshot[meshes.Mesh]:
+    _read_sourceref, = _dependencies__read_meshsnapshot()
     return Snapshot(_read_sourceref(r), meshes.Mesh(id=r.text(), name=r.text(), geometry=_read_meshgeometry(r)))
 
 def decode_meshes(value: bytes,signature:str)->tuple[Snapshot[meshes.Mesh],...]:
