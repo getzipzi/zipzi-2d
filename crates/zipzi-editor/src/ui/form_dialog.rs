@@ -70,6 +70,12 @@ pub(crate) trait FormDialogView: Render {
     }
     fn dialog(&self) -> &FormDialogState;
     fn dialog_mut(&mut self) -> &mut FormDialogState;
+    fn submit_label(&self) -> Option<SharedString> {
+        None
+    }
+    fn destructive() -> bool {
+        false
+    }
     /// Must revalidate against the current source immediately before executing.
     fn submit(&mut self, window: &mut Window, cx: &mut Context<Self>) -> anyhow::Result<()>;
     fn error_message(error: &anyhow::Error) -> String;
@@ -188,7 +194,11 @@ struct FormDialogFooter<V: FormDialogView> {
 
 impl<V: FormDialogView> Render for FormDialogFooter<V> {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let state = self.view.read(cx).dialog();
+        let view = self.view.read(cx);
+        let label = view
+            .submit_label()
+            .unwrap_or_else(|| self.options.submit_label.clone());
+        let state = view.dialog();
         let cancel = state.focus.clone();
         let cancel_enter = state.focus.clone();
         let confirm = state.focus.clone();
@@ -225,7 +235,8 @@ impl<V: FormDialogView> Render for FormDialogFooter<V> {
                 .child(
                     crate::ui::compact::button(Button::new(self.options.submit_id))
                         .primary()
-                        .label(self.options.submit_label.clone())
+                        .when(V::destructive(), |button| button.danger())
+                        .label(label)
                         .disabled(!state.can_submit())
                         .on_click(move |_, window, cx| {
                             confirm.dispatch_action(&Confirm { secondary: false }, window, cx)

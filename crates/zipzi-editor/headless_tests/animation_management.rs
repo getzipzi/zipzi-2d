@@ -221,7 +221,7 @@ fn deletion_review_defaults_to_cancel_and_executes_the_reported_migration(cx: &m
             (0, 0)
         );
         assert!(
-            window.try_find(("deletion-row", 0usize)).is_some(),
+            window.try_find("deletion-summary-title").is_some(),
             "{:?}",
             window
                 .try_find("deletion-error")
@@ -305,9 +305,15 @@ fn deleting_shared_clip_reviews_all_usages_cleans_preview_and_does_not_autoplay_
     });
     action(&h, A::DeleteAnimation(clip.clone(), D::Motion), cx);
     cx.update_window(h.window, |_, window, cx| {
+        window.click("deletion-details", cx)
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
         let mut lines = String::new();
         for i in 0..20usize {
-            if let Some(row) = window.try_find(("deletion-row", i)) {
+            if let Some(row) = window.try_find(("deletion-row-id", i)) {
                 lines.push_str(&row.label().unwrap_or_default());
             }
         }
@@ -372,7 +378,7 @@ fn last_registration_is_explained_and_stale_review_cannot_consume_redo(cx: &mut 
                 .find(("deletion-row", 0usize))
                 .label()
                 .unwrap()
-                .contains("LAST_MOTION_REGISTRATION")
+                .contains("last reference to this motion")
         );
         window.click("tree-deletion-submit", cx);
         assert_eq!(
@@ -506,7 +512,7 @@ fn group_menu_dissolve_preserves_all_registrations_and_preview(cx: &mut TestAppC
     });
 }
 #[gpui_kit::test]
-fn expression_deletion_clears_only_expression_preview_and_empty_group_deletes_directly(
+fn expression_deletion_clears_only_expression_preview_and_empty_group_requires_review(
     cx: &mut TestAppContext,
 ) {
     let h = setup(cx);
@@ -532,7 +538,7 @@ fn expression_deletion_clears_only_expression_preview_and_empty_group_deletes_di
     cx.update_window(h.window, |_, window, cx| {
         window.render_frame(cx);
         assert!(
-            window.try_find(("deletion-row", 0usize)).is_some(),
+            window.try_find("deletion-summary-title").is_some(),
             "{:?}",
             window
                 .try_find("deletion-error")
@@ -562,10 +568,18 @@ fn expression_deletion_clears_only_expression_preview_and_empty_group_deletes_di
         v.editor.active_inspection().unwrap().object().unwrap()
     });
     action(&h, A::DeleteAnimation(group.clone(), D::Group), cx);
-    cx.update_window(h.window, |_, window, _| {
-        assert!(window.try_find("tree-deletion-dialog").is_none())
+    h.view.read_with(cx, |v, _| {
+        let document = v.editor.document().unwrap();
+        assert!(document.object_index().get(&group).is_some());
+        assert_eq!(document.history_lengths(), (2, 0));
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("tree-deletion-dialog").visible());
+        window.click("tree-deletion-submit", cx);
     })
     .unwrap();
+    cx.run_until_parked();
     h.view.read_with(cx, |v, _| {
         assert!(
             v.editor

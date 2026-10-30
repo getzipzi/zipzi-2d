@@ -615,6 +615,19 @@ fn object_deletion_shortcut_protects_text_and_uses_tree_focus(cx: &mut TestAppCo
     })
     .unwrap();
     cx.run_until_parked();
+    super::settle_object_deletion(&h, cx);
+    h.view.read_with(cx, |view, _| {
+        let document = view.editor.document().unwrap();
+        assert!(document.object_index().get(&mesh).is_some());
+        assert_eq!(document.history_lengths(), (1, 0));
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("tree-deletion-dialog").visible());
+        window.click("tree-deletion-submit", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
     h.view.read_with(cx, |view, _| {
         assert!(
             view.editor
@@ -654,6 +667,19 @@ fn object_deletion_viewport_shortcuts_and_context_menu_share_behavior(cx: &mut T
             choose(&h, "Delete Object", cx);
         }
         cx.run_until_parked();
+        super::settle_object_deletion(&h, cx);
+        h.view.read_with(cx, |view, _| {
+            let document = view.editor.document().unwrap();
+            assert!(document.object_index().get(&mesh).is_some());
+            assert_eq!(document.history_lengths(), (1, 0));
+        });
+        cx.update_window(h.window, |_, window, cx| {
+            window.render_frame(cx);
+            assert!(window.find("tree-deletion-dialog").visible());
+            window.click("tree-deletion-submit", cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
         h.view.read_with(cx, |view, _| {
             assert!(
                 view.editor
@@ -666,6 +692,207 @@ fn object_deletion_viewport_shortcuts_and_context_menu_share_behavior(cx: &mut T
             assert_eq!(view.editor.document().unwrap().history_lengths(), (2, 0));
         });
     }
+}
+
+#[gpui_kit::test]
+fn object_deletion_ready_review_can_recalculate_and_cancel_without_mutation(
+    cx: &mut TestAppContext,
+) {
+    for cancel_with_enter in [false, true] {
+        let (h, mesh) = deletion_fixture(cx);
+        cx.update_window(h.window, |_, window, cx| {
+            window.click(format!("parts-item-Mesh:{}", mesh.id), cx);
+            window.press("delete", cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+        super::settle_object_deletion(&h, cx);
+        h.view.read_with(cx, |view, _| {
+            let document = view.editor.document().unwrap();
+            assert!(document.object_index().get(&mesh).is_some());
+            assert_eq!(document.history_lengths(), (1, 0));
+        });
+        cx.update_window(h.window, |_, window, cx| {
+            window.render_frame(cx);
+            assert!(window.find("tree-deletion-dialog").visible());
+            window.press("delete", cx);
+            window.press("backspace", cx);
+            if cancel_with_enter {
+                // A ready single-object plan still starts with Cancel focused.
+                window.press("enter", cx);
+            } else {
+                window.click("deletion-details", cx);
+                window.render_frame(cx);
+                window.click("deletion-review", cx);
+            }
+        })
+        .unwrap();
+        cx.run_until_parked();
+        if !cancel_with_enter {
+            super::settle_object_deletion(&h, cx);
+            h.view.read_with(cx, |view, _| {
+                let document = view.editor.document().unwrap();
+                assert!(document.object_index().get(&mesh).is_some());
+                assert_eq!(document.history_lengths(), (1, 0));
+            });
+            cx.update_window(h.window, |_, window, cx| {
+                window.render_frame(cx);
+                assert!(window.find("tree-deletion-dialog").visible());
+                window.click("tree-deletion-cancel", cx);
+            })
+            .unwrap();
+            cx.run_until_parked();
+        }
+        cx.update_window(h.window, |_, window, cx| {
+            window.render_frame(cx);
+            assert!(window.try_find("tree-deletion-dialog").is_none());
+        })
+        .unwrap();
+        h.view.read_with(cx, |view, _| {
+            let document = view.editor.document().unwrap();
+            assert!(document.object_index().get(&mesh).is_some());
+            assert_eq!(document.history_lengths(), (1, 0));
+        });
+    }
+}
+
+#[gpui_kit::test]
+fn object_deletion_preview_uses_names_and_keeps_technical_details_optional(
+    cx: &mut TestAppContext,
+) {
+    let (h, mesh) = deletion_fixture(cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click(format!("parts-item-Mesh:{}", mesh.id), cx);
+        window.press("delete", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    super::settle_object_deletion(&h, cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert_eq!(
+            window.find("deletion-summary-title").label(),
+            Some("Delete “Delete me”?")
+        );
+        assert_eq!(window.find("tree-deletion-submit").label(), Some("Delete"));
+        assert!(window.try_find(("deletion-row", 0usize)).is_none());
+        assert!(window.try_find(("deletion-row-id", 0usize)).is_none());
+        assert!(window.try_find("deletion-technical-tabs").is_none());
+        assert!(window.try_find("deletion-review").is_none());
+        assert!(window.try_find("deletion-next").is_none());
+        window.click("deletion-details", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert_eq!(
+            window.find(("deletion-row-id", 0usize)).label(),
+            Some(mesh.id.as_str())
+        );
+        assert!(window.find(("deletion-row-id", 0usize)).visible());
+        assert_eq!(
+            window.find("deletion-review").label(),
+            Some("Recheck impact")
+        );
+        window.click("deletion-details", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.try_find(("deletion-row-id", 0usize)).is_none());
+        assert!(window.try_find("deletion-review").is_none());
+        window.click("tree-deletion-cancel", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    h.view.read_with(cx, |view, _| {
+        let document = view.editor.document().unwrap();
+        assert!(document.object_index().get(&mesh).is_some());
+        assert_eq!(document.history_lengths(), (1, 0));
+    });
+}
+
+#[gpui_kit::test]
+fn object_deletion_scope_choice_preserves_children_until_confirmed(cx: &mut TestAppContext) {
+    let mut document = Document::new_blank().unwrap();
+    let plan = document
+        .plan_scene_object_creation(
+            zipzi_editor_core::SceneObjectType::Part,
+            "Eye group".into(),
+            &[],
+        )
+        .unwrap();
+    let part = document
+        .execute_scene_object_creation(&plan)
+        .unwrap()
+        .suggested_selection[0]
+        .clone();
+    let plan = document
+        .plan_scene_object_creation(
+            zipzi_editor_core::SceneObjectType::Mesh,
+            "Highlight".into(),
+            &[part.clone()],
+        )
+        .unwrap();
+    let mesh = document
+        .execute_scene_object_creation(&plan)
+        .unwrap()
+        .suggested_selection[0]
+        .clone();
+    let h = setup_with_document(cx, document, tempfile::tempdir().unwrap());
+    cx.update_window(h.window, |_, window, cx| {
+        window.click_with_options(
+            format!("parts-item-Part:{}", part.id),
+            ClickOptions::new().with_button(MouseButton::Right),
+            cx,
+        );
+    })
+    .unwrap();
+    choose(&h, "Delete Object", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert_eq!(
+            window.find(("deletion-scope", 0usize)).label(),
+            Some("Keep child objects")
+        );
+        window.click(("deletion-scope", 0usize), cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    super::settle_object_deletion(&h, cx);
+    h.view.read_with(cx, |view, _| {
+        let document = view.editor.document().unwrap();
+        assert!(document.object_index().get(&part).is_some());
+        assert!(document.object_index().get(&mesh).is_some());
+        assert_eq!(document.history_lengths(), (2, 0));
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert_eq!(
+            window.find(("deletion-scope-current", 0usize)).label(),
+            Some("Keep child objects")
+        );
+        window.click("tree-deletion-submit", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    h.view.update(cx, |view, _| {
+        let document = view.editor.document().unwrap();
+        assert!(document.object_index().get(&part).is_none());
+        assert!(document.object_index().get(&mesh).is_some());
+        assert_eq!(document.history_lengths(), (3, 0));
+        view.editor.execute(EditorCommand::Undo).unwrap();
+        assert!(
+            view.editor
+                .document()
+                .unwrap()
+                .object_index()
+                .get(&part)
+                .is_some()
+        );
+    });
 }
 
 #[gpui_kit::test]

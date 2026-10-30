@@ -124,12 +124,19 @@ mod ordinary_binding;
 /// Wait for the source-bound background plan before interacting with its review.
 fn settle_object_deletion(h: &Harness, cx: &mut TestAppContext) {
     use gpui_kit::test::{TestAppContextExt as _, TestWindowExt as _};
+    // These checks exercise actions, not the dialog's animated size transition.
+    cx.update(|cx| cx.set_reduce_motion(true));
     let executor = cx.foreground_executor().clone();
     executor.block_test(
         cx.wait_for(h.window, std::time::Duration::from_secs(2), |window, _| {
             window.try_find("tree-deletion-dialog").is_none()
-                || window.try_find(("deletion-section", 0usize)).is_some()
-                || window.try_find("deletion-error").is_some()
+                // An expired source has no report, but planning has still ended.
+                || (window.try_find("deletion-planning").is_none()
+                    && window.try_find("tree-deletion-submit").is_some())
         }),
     );
+    // The result also notifies the independently rendered confirmation footer.
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| window.render_frame(cx))
+        .unwrap();
 }

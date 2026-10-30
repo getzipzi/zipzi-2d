@@ -614,6 +614,18 @@ custom_fade = "Resource default · Customize"
 custom_fade_hint = "Set a custom fade starting at 0 seconds"
 
 [properties]
+type_BindingAxis = "Parameter axis"
+type_BindingSample = "Key value"
+type_GlueVertexPair = "Linked vertex pair"
+type_ModelHitArea = "Hit area"
+type_DrawOrderGroup = "Drawing group"
+type_PhysicsInput = "Physics input"
+type_PhysicsOutput = "Physics output"
+type_PhysicsNode = "Physics node"
+type_ModelParameterGroup = "Model parameter group"
+type_ModelParameterMember = "Model parameter member"
+type_CdiCombinedSet = "Combined parameter group"
+type_CdiCombinedMember = "Combined parameter member"
 type_ExpressionEntry = "Expression Member"
 type_MotionRegistration = "Motion Registration"
 selected_items = "%{count} items selected"
@@ -1068,26 +1080,30 @@ non_affine = "The mesh UVs do not define a consistent source image mapping."
 invalid_boundary = "Mesh Edit requires one closed outline without holes or separate regions."
 
 [deletion]
-submit = "Delete and clean dependencies"
+include_motion = "Also delete the motion resource"
+conversion_unavailable = "The current appearance cannot be preserved automatically. Choose another option."
+confirm_single = "Delete"
+summary_single = "1 object will be deleted"
+submit = "Confirm deletion"
 completed = "Objects deleted; dependencies cleaned. Undo is available."
-removed = "Delete"
-owned = "Owned axes, samples and keys"
-rewritten = "Keep and modify"
+removed = "Objects to delete"
+owned = "Attached data"
+rewritten = "References to update"
 effects = "Appearance and animation"
-decisions = "Resolve choices"
-locks = "Locked writes"
-structure = "Invalid result"
-deformation = "Deformation migration"
-organization = "Organization migration"
-limits = "Guarantee limitations"
-domain = "Proved parameter domain"
-exports = "Export availability"
-relations = "Causes and relations"
-edit_state = "Preserve current edit state"
-local = "Keep local data; appearance may change"
-choose_part = "Use selected Part"
+decisions = "Resolve dependencies"
+locks = "Locked objects"
+structure = "Cannot delete yet"
+deformation = "Parent changes"
+organization = "Group changes"
+limits = "Preservation limits"
+domain = "Parameter range checked"
+exports = "Export issues"
+relations = "Dependency details"
+edit_state = "Preserve the current pose"
+local = "Keep original coordinates; appearance may change"
+choose_part = "Move to selected Part"
 mapping = "Use explicit mapping"
-subtree = "Delete this subtree too"
+subtree = "Delete these children too"
 mapping_hint = "Optional mapping in destination keyform order (comma-separated integers)."
 lock_source = "Lock source"
 locate = "Locate lock source"
@@ -1104,8 +1120,8 @@ mask = "Remove Mask reference"
 glue = "Glue contribution"
 hit_area = "Remove Hit Area registration"
 drawing = "Drawing order"
-animation = "Remove Part animation record"
-display = "Remove Part display record"
+animation = "Animation reference"
+display = "Display information"
 scope = "Requested subtree"
 owner_required = "Choose a retained Part owner for this Offscreen."
 mapping_required = "An explicit Offscreen keyform mapping is required."
@@ -1121,15 +1137,15 @@ enabled = "Enabled state"
 dissolve_part = "Dissolve Part and keep contents"
 delete_contents = "Delete contents"
 remove_parent = "Remove parent and keep children"
-unlock = "Unlock this source and review again"
+unlock = "Unlock now and update preview"
 tolerances = "Tolerances (absolute, relative)"
-scope_options = "Root scope options"
-resolve_required = "Resolve the listed choices or blockers, then review again."
+scope_options = "Objects inside this group"
+resolve_required = "Complete the required choices or resolve the issues below."
 
-choose_texture = "Choose replacement texture"
-clear_texture = "Leave users unconfigured"
-choose_node = "Choose retained Physics node"
-choose_base = "Choose replacement base sample"
+choose_texture = "Replacement texture"
+clear_texture = "Remove texture from meshes"
+choose_node = "Replacement Physics node"
+choose_base = "Replacement base sample"
 parameter_dimension = "Reduce parameter dimension"
 binding_loss = "Remove binding contribution"
 physics = "Remove Physics channel"
@@ -1137,12 +1153,88 @@ resource = "Resource reference"
 content_changed = "Remove selected content"
 disabled = "Disabled outside grid"
 unconfigured = "Unconfigured"
-texture_required = "Choose a replacement or explicitly leave users unconfigured"
+texture_required = "Meshes use this texture. Replace it, or leave those meshes without a texture."
 base_required = "Choose a retained base sample"
 node_required = "Choose a retained node in the same Physics group"
 invalid_container = "The retained container would be invalid"
 dissolve_folder = "Dissolve folder and retain contents"
-slice = "Optional parameter slice coordinate (blank uses document default)"
-apply_slice = "Use coordinate"
+slice = "Value to keep after removing this parameter (blank uses its default)"
+apply_slice = "Use this value and update preview"
 
 move_to_root = "Keep registration and move from this group to Ungrouped"
+
+title = "Delete objects"
+
+confirm_count = "Delete %{count} objects"
+
+summary_count = "%{count} objects will be deleted"
+
+ready_hint = "You can undo this deletion."
+
+blocked_hint = "Choose how to handle the affected objects before deleting."
+
+owned_count = "%{count} attached data records will also be removed."
+
+checking = "Checking what will change…"
+
+check_failed = "Could not prepare the deletion preview."
+
+stale = "This preview is out of date. Close it and select the objects again."
+
+removed_hint = "Includes your selection and any objects that will be deleted with it."
+
+rewritten_hint = "These objects will stay. Their references to deleted objects will be updated."
+
+effects_hint = "These changes may affect how your model looks or animates."
+
+decisions_hint = "Choose a replacement below, then apply it to the affected item. The preview updates automatically."
+
+locks_hint = "These objects or their parents are locked. Unlocking takes effect immediately and updates this preview."
+
+structure_hint = "Deleting this selection would leave an incomplete structure. Adjust the selection or cancel."
+
+exports_hint = "Check which resources may no longer export in their original format."
+
+technical_hint = "Detailed data and relationships for this deletion. Counts represent records, not selected objects."
+
+show_details = "View details"
+
+hide_details = "Hide details"
+
+recheck = "Recheck impact"
+
+parameter_options = "Parameter deletion options"
+
+scope_keep = "Keep child objects"
+
+scope_delete = "Delete child objects"
+
+reason_requested = "Selected"
+
+reason_child = "Child object"
+
+reason_owned = "Belongs to an object being deleted"
+
+reason_dependency = "Removed with a related object"
+
+related_data = "Related data"
+
+previous = "Previous"
+
+next = "Next"
+
+page = "%{start}–%{end} of %{total}"
+
+last_registration = "This is the last reference to this motion. Delete the motion resource instead, or cancel."
+
+invalid_structure = "This deletion would leave an incomplete structure. Technical details explain the constraint."
+
+export_unavailable = "This resource cannot be exported in its original format."
+
+use_texture = "Apply replacement"
+
+use_node = "Use selected node"
+
+use_base = "Use selected base sample"
+
+summary_named = "Delete “%{name}”?"

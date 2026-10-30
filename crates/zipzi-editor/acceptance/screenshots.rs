@@ -7,6 +7,7 @@ use super::harness::Harness;
 
 mod animation_scene;
 mod common;
+mod deletion_scene;
 mod dock_and_layout;
 mod external_status_scene;
 mod load_status_scene;
@@ -34,6 +35,10 @@ pub(super) fn run() -> anyhow::Result<()> {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
+    if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("deletion") {
+        deletion_scene::run(&directory)?;
+        return Ok(());
+    }
     if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("load-status") {
         load_status_scene::run(&directory)?;
         return Ok(());

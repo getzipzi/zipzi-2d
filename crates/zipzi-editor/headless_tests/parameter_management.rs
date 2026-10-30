@@ -75,7 +75,9 @@ fn property_auto_commit_preserves_navigation_between_parameter_and_group(cx: &mu
 }
 
 #[gpui_kit::test]
-fn edit_command_uses_properties_and_delete_is_undoable_without_dialog(cx: &mut TestAppContext) {
+fn edit_command_uses_properties_and_delete_requires_review_before_one_step_undo(
+    cx: &mut TestAppContext,
+) {
     let mut doc = Document::new_blank().unwrap();
     let id = doc.create_parameter(NewParameter::default()).unwrap();
     let h = setup_with_document(cx, doc, tempfile::tempdir().unwrap());
@@ -94,7 +96,21 @@ fn edit_command_uses_properties_and_delete_is_undoable_without_dialog(cx: &mut T
     });
     command(&h, CommandId::DeleteParameter, cx);
     h.view.read_with(cx, |view, _| {
-        assert!(view.editor.document().unwrap().parameters().is_empty())
+        let document = view.editor.document().unwrap();
+        assert!(document.parameter_draft(&id).is_ok());
+        assert_eq!(document.history_lengths(), (2, 0));
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("tree-deletion-dialog").visible());
+        window.click("tree-deletion-submit", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    h.view.read_with(cx, |view, _| {
+        let document = view.editor.document().unwrap();
+        assert!(document.parameters().is_empty());
+        assert_eq!(document.history_lengths(), (3, 0));
     });
     cx.update_window(h.window, |_, window, cx| {
         assert!(!window.has_active_dialog(cx))

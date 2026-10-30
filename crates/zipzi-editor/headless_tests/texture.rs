@@ -120,6 +120,12 @@ fn new_texture_inspects_immediately_and_cancelled_chooser_keeps_empty_resource(
         assert!(v.texture_loads.is_empty());
     });
     run(&h, Some(asset.id.clone()), Control::Delete, cx);
+    h.view.read_with(cx, |v, _| {
+        let document = v.editor.document().unwrap();
+        assert!(document.texture_info(&asset.id).is_ok());
+        assert_eq!(document.history_lengths(), (1, 0));
+    });
+    click(&h, "tree-deletion-submit", cx);
     h.view.update(cx, |v, _| {
         assert!(
             v.editor
@@ -310,6 +316,11 @@ fn delete_reviews_real_users_requires_replacement_and_can_cancel(cx: &mut TestAp
         .view
         .read_with(cx, |v, _| v.editor.document().unwrap().history_lengths());
     run(&h, Some(source.id.clone()), Control::Delete, cx);
+    click(&h, "deletion-choice-0-0", cx);
+    cx.update_window(h.window, |_, window, _| {
+        assert!(window.try_find("deletion-texture").is_some());
+    })
+    .unwrap();
     click(&h, "tree-deletion-submit", cx);
     h.view.read_with(cx, |v, _| {
         assert_eq!(v.editor.document().unwrap().history_lengths(), history)
@@ -318,6 +329,7 @@ fn delete_reviews_real_users_requires_replacement_and_can_cancel(cx: &mut TestAp
     run(&h, Some(source.id.clone()), Control::Delete, cx);
     click(&h, ("deletion-section", 4usize), cx);
     choose(&h, "deletion-texture", "DeleteReplacement", cx);
+
     click(&h, "deletion-choice-0-0", cx);
     click(&h, "tree-deletion-submit", cx);
     h.view.update(cx, |v, _| {
@@ -380,11 +392,16 @@ fn dependency_review_virtualizes_large_lists_and_keeps_the_last_user_reachable(
     let document = zipzi_editor_core::Document::open(&saved.manifest).unwrap();
     let h = setup_with_document(cx, document, assets);
     run(&h, Some(asset_id), Control::Delete, cx);
+    click(&h, "deletion-details", cx);
     click(&h, ("deletion-section", 2usize), cx);
     for page in 0..16 {
         cx.update_window(h.window, |_, window, cx| {
             window.resize(size(px(1100.), px(1000.)));
             window.render_frame(cx);
+            assert_eq!(
+                window.find("deletion-page").label(),
+                Some(format!("{}–{} of {USERS}", page * 16 + 1, (page + 1) * 16).as_str())
+            );
             assert!((0..16usize).all(|i| window.try_find(("deletion-row", i)).is_some()));
             assert!(window.try_find(("deletion-row", 16usize)).is_none());
             if page == 15 {

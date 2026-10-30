@@ -613,6 +613,18 @@ custom_fade = "资源默认 · 自定义"
 custom_fade_hint = "从 0 秒开始设置自定义淡入淡出"
 
 [properties]
+type_BindingAxis = "参数轴"
+type_BindingSample = "关键值"
+type_GlueVertexPair = "关联顶点对"
+type_ModelHitArea = "点击区域"
+type_DrawOrderGroup = "绘制组"
+type_PhysicsInput = "物理输入"
+type_PhysicsOutput = "物理输出"
+type_PhysicsNode = "物理节点"
+type_ModelParameterGroup = "模型参数组"
+type_ModelParameterMember = "模型参数成员"
+type_CdiCombinedSet = "组合参数组"
+type_CdiCombinedMember = "组合参数成员"
 type_ExpressionEntry = "表情成员"
 type_MotionRegistration = "动作注册"
 selected_items = "已选中 %{count} 项"
@@ -1067,26 +1079,30 @@ non_affine = "当前网格的位置与 UV 无法还原一致的源图映射。"
 invalid_boundary = "网格编辑需要单个闭合外围，暂不支持孔洞或分离区域。"
 
 [deletion]
-submit = "删除并清理"
+include_motion = "将动作资源也加入删除清单"
+conversion_unavailable = "无法自动保留当前外观，请选择其他处理方式。"
+confirm_single = "删除"
+summary_single = "将删除 1 个对象"
+submit = "确认删除"
 completed = "对象已删除，依赖已清理，可撤销。"
-removed = "删除"
-owned = "所属轴、样本和关键帧"
-rewritten = "保留并修改"
-effects = "外观与动画影响"
-decisions = "需要处理"
-locks = "受锁保护的修改"
-structure = "结构阻碍"
-deformation = "变形迁移"
-organization = "组织迁移"
-limits = "保证限制"
-domain = "已证明的参数域"
-exports = "导出可用性"
-relations = "原因与关系"
-edit_state = "保留当前编辑状态"
-local = "保留局部数据，外观可能改变"
-choose_part = "迁移到所选 Part"
+removed = "删除清单"
+owned = "附带数据"
+rewritten = "将更新的引用"
+effects = "外观与动画变化"
+decisions = "处理依赖"
+locks = "需要解锁"
+structure = "暂时无法删除"
+deformation = "父级变更"
+organization = "分组变更"
+limits = "外观保留限制"
+domain = "已检查的参数范围"
+exports = "导出影响"
+relations = "依赖详情"
+edit_state = "保留当前姿态"
+local = "保留原始坐标（外观可能改变）"
+choose_part = "移动到所选 Part"
 mapping = "使用显式映射"
-subtree = "同时删除该子树"
+subtree = "连同这些子对象删除"
 mapping_hint = "可选：按目标关键形顺序填写映射（逗号分隔的整数）。"
 lock_source = "锁来源"
 locate = "定位锁来源"
@@ -1103,8 +1119,8 @@ mask = "解除 Mask 引用"
 glue = "Glue 贡献"
 hit_area = "删除 Hit Area 注册"
 drawing = "绘制顺序"
-animation = "删除 Part 动画记录"
-display = "删除 Part 显示记录"
+animation = "动画引用"
+display = "显示信息"
 scope = "请求的子树"
 owner_required = "为此 Offscreen 选择保留的 Part 所有者。"
 mapping_required = "需要显式指定 Offscreen 关键形映射。"
@@ -1120,15 +1136,15 @@ enabled = "启用状态"
 dissolve_part = "解散 Part，保留内容"
 delete_contents = "删除内容"
 remove_parent = "仅移除父级，保留子节点"
-unlock = "解锁此来源并重新审阅"
+unlock = "立即解锁并更新预览"
 tolerances = "容差（绝对、相对）"
-scope_options = "根对象范围选项"
-resolve_required = "请处理所列选项或阻碍，然后重新审阅。"
+scope_options = "其中的子对象"
+resolve_required = "请先完成下方的选择或处理问题。"
 
-choose_texture = "选择替代纹理"
-clear_texture = "将使用者设为未配置纹理"
-choose_node = "选择保留的物理节点"
-choose_base = "选择替代基础样本"
+choose_texture = "替代纹理"
+clear_texture = "移除网格的纹理"
+choose_node = "替代物理节点"
+choose_base = "替代基础样本"
 parameter_dimension = "参数轴降维"
 binding_loss = "移除绑定贡献"
 physics = "移除物理通道"
@@ -1136,12 +1152,88 @@ resource = "资源引用"
 content_changed = "移除选中内容"
 disabled = "网格外禁用"
 unconfigured = "未配置"
-texture_required = "请选择替代纹理，或明确将使用者设为未配置"
+texture_required = "有网格正在使用此纹理。可以替换为其他纹理，或让这些网格不再使用纹理。"
 base_required = "请选择保留的基础样本"
 node_required = "请选择同一物理组中的保留节点"
 invalid_container = "保留容器将不满足原生约束"
 dissolve_folder = "解散文件夹并保留内容"
-slice = "参数降维坐标（留空使用文档默认值）"
-apply_slice = "使用此坐标"
+slice = "移除此参数后保留的数值（留空使用默认值）"
+apply_slice = "使用此数值并更新预览"
 
 move_to_root = "保留注册项，从此组移到未分组"
+
+title = "删除对象"
+
+confirm_count = "删除 %{count} 个对象"
+
+summary_count = "将删除 %{count} 个对象"
+
+ready_hint = "删除后可以撤销。"
+
+blocked_hint = "请先选择如何处理受影响的对象。"
+
+owned_count = "同时移除 %{count} 项附带数据。"
+
+checking = "正在检查删除影响…"
+
+check_failed = "未能生成删除预览。"
+
+stale = "预览已过期，请关闭弹窗后重新选择对象。"
+
+removed_hint = "包含你选中的对象，以及随它们一起删除的子对象。"
+
+rewritten_hint = "这些对象会保留，只更新它们对被删对象的引用。"
+
+effects_hint = "下列变化可能影响模型的外观或动画。"
+
+decisions_hint = "先选择替代项，再点击对应对象的处理按钮。预览会自动更新。"
+
+locks_hint = "相关对象或其父级已锁定。解锁会立即生效，并更新此预览。"
+
+structure_hint = "删除后会留下不完整的结构，请调整选择或取消。"
+
+exports_hint = "下列资源可能无法再按原格式导出，请核对后决定是否继续。"
+
+technical_hint = "这里展示关联数据与依赖关系；数量是记录条数，不等于选中的对象数。"
+
+show_details = "查看详情"
+
+hide_details = "收起详情"
+
+recheck = "重新检查影响"
+
+parameter_options = "参数删除选项"
+
+scope_keep = "保留子对象"
+
+scope_delete = "一起删除"
+
+reason_requested = "已选中"
+
+reason_child = "子对象"
+
+reason_owned = "属于被删对象的附带数据"
+
+reason_dependency = "随关联对象一起移除"
+
+related_data = "关联数据"
+
+previous = "上一页"
+
+next = "下一页"
+
+page = "第 %{start}–%{end} 项，共 %{total} 项"
+
+last_registration = "这是此动作的最后一个引用。请改为删除动作资源，或取消操作。"
+
+invalid_structure = "删除后会留下不完整的结构，具体限制可在技术详情中查看。"
+
+export_unavailable = "此资源将无法按原格式导出。"
+
+use_texture = "应用替代纹理"
+
+use_node = "使用所选节点"
+
+use_base = "使用所选基础样本"
+
+summary_named = "删除「%{name}」？"

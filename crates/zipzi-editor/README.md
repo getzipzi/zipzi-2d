@@ -113,8 +113,17 @@ In Mesh Edit, the same keys delete selected geometry instead of the mesh object.
 Right-clicking a selected row uses the current selection; another row targets
 only that object. Part tree deletion includes organization descendants, while
 Deformer tree and viewport deletion include deformation descendants. Owned
-bindings are removed with their targets. Multiple removals require a review of the frozen
-deletion list, with Cancel focused initially. Each deletion is one undo step.
+bindings are removed with their targets. Every object deletion requires a review of
+the frozen deletion list and explicit confirmation, with Cancel focused initially.
+Completing or recalculating the review never deletes objects automatically.
+A single-object confirmation names the object directly; larger deletions list the
+objects and why they are included. Required choices show the reason before the
+replacement controls. Reference updates, IDs, attached records and conversion
+reports are behind **View details**. Choose whether to keep a
+group's contents with explicit scope controls. Choosing replacements or changing
+the scope updates the preview automatically; **Recheck impact** is available in
+technical details. Replacement actions stay disabled until a target is selected.
+Each deletion is one undo step.
 Locked objects (including inherited locks and locked descendants) and references
 from outside the deletion set block the operation. Menu labels stay short; clicking
 an unavailable action explains the reason in the status bar without changing the
