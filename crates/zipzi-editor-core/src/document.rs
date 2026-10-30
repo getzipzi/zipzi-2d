@@ -202,7 +202,7 @@ pub use authoring::{
     PhysicsAuthoringCapabilities, PhysicsChannelAction, PoseAuthoringCapabilities,
     ReferenceAuthoringCapabilities, ResourceAuthoringCapabilities, SceneAuthoringCapabilities,
     SceneContentAuthoringCapabilities, SceneObjectCreationPlan, SceneObjectType, TextureInfo,
-    TreeDeletionCancellation, TreeDeletionPlan, TreeDeletionTask,
+    TreeDeletionCancellation, TreeDeletionCompletion, TreeDeletionPlan, TreeDeletionTask,
 };
 mod edits;
 mod physics;

@@ -83,7 +83,9 @@ mod scene;
 pub use scene::SceneAuthoringCapabilities;
 #[path = "authoring/deletion.rs"]
 mod deletion;
-pub use deletion::{TreeDeletionPlan, TreeDeletionTask, TreeDeletionCancellation};
+pub use deletion::{
+    TreeDeletionCancellation, TreeDeletionCompletion, TreeDeletionPlan, TreeDeletionTask,
+};
 
 #[path = "authoring/content.rs"]
 mod content;

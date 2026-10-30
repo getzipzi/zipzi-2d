@@ -51,7 +51,7 @@ pub use document::{
     PhysicsChannelAction, PoseAuthoringCapabilities, ReferenceAuthoringCapabilities,
     ResourceAuthoringCapabilities, SceneAuthoringCapabilities, SceneContentAuthoringCapabilities,
     SceneObjectCreationPlan, SceneObjectType, TextureInfo, TreeDeletionCancellation,
-    TreeDeletionPlan, TreeDeletionTask,
+    TreeDeletionCompletion, TreeDeletionPlan, TreeDeletionTask,
 };
 pub use document::{OrganizationDestination, ParameterDestination, ReorderPosition};
 pub use editor::{CloseDisposition, EditorCommand, EditorPreview, LoadRequest};

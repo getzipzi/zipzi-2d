@@ -1,8 +1,8 @@
 //! All hierarchy and viewport deletion entries use one Runtime-owned plan.
 use super::*;
-use anyhow::{ensure, Result};
+use anyhow::{Result, ensure};
 use std::sync::Arc;
-use zipzi_runtime::{JobId, JobValue, PlanId, Work};
+use zipzi_runtime::{Completion, JobId, JobValue, PlanId, Work};
 use zipzi_sdk::{DeletionIntent, DeletionPage, DeletionSection, DeletionSummary};
 
 struct PlanLease {
@@ -90,15 +90,30 @@ pub struct TreeDeletionTask {
     work: Option<Work>,
     preview_revision: Option<u64>,
 }
+#[must_use = "Finish deletion planning on the owning application thread"]
+pub struct TreeDeletionCompletion {
+    cancellation: TreeDeletionCancellation,
+    returned: Completion,
+    preview_revision: Option<u64>,
+}
 impl TreeDeletionTask {
     pub fn cancellation(&self) -> TreeDeletionCancellation {
         self.cancellation.clone()
     }
-    /// Publish completion and release the Job before returning to any weak view callback.
-    pub fn run(mut self) -> Result<TreeDeletionPlan> {
-        let completion = self.work.take().expect("deletion task runs once").run();
+    /// Run frozen work off-thread without reading or mutating the shared Runtime.
+    pub fn run(mut self) -> TreeDeletionCompletion {
+        TreeDeletionCompletion {
+            cancellation: self.cancellation.clone(),
+            returned: self.work.take().expect("deletion task runs once").run(),
+            preview_revision: self.preview_revision,
+        }
+    }
+}
+impl TreeDeletionCompletion {
+    /// Publish on the application thread and release the Job before any weak view callback.
+    pub fn finish(self) -> Result<TreeDeletionPlan> {
         let host = &self.cancellation.host;
-        host.write().complete(completion);
+        host.write().complete(self.returned);
         let result = host
             .read()
             .job_info(host.client_id(), self.cancellation.job)?
@@ -208,6 +223,7 @@ impl Document {
     ) -> Result<TreeDeletionPlan> {
         self.start_tree_deletion(self.deletion_intent(objects)?)?
             .run()
+            .finish()
     }
     /// Explicitly unlock one reported source through the same Runtime session.
     /// Business identities need not opt into scene visibility/lock tree controls.

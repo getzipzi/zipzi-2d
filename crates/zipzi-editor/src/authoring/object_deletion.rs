@@ -218,7 +218,9 @@ impl DeletionDialog {
         let serial = self.serial;
         let work = cx.background_executor().spawn(async move { task.run() });
         cx.spawn_in(window, async move |this, cx| {
-            let result = work.await;
+            // Runtime publication shares the application thread with rendering.
+            // Finish even if the dialog or its source view has gone away.
+            let result = work.await.finish();
             let _ = this.update_in(cx, |this, window, cx| {
                 if this.serial != serial || !this.current(cx) {
                     return;

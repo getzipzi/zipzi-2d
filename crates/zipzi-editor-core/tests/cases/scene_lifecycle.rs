@@ -346,7 +346,7 @@ fn tree_deletion_scope_is_projection_independent_and_preview_context_expires() -
         zipzi_sdk::ReparentStrategy::PreserveEditState,
     );
     let task = d.start_tree_deletion(intent)?;
-    let current = task.run()?;
+    let current = task.run().finish()?;
     assert!(current.valid_for(&d));
     d.set_preview_parameter(&parameter, 0.8)?;
     assert!(!current.valid_for(&d));
@@ -355,12 +355,71 @@ fn tree_deletion_scope_is_projection_independent_and_preview_context_expires() -
     let plans = host.read().modeling_plan_count();
     let task = d.start_tree_deletion(d.deletion_intent(std::slice::from_ref(&mesh))?)?;
     task.cancellation().cancel();
-    assert!(task.run().is_err());
+    assert!(task.run().finish().is_err());
     assert_eq!(host.read().modeling_plan_count(), plans);
     let task = d.start_tree_deletion(d.deletion_intent(std::slice::from_ref(&mesh))?)?;
     drop(task);
     assert_eq!(host.read().modeling_plan_count(), plans);
     assert!(d.object_index().get(&mesh).is_some());
+    Ok(())
+}
+
+#[test]
+fn tree_deletion_background_planning_can_overlap_runtime_reads() -> anyhow::Result<()> {
+    let mut document = Document::new_blank()?;
+    let mesh = ObjectRef::new(
+        ObjectKind::Mesh,
+        create(
+            &mut document,
+            New::Mesh {
+                texture: Default::default(),
+            },
+        )?,
+    );
+    let host = document.runtime_host();
+    let task = document.start_tree_deletion(document.deletion_intent(&[mesh.clone()])?)?;
+    // Rendering keeps a read alive while the worker finishes its frozen plan.
+    let runtime = host.read();
+    let finished = std::thread::spawn(move || task.run()).join();
+    assert_eq!(runtime.modeling_plan_count(), 0);
+    let jobs = runtime.list_jobs(host.client_id())?;
+    assert_eq!(jobs.len(), 1);
+    assert_eq!(jobs[0].state, zipzi_runtime::JobState::Running);
+    drop(runtime);
+    let plan = finished
+        .expect("background deletion must not write to the Runtime")
+        .finish()?;
+    assert!(plan.valid_for(&document));
+    assert_eq!(plan.removed_ids(), vec![mesh.id]);
+    assert!(host.read().list_jobs(host.client_id())?.is_empty());
+    assert_eq!(host.read().modeling_plan_count(), 1);
+    drop(plan);
+    assert_eq!(host.read().modeling_plan_count(), 0);
+    Ok(())
+}
+
+#[test]
+fn tree_deletion_completion_releases_jobs_after_source_view_is_dropped() -> anyhow::Result<()> {
+    for cancel in [false, true] {
+        let mut document = Document::new_blank()?;
+        let id = document.create_parameter(zipzi_editor_core::NewParameter::default())?;
+        let object = ObjectRef::new(ObjectKind::Parameter, id);
+        let host = document.runtime_host();
+        let task = document.start_tree_deletion(document.deletion_intent(&[object])?)?;
+        let cancellation = task.cancellation();
+        let completion = std::thread::spawn(move || task.run())
+            .join()
+            .expect("background deletion must finish");
+        drop(document);
+        if cancel {
+            cancellation.cancel();
+        }
+        let plan = completion.finish();
+        assert_eq!(plan.is_err(), cancel);
+        assert!(host.read().list_jobs(host.client_id())?.is_empty());
+        drop(plan);
+        assert_eq!(host.read().modeling_plan_count(), 0);
+    }
     Ok(())
 }
 
