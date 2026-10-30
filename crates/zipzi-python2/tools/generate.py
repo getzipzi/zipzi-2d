@@ -51,6 +51,10 @@ _BINARY_SPEC = importlib.util.spec_from_file_location('zipzi_binary_codegen', PA
 _binary_codegen = importlib.util.module_from_spec(_BINARY_SPEC)
 _BINARY_SPEC.loader.exec_module(_binary_codegen)
 
+_OUTPUTS_SPEC = importlib.util.spec_from_file_location('zipzi_codegen_outputs', PACKAGE / 'tools/codegen/outputs.py')
+_outputs = importlib.util.module_from_spec(_OUTPUTS_SPEC)
+_OUTPUTS_SPEC.loader.exec_module(_outputs)
+
 TARGETS = (_catalog_codegen.TARGETS | _api_codegen.TARGETS | _dto_codegen.TARGETS | _binary_codegen.TARGETS | _modeling_codegen.TARGETS | RESOURCE_TARGETS | _scene_codegen.TARGETS | frozenset({
     'schema/authoring.json',
     'client/python/zipzi/_generated/__init__.py',
@@ -509,6 +513,7 @@ def cache_key(contract):
     add(sys.version)
     add(subprocess.check_output(['rustfmt', '--version'], text=True))
     paths = list((PACKAGE / 'tools').glob('generate*.py'))
+    paths += list((PACKAGE / 'tools/codegen').rglob('*.py'))
     paths += [p for p in (PACKAGE / 'client/python/zipzi').rglob('*.py') if '__pycache__' not in p.parts]
     paths += [PACKAGE / 'client/python/zipzi/docs/guide.md', PACKAGE / 'client/pyproject.toml']
     for path in sorted(paths):
@@ -517,18 +522,20 @@ def cache_key(contract):
     return digest.hexdigest()
 
 
-def cached_render(contract, cache_file):
+def cached_render(contract, cache_file, read_only=False):
     key = cache_key(contract)
     try:
         cached = json.loads(cache_file.read_text(encoding='utf-8'))
         output = cached.get('output')
-        if (cached.get('key') == key and isinstance(output, dict) and set(output) == TARGETS
+        if (cached.get('key') == key and isinstance(output, dict)
                 and all(isinstance(v, str) for v in output.values())
                 and cached.get('output_sha256') == hashlib.sha256(json.dumps(output, sort_keys=True).encode()).hexdigest()):
             return output
     except (OSError, ValueError, AttributeError):
         pass
     output = render(contract)
+    if read_only:
+        return output
     try:
         cache_file.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=cache_file.parent, delete=False) as temporary:
@@ -546,33 +553,7 @@ def cached_render(contract, cache_file):
 
 
 def write_outputs(output, check=False, package=PACKAGE):
-    # Validate the complete mutation set before writing any file.
-    if set(output) != TARGETS:
-        raise ValueError('Attempt to overwrite an unowned/handwritten file')
-    for folder in ('client/python/zipzi/_generated', 'src/generated'):
-        for file in (package / folder).rglob('*'):
-            if file.is_file() and '__pycache__' not in file.parts and file.relative_to(package).as_posix() not in output:
-                raise ValueError(f'Unmanaged file in generated directory: {file}')
-    differences = []
-    for path, content in output.items():
-        file = package / path
-        traverses_link = any(package.joinpath(*Path(path).parts[:index]).is_symlink()
-            for index in range(1, len(Path(path).parts) + 1))
-        if not file.resolve().is_relative_to(package.resolve()) or traverses_link:
-            raise ValueError('Generated path traverses a symlink/outside package')
-        existing = file.read_text(encoding='utf-8') if file.is_file() else None
-        if existing is not None:
-            owned = json.loads(existing).get('_generated_by') == OWNER if path.endswith('.json') else existing.startswith((HEADER, RUST_HEADER))
-            if not owned:
-                raise ValueError(f'Refusing to overwrite handwritten file: {path}')
-        if existing != content:
-            differences.append(path)
-    if not check:
-        for path in differences:
-            file = package / path
-            file.parent.mkdir(parents=True, exist_ok=True)
-            file.write_text(output[path], encoding='utf-8')
-    return differences
+    return _outputs.write_outputs(output, check, package, TARGETS)
 
 
 def main():
@@ -583,7 +564,7 @@ def main():
     args = parser.parse_args()
     with file_lock(ROOT / 'target/python2/generate.lock'):
         contract = json.loads(args.schema.read_text(encoding='utf-8')) if args.schema else export()
-        output = render(contract) if args.no_cache else cached_render(contract, ROOT / 'target/python2/generate-cache.json')
+        output = render(contract) if args.no_cache else cached_render(contract, ROOT / 'target/python2/generate-cache.json', read_only=args.check)
         changes = write_outputs(output, args.check)
     if args.check and changes:
         raise SystemExit('Generated drift: ' + ', '.join(changes))

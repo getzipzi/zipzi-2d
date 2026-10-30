@@ -1,0 +1,205 @@
+{
+  "version": 1,
+  "files": [
+    {
+      "path": "client/python/zipzi/_generated/__init__.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "039e0cd0e3ce7aa40ab7972ade5fbd965350c6298f76dae53479486817593090"
+    },
+    {
+      "path": "client/python/zipzi/_generated/backend_bindings.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "fbd5a39c431aee9cebad8c85c78a567971a0ecc538783264f6cca8599b23ed50"
+    },
+    {
+      "path": "client/python/zipzi/_generated/binary.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "d23a3968a1288f90252262a0e699110d6e7d85202d5d84b460dc2e48c4c4649a"
+    },
+    {
+      "path": "client/python/zipzi/_generated/binding_values.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "8d58461cdd955d3b428d1157f0454712be2e45e9cfa6dc690a258c6803116dcf"
+    },
+    {
+      "path": "client/python/zipzi/_generated/catalog.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "26dbca2bc3a97dda39ccaa3ed822360484ca0ae916113d64f010781eca16631f"
+    },
+    {
+      "path": "client/python/zipzi/_generated/discovery.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "f5b4f7fdbb1b1e91ff5783c086758378d00517c992de83cde9a519799bed667b"
+    },
+    {
+      "path": "client/python/zipzi/_generated/event_values.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "23e0fc56a8ea26222a65d9aa130faec94832d7208801956fc8f743a240b25d26"
+    },
+    {
+      "path": "client/python/zipzi/_generated/facades.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "1e9d9e2f898bee7e3f4e4a4712ddf82b5705f1d3a2c152126d235bd2a84e86b0"
+    },
+    {
+      "path": "client/python/zipzi/_generated/mesh_ops.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "08d35cdcd029d020d7f85305339cc898003f9c7f5f90cbc639d5a4ea4a2fd063"
+    },
+    {
+      "path": "client/python/zipzi/_generated/meshes.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "7dbcb6ca15c61761036e611ad0a755c9156bd12b231b8c540bee1c3fee58695a"
+    },
+    {
+      "path": "client/python/zipzi/_generated/modeling.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "231129041d4fa194294edd20a3313a1df4e9d7fbf59e51af0c9abf76060ae9e3"
+    },
+    {
+      "path": "client/python/zipzi/_generated/parameter_values.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "96d59d7bd28b8c5bc8001b44037dee055396e684138a9104f7aee7b22d4f8ab2"
+    },
+    {
+      "path": "client/python/zipzi/_generated/plan_intents.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "805dd93798f41fc469c3ab411edcd8aeb438f41ba9784c4d8f769d51a19b3f73"
+    },
+    {
+      "path": "client/python/zipzi/_generated/plan_values.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "9890fa5d134017952953af819c6e9f1eb642bc26a0e4547b52b33008fe268abc"
+    },
+    {
+      "path": "client/python/zipzi/_generated/planning.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "048010124a88cb9f43c990a3b9eea49b9d707e5b5fe7a116d27258ad64b6d7e6"
+    },
+    {
+      "path": "client/python/zipzi/_generated/protocols.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "9931f7bdcf6503ff74d52036955d6dfc4cb3651a9a9ba48140d57db9a64fa36c"
+    },
+    {
+      "path": "client/python/zipzi/_generated/reference_values.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "eff4c7ca22fed6fe186d233ec0c9b92271a0bdbd55da7ad85fe33237175e6354"
+    },
+    {
+      "path": "client/python/zipzi/_generated/request_directory.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "b99c32fbec5a76a480ca58cc23a37f129468e4974f9cee28982dfa663b4dcb11"
+    },
+    {
+      "path": "client/python/zipzi/_generated/resource_backends.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "96c844284ab11fc63d92e3464ac2be0fd71c508e5636fa64a5735d5848a2d87a"
+    },
+    {
+      "path": "client/python/zipzi/_generated/resource_ops.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "b05923ac8b831fd5a2805d29130450540ad2c9190cc7a286258b753bec40f3df"
+    },
+    {
+      "path": "client/python/zipzi/_generated/resource_values.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "970ebb3b3ba4f784c5ff6eeaa3f312c44111225a13f9ec3aa27c2846640add24"
+    },
+    {
+      "path": "client/python/zipzi/_generated/sampling_values.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "cef444d04a6145b725079c7fc7e3f024131bde0bd78c06a0cb83b5bb6c44ebbe"
+    },
+    {
+      "path": "client/python/zipzi/_generated/scene.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "ed7671f4e866c983841d228a470a1606be028887e9ef89d0c6d476d6a67a03a3"
+    },
+    {
+      "path": "client/python/zipzi/animation.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "f7c90e8863ca55cd5e8ff932fece1f4a5247f278202fee48796530444f5dde03"
+    },
+    {
+      "path": "client/python/zipzi/bindings.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "806de17ddaec992d7f0a1e72326a23316347b5c6e4944f6372c5716f764e1e23"
+    },
+    {
+      "path": "client/python/zipzi/docs/reference.md",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "2e1059540f95c229bdedab87961e6759181a52f7fd3a7f70359b490eb2e7e20d"
+    },
+    {
+      "path": "client/python/zipzi/meshes.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "d7a104aefa0369d8b6ca5b97feb66ef517e87b3c773b32aa9c5b871ea50d065f"
+    },
+    {
+      "path": "client/python/zipzi/observation.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "6c261b8c4015b24609441c349cafbfd1fab625498b208cb0f249b9bf386e6eaa"
+    },
+    {
+      "path": "client/python/zipzi/parameters.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "bef70f375a41929b0a50ebec1bb3e7edeb58ff683d422f47b04f7372ce4a826f"
+    },
+    {
+      "path": "client/python/zipzi/scene.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "a4911d769cecdfffefaab5e2cc391ec7ab3a26a2a2c6adbe32e55f483993ff72"
+    },
+    {
+      "path": "client/python/zipzi/spatial.py",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "46c6dd93272ceb06b85ee96ccb8177b74a14404ca9882c903d929bc9399e56e4"
+    },
+    {
+      "path": "schema/authoring.json",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "f2403586a5e3a0429b2396ea775101f9d3031608d1e2afbc185cab93de4eba66"
+    },
+    {
+      "path": "src/generated/discovery.rs",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "c1fdd0d0304dd02ecd1688ed531c3b1e37d7179c5bce24209506059f46df8f24"
+    },
+    {
+      "path": "src/generated/mesh.rs",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "92df0d22a3ac14acf8a0e4e28d5aae56281d91c8fb3ae77c031ba6ddee85013c"
+    },
+    {
+      "path": "src/generated/mod.rs",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "a6a6992a47685b97b99bea9a0ecdb61c3bfabcc604f3e4bc02eec2416cd4104f"
+    },
+    {
+      "path": "src/generated/modeling.rs",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "5ebdb33e1f531814a404d2d9cb4d72b538dcdea2bae74218087d5162dd1c227b"
+    },
+    {
+      "path": "src/generated/queries.rs",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "0b1dee6219fc64b688d70c647712123318c8e992f07a8f227fb797e50de3abb0"
+    },
+    {
+      "path": "src/generated/resource_queries.rs",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "b0683498651216a0d138756c7b340f23a2e61c09ef1b883938fcd65db928e45e"
+    },
+    {
+      "path": "src/generated/resources.rs",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "5e5f75b61f3330245492b4e97ea919107559dc541d995e89c9cc02f2525c7ae8"
+    },
+    {
+      "path": "src/generated/scene.rs",
+      "owner": "zipzi-python2/tools/generate.py",
+      "sha256": "c08303e716b6a5fe5b7a9124ced4f96b967e15305a55eb1aac2ae9e170b66283"
+    }
+  ]
+}

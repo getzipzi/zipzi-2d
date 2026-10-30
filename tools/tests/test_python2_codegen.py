@@ -89,6 +89,8 @@ class Python2Codegen(unittest.TestCase):
             root = Path(folder)
             (root / 'tools').mkdir()
             (root / 'tools/generate.py').write_text('generator')
+            (root / 'tools/codegen').mkdir()
+            (root / 'tools/codegen/helper.py').write_text('helper')
             client = root / 'client/python/zipzi'
             (client / 'docs').mkdir(parents=True)
             (client / 'docs/guide.md').write_text('guide')
@@ -104,9 +106,14 @@ class Python2Codegen(unittest.TestCase):
                 (client / 'api.py').write_text('changed')
                 gen.cached_render(contract, cache)
                 gen.cached_render({'version': 2}, cache)
+                (root / 'tools/codegen/helper.py').write_text('changed helper')
+                gen.cached_render(contract, cache)
                 cache.write_text('{invalid')
                 gen.cached_render(contract, cache)
-                self.assertEqual(render.call_count, 4)
+                self.assertEqual(render.call_count, 5)
+                cache.write_text('{invalid')
+                gen.cached_render(contract, cache, read_only=True)
+                self.assertEqual(cache.read_text(), '{invalid')
 
     def test_catalog_navigation_and_public_query_defaults(self):
         output=gen.render(self.contract());namespace={}
