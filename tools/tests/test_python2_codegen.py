@@ -69,6 +69,24 @@ class Python2ContractIsolation(unittest.TestCase):
 
 
 class Python2Codegen(unittest.TestCase):
+    def test_generated_files_keep_lf_in_windows_checkout(self):
+        manifest = json.loads((PACKAGE / 'generated-manifest.json').read_text(encoding='utf-8'))
+        paths = ['crates/zipzi-python2/' + entry['path'] for entry in manifest['files']]
+        paths.append('crates/zipzi-python2/generated-manifest.json')
+        attributes = subprocess.check_output(
+            ['git', 'check-attr', '--stdin', '-z', 'eol'], cwd=ROOT,
+            input=('\0'.join(paths) + '\0').encode()).split(b'\0')
+        values = dict(zip(attributes[0::3], attributes[2::3]))
+        self.assertEqual({path for path in paths if values[path.encode()] != b'lf'}, set())
+
+        generated = 'crates/zipzi-python2/client/python/zipzi/_generated/__init__.py'
+        with tempfile.TemporaryDirectory() as folder:
+            subprocess.run(['git', '-c', 'core.autocrlf=true', 'checkout-index',
+                            '--prefix', folder + '/', '--', generated], cwd=ROOT, check=True)
+            data = (Path(folder) / generated).read_bytes()
+        self.assertTrue(gen._outputs.marked(generated, data))
+        self.assertNotIn(b'\r\n', data)
+
     def test_exporter_dependency_closure_contains_no_implementation_packages(self):
         metadata = json.loads(subprocess.check_output(
             ['cargo', 'metadata', '--locked', '--no-deps', '--format-version', '1'], cwd=ROOT))
