@@ -1,7 +1,14 @@
 """Finite Python binding declarations; lifecycle/transport hooks remain handwritten."""
 import ast
 import json
+import importlib.util
 from pathlib import Path
+
+_python_api_spec = importlib.util.spec_from_file_location('zipzi_python_api_model', Path(__file__).parent/'codegen/python_api.py')
+_python_api = importlib.util.module_from_spec(_python_api_spec)
+_python_api_spec.loader.exec_module(_python_api)
+build_api = _python_api.build_api
+document_model = _python_api.document_model
 
 PUBLIC_EXPORTS = {'meshes': ('Mesh values are generated; selected Plan intents are generated.',
             ['from ._generated.meshes import Geometry as Geometry, MeshSpec as '
@@ -177,13 +184,13 @@ LIFECYCLE_REQUESTS={
 }
 OWNED_REQUESTS={'resources.Resources':'prepare_image prepare_buffer load_png prepare_png usage','resources.PreparedImage':'pixels','Buffer':'read','Owned':'close','animation.Preview':'info apply sample seek advance_to','references.ObjectRef':'resolve label capabilities scene_capabilities','references.LabelAddress':'plan','references.FieldAddress':'plan','events.SessionSubscription':'poll resync','events.RegistrySubscription':'poll resync'}
 
-def render_api(contract,header,rust_header):
+def render_api(contract,header,rust_header,resolve=lambda shape: shape):
     runtime=contract['runtime']
     writes={key:list(value) for key,value in WRITES.items()}
     # Public resource constructors flatten the selected SDK spec and replace
     # only the runtime ImageId leaf with its ownership wrapper.
     roots=contract['resources']['roots']
-    union=next(shape for shape in roots if shape.get('name','').endswith('::ResourceOperation'))
+    union=next(resolve(shape) for shape in roots if shape.get('name','').endswith('::ResourceOperation'))
     writes['Images']=[]
     for variant in union['variants']:
         if variant['rust_name']=='ApplyPlan':continue
@@ -191,7 +198,7 @@ def render_api(contract,header,rust_header):
         if variant['rust_name'] not in policy:raise ValueError('Unregistered public resource operation')
         projected=[]
         for field in variant['fields']:
-            if field['name']=='spec':projected.extend(field['shape']['fields'])
+            if field['name']=='spec':projected.extend(resolve(field['shape'])['fields'])
             else:projected.append(field)
         def default(field):
             if field['shape']['kind']=='optional':return 'None'
@@ -200,6 +207,7 @@ def render_api(contract,header,rust_header):
             if value=={'kind':'empty_string'}:return '""'
             raise ValueError('Unsupported resource convenience default')
         def annotation(shape):
+            shape=resolve(shape)
             if shape['kind']=='string':return 'str'
             if shape['kind']=='optional':return annotation(shape['item'])+' | None'
             if shape['kind']=='opaque' and shape['name'].endswith('::ImageId'):return 'resources.PreparedImage'
@@ -220,6 +228,7 @@ def render_api(contract,header,rust_header):
     py=[header.rstrip(),'"""Owned Runtime metadata generated from compiled Rust declarations."""','from dataclasses import dataclass','from .._values import record, sequence, integer, string','']
     rs=[rust_header.rstrip(),'use crate::*;']
     def typ(s):
+        s=resolve(s)
         k=s['kind']
         if k in {'usize','u32','u64'}:return 'int'
         if k in {'bool','string'}:return {'bool':'bool','string':'str'}[k]
@@ -227,6 +236,7 @@ def render_api(contract,header,rust_header):
         if k=='sequence':return 'tuple['+typ(s['item'])+', ...]'
         raise ValueError('Unsupported metadata type '+k)
     def read(s,e):
+        s=resolve(s)
         k=s['kind']
         if k in {'usize','u32','u64'}:return 'integer('+e+')'
         if k=='string':return 'string('+e+')'
@@ -236,6 +246,7 @@ def render_api(contract,header,rust_header):
         raise ValueError('Unsupported metadata read')
     py+=['def _flag(value: object) -> bool:','    if type(value) is not bool: raise TypeError("Expected bool")','    return value','']
     for name,s in runtime.items():
+        s=resolve(s)
         fs=s['fields'];py+=['@dataclass(frozen=True)','class '+name+':','    __module__ = "zipzi"']
         for f in fs:py+=['    '+f['name']+': '+typ(f['shape'])]
         py+=['','    @classmethod','    def read(cls, value: object) -> "'+name+'":','        if isinstance(value,cls): return value','        r=record(value)','        return cls('+', '.join(read(f['shape'],'r['+repr(f['name'])+']') for f in fs)+')','']

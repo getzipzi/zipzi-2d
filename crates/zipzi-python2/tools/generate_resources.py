@@ -12,8 +12,8 @@ TARGETS = frozenset({
     'src/generated/resource_queries.rs',
 })
 
-def render_resources(contract, Model, header, rust_header):
-    m = Model(contract, resources=True)
+def render_resources(contract, Model, header, rust_header, resolve=lambda shape: shape):
+    m = Model(contract, resources=True, resolve=resolve)
     selected = {b['name']: m.types[b['rust']] for b in m.bindings.values() if b['rust'] in m.types}
     resource_union = selected['ResourceOperation']
     intent_union = selected['Intent']
@@ -27,6 +27,7 @@ def render_resources(contract, Model, header, rust_header):
         raise ValueError('New plan intent requires public naming review')
 
     def typ(s):
+        s=resolve(s)
         k=s['kind']
         if k in {'string','u32','u64','usize','f32','bool','bytes'}:
             return dict(string='str',u32='int',u64='int',usize='int',f32='float',bool='bool',bytes='bytes')[k]
@@ -39,6 +40,7 @@ def render_resources(contract, Model, header, rust_header):
         return b['name']
 
     def read(s,e):
+        s=resolve(s)
         k=s['kind']
         if k in {'string','u32','u64','usize','f32','bool','bytes'}:
             return dict(string='string',u32='integer',u64='integer',usize='integer',f32='number',bool='_boolean',bytes='_bytes')[k]+'('+e+')'
@@ -96,7 +98,7 @@ def render_resources(contract, Model, header, rust_header):
     def projected_fields(v):
         flat=[]
         for f in v['fields']:
-            if f['name']=='spec':flat+=f['shape']['fields']
+            if f['name']=='spec':flat+=resolve(f['shape'])['fields']
             else:flat.append(f)
         return sorted(flat,key=lambda f:f['default'] is not None)
     def default_suffix(field):
@@ -116,13 +118,13 @@ def render_resources(contract, Model, header, rust_header):
     for v in resource_union['variants']:
         ops += [f'        case {v["rust_name"]}():']
         for f in projected_fields(v):
-            s=f['shape'];e='op.'+f['name']
+            s=resolve(f['shape']);e='op.'+f['name']
             if s['kind']=='opaque':
                 b=m.binding(s);ops += [f'            if not isinstance({e}, {b["module"]}.{b["name"]}):',f'                raise TypeError("Expected a {b["name"]}")']
             else:ops+=m.checks(s,e,12,[0])
     ops+=['        case _:','            raise TypeError("Unknown resource operation")','','def wire(op: ResourceOperation) -> dict[str, object]:','    match op:']
     def wire_field(f):
-        s=f['shape'];e='op.'+f['name']
+        s=resolve(f['shape']);e='op.'+f['name']
         if f['name']=='spec':return 'dict('+', '.join(x['name']+'=op.'+x['name'] for x in s['fields'])+')'
         if s['kind']=='opaque':return e+'._token'
         return e
@@ -131,8 +133,9 @@ def render_resources(contract, Model, header, rust_header):
     ops+=['    raise TypeError("Unknown resource operation")','']
     output['client/python/zipzi/_generated/resource_ops.py']='\n'.join(ops)
 
-    def rust_name(s):return s['name'].split('::')[-1].lower()
+    def rust_name(s):return resolve(s)['name'].split('::')[-1].lower()
     def native_read(s,e):
+        s=resolve(s)
         if s['kind']=='opaque':
             b=m.binding(s)
             if b['form']=='handle':return e+'.getattr("_token")?.extract::<PyRef<\'_, '+('ImageToken' if b['name']=='PreparedImage' else 'PlanToken')+'>>()?.id'
@@ -140,6 +143,7 @@ def render_resources(contract, Model, header, rust_header):
         if s['kind']=='union':return 'read_'+rust_name(s)+'(&'+e+')?'
         raise ValueError('Unreviewed native input')
     def native_write(s,e):
+        s=resolve(s)
         k=s['kind']
         if k in {'string','u32','u64','usize','bool','f32','sequence','string_map'}:return e
         if k=='optional':return e+'.map(|value| -> PyResult<_> { Ok('+native_write(s['item'],'value')+') }).transpose()?'
@@ -159,6 +163,7 @@ def render_resources(contract, Model, header, rust_header):
         for f in s['fields']:rust += [f'    d.set_item("{f["name"]}", {native_write(f["shape"], "value."+f["name"])})?;']
         rust += ['    Ok(d)','}','']
     def native_measure(s,e):
+        s=resolve(s)
         k=s['kind']
         if k=='string':return 'input_budget::text(&'+e+')?'
         if k=='optional':return '{ let v='+e+'; if v.is_none() { 0 } else { '+native_measure(s['item'],'v')+' } }'
@@ -173,7 +178,7 @@ def render_resources(contract, Model, header, rust_header):
             cost='256usize'
             for f in v['fields']:
                 if f['name']=='spec':
-                    cost+=''.join('.saturating_add('+native_measure(x['shape'],'op.getattr("'+x['name']+'")?')+')' for x in f['shape']['fields'])
+                    cost+=''.join('.saturating_add('+native_measure(x['shape'],'op.getattr("'+x['name']+'")?')+')' for x in resolve(f['shape'])['fields'])
                 else:cost+='.saturating_add('+native_measure(f['shape'],'op.getattr("'+f['name']+'")?')+')'
             rust += ['        "'+v['wire_name']+'" => Ok('+cost+'),']
         rust += ['        _ => Err(pyo3::exceptions::PyTypeError::new_err("Unknown typed input")),','    }','}','']
@@ -182,7 +187,7 @@ def render_resources(contract, Model, header, rust_header):
             rust += [f'        "{v["wire_name"]}" => Ok({b["path"]}::{v["rust_name"]} {{']
             for f in v['fields']:
                 if f['name']=='spec':
-                    expression=m.binding(f['shape'])['path']+' { '+', '.join(x['name']+': '+native_read(x['shape'],f'op.getattr("{x["name"]}")?') for x in f['shape']['fields'])+' }'
+                    expression=m.binding(f['shape'])['path']+' { '+', '.join(x['name']+': '+native_read(x['shape'],f'op.getattr("{x["name"]}")?') for x in resolve(f['shape'])['fields'])+' }'
                 else:expression=native_read(f['shape'],f'op.getattr("{f["name"]}")?')
                 rust += ['            '+f['name']+': '+expression+',']
             rust+=['        }),']
@@ -190,6 +195,7 @@ def render_resources(contract, Model, header, rust_header):
     output['src/generated/resources.rs']='\n'.join(rust)
 
     def param(s,native=False):
+        s=resolve(s)
         if s['kind']=='optional':return ('Option<'+param(s['item'],True)+'>' if native else param(s['item'])+' | None')
         if s['kind']=='string':return '&str' if native else 'str'
         if s['kind']=='opaque':
@@ -201,26 +207,26 @@ def render_resources(contract, Model, header, rust_header):
     for cls,owner in [('ResourceBackend',True),('NativeResources',False)]:
         back+=['class '+cls+'(Protocol):']
         for o in contract['operations']:
-            params=', '.join(f['name']+': '+param(f['shape']) for f in o['input']['fields'])
+            params=', '.join(f['name']+': '+param(f['shape']) for f in resolve(o['input'])['fields'])
             back += [f'    def {o["backend"]}(self, {params}{", owner: object" if owner else ""}) -> object: ...']
         back+=['']
     labels={'image':'resources.get','prepared_pixels':'resources.pixels','plan':'plan.create'}
     queries=[rust_header.rstrip(),'use crate::*;','use super::resources::*;','#[pymethods]','impl NativeRuntime {']
     for o in contract['operations']:
-        fields=o['input']['fields'];params=', '.join(f['name']+': '+param(f['shape']) for f in fields)
+        fields=resolve(o['input'])['fields'];params=', '.join(f['name']+': '+param(f['shape']) for f in fields)
         native_params=', '.join(f['name']+': '+param(f['shape'],True) for f in fields)
         if o['backend']=='image':queries += ['    #[pyo3(signature = (session, id, edit=None))]']
         queries += [f'    fn {o["backend"]}(&self, py: Python<\'_>, {native_params}) -> PyResult<Py<PyDict>> {{']
         costs=[]
         for f in fields:
-            if f['shape']['kind']=='string':costs.append(f['name']+'.len().saturating_mul(4).saturating_add(128)')
-            elif f['shape']['kind']=='union':costs.append('measure_'+rust_name(f['shape'])+'('+f['name']+')?')
+            if resolve(f['shape'])['kind']=='string':costs.append(f['name']+'.len().saturating_mul(4).saturating_add(128)')
+            elif resolve(f['shape'])['kind']=='union':costs.append('measure_'+rust_name(f['shape'])+'('+f['name']+')?')
         if costs:
             cost='256usize'+''.join('.saturating_add('+e+')' for e in costs)
             queries += [f'        let _input=input_lease!(self,py,{cost},"{labels[o["backend"]]}",None);']
         queries += ['        let client = self.client;',f'        let input = {m.binding(o["input"])["path"]} {{']
         for f in fields:
-            s=f['shape'];n=f['name'];expr=n
+            s=resolve(f['shape']);n=f['name'];expr=n
             if s['kind']=='opaque':expr=n+'.id'
             elif s['kind']=='optional':expr=n+'.map(|v| v.id)'
             elif s['kind']=='union':expr='read_'+rust_name(s)+'('+n+')?'

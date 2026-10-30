@@ -1,10 +1,11 @@
 """Render lazy catalog shards and navigable reference pages."""
-import hashlib
 import json
 import pprint
 
 
-def render(catalog, contract, domains, common, package_version, source_sha, prefix, header):
+def render(entries, contract, contract_hash, domains, common, package_version, source_sha, prefix, header):
+    entry_index = {entry.path: entry for entry in entries}
+    catalog = {entry.path: entry.row() for entry in entries}
     catalog['zipzi']['documentation'] += ' Package '+package_version+'; protocol '+contract['protocol']+'; client source SHA-256 '+source_sha+'.'
     for row in catalog.values():
         row['children'] = tuple(sorted(set(row.get('children', ()))))
@@ -20,8 +21,7 @@ def render(catalog, contract, domains, common, package_version, source_sha, pref
                     'See [common behavior](common.md) for inherited owned-value methods.', '']
              for name in groups}
     for path, row in sorted(catalog.items()):
-        method = path.rsplit('.', 1)[-1]
-        if method in common and row['documentation'] == common[method]:
+        if entry_index[path].inherited:
             continue
         page = pages[group(path)]
         page.extend(['## '+path, '', '`'+row.get('signature', '')+'`', '', row.get('documentation', ''), ''])
@@ -48,10 +48,10 @@ def render(catalog, contract, domains, common, package_version, source_sha, pref
         else:
             canonical[key] = path
             value = dict(row)
-            method = path.rsplit('.', 1)[-1]
-            if method in common and value['documentation'] == common[method]:
+            inherited = entry_index[path].inherited
+            if inherited:
                 value.pop('documentation')
-                value['common'] = method
+                value['common'] = inherited
         shards[group(path)][path] = value
 
     catalog_prefix = prefix+'_generated/catalog/'
@@ -59,7 +59,7 @@ def render(catalog, contract, domains, common, package_version, source_sha, pref
         prefix+'_generated/metadata.py': header+'"""Protocol and build metadata without help data."""\n'
             +'CONTRACT = '+repr(contract['protocol'])+'\nPACKAGE_VERSION = '+repr(package_version)
             +'\nCLIENT_SOURCE_SHA256 = '+repr(source_sha)+'\nCONTRACT_SHA256 = '
-            +repr(hashlib.sha256(json.dumps(contract, sort_keys=True).encode()).hexdigest())+'\n',
+            +repr(contract_hash)+'\n',
         prefix+'docs/reference.md': '\n'.join(reference)+'\n',
         prefix+'docs/reference/common.md': '\n'.join(common_page).rstrip()+'\n',
         catalog_prefix+'__init__.py': header+'"""Lazy offline API directory."""\nfrom .index import lookup as lookup, iter_paths as iter_paths\n',

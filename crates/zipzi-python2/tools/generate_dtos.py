@@ -37,7 +37,8 @@ def opaque(shape):
     return {'kind':primitive[base]} if base in primitive else shape
 
 
-def render_dtos(contract, header):
+def render_dtos(contract, header, resolve=lambda shape: shape):
+    def shape(value):return opaque(resolve(value))
     if contract['version'] != 1:raise ValueError('Unknown DTO contract')
     output = {}
     for domain, filename in [('parameters','parameter'),('bindings','binding'),('sampling','sampling'),('references','reference'),('events','event')]:
@@ -45,7 +46,7 @@ def render_dtos(contract, header):
         shapes = {}
         roots = list(contract[domain]) if domain != 'events' else [contract['events']['cursor'],contract['events']['origin']]
         def visit(s):
-            s=opaque(s);k=s['kind']
+            s=shape(s);k=s['kind']
             if k in {'serde_record','record','serde_enum','union'}:
                 name=short(s['name'])
                 if name not in bindings:raise ValueError('Unselected '+domain+' DTO: '+name)
@@ -70,7 +71,7 @@ def render_dtos(contract, header):
         def unit(s):return s['kind'] in {'serde_enum','union'} and all(not v['fields'] for v in variants(s))
         external={'Version':'Version','SessionId':'SessionId','EditReceipt':'Receipt','SaveReceipt':'SaveReceipt','SessionInfo':'SessionInfo','ClientId':'Origin','JobId':'Origin','OperationId':'Origin','EventCursor':'Cursor'}
         def typ(s, inputs=False):
-            s=opaque(s);k=s['kind']
+            s=shape(s);k=s['kind']
             if k in {'f32','f64'}:return 'float'
             if k in {'u8','u16','u32','u64','i32','i64','usize'}:return 'int'
             if k in {'string','bool'}:return {'string':'str','bool':'bool'}[k]
@@ -84,7 +85,7 @@ def render_dtos(contract, header):
             n=name(s)
             return 'Point' if n=='Point' else 'tuple[Point, Point]' if n=='Bounds' else n
         def own(s,e):
-            s=opaque(s);k=s['kind']
+            s=shape(s);k=s['kind']
             if k=='optional':return 'None if '+e+' is None else '+own(s['item'],e)
             if k=='shared':return own(s['item'],e)
             if k in {'sequence','array'}:return 'tuple('+own(s['item'],'item')+' for item in '+e+')'
@@ -92,7 +93,7 @@ def render_dtos(contract, header):
                 return 'tuple('+e+')' if name(s)=='Point' else 'tuple(tuple(item) for item in '+e+')'
             return e
         def read(s,e):
-            s=opaque(s);k=s['kind']
+            s=shape(s);k=s['kind']
             if k=='string':return '_text('+e+')'
             if k=='bool':return '_flag('+e+')'
             if k in {'u8','u16','u32','u64','i32','i64','usize'}:return '_whole('+e+', '+repr(k)+')'
@@ -112,7 +113,7 @@ def render_dtos(contract, header):
             if n=='Capability':return 'Capability.read('+e+')'
             return n+'.read('+e+')' if s['kind'] in {'record','serde_record'} else 'read_'+n+'('+e+')'
         def encode(s,e):
-            s=opaque(s);k=s['kind']
+            s=shape(s);k=s['kind']
             if k in {'string','bool','f32','f64','u8','u16','u32','u64','i32','i64','usize'}:return e
             if k=='shared':return encode(s['item'],e)
             if k=='optional':return 'None if '+e+' is None else '+encode(s['item'],e)
@@ -124,7 +125,7 @@ def render_dtos(contract, header):
             if unit(s):return e+'.value'
             return 'encode_'+n+'('+e+')'
         def checks(s,e,indent=4):
-            s=opaque(s);k=s['kind'];pad=' '*indent
+            s=shape(s);k=s['kind'];pad=' '*indent
             if k=='shared':return checks(s['item'],e,indent)
             if k=='optional':return [pad+'if '+e+' is not None:']+checks(s['item'],e,indent+4)
             if k in {'sequence','array'}:
@@ -160,7 +161,7 @@ def render_dtos(contract, header):
             input_names={'parameters':{'ParameterSpec','ParameterPatch','Create','Patch'},'bindings':{'Axis','Keyform','MeshBindingSpec','Create','SetKeyform'},'sampling':{'Checks'},'events':{'Cursor','Origin'},'references':set()}
             is_input=n in input_names[domain]
             for f in fs:
-                if is_input and domain!='events' and opaque(f['shape'])['kind']=='optional':f['_default_present']=True;f['default']=None
+                if is_input and domain!='events' and shape(f['shape'])['kind']=='optional':f['_default_present']=True;f['default']=None
                 elif n=='Checks' and f.get('default') is not None:f['_default_present']=True
             defaults=lambda f: f.get('_default_present',False)
             ordered=sorted(fs,key=defaults)
@@ -226,7 +227,7 @@ def render_dtos(contract, header):
                 lines+=['    raise TypeError("Expected domain operation")',''];continue
             fs=deepcopy(fields(s))
             if domain=='sampling' and n=='Result':
-                state=next(f for f in contract['sampling_outer']['fields'] if f['name']=='state')
+                state=next(f for f in resolve(contract['sampling_outer'])['fields'] if f['name']=='state')
                 fs=[state]+fs
                 next(f for f in fs if f['name']=='parameters')['_type']='tuple[Pose, ...]'
             if domain=='sampling' and n=='Checks':
@@ -243,10 +244,10 @@ def render_dtos(contract, header):
         if domain=='sampling':
             lines+=['def inputs(poses: Sequence[Mapping[str, float]]) -> tuple[dict[str, float], ...]:','    result: list[dict[str, float]] = []','    for pose in poses:','        owned = dict(pose)','        for key, value in owned.items():','            _text(key)','            _numeric(value, '+repr(params['value']['kind'])+')','        result.append(owned)','    return tuple(result)','']
         if domain=='events':
-            event=contract['events']['event'];common=[f for f in event['fields'] if f['name']!='kind'];classes=[]
-            for variant in contract['events']['kind']['variants']:
+            event=resolve(contract['events']['event']);common=[f for f in event['fields'] if f['name']!='kind'];classes=[]
+            for variant in resolve(contract['events']['kind'])['variants']:
                 n=variant['rust_name'];classes.append(n)
-                payload=opaque(variant['fields'][0]['shape'])
+                payload=shape(variant['fields'][0]['shape'])
                 payload_name=typ(payload)
                 public='receipt' if payload_name in {'Receipt','SaveReceipt'} else 'info' if payload_name=='SessionInfo' else None
                 if public is None:raise ValueError('Unselected event payload')
@@ -254,7 +255,7 @@ def render_dtos(contract, header):
                 kind=re.sub(r'(?<!^)(?=[A-Z])','_',n).lower()
                 record_class(n,fs,kind)
             lines+=['Event: TypeAlias = '+' | '.join(classes),'','def read_event(value: object) -> Event:','    kind = _text(_get(value, "kind"))','    content = {name: _get(value, name) for name in '+repr(tuple(f['name'] for f in common))+'}']
-            for variant in contract['events']['kind']['variants']:
+            for variant in resolve(contract['events']['kind'])['variants']:
                 n=variant['rust_name'];payload=typ(variant['fields'][0]['shape']);field='receipt' if payload in {'Receipt','SaveReceipt'} else 'info';kind=re.sub(r'(?<!^)(?=[A-Z])','_',n).lower()
                 lines+=['    if kind == '+repr(kind)+': return '+n+'.read(dict(content, '+field+'=_get(value, "value")))']
             lines+=['    raise ValueError("Unknown event kind")','']
@@ -271,8 +272,8 @@ def render_dtos(contract, header):
         if '_items(' not in text:text=text.replace('from .._dto_support import items as _items\n','')
         output['client/python/zipzi/_generated/'+filename+'_values.py']=text+'\n'
     # Public planning is a subset of the same Runtime commands, derived from the SDK intent registration.
-    vs=contract['planning']['variants'];classes=['m.ModelingCommand'+v['rust_name'] for v in vs]
-    tag,content=contract['planning']['tag'],contract['planning']['content']
+    vs=resolve(contract['planning'])['variants'];classes=['m.ModelingCommand'+v['rust_name'] for v in vs]
+    tag,content=resolve(contract['planning'])['tag'],resolve(contract['planning'])['content']
     planning=[header.rstrip(),'from . import modeling as m','from .._values import record','', 'ModelingPlanOperation = '+' | '.join(classes),'MODELING_PLAN_TYPES = ('+', '.join(classes)+',)','', 'def encode_modeling(value: ModelingPlanOperation) -> dict[str, object]:','    raw = record(m.encode_ModelingCommand(value))','    return {'+repr(tag)+': raw["op"], '+repr(content)+': raw["intent"]}','']
     output['client/python/zipzi/_generated/planning.py']='\n'.join(planning)
     return output

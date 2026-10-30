@@ -50,6 +50,7 @@ class Python2Distribution(unittest.TestCase):
                       'crates/zipzi-api-derive/Cargo.toml',
                       'crates/zipzi-api-derive/src/lib.rs',
                       'crates/zipzi-python2/tools/generate.py',
+                      'crates/zipzi-python2/tools/codegen/normalize.py',
                       'tools/workspace/dev_platform.py')
             for name in inputs:
                 path = checkout / name

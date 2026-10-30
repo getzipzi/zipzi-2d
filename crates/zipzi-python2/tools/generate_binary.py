@@ -121,12 +121,13 @@ class Reader:
 
 '''
 
-def render_binary(contract,header):
+def render_binary(contract,header,resolve=lambda shape: shape):
     if contract['version']!=1:raise ValueError('Unsupported binary contract')
     expected={'Modeling','Scene','MeshBinding','Parameter','Mesh','Resource'}
     if set(contract['edit_variants'])!=expected:raise ValueError('New Edit variant needs reviewed lifecycle/binary policy')
     types={};inputs=set();outputs=set()
     def visit(s,selected):
+        s=resolve(s)
         k=s['kind']
         if k in {'serde_record','serde_enum','record','union','opaque'}:
             if s['name']=='__skipped':return
@@ -161,6 +162,7 @@ def render_binary(contract,header):
     def enum(s):return s['kind'] in {'serde_enum','union'}
     codes=dict(u8='B',u16='H',u32='I',u64='Q',usize='Q',i32='i',i64='q',f32='f',f64='d')
     def numeric(s):
+        s=resolve(s)
         if s['kind'] in codes:return codes[s['kind']]
         if s['kind']=='array' and s['item']['kind'] in codes:return codes[s['item']['kind']]*s['length']
         if s.get('name','').endswith('::Vec2'):return 'ff'
@@ -168,6 +170,7 @@ def render_binary(contract,header):
         return None
     def getter(value,f):return '_field('+value+', '+repr(attr(f))+')'
     def write(s,e,indent,d=0):
+        s=resolve(s)
         p=' '*indent;k=s['kind']
         if k=='shared':return write(s['item'],e,indent,d)
         if k in codes:return [p+'w.scalar('+repr(codes[k])+', '+e+')']
@@ -180,7 +183,7 @@ def render_binary(contract,header):
             v='items'+str(d);lines=[p+v+'=sequence('+e+')']
             if k=='sequence':lines += [p+'w.u32(len('+v+'))']
             else:lines += [p+'if len('+v+')!='+str(s['length'])+': raise ValueError("Invalid binary array length")']
-            item=s['item'];fmt=numeric(item)
+            item=resolve(s['item']);fmt=numeric(item)
             if fmt and item['kind'] in codes: return lines+[p+'w.numeric('+repr(fmt)+', tuple('+v+'))']
             if fmt and item['kind']=='array':return lines+[p+'w.numeric('+repr(codes[item['item']['kind']])+', tuple(v for item in '+v+' for v in sequence(item)))']
             if fmt and item.get('name','').endswith(('::Vec2','::PreciseVec2')):return lines+[p+'w.numeric('+repr(fmt[0])+', tuple(v for item in '+v+' for v in _point(item)))']
@@ -191,6 +194,7 @@ def render_binary(contract,header):
             return [p+v+'=_mapping('+e+')',p+'w.u32(len('+v+'))',p+'for key'+str(d)+', value'+str(d)+' in '+v+'.items():']+write(key,'key'+str(d),indent+4,d+1)+write(s['value'],'value'+str(d),indent+4,d+1)
         return [p+'_write_'+fn(s)+'('+e+', w)']
     def typ(s):
+        s=resolve(s)
         k=s['kind']
         if k in codes:return 'float' if k.startswith('f') else 'int'
         if k in {'string','bool','bytes','json'}:return dict(string='str',bool='bool',bytes='bytes',json='ExtensionValue')[k]
@@ -201,13 +205,14 @@ def render_binary(contract,header):
         if k in {'string_map','index_map'}:return 'Mapping['+('str' if k=='string_map' else 'int')+', '+typ(s['value'])+']'
         return {'Version':'Version','SourceRef':'Source','MeshSnapshot':'Snapshot[meshes.Mesh]','MeshGeometry':'meshes.Geometry','ImageSnapshot':'Snapshot[resources.Image]','ImagePixels':'resources.ImagePixels'}.get(name(s),'m.'+name(s))
     def read(s,d=0):
+        s=resolve(s)
         k=s['kind']
         if k=='shared':return read(s['item'],d)
         if k in codes:return ('number' if k.startswith('f') else 'integer')+'(r.scalar('+repr(codes[k])+'))'
         if k in {'string','bool','json','bytes'}:return dict(string='r.text()',bool='r.boolean()',json='r.extension()',bytes='r.bytes()')[k]
         if k=='optional':return '('+read(s['item'],d)+' if r.optional() else None)'
         if k in {'sequence','array'}:
-            item=s['item'];n='r.count()' if k=='sequence' else str(s['length'])
+            item=resolve(s['item']);n='r.count()' if k=='sequence' else str(s['length'])
             if k=='sequence' and item['kind']=='u8':return 'r.bytes()'
             fmt=numeric(item)
             if fmt:
@@ -269,7 +274,7 @@ def render_binary(contract,header):
                 out+=['    return Snapshot('+read(fields(s)[0]['shape'])+', '+('meshes.Mesh' if name(s)=='MeshSnapshot' else 'resources.Image')+'('+', '.join(attr(f)+'='+read(f['shape']) for f in fields(s)[1:])+'))']
             else:out+=['    return '+typ(s)+'('+', '.join(attr(f)+'='+('_mesh_meshing('+read(f['shape'])+')' if name(s)=='MeshGeometry' and f['name']=='meshing' else read(f['shape'])) for f in fields(s))+')']
             out+=['']
-    roots={name(s):s for s in contract['inputs']}
+    roots={name(resolve(s)):resolve(s) for s in contract['inputs']}
     def ordinal(root,variant):return next(i for i,v in enumerate(variants(roots[root])) if v['rust_name']==variant)
     tags={v:i for i,v in enumerate(contract['edit_variants'])}
     out+=['def encode_operations(operations: tuple[ops.WireOperation, ...]) -> bytes:','    if len(operations)>1024: raise ValueError("Too many authoring operations")','    w=Writer()','    w.raw(b"ZZA1"); w.raw(int(INPUT_SIGNATURE,16).to_bytes(16,"little")); w.u32(len(operations))','    for operation in operations:']

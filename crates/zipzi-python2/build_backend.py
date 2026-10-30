@@ -46,6 +46,8 @@ def verify_codegen_sources(archive, checkout):
         paths.extend(path.relative_to(checkout) for path in (checkout / package / 'src').rglob('*.rs'))
     paths.extend(path.relative_to(checkout) for path in
                  (checkout / 'crates/zipzi-python2/tools').glob('generate*.py'))
+    paths.extend(path.relative_to(checkout) for path in
+                 (checkout / 'crates/zipzi-python2/tools/codegen').rglob('*.py'))
     for path in paths:
         if not (archive / path).is_file() or (archive / path).read_bytes() != (checkout / path).read_bytes():
             raise RuntimeError(f'Source archive lacks current codegen input: {path}')

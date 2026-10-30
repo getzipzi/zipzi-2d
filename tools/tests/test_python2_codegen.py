@@ -5,6 +5,7 @@ import importlib.util
 import inspect
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import tempfile
@@ -236,7 +237,7 @@ class Python2Codegen(unittest.TestCase):
         exec(protocol_output['client/python/zipzi/_generated/metadata.py'],namespace)
         self.assertEqual(namespace['CONTRACT'],'test-runtime-contract')
         self.assertIn('protocol test-runtime-contract;',catalog_from_output(protocol_output)['zipzi']['documentation'])
-        with patch.object(gen._catalog_codegen.tomllib,'loads',return_value={'project':{'version':'9.8.7a6'}}):
+        with patch.object(gen._api_codegen._python_api.tomllib,'loads',return_value={'project':{'version':'9.8.7a6'}}):
             changed=gen.render(self.contract())
         exec(changed['client/python/zipzi/_generated/metadata.py'],namespace)
         self.assertEqual(namespace['PACKAGE_VERSION'],'9.8.7a6')
@@ -401,6 +402,24 @@ class Python2Codegen(unittest.TestCase):
             gen.write_outputs(output, package=folder)
             self.assertEqual(gen.write_outputs(output, check=True, package=folder), [])
 
+    def test_render_ignores_stale_generated_python_in_checkout(self):
+        contract=self.contract()
+        expected=gen.render(contract)
+        with tempfile.TemporaryDirectory() as folder:
+            package=Path(folder)
+            shutil.copytree(PACKAGE/'client',package/'client')
+            stale=package/'client/python/zipzi/_generated/modeling.py'
+            stale.write_text('this is not valid Python source !!!\n')
+            old=package/'client/python/zipzi/_generated/obsolete.py'
+            old.write_text('also not Python !!!\n')
+            with patch.object(gen,'PACKAGE',package):
+                self.assertEqual(gen.render(contract),expected)
+
+    def test_renderers_consume_graph_without_legacy_expansion(self):
+        with patch.object(gen.TypeGraph,'legacy_contract',side_effect=AssertionError('legacy expansion')):
+            output=gen.render(self.contract())
+        self.assertEqual(gen.write_outputs(output,check=True),[])
+
     def test_handwritten_files_unowned_paths_and_symlinks_fail_before_any_write(self):
         output = gen.render(self.contract())
         with tempfile.TemporaryDirectory() as folder:
@@ -469,7 +488,14 @@ class Python2Codegen(unittest.TestCase):
         checks = contract['dtos']['sampling'][0]
         field = next(f for f in checks['fields'] if f['name'] == 'min_triangle_area')
         self.assertEqual(field['default'], 0.0)
-        field['default'] = 0.5
+        def change(value):
+            if isinstance(value,dict):
+                if value.get('name') == checks['name'] and value.get('kind') in ('record','serde_record'):
+                    next(f for f in value['fields'] if f['name'] == 'min_triangle_area')['default'] = 0.5
+                for item in value.values():change(item)
+            elif isinstance(value,list):
+                for item in value:change(item)
+        change(contract)
         output = gen.render(contract)
         self.assertIn('min_triangle_area: float = 0.5',
                       output['client/python/zipzi/_generated/sampling_values.py'])

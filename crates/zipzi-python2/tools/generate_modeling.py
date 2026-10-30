@@ -7,9 +7,10 @@ TARGETS=frozenset({'client/python/zipzi/_generated/modeling.py','src/generated/m
 def public_name(rust_name):
     return ''.join(re.findall(r'(?:^|::)([A-Z][A-Za-z0-9_]*)',rust_name)) if '<' in rust_name else rust_name.rsplit('::',1)[-1]
 
-def render_modeling(contract, header, rust_header):
+def render_modeling(contract, header, rust_header, resolve=lambda shape: shape):
     shapes={}
     def visit(s):
+        s=resolve(s)
         k=s['kind']
         if k in {'serde_record','serde_enum','record','union','opaque'}:
             if k=='serde_record' and s.get('tuple') and not s.get('transparent'):raise ValueError('Unselected tuple record projection')
@@ -31,6 +32,7 @@ def render_modeling(contract, header, rust_header):
     for s in contract.get('native_only_roots',[]):visit(s)
     input_names=set()
     def mark(s):
+        s=resolve(s)
         if 'name' in s and s['kind'] in {'serde_record','serde_enum','record','union','opaque'}:input_names.add(s['name'])
         for f in s.get('fields',[]):
             if not f.get('skip'):mark(f['shape'])
@@ -67,6 +69,7 @@ def render_modeling(contract, header, rust_header):
     def vn(s,v):return nm(s)+v['rust_name']
     def member(v):return re.sub(r'(?<!^)(?=[A-Z])','_',v['rust_name']).upper()
     def typ(s):
+        s=resolve(s)
         k=s['kind']
         if k=='opaque' and nm(s)=='SourceRef':return '_Source'
         if k in {'u8','u16','u32','u64','usize','i32','i64'}:return 'int'
@@ -80,6 +83,7 @@ def render_modeling(contract, header, rust_header):
         if k in {'string_map','index_map'}:return 'Mapping['+('str' if k=='string_map' else 'int')+', '+typ(s['value'])+']'
         return nm(s)
     def freeze(s,e,d=0):
+        s=resolve(s)
         k=s['kind']
         if k=='sequence' and s['item']['kind']=='u8':return None
         if k=='shared':return freeze(s['item'],e,d)
@@ -96,6 +100,7 @@ def render_modeling(contract, header, rust_header):
         if k=='json':return '_freeze_extension('+e+')'
         return None
     def check(s,e,indent,d=0):
+        s=resolve(s)
         k=s['kind'];p=' '*indent
         if k=='sequence' and s['item']['kind']=='u8':return [p+f'if not isinstance({e}, bytes):',p+'    raise TypeError(\"Expected immutable bytes\")']
         if k=='shared':return check(s['item'],e,indent,d)
@@ -119,6 +124,7 @@ def render_modeling(contract, header, rust_header):
         else:return [p+f'validate_{nm(s)}({e})']
         return [p+f'if {cond}:',p+f'    raise ValueError("Expected {k}")']
     def encode(s,e,d=0):
+        s=resolve(s)
         k=s['kind']
         if k=='shared':return encode(s['item'],e,d)
         if k=='optional':return f'None if {e} is None else '+encode(s['item'],e,d)
@@ -131,6 +137,7 @@ def render_modeling(contract, header, rust_header):
         if k in {'string','bool','u8','u16','u32','u64','usize','i32','i64','f32','f64'}:return e
         return 'encode_'+nm(s)+'('+e+')'
     def decode(s,e,d=0):
+        s=resolve(s)
         k=s['kind']
         if k=='sequence' and s['item']['kind']=='u8':return '_bytes('+e+')'
         if k=='shared':return decode(s['item'],e,d)
@@ -255,11 +262,12 @@ def render_modeling(contract, header, rust_header):
                 if f.get('flatten'):return '{key: item for key, item in r.items() if key not in '+repr(known)+'}'
                 return 'value' if s.get('transparent') else ('r.get('+repr(f['name'])+', '+repr(f['default'])+')' if 'default' in f and s['kind']=='serde_record' else 'r['+repr(f['name'])+']')
             py+=['    return '+n+'('+', '.join(pn(f)+'='+decode(f['shape'],field_input(f)) for f in fs)+')','']
-    root=contract['roots'][0]
+    root=resolve(contract['roots'][0])
     py+=['OPERATION_TYPES = ('+', '.join(vn(root,v) for v in variants(root))+',)','']
     def rn(s):return 'read_'+nm(s).lower()
     def wn(s):return 'write_'+nm(s).lower()
     def nr(s,e,d=0):
+        s=resolve(s)
         k=s['kind']
         if k=='sequence' and s['item']['kind']=='u8':return e+'.extract::<Vec<u8>>()?'
         if k=='shared':return 'std::sync::Arc::new('+nr(s['item'],e,d)+')'
@@ -275,6 +283,7 @@ def render_modeling(contract, header, rust_header):
         if k in {'string','bool','u8','u16','u32','u64','usize','i32','i64','f32','f64'}:return e+'.extract()?'
         return rn(s)+'(&'+e+')?'
     def nw(s,e,d=0):
+        s=resolve(s)
         k=s['kind'];e='('+e+')'
         if k=='sequence' and s['item']['kind']=='u8':return 'PyBytes::new(py, '+e+').into_any().unbind()'
         if k=='shared':return nw(s['item'],e+'.as_ref()',d)
@@ -355,6 +364,7 @@ def render_modeling(contract, header, rust_header):
             rust+=['    Ok(classes.getattr(\"'+nm(s)+'\")?.call((),Some(&out))?.unbind())']
         rust+=['}','']
     def measure(s,e,d=0):
+        s=resolve(s)
         k=s['kind'];e='('+e+')'
         if k=='shared':return measure(s['item'],e,d)
         if k=='optional':return 'if '+e+'.is_none() {0usize} else {'+measure(s['item'],e,d)+'}'

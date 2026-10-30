@@ -1,7 +1,7 @@
 """Finite P3 records/unions; names and fields come from compiled Rust shapes."""
 TARGETS = frozenset({'client/python/zipzi/_generated/scene.py', 'src/generated/scene.rs'})
 
-def render_scene(contract, header, rust_header, identifier, rust_path):
+def render_scene(contract, header, rust_header, identifier, rust_path, resolve=lambda shape: shape):
     if contract['version'] != 1:
         raise ValueError('Unsupported scene contract')
     bindings = {}
@@ -12,6 +12,7 @@ def render_scene(contract, header, rust_header, identifier, rust_path):
         bindings[b['rust']] = b
     types = {}
     def visit(s):
+        s = resolve(s)
         k = s['kind']
         if k in {'string', 'bool', 'f32', 'u32', 'i32'}: return
         if k in {'optional', 'sequence', 'array'}:
@@ -40,6 +41,7 @@ def render_scene(contract, header, rust_header, identifier, rust_path):
     if set(types) != set(bindings): raise ValueError('Unused scene binding')
     def name(s): return bindings[s['name']]['name']
     def typ(s):
+        s = resolve(s)
         k = s['kind']
         if k in {'string', 'bool', 'f32', 'u32', 'i32'}: return dict(string='str', bool='bool', f32='float', u32='int', i32='int')[k]
         if k == 'optional': return typ(s['item']) + ' | None'
@@ -47,6 +49,7 @@ def render_scene(contract, header, rust_header, identifier, rust_path):
         if k == 'array': return 'tuple[' + ', '.join([typ(s['item'])] * s['length']) + ']'
         return name(s)
     def wire(s, e):
+        s = resolve(s)
         k = s['kind']
         if k in {'string', 'bool', 'f32', 'u32', 'i32'}: return e
         if k == 'optional': return f'None if {e} is None else {wire(s["item"], e)}'
@@ -54,12 +57,14 @@ def render_scene(contract, header, rust_header, identifier, rust_path):
         if k == 'record': return 'dict(' + ', '.join(f['name'] + '=' + wire(f['shape'], e + '.' + f['name']) for f in s['fields']) + ')'
         raise ValueError('Unreviewed nested scene union')
     def read(s, e):
+        s = resolve(s)
         k=s['kind']
         if k in {'string','f32','u32','i32','bool'}: return {'string':'string','f32':'number','u32':'integer','i32':'integer','bool':'_boolean'}[k]+'('+e+')'
         if k=='optional': return 'None if '+e+' is None else '+read(s['item'],e)
         if k in {'sequence','array'}: return 'tuple('+read(s['item'],'item')+' for item in sequence('+e+'))'
         return name(s)+'.read('+e+')'
     def check(s, e, indent, depth=0):
+        s = resolve(s)
         p=' '*indent; k=s['kind']
         if k == 'string': return [p+f'if not isinstance({e}, str):', p+'    raise TypeError("Expected text")']
         if k == 'bool': return [p+f'if type({e}) is not bool:', p+'    raise TypeError("Expected boolean")']
@@ -79,6 +84,7 @@ def render_scene(contract, header, rust_header, identifier, rust_path):
         raise ValueError('Unreviewed scene check')
     def fields(s): return sorted(s, key=lambda f: f['shape']['kind']=='optional')
     def freeze(s, e, depth=0):
+        s = resolve(s)
         if s['kind']=='optional': return 'None if '+e+' is None else '+freeze(s['item'], e, depth)
         if s['kind'] in {'sequence','array'}:
             v='item'+str(depth)
@@ -102,7 +108,7 @@ def render_scene(contract, header, rust_header, identifier, rust_path):
             record(name(s), s['fields'])
             if name(s)=='Summary':
                 py += ['    @classmethod', '    def read(cls, value: object) -> "Summary":', '        r = record(value)', '        return cls('+', '.join(f['name']+'='+read(f['shape'], 'r["'+f['name']+'"]') for f in s['fields'])+')', '']
-    union=contract['roots'][0]
+    union=resolve(contract['roots'][0])
     if union['kind'] != 'union': raise ValueError('Expected scene operation union')
     for v in union['variants']: record(v['rust_name'], v['fields'], v['wire_name'])
     py += ['Operation = '+' | '.join(v['rust_name'] for v in union['variants']), '', 'OPERATION_TYPES = ('+', '.join(v['rust_name'] for v in union['variants'])+',)', '', 'def validate(op: Operation) -> None:', '    match op:']
@@ -114,8 +120,9 @@ def render_scene(contract, header, rust_header, identifier, rust_path):
         py += ['        case '+v['rust_name']+'():', '            return dict(domain="scene", operation=dict(op="'+v['wire_name']+'", '+', '.join(f['name']+'='+wire(f['shape'], 'op.'+f['name']) for f in v['fields'])+'))']
     py += ['    raise TypeError("Expected scene operation")', '']
     def native(s, e):
+        s = resolve(s)
         k=s['kind']
-        if k == 'sequence' and s['item']['kind']=='record':
+        if k == 'sequence' and resolve(s['item'])['kind']=='record':
             return e+'.try_iter()?.map(|item| -> PyResult<_> { Ok('+native(s['item'], 'item?')+') }).collect::<PyResult<_>>()?'
         if k in {'string', 'bool', 'f32', 'u32', 'i32', 'array', 'sequence'}: return e+'.extract()?'
         if k=='optional' and s['item']['kind'] in {'string','bool','f32','u32','i32','array','sequence'}: return e+'.extract()?'
@@ -138,6 +145,7 @@ def render_scene(contract, header, rust_header, identifier, rust_path):
     rust += ['    result.set_item("'+f['name']+'", value.'+f['name']+')?;' for f in summary['fields']]
     rust += ['    Ok(result)', '}', '']
     def measure(s,e,d=0):
+        s = resolve(s)
         k=s['kind'];e='('+e+')'
         if k=='optional':return 'if '+e+'.is_none() {0usize} else {'+measure(s['item'],e,d)+'}'
         if k=='string':return e+'.len()?.saturating_mul(4).saturating_add(32)'
