@@ -42,8 +42,8 @@ def describe(path:str)->ApiDescription:
     This describes the installed API, while runtime.capabilities() describes
     the connected host. No resource is constructed or RPC sent by this query.
     """
-    from ._generated.catalog import CATALOG
+    from ._generated.catalog import lookup
     if not isinstance(path,str):raise TypeError('Expected a public API path')
     key=path if path=='zipzi' or path.startswith('zipzi.') else 'zipzi.'+path
-    raw=CATALOG[key]
+    raw=lookup(key)
     return ApiDescription(key,raw['kind'],raw.get('signature',''),raw.get('documentation',''),tuple(raw.get('fields',())),tuple(raw.get('children',())),raw.get('example',''))

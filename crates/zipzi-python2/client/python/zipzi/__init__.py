@@ -10,6 +10,10 @@ from ._lifecycle import Edit, EditState, Job, JobState, Runtime, Session
 from ._calls import recover_call as recover_call
 from ._results import Batch, Page, PageCursor, Snapshot
 from ._values import ConnectionInfo, ConnectionLimits, Receipt, SaveReceipt, SessionId, SessionInfo, Source, Version, WriteResult
+from . import _values as _values
+
+# Resolve WriteResult's deferred annotation after modeling has finished importing.
+_values.ManualMeshTransferReport = modeling.ManualMeshTransferReport
 
 def local() -> Runtime:
     'Explicitly create an owned in-process Runtime with the paired optional native wheel. Importing zipzi alone does not start it. Use as a context manager; close releases its sessions without saving or connecting to another host.'

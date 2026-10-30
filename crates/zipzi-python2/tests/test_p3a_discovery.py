@@ -2,6 +2,7 @@
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 import test_api as support
 zipzi,meshes=support.zipzi,support.meshes
@@ -55,6 +56,21 @@ class P3ADiscovery(unittest.TestCase):
         self.assertEqual(geometry.summary(),repr(geometry))
         self.assertEqual(len(geometry.positions),1000)
         self.assertIn('vertex_ids',geometry.__doc__)
+
+    def test_offline_catalog_aliases_fields_and_cycle_detection(self):
+        from zipzi._generated.catalog import index
+        alias=zipzi.describe('modeling.PhysicsAssetProperty')
+        original=zipzi.describe('modeling.PhysicsAssetPropertyFps')
+        self.assertEqual(alias.path,'zipzi.modeling.PhysicsAssetProperty')
+        self.assertEqual(alias.fields,original.fields)
+        self.assertIn('zipzi.modeling.PhysicsAssetProperty.summary',alias.children)
+        self.assertEqual(zipzi.describe(alias.path+'.summary').documentation,
+                         zipzi.describe(original.path+'.summary').documentation)
+        for name,text in alias.fields:
+            self.assertEqual(alias.format().count(name+': '+text),1)
+        with self.assertRaises(KeyError):zipzi.describe('modeling.missing')
+        with patch.object(index,'_data',return_value={'zipzi.a':{'alias':'zipzi.b'},'zipzi.b':{'alias':'zipzi.a'}}):
+            with self.assertRaisesRegex(ValueError,'alias cycle'):index.lookup('zipzi.a')
 
     def test_candidate_cursor_undo_and_wrong_collection_fail_without_aborting_reads(self):
         for mode in ('local','connected'):

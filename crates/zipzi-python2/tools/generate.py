@@ -515,7 +515,9 @@ def cache_key(contract):
     paths = list((PACKAGE / 'tools').glob('generate*.py'))
     paths += list((PACKAGE / 'tools/codegen').rglob('*.py'))
     paths += [p for p in (PACKAGE / 'client/python/zipzi').rglob('*.py') if '__pycache__' not in p.parts]
-    paths += [PACKAGE / 'client/python/zipzi/docs/guide.md', PACKAGE / 'client/pyproject.toml']
+    paths += [p for p in (PACKAGE / 'client/python/zipzi/docs').rglob('*.md')
+              if p.name != 'reference.md' and 'reference' not in p.relative_to(PACKAGE / 'client/python/zipzi/docs').parts]
+    paths += [PACKAGE / 'client/pyproject.toml']
     for path in sorted(paths):
         add(path.relative_to(PACKAGE).as_posix())
         add(path.read_bytes())

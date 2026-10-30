@@ -81,18 +81,20 @@ def render_modeling(contract, header, rust_header):
         return nm(s)
     def freeze(s,e,d=0):
         k=s['kind']
-        if k=='sequence' and s['item']['kind']=='u8':return e
+        if k=='sequence' and s['item']['kind']=='u8':return None
         if k=='shared':return freeze(s['item'],e,d)
-        if k=='optional':return f'None if {e} is None else '+freeze(s['item'],e,d)
+        if k=='optional':
+            converted=freeze(s['item'],e,d)
+            return f'None if {e} is None else '+converted if converted is not None else None
         if k in {'array','sequence'}:
             item=s['item'];v='v'+str(d)
             if item['kind'] not in {'optional','sequence','array','shared','string_map','index_map','json'}:return f'tuple({e})'
-            return 'tuple('+freeze(item,v,d+1)+f' for {v} in {e})'
+            return 'tuple('+(freeze(item,v,d+1) or v)+f' for {v} in {e})'
         if k in {'string_map','index_map'}:
             v='v'+str(d);key='key'+str(d)
-            return 'MappingProxyType({'+key+': '+freeze(s['value'],v,d+1)+f' for {key}, {v} in {e}.items()'+'})'
+            return 'MappingProxyType({'+key+': '+(freeze(s['value'],v,d+1) or v)+f' for {key}, {v} in {e}.items()'+'})'
         if k=='json':return '_freeze_extension('+e+')'
-        return e
+        return None
     def check(s,e,indent,d=0):
         k=s['kind'];p=' '*indent
         if k=='sequence' and s['item']['kind']=='u8':return [p+f'if not isinstance({e}, bytes):',p+'    raise TypeError(\"Expected immutable bytes\")']
@@ -163,9 +165,11 @@ def render_modeling(contract, header, rust_header):
                 default=' = field(default_factory=lambda: '+decode(f['shape'],repr(value))+')'
             py.append('    '+pn(f)+': '+typ(f['shape'])+default)
         if not fs and tag is None:py.append('    pass')
-        if fs:
+        frozen=[(f,freeze(f['shape'],'self.'+pn(f))) for f in fs]
+        frozen=[(f,expr) for f,expr in frozen if expr is not None]
+        if frozen:
             py.extend(['','    def __post_init__(self) -> None:'])
-            for f in fs:py.append('        object.__setattr__(self, '+repr(pn(f))+', '+freeze(f['shape'],'self.'+pn(f))+')')
+            for f,expr in frozen:py.append('        object.__setattr__(self, '+repr(pn(f))+', '+expr+')')
         py.extend([n+'.__module__ = "zipzi.modeling"', ''])
     for s in shapes.values():
         if nm(s)=='ModelingIntent' or s['name'] not in public_shapes: continue

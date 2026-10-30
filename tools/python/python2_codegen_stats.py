@@ -46,15 +46,30 @@ def inspect(package):
                 invalid_setattrs += 1
     catalog_file = package / 'client/python/zipzi/_generated/catalog.py'
     catalog = {}
-    if catalog_file.exists():
-        tree = ast.parse(catalog_file.read_text(encoding='utf-8'))
+    common = {}
+    def literal_assignment(path, name):
+        tree = ast.parse(path.read_text(encoding='utf-8'))
         for node in tree.body:
-            if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id == 'CATALOG':
-                catalog = ast.literal_eval(node.value)
+            if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id == name:
+                return ast.literal_eval(node.value)
+            if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == name for target in node.targets):
+                return ast.literal_eval(node.value)
+        return {}
+    if catalog_file.exists():
+        catalog = literal_assignment(catalog_file, 'CATALOG')
+    else:
+        folder = catalog_file.with_suffix('')
+        for path in sorted(folder.glob('*.py')):
+            catalog.update(literal_assignment(path, 'DATA'))
+        common_path = folder / 'common.py'
+        if common_path.is_file():
+            common = literal_assignment(common_path, 'COMMON')
     inherited = {}
     for method in ('summary', '__repr__'):
-        docs = Counter(entry.get('documentation', '') for path, entry in catalog.items() if path.endswith('.' + method))
-        inherited[method] = {'entries': sum(docs.values()), 'unique_descriptions': len(docs),
+        docs = Counter(entry['documentation'] for path, entry in catalog.items() if path.endswith('.' + method) and 'documentation' in entry)
+        if method in common:
+            docs[common[method]] += 1
+        inherited[method] = {'entries': sum(path.endswith('.' + method) for path in catalog), 'unique_descriptions': len(docs),
                              'duplicate_descriptions': sum(count - 1 for count in docs.values())}
     repeated_fields = sum(bool(entry.get('fields')) and 'Fields:\n' in entry.get('documentation', '') for entry in catalog.values())
     over_review_threshold = {path: info['lines'] for path, info in files.items()

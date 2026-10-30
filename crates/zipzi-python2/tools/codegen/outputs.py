@@ -74,7 +74,7 @@ def write_outputs(output, check, package, fixed):
     package = Path(package)
     paths = {path: safe_path(package, path, fixed) for path in output}
     old = read_manifest(package, fixed)
-    if old is None and set(output) != set(fixed):
+    if old is None and any(path not in fixed and file.exists() for path, file in paths.items()):
         raise ValueError('Cannot bootstrap ownership outside the existing generated targets')
     # Never silently adopt files in generator-owned directories.
     for folder in ('client/python/zipzi/_generated', 'src/generated', 'schema/types', 'client/python/zipzi/docs/reference'):

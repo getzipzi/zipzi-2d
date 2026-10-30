@@ -1,6 +1,8 @@
 """Independent codegen acceptance: determinism, protected sources and Rust typing."""
 from copy import deepcopy
+import ast
 import importlib.util
+import inspect
 import json
 import os
 from pathlib import Path
@@ -14,6 +16,29 @@ PACKAGE = ROOT / 'crates/zipzi-python2'
 SPEC = importlib.util.spec_from_file_location('python2_generate', PACKAGE / 'tools/generate.py')
 gen = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(gen)
+
+
+def catalog_from_output(output):
+    import importlib
+    import sys
+    with tempfile.TemporaryDirectory() as folder:
+        root=Path(folder)
+        package=root/'test_generated_catalog'
+        package.mkdir()
+        for path, source in output.items():
+            prefix='client/python/zipzi/_generated/catalog/'
+            if path.startswith(prefix):
+                destination=package/path[len(prefix):]
+                destination.parent.mkdir(parents=True,exist_ok=True)
+                destination.write_text(source,encoding='utf-8')
+        try:
+            with patch.object(sys,'path',[folder,*sys.path]):
+                directory=importlib.import_module('test_generated_catalog')
+                return {path:directory.lookup(path) for path in directory.iter_paths()}
+        finally:
+            for name in list(sys.modules):
+                if name=='test_generated_catalog' or name.startswith('test_generated_catalog.'):
+                    del sys.modules[name]
 
 
 class Python2ContractIsolation(unittest.TestCase):
@@ -116,20 +141,23 @@ class Python2Codegen(unittest.TestCase):
                 self.assertEqual(cache.read_text(), '{invalid')
 
     def test_catalog_navigation_and_public_query_defaults(self):
-        output=gen.render(self.contract());namespace={}
-        exec(output['client/python/zipzi/_generated/catalog.py'],namespace)
-        catalog=namespace['CATALOG']
+        output=gen.render(self.contract())
+        catalog=catalog_from_output(output)
         for path in catalog:
             parent=path.rpartition('.')[0]
             if parent in catalog:
                 self.assertIn(path,catalog[parent]['children'])
+            row=catalog[path]
+            if row.get('fields'):
+                self.assertNotIn('Fields:',row['documentation'],path)
+                self.assertTrue(all(name and doc for name,doc in row['fields']),path)
         for path in ('Runtime.sessions','Runtime.resources','Session.project'):
             self.assertTrue(catalog['zipzi.'+path]['children'])
         signature=catalog['zipzi.modeling.ModelingQuery']['signature']
         self.assertNotIn('field(',signature)
         self.assertIn('assets: tuple[str, ...] = ()',signature)
         self.assertIn('physics: bool = False',signature)
-        self.assertIn('`'+signature+'`',output['client/python/zipzi/docs/reference.md'])
+        self.assertIn('`'+signature+'`',output['client/python/zipzi/docs/reference/modeling.md'])
 
     def test_full_help_preserves_content_and_query_runtime_defaults(self):
         import sys
@@ -142,10 +170,24 @@ class Python2Codegen(unittest.TestCase):
                           help.fields[0][1],help.children[0],help.example):
                 self.assertIn(value,full)
             self.assertLess(len(repr(help)),len(full))
+            self.assertEqual(full.count('field: '+help.fields[0][1]),1)
             query=modeling.ModelingQuery()
             self.assertEqual(query.assets,())
             self.assertIs(query.physics,False)
             self.assertIs(query.pose,False)
+
+    def test_modeling_freezes_only_values_requiring_conversion(self):
+        output=gen.render(self.contract())
+        tree=ast.parse(output['client/python/zipzi/_generated/modeling.py'])
+        for node in ast.walk(tree):
+            if not isinstance(node,ast.Call) or len(node.args)!=3:continue
+            func,obj,name,value=node.func,*node.args
+            if (isinstance(func,ast.Attribute) and isinstance(func.value,ast.Name)
+                    and func.value.id=='object' and func.attr=='__setattr__'
+                    and isinstance(obj,ast.Name) and obj.id=='self'
+                    and isinstance(name,ast.Constant) and isinstance(value,ast.Attribute)
+                    and isinstance(value.value,ast.Name) and value.value.id=='self'):
+                self.assertNotEqual(name.value,value.attr)
 
     def test_flattened_physics_extensions_roundtrip_and_cannot_shadow_fields(self):
         import sys
@@ -168,9 +210,8 @@ class Python2Codegen(unittest.TestCase):
                 codec.validate_PhysicsNormalization(shadow)
 
     def test_single_variant_type_alias_keeps_fields_and_public_methods_in_catalog(self):
-        output=gen.render(self.contract());namespace={}
-        exec(output['client/python/zipzi/_generated/catalog.py'],namespace)
-        catalog=namespace['CATALOG']
+        output=gen.render(self.contract())
+        catalog=catalog_from_output(output)
         alias='zipzi.modeling.PhysicsAssetProperty'
         concrete='zipzi.modeling.PhysicsAssetPropertyFps'
         self.assertEqual(catalog[alias]['kind'],'type')
@@ -184,27 +225,26 @@ class Python2Codegen(unittest.TestCase):
     def test_catalog_version_follows_distribution_metadata(self):
         output=gen.render(self.contract())
         namespace={}
-        exec(output['client/python/zipzi/_generated/catalog.py'],namespace)
+        exec(output['client/python/zipzi/_generated/metadata.py'],namespace)
         import tomllib
         version=tomllib.loads((PACKAGE/'client/pyproject.toml').read_text())['project']['version']
         self.assertEqual(namespace['PACKAGE_VERSION'],version)
-        self.assertIn('Package '+version+';',namespace['CATALOG']['zipzi']['documentation'])
+        self.assertIn('Package '+version+';',catalog_from_output(output)['zipzi']['documentation'])
         self.assertEqual(namespace['CONTRACT'],self.contract()['protocol'])
         changed_protocol=deepcopy(self.contract());changed_protocol['protocol']='test-runtime-contract'
         protocol_output=gen.render(changed_protocol)
-        exec(protocol_output['client/python/zipzi/_generated/catalog.py'],namespace)
+        exec(protocol_output['client/python/zipzi/_generated/metadata.py'],namespace)
         self.assertEqual(namespace['CONTRACT'],'test-runtime-contract')
-        self.assertIn('protocol test-runtime-contract;',namespace['CATALOG']['zipzi']['documentation'])
+        self.assertIn('protocol test-runtime-contract;',catalog_from_output(protocol_output)['zipzi']['documentation'])
         with patch.object(gen._catalog_codegen.tomllib,'loads',return_value={'project':{'version':'9.8.7a6'}}):
             changed=gen.render(self.contract())
-        exec(changed['client/python/zipzi/_generated/catalog.py'],namespace)
+        exec(changed['client/python/zipzi/_generated/metadata.py'],namespace)
         self.assertEqual(namespace['PACKAGE_VERSION'],'9.8.7a6')
-        self.assertIn('Package 9.8.7a6;',changed['client/python/zipzi/docs/reference.md'])
+        self.assertIn('Package 9.8.7a6;',changed['client/python/zipzi/docs/reference/runtime.md'])
 
     def test_handwritten_context_and_representation_methods_have_public_entries(self):
-        output=gen.render(self.contract());namespace={}
-        exec(output['client/python/zipzi/_generated/catalog.py'],namespace)
-        catalog=namespace['CATALOG']
+        output=gen.render(self.contract())
+        catalog=catalog_from_output(output)
         for path in ('zipzi.Runtime.__enter__','zipzi.Runtime.__exit__',
                      'zipzi.Edit.__enter__','zipzi.Edit.__exit__','zipzi.Job.__exit__',
                      'zipzi.Plan.__exit__','zipzi.Buffer.__enter__','zipzi.Source.__repr__'):
@@ -229,9 +269,7 @@ class Python2Codegen(unittest.TestCase):
 
     def test_field_semantics_are_shared_by_docstrings_catalog_and_reference(self):
         output=gen.render(self.contract())
-        namespace={}
-        exec(output['client/python/zipzi/_generated/catalog.py'],namespace)
-        catalog=namespace['CATALOG']
+        catalog=catalog_from_output(output)
         examples={
             'zipzi.parameters.ParameterPatch':('repeat','None preserves the current value'),
             'zipzi.bindings.Keyform':('keys','axis order'),
@@ -243,13 +281,19 @@ class Python2Codegen(unittest.TestCase):
             'zipzi.modeling.BindingGridEditEdit':('operation','Typed axis/sample grid edit'),
             'zipzi.modeling.DeltaOffscreenKeyform':('multiply','neutral (1, 1, 1)'),
         }
-        reference=output['client/python/zipzi/docs/reference.md']
+        reference='\n'.join(value for path,value in output.items() if path.startswith('client/python/zipzi/docs/reference/'))
+        import sys
+        with patch.object(sys,'path',[str(PACKAGE/'client/python'),*sys.path]):
+            import zipzi
         for path,(field,meaning) in examples.items():
             with self.subTest(path=path,field=field):
                 entry=catalog[path]
                 self.assertIn(meaning,' '.join(dict(entry['fields'])[field].split()))
-                self.assertIn(meaning,' '.join(entry['documentation'].split()))
+                self.assertNotIn('Fields:',entry['documentation'])
                 self.assertIn(meaning,' '.join(reference.split()))
+                value=zipzi
+                for part in path.split('.')[1:]:value=getattr(value,part)
+                self.assertIn(meaning,' '.join((inspect.getdoc(value) or '').split()))
         mesh=output['client/python/zipzi/_generated/mesh_ops.py']
         self.assertIn('name precondition',mesh)
 
@@ -430,7 +474,7 @@ class Python2Codegen(unittest.TestCase):
         self.assertIn('min_triangle_area: float = 0.5',
                       output['client/python/zipzi/_generated/sampling_values.py'])
         self.assertIn('min_triangle_area: float=0.5',
-                      output['client/python/zipzi/_generated/catalog.py'])
+                      output['client/python/zipzi/_generated/catalog/sampling.py'])
 
     def test_rust_field_change_updates_python_wire_and_native_shapes_together(self):
         contract = self.contract()

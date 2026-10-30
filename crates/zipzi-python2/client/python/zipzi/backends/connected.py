@@ -3,7 +3,7 @@
 Host discovery/start ownership lives in _endpoint; request recovery never launches.
 """
 from .._generated import binary as typed_binary
-from .._generated.catalog import CONTRACT
+from .._generated.metadata import CONTRACT
 from .._generated.modeling import ModelingCommandManualMesh
 import hashlib
 import json

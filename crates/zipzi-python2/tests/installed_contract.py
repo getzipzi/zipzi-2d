@@ -6,16 +6,16 @@ import importlib.util
 import inspect
 import typing
 import re
-import hashlib
 from importlib import metadata,resources
 import zipzi
-from zipzi._generated.catalog import CATALOG
+from zipzi._generated.catalog import lookup,iter_paths
 from zipzi._generated import facades
 from zipzi._lifecycle import Sessions,Project
 from zipzi.resources import Resources
 
 
 def audit()->dict[str,object]:
+    paths=set(iter_paths())
     failures:dict[str,list[str]]={key:[] for key in ('D01','D02','D04','D07','D08')}
     counts={'symbols':0,'callables':0,'fields':0}
     if '/site-packages/zipzi/' not in zipzi.__file__:raise RuntimeError('Audit requires an installed wheel')
@@ -23,12 +23,12 @@ def audit()->dict[str,object]:
     modules=[zipzi,*[getattr(zipzi,n) for n in ('meshes','parameters','bindings','resources','scene','sampling','events','references','modeling','ops','animation','spatial','observation','inspection')]]
     def visit(path:str,value:object,constructor:bool=True)->None:
         counts['symbols']+=1
-        if path not in CATALOG:failures['D01'].append(path+': missing from installed catalog')
+        if path not in paths:failures['D01'].append(path+': missing from installed catalog')
         if inspect.isclass(value):
             try:inspect.signature(value);typing.get_type_hints(value)
             except Exception as error:failures['D04'].append(path+': '+str(error))
             if is_dataclass(value):
-                documented=dict(CATALOG.get(path,{}).get('fields',()))
+                documented=dict(lookup(path).get('fields',())) if path in paths else {}
                 for field in fields(value):
                     if field.name.startswith('_'):continue
                     counts['fields']+=1
@@ -49,7 +49,7 @@ def audit()->dict[str,object]:
         elif inspect.isfunction(value):check_callable(path,value)
     def check_callable(path:str,value:object)->None:
         counts['callables']+=1
-        if path not in CATALOG:failures['D01'].append(path+': missing callable catalog entry')
+        if path not in paths:failures['D01'].append(path+': missing callable catalog entry')
         try:
             inspect.signature(value);typing.get_type_hints(value)
         except Exception as error:failures['D04'].append(path+': '+str(error))
@@ -72,35 +72,34 @@ def audit()->dict[str,object]:
     positions=tuple((float(n),0.) for n in range(1000))
     geometry=zipzi.meshes.Geometry(tuple(range(1000)),positions,positions,())
     frame=zipzi.sampling.Frame(0,(),(),(),(),())
-    sampled=zipzi.sampling.Result('formal',source.version,(),(frame,),())
+    sampled=zipzi.sampling.Result('formal',source.version,(),(frame,),(),())
     values=(frame,sampled,geometry,zipzi.resources.ImagePixels(1024,1024,bytes(4<<20)),zipzi.Snapshot(source,geometry),zipzi.Batch(source,tuple(range(1000000))),zipzi.Page(source,(geometry,)))
     for value in values:
         if len(repr(value))>1024:failures['D07'].append(type(value).__name__+': repr exceeds 1024 chars')
         if value.summary()!=repr(value):failures['D07'].append(type(value).__name__+': summary differs')
     if len(geometry.positions)!=1000:failures['D07'].append('Explicit geometry fields changed')
-    from zipzi._generated.catalog import PACKAGE_VERSION,CONTRACT,CONTRACT_SHA256,CLIENT_SOURCE_SHA256
+    from zipzi._generated.metadata import PACKAGE_VERSION,CONTRACT,CONTRACT_SHA256,CLIENT_SOURCE_SHA256
     if PACKAGE_VERSION!=metadata.version('zipzi'):failures['D08'].append('Installed package/catalog version mismatch')
     if CONTRACT!='zipzi-runtime-v2' or not re.fullmatch('[0-9a-f]{64}',CONTRACT_SHA256):failures['D08'].append('Missing protocol major or contract provenance')
     package=resources.files('zipzi')
-    fingerprint=hashlib.sha256()
+    from zipzi._fingerprint import fingerprint,included
+    sources={}
     package_path=Path(zipzi.__file__).parent
-    for path in sorted(package_path.rglob('*.py')):
-        if path.relative_to(package_path).as_posix()=='_generated/catalog.py':continue
+    for path in package_path.rglob('*'):
+        if not path.is_file():continue
         relative='client/python/zipzi/'+path.relative_to(package_path).as_posix()
-        fingerprint.update(relative.encode());fingerprint.update(b'\0');fingerprint.update(path.read_text().encode())
-    fingerprint.update(b'client/python/zipzi/docs/guide.md\0')
-    fingerprint.update(package.joinpath('docs/guide.md').read_text().encode())
-    if fingerprint.hexdigest()!=CLIENT_SOURCE_SHA256:failures['D08'].append('Installed source/document build fingerprint mismatch')
+        if included(relative):sources[relative]=path.read_text(encoding='utf-8')
+    if fingerprint(sources)!=CLIENT_SOURCE_SHA256:failures['D08'].append('Installed source/document build fingerprint mismatch')
     if CLIENT_SOURCE_SHA256 not in zipzi.describe('zipzi').documentation:failures['D08'].append('Build fingerprint missing from public root help')
-    for reference in {'docs/guide.md','docs/reference.md','docs/recipes.py',*[entry.get('example','') for entry in CATALOG.values()]}-{''}:
+    for reference in {'docs/guide.md','docs/reference.md','docs/recipes.py',*[lookup(path).get('example','') for path in paths]}-{''}:
         if not package.joinpath(reference).is_file():failures['D08'].append('Missing installed reference: '+reference)
     guide=package.joinpath('docs/guide.md').read_text()
     if len(guide.split())>1500:failures['D08'].append('Short workflow exceeds 1500 words')
-    for name in ('guide.md','reference.md'):
-        document=package.joinpath('docs',name)
+    for document in (package_path/'docs').rglob('*.md'):
+        name=document.relative_to(package_path/'docs').as_posix()
         for link in re.findall(r'(?<!!)\[[^\]]+\]\(([^)]+)\)',document.read_text()):
             if '://' in link or link.startswith('#'):continue
-            if not package.joinpath('docs',link.split('#',1)[0]).is_file():failures['D08'].append(name+': invalid installed link '+link)
+            if not (document.parent/link.split('#',1)[0]).is_file():failures['D08'].append(name+': invalid installed link '+link)
     return {'counts':counts,'failures':{k:sorted(set(v)) for k,v in failures.items()}}
 
 

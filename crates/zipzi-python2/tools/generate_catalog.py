@@ -1,14 +1,21 @@
 """Deterministic offline API metadata, sourced from bindings, Rust fields and source docs."""
 import ast
 import re
-import pprint
 import hashlib
 import keyword
 import tomllib
 from copy import deepcopy
 from pathlib import Path
+import importlib.util
 
-TARGETS=frozenset({'client/python/zipzi/_generated/catalog.py','client/python/zipzi/docs/reference.md'})
+_spec=importlib.util.spec_from_file_location('zipzi_catalog_output', Path(__file__).parent/'codegen/catalog_output.py')
+_catalog_output=importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_catalog_output)
+_fingerprint_spec=importlib.util.spec_from_file_location('zipzi_source_fingerprint', Path(__file__).parents[1]/'client/python/zipzi/_fingerprint.py')
+_fingerprint=importlib.util.module_from_spec(_fingerprint_spec)
+_fingerprint_spec.loader.exec_module(_fingerprint)
+
+TARGETS=frozenset({'client/python/zipzi/_generated/metadata.py','client/python/zipzi/docs/reference.md'})
 PUBLIC_SPECIALS=frozenset({'__enter__','__exit__','__repr__'})
 
 def compact(source):
@@ -38,7 +45,7 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
         return cached[1]
     # Read sources rather than importing them: generation never creates Runtime,
     # imports native code, introspects private tokens or depends on an installed wheel.
-    sources={p.relative_to(package).as_posix():p.read_text(encoding='utf-8') for p in (package/'client/python/zipzi').rglob('*.py') if '__pycache__' not in p.parts}
+    sources={p.relative_to(package).as_posix():p.read_text(encoding='utf-8') for p in (package/'client/python/zipzi').rglob('*.py') if '__pycache__' not in p.parts and '_generated/catalog' not in p.as_posix() and p.name!='metadata.py'}
     sources.update({p:s for p,s in output.items() if p.endswith('.py')})
     for p,s in list(output.items()):
         if p.endswith('.py') and '@dataclass(' in s:output[p]=compact(s);sources[p]=output[p]
@@ -280,23 +287,12 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
     for path in catalog:
         parent=path.rpartition('.')[0]
         if parent in catalog:catalog[parent]['children'].append(path)
-    fingerprint=hashlib.sha256()
-    for path,source in sorted(sources.items()):
-        if not path.startswith(prefix) or path.endswith('/catalog.py'):continue
-        fingerprint.update(path.encode());fingerprint.update(b'\0');fingerprint.update(source.encode())
-    guide_path=prefix+'docs/guide.md'
-    fingerprint.update(guide_path.encode());fingerprint.update(b'\0')
-    fingerprint.update((package/guide_path).read_text(encoding='utf-8').encode())
-    source_sha=fingerprint.hexdigest()
+    for path in (package/prefix/'docs').rglob('*.md'):
+        relative=path.relative_to(package).as_posix()
+        if _fingerprint.included(relative):sources[relative]=path.read_text(encoding='utf-8')
+    source_sha=_fingerprint.fingerprint(sources)
     package_version=tomllib.loads((package/'client/pyproject.toml').read_text(encoding='utf-8'))['project']['version']
-    catalog['zipzi']['documentation']+=' Package '+package_version+'; protocol '+contract['protocol']+'; client source SHA-256 '+source_sha+'.'
-    for row in catalog.values():row['children']=tuple(sorted(set(row.get('children',()))))
-    reference=[header.rstrip(),'# Installed Python API reference','','Generated from the compiled authoring contract, the finite binding directory and lifecycle source docs.','']
-    for path,row in sorted(catalog.items()):
-        reference+=['## '+path,'', '`'+row.get('signature','')+'`','',row.get('documentation',''),'']
-        for field,text in row.get('fields',()):reference+=['- `'+field+'`: '+text]
-        reference+=['']
-    result={'client/python/zipzi/_generated/catalog.py':header+'"""Offline API directory; no imports or host probes."""\nfrom typing import TypedDict, NotRequired\nfrom collections.abc import Sequence\nclass _Entry(TypedDict):\n    kind: str\n    signature: str\n    documentation: str\n    fields: NotRequired[Sequence[tuple[str,str]]]\n    children: tuple[str,...]\n    example: NotRequired[str]\nCONTRACT = '+repr(contract['protocol'])+'\nPACKAGE_VERSION = '+repr(package_version)+'\nCONTRACT_SHA256 = '+repr(hashlib.sha256(__import__('json').dumps(contract,sort_keys=True).encode()).hexdigest())+'\nCATALOG: dict[str,_Entry] = '+pprint.pformat(catalog,width=120,sort_dicts=True)+'\n', 'client/python/zipzi/docs/reference.md':'\n'.join(reference)+'\n'}
-    result['client/python/zipzi/_generated/catalog.py']=result['client/python/zipzi/_generated/catalog.py'].replace(
-        'CONTRACT_SHA256 = ', 'CLIENT_SOURCE_SHA256 = '+repr(source_sha)+'\nCONTRACT_SHA256 = ',1)
-    return result
+    compact_class=resolve('_presentation','CompactValue')
+    common={n.name:ast.get_docstring(n) for n in compact_class.body
+            if isinstance(n,ast.FunctionDef) and n.name in {'summary','__repr__'}}
+    return _catalog_output.render(catalog,contract,domains,common,package_version,source_sha,prefix,header)

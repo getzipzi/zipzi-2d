@@ -28,9 +28,6 @@ class ModelingCommandCreateAsset(CompactValue):
     _variant: _ClassVar[str] = 'create_asset'
     kind: _ClassVar[str] = "modeling"
     asset: ImageAsset
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'asset', self.asset)
 ModelingCommandCreateAsset.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -39,9 +36,6 @@ class ModelingCommandReplaceAsset(CompactValue):
     _variant: _ClassVar[str] = 'replace_asset'
     kind: _ClassVar[str] = "modeling"
     asset: ImageAsset
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'asset', self.asset)
 ModelingCommandReplaceAsset.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -50,9 +44,6 @@ class ModelingCommandCreateMesh(CompactValue):
     _variant: _ClassVar[str] = 'create_mesh'
     kind: _ClassVar[str] = "modeling"
     mesh: Mesh
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'mesh', self.mesh)
 ModelingCommandCreateMesh.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -61,9 +52,6 @@ class ModelingCommandReplaceMesh(CompactValue):
     _variant: _ClassVar[str] = 'replace_mesh'
     kind: _ClassVar[str] = "modeling"
     mesh: Mesh
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'mesh', self.mesh)
 ModelingCommandReplaceMesh.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -72,9 +60,6 @@ class ModelingCommandCreateParameter(CompactValue):
     _variant: _ClassVar[str] = 'create_parameter'
     kind: _ClassVar[str] = "modeling"
     parameter: Parameter
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'parameter', self.parameter)
 ModelingCommandCreateParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -83,9 +68,6 @@ class ModelingCommandReplaceParameter(CompactValue):
     _variant: _ClassVar[str] = 'replace_parameter'
     kind: _ClassVar[str] = "modeling"
     parameter: Parameter
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'parameter', self.parameter)
 ModelingCommandReplaceParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -94,9 +76,6 @@ class ModelingCommandCreatePart(CompactValue):
     _variant: _ClassVar[str] = 'create_part'
     kind: _ClassVar[str] = "modeling"
     part: Part
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'part', self.part)
 ModelingCommandCreatePart.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -105,9 +84,6 @@ class ModelingCommandReplacePart(CompactValue):
     _variant: _ClassVar[str] = 'replace_part'
     kind: _ClassVar[str] = "modeling"
     part: Part
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'part', self.part)
 ModelingCommandReplacePart.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -116,9 +92,6 @@ class ModelingCommandCreateTransform(CompactValue):
     _variant: _ClassVar[str] = 'create_transform'
     kind: _ClassVar[str] = "modeling"
     transform: Transform
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'transform', self.transform)
 ModelingCommandCreateTransform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -127,9 +100,6 @@ class ModelingCommandReplaceTransform(CompactValue):
     _variant: _ClassVar[str] = 'replace_transform'
     kind: _ClassVar[str] = "modeling"
     transform: Transform
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'transform', self.transform)
 ModelingCommandReplaceTransform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -138,9 +108,6 @@ class ModelingCommandCreateBinding(CompactValue):
     _variant: _ClassVar[str] = 'create_binding'
     kind: _ClassVar[str] = "modeling"
     binding: MeshBinding
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'binding', self.binding)
 ModelingCommandCreateBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -149,9 +116,6 @@ class ModelingCommandReplaceBinding(CompactValue):
     _variant: _ClassVar[str] = 'replace_binding'
     kind: _ClassVar[str] = "modeling"
     binding: MeshBinding
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'binding', self.binding)
 ModelingCommandReplaceBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -160,9 +124,6 @@ class ModelingCommandCreateSceneBinding(CompactValue):
     _variant: _ClassVar[str] = 'create_scene_binding'
     kind: _ClassVar[str] = "modeling"
     binding: SceneBinding
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'binding', self.binding)
 ModelingCommandCreateSceneBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -171,9 +132,6 @@ class ModelingCommandReplaceSceneBinding(CompactValue):
     _variant: _ClassVar[str] = 'replace_scene_binding'
     kind: _ClassVar[str] = "modeling"
     binding: SceneBinding
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'binding', self.binding)
 ModelingCommandReplaceSceneBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -182,9 +140,6 @@ class ModelingCommandCreateBlendKeyTable(CompactValue):
     _variant: _ClassVar[str] = 'create_blend_key_table'
     kind: _ClassVar[str] = "modeling"
     table: BlendShapeKeyTable
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'table', self.table)
 ModelingCommandCreateBlendKeyTable.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -193,9 +148,6 @@ class ModelingCommandReplaceBlendKeyTable(CompactValue):
     _variant: _ClassVar[str] = 'replace_blend_key_table'
     kind: _ClassVar[str] = "modeling"
     table: BlendShapeKeyTable
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'table', self.table)
 ModelingCommandReplaceBlendKeyTable.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -204,9 +156,6 @@ class ModelingCommandCreateBlendConstraint(CompactValue):
     _variant: _ClassVar[str] = 'create_blend_constraint'
     kind: _ClassVar[str] = "modeling"
     constraint: BlendShapeConstraint
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'constraint', self.constraint)
 ModelingCommandCreateBlendConstraint.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -215,9 +164,6 @@ class ModelingCommandReplaceBlendConstraint(CompactValue):
     _variant: _ClassVar[str] = 'replace_blend_constraint'
     kind: _ClassVar[str] = "modeling"
     constraint: BlendShapeConstraint
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'constraint', self.constraint)
 ModelingCommandReplaceBlendConstraint.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -226,9 +172,6 @@ class ModelingCommandCreateBlendBinding(CompactValue):
     _variant: _ClassVar[str] = 'create_blend_binding'
     kind: _ClassVar[str] = "modeling"
     binding: BlendShapeBinding
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'binding', self.binding)
 ModelingCommandCreateBlendBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -237,9 +180,6 @@ class ModelingCommandReplaceBlendBinding(CompactValue):
     _variant: _ClassVar[str] = 'replace_blend_binding'
     kind: _ClassVar[str] = "modeling"
     binding: BlendShapeBinding
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'binding', self.binding)
 ModelingCommandReplaceBlendBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -248,9 +188,6 @@ class ModelingCommandCreateGlue(CompactValue):
     _variant: _ClassVar[str] = 'create_glue'
     kind: _ClassVar[str] = "modeling"
     glue: Glue
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'glue', self.glue)
 ModelingCommandCreateGlue.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -259,9 +196,6 @@ class ModelingCommandReplaceGlue(CompactValue):
     _variant: _ClassVar[str] = 'replace_glue'
     kind: _ClassVar[str] = "modeling"
     glue: Glue
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'glue', self.glue)
 ModelingCommandReplaceGlue.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -270,9 +204,6 @@ class ModelingCommandCreateOffscreen(CompactValue):
     _variant: _ClassVar[str] = 'create_offscreen'
     kind: _ClassVar[str] = "modeling"
     offscreen: Offscreen
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'offscreen', self.offscreen)
 ModelingCommandCreateOffscreen.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -281,9 +212,6 @@ class ModelingCommandReplaceOffscreen(CompactValue):
     _variant: _ClassVar[str] = 'replace_offscreen'
     kind: _ClassVar[str] = "modeling"
     offscreen: Offscreen
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'offscreen', self.offscreen)
 ModelingCommandReplaceOffscreen.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -292,9 +220,6 @@ class ModelingCommandDeletion(CompactValue):
     _variant: _ClassVar[str] = 'deletion'
     kind: _ClassVar[str] = "modeling"
     intent: DeletionIntent
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'intent', self.intent)
 ModelingCommandDeletion.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -303,9 +228,6 @@ class ModelingCommandScene(CompactValue):
     _variant: _ClassVar[str] = 'scene'
     kind: _ClassVar[str] = "modeling"
     intent: SceneEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'intent', self.intent)
 ModelingCommandScene.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -314,9 +236,6 @@ class ModelingCommandOrganization(CompactValue):
     _variant: _ClassVar[str] = 'organization'
     kind: _ClassVar[str] = "modeling"
     intent: OrganizationEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'intent', self.intent)
 ModelingCommandOrganization.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -325,9 +244,6 @@ class ModelingCommandBinding(CompactValue):
     _variant: _ClassVar[str] = 'binding'
     kind: _ClassVar[str] = "modeling"
     intent: BindingAuthoringEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'intent', self.intent)
 ModelingCommandBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -336,9 +252,6 @@ class ModelingCommandContent(CompactValue):
     _variant: _ClassVar[str] = 'content'
     kind: _ClassVar[str] = "modeling"
     intent: SceneContentEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'intent', self.intent)
 ModelingCommandContent.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -347,9 +260,6 @@ class ModelingCommandReferences(CompactValue):
     _variant: _ClassVar[str] = 'references'
     kind: _ClassVar[str] = "modeling"
     intent: ReferenceEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'intent', self.intent)
 ModelingCommandReferences.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -358,9 +268,6 @@ class ModelingCommandResource(CompactValue):
     _variant: _ClassVar[str] = 'resource'
     kind: _ClassVar[str] = "modeling"
     intent: ResourceEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'intent', self.intent)
 ModelingCommandResource.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -369,9 +276,6 @@ class ModelingCommandDocument(CompactValue):
     _variant: _ClassVar[str] = 'document'
     kind: _ClassVar[str] = "modeling"
     intent: DocumentAuthoringEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'intent', self.intent)
 ModelingCommandDocument.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -380,9 +284,6 @@ class ModelingCommandAttachment(CompactValue):
     _variant: _ClassVar[str] = 'attachment'
     kind: _ClassVar[str] = "modeling"
     intent: AttachmentEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'intent', self.intent)
 ModelingCommandAttachment.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -391,9 +292,6 @@ class ModelingCommandMotion(CompactValue):
     _variant: _ClassVar[str] = 'motion'
     kind: _ClassVar[str] = "modeling"
     intent: MotionEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'intent', self.intent)
 ModelingCommandMotion.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -402,9 +300,6 @@ class ModelingCommandExpression(CompactValue):
     _variant: _ClassVar[str] = 'expression'
     kind: _ClassVar[str] = "modeling"
     intent: ExpressionEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'intent', self.intent)
 ModelingCommandExpression.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -413,9 +308,6 @@ class ModelingCommandPhysics(CompactValue):
     _variant: _ClassVar[str] = 'physics'
     kind: _ClassVar[str] = "modeling"
     intent: PhysicsEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'intent', self.intent)
 ModelingCommandPhysics.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -424,9 +316,6 @@ class ModelingCommandPose(CompactValue):
     _variant: _ClassVar[str] = 'pose'
     kind: _ClassVar[str] = "modeling"
     intent: PoseEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'intent', self.intent)
 ModelingCommandPose.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -435,9 +324,6 @@ class ModelingCommandCreateMotion(CompactValue):
     _variant: _ClassVar[str] = 'create_motion'
     kind: _ClassVar[str] = "modeling"
     clip: MotionClip
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'clip', self.clip)
 ModelingCommandCreateMotion.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -446,9 +332,6 @@ class ModelingCommandReplaceMotion(CompactValue):
     _variant: _ClassVar[str] = 'replace_motion'
     kind: _ClassVar[str] = "modeling"
     clip: MotionClip
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'clip', self.clip)
 ModelingCommandReplaceMotion.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -457,9 +340,6 @@ class ModelingCommandCreateExpression(CompactValue):
     _variant: _ClassVar[str] = 'create_expression'
     kind: _ClassVar[str] = "modeling"
     expression: ExpressionAsset
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'expression', self.expression)
 ModelingCommandCreateExpression.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -468,9 +348,6 @@ class ModelingCommandReplaceExpression(CompactValue):
     _variant: _ClassVar[str] = 'replace_expression'
     kind: _ClassVar[str] = "modeling"
     expression: ExpressionAsset
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'expression', self.expression)
 ModelingCommandReplaceExpression.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -479,9 +356,6 @@ class ModelingCommandSetPhysics(CompactValue):
     _variant: _ClassVar[str] = 'set_physics'
     kind: _ClassVar[str] = "modeling"
     physics: PhysicsAsset
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'physics', self.physics)
 ModelingCommandSetPhysics.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -490,9 +364,6 @@ class ModelingCommandSetPose(CompactValue):
     _variant: _ClassVar[str] = 'set_pose'
     kind: _ClassVar[str] = "modeling"
     pose: PoseAsset
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'pose', self.pose)
 ModelingCommandSetPose.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -501,9 +372,6 @@ class ModelingCommandReplaceModelSetup(CompactValue):
     _variant: _ClassVar[str] = 'replace_model_setup'
     kind: _ClassVar[str] = "modeling"
     setup: ModelSetup
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'setup', self.setup)
 ModelingCommandReplaceModelSetup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -512,9 +380,6 @@ class ModelingCommandReplaceHierarchyOrder(CompactValue):
     _variant: _ClassVar[str] = 'replace_hierarchy_order'
     kind: _ClassVar[str] = "modeling"
     order: HierarchyOrder
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'order', self.order)
 ModelingCommandReplaceHierarchyOrder.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -523,9 +388,6 @@ class ModelingCommandReplaceEditorState(CompactValue):
     _variant: _ClassVar[str] = 'replace_editor_state'
     kind: _ClassVar[str] = "modeling"
     state: EditorState
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'state', self.state)
 ModelingCommandReplaceEditorState.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -545,9 +407,6 @@ class ModelingCommandEraseObject(CompactValue):
     _variant: _ClassVar[str] = 'erase_object'
     kind: _ClassVar[str] = "modeling"
     id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
 ModelingCommandEraseObject.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -557,10 +416,6 @@ class ModelingCommandRenameMesh(CompactValue):
     kind: _ClassVar[str] = "modeling"
     id: str
     name: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
 ModelingCommandRenameMesh.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -573,7 +428,6 @@ class ModelingCommandUpdatePositions(CompactValue):
     positions: tuple[Vec2, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'vertex_ids', tuple(self.vertex_ids))
         object.__setattr__(self, 'positions', tuple(self.positions))
 ModelingCommandUpdatePositions.__module__ = "zipzi.modeling"
@@ -585,10 +439,6 @@ class ModelingCommandSetMeshKeyform(CompactValue):
     kind: _ClassVar[str] = "modeling"
     id: str
     keyform: MeshKeyform
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'keyform', self.keyform)
 ModelingCommandSetMeshKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -598,10 +448,6 @@ class ModelingCommandSetSceneKeyform(CompactValue):
     kind: _ClassVar[str] = "modeling"
     id: str
     keyform: SceneKeyform
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'keyform', self.keyform)
 ModelingCommandSetSceneKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -612,11 +458,6 @@ class ModelingCommandRemeshRectangleGrid(CompactValue):
     id: str
     columns: int
     rows: int
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'columns', self.columns)
-        object.__setattr__(self, 'rows', self.rows)
 ModelingCommandRemeshRectangleGrid.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -626,10 +467,6 @@ class ModelingCommandReplaceTopology(CompactValue):
     kind: _ClassVar[str] = "modeling"
     source: GeometrySnapshot
     replacement: TopologyReplacement
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'source', self.source)
-        object.__setattr__(self, 'replacement', self.replacement)
 ModelingCommandReplaceTopology.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -640,11 +477,6 @@ class ModelingCommandManualMesh(CompactValue):
     mesh_id: str
     expected: _Source
     operation: ManualMeshOperation
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'mesh_id', self.mesh_id)
-        object.__setattr__(self, 'expected', self.expected)
-        object.__setattr__(self, 'operation', self.operation)
 ModelingCommandManualMesh.__module__ = "zipzi.modeling"
 
 ModelingCommand: TypeAlias = ModelingCommandCreateAsset | ModelingCommandReplaceAsset | ModelingCommandCreateMesh | ModelingCommandReplaceMesh | ModelingCommandCreateParameter | ModelingCommandReplaceParameter | ModelingCommandCreatePart | ModelingCommandReplacePart | ModelingCommandCreateTransform | ModelingCommandReplaceTransform | ModelingCommandCreateBinding | ModelingCommandReplaceBinding | ModelingCommandCreateSceneBinding | ModelingCommandReplaceSceneBinding | ModelingCommandCreateBlendKeyTable | ModelingCommandReplaceBlendKeyTable | ModelingCommandCreateBlendConstraint | ModelingCommandReplaceBlendConstraint | ModelingCommandCreateBlendBinding | ModelingCommandReplaceBlendBinding | ModelingCommandCreateGlue | ModelingCommandReplaceGlue | ModelingCommandCreateOffscreen | ModelingCommandReplaceOffscreen | ModelingCommandDeletion | ModelingCommandScene | ModelingCommandOrganization | ModelingCommandBinding | ModelingCommandContent | ModelingCommandReferences | ModelingCommandResource | ModelingCommandDocument | ModelingCommandAttachment | ModelingCommandMotion | ModelingCommandExpression | ModelingCommandPhysics | ModelingCommandPose | ModelingCommandCreateMotion | ModelingCommandReplaceMotion | ModelingCommandCreateExpression | ModelingCommandReplaceExpression | ModelingCommandSetPhysics | ModelingCommandSetPose | ModelingCommandReplaceModelSetup | ModelingCommandReplaceHierarchyOrder | ModelingCommandReplaceEditorState | ModelingCommandReplaceDrawOrderGroups | ModelingCommandEraseObject | ModelingCommandRenameMesh | ModelingCommandUpdatePositions | ModelingCommandSetMeshKeyform | ModelingCommandSetSceneKeyform | ModelingCommandRemeshRectangleGrid | ModelingCommandReplaceTopology | ModelingCommandManualMesh
@@ -656,12 +488,6 @@ class ImageAsset(CompactValue):
     id: str
     name: str
     content: (ImageContent | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'unresolved_source', None if self.unresolved_source is None else self.unresolved_source)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'content', None if self.content is None else self.content)
 ImageAsset.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -671,12 +497,6 @@ class ImageContent(CompactValue):
     width: int
     height: int
     sha256: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'source', self.source)
-        object.__setattr__(self, 'width', self.width)
-        object.__setattr__(self, 'height', self.height)
-        object.__setattr__(self, 'sha256', self.sha256)
 ImageContent.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -703,25 +523,11 @@ class Mesh(CompactValue):
     raw_blend_mode: (int | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'texture_asset_id', self.texture_asset_id)
         object.__setattr__(self, 'vertex_ids', tuple(self.vertex_ids))
         object.__setattr__(self, 'base_positions', tuple(self.base_positions))
         object.__setattr__(self, 'uvs', tuple(self.uvs))
         object.__setattr__(self, 'triangles', tuple(tuple(v0) for v0 in self.triangles))
-        object.__setattr__(self, 'meshing', None if self.meshing is None else self.meshing)
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
-        object.__setattr__(self, 'part_id', self.part_id)
-        object.__setattr__(self, 'deformer_id', self.deformer_id)
-        object.__setattr__(self, 'appearance', self.appearance)
-        object.__setattr__(self, 'draw_order', None if self.draw_order is None else self.draw_order)
-        object.__setattr__(self, 'blend_mode', self.blend_mode)
-        object.__setattr__(self, 'enabled', self.enabled)
-        object.__setattr__(self, 'double_sided', self.double_sided)
-        object.__setattr__(self, 'inverted_mask', self.inverted_mask)
         object.__setattr__(self, 'masks', tuple(self.masks))
-        object.__setattr__(self, 'raw_blend_mode', None if self.raw_blend_mode is None else self.raw_blend_mode)
 Mesh.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -735,9 +541,6 @@ class SceneReferenceResolved(CompactValue):
     'Immutable owned SceneReferenceResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nobject_id: Stable document ID of the object described or selected by this value.'
     _variant: _ClassVar[str] = 'resolved'
     object_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'object_id', self.object_id)
 SceneReferenceResolved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -745,9 +548,6 @@ class SceneReferenceUnresolved(CompactValue):
     'Immutable owned SceneReferenceUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nruntime_id: External format/runtime identifier retained for import/export; not the document\nobject ID.'
     _variant: _ClassVar[str] = 'unresolved'
     runtime_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
 SceneReferenceUnresolved.__module__ = "zipzi.modeling"
 
 SceneReference: TypeAlias = SceneReferenceUnspecified | SceneReferenceResolved | SceneReferenceUnresolved
@@ -776,7 +576,6 @@ class MeshConstraint(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'endpoints', tuple(self.endpoints))
-        object.__setattr__(self, 'kind', self.kind)
 MeshConstraint.__module__ = "zipzi.modeling"
 
 class MeshConstraintKind(str, Enum):
@@ -792,7 +591,6 @@ class Appearance(CompactValue):
     screen: tuple[float, float, float]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'opacity', self.opacity)
         object.__setattr__(self, 'multiply', tuple(self.multiply))
         object.__setattr__(self, 'screen', tuple(self.screen))
 Appearance.__module__ = "zipzi.modeling"
@@ -815,17 +613,6 @@ class Parameter(CompactValue):
     decimal_places: int = field(default_factory=lambda: integer(6))
     kind: ParameterKind = field(default_factory=lambda: read_ParameterKind('normal'))
     repeat: bool = field(default_factory=lambda: _boolean(False))
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'minimum', self.minimum)
-        object.__setattr__(self, 'maximum', self.maximum)
-        object.__setattr__(self, 'default_value', self.default_value)
-        object.__setattr__(self, 'decimal_places', self.decimal_places)
-        object.__setattr__(self, 'kind', self.kind)
-        object.__setattr__(self, 'repeat', self.repeat)
 Parameter.__module__ = "zipzi.modeling"
 
 class ParameterKind(str, Enum):
@@ -842,14 +629,6 @@ class Part(CompactValue):
     parent_id: str
     enabled: bool
     draw_order: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'parent_id', self.parent_id)
-        object.__setattr__(self, 'enabled', self.enabled)
-        object.__setattr__(self, 'draw_order', self.draw_order)
 Part.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -863,34 +642,18 @@ class Transform(CompactValue):
     data: TransformData
     enabled: bool
     appearance: Appearance
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'part_id', None if self.part_id is None else self.part_id)
-        object.__setattr__(self, 'parent_id', None if self.parent_id is None else self.parent_id)
-        object.__setattr__(self, 'data', self.data)
-        object.__setattr__(self, 'enabled', self.enabled)
-        object.__setattr__(self, 'appearance', self.appearance)
 Transform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PartId(CompactValue):
     'Immutable owned PartId value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Persistent scene object identifier.'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 PartId.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class TransformId(CompactValue):
     'Immutable owned TransformId value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Persistent scene object identifier.'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 TransformId.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -898,9 +661,6 @@ class TransformDataWarp(CompactValue):
     'Immutable owned TransformDataWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Warp deformation definition with its baked lattice and optional authoring controller.'
     _variant: _ClassVar[str] = 'Warp'
     value: WarpTransform
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 TransformDataWarp.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -908,9 +668,6 @@ class TransformDataRotation(CompactValue):
     'Immutable owned TransformDataRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Rotation deformation definition with its reference angle and base pose.'
     _variant: _ClassVar[str] = 'Rotation'
     value: RotationTransform
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 TransformDataRotation.__module__ = "zipzi.modeling"
 
 TransformData: TypeAlias = TransformDataWarp | TransformDataRotation
@@ -925,10 +682,6 @@ class WarpTransform(CompactValue):
     points: tuple[Vec2, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'bezier', None if self.bezier is None else self.bezier)
-        object.__setattr__(self, 'rows', self.rows)
-        object.__setattr__(self, 'columns', self.columns)
-        object.__setattr__(self, 'quad', self.quad)
         object.__setattr__(self, 'points', tuple(self.points))
 WarpTransform.__module__ = "zipzi.modeling"
 
@@ -940,8 +693,6 @@ class WarpBezier(CompactValue):
     nodes: tuple[WarpBezierNode, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'rows', self.rows)
-        object.__setattr__(self, 'columns', self.columns)
         object.__setattr__(self, 'nodes', tuple(self.nodes))
 WarpBezier.__module__ = "zipzi.modeling"
 
@@ -952,7 +703,6 @@ class WarpBezierNode(CompactValue):
     handles: tuple[Vec2, Vec2, Vec2, Vec2]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'position', self.position)
         object.__setattr__(self, 'handles', tuple(self.handles))
 WarpBezierNode.__module__ = "zipzi.modeling"
 
@@ -961,10 +711,6 @@ class RotationTransform(CompactValue):
     'Immutable owned RotationTransform value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nbase_angle: Reference angle in degrees used to orient the rotation control.\npose: Base rotation pose; its origin is expressed in the parent authoring space.'
     base_angle: float
     pose: RotationPose
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'base_angle', self.base_angle)
-        object.__setattr__(self, 'pose', self.pose)
 RotationTransform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -975,13 +721,6 @@ class RotationPose(CompactValue):
     scale: float
     reflect_x: bool
     reflect_y: bool
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'origin', self.origin)
-        object.__setattr__(self, 'angle', self.angle)
-        object.__setattr__(self, 'scale', self.scale)
-        object.__setattr__(self, 'reflect_x', self.reflect_x)
-        object.__setattr__(self, 'reflect_y', self.reflect_y)
 RotationPose.__module__ = "zipzi.modeling"
 
 class PreciseVec2(NamedTuple):
@@ -998,8 +737,6 @@ class MeshBinding(CompactValue):
     keyforms: tuple[MeshKeyform, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'mesh_id', self.mesh_id)
         object.__setattr__(self, 'axes', tuple(self.axes))
         object.__setattr__(self, 'keyforms', tuple(self.keyforms))
 MeshBinding.__module__ = "zipzi.modeling"
@@ -1012,9 +749,7 @@ class BindingAxis(CompactValue):
     parameter_id: str
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'samples', tuple(self.samples))
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
 BindingAxis.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1022,10 +757,6 @@ class BindingSample(CompactValue):
     'Immutable owned BindingSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable sample UUID within the binding axis; distinct from its numeric value.\nvalue: Finite sample coordinate in the driving parameter domain; axis samples are strictly\nincreasing.'
     id: str
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'value', self.value)
 BindingSample.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1039,8 +770,6 @@ class MeshKeyform(CompactValue):
     def __post_init__(self) -> None:
         object.__setattr__(self, 'samples', tuple(self.samples))
         object.__setattr__(self, 'positions', tuple(self.positions))
-        object.__setattr__(self, 'appearance', self.appearance)
-        object.__setattr__(self, 'draw_order', None if self.draw_order is None else self.draw_order)
 MeshKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1051,9 +780,7 @@ class SceneBinding(CompactValue):
     track: SceneTrack
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'axes', tuple(self.axes))
-        object.__setattr__(self, 'track', self.track)
 SceneBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1064,7 +791,6 @@ class SceneTrackWarp(CompactValue):
     keyforms: tuple[WarpKeyform, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'target_id', self.target_id)
         object.__setattr__(self, 'keyforms', tuple(self.keyforms))
 SceneTrackWarp.__module__ = "zipzi.modeling"
 
@@ -1076,7 +802,6 @@ class SceneTrackRotation(CompactValue):
     keyforms: tuple[RotationKeyform, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'target_id', self.target_id)
         object.__setattr__(self, 'keyforms', tuple(self.keyforms))
 SceneTrackRotation.__module__ = "zipzi.modeling"
 
@@ -1088,7 +813,6 @@ class SceneTrackPart(CompactValue):
     keyforms: tuple[PartKeyform, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'target_id', self.target_id)
         object.__setattr__(self, 'keyforms', tuple(self.keyforms))
 SceneTrackPart.__module__ = "zipzi.modeling"
 
@@ -1103,10 +827,8 @@ class WarpKeyform(CompactValue):
     appearance: Appearance
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'bezier', None if self.bezier is None else self.bezier)
         object.__setattr__(self, 'samples', tuple(self.samples))
         object.__setattr__(self, 'positions', tuple(self.positions))
-        object.__setattr__(self, 'appearance', self.appearance)
 WarpKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1118,8 +840,6 @@ class RotationKeyform(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'samples', tuple(self.samples))
-        object.__setattr__(self, 'rotation', self.rotation)
-        object.__setattr__(self, 'appearance', self.appearance)
 RotationKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1130,7 +850,6 @@ class PartKeyform(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'samples', tuple(self.samples))
-        object.__setattr__(self, 'draw_order', self.draw_order)
 PartKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1143,9 +862,6 @@ class BlendShapeKeyTable(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'samples', tuple(self.samples))
-        object.__setattr__(self, 'base_sample_id', self.base_sample_id)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
 BlendShapeKeyTable.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1157,8 +873,6 @@ class BlendShapeConstraint(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'samples', tuple(self.samples))
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
 BlendShapeConstraint.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1167,11 +881,6 @@ class ConstraintSample(CompactValue):
     id: str
     value: float
     weight: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'value', self.value)
-        object.__setattr__(self, 'weight', self.weight)
 ConstraintSample.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1185,12 +894,7 @@ class BlendShapeBinding(CompactValue):
     keyforms: DeltaKeyforms
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'target_id', self.target_id)
-        object.__setattr__(self, 'target_kind', self.target_kind)
-        object.__setattr__(self, 'key_table_id', self.key_table_id)
         object.__setattr__(self, 'constraint_ids', tuple(self.constraint_ids))
-        object.__setattr__(self, 'keyforms', self.keyforms)
 BlendShapeBinding.__module__ = "zipzi.modeling"
 
 class BlendShapeTargetKind(str, Enum):
@@ -1275,10 +979,7 @@ class DeltaMeshKeyform(CompactValue):
     screen: (tuple[float, float, float] | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'sample_id', self.sample_id)
         object.__setattr__(self, 'positions', tuple(self.positions))
-        object.__setattr__(self, 'opacity', None if self.opacity is None else self.opacity)
-        object.__setattr__(self, 'draw_order', None if self.draw_order is None else self.draw_order)
         object.__setattr__(self, 'multiply', None if self.multiply is None else tuple(self.multiply))
         object.__setattr__(self, 'screen', None if self.screen is None else tuple(self.screen))
 DeltaMeshKeyform.__module__ = "zipzi.modeling"
@@ -1293,9 +994,7 @@ class DeltaWarpKeyform(CompactValue):
     screen: (tuple[float, float, float] | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'sample_id', self.sample_id)
         object.__setattr__(self, 'points', tuple(self.points))
-        object.__setattr__(self, 'opacity', None if self.opacity is None else self.opacity)
         object.__setattr__(self, 'multiply', None if self.multiply is None else tuple(self.multiply))
         object.__setattr__(self, 'screen', None if self.screen is None else tuple(self.screen))
 DeltaWarpKeyform.__module__ = "zipzi.modeling"
@@ -1312,11 +1011,6 @@ class DeltaRotationKeyform(CompactValue):
     screen: (tuple[float, float, float] | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'sample_id', self.sample_id)
-        object.__setattr__(self, 'origin', None if self.origin is None else self.origin)
-        object.__setattr__(self, 'angle', None if self.angle is None else self.angle)
-        object.__setattr__(self, 'scale', None if self.scale is None else self.scale)
-        object.__setattr__(self, 'opacity', None if self.opacity is None else self.opacity)
         object.__setattr__(self, 'multiply', None if self.multiply is None else tuple(self.multiply))
         object.__setattr__(self, 'screen', None if self.screen is None else tuple(self.screen))
 DeltaRotationKeyform.__module__ = "zipzi.modeling"
@@ -1326,10 +1020,6 @@ class DeltaPartKeyform(CompactValue):
     'Immutable owned DeltaPartKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.\ndraw_order: Additive drawing-order delta; zero is neutral.'
     sample_id: str = field(default_factory=lambda: string(''))
     draw_order: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'sample_id', self.sample_id)
-        object.__setattr__(self, 'draw_order', self.draw_order)
 DeltaPartKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1337,10 +1027,6 @@ class DeltaGlueKeyform(CompactValue):
     'Immutable owned DeltaGlueKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.\nintensity: Additive Glue intensity delta; zero is neutral.'
     sample_id: str = field(default_factory=lambda: string(''))
     intensity: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'sample_id', self.sample_id)
-        object.__setattr__(self, 'intensity', self.intensity)
 DeltaGlueKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1352,8 +1038,6 @@ class DeltaOffscreenKeyform(CompactValue):
     screen: (tuple[float, float, float] | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'sample_id', self.sample_id)
-        object.__setattr__(self, 'opacity', self.opacity)
         object.__setattr__(self, 'multiply', None if self.multiply is None else tuple(self.multiply))
         object.__setattr__(self, 'screen', None if self.screen is None else tuple(self.screen))
 DeltaOffscreenKeyform.__module__ = "zipzi.modeling"
@@ -1371,14 +1055,7 @@ class Glue(CompactValue):
     binding: (GlueBinding | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'mesh_a_id', self.mesh_a_id)
-        object.__setattr__(self, 'mesh_b_id', self.mesh_b_id)
         object.__setattr__(self, 'pairs', tuple(self.pairs))
-        object.__setattr__(self, 'intensity', self.intensity)
-        object.__setattr__(self, 'binding', None if self.binding is None else self.binding)
 Glue.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1389,13 +1066,6 @@ class GlueVertexPair(CompactValue):
     vertex_b: (int | None) = None
     weight_a: float
     weight_b: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'vertex_a', None if self.vertex_a is None else self.vertex_a)
-        object.__setattr__(self, 'vertex_b', None if self.vertex_b is None else self.vertex_b)
-        object.__setattr__(self, 'weight_a', self.weight_a)
-        object.__setattr__(self, 'weight_b', self.weight_b)
 GlueVertexPair.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1417,7 +1087,6 @@ class GlueKeyform(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'samples', tuple(self.samples))
-        object.__setattr__(self, 'intensity', self.intensity)
 GlueKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1435,13 +1104,6 @@ class Offscreen(CompactValue):
     keyforms: tuple[OffscreenKeyform, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'part_id', self.part_id)
-        object.__setattr__(self, 'enabled', self.enabled)
-        object.__setattr__(self, 'blend_mode', self.blend_mode)
-        object.__setattr__(self, 'flags', self.flags)
         object.__setattr__(self, 'masks', tuple(self.masks))
         object.__setattr__(self, 'part_keyform_indices', tuple(self.part_keyform_indices))
         object.__setattr__(self, 'keyforms', tuple(self.keyforms))
@@ -1455,7 +1117,6 @@ class OffscreenKeyform(CompactValue):
     screen: (tuple[float, float, float] | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'opacity', self.opacity)
         object.__setattr__(self, 'multiply', None if self.multiply is None else tuple(self.multiply))
         object.__setattr__(self, 'screen', None if self.screen is None else tuple(self.screen))
 OffscreenKeyform.__module__ = "zipzi.modeling"
@@ -1467,7 +1128,6 @@ class DeletionIntent(CompactValue):
     accepted_export_failures: tuple[OpaqueExportIssue, ...] = field(default_factory=lambda: tuple(read_OpaqueExportIssue(v0) for v0 in sequence([])))
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'request', self.request)
         object.__setattr__(self, 'accepted_export_failures', tuple(self.accepted_export_failures))
 DeletionIntent.__module__ = "zipzi.modeling"
 
@@ -1487,11 +1147,9 @@ class DeletionRequest(CompactValue):
     def __post_init__(self) -> None:
         object.__setattr__(self, 'roots', tuple(self.roots))
         object.__setattr__(self, 'reparent', MappingProxyType({key0: v0 for key0, v0 in self.reparent.items()}))
-        object.__setattr__(self, 'conversion_context', None if self.conversion_context is None else self.conversion_context)
         object.__setattr__(self, 'offscreen_placements', MappingProxyType({key0: v0 for key0, v0 in self.offscreen_placements.items()}))
-        object.__setattr__(self, 'tolerance', self.tolerance)
         object.__setattr__(self, 'parameter_slices', MappingProxyType({key0: v0 for key0, v0 in self.parameter_slices.items()}))
-        object.__setattr__(self, 'texture_replacements', MappingProxyType({key0: None if v0 is None else v0 for key0, v0 in self.texture_replacements.items()}))
+        object.__setattr__(self, 'texture_replacements', MappingProxyType({key0: v0 for key0, v0 in self.texture_replacements.items()}))
         object.__setattr__(self, 'physics_node_replacements', MappingProxyType({key0: v0 for key0, v0 in self.physics_node_replacements.items()}))
         object.__setattr__(self, 'blend_base_replacements', MappingProxyType({key0: v0 for key0, v0 in self.blend_base_replacements.items()}))
 DeletionRequest.__module__ = "zipzi.modeling"
@@ -1501,9 +1159,6 @@ class DeletionTargetMesh(CompactValue):
     'Immutable owned DeletionTargetMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Delete this Mesh and its owned identities; shared resources remain.'
     _variant: _ClassVar[str] = 'Mesh'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionTargetMesh.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1511,9 +1166,6 @@ class DeletionTargetGlue(CompactValue):
     'Immutable owned DeletionTargetGlue value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Delete this Glue connection, pairs and owned bindings; endpoint meshes remain.'
     _variant: _ClassVar[str] = 'Glue'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionTargetGlue.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1521,9 +1173,6 @@ class DeletionTargetOffscreen(CompactValue):
     'Immutable owned DeletionTargetOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Delete this Offscreen composite and its own shapes/bindings; its Part remains.'
     _variant: _ClassVar[str] = 'Offscreen'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionTargetOffscreen.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1531,9 +1180,6 @@ class DeletionTargetPart(CompactValue):
     'Immutable owned DeletionTargetPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Delete this Part organization subtree; external deformation members remain and migrate.'
     _variant: _ClassVar[str] = 'Part'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionTargetPart.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1541,9 +1187,6 @@ class DeletionTargetDeformer(CompactValue):
     'Immutable owned DeletionTargetDeformer value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Delete this deformation subtree, including meshes across organization Parts.'
     _variant: _ClassVar[str] = 'Deformer'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionTargetDeformer.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1551,9 +1194,6 @@ class DeletionTargetDissolvePart(CompactValue):
     'Immutable owned DeletionTargetDissolvePart value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Remove this Part while retaining and migrating its organization members.'
     _variant: _ClassVar[str] = 'DissolvePart'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionTargetDissolvePart.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1561,9 +1201,6 @@ class DeletionTargetRemoveDeformer(CompactValue):
     'Immutable owned DeletionTargetRemoveDeformer value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Remove only this Deformer and retain/migrate its deformation children.'
     _variant: _ClassVar[str] = 'RemoveDeformer'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionTargetRemoveDeformer.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1571,9 +1208,6 @@ class DeletionTargetParameter(CompactValue):
     'Immutable owned DeletionTargetParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Delete this parameter and reduce ordinary axes at its frozen default unless explicitly overridden.'
     _variant: _ClassVar[str] = 'Parameter'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionTargetParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1581,9 +1215,6 @@ class DeletionTargetParameterFolder(CompactValue):
     'Immutable owned DeletionTargetParameterFolder value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Dissolve this parameter folder and retain its parameters and nested folders in the retained parent.'
     _variant: _ClassVar[str] = 'ParameterFolder'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionTargetParameterFolder.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1591,9 +1222,6 @@ class DeletionTargetParameterFolderContents(CompactValue):
     'Immutable owned DeletionTargetParameterFolderContents value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Delete this parameter folder subtree and explicitly include its contained parameters.'
     _variant: _ClassVar[str] = 'ParameterFolderContents'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionTargetParameterFolderContents.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1601,9 +1229,6 @@ class DeletionTargetTexture(CompactValue):
     'Immutable owned DeletionTargetTexture value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Delete this image record; retained users require an explicit replacement or unconfigured choice.'
     _variant: _ClassVar[str] = 'Texture'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionTargetTexture.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1611,9 +1236,6 @@ class DeletionTargetAttachment(CompactValue):
     'Immutable owned DeletionTargetAttachment value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Delete this owned attachment record and clear resolved optional sound/UserData references.'
     _variant: _ClassVar[str] = 'Attachment'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionTargetAttachment.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1621,9 +1243,6 @@ class DeletionTargetRecord(CompactValue):
     'Immutable owned DeletionTargetRecord value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Typed non-scene business record; its native domain validates ownership, child identities and choices.'
     _variant: _ClassVar[str] = 'Record'
     value: DeletionObject
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionTargetRecord.__module__ = "zipzi.modeling"
 
 DeletionTarget: TypeAlias = DeletionTargetMesh | DeletionTargetGlue | DeletionTargetOffscreen | DeletionTargetPart | DeletionTargetDeformer | DeletionTargetDissolvePart | DeletionTargetRemoveDeformer | DeletionTargetParameter | DeletionTargetParameterFolder | DeletionTargetParameterFolderContents | DeletionTargetTexture | DeletionTargetAttachment | DeletionTargetRecord
@@ -1634,11 +1253,6 @@ class DeletionObject(CompactValue):
     kind: DeletionKind
     id: str
     owner_id: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'kind', self.kind)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'owner_id', None if self.owner_id is None else self.owner_id)
 DeletionObject.__module__ = "zipzi.modeling"
 
 class DeletionKind(str, Enum):
@@ -1706,7 +1320,6 @@ class ReparentContext(CompactValue):
     def __post_init__(self) -> None:
         object.__setattr__(self, 'parameter_values', MappingProxyType({key0: v0 for key0, v0 in self.parameter_values.items()}))
         object.__setattr__(self, 'parameter_domain', tuple(self.parameter_domain))
-        object.__setattr__(self, 'edit_time_seconds', self.edit_time_seconds)
 ReparentContext.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1715,11 +1328,6 @@ class ConversionDomain(CompactValue):
     parameter_id: str
     minimum: float
     maximum: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
-        object.__setattr__(self, 'minimum', self.minimum)
-        object.__setattr__(self, 'maximum', self.maximum)
 ConversionDomain.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1729,7 +1337,6 @@ class DeletionOffscreenPlacement(CompactValue):
     mapping: (tuple[int, ...] | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'part_id', self.part_id)
         object.__setattr__(self, 'mapping', None if self.mapping is None else tuple(self.mapping))
 DeletionOffscreenPlacement.__module__ = "zipzi.modeling"
 
@@ -1738,10 +1345,6 @@ class DeletionTolerance(CompactValue):
     'Immutable owned DeletionTolerance value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nabsolute: Finite positive absolute error tolerance in model units.\nrelative: Finite nonnegative tolerance times the original geometry scale.'
     absolute: float
     relative: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'absolute', self.absolute)
-        object.__setattr__(self, 'relative', self.relative)
 DeletionTolerance.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1755,9 +1358,6 @@ class OpaqueExportIssueCdi(CompactValue):
     'Immutable owned OpaqueExportIssueCdi value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nproblem: Exact native opaque-field guard violated by this retained resource.'
     _variant: _ClassVar[str] = 'Cdi'
     problem: OpaqueExportProblem
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'problem', self.problem)
 OpaqueExportIssueCdi.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1766,10 +1366,6 @@ class OpaqueExportIssueMotion(CompactValue):
     _variant: _ClassVar[str] = 'Motion'
     id: str
     problem: OpaqueExportProblem
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'problem', self.problem)
 OpaqueExportIssueMotion.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1778,10 +1374,6 @@ class OpaqueExportIssueExpression(CompactValue):
     _variant: _ClassVar[str] = 'Expression'
     id: str
     problem: OpaqueExportProblem
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'problem', self.problem)
 OpaqueExportIssueExpression.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1790,10 +1382,6 @@ class OpaqueExportIssuePose(CompactValue):
     _variant: _ClassVar[str] = 'Pose'
     id: str
     problem: OpaqueExportProblem
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'problem', self.problem)
 OpaqueExportIssuePose.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1802,10 +1390,6 @@ class OpaqueExportIssuePhysics(CompactValue):
     _variant: _ClassVar[str] = 'Physics'
     id: str
     problem: OpaqueExportProblem
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'problem', self.problem)
 OpaqueExportIssuePhysics.__module__ = "zipzi.modeling"
 
 OpaqueExportIssue: TypeAlias = OpaqueExportIssueModel3NamespaceChanged | OpaqueExportIssueCdi | OpaqueExportIssueMotion | OpaqueExportIssueExpression | OpaqueExportIssuePose | OpaqueExportIssuePhysics
@@ -1827,15 +1411,6 @@ class SceneEditCreate(CompactValue):
     parent_id: (str | None) = None
     before: (str | None) = None
     deformation_before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'object', self.object)
-        object.__setattr__(self, 'part_id', None if self.part_id is None else self.part_id)
-        object.__setattr__(self, 'parent_id', None if self.parent_id is None else self.parent_id)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
-        object.__setattr__(self, 'deformation_before', None if self.deformation_before is None else self.deformation_before)
 SceneEditCreate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1846,12 +1421,6 @@ class SceneEditPatch(CompactValue):
     expected: SceneFieldValue
     value: SceneFieldValue
     clear_glue_pairs: bool = field(default_factory=lambda: _boolean(False))
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'expected', self.expected)
-        object.__setattr__(self, 'value', self.value)
-        object.__setattr__(self, 'clear_glue_pairs', self.clear_glue_pairs)
 SceneEditPatch.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1864,8 +1433,6 @@ class SceneEditMove(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'destination', self.destination)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 SceneEditMove.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1873,9 +1440,6 @@ class SceneEditReparent(CompactValue):
     'Immutable owned SceneEditReparent value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nedit: Edit candidate handle; None selects formal document state.'
     _variant: _ClassVar[str] = 'reparent'
     edit: ReparentEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'edit', self.edit)
 SceneEditReparent.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1889,9 +1453,6 @@ class SceneEditDuplicate(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'scope', self.scope)
-        object.__setattr__(self, 'destination', None if self.destination is None else self.destination)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 SceneEditDuplicate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1903,7 +1464,6 @@ class SceneEditDelete(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'scope', self.scope)
 SceneEditDelete.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1915,8 +1475,6 @@ class SceneEditTransferOffscreen(CompactValue):
     part_keyform_indices: tuple[int, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'part_id', self.part_id)
         object.__setattr__(self, 'part_keyform_indices', tuple(self.part_keyform_indices))
 SceneEditTransferOffscreen.__module__ = "zipzi.modeling"
 
@@ -1927,11 +1485,6 @@ class SceneEditEnsureDrawingGroup(CompactValue):
     owner: str
     parent: str
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'owner', self.owner)
-        object.__setattr__(self, 'parent', self.parent)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 SceneEditEnsureDrawingGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1943,7 +1496,6 @@ class SceneEditSetDrawingRange(CompactValue):
     range: tuple[int, int]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'owner', self.owner)
         object.__setattr__(self, 'expected', tuple(self.expected))
         object.__setattr__(self, 'range', tuple(self.range))
 SceneEditSetDrawingRange.__module__ = "zipzi.modeling"
@@ -1953,9 +1505,6 @@ class SceneEditDissolveDrawingGroup(CompactValue):
     'Immutable owned SceneEditDissolveDrawingGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.'
     _variant: _ClassVar[str] = 'dissolve_drawing_group'
     owner: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'owner', self.owner)
 SceneEditDissolveDrawingGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -1964,10 +1513,6 @@ class SceneEditDuplicateDrawingGroup(CompactValue):
     _variant: _ClassVar[str] = 'duplicate_drawing_group'
     source: str
     target: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'source', self.source)
-        object.__setattr__(self, 'target', self.target)
 SceneEditDuplicateDrawingGroup.__module__ = "zipzi.modeling"
 
 SceneEdit: TypeAlias = SceneEditCreate | SceneEditPatch | SceneEditMove | SceneEditReparent | SceneEditDuplicate | SceneEditDelete | SceneEditTransferOffscreen | SceneEditEnsureDrawingGroup | SceneEditSetDrawingRange | SceneEditDissolveDrawingGroup | SceneEditDuplicateDrawingGroup
@@ -1977,9 +1522,6 @@ class SceneCreateMesh(CompactValue):
     'Immutable owned SceneCreateMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntexture: Image-asset reference; resolved values use asset IDs and unresolved values retain\nexternal texture identifiers.'
     _variant: _ClassVar[str] = 'mesh'
     texture: SceneReference = field(default_factory=lambda: read_SceneReference({'kind': 'unspecified'}))
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'texture', self.texture)
 SceneCreateMesh.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2010,10 +1552,6 @@ class SceneCreateGlue(CompactValue):
     _variant: _ClassVar[str] = 'glue'
     a: SceneReference = field(default_factory=lambda: read_SceneReference({'kind': 'unspecified'}))
     b: SceneReference = field(default_factory=lambda: read_SceneReference({'kind': 'unspecified'}))
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'a', self.a)
-        object.__setattr__(self, 'b', self.b)
 SceneCreateGlue.__module__ = "zipzi.modeling"
 
 SceneCreate: TypeAlias = SceneCreateMesh | SceneCreateWarp | SceneCreateRotation | SceneCreateOffscreen | SceneCreateGlue
@@ -2023,9 +1561,6 @@ class SceneFieldValueLabel(CompactValue):
     'Immutable owned SceneFieldValueLabel value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Replacement display label.'
     _variant: _ClassVar[str] = 'label'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 SceneFieldValueLabel.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2033,9 +1568,6 @@ class SceneFieldValueRuntimeId(CompactValue):
     'Immutable owned SceneFieldValueRuntimeId value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Replacement external runtime identifier; an empty string explicitly clears it.'
     _variant: _ClassVar[str] = 'runtime_id'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 SceneFieldValueRuntimeId.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2043,9 +1575,6 @@ class SceneFieldValueEnabled(CompactValue):
     'Immutable owned SceneFieldValueEnabled value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Replacement model evaluation enabled flag.'
     _variant: _ClassVar[str] = 'enabled'
     value: bool
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 SceneFieldValueEnabled.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2053,9 +1582,6 @@ class SceneFieldValueAppearance(CompactValue):
     'Immutable owned SceneFieldValueAppearance value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Replacement opacity and RGB color factors.'
     _variant: _ClassVar[str] = 'appearance'
     value: Appearance
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 SceneFieldValueAppearance.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2063,9 +1589,6 @@ class SceneFieldValueTexture(CompactValue):
     'Immutable owned SceneFieldValueTexture value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Resolved image-asset reference or explicitly unresolved texture runtime identifier.'
     _variant: _ClassVar[str] = 'texture'
     value: SceneReference
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 SceneFieldValueTexture.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2087,13 +1610,6 @@ class SceneFieldValueMeshDrawing(CompactValue):
     raw_blend_mode: (int | None) = None
     double_sided: bool
     inverted_mask: bool
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'draw_order', None if self.draw_order is None else self.draw_order)
-        object.__setattr__(self, 'blend_mode', self.blend_mode)
-        object.__setattr__(self, 'raw_blend_mode', None if self.raw_blend_mode is None else self.raw_blend_mode)
-        object.__setattr__(self, 'double_sided', self.double_sided)
-        object.__setattr__(self, 'inverted_mask', self.inverted_mask)
 SceneFieldValueMeshDrawing.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2101,9 +1617,6 @@ class SceneFieldValueWarp(CompactValue):
     'Immutable owned SceneFieldValueWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Complete replacement warp lattice and controller definition.'
     _variant: _ClassVar[str] = 'warp'
     value: WarpTransform
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 SceneFieldValueWarp.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2111,9 +1624,6 @@ class SceneFieldValueRotation(CompactValue):
     'Immutable owned SceneFieldValueRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Complete replacement rotation definition.'
     _variant: _ClassVar[str] = 'rotation'
     value: RotationTransform
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 SceneFieldValueRotation.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2122,10 +1632,6 @@ class SceneFieldValueGlueEndpoints(CompactValue):
     _variant: _ClassVar[str] = 'glue_endpoints'
     a: SceneReference
     b: SceneReference
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'a', self.a)
-        object.__setattr__(self, 'b', self.b)
 SceneFieldValueGlueEndpoints.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2133,9 +1639,6 @@ class SceneFieldValueGlueIntensity(CompactValue):
     'Immutable owned SceneFieldValueGlueIntensity value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Replacement Glue influence factor.'
     _variant: _ClassVar[str] = 'glue_intensity'
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 SceneFieldValueGlueIntensity.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2148,8 +1651,6 @@ class SceneFieldValueOffscreen(CompactValue):
     part_keyform_indices: tuple[int, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'blend_mode', self.blend_mode)
-        object.__setattr__(self, 'flags', self.flags)
         object.__setattr__(self, 'keyforms', tuple(self.keyforms))
         object.__setattr__(self, 'part_keyform_indices', tuple(self.part_keyform_indices))
 SceneFieldValueOffscreen.__module__ = "zipzi.modeling"
@@ -2160,10 +1661,6 @@ class SceneFieldValueContext(CompactValue):
     _variant: _ClassVar[str] = 'context'
     part_id: (str | None) = None
     parent_id: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'part_id', None if self.part_id is None else self.part_id)
-        object.__setattr__(self, 'parent_id', None if self.parent_id is None else self.parent_id)
 SceneFieldValueContext.__module__ = "zipzi.modeling"
 
 SceneFieldValue: TypeAlias = SceneFieldValueLabel | SceneFieldValueRuntimeId | SceneFieldValueEnabled | SceneFieldValueAppearance | SceneFieldValueTexture | SceneFieldValueMasks | SceneFieldValueMeshDrawing | SceneFieldValueWarp | SceneFieldValueRotation | SceneFieldValueGlueEndpoints | SceneFieldValueGlueIntensity | SceneFieldValueOffscreen | SceneFieldValueContext
@@ -2173,9 +1670,6 @@ class SceneCollectionOrganization(CompactValue):
     'Immutable owned SceneCollectionOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects\nthe root/unassigned container.'
     _variant: _ClassVar[str] = 'organization'
     part_id: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'part_id', None if self.part_id is None else self.part_id)
 SceneCollectionOrganization.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2183,9 +1677,6 @@ class SceneCollectionDeformation(CompactValue):
     'Immutable owned SceneCollectionDeformation value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.'
     _variant: _ClassVar[str] = 'deformation'
     parent_id: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'parent_id', None if self.parent_id is None else self.parent_id)
 SceneCollectionDeformation.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2205,9 +1696,6 @@ class SceneCollectionDrawing(CompactValue):
     'Immutable owned SceneCollectionDrawing value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.'
     _variant: _ClassVar[str] = 'drawing'
     owner: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'owner', self.owner)
 SceneCollectionDrawing.__module__ = "zipzi.modeling"
 
 SceneCollection: TypeAlias = SceneCollectionOrganization | SceneCollectionDeformation | SceneCollectionGlues | SceneCollectionDrawingGroups | SceneCollectionDrawing
@@ -2225,21 +1713,12 @@ class ReparentEdit(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'sources', tuple(self.sources))
-        object.__setattr__(self, 'parent_id', self.parent_id)
-        object.__setattr__(self, 'strategy', self.strategy)
-        object.__setattr__(self, 'placement', None if self.placement is None else self.placement)
-        object.__setattr__(self, 'tolerance', self.tolerance)
-        object.__setattr__(self, 'relative_tolerance', self.relative_tolerance)
-        object.__setattr__(self, 'context', None if self.context is None else self.context)
 ReparentEdit.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReparentPlacement(CompactValue):
     'Immutable owned ReparentPlacement value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nbefore: None appends; Some names an unselected member of the destination.'
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 ReparentPlacement.__module__ = "zipzi.modeling"
 
 class SceneCopyScope(str, Enum):
@@ -2252,9 +1731,6 @@ class OrganizationCollectionParameters(CompactValue):
     'Immutable owned OrganizationCollectionParameters value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ngroup_id: Parameter-group ID in the document metadata hierarchy. None selects the\nroot/unassigned container.'
     _variant: _ClassVar[str] = 'parameters'
     group_id: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'group_id', None if self.group_id is None else self.group_id)
 OrganizationCollectionParameters.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2262,9 +1738,6 @@ class OrganizationCollectionParameterGroups(CompactValue):
     'Immutable owned OrganizationCollectionParameterGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.'
     _variant: _ClassVar[str] = 'parameter_groups'
     parent_id: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'parent_id', None if self.parent_id is None else self.parent_id)
 OrganizationCollectionParameterGroups.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2272,9 +1745,6 @@ class OrganizationCollectionPartMembers(CompactValue):
     'Immutable owned OrganizationCollectionPartMembers value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects\nthe root/unassigned container.'
     _variant: _ClassVar[str] = 'part_members'
     part_id: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'part_id', None if self.part_id is None else self.part_id)
 OrganizationCollectionPartMembers.__module__ = "zipzi.modeling"
 
 OrganizationCollection: TypeAlias = OrganizationCollectionParameters | OrganizationCollectionParameterGroups | OrganizationCollectionPartMembers
@@ -2286,11 +1756,6 @@ class OrganizationEditCreateParameter(CompactValue):
     parameter: Parameter
     group_id: (str | None) = None
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'parameter', self.parameter)
-        object.__setattr__(self, 'group_id', None if self.group_id is None else self.group_id)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 OrganizationEditCreateParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2299,10 +1764,6 @@ class OrganizationEditCreateGroup(CompactValue):
     _variant: _ClassVar[str] = 'create_group'
     group: CdiParameterGroup
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'group', self.group)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 OrganizationEditCreateGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2311,10 +1772,6 @@ class OrganizationEditCreatePart(CompactValue):
     _variant: _ClassVar[str] = 'create_part'
     part: Part
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'part', self.part)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 OrganizationEditCreatePart.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2323,10 +1780,6 @@ class OrganizationEditSetParameterGroup(CompactValue):
     _variant: _ClassVar[str] = 'set_parameter_group'
     parameter_id: str
     group_id: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
-        object.__setattr__(self, 'group_id', None if self.group_id is None else self.group_id)
 OrganizationEditSetParameterGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2335,10 +1788,6 @@ class OrganizationEditPatchGroup(CompactValue):
     _variant: _ClassVar[str] = 'patch_group'
     expected: CdiParameterGroup
     group: CdiParameterGroup
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'expected', self.expected)
-        object.__setattr__(self, 'group', self.group)
 OrganizationEditPatchGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2351,8 +1800,6 @@ class OrganizationEditMove(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'destination', self.destination)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 OrganizationEditMove.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2365,8 +1812,6 @@ class OrganizationEditDuplicate(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'destination', self.destination)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 OrganizationEditDuplicate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2378,7 +1823,6 @@ class OrganizationEditDelete(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'policy', self.policy)
 OrganizationEditDelete.__module__ = "zipzi.modeling"
 
 OrganizationEdit: TypeAlias = OrganizationEditCreateParameter | OrganizationEditCreateGroup | OrganizationEditCreatePart | OrganizationEditSetParameterGroup | OrganizationEditPatchGroup | OrganizationEditMove | OrganizationEditDuplicate | OrganizationEditDelete
@@ -2393,10 +1837,6 @@ class CdiParameterGroup(CompactValue):
     extensions: _Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'parent_id', None if self.parent_id is None else self.parent_id)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 CdiParameterGroup.__module__ = "zipzi.modeling"
 
@@ -2410,9 +1850,6 @@ class BindingAuthoringEditGrid(CompactValue):
     'Immutable owned BindingAuthoringEditGrid value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Typed intent for ordinary binding-grid edits; apply/plan it against a Session/Edit\nsource rather than mutating this value.'
     _variant: _ClassVar[str] = 'Grid'
     value: BindingGridEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 BindingAuthoringEditGrid.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2420,9 +1857,6 @@ class BindingAuthoringEditBlend(CompactValue):
     'Immutable owned BindingAuthoringEditBlend value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Typed intent for BlendShape authoring; apply/plan it against a Session/Edit source\nrather than mutating this value.'
     _variant: _ClassVar[str] = 'Blend'
     value: BlendAuthoringEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 BindingAuthoringEditBlend.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2430,9 +1864,6 @@ class BindingAuthoringEditMeshGrid(CompactValue):
     'Immutable owned BindingAuthoringEditMeshGrid value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Typed intent for mesh binding grid edits; apply/plan it against a Session/Edit\nsource rather than mutating this value.'
     _variant: _ClassVar[str] = 'MeshGrid'
     value: MeshGridEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 BindingAuthoringEditMeshGrid.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2440,9 +1871,6 @@ class BindingAuthoringEditParameterRange(CompactValue):
     'Immutable owned BindingAuthoringEditParameterRange value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Typed intent for parameter range conversion; apply/plan it against a Session/Edit\nsource rather than mutating this value.'
     _variant: _ClassVar[str] = 'ParameterRange'
     value: ParameterRangeEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 BindingAuthoringEditParameterRange.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2450,9 +1878,6 @@ class BindingAuthoringEditReparent(CompactValue):
     'Immutable owned BindingAuthoringEditReparent value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Typed intent for deformation reparenting; apply/plan it against a Session/Edit\nsource rather than mutating this value.'
     _variant: _ClassVar[str] = 'Reparent'
     value: ReparentEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 BindingAuthoringEditReparent.__module__ = "zipzi.modeling"
 
 BindingAuthoringEdit: TypeAlias = BindingAuthoringEditGrid | BindingAuthoringEditBlend | BindingAuthoringEditMeshGrid | BindingAuthoringEditParameterRange | BindingAuthoringEditReparent
@@ -2462,9 +1887,6 @@ class BindingGridEditDelete(CompactValue):
     'Immutable owned BindingGridEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.'
     _variant: _ClassVar[str] = 'Delete'
     owner: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'owner', self.owner)
 BindingGridEditDelete.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2473,10 +1895,6 @@ class BindingGridEditCreate(CompactValue):
     _variant: _ClassVar[str] = 'Create'
     id: str
     target: BindingGridTarget
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'target', self.target)
 BindingGridEditCreate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2485,10 +1903,6 @@ class BindingGridEditEdit(CompactValue):
     _variant: _ClassVar[str] = 'Edit'
     owner: str
     operation: GridOperation
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'owner', self.owner)
-        object.__setattr__(self, 'operation', self.operation)
 BindingGridEditEdit.__module__ = "zipzi.modeling"
 
 BindingGridEdit: TypeAlias = BindingGridEditDelete | BindingGridEditCreate | BindingGridEditEdit
@@ -2498,9 +1912,6 @@ class BindingGridTargetMesh(CompactValue):
     'Immutable owned BindingGridTargetMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Stable ID of the target mesh whose ordinary grid is being created.'
     _variant: _ClassVar[str] = 'Mesh'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 BindingGridTargetMesh.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2508,9 +1919,6 @@ class BindingGridTargetScene(CompactValue):
     'Immutable owned BindingGridTargetScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Stable ID of the target scene transform or Part whose ordinary grid is being created.'
     _variant: _ClassVar[str] = 'Scene'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 BindingGridTargetScene.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2518,9 +1926,6 @@ class BindingGridTargetGlue(CompactValue):
     'Immutable owned BindingGridTargetGlue value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Stable ID of the target Glue whose ordinary grid is being created.'
     _variant: _ClassVar[str] = 'Glue'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 BindingGridTargetGlue.__module__ = "zipzi.modeling"
 
 BindingGridTarget: TypeAlias = BindingGridTargetMesh | BindingGridTargetScene | BindingGridTargetGlue
@@ -2530,9 +1935,6 @@ class GridOperationAddAxis(CompactValue):
     'Immutable owned GridOperationAddAxis value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\naxis: Axis definition with a parameter ID and ordered samples; axis identity is distinct\nfrom the parameter ID.'
     _variant: _ClassVar[str] = 'AddAxis'
     axis: BindingAxis
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'axis', self.axis)
 GridOperationAddAxis.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2542,11 +1944,6 @@ class GridOperationRemapParameter(CompactValue):
     axis_id: str
     parameter_id: str
     policy: ParameterRangePolicy
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'axis_id', self.axis_id)
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
-        object.__setattr__(self, 'policy', self.policy)
 GridOperationRemapParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2556,11 +1953,6 @@ class GridOperationSetParameter(CompactValue):
     axis_id: str
     parameter_id: str
     reduction: (AxisReduction | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'axis_id', self.axis_id)
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
-        object.__setattr__(self, 'reduction', None if self.reduction is None else self.reduction)
 GridOperationSetParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2580,11 +1972,6 @@ class GridOperationInsertSample(CompactValue):
     axis_id: str
     id: str
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'axis_id', self.axis_id)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'value', self.value)
 GridOperationInsertSample.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2593,10 +1980,6 @@ class GridOperationMoveSample(CompactValue):
     _variant: _ClassVar[str] = 'MoveSample'
     sample_id: str
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'sample_id', self.sample_id)
-        object.__setattr__(self, 'value', self.value)
 GridOperationMoveSample.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2604,9 +1987,6 @@ class GridOperationDeleteSample(CompactValue):
     'Immutable owned GridOperationDeleteSample value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.'
     _variant: _ClassVar[str] = 'DeleteSample'
     sample_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'sample_id', self.sample_id)
 GridOperationDeleteSample.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2616,11 +1996,6 @@ class GridOperationRemoveAxis(CompactValue):
     axis_id: str
     reduction: (AxisReduction | None) = None
     keep_pending: bool
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'axis_id', self.axis_id)
-        object.__setattr__(self, 'reduction', None if self.reduction is None else self.reduction)
-        object.__setattr__(self, 'keep_pending', self.keep_pending)
 GridOperationRemoveAxis.__module__ = "zipzi.modeling"
 
 GridOperation: TypeAlias = GridOperationAddAxis | GridOperationRemapParameter | GridOperationSetParameter | GridOperationReorderAxes | GridOperationInsertSample | GridOperationMoveSample | GridOperationDeleteSample | GridOperationRemoveAxis
@@ -2635,9 +2010,6 @@ class AxisReductionSlice(CompactValue):
     'Immutable owned AxisReductionSlice value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Parameter coordinate at which to slice the old grid while removing an axis.'
     _variant: _ClassVar[str] = 'Slice'
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 AxisReductionSlice.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2645,9 +2017,6 @@ class AxisReductionResample(CompactValue):
     'Immutable owned AxisReductionResample value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Parameter coordinate used to resample the old grid while reducing an axis.'
     _variant: _ClassVar[str] = 'Resample'
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 AxisReductionResample.__module__ = "zipzi.modeling"
 
 AxisReduction: TypeAlias = AxisReductionSlice | AxisReductionResample
@@ -2657,9 +2026,6 @@ class BlendAuthoringEditCreateTable(CompactValue):
     'Immutable owned BlendAuthoringEditCreateTable value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntable: Complete BlendShape key table with stable sample IDs and an explicit base sample.'
     _variant: _ClassVar[str] = 'CreateTable'
     table: BlendShapeKeyTable
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'table', self.table)
 BlendAuthoringEditCreateTable.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2667,9 +2033,6 @@ class BlendAuthoringEditCreateConstraint(CompactValue):
     'Immutable owned BlendAuthoringEditCreateConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nconstraint: Complete BlendShape constraint with its driving parameter and weighted samples.'
     _variant: _ClassVar[str] = 'CreateConstraint'
     constraint: BlendShapeConstraint
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'constraint', self.constraint)
 BlendAuthoringEditCreateConstraint.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2680,12 +2043,6 @@ class BlendAuthoringEditCreateBinding(CompactValue):
     target_id: str
     target_kind: BlendShapeTargetKind
     key_table_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'target_id', self.target_id)
-        object.__setattr__(self, 'target_kind', self.target_kind)
-        object.__setattr__(self, 'key_table_id', self.key_table_id)
 BlendAuthoringEditCreateBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2694,10 +2051,6 @@ class BlendAuthoringEditTable(CompactValue):
     _variant: _ClassVar[str] = 'Table'
     id: str
     operation: BlendTableOperation
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'operation', self.operation)
 BlendAuthoringEditTable.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2709,8 +2062,6 @@ class BlendAuthoringEditConstraint(CompactValue):
     samples: tuple[ConstraintSample, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
         object.__setattr__(self, 'samples', tuple(self.samples))
 BlendAuthoringEditConstraint.__module__ = "zipzi.modeling"
 
@@ -2721,11 +2072,6 @@ class BlendAuthoringEditSetBindingTable(CompactValue):
     id: str
     key_table_id: str
     reset: bool
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'key_table_id', self.key_table_id)
-        object.__setattr__(self, 'reset', self.reset)
 BlendAuthoringEditSetBindingTable.__module__ = "zipzi.modeling"
 
 BlendAuthoringEdit: TypeAlias = BlendAuthoringEditCreateTable | BlendAuthoringEditCreateConstraint | BlendAuthoringEditCreateBinding | BlendAuthoringEditTable | BlendAuthoringEditConstraint | BlendAuthoringEditSetBindingTable
@@ -2735,9 +2081,6 @@ class BlendTableOperationInsert(CompactValue):
     'Immutable owned BlendTableOperationInsert value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsample: New stable sample UUID and finite parameter coordinate to insert into this key table.'
     _variant: _ClassVar[str] = 'Insert'
     sample: BindingSample
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'sample', self.sample)
 BlendTableOperationInsert.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2746,10 +2089,6 @@ class BlendTableOperationMove(CompactValue):
     _variant: _ClassVar[str] = 'Move'
     sample_id: str
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'sample_id', self.sample_id)
-        object.__setattr__(self, 'value', self.value)
 BlendTableOperationMove.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2758,10 +2097,6 @@ class BlendTableOperationDelete(CompactValue):
     _variant: _ClassVar[str] = 'Delete'
     sample_id: str
     replacement_base: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'sample_id', self.sample_id)
-        object.__setattr__(self, 'replacement_base', None if self.replacement_base is None else self.replacement_base)
 BlendTableOperationDelete.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2769,9 +2104,6 @@ class BlendTableOperationSetBase(CompactValue):
     'Immutable owned BlendTableOperationSetBase value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.'
     _variant: _ClassVar[str] = 'SetBase'
     sample_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'sample_id', self.sample_id)
 BlendTableOperationSetBase.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2779,9 +2111,6 @@ class BlendTableOperationSetParameter(CompactValue):
     'Immutable owned BlendTableOperationSetParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.'
     _variant: _ClassVar[str] = 'SetParameter'
     parameter_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
 BlendTableOperationSetParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2790,10 +2119,6 @@ class BlendTableOperationRemapParameter(CompactValue):
     _variant: _ClassVar[str] = 'RemapParameter'
     parameter_id: str
     policy: ParameterRangePolicy
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
-        object.__setattr__(self, 'policy', self.policy)
 BlendTableOperationRemapParameter.__module__ = "zipzi.modeling"
 
 BlendTableOperation: TypeAlias = BlendTableOperationInsert | BlendTableOperationMove | BlendTableOperationDelete | BlendTableOperationSetBase | BlendTableOperationSetParameter | BlendTableOperationRemapParameter
@@ -2804,10 +2129,6 @@ class MeshGridEditCreate(CompactValue):
     _variant: _ClassVar[str] = 'Create'
     id: str
     mesh_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'mesh_id', self.mesh_id)
 MeshGridEditCreate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2816,10 +2137,6 @@ class MeshGridEditAddAxis(CompactValue):
     _variant: _ClassVar[str] = 'AddAxis'
     binding_id: str
     axis: BindingAxis
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'binding_id', self.binding_id)
-        object.__setattr__(self, 'axis', self.axis)
 MeshGridEditAddAxis.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2830,7 +2147,6 @@ class MeshGridEditReorderAxes(CompactValue):
     parameter_ids: tuple[str, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'binding_id', self.binding_id)
         object.__setattr__(self, 'parameter_ids', tuple(self.parameter_ids))
 MeshGridEditReorderAxes.__module__ = "zipzi.modeling"
 
@@ -2841,11 +2157,6 @@ class MeshGridEditInsertSample(CompactValue):
     binding_id: str
     parameter_id: str
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'binding_id', self.binding_id)
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
-        object.__setattr__(self, 'value', self.value)
 MeshGridEditInsertSample.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2856,12 +2167,6 @@ class MeshGridEditMoveSample(CompactValue):
     parameter_id: str
     from_: float
     to: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'binding_id', self.binding_id)
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
-        object.__setattr__(self, 'from_', self.from_)
-        object.__setattr__(self, 'to', self.to)
 MeshGridEditMoveSample.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2871,11 +2176,6 @@ class MeshGridEditDeleteSample(CompactValue):
     binding_id: str
     parameter_id: str
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'binding_id', self.binding_id)
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
-        object.__setattr__(self, 'value', self.value)
 MeshGridEditDeleteSample.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2885,11 +2185,6 @@ class MeshGridEditRemoveAxis(CompactValue):
     binding_id: str
     parameter_id: str
     reduction: AxisReduction
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'binding_id', self.binding_id)
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
-        object.__setattr__(self, 'reduction', self.reduction)
 MeshGridEditRemoveAxis.__module__ = "zipzi.modeling"
 
 MeshGridEdit: TypeAlias = MeshGridEditCreate | MeshGridEditAddAxis | MeshGridEditReorderAxes | MeshGridEditInsertSample | MeshGridEditMoveSample | MeshGridEditDeleteSample | MeshGridEditRemoveAxis
@@ -2902,13 +2197,6 @@ class ParameterRangeEdit(CompactValue):
     maximum: float
     default_value: float
     policy: ParameterRangePolicy
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
-        object.__setattr__(self, 'minimum', self.minimum)
-        object.__setattr__(self, 'maximum', self.maximum)
-        object.__setattr__(self, 'default_value', self.default_value)
-        object.__setattr__(self, 'policy', self.policy)
 ParameterRangeEdit.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2920,8 +2208,6 @@ class SceneContentEditMeshVertices(CompactValue):
     updates: tuple[VertexContentPatch, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'mesh_id', self.mesh_id)
-        object.__setattr__(self, 'target', self.target)
         object.__setattr__(self, 'updates', tuple(self.updates))
 SceneContentEditMeshVertices.__module__ = "zipzi.modeling"
 
@@ -2934,9 +2220,7 @@ class SceneContentEditInsertMeshVertices(CompactValue):
     before: (int | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'mesh_id', self.mesh_id)
         object.__setattr__(self, 'vertices', tuple(self.vertices))
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 SceneContentEditInsertMeshVertices.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2948,9 +2232,7 @@ class SceneContentEditDeleteMeshVertices(CompactValue):
     policy: VertexDeletePolicy
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'mesh_id', self.mesh_id)
         object.__setattr__(self, 'vertices', tuple(self.vertices))
-        object.__setattr__(self, 'policy', self.policy)
 SceneContentEditDeleteMeshVertices.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2961,7 +2243,6 @@ class SceneContentEditReorderMeshVertices(CompactValue):
     order: tuple[int, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'mesh_id', self.mesh_id)
         object.__setattr__(self, 'order', tuple(self.order))
 SceneContentEditReorderMeshVertices.__module__ = "zipzi.modeling"
 
@@ -2974,9 +2255,7 @@ class SceneContentEditInsertTriangle(CompactValue):
     before: (int | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'mesh_id', self.mesh_id)
         object.__setattr__(self, 'vertices', tuple(self.vertices))
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 SceneContentEditInsertTriangle.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -2988,8 +2267,6 @@ class SceneContentEditPatchTriangle(CompactValue):
     vertices: tuple[int, int, int]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'mesh_id', self.mesh_id)
-        object.__setattr__(self, 'slot', self.slot)
         object.__setattr__(self, 'vertices', tuple(self.vertices))
 SceneContentEditPatchTriangle.__module__ = "zipzi.modeling"
 
@@ -3001,7 +2278,6 @@ class SceneContentEditDeleteTriangles(CompactValue):
     slots: tuple[int, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'mesh_id', self.mesh_id)
         object.__setattr__(self, 'slots', tuple(self.slots))
 SceneContentEditDeleteTriangles.__module__ = "zipzi.modeling"
 
@@ -3013,7 +2289,6 @@ class SceneContentEditReplaceTriangles(CompactValue):
     triangles: tuple[tuple[int, int, int], ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'mesh_id', self.mesh_id)
         object.__setattr__(self, 'triangles', tuple(tuple(v0) for v0 in self.triangles))
 SceneContentEditReplaceTriangles.__module__ = "zipzi.modeling"
 
@@ -3027,10 +2302,7 @@ class SceneContentEditWarpPoints(CompactValue):
     clear_bezier: bool = field(default_factory=lambda: _boolean(False))
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'transform_id', self.transform_id)
-        object.__setattr__(self, 'target', self.target)
         object.__setattr__(self, 'updates', tuple(self.updates))
-        object.__setattr__(self, 'clear_bezier', self.clear_bezier)
 SceneContentEditWarpPoints.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3040,11 +2312,6 @@ class SceneContentEditWarpBezier(CompactValue):
     transform_id: str
     target: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'}))
     controller: (WarpBezier | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'transform_id', self.transform_id)
-        object.__setattr__(self, 'target', self.target)
-        object.__setattr__(self, 'controller', None if self.controller is None else self.controller)
 SceneContentEditWarpBezier.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3055,12 +2322,6 @@ class SceneContentEditResizeWarp(CompactValue):
     rows: int
     columns: int
     quad: bool
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'transform_id', self.transform_id)
-        object.__setattr__(self, 'rows', self.rows)
-        object.__setattr__(self, 'columns', self.columns)
-        object.__setattr__(self, 'quad', self.quad)
 SceneContentEditResizeWarp.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3070,11 +2331,6 @@ class SceneContentEditInsertGluePair(CompactValue):
     glue_id: str
     pair: GlueVertexPair
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'glue_id', self.glue_id)
-        object.__setattr__(self, 'pair', self.pair)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 SceneContentEditInsertGluePair.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3083,10 +2339,6 @@ class SceneContentEditPatchGluePair(CompactValue):
     _variant: _ClassVar[str] = 'patch_glue_pair'
     glue_id: str
     pair: GlueVertexPair
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'glue_id', self.glue_id)
-        object.__setattr__(self, 'pair', self.pair)
 SceneContentEditPatchGluePair.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3098,9 +2350,7 @@ class SceneContentEditMoveGluePairs(CompactValue):
     before: (str | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'glue_id', self.glue_id)
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 SceneContentEditMoveGluePairs.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3113,10 +2363,7 @@ class SceneContentEditTransferGluePairs(CompactValue):
     before: (str | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'glue_id', self.glue_id)
-        object.__setattr__(self, 'destination', self.destination)
         object.__setattr__(self, 'pairs', tuple(self.pairs))
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 SceneContentEditTransferGluePairs.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3128,9 +2375,7 @@ class SceneContentEditDuplicateGluePairs(CompactValue):
     before: (str | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'glue_id', self.glue_id)
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 SceneContentEditDuplicateGluePairs.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3141,7 +2386,6 @@ class SceneContentEditDeleteGluePairs(CompactValue):
     ids: tuple[str, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'glue_id', self.glue_id)
         object.__setattr__(self, 'ids', tuple(self.ids))
 SceneContentEditDeleteGluePairs.__module__ = "zipzi.modeling"
 
@@ -3152,11 +2396,6 @@ class SceneContentEditInsertOffscreenKeyform(CompactValue):
     offscreen_id: str
     value: OffscreenKeyform
     before: (int | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'offscreen_id', self.offscreen_id)
-        object.__setattr__(self, 'value', self.value)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 SceneContentEditInsertOffscreenKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3166,11 +2405,6 @@ class SceneContentEditPatchOffscreenKeyform(CompactValue):
     offscreen_id: str
     slot: int
     value: OffscreenKeyform
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'offscreen_id', self.offscreen_id)
-        object.__setattr__(self, 'slot', self.slot)
-        object.__setattr__(self, 'value', self.value)
 SceneContentEditPatchOffscreenKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3182,9 +2416,7 @@ class SceneContentEditDuplicateOffscreenKeyforms(CompactValue):
     before: (int | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'offscreen_id', self.offscreen_id)
         object.__setattr__(self, 'slots', tuple(self.slots))
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 SceneContentEditDuplicateOffscreenKeyforms.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3195,7 +2427,6 @@ class SceneContentEditReorderOffscreenKeyforms(CompactValue):
     order: tuple[int, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'offscreen_id', self.offscreen_id)
         object.__setattr__(self, 'order', tuple(self.order))
 SceneContentEditReorderOffscreenKeyforms.__module__ = "zipzi.modeling"
 
@@ -3208,9 +2439,7 @@ class SceneContentEditDeleteOffscreenKeyforms(CompactValue):
     policy: OffscreenDeletePolicy
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'offscreen_id', self.offscreen_id)
         object.__setattr__(self, 'slots', tuple(self.slots))
-        object.__setattr__(self, 'policy', self.policy)
 SceneContentEditDeleteOffscreenKeyforms.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3221,7 +2450,6 @@ class SceneContentEditSetOffscreenMapping(CompactValue):
     updates: tuple[OffscreenMappingPatch, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'offscreen_id', self.offscreen_id)
         object.__setattr__(self, 'updates', tuple(self.updates))
 SceneContentEditSetOffscreenMapping.__module__ = "zipzi.modeling"
 
@@ -3241,7 +2469,6 @@ class ShapeTargetOrdinary(CompactValue):
     samples: tuple[str, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'binding_id', self.binding_id)
         object.__setattr__(self, 'samples', tuple(self.samples))
 ShapeTargetOrdinary.__module__ = "zipzi.modeling"
 
@@ -3251,10 +2478,6 @@ class ShapeTargetBlend(CompactValue):
     _variant: _ClassVar[str] = 'blend'
     binding_id: str
     sample_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'binding_id', self.binding_id)
-        object.__setattr__(self, 'sample_id', self.sample_id)
 ShapeTargetBlend.__module__ = "zipzi.modeling"
 
 ShapeTarget: TypeAlias = ShapeTargetBase | ShapeTargetOrdinary | ShapeTargetBlend
@@ -3265,11 +2488,6 @@ class VertexContentPatch(CompactValue):
     vertex_id: int
     position: (Vec2 | None) = None
     uv: (Vec2 | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'vertex_id', self.vertex_id)
-        object.__setattr__(self, 'position', None if self.position is None else self.position)
-        object.__setattr__(self, 'uv', None if self.uv is None else self.uv)
 VertexContentPatch.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3279,12 +2497,6 @@ class NewMeshVertex(CompactValue):
     position: Vec2
     uv: Vec2
     seed: VertexSeed
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'vertex_id', self.vertex_id)
-        object.__setattr__(self, 'position', self.position)
-        object.__setattr__(self, 'uv', self.uv)
-        object.__setattr__(self, 'seed', self.seed)
 NewMeshVertex.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3310,10 +2522,6 @@ class VertexWeight(CompactValue):
     'Immutable owned VertexWeight value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.\nweight: Dimensionless interpolation weight applied to the referenced source vertex.'
     vertex_id: int
     weight: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'vertex_id', self.vertex_id)
-        object.__setattr__(self, 'weight', self.weight)
 VertexWeight.__module__ = "zipzi.modeling"
 
 class VertexDeletePolicy(str, Enum):
@@ -3327,11 +2535,6 @@ class WarpPointPatch(CompactValue):
     row: int
     column: int
     point: Vec2
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'row', self.row)
-        object.__setattr__(self, 'column', self.column)
-        object.__setattr__(self, 'point', self.point)
 WarpPointPatch.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3353,7 +2556,7 @@ class OffscreenDeletePolicyRemap(CompactValue):
     replacements: _Mapping[int, (int | None)]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'replacements', MappingProxyType({key0: None if v0 is None else v0 for key0, v0 in self.replacements.items()}))
+        object.__setattr__(self, 'replacements', MappingProxyType({key0: v0 for key0, v0 in self.replacements.items()}))
 OffscreenDeletePolicyRemap.__module__ = "zipzi.modeling"
 
 OffscreenDeletePolicy: TypeAlias = OffscreenDeletePolicyRejectReferences | OffscreenDeletePolicyNeutral | OffscreenDeletePolicyRemap
@@ -3363,10 +2566,6 @@ class OffscreenMappingPatch(CompactValue):
     'Immutable owned OffscreenMappingPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nslot: Static Part slot or stable Part-binding sample combination to remap.\nkeyform: Offscreen keyform-array index; -1 explicitly selects the neutral/unmapped state.'
     slot: PartKeyformSlot
     keyform: int
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'slot', self.slot)
-        object.__setattr__(self, 'keyform', self.keyform)
 OffscreenMappingPatch.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3394,11 +2593,6 @@ class ReferenceEditCreateModelParameterGroup(CompactValue):
     id: str
     name: str
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 ReferenceEditCreateModelParameterGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3408,11 +2602,6 @@ class ReferenceEditCreateModelHitArea(CompactValue):
     id: str
     name: str
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 ReferenceEditCreateModelHitArea.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3421,10 +2610,6 @@ class ReferenceEditCreateCdiCombinedSet(CompactValue):
     _variant: _ClassVar[str] = 'create_cdi_combined_set'
     id: str
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 ReferenceEditCreateCdiCombinedSet.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3434,11 +2619,6 @@ class ReferenceEditCreateMember(CompactValue):
     id: str
     collection: ReferenceCollection
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'collection', self.collection)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 ReferenceEditCreateMember.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3448,11 +2628,6 @@ class ReferenceEditPatch(CompactValue):
     id: str
     expected: ReferenceFields
     fields: ReferenceFields
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'expected', self.expected)
-        object.__setattr__(self, 'fields', self.fields)
 ReferenceEditPatch.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3465,8 +2640,6 @@ class ReferenceEditMove(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'destination', self.destination)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 ReferenceEditMove.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3479,8 +2652,6 @@ class ReferenceEditDuplicate(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'destination', self.destination)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 ReferenceEditDuplicate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3500,11 +2671,6 @@ class ReferenceEditDissolve(CompactValue):
     id: str
     destination: str
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'destination', self.destination)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 ReferenceEditDissolve.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3517,8 +2683,6 @@ class ReferenceEditReplaceSelection(CompactValue):
     targets: tuple[str, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'owner', self.owner)
-        object.__setattr__(self, 'field', self.field)
         object.__setattr__(self, 'expected', tuple(self.expected))
         object.__setattr__(self, 'targets', tuple(self.targets))
 ReferenceEditReplaceSelection.__module__ = "zipzi.modeling"
@@ -3548,9 +2712,6 @@ class ReferenceCollectionModelParameterMembers(CompactValue):
     'Immutable owned ReferenceCollectionModelParameterMembers value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ngroup_id: Existing model3 parameter-group object ID; this collection has no root/unassigned group.'
     _variant: _ClassVar[str] = 'model_parameter_members'
     group_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'group_id', self.group_id)
 ReferenceCollectionModelParameterMembers.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3558,9 +2719,6 @@ class ReferenceCollectionCdiCombinedMembers(CompactValue):
     'Immutable owned ReferenceCollectionCdiCombinedMembers value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nset_id: Stable CDI combined-parameter set ID owning the selected members.'
     _variant: _ClassVar[str] = 'cdi_combined_members'
     set_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'set_id', self.set_id)
 ReferenceCollectionCdiCombinedMembers.__module__ = "zipzi.modeling"
 
 ReferenceCollection: TypeAlias = ReferenceCollectionModelParameterGroups | ReferenceCollectionModelHitAreas | ReferenceCollectionCdiCombinedSets | ReferenceCollectionModelParameterMembers | ReferenceCollectionCdiCombinedMembers
@@ -3570,9 +2728,6 @@ class ReferenceFieldsModelParameterGroup(CompactValue):
     'Immutable owned ReferenceFieldsModelParameterGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can change.'
     _variant: _ClassVar[str] = 'model_parameter_group'
     name: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'name', self.name)
 ReferenceFieldsModelParameterGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3581,10 +2736,6 @@ class ReferenceFieldsModelHitArea(CompactValue):
     _variant: _ClassVar[str] = 'model_hit_area'
     name: str
     mesh: ModelTargetRef
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'mesh', self.mesh)
 ReferenceFieldsModelHitArea.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3592,9 +2743,6 @@ class ReferenceFieldsModelParameterMember(CompactValue):
     'Immutable owned ReferenceFieldsModelParameterMember value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntarget: Resolved document target or preserved unresolved runtime identifier; entry identity\nremains independent of the target.'
     _variant: _ClassVar[str] = 'model_parameter_member'
     target: ModelTargetRef
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'target', self.target)
 ReferenceFieldsModelParameterMember.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3602,9 +2750,6 @@ class ReferenceFieldsCdiCombinedMember(CompactValue):
     'Immutable owned ReferenceFieldsCdiCombinedMember value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntarget: Resolved document target or preserved unresolved runtime identifier; entry identity\nremains independent of the target.'
     _variant: _ClassVar[str] = 'cdi_combined_member'
     target: CdiParameterRef
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'target', self.target)
 ReferenceFieldsCdiCombinedMember.__module__ = "zipzi.modeling"
 
 ReferenceFields: TypeAlias = ReferenceFieldsModelParameterGroup | ReferenceFieldsModelHitArea | ReferenceFieldsModelParameterMember | ReferenceFieldsCdiCombinedMember
@@ -3620,9 +2765,6 @@ class ModelTargetRefResolved(CompactValue):
     'Immutable owned ModelTargetRefResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nobject_id: Stable document ID of the object described or selected by this value.'
     _variant: _ClassVar[str] = 'resolved'
     object_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'object_id', self.object_id)
 ModelTargetRefResolved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3630,9 +2772,6 @@ class ModelTargetRefUnresolved(CompactValue):
     'Immutable owned ModelTargetRefUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nruntime_id: External format/runtime identifier retained for import/export; not the document\nobject ID.'
     _variant: _ClassVar[str] = 'unresolved'
     runtime_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
 ModelTargetRefUnresolved.__module__ = "zipzi.modeling"
 
 ModelTargetRef: TypeAlias = ModelTargetRefUnspecified | ModelTargetRefResolved | ModelTargetRefUnresolved
@@ -3648,9 +2787,6 @@ class CdiParameterRefResolved(CompactValue):
     'Immutable owned CdiParameterRefResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.'
     _variant: _ClassVar[str] = 'resolved'
     parameter_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
 CdiParameterRefResolved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3658,9 +2794,6 @@ class CdiParameterRefUnresolved(CompactValue):
     'Immutable owned CdiParameterRefUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nruntime_id: External format/runtime identifier retained for import/export; not the document\nobject ID.'
     _variant: _ClassVar[str] = 'unresolved'
     runtime_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
 CdiParameterRefUnresolved.__module__ = "zipzi.modeling"
 
 CdiParameterRef: TypeAlias = CdiParameterRefUnspecified | CdiParameterRefResolved | CdiParameterRefUnresolved
@@ -3678,11 +2811,6 @@ class ResourceEditCreate(CompactValue):
     id: str
     name: str
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 ResourceEditCreate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3692,11 +2820,6 @@ class ResourceEditPatchName(CompactValue):
     id: str
     expected: str
     name: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'expected', self.expected)
-        object.__setattr__(self, 'name', self.name)
 ResourceEditPatchName.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3706,11 +2829,6 @@ class ResourceEditSetContent(CompactValue):
     id: str
     expected: (ImageContent | None) = None
     content: (ImageContent | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'expected', None if self.expected is None else self.expected)
-        object.__setattr__(self, 'content', None if self.content is None else self.content)
 ResourceEditSetContent.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3722,7 +2840,6 @@ class ResourceEditReorder(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 ResourceEditReorder.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3733,12 +2850,6 @@ class ResourceEditDuplicate(CompactValue):
     id: str
     name: str
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'source', self.source)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 ResourceEditDuplicate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3747,10 +2858,6 @@ class ResourceEditDelete(CompactValue):
     _variant: _ClassVar[str] = 'delete'
     id: str
     replacement: (SceneReference | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'replacement', None if self.replacement is None else self.replacement)
 ResourceEditDelete.__module__ = "zipzi.modeling"
 
 ResourceEdit: TypeAlias = ResourceEditCreate | ResourceEditPatchName | ResourceEditSetContent | ResourceEditReorder | ResourceEditDuplicate | ResourceEditDelete
@@ -3761,10 +2868,6 @@ class DocumentAuthoringEditPatch(CompactValue):
     _variant: _ClassVar[str] = 'patch'
     expected: DocumentValue
     value: DocumentValue
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'expected', self.expected)
-        object.__setattr__(self, 'value', self.value)
 DocumentAuthoringEditPatch.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3773,10 +2876,6 @@ class DocumentAuthoringEditRepairMissingAttachment(CompactValue):
     _variant: _ClassVar[str] = 'repair_missing_attachment'
     path: str
     attachment_id: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'path', self.path)
-        object.__setattr__(self, 'attachment_id', None if self.attachment_id is None else self.attachment_id)
 DocumentAuthoringEditRepairMissingAttachment.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3785,10 +2884,6 @@ class DocumentAuthoringEditRepairCdiParameter(CompactValue):
     _variant: _ClassVar[str] = 'repair_cdi_parameter'
     runtime_id: str
     parameter_id: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
-        object.__setattr__(self, 'parameter_id', None if self.parameter_id is None else self.parameter_id)
 DocumentAuthoringEditRepairCdiParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3797,10 +2892,6 @@ class DocumentAuthoringEditRepairCdiPart(CompactValue):
     _variant: _ClassVar[str] = 'repair_cdi_part'
     runtime_id: str
     part_id: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
-        object.__setattr__(self, 'part_id', None if self.part_id is None else self.part_id)
 DocumentAuthoringEditRepairCdiPart.__module__ = "zipzi.modeling"
 
 DocumentAuthoringEdit: TypeAlias = DocumentAuthoringEditPatch | DocumentAuthoringEditRepairMissingAttachment | DocumentAuthoringEditRepairCdiParameter | DocumentAuthoringEditRepairCdiPart
@@ -3820,9 +2911,6 @@ class DocumentValueExportSettings(CompactValue):
     'Immutable owned DocumentValueExportSettings value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Replacement export-frame scale and padding settings.'
     _variant: _ClassVar[str] = 'export_settings'
     value: ExportSettings
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DocumentValueExportSettings.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3830,9 +2918,6 @@ class DocumentValueSourceCanvas(CompactValue):
     'Immutable owned DocumentValueSourceCanvas value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Replacement source-canvas metadata; None explicitly removes the canvas provenance.'
     _variant: _ClassVar[str] = 'source_canvas'
     value: (Canvas | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', None if self.value is None else self.value)
 DocumentValueSourceCanvas.__module__ = "zipzi.modeling"
 
 DocumentValue: TypeAlias = DocumentValueLayout | DocumentValueExportSettings | DocumentValueSourceCanvas
@@ -3847,11 +2932,7 @@ class ExportSettings(CompactValue):
     minimum_extent: float
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'pixels_per_unit', self.pixels_per_unit)
         object.__setattr__(self, 'bounds', None if self.bounds is None else tuple(self.bounds))
-        object.__setattr__(self, 'padding_fraction', self.padding_fraction)
-        object.__setattr__(self, 'padding_pixels', self.padding_pixels)
-        object.__setattr__(self, 'minimum_extent', self.minimum_extent)
 ExportSettings.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3862,13 +2943,6 @@ class Canvas(CompactValue):
     origin: Vec2
     pixels_per_unit: float
     flag: int = field(default_factory=lambda: integer(1))
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'width', self.width)
-        object.__setattr__(self, 'height', self.height)
-        object.__setattr__(self, 'origin', self.origin)
-        object.__setattr__(self, 'pixels_per_unit', self.pixels_per_unit)
-        object.__setattr__(self, 'flag', self.flag)
 Canvas.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3877,10 +2951,6 @@ class AttachmentEditCreate(CompactValue):
     _variant: _ClassVar[str] = 'create'
     id: str
     path: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'path', self.path)
 AttachmentEditCreate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3889,10 +2959,6 @@ class AttachmentEditReplace(CompactValue):
     _variant: _ClassVar[str] = 'replace'
     expected: PackageAttachment
     attachment: PackageAttachment
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'expected', self.expected)
-        object.__setattr__(self, 'attachment', self.attachment)
 AttachmentEditReplace.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3902,11 +2968,6 @@ class AttachmentEditDuplicate(CompactValue):
     source: str
     id: str
     path: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'source', self.source)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'path', self.path)
 AttachmentEditDuplicate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3914,9 +2975,6 @@ class AttachmentEditDelete(CompactValue):
     'Immutable owned AttachmentEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.'
     _variant: _ClassVar[str] = 'delete'
     id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
 AttachmentEditDelete.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3925,10 +2983,6 @@ class AttachmentEditDeleteWithReplacement(CompactValue):
     _variant: _ClassVar[str] = 'delete_with_replacement'
     id: str
     replacement: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'replacement', None if self.replacement is None else self.replacement)
 AttachmentEditDeleteWithReplacement.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3940,7 +2994,6 @@ class AttachmentEditReorder(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 AttachmentEditReorder.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3949,10 +3002,6 @@ class AttachmentEditSetSound(CompactValue):
     _variant: _ClassVar[str] = 'set_sound'
     registration: str
     reference: (AttachmentRef | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'registration', self.registration)
-        object.__setattr__(self, 'reference', None if self.reference is None else self.reference)
 AttachmentEditSetSound.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3960,9 +3009,6 @@ class AttachmentEditSetUserData(CompactValue):
     'Immutable owned AttachmentEditSetUserData value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nreference: Resolved attachment identity or explicitly unresolved package path.'
     _variant: _ClassVar[str] = 'set_user_data'
     reference: (AttachmentRef | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'reference', None if self.reference is None else self.reference)
 AttachmentEditSetUserData.__module__ = "zipzi.modeling"
 
 AttachmentEdit: TypeAlias = AttachmentEditCreate | AttachmentEditReplace | AttachmentEditDuplicate | AttachmentEditDelete | AttachmentEditDeleteWithReplacement | AttachmentEditReorder | AttachmentEditSetSound | AttachmentEditSetUserData
@@ -3973,11 +3019,6 @@ class PackageAttachment(CompactValue):
     id: str
     path: str
     bytes: (_Bytes | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'path', self.path)
-        object.__setattr__(self, 'bytes', None if self.bytes is None else self.bytes)
 PackageAttachment.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3985,9 +3026,6 @@ class AttachmentRefResolved(CompactValue):
     'Immutable owned AttachmentRefResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nattachment_id: Stable package-attachment ID, distinct from its relative package path.'
     _variant: _ClassVar[str] = 'resolved'
     attachment_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'attachment_id', self.attachment_id)
 AttachmentRefResolved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -3995,9 +3033,6 @@ class AttachmentRefUnresolved(CompactValue):
     'Immutable owned AttachmentRefUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npath: Normalized package-relative attachment path using forward slashes; absolute paths\nand .. components are invalid.'
     _variant: _ClassVar[str] = 'unresolved'
     path: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'path', self.path)
 AttachmentRefUnresolved.__module__ = "zipzi.modeling"
 
 AttachmentRef: TypeAlias = AttachmentRefResolved | AttachmentRefUnresolved
@@ -4010,12 +3045,6 @@ class MotionEditCreate(CompactValue):
     name: str
     registration_id: str
     destination: MotionContainer
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'registration_id', self.registration_id)
-        object.__setattr__(self, 'destination', self.destination)
 MotionEditCreate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4024,10 +3053,6 @@ class MotionEditCreateGroup(CompactValue):
     _variant: _ClassVar[str] = 'create_group'
     id: str
     name: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
 MotionEditCreateGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4036,10 +3061,6 @@ class MotionEditRenameGroup(CompactValue):
     _variant: _ClassVar[str] = 'rename_group'
     id: str
     name: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
 MotionEditRenameGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4059,11 +3080,6 @@ class MotionEditRegister(CompactValue):
     entry: MotionRegistration
     destination: MotionContainer
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'entry', self.entry)
-        object.__setattr__(self, 'destination', self.destination)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 MotionEditRegister.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4073,11 +3089,6 @@ class MotionEditPatchRegistration(CompactValue):
     id: str
     expected: MotionRegistration
     entry: MotionRegistration
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'expected', self.expected)
-        object.__setattr__(self, 'entry', self.entry)
 MotionEditPatchRegistration.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4090,8 +3101,6 @@ class MotionEditMoveRegistrations(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'destination', self.destination)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 MotionEditMoveRegistrations.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4104,8 +3113,6 @@ class MotionEditDuplicateRegistrations(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'destination', self.destination)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 MotionEditDuplicateRegistrations.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4123,9 +3130,6 @@ class MotionEditDissolveGroup(CompactValue):
     'Immutable owned MotionEditDissolveGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
     _variant: _ClassVar[str] = 'dissolve_group'
     id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
 MotionEditDissolveGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4133,9 +3137,6 @@ class MotionEditDeleteGroup(CompactValue):
     'Immutable owned MotionEditDeleteGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
     _variant: _ClassVar[str] = 'delete_group'
     id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
 MotionEditDeleteGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4145,11 +3146,6 @@ class MotionEditDuplicateGroup(CompactValue):
     source: str
     id: str
     name: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'source', self.source)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
 MotionEditDuplicateGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4161,13 +3157,6 @@ class MotionEditDuplicateClip(CompactValue):
     name: str
     registration_id: str
     destination: MotionContainer
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'source', self.source)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'registration_id', self.registration_id)
-        object.__setattr__(self, 'destination', self.destination)
 MotionEditDuplicateClip.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4175,9 +3164,6 @@ class MotionEditDeleteClip(CompactValue):
     'Immutable owned MotionEditDeleteClip value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
     _variant: _ClassVar[str] = 'delete_clip'
     id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
 MotionEditDeleteClip.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4188,7 +3174,6 @@ class MotionEditReorderTracks(CompactValue):
     ids: tuple[str, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'clip', self.clip)
         object.__setattr__(self, 'ids', tuple(self.ids))
 MotionEditReorderTracks.__module__ = "zipzi.modeling"
 
@@ -4200,12 +3185,6 @@ class MotionEditCreateTrack(CompactValue):
     id: str
     key_id: str
     time: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'clip', self.clip)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'key_id', self.key_id)
-        object.__setattr__(self, 'time', self.time)
 MotionEditCreateTrack.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4214,10 +3193,6 @@ class MotionEditSetTrackTarget(CompactValue):
     _variant: _ClassVar[str] = 'set_track_target'
     id: str
     target: MotionTrackTarget
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'target', self.target)
 MotionEditSetTrackTarget.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4231,9 +3206,6 @@ class MotionEditMoveTracks(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'destination', self.destination)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
-        object.__setattr__(self, 'copy', self.copy)
 MotionEditMoveTracks.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4257,9 +3229,6 @@ class MotionEditTransferKeys(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'destination_track', self.destination_track)
-        object.__setattr__(self, 'time_offset', self.time_offset)
-        object.__setattr__(self, 'copy', self.copy)
 MotionEditTransferKeys.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4268,10 +3237,6 @@ class MotionEditSetEvent(CompactValue):
     _variant: _ClassVar[str] = 'set_event'
     clip: str
     event: MotionEvent
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'clip', self.clip)
-        object.__setattr__(self, 'event', self.event)
 MotionEditSetEvent.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4295,9 +3260,6 @@ class MotionEditMoveEvents(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'destination', self.destination)
-        object.__setattr__(self, 'time_offset', self.time_offset)
-        object.__setattr__(self, 'copy', self.copy)
 MotionEditMoveEvents.__module__ = "zipzi.modeling"
 
 MotionEdit: TypeAlias = MotionEditCreate | MotionEditCreateGroup | MotionEditRenameGroup | MotionEditReorderGroups | MotionEditRegister | MotionEditPatchRegistration | MotionEditMoveRegistrations | MotionEditDuplicateRegistrations | MotionEditDeleteRegistrations | MotionEditDissolveGroup | MotionEditDeleteGroup | MotionEditDuplicateGroup | MotionEditDuplicateClip | MotionEditDeleteClip | MotionEditReorderTracks | MotionEditCreateTrack | MotionEditSetTrackTarget | MotionEditMoveTracks | MotionEditDeleteTracks | MotionEditTransferKeys | MotionEditSetEvent | MotionEditDeleteEvents | MotionEditMoveEvents
@@ -4313,9 +3275,6 @@ class MotionContainerGroup(CompactValue):
     'Immutable owned MotionContainerGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Destination motion-group identity; Root selects ungrouped registrations.'
     _variant: _ClassVar[str] = 'group'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 MotionContainerGroup.__module__ = "zipzi.modeling"
 
 MotionContainer: TypeAlias = MotionContainerRoot | MotionContainerGroup
@@ -4331,11 +3290,6 @@ class MotionRegistration(CompactValue):
     extensions: _Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'clip_id', self.clip_id)
-        object.__setattr__(self, 'fade_in', None if self.fade_in is None else self.fade_in)
-        object.__setattr__(self, 'fade_out', None if self.fade_out is None else self.fade_out)
-        object.__setattr__(self, 'sound', None if self.sound is None else self.sound)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 MotionRegistration.__module__ = "zipzi.modeling"
 
@@ -4350,9 +3304,6 @@ class MotionTrackTargetModel(CompactValue):
     'Immutable owned MotionTrackTargetModel value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nruntime_id: Imported/exported runtime label, distinct from the document object UUID.'
     _variant: _ClassVar[str] = 'model'
     runtime_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
 MotionTrackTargetModel.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4360,9 +3311,6 @@ class MotionTrackTargetParameter(CompactValue):
     'Immutable owned MotionTrackTargetParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nparameter_id: Stable document parameter UUID; evaluation uses its declared range and default.'
     _variant: _ClassVar[str] = 'parameter'
     parameter_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
 MotionTrackTargetParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4370,9 +3318,6 @@ class MotionTrackTargetPartOpacity(CompactValue):
     'Immutable owned MotionTrackTargetPartOpacity value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npart_id: Stable document Part UUID for this opacity or visibility reference.'
     _variant: _ClassVar[str] = 'part_opacity'
     part_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'part_id', self.part_id)
 MotionTrackTargetPartOpacity.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4381,10 +3326,6 @@ class MotionTrackTargetUnresolved(CompactValue):
     _variant: _ClassVar[str] = 'unresolved'
     category: str
     runtime_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'category', self.category)
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
 MotionTrackTargetUnresolved.__module__ = "zipzi.modeling"
 
 MotionTrackTarget: TypeAlias = MotionTrackTargetUnspecified | MotionTrackTargetModel | MotionTrackTargetParameter | MotionTrackTargetPartOpacity | MotionTrackTargetUnresolved
@@ -4398,9 +3339,6 @@ class MotionEvent(CompactValue):
     extensions: _Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'time', self.time)
-        object.__setattr__(self, 'value', self.value)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 MotionEvent.__module__ = "zipzi.modeling"
 
@@ -4410,10 +3348,6 @@ class ExpressionEditCreate(CompactValue):
     _variant: _ClassVar[str] = 'create'
     id: str
     name: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
 ExpressionEditCreate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4423,11 +3357,6 @@ class ExpressionEditCreateEntry(CompactValue):
     owner: str
     id: str
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'owner', self.owner)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 ExpressionEditCreateEntry.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4437,11 +3366,6 @@ class ExpressionEditPatchEntry(CompactValue):
     id: str
     expected: ExpressionEntryFields
     fields: ExpressionEntryFields
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'expected', self.expected)
-        object.__setattr__(self, 'fields', self.fields)
 ExpressionEditPatchEntry.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4454,8 +3378,6 @@ class ExpressionEditMoveEntries(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'destination', self.destination)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 ExpressionEditMoveEntries.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4470,8 +3392,6 @@ class ExpressionEditDuplicateEntries(CompactValue):
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
         object.__setattr__(self, 'new_ids', tuple(self.new_ids))
-        object.__setattr__(self, 'destination', self.destination)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 ExpressionEditDuplicateEntries.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4494,9 +3414,6 @@ class ExpressionEditDuplicate(CompactValue):
     entry_ids: tuple[str, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'source', self.source)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
         object.__setattr__(self, 'entry_ids', tuple(self.entry_ids))
 ExpressionEditDuplicate.__module__ = "zipzi.modeling"
 
@@ -4505,9 +3422,6 @@ class ExpressionEditDelete(CompactValue):
     'Immutable owned ExpressionEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
     _variant: _ClassVar[str] = 'delete'
     id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
 ExpressionEditDelete.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4528,11 +3442,6 @@ class ExpressionEntryFields(CompactValue):
     target: ExpressionTarget
     value: float
     blend: (ExpressionBlend | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'target', self.target)
-        object.__setattr__(self, 'value', self.value)
-        object.__setattr__(self, 'blend', None if self.blend is None else self.blend)
 ExpressionEntryFields.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4546,9 +3455,6 @@ class ExpressionTargetResolved(CompactValue):
     'Immutable owned ExpressionTargetResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nparameter_id: Stable document parameter UUID; evaluation uses its declared range and default.'
     _variant: _ClassVar[str] = 'resolved'
     parameter_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
 ExpressionTargetResolved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4556,9 +3462,6 @@ class ExpressionTargetUnresolved(CompactValue):
     'Immutable owned ExpressionTargetUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nruntime_id: Imported/exported runtime label, distinct from the document object UUID.'
     _variant: _ClassVar[str] = 'unresolved'
     runtime_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
 ExpressionTargetUnresolved.__module__ = "zipzi.modeling"
 
 ExpressionTarget: TypeAlias = ExpressionTargetUnspecified | ExpressionTargetResolved | ExpressionTargetUnresolved
@@ -4577,12 +3480,6 @@ class PhysicsEditCreateGroup(CompactValue):
     id: str
     name: str
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'asset_id', self.asset_id)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 PhysicsEditCreateGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4592,11 +3489,6 @@ class PhysicsEditCreateInput(CompactValue):
     group_id: str
     id: str
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'group_id', self.group_id)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 PhysicsEditCreateInput.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4607,12 +3499,6 @@ class PhysicsEditCreateOutput(CompactValue):
     id: str
     node_id: str
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'group_id', self.group_id)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'node_id', self.node_id)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 PhysicsEditCreateOutput.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4622,11 +3508,6 @@ class PhysicsEditInsertNode(CompactValue):
     group_id: str
     node: PhysicsNode
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'group_id', self.group_id)
-        object.__setattr__(self, 'node', self.node)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 PhysicsEditInsertNode.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4635,10 +3516,6 @@ class PhysicsEditMoveNode(CompactValue):
     _variant: _ClassVar[str] = 'move_node'
     id: str
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 PhysicsEditMoveNode.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4647,10 +3524,6 @@ class PhysicsEditDuplicateNode(CompactValue):
     _variant: _ClassVar[str] = 'duplicate_node'
     id: str
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 PhysicsEditDuplicateNode.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4658,9 +3531,6 @@ class PhysicsEditPatch(CompactValue):
     'Immutable owned PhysicsEditPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npatch: Typed atomic Physics changes validated against the current candidate.'
     _variant: _ClassVar[str] = 'patch'
     patch: PhysicsPatch
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'patch', self.patch)
 PhysicsEditPatch.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4673,8 +3543,6 @@ class PhysicsEditMoveInputs(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'group_id', self.group_id)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 PhysicsEditMoveInputs.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4688,8 +3556,6 @@ class PhysicsEditMoveOutputs(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'group_id', self.group_id)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
         object.__setattr__(self, 'node_replacements', MappingProxyType({key0: v0 for key0, v0 in self.node_replacements.items()}))
 PhysicsEditMoveOutputs.__module__ = "zipzi.modeling"
 
@@ -4702,7 +3568,6 @@ class PhysicsEditReorderGroups(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 PhysicsEditReorderGroups.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4715,8 +3580,6 @@ class PhysicsEditDuplicate(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'group_id', None if self.group_id is None else self.group_id)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 PhysicsEditDuplicate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4745,12 +3608,6 @@ class PhysicsNode(CompactValue):
     extensions: _Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'position', self.position)
-        object.__setattr__(self, 'mobility', self.mobility)
-        object.__setattr__(self, 'delay', self.delay)
-        object.__setattr__(self, 'acceleration', self.acceleration)
-        object.__setattr__(self, 'radius', self.radius)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 PhysicsNode.__module__ = "zipzi.modeling"
 
@@ -4759,10 +3616,6 @@ class PhysicsVector(CompactValue):
     'Immutable owned PhysicsVector value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nX: Horizontal component in the native Physics coordinate convention.\nY: Vertical component in the native Physics coordinate convention.'
     X: float
     Y: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'X', self.X)
-        object.__setattr__(self, 'Y', self.Y)
 PhysicsVector.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4773,9 +3626,7 @@ class PhysicsPatch(CompactValue):
     rig: (PhysicsRigPatch | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'asset_id', self.asset_id)
         object.__setattr__(self, 'asset_changes', tuple(self.asset_changes))
-        object.__setattr__(self, 'rig', None if self.rig is None else self.rig)
 PhysicsPatch.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4783,9 +3634,6 @@ class PhysicsAssetPropertyFps(CompactValue):
     'Immutable owned PhysicsAssetPropertyFps value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Optional Physics fixed-step frequency; None follows the evaluation delta.'
     _variant: _ClassVar[str] = 'Fps'
     value: (float | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', None if self.value is None else self.value)
 PhysicsAssetPropertyFps.__module__ = "zipzi.modeling"
 
 PhysicsAssetProperty: TypeAlias = PhysicsAssetPropertyFps
@@ -4797,7 +3645,6 @@ class PhysicsRigPatch(CompactValue):
     changes: tuple[PhysicsProperty, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'group_id', self.group_id)
         object.__setattr__(self, 'changes', tuple(self.changes))
 PhysicsRigPatch.__module__ = "zipzi.modeling"
 
@@ -4806,9 +3653,6 @@ class PhysicsPropertyName(CompactValue):
     'Immutable owned PhysicsPropertyName value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Replacement display name of the Physics group.'
     _variant: _ClassVar[str] = 'Name'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 PhysicsPropertyName.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4817,10 +3661,6 @@ class PhysicsPropertyInputWeight(CompactValue):
     _variant: _ClassVar[str] = 'InputWeight'
     id: str
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'value', self.value)
 PhysicsPropertyInputWeight.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4829,10 +3669,6 @@ class PhysicsPropertyInputAxis(CompactValue):
     _variant: _ClassVar[str] = 'InputAxis'
     id: str
     value: PhysicsAxis
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'value', self.value)
 PhysicsPropertyInputAxis.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4841,10 +3677,6 @@ class PhysicsPropertyInputReflect(CompactValue):
     _variant: _ClassVar[str] = 'InputReflect'
     id: str
     value: bool
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'value', self.value)
 PhysicsPropertyInputReflect.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4853,10 +3685,6 @@ class PhysicsPropertyInputParameter(CompactValue):
     _variant: _ClassVar[str] = 'InputParameter'
     id: str
     target: PhysicsTarget
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'target', self.target)
 PhysicsPropertyInputParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4865,10 +3693,6 @@ class PhysicsPropertyOutputWeight(CompactValue):
     _variant: _ClassVar[str] = 'OutputWeight'
     id: str
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'value', self.value)
 PhysicsPropertyOutputWeight.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4877,10 +3701,6 @@ class PhysicsPropertyOutputScale(CompactValue):
     _variant: _ClassVar[str] = 'OutputScale'
     id: str
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'value', self.value)
 PhysicsPropertyOutputScale.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4889,10 +3709,6 @@ class PhysicsPropertyOutputAxis(CompactValue):
     _variant: _ClassVar[str] = 'OutputAxis'
     id: str
     value: PhysicsAxis
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'value', self.value)
 PhysicsPropertyOutputAxis.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4901,10 +3717,6 @@ class PhysicsPropertyOutputReflect(CompactValue):
     _variant: _ClassVar[str] = 'OutputReflect'
     id: str
     value: bool
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'value', self.value)
 PhysicsPropertyOutputReflect.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4913,10 +3725,6 @@ class PhysicsPropertyOutputParameter(CompactValue):
     _variant: _ClassVar[str] = 'OutputParameter'
     id: str
     target: PhysicsTarget
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'target', self.target)
 PhysicsPropertyOutputParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4925,10 +3733,6 @@ class PhysicsPropertyOutputNode(CompactValue):
     _variant: _ClassVar[str] = 'OutputNode'
     id: str
     node_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'node_id', self.node_id)
 PhysicsPropertyOutputNode.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4937,10 +3741,6 @@ class PhysicsPropertyVertexPosition(CompactValue):
     _variant: _ClassVar[str] = 'VertexPosition'
     id: str
     value: PhysicsVector
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'value', self.value)
 PhysicsPropertyVertexPosition.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4949,10 +3749,6 @@ class PhysicsPropertyVertexRadius(CompactValue):
     _variant: _ClassVar[str] = 'VertexRadius'
     id: str
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'value', self.value)
 PhysicsPropertyVertexRadius.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4961,10 +3757,6 @@ class PhysicsPropertyVertexMobility(CompactValue):
     _variant: _ClassVar[str] = 'VertexMobility'
     id: str
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'value', self.value)
 PhysicsPropertyVertexMobility.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4973,10 +3765,6 @@ class PhysicsPropertyVertexDelay(CompactValue):
     _variant: _ClassVar[str] = 'VertexDelay'
     id: str
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'value', self.value)
 PhysicsPropertyVertexDelay.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4985,10 +3773,6 @@ class PhysicsPropertyVertexAcceleration(CompactValue):
     _variant: _ClassVar[str] = 'VertexAcceleration'
     id: str
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'value', self.value)
 PhysicsPropertyVertexAcceleration.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -4996,9 +3780,6 @@ class PhysicsPropertyPositionNormalization(CompactValue):
     'Immutable owned PhysicsPropertyPositionNormalization value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Replacement minimum/default/maximum range for position normalization.'
     _variant: _ClassVar[str] = 'PositionNormalization'
     value: PhysicsRange
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 PhysicsPropertyPositionNormalization.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5006,9 +3787,6 @@ class PhysicsPropertyAngleNormalization(CompactValue):
     'Immutable owned PhysicsPropertyAngleNormalization value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Replacement minimum/default/maximum range for angle normalization.'
     _variant: _ClassVar[str] = 'AngleNormalization'
     value: PhysicsRange
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 PhysicsPropertyAngleNormalization.__module__ = "zipzi.modeling"
 
 PhysicsProperty: TypeAlias = PhysicsPropertyName | PhysicsPropertyInputWeight | PhysicsPropertyInputAxis | PhysicsPropertyInputReflect | PhysicsPropertyInputParameter | PhysicsPropertyOutputWeight | PhysicsPropertyOutputScale | PhysicsPropertyOutputAxis | PhysicsPropertyOutputReflect | PhysicsPropertyOutputParameter | PhysicsPropertyOutputNode | PhysicsPropertyVertexPosition | PhysicsPropertyVertexRadius | PhysicsPropertyVertexMobility | PhysicsPropertyVertexDelay | PhysicsPropertyVertexAcceleration | PhysicsPropertyPositionNormalization | PhysicsPropertyAngleNormalization
@@ -5030,9 +3808,6 @@ class PhysicsTargetResolved(CompactValue):
     'Immutable owned PhysicsTargetResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nparameter_id: Stable document parameter UUID; evaluation uses its declared range and default.'
     _variant: _ClassVar[str] = 'resolved'
     parameter_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
 PhysicsTargetResolved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5040,9 +3815,6 @@ class PhysicsTargetUnresolved(CompactValue):
     'Immutable owned PhysicsTargetUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nruntime_id: Imported/exported runtime label, distinct from the document object UUID.'
     _variant: _ClassVar[str] = 'unresolved'
     runtime_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
 PhysicsTargetUnresolved.__module__ = "zipzi.modeling"
 
 PhysicsTarget: TypeAlias = PhysicsTargetUnspecified | PhysicsTargetResolved | PhysicsTargetUnresolved
@@ -5053,11 +3825,6 @@ class PhysicsRange(CompactValue):
     Minimum: float
     Default: float
     Maximum: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'Minimum', self.Minimum)
-        object.__setattr__(self, 'Default', self.Default)
-        object.__setattr__(self, 'Maximum', self.Maximum)
 PhysicsRange.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5065,9 +3832,6 @@ class PoseEditCreate(CompactValue):
     'Immutable owned PoseEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
     _variant: _ClassVar[str] = 'create'
     id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
 PoseEditCreate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5078,12 +3842,6 @@ class PoseEditCreateGroup(CompactValue):
     id: str
     name: str
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'pose_id', self.pose_id)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 PoseEditCreateGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5093,11 +3851,6 @@ class PoseEditCreateEntry(CompactValue):
     group_id: str
     id: str
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'group_id', self.group_id)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 PoseEditCreateEntry.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5107,11 +3860,6 @@ class PoseEditCreateLink(CompactValue):
     entry_id: str
     id: str
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'entry_id', self.entry_id)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 PoseEditCreateLink.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5121,11 +3869,6 @@ class PoseEditPatch(CompactValue):
     id: str
     expected: PoseFields
     fields: PoseFields
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'expected', self.expected)
-        object.__setattr__(self, 'fields', self.fields)
 PoseEditPatch.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5138,8 +3881,6 @@ class PoseEditMove(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'destination', self.destination)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 PoseEditMove.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5152,8 +3893,6 @@ class PoseEditDuplicate(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'ids', tuple(self.ids))
-        object.__setattr__(self, 'destination', self.destination)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 PoseEditDuplicate.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5173,11 +3912,6 @@ class PoseEditDissolveGroup(CompactValue):
     id: str
     destination: str
     before: (str | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'destination', self.destination)
-        object.__setattr__(self, 'before', None if self.before is None else self.before)
 PoseEditDissolveGroup.__module__ = "zipzi.modeling"
 
 PoseEdit: TypeAlias = PoseEditCreate | PoseEditCreateGroup | PoseEditCreateEntry | PoseEditCreateLink | PoseEditPatch | PoseEditMove | PoseEditDuplicate | PoseEditDelete | PoseEditDissolveGroup
@@ -5187,9 +3921,6 @@ class PoseFieldsAsset(CompactValue):
     'Immutable owned PoseFieldsAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.'
     _variant: _ClassVar[str] = 'asset'
     fade_in: (float | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'fade_in', None if self.fade_in is None else self.fade_in)
 PoseFieldsAsset.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5197,9 +3928,6 @@ class PoseFieldsGroup(CompactValue):
     'Immutable owned PoseFieldsGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nname: Human-readable display or registration name; distinct from persistent object identity.'
     _variant: _ClassVar[str] = 'group'
     name: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'name', self.name)
 PoseFieldsGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5207,9 +3935,6 @@ class PoseFieldsEntry(CompactValue):
     'Immutable owned PoseFieldsEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npart: Typed resolved/unresolved Part reference retained by the Pose entry or link.'
     _variant: _ClassVar[str] = 'entry'
     part: PosePartRef
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'part', self.part)
 PoseFieldsEntry.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5217,9 +3942,6 @@ class PoseFieldsLink(CompactValue):
     'Immutable owned PoseFieldsLink value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.'
     _variant: _ClassVar[str] = 'link'
     target: PosePartRef
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'target', self.target)
 PoseFieldsLink.__module__ = "zipzi.modeling"
 
 PoseFields: TypeAlias = PoseFieldsAsset | PoseFieldsGroup | PoseFieldsEntry | PoseFieldsLink
@@ -5235,9 +3957,6 @@ class PosePartRefResolved(CompactValue):
     'Immutable owned PosePartRefResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npart_id: Stable document Part UUID for this opacity or visibility reference.'
     _variant: _ClassVar[str] = 'resolved'
     part_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'part_id', self.part_id)
 PosePartRefResolved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5245,9 +3964,6 @@ class PosePartRefUnresolved(CompactValue):
     'Immutable owned PosePartRefUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nruntime_id: Imported/exported runtime label, distinct from the document object UUID.'
     _variant: _ClassVar[str] = 'unresolved'
     runtime_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
 PosePartRefUnresolved.__module__ = "zipzi.modeling"
 
 PosePartRef: TypeAlias = PosePartRefUnspecified | PosePartRefResolved | PosePartRefUnresolved
@@ -5263,9 +3979,6 @@ class PoseCollectionEntries(CompactValue):
     'Immutable owned PoseCollectionEntries value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.'
     _variant: _ClassVar[str] = 'entries'
     group_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'group_id', self.group_id)
 PoseCollectionEntries.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5273,9 +3986,6 @@ class PoseCollectionLinks(CompactValue):
     'Immutable owned PoseCollectionLinks value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nentry_id: Stable ID of the owning entry; links remain owned by that entry.'
     _variant: _ClassVar[str] = 'links'
     entry_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'entry_id', self.entry_id)
 PoseCollectionLinks.__module__ = "zipzi.modeling"
 
 PoseCollection: TypeAlias = PoseCollectionGroups | PoseCollectionEntries | PoseCollectionLinks
@@ -5300,21 +4010,12 @@ class MotionClip(CompactValue):
     opaque_source_content_hash: (str | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'duration', self.duration)
-        object.__setattr__(self, 'fps', self.fps)
-        object.__setattr__(self, 'looping', self.looping)
-        object.__setattr__(self, 'restricted_beziers', self.restricted_beziers)
-        object.__setattr__(self, 'fade_in', None if self.fade_in is None else self.fade_in)
-        object.__setattr__(self, 'fade_out', None if self.fade_out is None else self.fade_out)
         object.__setattr__(self, 'track_order', tuple(self.track_order))
         object.__setattr__(self, 'tracks', tuple(self.tracks))
         object.__setattr__(self, 'events', tuple(self.events))
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
         object.__setattr__(self, 'meta_extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.meta_extensions.items()}))
         object.__setattr__(self, 'opaque_source_ids', None if self.opaque_source_ids is None else MappingProxyType({key0: v0 for key0, v0 in self.opaque_source_ids.items()}))
-        object.__setattr__(self, 'opaque_source_content_hash', None if self.opaque_source_content_hash is None else self.opaque_source_content_hash)
 MotionClip.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5329,12 +4030,7 @@ class MotionTrack(CompactValue):
     extensions: _Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'target', self.target)
-        object.__setattr__(self, 'initial', self.initial)
         object.__setattr__(self, 'segments', tuple(self.segments))
-        object.__setattr__(self, 'fade_in', None if self.fade_in is None else self.fade_in)
-        object.__setattr__(self, 'fade_out', None if self.fade_out is None else self.fade_out)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 MotionTrack.__module__ = "zipzi.modeling"
 
@@ -5344,11 +4040,6 @@ class MotionKey(CompactValue):
     id: str
     time: float
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'time', self.time)
-        object.__setattr__(self, 'value', self.value)
 MotionKey.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5356,9 +4047,6 @@ class MotionSegmentLinear(CompactValue):
     'Immutable owned MotionSegmentLinear value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nend: Segment endpoint key or source-range end time, as declared by the enclosing type.'
     _variant: _ClassVar[str] = 'linear'
     end: MotionKey
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'end', self.end)
 MotionSegmentLinear.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5368,11 +4056,6 @@ class MotionSegmentBezier(CompactValue):
     control1: MotionPoint
     control2: MotionPoint
     end: MotionKey
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'control1', self.control1)
-        object.__setattr__(self, 'control2', self.control2)
-        object.__setattr__(self, 'end', self.end)
 MotionSegmentBezier.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5380,9 +4063,6 @@ class MotionSegmentStepped(CompactValue):
     'Immutable owned MotionSegmentStepped value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nend: Segment endpoint key or source-range end time, as declared by the enclosing type.'
     _variant: _ClassVar[str] = 'stepped'
     end: MotionKey
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'end', self.end)
 MotionSegmentStepped.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5390,9 +4070,6 @@ class MotionSegmentInverseStepped(CompactValue):
     'Immutable owned MotionSegmentInverseStepped value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nend: Segment endpoint key or source-range end time, as declared by the enclosing type.'
     _variant: _ClassVar[str] = 'inverse_stepped'
     end: MotionKey
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'end', self.end)
 MotionSegmentInverseStepped.__module__ = "zipzi.modeling"
 
 MotionSegment: TypeAlias = MotionSegmentLinear | MotionSegmentBezier | MotionSegmentStepped | MotionSegmentInverseStepped
@@ -5402,10 +4079,6 @@ class MotionPoint(CompactValue):
     'Immutable owned MotionPoint value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntime: Absolute time in seconds within the owning motion clip.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
     time: float
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'time', self.time)
-        object.__setattr__(self, 'value', self.value)
 MotionPoint.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5422,15 +4095,9 @@ class ExpressionAsset(CompactValue):
     opaque_source_content_hash: (str | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'file_type', None if self.file_type is None else self.file_type)
-        object.__setattr__(self, 'fade_in', None if self.fade_in is None else self.fade_in)
-        object.__setattr__(self, 'fade_out', None if self.fade_out is None else self.fade_out)
         object.__setattr__(self, 'entries', tuple(self.entries))
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
         object.__setattr__(self, 'opaque_source_ids', None if self.opaque_source_ids is None else MappingProxyType({key0: v0 for key0, v0 in self.opaque_source_ids.items()}))
-        object.__setattr__(self, 'opaque_source_content_hash', None if self.opaque_source_content_hash is None else self.opaque_source_content_hash)
 ExpressionAsset.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5443,10 +4110,6 @@ class ExpressionEntry(CompactValue):
     extensions: _Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'target', self.target)
-        object.__setattr__(self, 'value', self.value)
-        object.__setattr__(self, 'blend', None if self.blend is None else self.blend)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 ExpressionEntry.__module__ = "zipzi.modeling"
 
@@ -5459,10 +4122,7 @@ class PhysicsAsset(CompactValue):
     opaque_source_content_hash: (str | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'data', self.data)
         object.__setattr__(self, 'opaque_source_ids', None if self.opaque_source_ids is None else MappingProxyType({key0: v0 for key0, v0 in self.opaque_source_ids.items()}))
-        object.__setattr__(self, 'opaque_source_content_hash', None if self.opaque_source_content_hash is None else self.opaque_source_content_hash)
 PhysicsAsset.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5474,8 +4134,6 @@ class PhysicsDefinition(CompactValue):
     extensions: _Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'version', self.version)
-        object.__setattr__(self, 'meta', self.meta)
         object.__setattr__(self, 'settings', tuple(v0 for v0 in self.settings))
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 PhysicsDefinition.__module__ = "zipzi.modeling"
@@ -5493,13 +4151,7 @@ class PhysicsMeta(CompactValue):
     extensions: _Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'PhysicsSettingCount', self.PhysicsSettingCount)
-        object.__setattr__(self, 'TotalInputCount', self.TotalInputCount)
-        object.__setattr__(self, 'TotalOutputCount', self.TotalOutputCount)
-        object.__setattr__(self, 'VertexCount', self.VertexCount)
-        object.__setattr__(self, 'EffectiveForces', self.EffectiveForces)
         object.__setattr__(self, 'PhysicsDictionary', tuple(self.PhysicsDictionary))
-        object.__setattr__(self, 'Fps', None if self.Fps is None else self.Fps)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 PhysicsMeta.__module__ = "zipzi.modeling"
 
@@ -5511,8 +4163,6 @@ class PhysicsForces(CompactValue):
     extensions: _Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'Gravity', self.Gravity)
-        object.__setattr__(self, 'Wind', self.Wind)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 PhysicsForces.__module__ = "zipzi.modeling"
 
@@ -5524,8 +4174,6 @@ class PhysicsDictionaryEntry(CompactValue):
     extensions: _Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'Id', self.Id)
-        object.__setattr__(self, 'Name', self.Name)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 PhysicsDictionaryEntry.__module__ = "zipzi.modeling"
 
@@ -5541,12 +4189,9 @@ class PhysicsSetting(CompactValue):
     extensions: _Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'external_id', self.external_id)
         object.__setattr__(self, 'inputs', tuple(self.inputs))
         object.__setattr__(self, 'outputs', tuple(self.outputs))
         object.__setattr__(self, 'vertices', tuple(self.vertices))
-        object.__setattr__(self, 'normalization', self.normalization)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 PhysicsSetting.__module__ = "zipzi.modeling"
 
@@ -5562,12 +4207,7 @@ class PhysicsInput(CompactValue):
     extensions: _Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'source', self.source)
         object.__setattr__(self, 'reference_extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.reference_extensions.items()}))
-        object.__setattr__(self, 'weight', self.weight)
-        object.__setattr__(self, 'kind', self.kind)
-        object.__setattr__(self, 'reflect', self.reflect)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 PhysicsInput.__module__ = "zipzi.modeling"
 
@@ -5585,14 +4225,7 @@ class PhysicsOutput(CompactValue):
     extensions: _Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'destination', self.destination)
         object.__setattr__(self, 'reference_extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.reference_extensions.items()}))
-        object.__setattr__(self, 'node_id', self.node_id)
-        object.__setattr__(self, 'scale', self.scale)
-        object.__setattr__(self, 'weight', self.weight)
-        object.__setattr__(self, 'kind', self.kind)
-        object.__setattr__(self, 'reflect', self.reflect)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 PhysicsOutput.__module__ = "zipzi.modeling"
 
@@ -5604,8 +4237,6 @@ class PhysicsNormalization(CompactValue):
     extensions: _Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'Position', self.Position)
-        object.__setattr__(self, 'Angle', self.Angle)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 PhysicsNormalization.__module__ = "zipzi.modeling"
 
@@ -5621,13 +4252,9 @@ class PoseAsset(CompactValue):
     opaque_source_content_hash: (str | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'file_type', None if self.file_type is None else self.file_type)
-        object.__setattr__(self, 'fade_in', None if self.fade_in is None else self.fade_in)
         object.__setattr__(self, 'groups', tuple(self.groups))
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
         object.__setattr__(self, 'opaque_source_ids', None if self.opaque_source_ids is None else MappingProxyType({key0: v0 for key0, v0 in self.opaque_source_ids.items()}))
-        object.__setattr__(self, 'opaque_source_content_hash', None if self.opaque_source_content_hash is None else self.opaque_source_content_hash)
 PoseAsset.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5638,8 +4265,6 @@ class PoseGroup(CompactValue):
     entries: tuple[PoseEntry, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
         object.__setattr__(self, 'entries', tuple(self.entries))
 PoseGroup.__module__ = "zipzi.modeling"
 
@@ -5652,8 +4277,6 @@ class PoseEntry(CompactValue):
     extensions: _Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'part', self.part)
         object.__setattr__(self, 'links', None if self.links is None else tuple(self.links))
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 PoseEntry.__module__ = "zipzi.modeling"
@@ -5663,10 +4286,6 @@ class PoseLink(CompactValue):
     'Immutable owned PoseLink value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.'
     id: str
     target: PosePartRef
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'target', self.target)
 PoseLink.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5674,10 +4293,6 @@ class ModelSetup(CompactValue):
     'Immutable owned ModelSetup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsource_canvas: Optional imported canvas metadata; None means this model has no source-canvas provenance.\nexport: Export-frame settings; padding is applied when computing an exported frame.'
     source_canvas: (Canvas | None) = None
     export: ExportSettings
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'source_canvas', None if self.source_canvas is None else self.source_canvas)
-        object.__setattr__(self, 'export', self.export)
 ModelSetup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5707,10 +4322,6 @@ class ObjectEditorState(CompactValue):
     'Immutable owned ObjectEditorState value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nhidden_in_editor: Editor-only hiding flag; does not replace the model enabled/visibility state.\nlocked: Authoring lock state; native edit admission and capabilities enforce the lock.'
     hidden_in_editor: bool = field(default_factory=lambda: _boolean(False))
     locked: bool = field(default_factory=lambda: _boolean(False))
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'hidden_in_editor', self.hidden_in_editor)
-        object.__setattr__(self, 'locked', self.locked)
 ObjectEditorState.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5722,10 +4333,7 @@ class DrawOrderGroup(CompactValue):
     max_order: int
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'owner', self.owner)
         object.__setattr__(self, 'items', tuple(self.items))
-        object.__setattr__(self, 'min_order', self.min_order)
-        object.__setattr__(self, 'max_order', self.max_order)
 DrawOrderGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5733,9 +4341,6 @@ class SceneKeyformWarp(CompactValue):
     'Immutable owned SceneKeyformWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Complete Warp ordinary-binding keyform; samples identify the active axis combination.'
     _variant: _ClassVar[str] = 'Warp'
     value: WarpKeyform
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 SceneKeyformWarp.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5743,9 +4348,6 @@ class SceneKeyformRotation(CompactValue):
     'Immutable owned SceneKeyformRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Complete Rotation ordinary-binding keyform; samples identify the active axis\ncombination.'
     _variant: _ClassVar[str] = 'Rotation'
     value: RotationKeyform
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 SceneKeyformRotation.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5753,9 +4355,6 @@ class SceneKeyformPart(CompactValue):
     'Immutable owned SceneKeyformPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Complete Part ordinary-binding keyform; samples identify the active axis combination.'
     _variant: _ClassVar[str] = 'Part'
     value: PartKeyform
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 SceneKeyformPart.__module__ = "zipzi.modeling"
 
 SceneKeyform: TypeAlias = SceneKeyformWarp | SceneKeyformRotation | SceneKeyformPart
@@ -5773,14 +4372,10 @@ class GeometrySnapshot(CompactValue):
     space: GeometrySpace
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'version', self.version)
-        object.__setattr__(self, 'mesh_id', self.mesh_id)
         object.__setattr__(self, 'vertex_ids', tuple(self.vertex_ids))
         object.__setattr__(self, 'positions', tuple(self.positions))
         object.__setattr__(self, 'uvs', tuple(self.uvs))
         object.__setattr__(self, 'triangles', tuple(tuple(v0) for v0 in self.triangles))
-        object.__setattr__(self, 'meshing', None if self.meshing is None else self.meshing)
-        object.__setattr__(self, 'space', self.space)
 GeometrySnapshot.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5794,9 +4389,6 @@ class GeometrySpaceRotationLocal(CompactValue):
     'Immutable owned GeometrySpaceRotationLocal value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Stable rotation-transform ID defining the local position space.'
     _variant: _ClassVar[str] = 'RotationLocal'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 GeometrySpaceRotationLocal.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5804,9 +4396,6 @@ class GeometrySpaceWarpParameter(CompactValue):
     'Immutable owned GeometrySpaceWarpParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Stable warp-transform ID defining the parameter/lattice position space.'
     _variant: _ClassVar[str] = 'WarpParameter'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 GeometrySpaceWarpParameter.__module__ = "zipzi.modeling"
 
 GeometrySpace: TypeAlias = GeometrySpaceModel | GeometrySpaceRotationLocal | GeometrySpaceWarpParameter
@@ -5821,11 +4410,9 @@ class TopologyReplacement(CompactValue):
     vertex_mapping: _Mapping[int, (int | None)]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'mesh', self.mesh)
-        object.__setattr__(self, 'binding', None if self.binding is None else self.binding)
         object.__setattr__(self, 'blend_bindings', tuple(self.blend_bindings))
         object.__setattr__(self, 'glues', tuple(self.glues))
-        object.__setattr__(self, 'vertex_mapping', MappingProxyType({key0: None if v0 is None else v0 for key0, v0 in self.vertex_mapping.items()}))
+        object.__setattr__(self, 'vertex_mapping', MappingProxyType({key0: v0 for key0, v0 in self.vertex_mapping.items()}))
 TopologyReplacement.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5834,10 +4421,6 @@ class ManualMeshOperationInsertVertex(CompactValue):
     _variant: _ClassVar[str] = 'insert_vertex'
     id: int
     uv: Vec2
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'uv', self.uv)
 ManualMeshOperationInsertVertex.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5847,11 +4430,6 @@ class ManualMeshOperationInsertConnectedVertex(CompactValue):
     from_: int
     id: int
     uv: Vec2
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'from_', self.from_)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'uv', self.uv)
 ManualMeshOperationInsertConnectedVertex.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5860,10 +4438,6 @@ class ManualMeshOperationDeleteEdge(CompactValue):
     _variant: _ClassVar[str] = 'delete_edge'
     a: int
     b: int
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'a', self.a)
-        object.__setattr__(self, 'b', self.b)
 ManualMeshOperationDeleteEdge.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5894,10 +4468,6 @@ class ManualMeshOperationConstrainEdge(CompactValue):
     _variant: _ClassVar[str] = 'constrain_edge'
     a: int
     b: int
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'a', self.a)
-        object.__setattr__(self, 'b', self.b)
 ManualMeshOperationConstrainEdge.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5906,10 +4476,6 @@ class ManualMeshOperationReleaseConstraint(CompactValue):
     _variant: _ClassVar[str] = 'release_constraint'
     a: int
     b: int
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'a', self.a)
-        object.__setattr__(self, 'b', self.b)
 ManualMeshOperationReleaseConstraint.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5925,10 +4491,6 @@ class ManualVertexTarget(CompactValue):
     'Immutable owned ManualVertexTarget value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable vertex identity in the edited mesh, not its array index.\nuv: Absolute target UV coordinate in the mesh texture domain.'
     id: int
     uv: Vec2
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'uv', self.uv)
 ManualVertexTarget.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -5974,8 +4536,6 @@ class ModelingQuery(CompactValue):
         object.__setattr__(self, 'motion_groups', tuple(self.motion_groups))
         object.__setattr__(self, 'motion_registrations', tuple(self.motion_registrations))
         object.__setattr__(self, 'expressions', tuple(self.expressions))
-        object.__setattr__(self, 'physics', self.physics)
-        object.__setattr__(self, 'pose', self.pose)
 ModelingQuery.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6011,34 +4571,26 @@ class OwnedModelingRecords(CompactValue):
     pose: (PoseAsset | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'document_id', self.document_id)
-        object.__setattr__(self, 'setup', self.setup)
-        object.__setattr__(self, 'hierarchy_order', self.hierarchy_order)
-        object.__setattr__(self, 'editor_state', self.editor_state)
-        object.__setattr__(self, 'display_info', self.display_info)
-        object.__setattr__(self, 'model3_settings', self.model3_settings)
         object.__setattr__(self, 'draw_order_groups', None if self.draw_order_groups is None else tuple(self.draw_order_groups))
         object.__setattr__(self, 'ids', MappingProxyType({key0: tuple(v0) for key0, v0 in self.ids.items()}))
-        object.__setattr__(self, 'assets', tuple(None if v0 is None else v0 for v0 in self.assets))
-        object.__setattr__(self, 'meshes', tuple(None if v0 is None else v0 for v0 in self.meshes))
-        object.__setattr__(self, 'parameters', tuple(None if v0 is None else v0 for v0 in self.parameters))
-        object.__setattr__(self, 'parts', tuple(None if v0 is None else v0 for v0 in self.parts))
-        object.__setattr__(self, 'transforms', tuple(None if v0 is None else v0 for v0 in self.transforms))
-        object.__setattr__(self, 'bindings', tuple(None if v0 is None else v0 for v0 in self.bindings))
-        object.__setattr__(self, 'scene_bindings', tuple(None if v0 is None else v0 for v0 in self.scene_bindings))
-        object.__setattr__(self, 'blend_key_tables', tuple(None if v0 is None else v0 for v0 in self.blend_key_tables))
-        object.__setattr__(self, 'blend_constraints', tuple(None if v0 is None else v0 for v0 in self.blend_constraints))
-        object.__setattr__(self, 'blend_bindings', tuple(None if v0 is None else v0 for v0 in self.blend_bindings))
-        object.__setattr__(self, 'glues', tuple(None if v0 is None else v0 for v0 in self.glues))
-        object.__setattr__(self, 'offscreens', tuple(None if v0 is None else v0 for v0 in self.offscreens))
-        object.__setattr__(self, 'parameter_groups', tuple(None if v0 is None else v0 for v0 in self.parameter_groups))
-        object.__setattr__(self, 'attachments', tuple(None if v0 is None else v0 for v0 in self.attachments))
-        object.__setattr__(self, 'motions', tuple(None if v0 is None else v0 for v0 in self.motions))
-        object.__setattr__(self, 'motion_groups', tuple(None if v0 is None else v0 for v0 in self.motion_groups))
-        object.__setattr__(self, 'motion_registrations', tuple(None if v0 is None else v0 for v0 in self.motion_registrations))
-        object.__setattr__(self, 'expressions', tuple(None if v0 is None else v0 for v0 in self.expressions))
-        object.__setattr__(self, 'physics', None if self.physics is None else self.physics)
-        object.__setattr__(self, 'pose', None if self.pose is None else self.pose)
+        object.__setattr__(self, 'assets', tuple(v0 for v0 in self.assets))
+        object.__setattr__(self, 'meshes', tuple(v0 for v0 in self.meshes))
+        object.__setattr__(self, 'parameters', tuple(v0 for v0 in self.parameters))
+        object.__setattr__(self, 'parts', tuple(v0 for v0 in self.parts))
+        object.__setattr__(self, 'transforms', tuple(v0 for v0 in self.transforms))
+        object.__setattr__(self, 'bindings', tuple(v0 for v0 in self.bindings))
+        object.__setattr__(self, 'scene_bindings', tuple(v0 for v0 in self.scene_bindings))
+        object.__setattr__(self, 'blend_key_tables', tuple(v0 for v0 in self.blend_key_tables))
+        object.__setattr__(self, 'blend_constraints', tuple(v0 for v0 in self.blend_constraints))
+        object.__setattr__(self, 'blend_bindings', tuple(v0 for v0 in self.blend_bindings))
+        object.__setattr__(self, 'glues', tuple(v0 for v0 in self.glues))
+        object.__setattr__(self, 'offscreens', tuple(v0 for v0 in self.offscreens))
+        object.__setattr__(self, 'parameter_groups', tuple(v0 for v0 in self.parameter_groups))
+        object.__setattr__(self, 'attachments', tuple(v0 for v0 in self.attachments))
+        object.__setattr__(self, 'motions', tuple(v0 for v0 in self.motions))
+        object.__setattr__(self, 'motion_groups', tuple(v0 for v0 in self.motion_groups))
+        object.__setattr__(self, 'motion_registrations', tuple(v0 for v0 in self.motion_registrations))
+        object.__setattr__(self, 'expressions', tuple(v0 for v0 in self.expressions))
 OwnedModelingRecords.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6053,13 +4605,11 @@ class DisplayInfo(CompactValue):
     opaque_source_ids: (CdiNamespaceIds | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'origin', self.origin)
         object.__setattr__(self, 'parameters', None if self.parameters is None else tuple(self.parameters))
         object.__setattr__(self, 'parameter_groups', None if self.parameter_groups is None else tuple(self.parameter_groups))
         object.__setattr__(self, 'parts', None if self.parts is None else tuple(self.parts))
         object.__setattr__(self, 'combined_parameters', None if self.combined_parameters is None else tuple(self.combined_parameters))
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
-        object.__setattr__(self, 'opaque_source_ids', None if self.opaque_source_ids is None else self.opaque_source_ids)
 DisplayInfo.__module__ = "zipzi.modeling"
 
 class DisplayInfoOrigin(str, Enum):
@@ -6076,8 +4626,6 @@ class CdiParameterEntryResolved(CompactValue):
     extensions: _Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
-        object.__setattr__(self, 'group_id', None if self.group_id is None else self.group_id)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 CdiParameterEntryResolved.__module__ = "zipzi.modeling"
 
@@ -6091,9 +4639,6 @@ class CdiParameterEntryUnresolved(CompactValue):
     extensions: _Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'group_id', None if self.group_id is None else self.group_id)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 CdiParameterEntryUnresolved.__module__ = "zipzi.modeling"
 
@@ -6107,7 +4652,6 @@ class CdiPartEntryResolved(CompactValue):
     extensions: _Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'part_id', self.part_id)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 CdiPartEntryResolved.__module__ = "zipzi.modeling"
 
@@ -6120,8 +4664,6 @@ class CdiPartEntryUnresolved(CompactValue):
     extensions: _Mapping[str, ExtensionValue]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
-        object.__setattr__(self, 'name', self.name)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 CdiPartEntryUnresolved.__module__ = "zipzi.modeling"
 
@@ -6134,7 +4676,6 @@ class CdiCombinedSet(CompactValue):
     members: tuple[ReferenceEntryCdiParameterRef, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'members', tuple(self.members))
 CdiCombinedSet.__module__ = "zipzi.modeling"
 
@@ -6143,10 +4684,6 @@ class ReferenceEntryCdiParameterRef(CompactValue):
     'Immutable owned ReferenceEntryCdiParameterRef value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable UUID of this reference entry; not the identity of its target.\ntarget: Resolved document target or preserved unresolved runtime identifier; entry identity\nremains independent of the target.'
     id: str
     target: CdiParameterRef
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'target', self.target)
 ReferenceEntryCdiParameterRef.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6177,10 +4714,8 @@ class Model3Settings(CompactValue):
         object.__setattr__(self, 'groups', None if self.groups is None else tuple(self.groups))
         object.__setattr__(self, 'layout', None if self.layout is None else MappingProxyType({key0: v0 for key0, v0 in self.layout.items()}))
         object.__setattr__(self, 'hit_areas', None if self.hit_areas is None else tuple(self.hit_areas))
-        object.__setattr__(self, 'user_data', None if self.user_data is None else self.user_data)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
         object.__setattr__(self, 'source_runtime_ids', None if self.source_runtime_ids is None else MappingProxyType({key0: v0 for key0, v0 in self.source_runtime_ids.items()}))
-        object.__setattr__(self, 'source_content', None if self.source_content is None else self.source_content)
 Model3Settings.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6192,8 +4727,6 @@ class ModelParameterGroup(CompactValue):
     extensions: _Mapping[str, ExtensionValue] = field(default_factory=lambda: {key0: _read_extension(v0) for key0, v0 in record({}).items()})
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
         object.__setattr__(self, 'parameters', tuple(self.parameters))
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 ModelParameterGroup.__module__ = "zipzi.modeling"
@@ -6203,10 +4736,6 @@ class ReferenceEntryModelTargetRef(CompactValue):
     'Immutable owned ReferenceEntryModelTargetRef value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable UUID of this reference entry; not the identity of its target.\ntarget: Resolved document target or preserved unresolved runtime identifier; entry identity\nremains independent of the target.'
     id: str
     target: ModelTargetRef
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'target', self.target)
 ReferenceEntryModelTargetRef.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6218,9 +4747,6 @@ class ModelHitArea(CompactValue):
     extensions: _Mapping[str, ExtensionValue] = field(default_factory=lambda: {key0: _read_extension(v0) for key0, v0 in record({}).items()})
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'mesh', self.mesh)
         object.__setattr__(self, 'extensions', MappingProxyType({key0: _freeze_extension(v0) for key0, v0 in self.extensions.items()}))
 ModelHitArea.__module__ = "zipzi.modeling"
 
@@ -6232,8 +4758,6 @@ class MotionGroup(CompactValue):
     entries: tuple[MotionRegistration, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'name', self.name)
         object.__setattr__(self, 'entries', tuple(self.entries))
 MotionGroup.__module__ = "zipzi.modeling"
 
@@ -6243,10 +4767,6 @@ class AddressSelectorScene(CompactValue):
     _variant: _ClassVar[str] = 'scene'
     id: str
     field: SceneField
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'field', self.field)
 AddressSelectorScene.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6254,9 +4774,6 @@ class AddressSelectorDrawingGroup(CompactValue):
     'Immutable owned AddressSelectorDrawingGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.'
     _variant: _ClassVar[str] = 'drawing_group'
     owner: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'owner', self.owner)
 AddressSelectorDrawingGroup.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6264,9 +4781,6 @@ class AddressSelectorBinding(CompactValue):
     'Immutable owned AddressSelectorBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.'
     _variant: _ClassVar[str] = 'binding'
     id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
 AddressSelectorBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6274,9 +4788,6 @@ class AddressSelectorOrganization(CompactValue):
     'Immutable owned AddressSelectorOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.'
     _variant: _ClassVar[str] = 'organization'
     id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
 AddressSelectorOrganization.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6285,10 +4796,6 @@ class AddressSelectorContent(CompactValue):
     _variant: _ClassVar[str] = 'content'
     id: str
     target: SceneContentTarget
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'target', self.target)
 AddressSelectorContent.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6296,9 +4803,6 @@ class AddressSelectorReference(CompactValue):
     'Immutable owned AddressSelectorReference value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.'
     _variant: _ClassVar[str] = 'reference'
     id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
 AddressSelectorReference.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6307,10 +4811,6 @@ class AddressSelectorSelection(CompactValue):
     _variant: _ClassVar[str] = 'selection'
     owner: str
     field: ReferenceSelectionField
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'owner', self.owner)
-        object.__setattr__(self, 'field', self.field)
 AddressSelectorSelection.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6318,9 +4818,6 @@ class AddressSelectorResourceName(CompactValue):
     'Immutable owned AddressSelectorResourceName value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.'
     _variant: _ClassVar[str] = 'resource_name'
     id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
 AddressSelectorResourceName.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6328,9 +4825,6 @@ class AddressSelectorAttachmentPath(CompactValue):
     'Immutable owned AddressSelectorAttachmentPath value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.'
     _variant: _ClassVar[str] = 'attachment_path'
     id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
 AddressSelectorAttachmentPath.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6338,9 +4832,6 @@ class AddressSelectorDocument(CompactValue):
     'Immutable owned AddressSelectorDocument value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nfield: Explicit field discriminator; must match the addressed object/domain.'
     _variant: _ClassVar[str] = 'document'
     field: DocumentField
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'field', self.field)
 AddressSelectorDocument.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6348,9 +4839,6 @@ class AddressSelectorMotionRegistration(CompactValue):
     'Immutable owned AddressSelectorMotionRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity of the addressed native animation object.'
     _variant: _ClassVar[str] = 'motion_registration'
     id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
 AddressSelectorMotionRegistration.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6358,9 +4846,6 @@ class AddressSelectorExpressionEntry(CompactValue):
     'Immutable owned AddressSelectorExpressionEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity of the addressed native animation object.'
     _variant: _ClassVar[str] = 'expression_entry'
     id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
 AddressSelectorExpressionEntry.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6368,9 +4853,6 @@ class AddressSelectorPhysics(CompactValue):
     'Immutable owned AddressSelectorPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity of the addressed native animation object.'
     _variant: _ClassVar[str] = 'physics'
     id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
 AddressSelectorPhysics.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6378,9 +4860,6 @@ class AddressSelectorPose(CompactValue):
     'Immutable owned AddressSelectorPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity of the addressed native animation object.'
     _variant: _ClassVar[str] = 'pose'
     id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
 AddressSelectorPose.__module__ = "zipzi.modeling"
 
 AddressSelector: TypeAlias = AddressSelectorScene | AddressSelectorDrawingGroup | AddressSelectorBinding | AddressSelectorOrganization | AddressSelectorContent | AddressSelectorReference | AddressSelectorSelection | AddressSelectorResourceName | AddressSelectorAttachmentPath | AddressSelectorDocument | AddressSelectorMotionRegistration | AddressSelectorExpressionEntry | AddressSelectorPhysics | AddressSelectorPose
@@ -6407,10 +4886,6 @@ class SceneContentTargetVertexPosition(CompactValue):
     _variant: _ClassVar[str] = 'vertex_position'
     vertex_id: int
     shape: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'}))
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'vertex_id', self.vertex_id)
-        object.__setattr__(self, 'shape', self.shape)
 SceneContentTargetVertexPosition.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6418,9 +4893,6 @@ class SceneContentTargetVertexUv(CompactValue):
     'Immutable owned SceneContentTargetVertexUv value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.'
     _variant: _ClassVar[str] = 'vertex_uv'
     vertex_id: int
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'vertex_id', self.vertex_id)
 SceneContentTargetVertexUv.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6428,9 +4900,6 @@ class SceneContentTargetTriangle(CompactValue):
     'Immutable owned SceneContentTargetTriangle value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nslot: Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.'
     _variant: _ClassVar[str] = 'triangle'
     slot: int
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'slot', self.slot)
 SceneContentTargetTriangle.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6440,11 +4909,6 @@ class SceneContentTargetWarpPoint(CompactValue):
     row: int
     column: int
     shape: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'}))
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'row', self.row)
-        object.__setattr__(self, 'column', self.column)
-        object.__setattr__(self, 'shape', self.shape)
 SceneContentTargetWarpPoint.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6454,11 +4918,6 @@ class SceneContentTargetWarpBezierControl(CompactValue):
     node: int
     component: int
     shape: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'}))
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'node', self.node)
-        object.__setattr__(self, 'component', self.component)
-        object.__setattr__(self, 'shape', self.shape)
 SceneContentTargetWarpBezierControl.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6466,9 +4925,6 @@ class SceneContentTargetGluePair(CompactValue):
     'Immutable owned SceneContentTargetGluePair value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npair_id: Stable Glue pair ID, not its offset in the pair array.'
     _variant: _ClassVar[str] = 'glue_pair'
     pair_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'pair_id', self.pair_id)
 SceneContentTargetGluePair.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6476,9 +4932,6 @@ class SceneContentTargetOffscreenKeyform(CompactValue):
     'Immutable owned SceneContentTargetOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nslot: Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.'
     _variant: _ClassVar[str] = 'offscreen_keyform'
     slot: int
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'slot', self.slot)
 SceneContentTargetOffscreenKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6486,9 +4939,6 @@ class SceneContentTargetOffscreenMapping(CompactValue):
     'Immutable owned SceneContentTargetOffscreenMapping value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nslot: Static Part slot or stable Part-binding sample combination, not an Offscreen array\noffset.'
     _variant: _ClassVar[str] = 'offscreen_mapping'
     slot: PartKeyformSlot
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'slot', self.slot)
 SceneContentTargetOffscreenMapping.__module__ = "zipzi.modeling"
 
 SceneContentTarget: TypeAlias = SceneContentTargetVertexPosition | SceneContentTargetVertexUv | SceneContentTargetTriangle | SceneContentTargetWarpPoint | SceneContentTargetWarpBezierControl | SceneContentTargetGluePair | SceneContentTargetOffscreenKeyform | SceneContentTargetOffscreenMapping
@@ -6508,10 +4958,6 @@ class AddressPatchScene(CompactValue):
     _variant: _ClassVar[str] = 'scene'
     value: SceneFieldValue
     clear_glue_pairs: bool
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
-        object.__setattr__(self, 'clear_glue_pairs', self.clear_glue_pairs)
 AddressPatchScene.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6529,9 +4975,6 @@ class AddressPatchBinding(CompactValue):
     'Immutable owned AddressPatchBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npatch: Typed patch for the addressed object; apply through the Edit to mutate candidate state.'
     _variant: _ClassVar[str] = 'binding'
     patch: BindingFieldPatch
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'patch', self.patch)
 AddressPatchBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6539,9 +4982,6 @@ class AddressPatchOrganization(CompactValue):
     'Immutable owned AddressPatchOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nintent: Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.'
     _variant: _ClassVar[str] = 'organization'
     intent: OrganizationEdit
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'intent', self.intent)
 AddressPatchOrganization.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6549,9 +4989,6 @@ class AddressPatchContent(CompactValue):
     'Immutable owned AddressPatchContent value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Scalar value in the referenced parameter domain.'
     _variant: _ClassVar[str] = 'content'
     value: SceneContentValue
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 AddressPatchContent.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6559,9 +4996,6 @@ class AddressPatchReference(CompactValue):
     'Immutable owned AddressPatchReference value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nfields: Typed replacement metadata fields; their variant must match the addressed reference\nkind.'
     _variant: _ClassVar[str] = 'reference'
     fields: ReferenceFields
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'fields', self.fields)
 AddressPatchReference.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6579,9 +5013,6 @@ class AddressPatchResourceName(CompactValue):
     'Immutable owned AddressPatchResourceName value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can change.'
     _variant: _ClassVar[str] = 'resource_name'
     name: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'name', self.name)
 AddressPatchResourceName.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6589,9 +5020,6 @@ class AddressPatchAttachmentPath(CompactValue):
     'Immutable owned AddressPatchAttachmentPath value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npath: Normalized package-relative attachment path using forward slashes; absolute paths\nand .. components are invalid.'
     _variant: _ClassVar[str] = 'attachment_path'
     path: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'path', self.path)
 AddressPatchAttachmentPath.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6599,9 +5027,6 @@ class AddressPatchDocument(CompactValue):
     'Immutable owned AddressPatchDocument value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Scalar value in the referenced parameter domain.'
     _variant: _ClassVar[str] = 'document'
     value: DocumentValue
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 AddressPatchDocument.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6609,9 +5034,6 @@ class AddressPatchMotionRegistration(CompactValue):
     'Immutable owned AddressPatchMotionRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nentry: Complete replacement registration with its existing stable identity.'
     _variant: _ClassVar[str] = 'motion_registration'
     entry: MotionRegistration
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'entry', self.entry)
 AddressPatchMotionRegistration.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6619,9 +5041,6 @@ class AddressPatchExpressionEntry(CompactValue):
     'Immutable owned AddressPatchExpressionEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nfields: Replacement expression target/value/blend fields, under captured owner epochs.'
     _variant: _ClassVar[str] = 'expression_entry'
     fields: ExpressionEntryFields
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'fields', self.fields)
 AddressPatchExpressionEntry.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6639,9 +5058,6 @@ class AddressPatchPose(CompactValue):
     'Immutable owned AddressPatchPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nfields: Replacement fields for the captured Pose singleton/group/entry/link.'
     _variant: _ClassVar[str] = 'pose'
     fields: PoseFields
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'fields', self.fields)
 AddressPatchPose.__module__ = "zipzi.modeling"
 
 AddressPatch: TypeAlias = AddressPatchScene | AddressPatchDrawingRange | AddressPatchBinding | AddressPatchOrganization | AddressPatchContent | AddressPatchReference | AddressPatchSelection | AddressPatchResourceName | AddressPatchAttachmentPath | AddressPatchDocument | AddressPatchMotionRegistration | AddressPatchExpressionEntry | AddressPatchPhysics | AddressPatchPose
@@ -6651,9 +5067,6 @@ class BindingFieldPatchSampleValue(CompactValue):
     'Immutable owned BindingFieldPatchSampleValue value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Scalar value in the referenced parameter domain.'
     _variant: _ClassVar[str] = 'SampleValue'
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 BindingFieldPatchSampleValue.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6662,10 +5075,6 @@ class BindingFieldPatchConstraintSample(CompactValue):
     _variant: _ClassVar[str] = 'ConstraintSample'
     value: float
     weight: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
-        object.__setattr__(self, 'weight', self.weight)
 BindingFieldPatchConstraintSample.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6674,10 +5083,6 @@ class BindingFieldPatchAxisParameter(CompactValue):
     _variant: _ClassVar[str] = 'AxisParameter'
     parameter_id: str
     reduction: (AxisReduction | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
-        object.__setattr__(self, 'reduction', None if self.reduction is None else self.reduction)
 BindingFieldPatchAxisParameter.__module__ = "zipzi.modeling"
 
 BindingFieldPatch: TypeAlias = BindingFieldPatchSampleValue | BindingFieldPatchConstraintSample | BindingFieldPatchAxisParameter
@@ -6687,9 +5092,6 @@ class SceneContentValuePoint(CompactValue):
     'Immutable owned SceneContentValuePoint value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Replacement XY value in the selected shape/UV space; BlendShape targets use deltas.'
     _variant: _ClassVar[str] = 'point'
     value: Vec2
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 SceneContentValuePoint.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6707,9 +5109,6 @@ class SceneContentValueGluePair(CompactValue):
     'Immutable owned SceneContentValueGluePair value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Complete replacement Glue pair with its identity and endpoint vertices.'
     _variant: _ClassVar[str] = 'glue_pair'
     value: GlueVertexPair
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 SceneContentValueGluePair.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6717,9 +5116,6 @@ class SceneContentValueOffscreenKeyform(CompactValue):
     'Immutable owned SceneContentValueOffscreenKeyform value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Complete replacement Offscreen appearance sample.'
     _variant: _ClassVar[str] = 'offscreen_keyform'
     value: OffscreenKeyform
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 SceneContentValueOffscreenKeyform.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6727,9 +5123,6 @@ class SceneContentValueMapping(CompactValue):
     'Immutable owned SceneContentValueMapping value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Replacement Offscreen keyform-array index; -1 selects neutral/unmapped.'
     _variant: _ClassVar[str] = 'mapping'
     value: int
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 SceneContentValueMapping.__module__ = "zipzi.modeling"
 
 SceneContentValue: TypeAlias = SceneContentValuePoint | SceneContentValueTriangle | SceneContentValueGluePair | SceneContentValueOffscreenKeyform | SceneContentValueMapping
@@ -6753,9 +5146,6 @@ class CollectionQueryScene(CompactValue):
     'Immutable owned CollectionQueryScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncollection: Explicit native collection selector; it does not imply loading every object payload.'
     _variant: _ClassVar[str] = 'scene'
     collection: SceneCollection
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'collection', self.collection)
 CollectionQueryScene.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6763,9 +5153,6 @@ class CollectionQueryOrganization(CompactValue):
     'Immutable owned CollectionQueryOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncollection: Explicit native collection selector; it does not imply loading every object payload.'
     _variant: _ClassVar[str] = 'organization'
     collection: OrganizationCollection
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'collection', self.collection)
 CollectionQueryOrganization.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6773,9 +5160,6 @@ class CollectionQueryReferences(CompactValue):
     'Immutable owned CollectionQueryReferences value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncollection: Explicit native collection selector; it does not imply loading every object payload.'
     _variant: _ClassVar[str] = 'references'
     collection: ReferenceCollection
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'collection', self.collection)
 CollectionQueryReferences.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6795,9 +5179,6 @@ class CollectionQueryDocument(CompactValue):
     'Immutable owned CollectionQueryDocument value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nfield: Explicit field discriminator; must match the addressed object/domain.'
     _variant: _ClassVar[str] = 'document'
     field: DocumentField
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'field', self.field)
 CollectionQueryDocument.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6805,9 +5186,6 @@ class CollectionQueryMotion(CompactValue):
     'Immutable owned CollectionQueryMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncollection: Root or stable motion-group container for library registrations.'
     _variant: _ClassVar[str] = 'motion'
     collection: MotionContainer
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'collection', self.collection)
 CollectionQueryMotion.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6833,9 +5211,6 @@ class CollectionQueryExpressionEntries(CompactValue):
     'Immutable owned CollectionQueryExpressionEntries value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nexpression_id: Stable expression asset ID owning the entry collection.'
     _variant: _ClassVar[str] = 'expression_entries'
     expression_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'expression_id', self.expression_id)
 CollectionQueryExpressionEntries.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6843,9 +5218,6 @@ class CollectionQueryPhysics(CompactValue):
     'Immutable owned CollectionQueryPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncollection: Native Physics group/input/output/node collection selector.'
     _variant: _ClassVar[str] = 'physics'
     collection: PhysicsCollection
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'collection', self.collection)
 CollectionQueryPhysics.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6853,9 +5225,6 @@ class CollectionQueryPose(CompactValue):
     'Immutable owned CollectionQueryPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncollection: Native Pose group/entry/link collection selector.'
     _variant: _ClassVar[str] = 'pose'
     collection: PoseCollection
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'collection', self.collection)
 CollectionQueryPose.__module__ = "zipzi.modeling"
 
 CollectionQuery: TypeAlias = CollectionQueryScene | CollectionQueryOrganization | CollectionQueryReferences | CollectionQueryResources | CollectionQueryAttachments | CollectionQueryDocument | CollectionQueryMotion | CollectionQueryMotionGroups | CollectionQueryClips | CollectionQueryExpressions | CollectionQueryExpressionEntries | CollectionQueryPhysics | CollectionQueryPose
@@ -6871,9 +5240,6 @@ class PhysicsCollectionInputs(CompactValue):
     'Immutable owned PhysicsCollectionInputs value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ngroup_id: Stable Physics rig ID owning the selected rows.'
     _variant: _ClassVar[str] = 'inputs'
     group_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'group_id', self.group_id)
 PhysicsCollectionInputs.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6881,9 +5247,6 @@ class PhysicsCollectionOutputs(CompactValue):
     'Immutable owned PhysicsCollectionOutputs value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ngroup_id: Stable Physics rig ID owning the selected rows.'
     _variant: _ClassVar[str] = 'outputs'
     group_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'group_id', self.group_id)
 PhysicsCollectionOutputs.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6891,9 +5254,6 @@ class PhysicsCollectionNodes(CompactValue):
     'Immutable owned PhysicsCollectionNodes value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ngroup_id: Stable Physics rig ID owning the selected rows.'
     _variant: _ClassVar[str] = 'nodes'
     group_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'group_id', self.group_id)
 PhysicsCollectionNodes.__module__ = "zipzi.modeling"
 
 PhysicsCollection: TypeAlias = PhysicsCollectionGroups | PhysicsCollectionInputs | PhysicsCollectionOutputs | PhysicsCollectionNodes
@@ -6903,9 +5263,6 @@ class CapabilitiesScene(CompactValue):
     'Immutable owned CapabilitiesScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Current scene lifecycle, hierarchy and drawing capability states and reasons; do not\ninfer support from method presence.'
     _variant: _ClassVar[str] = 'scene'
     value: SceneCapabilities
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 CapabilitiesScene.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6913,9 +5270,6 @@ class CapabilitiesOrganization(CompactValue):
     'Immutable owned CapabilitiesOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Current organization and parameter groups capability states and reasons; do not\ninfer support from method presence.'
     _variant: _ClassVar[str] = 'organization'
     value: OrganizationCapabilities
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 CapabilitiesOrganization.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6923,9 +5277,6 @@ class CapabilitiesBinding(CompactValue):
     'Immutable owned CapabilitiesBinding value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Current parameter bindings and grid conversions capability states and reasons; do\nnot infer support from method presence.'
     _variant: _ClassVar[str] = 'binding'
     value: BindingCapabilities
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 CapabilitiesBinding.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6933,9 +5284,6 @@ class CapabilitiesContent(CompactValue):
     'Immutable owned CapabilitiesContent value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Current geometry and topology content capability states and reasons; do not infer\nsupport from method presence.'
     _variant: _ClassVar[str] = 'content'
     value: SceneContentCapabilities
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 CapabilitiesContent.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6943,9 +5291,6 @@ class CapabilitiesReferences(CompactValue):
     'Immutable owned CapabilitiesReferences value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Current metadata references and selections capability states and reasons; do not\ninfer support from method presence.'
     _variant: _ClassVar[str] = 'references'
     value: ReferenceCapabilities
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 CapabilitiesReferences.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6953,9 +5298,6 @@ class CapabilitiesResource(CompactValue):
     'Immutable owned CapabilitiesResource value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Current image asset metadata and references capability states and reasons; do not\ninfer support from method presence.'
     _variant: _ClassVar[str] = 'resource'
     value: ResourceCapabilities
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 CapabilitiesResource.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6963,9 +5305,6 @@ class CapabilitiesAttachment(CompactValue):
     'Immutable owned CapabilitiesAttachment value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Current package attachments and their references capability states and reasons; do\nnot infer support from method presence.'
     _variant: _ClassVar[str] = 'attachment'
     value: AttachmentCapabilities
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 CapabilitiesAttachment.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6973,9 +5312,6 @@ class CapabilitiesCollection(CompactValue):
     'Immutable owned CapabilitiesCollection value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Current collection capability states and reasons; do not infer support from method\npresence.'
     _variant: _ClassVar[str] = 'collection'
     value: CollectionCapabilities
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 CapabilitiesCollection.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6983,9 +5319,6 @@ class CapabilitiesDocument(CompactValue):
     'Immutable owned CapabilitiesDocument value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Current document configuration and metadata repair capability states and reasons; do\nnot infer support from method presence.'
     _variant: _ClassVar[str] = 'document'
     value: CapabilityState
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 CapabilitiesDocument.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -6993,9 +5326,6 @@ class CapabilitiesMotion(CompactValue):
     'Immutable owned CapabilitiesMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Current native motion eligibility; host Preview support is advertised separately.'
     _variant: _ClassVar[str] = 'motion'
     value: MotionCapabilities
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 CapabilitiesMotion.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7003,9 +5333,6 @@ class CapabilitiesExpression(CompactValue):
     'Immutable owned CapabilitiesExpression value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Current native expression eligibility; host Preview support is advertised separately.'
     _variant: _ClassVar[str] = 'expression'
     value: ExpressionCapabilities
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 CapabilitiesExpression.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7013,9 +5340,6 @@ class CapabilitiesPhysics(CompactValue):
     'Immutable owned CapabilitiesPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Current native physics eligibility; host Preview support is advertised separately.'
     _variant: _ClassVar[str] = 'physics'
     value: PhysicsCapabilities
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 CapabilitiesPhysics.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7023,9 +5347,6 @@ class CapabilitiesPose(CompactValue):
     'Immutable owned CapabilitiesPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Current native pose eligibility; host Preview support is advertised separately.'
     _variant: _ClassVar[str] = 'pose'
     value: PoseCapabilities
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 CapabilitiesPose.__module__ = "zipzi.modeling"
 
 Capabilities: TypeAlias = CapabilitiesScene | CapabilitiesOrganization | CapabilitiesBinding | CapabilitiesContent | CapabilitiesReferences | CapabilitiesResource | CapabilitiesAttachment | CapabilitiesCollection | CapabilitiesDocument | CapabilitiesMotion | CapabilitiesExpression | CapabilitiesPhysics | CapabilitiesPose
@@ -7041,16 +5362,6 @@ class SceneCapabilities(CompactValue):
     duplicate: CapabilityState
     delete: CapabilityState
     dissolve: CapabilityState
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'inspect', self.inspect)
-        object.__setattr__(self, 'patch', self.patch)
-        object.__setattr__(self, 'move_object', self.move_object)
-        object.__setattr__(self, 'reparent', self.reparent)
-        object.__setattr__(self, 'reorder', self.reorder)
-        object.__setattr__(self, 'duplicate', self.duplicate)
-        object.__setattr__(self, 'delete', self.delete)
-        object.__setattr__(self, 'dissolve', self.dissolve)
 SceneCapabilities.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7064,9 +5375,6 @@ class CapabilityStateUnsupported(CompactValue):
     'Immutable owned CapabilityStateUnsupported value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncode: Stable reason code explaining why this operation is unsupported for this object/domain.'
     _variant: _ClassVar[str] = 'Unsupported'
     code: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'code', self.code)
 CapabilityStateUnsupported.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7074,9 +5382,6 @@ class CapabilityStateUnavailable(CompactValue):
     'Immutable owned CapabilityStateUnavailable value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncode: Stable reason code explaining why this operation is currently unavailable.'
     _variant: _ClassVar[str] = 'Unavailable'
     code: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'code', self.code)
 CapabilityStateUnavailable.__module__ = "zipzi.modeling"
 
 CapabilityState: TypeAlias = CapabilityStateAvailable | CapabilityStateUnsupported | CapabilityStateUnavailable
@@ -7092,16 +5397,6 @@ class OrganizationCapabilities(CompactValue):
     duplicate: CapabilityState
     delete: CapabilityState
     dissolve: CapabilityState
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'inspect', self.inspect)
-        object.__setattr__(self, 'patch', self.patch)
-        object.__setattr__(self, 'create_child', self.create_child)
-        object.__setattr__(self, 'move_object', self.move_object)
-        object.__setattr__(self, 'reorder', self.reorder)
-        object.__setattr__(self, 'duplicate', self.duplicate)
-        object.__setattr__(self, 'delete', self.delete)
-        object.__setattr__(self, 'dissolve', self.dissolve)
 OrganizationCapabilities.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7114,15 +5409,6 @@ class BindingCapabilities(CompactValue):
     delete: CapabilityState
     repair: CapabilityState
     preview: CapabilityState
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'inspect', self.inspect)
-        object.__setattr__(self, 'patch', self.patch)
-        object.__setattr__(self, 'create_child', self.create_child)
-        object.__setattr__(self, 'reorder', self.reorder)
-        object.__setattr__(self, 'delete', self.delete)
-        object.__setattr__(self, 'repair', self.repair)
-        object.__setattr__(self, 'preview', self.preview)
 BindingCapabilities.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7131,11 +5417,6 @@ class SceneContentCapabilities(CompactValue):
     inspect: CapabilityState
     edit: CapabilityState
     topology: CapabilityState
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'inspect', self.inspect)
-        object.__setattr__(self, 'edit', self.edit)
-        object.__setattr__(self, 'topology', self.topology)
 SceneContentCapabilities.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7148,15 +5429,6 @@ class ReferenceCapabilities(CompactValue):
     duplicate: CapabilityState
     delete: CapabilityState
     dissolve: CapabilityState
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'inspect', self.inspect)
-        object.__setattr__(self, 'patch', self.patch)
-        object.__setattr__(self, 'create_child', self.create_child)
-        object.__setattr__(self, 'move_object', self.move_object)
-        object.__setattr__(self, 'duplicate', self.duplicate)
-        object.__setattr__(self, 'delete', self.delete)
-        object.__setattr__(self, 'dissolve', self.dissolve)
 ReferenceCapabilities.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7168,14 +5440,6 @@ class ResourceCapabilities(CompactValue):
     duplicate: CapabilityState
     delete: CapabilityState
     reorder: CapabilityState
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'inspect', self.inspect)
-        object.__setattr__(self, 'patch', self.patch)
-        object.__setattr__(self, 'load_content', self.load_content)
-        object.__setattr__(self, 'duplicate', self.duplicate)
-        object.__setattr__(self, 'delete', self.delete)
-        object.__setattr__(self, 'reorder', self.reorder)
 ResourceCapabilities.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7186,13 +5450,6 @@ class AttachmentCapabilities(CompactValue):
     duplicate: CapabilityState
     delete: CapabilityState
     load_content: CapabilityState
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'inspect', self.inspect)
-        object.__setattr__(self, 'patch', self.patch)
-        object.__setattr__(self, 'duplicate', self.duplicate)
-        object.__setattr__(self, 'delete', self.delete)
-        object.__setattr__(self, 'load_content', self.load_content)
 AttachmentCapabilities.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7201,11 +5458,6 @@ class CollectionCapabilities(CompactValue):
     create: CapabilityState
     move_into: CapabilityState
     reorder: CapabilityState
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'create', self.create)
-        object.__setattr__(self, 'move_into', self.move_into)
-        object.__setattr__(self, 'reorder', self.reorder)
 CollectionCapabilities.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7221,18 +5473,6 @@ class MotionCapabilities(CompactValue):
     reorder: CapabilityState
     repair: CapabilityState
     edit_content: CapabilityState
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'inspect', self.inspect)
-        object.__setattr__(self, 'patch', self.patch)
-        object.__setattr__(self, 'duplicate', self.duplicate)
-        object.__setattr__(self, 'delete', self.delete)
-        object.__setattr__(self, 'move_object', self.move_object)
-        object.__setattr__(self, 'preview', self.preview)
-        object.__setattr__(self, 'create_child', self.create_child)
-        object.__setattr__(self, 'reorder', self.reorder)
-        object.__setattr__(self, 'repair', self.repair)
-        object.__setattr__(self, 'edit_content', self.edit_content)
 MotionCapabilities.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7246,16 +5486,6 @@ class ExpressionCapabilities(CompactValue):
     delete: CapabilityState
     repair: CapabilityState
     preview: CapabilityState
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'inspect', self.inspect)
-        object.__setattr__(self, 'create_entry', self.create_entry)
-        object.__setattr__(self, 'patch', self.patch)
-        object.__setattr__(self, 'move_entry', self.move_entry)
-        object.__setattr__(self, 'duplicate', self.duplicate)
-        object.__setattr__(self, 'delete', self.delete)
-        object.__setattr__(self, 'repair', self.repair)
-        object.__setattr__(self, 'preview', self.preview)
 ExpressionCapabilities.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7270,17 +5500,6 @@ class PhysicsCapabilities(CompactValue):
     reorder: CapabilityState
     repair: CapabilityState
     preview: CapabilityState
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'inspect', self.inspect)
-        object.__setattr__(self, 'patch', self.patch)
-        object.__setattr__(self, 'create_child', self.create_child)
-        object.__setattr__(self, 'duplicate', self.duplicate)
-        object.__setattr__(self, 'delete', self.delete)
-        object.__setattr__(self, 'move_object', self.move_object)
-        object.__setattr__(self, 'reorder', self.reorder)
-        object.__setattr__(self, 'repair', self.repair)
-        object.__setattr__(self, 'preview', self.preview)
 PhysicsCapabilities.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7296,18 +5515,6 @@ class PoseCapabilities(CompactValue):
     repair: CapabilityState
     dissolve: CapabilityState
     preview: CapabilityState
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'inspect', self.inspect)
-        object.__setattr__(self, 'patch', self.patch)
-        object.__setattr__(self, 'create_child', self.create_child)
-        object.__setattr__(self, 'duplicate', self.duplicate)
-        object.__setattr__(self, 'delete', self.delete)
-        object.__setattr__(self, 'move_object', self.move_object)
-        object.__setattr__(self, 'reorder', self.reorder)
-        object.__setattr__(self, 'repair', self.repair)
-        object.__setattr__(self, 'dissolve', self.dissolve)
-        object.__setattr__(self, 'preview', self.preview)
 PoseCapabilities.__module__ = "zipzi.modeling"
 
 class ObjectKind(str, Enum):
@@ -7363,7 +5570,6 @@ class ModelingSamples(CompactValue):
     quality: tuple[tuple[MeshQuality, ...], ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'version', self.version)
         object.__setattr__(self, 'parameters', tuple(MappingProxyType({key1: v1 for key1, v1 in v0.items()}) for v0 in self.parameters))
         object.__setattr__(self, 'frames', tuple(self.frames))
         object.__setattr__(self, 'diagnostics', tuple(self.diagnostics))
@@ -7381,7 +5587,6 @@ class DrawableFrame(CompactValue):
     deformers: tuple[EvaluatedDeformer, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'source_revision', self.source_revision)
         object.__setattr__(self, 'parameters', tuple(self.parameters))
         object.__setattr__(self, 'drawables', tuple(self.drawables))
         object.__setattr__(self, 'offscreens', tuple(self.offscreens))
@@ -7396,12 +5601,6 @@ class EvaluatedParameter(CompactValue):
     requested: float
     value: float
     clamped: bool
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'requested', self.requested)
-        object.__setattr__(self, 'value', self.value)
-        object.__setattr__(self, 'clamped', self.clamped)
 EvaluatedParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7430,26 +5629,11 @@ class Drawable(CompactValue):
     masks: tuple[str, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
-        object.__setattr__(self, 'part_id', self.part_id)
-        object.__setattr__(self, 'raw_blend_mode', None if self.raw_blend_mode is None else self.raw_blend_mode)
-        object.__setattr__(self, 'texture_asset_id', self.texture_asset_id)
-        object.__setattr__(self, 'texture_slot', self.texture_slot)
-        object.__setattr__(self, 'renderable', self.renderable)
         object.__setattr__(self, 'positions', tuple(self.positions))
         object.__setattr__(self, 'uvs', tuple(self.uvs))
         object.__setattr__(self, 'indices', tuple(self.indices))
-        object.__setattr__(self, 'draw_order', self.draw_order)
-        object.__setattr__(self, 'render_order', self.render_order)
-        object.__setattr__(self, 'opacity', self.opacity)
         object.__setattr__(self, 'multiply_color', tuple(self.multiply_color))
         object.__setattr__(self, 'screen_color', tuple(self.screen_color))
-        object.__setattr__(self, 'blend_mode', self.blend_mode)
-        object.__setattr__(self, 'enabled', self.enabled)
-        object.__setattr__(self, 'visible', self.visible)
-        object.__setattr__(self, 'double_sided', self.double_sided)
-        object.__setattr__(self, 'inverted_mask', self.inverted_mask)
         object.__setattr__(self, 'masks', tuple(self.masks))
 Drawable.__module__ = "zipzi.modeling"
 
@@ -7471,16 +5655,6 @@ class OffscreenFrame(CompactValue):
     screen_color: tuple[float, float, float, float]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'renderable', self.renderable)
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'runtime_id', self.runtime_id)
-        object.__setattr__(self, 'owner_part_id', self.owner_part_id)
-        object.__setattr__(self, 'parent_offscreen_id', None if self.parent_offscreen_id is None else self.parent_offscreen_id)
-        object.__setattr__(self, 'render_order', self.render_order)
-        object.__setattr__(self, 'opacity', self.opacity)
-        object.__setattr__(self, 'enabled', self.enabled)
-        object.__setattr__(self, 'blend_mode', self.blend_mode)
-        object.__setattr__(self, 'flags', self.flags)
         object.__setattr__(self, 'masks', tuple(self.masks))
         object.__setattr__(self, 'multiply_color', tuple(self.multiply_color))
         object.__setattr__(self, 'screen_color', tuple(self.screen_color))
@@ -7491,9 +5665,6 @@ class RenderCommandBeginOffscreen(CompactValue):
     'Immutable owned RenderCommandBeginOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.'
     _variant: _ClassVar[str] = 'BeginOffscreen'
     offscreen_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'offscreen_id', self.offscreen_id)
 RenderCommandBeginOffscreen.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7501,9 +5672,6 @@ class RenderCommandDrawMesh(CompactValue):
     'Immutable owned RenderCommandDrawMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.'
     _variant: _ClassVar[str] = 'DrawMesh'
     mesh_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'mesh_id', self.mesh_id)
 RenderCommandDrawMesh.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7511,9 +5679,6 @@ class RenderCommandEndOffscreen(CompactValue):
     'Immutable owned RenderCommandEndOffscreen value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.'
     _variant: _ClassVar[str] = 'EndOffscreen'
     offscreen_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'offscreen_id', self.offscreen_id)
 RenderCommandEndOffscreen.__module__ = "zipzi.modeling"
 
 RenderCommand: TypeAlias = RenderCommandBeginOffscreen | RenderCommandDrawMesh | RenderCommandEndOffscreen
@@ -7528,10 +5693,7 @@ class EvaluatedDeformer(CompactValue):
     rotation_basis: (tuple[Vec2, Vec2] | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'enabled', self.enabled)
         object.__setattr__(self, 'points', tuple(self.points))
-        object.__setattr__(self, 'rotation_axis', None if self.rotation_axis is None else self.rotation_axis)
         object.__setattr__(self, 'rotation_basis', None if self.rotation_basis is None else tuple(self.rotation_basis))
 EvaluatedDeformer.__module__ = "zipzi.modeling"
 
@@ -7541,11 +5703,6 @@ class GeometryDiagnostic(CompactValue):
     kind: GeometryDiagnosticKind
     mesh_id: str
     triangle_index: (int | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'kind', self.kind)
-        object.__setattr__(self, 'mesh_id', self.mesh_id)
-        object.__setattr__(self, 'triangle_index', None if self.triangle_index is None else self.triangle_index)
 GeometryDiagnostic.__module__ = "zipzi.modeling"
 
 class GeometryDiagnosticKind(str, Enum):
@@ -7569,16 +5726,7 @@ class MeshQuality(CompactValue):
     texture_coverage: (TextureCoverage | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'mesh_id', self.mesh_id)
-        object.__setattr__(self, 'visible', self.visible)
-        object.__setattr__(self, 'vertex_count', self.vertex_count)
         object.__setattr__(self, 'triangles', tuple(self.triangles))
-        object.__setattr__(self, 'min_angle_degrees', None if self.min_angle_degrees is None else self.min_angle_degrees)
-        object.__setattr__(self, 'max_aspect_ratio', None if self.max_aspect_ratio is None else self.max_aspect_ratio)
-        object.__setattr__(self, 'max_edge_stretch', None if self.max_edge_stretch is None else self.max_edge_stretch)
-        object.__setattr__(self, 'degenerate_triangles', self.degenerate_triangles)
-        object.__setattr__(self, 'flipped_triangles', self.flipped_triangles)
-        object.__setattr__(self, 'texture_coverage', None if self.texture_coverage is None else self.texture_coverage)
 MeshQuality.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7590,14 +5738,6 @@ class TriangleQuality(CompactValue):
     aspect_ratio: (float | None) = None
     relative_area: (float | None) = None
     edge_stretch: (float | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'triangle_index', self.triangle_index)
-        object.__setattr__(self, 'area', self.area)
-        object.__setattr__(self, 'min_angle_degrees', self.min_angle_degrees)
-        object.__setattr__(self, 'aspect_ratio', None if self.aspect_ratio is None else self.aspect_ratio)
-        object.__setattr__(self, 'relative_area', None if self.relative_area is None else self.relative_area)
-        object.__setattr__(self, 'edge_stretch', None if self.edge_stretch is None else self.edge_stretch)
 TriangleQuality.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7613,18 +5753,6 @@ class TextureCoverage(CompactValue):
     transparent_coverage_fraction: (float | None) = None
     uncovered_opaque_fraction: (float | None) = None
     out_of_bounds_triangles: int
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'alpha_threshold', self.alpha_threshold)
-        object.__setattr__(self, 'pixel_step', self.pixel_step)
-        object.__setattr__(self, 'sampled_pixels', self.sampled_pixels)
-        object.__setattr__(self, 'covered_pixels', self.covered_pixels)
-        object.__setattr__(self, 'transparent_covered_pixels', self.transparent_covered_pixels)
-        object.__setattr__(self, 'opaque_pixels', self.opaque_pixels)
-        object.__setattr__(self, 'uncovered_opaque_pixels', self.uncovered_opaque_pixels)
-        object.__setattr__(self, 'transparent_coverage_fraction', None if self.transparent_coverage_fraction is None else self.transparent_coverage_fraction)
-        object.__setattr__(self, 'uncovered_opaque_fraction', None if self.uncovered_opaque_fraction is None else self.uncovered_opaque_fraction)
-        object.__setattr__(self, 'out_of_bounds_triangles', self.out_of_bounds_triangles)
 TextureCoverage.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7642,8 +5770,6 @@ class ProjectRequestImport(CompactValue):
     textures: tuple[TextureSlot, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'path', self.path)
-        object.__setattr__(self, 'format', self.format)
         object.__setattr__(self, 'textures', tuple(self.textures))
 ProjectRequestImport.__module__ = "zipzi.modeling"
 
@@ -7652,9 +5778,6 @@ class ProjectRequestOpen(CompactValue):
     'Immutable owned ProjectRequestOpen value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npath: Host-side filesystem path for this IO request; resolve it explicitly on the host.'
     _variant: _ClassVar[str] = 'open'
     path: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'path', self.path)
 ProjectRequestOpen.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7663,10 +5786,6 @@ class ProjectRequestNew(CompactValue):
     _variant: _ClassVar[str] = 'new'
     document_id: str
     setup: ModelSetup
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'document_id', self.document_id)
-        object.__setattr__(self, 'setup', self.setup)
 ProjectRequestNew.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7680,15 +5799,6 @@ class ProjectRequestExport(CompactValue):
     allow_loss: bool
     bake_animation: bool
     auto_frame_rate: bool
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'path', self.path)
-        object.__setattr__(self, 'format', self.format)
-        object.__setattr__(self, 'name', self.name)
-        object.__setattr__(self, 'object_id', None if self.object_id is None else self.object_id)
-        object.__setattr__(self, 'allow_loss', self.allow_loss)
-        object.__setattr__(self, 'bake_animation', self.bake_animation)
-        object.__setattr__(self, 'auto_frame_rate', self.auto_frame_rate)
 ProjectRequestExport.__module__ = "zipzi.modeling"
 
 ProjectRequest: TypeAlias = ProjectRequestDiagnose | ProjectRequestImport | ProjectRequestOpen | ProjectRequestNew | ProjectRequestExport
@@ -7705,10 +5815,6 @@ class TextureSlot(CompactValue):
     'Immutable owned TextureSlot value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nslot: Zero-based external texture slot number used by the import format.\npath: Host-side image file path supplying this external texture slot.'
     slot: int
     path: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'slot', self.slot)
-        object.__setattr__(self, 'path', self.path)
 TextureSlot.__module__ = "zipzi.modeling"
 
 class ExportFormat(str, Enum):
@@ -7735,12 +5841,8 @@ class ProjectReport(CompactValue):
     paths: tuple[str, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'before', self.before)
-        object.__setattr__(self, 'after', self.after)
         object.__setattr__(self, 'warnings', tuple(self.warnings))
         object.__setattr__(self, 'diagnostics', tuple(self.diagnostics))
-        object.__setattr__(self, 'published', self.published)
-        object.__setattr__(self, 'durable', self.durable)
         object.__setattr__(self, 'paths', tuple(self.paths))
 ProjectReport.__module__ = "zipzi.modeling"
 
@@ -7751,12 +5853,6 @@ class ProjectDiagnostic(CompactValue):
     code: str
     object_id: str
     message: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'severity', self.severity)
-        object.__setattr__(self, 'code', self.code)
-        object.__setattr__(self, 'object_id', self.object_id)
-        object.__setattr__(self, 'message', self.message)
 ProjectDiagnostic.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7771,13 +5867,7 @@ class EditorContext(CompactValue):
     pending_interaction: bool
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'version', self.version)
-        object.__setattr__(self, 'view_id', self.view_id)
         object.__setattr__(self, 'selected_ids', tuple(self.selected_ids))
-        object.__setattr__(self, 'workspace', self.workspace)
-        object.__setattr__(self, 'editing_context', self.editing_context)
-        object.__setattr__(self, 'active_tool', self.active_tool)
-        object.__setattr__(self, 'pending_interaction', self.pending_interaction)
 EditorContext.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7786,10 +5876,6 @@ class PreviewCommandSetParameter(CompactValue):
     _variant: _ClassVar[str] = 'set_parameter'
     id: str
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'value', self.value)
 PreviewCommandSetParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7798,10 +5884,6 @@ class PreviewCommandScheduleMotion(CompactValue):
     _variant: _ClassVar[str] = 'schedule_motion'
     id: str
     time: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'time', self.time)
 PreviewCommandScheduleMotion.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7810,10 +5892,6 @@ class PreviewCommandScheduleRegistration(CompactValue):
     _variant: _ClassVar[str] = 'schedule_registration'
     id: str
     time: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'time', self.time)
 PreviewCommandScheduleRegistration.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7822,10 +5900,6 @@ class PreviewCommandScheduleExpression(CompactValue):
     _variant: _ClassVar[str] = 'schedule_expression'
     id: str
     time: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'time', self.time)
 PreviewCommandScheduleExpression.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7835,11 +5909,6 @@ class PreviewCommandScheduleParameter(CompactValue):
     id: str
     time: float
     value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'time', self.time)
-        object.__setattr__(self, 'value', self.value)
 PreviewCommandScheduleParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7848,10 +5917,6 @@ class PreviewCommandSetPhysics(CompactValue):
     _variant: _ClassVar[str] = 'set_physics'
     enabled: bool
     stabilized_start: bool
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'enabled', self.enabled)
-        object.__setattr__(self, 'stabilized_start', self.stabilized_start)
 PreviewCommandSetPhysics.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7867,10 +5932,6 @@ class PreviewState(CompactValue):
     'Immutable owned PreviewState value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsequence: Monotonic accepted operation ordinal, including cancelled sample requests.\ntime: Actual SDK clock after the last completed operation, in seconds.'
     sequence: int
     time: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'sequence', self.sequence)
-        object.__setattr__(self, 'time', self.time)
 PreviewState.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7882,9 +5943,7 @@ class PreviewBatch(CompactValue):
     frames: tuple[PreviewFrame, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'view', None if self.view is None else self.view)
         object.__setattr__(self, 'queries', tuple(self.queries))
-        object.__setattr__(self, 'sequence', self.sequence)
         object.__setattr__(self, 'frames', tuple(self.frames))
 PreviewBatch.__module__ = "zipzi.modeling"
 
@@ -7899,12 +5958,7 @@ class ObservationView(CompactValue):
     quality: bool = field(default_factory=lambda: _boolean(False))
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'width', self.width)
-        object.__setattr__(self, 'height', self.height)
         object.__setattr__(self, 'roi', tuple(self.roi))
-        object.__setattr__(self, 'padding_model', self.padding_model)
-        object.__setattr__(self, 'topology', None if self.topology is None else self.topology)
-        object.__setattr__(self, 'quality', self.quality)
 ObservationView.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7927,19 +5981,6 @@ class TopologyOverlay(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'targets', None if self.targets is None else tuple(self.targets))
-        object.__setattr__(self, 'wireframe', self.wireframe)
-        object.__setattr__(self, 'vertices', self.vertices)
-        object.__setattr__(self, 'vertex_ids', self.vertex_ids)
-        object.__setattr__(self, 'constraints', self.constraints)
-        object.__setattr__(self, 'strain', self.strain)
-        object.__setattr__(self, 'include_hidden', self.include_hidden)
-        object.__setattr__(self, 'topology_only', self.topology_only)
-        object.__setattr__(self, 'heat_opacity', self.heat_opacity)
-        object.__setattr__(self, 'anomalies_only', self.anomalies_only)
-        object.__setattr__(self, 'thresholds', self.thresholds)
-        object.__setattr__(self, 'label_scale', self.label_scale)
-        object.__setattr__(self, 'label_spacing', self.label_spacing)
-        object.__setattr__(self, 'max_labels', self.max_labels)
 TopologyOverlay.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7947,9 +5988,6 @@ class ObjectTargetMesh(CompactValue):
     'Immutable owned ObjectTargetMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Persistent authoring mesh UUID.'
     _variant: _ClassVar[str] = 'mesh'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 ObjectTargetMesh.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7957,9 +5995,6 @@ class ObjectTargetPart(CompactValue):
     'Immutable owned ObjectTargetPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Persistent Part UUID selecting descendant meshes.'
     _variant: _ClassVar[str] = 'part'
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 ObjectTargetPart.__module__ = "zipzi.modeling"
 
 ObjectTarget: TypeAlias = ObjectTargetMesh | ObjectTargetPart
@@ -7970,11 +6005,6 @@ class TopologyThresholds(CompactValue):
     min_angle_degrees: float = field(default_factory=lambda: number(10.0))
     max_aspect_ratio: float = field(default_factory=lambda: number(20.0))
     max_edge_stretch: float = field(default_factory=lambda: number(2.0))
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'min_angle_degrees', self.min_angle_degrees)
-        object.__setattr__(self, 'max_aspect_ratio', self.max_aspect_ratio)
-        object.__setattr__(self, 'max_edge_stretch', self.max_edge_stretch)
 TopologyThresholds.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -7986,7 +6016,6 @@ class SpatialQueryBounds(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'targets', tuple(self.targets))
-        object.__setattr__(self, 'include_hidden', self.include_hidden)
 SpatialQueryBounds.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8000,9 +6029,6 @@ class SpatialQueryHits(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'point', tuple(self.point))
-        object.__setattr__(self, 'include_hidden', self.include_hidden)
-        object.__setattr__(self, 'details', self.details)
-        object.__setattr__(self, 'max_candidates', self.max_candidates)
 SpatialQueryHits.__module__ = "zipzi.modeling"
 
 SpatialQuery: TypeAlias = SpatialQueryBounds | SpatialQueryHits
@@ -8019,13 +6045,7 @@ class PreviewFrame(CompactValue):
     geometry: (DrawableFrame | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'observation', None if self.observation is None else self.observation)
         object.__setattr__(self, 'spatial', tuple(self.spatial))
-        object.__setattr__(self, 'preview_id', self.preview_id)
-        object.__setattr__(self, 'sequence', self.sequence)
-        object.__setattr__(self, 'index', self.index)
-        object.__setattr__(self, 'motion', self.motion)
-        object.__setattr__(self, 'geometry', None if self.geometry is None else self.geometry)
 PreviewFrame.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8052,21 +6072,8 @@ class ObservationImage(CompactValue):
     quality: tuple[MeshQuality, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'width', self.width)
-        object.__setattr__(self, 'height', self.height)
-        object.__setattr__(self, 'rgba', self.rgba)
-        object.__setattr__(self, 'png', self.png)
-        object.__setattr__(self, 'document_id', self.document_id)
-        object.__setattr__(self, 'evaluation_revision', self.evaluation_revision)
-        object.__setattr__(self, 'capture_id', self.capture_id)
-        object.__setattr__(self, 'scene_digest', self.scene_digest)
-        object.__setattr__(self, 'render_digest', self.render_digest)
-        object.__setattr__(self, 'input_sha256', self.input_sha256)
-        object.__setattr__(self, 'adapter_name', self.adapter_name)
-        object.__setattr__(self, 'adapter_backend', self.adapter_backend)
         object.__setattr__(self, 'parameters', MappingProxyType({key0: v0 for key0, v0 in self.parameters.items()}))
         object.__setattr__(self, 'visible_roi', tuple(self.visible_roi))
-        object.__setattr__(self, 'scale', self.scale)
         object.__setattr__(self, 'offset', tuple(self.offset))
         object.__setattr__(self, 'textures', tuple(self.textures))
         object.__setattr__(self, 'drawable_bounds', tuple(self.drawable_bounds))
@@ -8078,10 +6085,6 @@ class ObservedTexture(CompactValue):
     'Immutable owned ObservedTexture value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nasset_id: Stable asset UUID resolved from the frozen authoring source.\nsha256: SHA256 of the exact immutable texture content uploaded by this capture.'
     asset_id: str
     sha256: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'asset_id', self.asset_id)
-        object.__setattr__(self, 'sha256', self.sha256)
 ObservedTexture.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8092,8 +6095,6 @@ class ObservedBounds(CompactValue):
     bounds: (tuple[int, int, int, int] | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
-        object.__setattr__(self, 'visible', self.visible)
         object.__setattr__(self, 'bounds', None if self.bounds is None else tuple(self.bounds))
 ObservedBounds.__module__ = "zipzi.modeling"
 
@@ -8102,9 +6103,6 @@ class SpatialResultBounds(CompactValue):
     'Immutable owned SpatialResultBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Bounds and resolved mesh IDs for the corresponding selector request.'
     _variant: _ClassVar[str] = 'bounds'
     value: ObjectBounds
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 SpatialResultBounds.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8112,9 +6110,6 @@ class SpatialResultHits(CompactValue):
     'Immutable owned SpatialResultHits value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Geometric candidates in SDK order, including total and truncation metadata.'
     _variant: _ClassVar[str] = 'hits'
     value: GeometryQuery
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 SpatialResultHits.__module__ = "zipzi.modeling"
 
 SpatialResult: TypeAlias = SpatialResultBounds | SpatialResultHits
@@ -8129,7 +6124,6 @@ class ObjectBounds(CompactValue):
     def __post_init__(self) -> None:
         object.__setattr__(self, 'mesh_ids', tuple(self.mesh_ids))
         object.__setattr__(self, 'model_bounds', None if self.model_bounds is None else tuple(self.model_bounds))
-        object.__setattr__(self, 'empty_reason', None if self.empty_reason is None else self.empty_reason)
 ObjectBounds.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8141,8 +6135,6 @@ class GeometryQuery(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'hits', tuple(self.hits))
-        object.__setattr__(self, 'total', self.total)
-        object.__setattr__(self, 'truncated', self.truncated)
 GeometryQuery.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8159,14 +6151,8 @@ class GeometryHit(CompactValue):
     triangles: tuple[TriangleHit, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'mesh_id', self.mesh_id)
-        object.__setattr__(self, 'name', self.name)
         object.__setattr__(self, 'part_path', tuple(self.part_path))
         object.__setattr__(self, 'part_names', tuple(self.part_names))
-        object.__setattr__(self, 'enabled', self.enabled)
-        object.__setattr__(self, 'visible', self.visible)
-        object.__setattr__(self, 'opacity', self.opacity)
-        object.__setattr__(self, 'render_order', self.render_order)
         object.__setattr__(self, 'triangles', tuple(self.triangles))
 GeometryHit.__module__ = "zipzi.modeling"
 
@@ -8180,7 +6166,6 @@ class TriangleHit(CompactValue):
     uv: (tuple[float, float] | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'triangle_index', self.triangle_index)
         object.__setattr__(self, 'vertex_indices', tuple(self.vertex_indices))
         object.__setattr__(self, 'vertex_ids', None if self.vertex_ids is None else tuple(self.vertex_ids))
         object.__setattr__(self, 'barycentric', tuple(self.barycentric))
@@ -8204,11 +6189,9 @@ class MotionSnapshot(CompactValue):
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'physics', tuple(self.physics))
-        object.__setattr__(self, 'time', self.time)
         object.__setattr__(self, 'parameters', MappingProxyType({key0: v0 for key0, v0 in self.parameters.items()}))
         object.__setattr__(self, 'part_opacity_channels', MappingProxyType({key0: v0 for key0, v0 in self.part_opacity_channels.items()}))
         object.__setattr__(self, 'part_opacities', MappingProxyType({key0: v0 for key0, v0 in self.part_opacities.items()}))
-        object.__setattr__(self, 'model_opacity', self.model_opacity)
         object.__setattr__(self, 'active_motions', tuple(self.active_motions))
         object.__setattr__(self, 'active_expressions', tuple(self.active_expressions))
         object.__setattr__(self, 'fired_events', tuple(self.fired_events))
@@ -8229,14 +6212,12 @@ class PhysicsRigSnapshot(CompactValue):
     outputs: tuple[(PhysicsOutputSnapshot | None), ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'id', self.id)
         object.__setattr__(self, 'input_ids', tuple(self.input_ids))
         object.__setattr__(self, 'output_ids', tuple(self.output_ids))
         object.__setattr__(self, 'node_ids', tuple(self.node_ids))
         object.__setattr__(self, 'particles', tuple(tuple(v0) for v0 in self.particles))
-        object.__setattr__(self, 'input_angle', self.input_angle)
         object.__setattr__(self, 'inputs', tuple(self.inputs))
-        object.__setattr__(self, 'outputs', tuple(None if v0 is None else v0 for v0 in self.outputs))
+        object.__setattr__(self, 'outputs', tuple(v0 for v0 in self.outputs))
 PhysicsRigSnapshot.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8246,12 +6227,6 @@ class PhysicsOutputSnapshot(CompactValue):
     before: float
     after: float
     clamped: bool
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'raw', self.raw)
-        object.__setattr__(self, 'before', self.before)
-        object.__setattr__(self, 'after', self.after)
-        object.__setattr__(self, 'clamped', self.clamped)
 PhysicsOutputSnapshot.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8260,11 +6235,6 @@ class MotionEventFired(CompactValue):
     motion_id: str
     event_id: str
     value: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'motion_id', self.motion_id)
-        object.__setattr__(self, 'event_id', self.event_id)
-        object.__setattr__(self, 'value', self.value)
 MotionEventFired.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8275,13 +6245,6 @@ class MotionPlaybackPosition(CompactValue):
     period: float
     loop_index: int
     cycle_origin: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'motion_id', self.motion_id)
-        object.__setattr__(self, 'local_time', self.local_time)
-        object.__setattr__(self, 'period', self.period)
-        object.__setattr__(self, 'loop_index', self.loop_index)
-        object.__setattr__(self, 'cycle_origin', self.cycle_origin)
 MotionPlaybackPosition.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8293,7 +6256,6 @@ class SpatialSamples(CompactValue):
     frames: tuple[SpatialFrame, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'version', self.version)
         object.__setattr__(self, 'requested', tuple(MappingProxyType({key1: v1 for key1, v1 in v0.items()}) for v0 in self.requested))
         object.__setattr__(self, 'queries', tuple(self.queries))
         object.__setattr__(self, 'frames', tuple(self.frames))
@@ -8318,7 +6280,6 @@ class ObservationBatch(CompactValue):
     frames: tuple[ObservationImage, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'view', self.view)
         object.__setattr__(self, 'requested', tuple(MappingProxyType({key1: v1 for key1, v1 in v0.items()}) for v0 in self.requested))
         object.__setattr__(self, 'frames', tuple(self.frames))
 ObservationBatch.__module__ = "zipzi.modeling"
@@ -8338,16 +6299,7 @@ class ManualMeshTransferReport(CompactValue):
     cost: ConversionCost
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'added', self.added)
-        object.__setattr__(self, 'moved', self.moved)
-        object.__setattr__(self, 'removed', self.removed)
-        object.__setattr__(self, 'shape_count', self.shape_count)
-        object.__setattr__(self, 'reconnected', self.reconnected)
-        object.__setattr__(self, 'glue_endpoints', self.glue_endpoints)
-        object.__setattr__(self, 'non_affine_parent', self.non_affine_parent)
-        object.__setattr__(self, 'affine_extension', self.affine_extension)
         object.__setattr__(self, 'appearance_limits', tuple(self.appearance_limits))
-        object.__setattr__(self, 'cost', self.cost)
 ManualMeshTransferReport.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8357,12 +6309,6 @@ class ConversionCost(CompactValue):
     payload_bytes: int
     temporary_bytes: int
     history_bytes: int
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'sample_combinations', self.sample_combinations)
-        object.__setattr__(self, 'payload_bytes', self.payload_bytes)
-        object.__setattr__(self, 'temporary_bytes', self.temporary_bytes)
-        object.__setattr__(self, 'history_bytes', self.history_bytes)
 ConversionCost.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8374,10 +6320,7 @@ class DeletionSummary(CompactValue):
     export_analysis_complete: bool
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'state', self.state)
-        object.__setattr__(self, 'requested', self.requested)
         object.__setattr__(self, 'sections', tuple(self.sections))
-        object.__setattr__(self, 'export_analysis_complete', self.export_analysis_complete)
 DeletionSummary.__module__ = "zipzi.modeling"
 
 class DeletionReviewState(str, Enum):
@@ -8392,10 +6335,6 @@ class DeletionSectionCount(CompactValue):
     'Immutable owned DeletionSectionCount value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsection: Frozen report section addressed by report_page.\ncount: Total rows in this section, before paging.'
     section: DeletionSection
     count: int
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'section', self.section)
-        object.__setattr__(self, 'count', self.count)
 DeletionSectionCount.__module__ = "zipzi.modeling"
 
 class DeletionSection(str, Enum):
@@ -8424,11 +6363,7 @@ class DeletionPage(CompactValue):
     next_offset: (int | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'section', self.section)
-        object.__setattr__(self, 'offset', self.offset)
-        object.__setattr__(self, 'total', self.total)
         object.__setattr__(self, 'rows', tuple(self.rows))
-        object.__setattr__(self, 'next_offset', None if self.next_offset is None else self.next_offset)
 DeletionPage.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8436,9 +6371,6 @@ class DeletionRowRemoval(CompactValue):
     'Immutable owned DeletionRowRemoval value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nremoval: Deleted identity and its ownership/scope/dependency reason.'
     _variant: _ClassVar[str] = 'removal'
     removal: DeletionRemoval
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'removal', self.removal)
 DeletionRowRemoval.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8446,9 +6378,6 @@ class DeletionRowRelation(CompactValue):
     'Immutable owned DeletionRowRelation value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nrelation: Native source field and target explaining a retained rewrite or dependency.'
     _variant: _ClassVar[str] = 'relation'
     relation: DeletionRelation
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'relation', self.relation)
 DeletionRowRelation.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8456,9 +6385,6 @@ class DeletionRowEffect(CompactValue):
     'Immutable owned DeletionRowEffect value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\neffect: Typed appearance, animation, composition or export consequence.'
     _variant: _ClassVar[str] = 'effect'
     effect: DeletionEffect
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'effect', self.effect)
 DeletionRowEffect.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8466,9 +6392,6 @@ class DeletionRowDecision(CompactValue):
     'Immutable owned DeletionRowDecision value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ndecision: Outstanding native choice and actually available alternatives.'
     _variant: _ClassVar[str] = 'decision'
     decision: DeletionDecision
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'decision', self.decision)
 DeletionRowDecision.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8476,9 +6399,6 @@ class DeletionRowLock(CompactValue):
     'Immutable owned DeletionRowLock value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nblocker: Affected identity and the inherited lock source.'
     _variant: _ClassVar[str] = 'lock'
     blocker: DeletionLock
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'blocker', self.blocker)
 DeletionRowLock.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8486,9 +6406,6 @@ class DeletionRowStructural(CompactValue):
     'Immutable owned DeletionRowStructural value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nblocker: Native invalid-result address and diagnostic code.'
     _variant: _ClassVar[str] = 'structural'
     blocker: DeletionStructuralBlocker
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'blocker', self.blocker)
 DeletionRowStructural.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8499,12 +6416,6 @@ class DeletionRowDeformation(CompactValue):
     parent_id: str
     strategy: ReparentStrategy
     guarantee: (DeletionPositionGuarantee | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'object', self.object)
-        object.__setattr__(self, 'parent_id', self.parent_id)
-        object.__setattr__(self, 'strategy', self.strategy)
-        object.__setattr__(self, 'guarantee', None if self.guarantee is None else self.guarantee)
 DeletionRowDeformation.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8514,11 +6425,6 @@ class DeletionRowOrganization(CompactValue):
     object: DeletionObject
     parent_id: str
     mapping_slots: (int | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'object', self.object)
-        object.__setattr__(self, 'parent_id', self.parent_id)
-        object.__setattr__(self, 'mapping_slots', None if self.mapping_slots is None else self.mapping_slots)
 DeletionRowOrganization.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8527,10 +6433,6 @@ class DeletionRowGuaranteeLimit(CompactValue):
     _variant: _ClassVar[str] = 'guarantee_limit'
     object: DeletionObject
     ancestor: DeletionObject
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'object', self.object)
-        object.__setattr__(self, 'ancestor', self.ancestor)
 DeletionRowGuaranteeLimit.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8542,13 +6444,6 @@ class DeletionRowDomain(CompactValue):
     minimum: float
     maximum: float
     reference_value: float
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'object', self.object)
-        object.__setattr__(self, 'parameter_id', self.parameter_id)
-        object.__setattr__(self, 'minimum', self.minimum)
-        object.__setattr__(self, 'maximum', self.maximum)
-        object.__setattr__(self, 'reference_value', self.reference_value)
 DeletionRowDomain.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8557,10 +6452,6 @@ class DeletionRowExport(CompactValue):
     _variant: _ClassVar[str] = 'export'
     failure: OpaqueExportIssue
     existing: bool
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'failure', self.failure)
-        object.__setattr__(self, 'existing', self.existing)
 DeletionRowExport.__module__ = "zipzi.modeling"
 
 DeletionRow: TypeAlias = DeletionRowRemoval | DeletionRowRelation | DeletionRowEffect | DeletionRowDecision | DeletionRowLock | DeletionRowStructural | DeletionRowDeformation | DeletionRowOrganization | DeletionRowGuaranteeLimit | DeletionRowDomain | DeletionRowExport
@@ -8570,10 +6461,6 @@ class DeletionRemoval(CompactValue):
     'Immutable owned DeletionRemoval value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nobject: Retired identity, including its native domain and embedded namespace.\nreason: Whether this is an explicit root, scoped descendant, owned identity or dependency record.'
     object: DeletionObject
     reason: DeletionReason
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'object', self.object)
-        object.__setattr__(self, 'reason', self.reason)
 DeletionRemoval.__module__ = "zipzi.modeling"
 
 class DeletionReason(str, Enum):
@@ -8589,11 +6476,6 @@ class DeletionRelation(CompactValue):
     owner: DeletionObject
     field: DeletionField
     target: DeletionObject
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'owner', self.owner)
-        object.__setattr__(self, 'field', self.field)
-        object.__setattr__(self, 'target', self.target)
 DeletionRelation.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8607,9 +6489,6 @@ class DeletionFieldMeshMask(CompactValue):
     'Immutable owned DeletionFieldMeshMask value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nslot: Zero-based address in the frozen source list, never a persistent object ID.'
     _variant: _ClassVar[str] = 'MeshMask'
     slot: int
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'slot', self.slot)
 DeletionFieldMeshMask.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8623,9 +6502,6 @@ class DeletionFieldOffscreenMask(CompactValue):
     'Immutable owned DeletionFieldOffscreenMask value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nslot: Zero-based address in the frozen source list, never a persistent object ID.'
     _variant: _ClassVar[str] = 'OffscreenMask'
     slot: int
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'slot', self.slot)
 DeletionFieldOffscreenMask.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8651,9 +6527,6 @@ class DeletionFieldDrawingItem(CompactValue):
     'Immutable owned DeletionFieldDrawingItem value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nslot: Zero-based address in the frozen source list, never a persistent object ID.'
     _variant: _ClassVar[str] = 'DrawingItem'
     slot: int
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'slot', self.slot)
 DeletionFieldDrawingItem.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8703,9 +6576,6 @@ class DeletionFieldCdiPart(CompactValue):
     'Immutable owned DeletionFieldCdiPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nslot: Zero-based address in the frozen source list, never a persistent object ID.'
     _variant: _ClassVar[str] = 'CdiPart'
     slot: int
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'slot', self.slot)
 DeletionFieldCdiPart.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8743,9 +6613,6 @@ class DeletionFieldBlendConstraint(CompactValue):
     'Immutable owned DeletionFieldBlendConstraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nslot: Zero-based constraint address in the frozen BlendBinding.'
     _variant: _ClassVar[str] = 'BlendConstraint'
     slot: int
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'slot', self.slot)
 DeletionFieldBlendConstraint.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8825,9 +6692,6 @@ class DeletionFieldCdiParameter(CompactValue):
     'Immutable owned DeletionFieldCdiParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nslot: Frozen zero-based CDI Parameters record address; imported unresolved records remain untouched.'
     _variant: _ClassVar[str] = 'CdiParameter'
     slot: int
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'slot', self.slot)
 DeletionFieldCdiParameter.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8844,10 +6708,6 @@ class DeletionEffectMotionRegistrationMoved(CompactValue):
     _variant: _ClassVar[str] = 'MotionRegistrationMoved'
     registration: DeletionObject
     group: DeletionObject
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'registration', self.registration)
-        object.__setattr__(self, 'group', self.group)
 DeletionEffectMotionRegistrationMoved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8855,9 +6715,6 @@ class DeletionEffectContentChanged(CompactValue):
     'Immutable owned DeletionEffectContentChanged value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Retained owner whose selected stable content identities disappear.'
     _variant: _ClassVar[str] = 'ContentChanged'
     value: DeletionObject
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionEffectContentChanged.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8869,13 +6726,6 @@ class DeletionEffectParameterDimensionRemoved(CompactValue):
     value: float
     effective_value: float
     disabled: bool
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'object', self.object)
-        object.__setattr__(self, 'parameter', self.parameter)
-        object.__setattr__(self, 'value', self.value)
-        object.__setattr__(self, 'effective_value', self.effective_value)
-        object.__setattr__(self, 'disabled', self.disabled)
 DeletionEffectParameterDimensionRemoved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8884,10 +6734,6 @@ class DeletionEffectBindingContributionRemoved(CompactValue):
     _variant: _ClassVar[str] = 'BindingContributionRemoved'
     object: DeletionObject
     binding: DeletionObject
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'object', self.object)
-        object.__setattr__(self, 'binding', self.binding)
 DeletionEffectBindingContributionRemoved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8897,11 +6743,6 @@ class DeletionEffectResourceReplaced(CompactValue):
     object: DeletionObject
     source: DeletionObject
     replacement: (DeletionObject | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'object', self.object)
-        object.__setattr__(self, 'source', self.source)
-        object.__setattr__(self, 'replacement', None if self.replacement is None else self.replacement)
 DeletionEffectResourceReplaced.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8909,9 +6750,6 @@ class DeletionEffectParameterAnimationRemoved(CompactValue):
     'Immutable owned DeletionEffectParameterAnimationRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Removed Motion/Expression parameter record; other tracks, events and resource registrations remain.'
     _variant: _ClassVar[str] = 'ParameterAnimationRemoved'
     value: DeletionObject
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionEffectParameterAnimationRemoved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8920,10 +6758,6 @@ class DeletionEffectPhysicsChannelRemoved(CompactValue):
     _variant: _ClassVar[str] = 'PhysicsChannelRemoved'
     object: DeletionObject
     group: DeletionObject
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'object', self.object)
-        object.__setattr__(self, 'group', self.group)
 DeletionEffectPhysicsChannelRemoved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8931,9 +6765,6 @@ class DeletionEffectMaskChanged(CompactValue):
     'Immutable owned DeletionEffectMaskChanged value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Retained Mask consumer whose clipping effect changes.'
     _variant: _ClassVar[str] = 'MaskChanged'
     value: DeletionObject
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionEffectMaskChanged.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8941,9 +6772,6 @@ class DeletionEffectGlueRemoved(CompactValue):
     'Immutable owned DeletionEffectGlueRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Deleted connection whose seam or postprocessing contribution disappears.'
     _variant: _ClassVar[str] = 'GlueRemoved'
     value: DeletionObject
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionEffectGlueRemoved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8951,9 +6779,6 @@ class DeletionEffectHitAreaRemoved(CompactValue):
     'Immutable owned DeletionEffectHitAreaRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Deleted model3 Hit Area registration.'
     _variant: _ClassVar[str] = 'HitAreaRemoved'
     value: DeletionObject
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionEffectHitAreaRemoved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8961,9 +6786,6 @@ class DeletionEffectCompositionChanged(CompactValue):
     'Immutable owned DeletionEffectCompositionChanged value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Affected Offscreen or Part whose compositing can change.'
     _variant: _ClassVar[str] = 'CompositionChanged'
     value: DeletionObject
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionEffectCompositionChanged.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8971,9 +6793,6 @@ class DeletionEffectPartAnimationRemoved(CompactValue):
     'Immutable owned DeletionEffectPartAnimationRemoved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Removed Part animation/Pose record; its container remains.'
     _variant: _ClassVar[str] = 'PartAnimationRemoved'
     value: DeletionObject
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionEffectPartAnimationRemoved.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -8988,12 +6807,8 @@ class DeletionEffectDrawingGroupFlattened(CompactValue):
     offscreen: (DeletionObject | None) = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'group', self.group)
-        object.__setattr__(self, 'destination', self.destination)
         object.__setattr__(self, 'source_range', tuple(self.source_range))
         object.__setattr__(self, 'destination_range', tuple(self.destination_range))
-        object.__setattr__(self, 'dynamic_order', self.dynamic_order)
-        object.__setattr__(self, 'offscreen', None if self.offscreen is None else self.offscreen)
 DeletionEffectDrawingGroupFlattened.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -9001,9 +6816,6 @@ class DeletionEffectOrganizationChanged(CompactValue):
     'Immutable owned DeletionEffectOrganizationChanged value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Surviving member whose organization owner changes.'
     _variant: _ClassVar[str] = 'OrganizationChanged'
     value: DeletionObject
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionEffectOrganizationChanged.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -9011,9 +6823,6 @@ class DeletionEffectDeformationChanged(CompactValue):
     'Immutable owned DeletionEffectDeformationChanged value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Surviving object whose deformation is not fully preserved.'
     _variant: _ClassVar[str] = 'DeformationChanged'
     value: DeletionObject
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'value', self.value)
 DeletionEffectDeformationChanged.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -9024,7 +6833,6 @@ class DeletionEffectUnpreservedChannels(CompactValue):
     channels: tuple[DeletionChannel, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'object', self.object)
         object.__setattr__(self, 'channels', tuple(self.channels))
 DeletionEffectUnpreservedChannels.__module__ = "zipzi.modeling"
 
@@ -9035,11 +6843,6 @@ class DeletionEffectPartStateRemoved(CompactValue):
     part: DeletionObject
     enabled: bool
     animated_order: bool
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'part', self.part)
-        object.__setattr__(self, 'enabled', self.enabled)
-        object.__setattr__(self, 'animated_order', self.animated_order)
 DeletionEffectPartStateRemoved.__module__ = "zipzi.modeling"
 
 DeletionEffect: TypeAlias = DeletionEffectMotionRegistrationMoved | DeletionEffectContentChanged | DeletionEffectParameterDimensionRemoved | DeletionEffectBindingContributionRemoved | DeletionEffectResourceReplaced | DeletionEffectParameterAnimationRemoved | DeletionEffectPhysicsChannelRemoved | DeletionEffectMaskChanged | DeletionEffectGlueRemoved | DeletionEffectHitAreaRemoved | DeletionEffectCompositionChanged | DeletionEffectPartAnimationRemoved | DeletionEffectDrawingGroupFlattened | DeletionEffectOrganizationChanged | DeletionEffectDeformationChanged | DeletionEffectUnpreservedChannels | DeletionEffectPartStateRemoved
@@ -9059,8 +6862,6 @@ class DeletionDecision(CompactValue):
     choices: tuple[DeletionChoice, ...]
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'object', self.object)
-        object.__setattr__(self, 'reason', self.reason)
         object.__setattr__(self, 'choices', tuple(self.choices))
 DeletionDecision.__module__ = "zipzi.modeling"
 
@@ -9069,9 +6870,6 @@ class DeletionDecisionReasonConversionUnproven(CompactValue):
     'Immutable owned DeletionDecisionReasonConversionUnproven value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncode: Native conversion diagnostic code; available resolutions come from typed choices.'
     _variant: _ClassVar[str] = 'ConversionUnproven'
     code: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'code', self.code)
 DeletionDecisionReasonConversionUnproven.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -9115,9 +6913,6 @@ class DeletionDecisionReasonInvalidContainer(CompactValue):
     'Immutable owned DeletionDecisionReasonInvalidContainer value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncode: Native container invariant requiring an explicit larger deletion or cancellation.'
     _variant: _ClassVar[str] = 'InvalidContainer'
     code: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'code', self.code)
 DeletionDecisionReasonInvalidContainer.__module__ = "zipzi.modeling"
 
 DeletionDecisionReason: TypeAlias = DeletionDecisionReasonConversionUnproven | DeletionDecisionReasonOffscreenOwnerUnavailable | DeletionDecisionReasonOffscreenMappingRequired | DeletionDecisionReasonPartStateUnpreserved | DeletionDecisionReasonTextureReplacementRequired | DeletionDecisionReasonBlendBaseReplacementRequired | DeletionDecisionReasonPhysicsNodeReplacementRequired | DeletionDecisionReasonInvalidContainer
@@ -9140,10 +6935,6 @@ class DeletionLock(CompactValue):
     'Immutable owned DeletionLock value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nobject: Actual removed or rewritten object protected by the lock.\nsource_id: Persistent ID of the direct or inherited lock source to locate and unlock.'
     object: DeletionObject
     source_id: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'object', self.object)
-        object.__setattr__(self, 'source_id', self.source_id)
 DeletionLock.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -9152,11 +6943,6 @@ class DeletionStructuralBlocker(CompactValue):
     object_id: str
     code: str
     reason: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'object_id', self.object_id)
-        object.__setattr__(self, 'code', self.code)
-        object.__setattr__(self, 'reason', self.reason)
 DeletionStructuralBlocker.__module__ = "zipzi.modeling"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
@@ -9169,15 +6955,6 @@ class DeletionPositionGuarantee(CompactValue):
     error_bound: float
     domain_parameters: int
     edit_time_seconds: (float | None) = None
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, 'strategy', self.strategy)
-        object.__setattr__(self, 'tolerance', self.tolerance)
-        object.__setattr__(self, 'relative_tolerance', self.relative_tolerance)
-        object.__setattr__(self, 'measured_error', self.measured_error)
-        object.__setattr__(self, 'error_bound', self.error_bound)
-        object.__setattr__(self, 'domain_parameters', self.domain_parameters)
-        object.__setattr__(self, 'edit_time_seconds', None if self.edit_time_seconds is None else self.edit_time_seconds)
 DeletionPositionGuarantee.__module__ = "zipzi.modeling"
 
 def validate_ModelingCommand(value: ModelingCommand) -> None:
