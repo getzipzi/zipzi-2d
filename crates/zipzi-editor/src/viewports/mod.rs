@@ -63,7 +63,7 @@ mod deformer_bar;
 mod input;
 mod isolation;
 mod painting;
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use painting::CanvasOverlay;
 mod animation;
 mod background;
@@ -107,7 +107,7 @@ pub struct ViewportSurface {
     pub(crate) toolbar: toolbar::ToolbarRegistry,
     pub(super) show_transparency_grid: bool,
     pub(super) show_origin_crosshair: bool,
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     overlay_renderer: std::rc::Rc<std::cell::RefCell<CanvasOverlay>>,
     bounds: Bounds<Pixels>,
     #[cfg(test)]
@@ -224,7 +224,7 @@ impl ViewportSurface {
                 toolbar,
                 show_transparency_grid: false,
                 show_origin_crosshair: true,
-                #[cfg(target_os = "macos")]
+                #[cfg(any(target_os = "macos", target_os = "windows"))]
                 overlay_renderer: Default::default(),
                 bounds: Bounds::default(),
                 #[cfg(test)]
@@ -272,6 +272,7 @@ impl ViewportSurface {
     pub fn hand_tool(&self, cx: &App) -> bool {
         self.owner.upgrade().is_some_and(|owner| {
             self.kind == zipzi_editor_core::ViewportKind::Animation
+                || benchmark::parameter_overlay::animation_viewport_style()
                 || owner.read(cx).editor.active_tool() == ToolId::Hand
         })
     }
@@ -469,4 +470,17 @@ pub(super) struct SurfaceContent {
     hand_tool: bool,
     controls: Option<fn(&ViewportSurface, bool, &mut Context<ViewportSurface>) -> AnyElement>,
     cursor: Option<CursorStyle>,
+}
+
+impl SurfaceContent {
+    fn navigation(image: Option<(preview::Image, ViewportMetrics)>, error: Option<String>) -> Self {
+        Self {
+            image,
+            error,
+            overlay: Default::default(),
+            hand_tool: true,
+            controls: None,
+            cursor: None,
+        }
+    }
 }

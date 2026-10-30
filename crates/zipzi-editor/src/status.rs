@@ -68,7 +68,6 @@ impl EditorView {
         });
         self.resume_feedback(cx);
         StatusBar::sync(&self.status_bar, self, cx);
-        cx.notify();
     }
 
     fn pause_feedback(&mut self) {
@@ -110,7 +109,6 @@ impl EditorView {
         self.message.clear();
         self.edit_error = None;
         StatusBar::sync(&self.status_bar, self, cx);
-        cx.notify();
     }
 
     pub(crate) fn clear_edit_error(&mut self, cx: &mut Context<Self>) {
@@ -129,7 +127,6 @@ impl EditorView {
         if self.message == old {
             self.message = new.to_owned();
             StatusBar::sync(&self.status_bar, self, cx);
-            cx.notify();
         }
     }
 

@@ -461,12 +461,14 @@ impl ParametersPanel {
             if !changed {
                 return true;
             }
-            let result = owner.editor.execute_for(
-                document_id,
-                EditorCommand::SetPreviewParameters {
-                    values: values.to_vec(),
-                },
-            );
+            let result = crate::benchmark::parameter_overlay::capture(5, || {
+                owner.editor.execute_for(
+                    document_id,
+                    EditorCommand::SetPreviewParameters {
+                        values: values.to_vec(),
+                    },
+                )
+            });
             let applied = result.is_ok();
             owner.complete_preview_edit(result, cx);
             applied

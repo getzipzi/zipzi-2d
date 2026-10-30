@@ -563,7 +563,7 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                     &gpu.queue,
                     viewport,
                     &overlay,
-                    palette.metal(),
+                    palette.native(),
                     zipzi_editor_render::OverlayPass::Vertices,
                 )?
                 .unwrap();

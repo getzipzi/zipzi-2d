@@ -106,6 +106,16 @@ the same automatic window harness with `ZIPZI_BENCH_ANIMATION=1`.
 fixture generator in a disposable copy of the supplied model. The original
 assets are never saved. With `ZIPZI_BENCH_ANIMATION_DRAG` unset it measures
 playback; `canvas` and `number` dispatch the existing production drag handlers.
+The `number` case slides the Timeline `ParamAngleX` channel value through the
+real candidate-key editing path. Number/canvas drags honor `ZIPZI_BENCH_WARMUP`
+and emit workload-9 input ticks. On Windows, use
+`windows-gpui-trace-report.py` to join those ticks through
+`animation_enqueued.input` to shared-texture paints and CPU platform returns.
+The [2026-10-30 real Timeline baseline](../../docs/archive/benchmarks/2026-10-30-windows-timeline-number.md)
+is the reference for subsequent Modeling interaction comparisons: UI draw P50
+5.26 ms and input-to-associated-platform-return P50 23.83 ms (medians across
+three per-run P50s). Preserve the documented input cadence, camera/workspace,
+association counts and measurement boundary when comparing against it.
 The additional `timeline_scroll`, `timeline_zoom`, `timeline_seek` and
 `timeline_key` probes verify navigation/candidate changes and preserve authoring
 history. These visible probes do not cover the macOS headless Timeline pixel
@@ -157,6 +167,29 @@ as `parameter_overlay.legacy_edge_bounds`; leave tessellated edges disabled.
 layout writes. It requires the automatic parameter workload and is recorded as
 `parameter_overlay.eager_viewport_layout`. Change one switch at a time and keep
 detailed recording identical in each pair.
+`ZIPZI_BENCH_VIEWPORT_STYLE=animation` gives the Modeling viewport Animation's
+image/navigation presentation: no Modeling overlay construction, editing toolbar,
+tool handler or object menu. The shared navigation content factory is also used
+by the real Animation viewport. This diagnostic keeps Modeling frame bindings,
+the model worker, selection and parameter-slider input intact; it does not switch
+to the animation motion worker. The default is `modeling`. It requires the
+automatic parameter workload and is recorded as `parameter_overlay.viewport_style`.
+Compare against both normal Modeling and `ZIPZI_BENCH_OVERLAY_PAINT=none`, which
+still constructs the Modeling overlay. Keep viewport dimensions and selection
+identical, and verify newly presented frames and actual mesh deformation.
+See the [Windows viewport comparison](../../docs/references/windows-viewport-style.md)
+for the 2026-10-30 controlled results and reproduction commands.
+`ZIPZI_BENCH_PARAMETER_INPUT=track|number|pad` selects the real Modeling
+track, SlideNumberInput or linked two-axis pad (default `track`). `pad` links the
+first two adjacent parameters in the isolated imported document before warmup;
+its gesture changes both axes. Audits require a changed displayed mesh and,
+for `number`/`pad`, an active drag and unchanged history; pad also requires two
+changed displayed parameters. This switch requires the automatic parameter-only
+workload. Keep the full Modeling presentation for comparisons against Timeline.
+The Windows report includes outer input dispatch/effect-flush time, interval P99
+and counts above 25 ms. Use these alongside interval P95 and input-to-associated
+CPU platform return; the latter is not screen latency. See the
+[shared parameter preview investigation](../../docs/archive/benchmarks/2026-10-30-windows-parameter-chain.md).
 The `vertices` case skips fallback mesh edges as well as control lines on Windows.
 Earlier Windows `vertices` traces that still included mesh edges are not a pure
 vertex ablation. Preserve those raw results rather than relabeling them.
@@ -557,6 +590,18 @@ the gesture even in R1. Preserve a rejected trace separately; never report it as
 low-latency pass. Choose an audited editable target when using a different model.
 
 ### Windows shared texture presentation
+
+Windows mesh overlays now mirror the Metal edge/vertex shader passes using
+D3D11-native immutable surfaces. For a same-binary GPUI comparison set
+`ZIPZI_TRACE_BATCH_MESH_EDGES=1`; leave it unset for the native shader path.
+The switch retains full overlays and is recorded as
+`diagnostics.native_mesh_overlay` (and the historical `metal_mesh_overlay`).
+`overlay_shader_surface.fields.pass=1|2` identifies the edge/mesh-marker surfaces;
+it is independent of `paint_shared_surface`, which identifies the model preview.
+Detailed traces should have no `overlay.gpui_mesh_edges` on the native path;
+`overlay.gpui_markers` still includes non-mesh controls, so its presence alone is
+not a shader fallback. Compare platform CPU submission as well as UI paint and
+new-image intervals; lower primitive counts do not establish screen latency.
 
 Windows previews now publish `shared_texture_submitted` and paint through
 `paint_shared_surface`, without the former preview `readback`/`compose_image`

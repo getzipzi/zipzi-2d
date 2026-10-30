@@ -59,9 +59,12 @@ impl Render for EditorView {
             } else {
                 None
             };
-            let cleanup = dock
-                .properties
-                .update(cx, |panel, cx| panel.set_visible(visible, cx));
+            let cleanup = if dock.properties.read(cx).is_visible() != visible {
+                dock.properties
+                    .update(cx, |panel, cx| panel.set_visible(visible, cx))
+            } else {
+                None
+            };
             if let Some((target, id, token)) = cleanup {
                 token.cancel(&mut self.editor);
                 if let Some(form) = self.property_forms.entries.get_mut(&target) {

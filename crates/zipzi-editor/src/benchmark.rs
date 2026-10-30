@@ -271,6 +271,7 @@ pub fn init() -> anyhow::Result<()> {
                     "hide_mesh_edges": HIDE_MESH_EDGES.load(Ordering::Relaxed),
                     "batch_mesh_edges": BATCH_MESH_EDGES.load(Ordering::Relaxed),
                     "metal_mesh_overlay": METAL_MESH_OVERLAY.load(Ordering::Relaxed),
+                    "native_mesh_overlay": METAL_MESH_OVERLAY.load(Ordering::Relaxed),
                 },
             })
         )?;
@@ -328,8 +329,8 @@ pub fn init() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[cfg(target_os = "macos")]
-pub fn metal_mesh_overlay() -> bool {
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub fn native_mesh_overlay() -> bool {
     METAL_MESH_OVERLAY.load(Ordering::Relaxed)
 }
 
@@ -525,6 +526,13 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                 } else {
                     None
                 };
+                if mode == 4 && parameter_overlay::parameter_input() == "number" {
+                    view.update_in(cx, |v, _, cx| {
+                        if let Some(number) = v.dock.as_ref().unwrap().parameters.read(cx).benchmark_number_input(cx) {
+                            number.update(cx, |number, _| number.ignore_mouse_moves_when(Some(ignore_native_pointer_event)));
+                        }
+                    })?;
+                }
                 // Press the actual thumb: a fixed fraction can hit a keyframe
                 // marker, which selects a value without starting a drag.
                 let center = slider.map_or(center.0, |(_, thumb)| thumb);
@@ -555,7 +563,7 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                         )
                     })?;
                 }
-                if mode == 4 {
+                if mode == 4 && parameter_overlay::parameter_input() != "number" {
                     ensure!(
                         view.update_in(cx, |v, _, cx| v
                             .dock
@@ -674,12 +682,16 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                                 dispatch_pointer(
                                     window,
                                     MouseMoveEvent {
-                                        position: point(
+                                        position: if parameter_overlay::parameter_input() == "number" {
+                                            center + point(px((sample as f32*0.13).sin()*140.+8.), px(0.))
+                                        } else { point(
                                             bounds.left()
                                                 + bounds.size.width
                                                     * (0.5 + (sample as f32 * 0.13).sin() * 0.35),
-                                            center.y,
-                                        ),
+                                            if parameter_overlay::parameter_input() == "pad" {
+                                                bounds.center().y + bounds.size.height*(sample as f32*0.17).sin()*0.3
+                                            } else { center.y },
+                                        ) },
                                         pressed_button: Some(MouseButton::Left),
                                         modifiers: Default::default(),
                                     }
@@ -722,7 +734,7 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                                 .unwrap()
                                 .parameters
                                 .read(cx)
-                                .benchmark_slider_dragging())?,
+                                .benchmark_input_dragging(cx))?,
                             "parameter slider drag interrupted at sample {sample}"
                         );
                     }

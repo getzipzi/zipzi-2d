@@ -514,12 +514,27 @@ async fn run_drag(
     let mut deadline = Instant::now();
     #[cfg(feature = "bench-instrumentation")]
     let detail = std::env::var("ZIPZI_BENCH_ANIMATION_DETAIL").is_ok_and(|v| v == "1");
-    for sample in 0..config.samples {
+    for sample in 0..config.warmup + config.samples {
         deadline += interval;
         executor
             .timer(deadline.saturating_duration_since(Instant::now()))
             .await;
         let _input = frame_trace::InputScope::begin(110 + mode);
+        frame_trace::emit(
+            _input.id(),
+            "benchmark_tick",
+            &[
+                ("mode", 9),
+                ("sample", sample.saturating_sub(config.warmup) as u64),
+                ("warmup", (sample < config.warmup) as u64),
+                (
+                    "timer_late_ns",
+                    Instant::now()
+                        .saturating_duration_since(deadline)
+                        .as_nanos() as u64,
+                ),
+            ],
+        );
         #[cfg(feature = "bench-instrumentation")]
         let capture = detail.then(zipzi_core::benchmark::Capture::start);
         cx.update(|window, cx| -> anyhow::Result<()> {
@@ -589,6 +604,9 @@ async fn run_drag(
         "animation_workload",
         &[("model", mode), ("phase", 0)],
     );
+    // Let the last candidate reach the visible viewport before cancelling it.
+    // Otherwise a fast cancel can turn the final input into a no-image sample.
+    executor.timer(Duration::from_millis(250)).await;
     // Cancel before mouse-up so the benchmark never commits a number edit.
     if kind == "number" {
         cx.update(|window, cx| {

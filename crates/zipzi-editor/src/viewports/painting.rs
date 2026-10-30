@@ -1,4 +1,4 @@
-//! Metal overlay rendering, GPUI fallback and measured canvas capture.
+//! Native mesh overlay rendering, GPUI fallback and measured canvas capture.
 use super::*;
 
 #[cfg(target_os = "macos")]
@@ -25,7 +25,7 @@ impl CanvasOverlay {
         {
             return Ok(());
         }
-        anyhow::ensure!(benchmark::metal_mesh_overlay(), "GPUI diagnostic override");
+        anyhow::ensure!(benchmark::native_mesh_overlay(), "GPUI diagnostic override");
         let gpu = window
             .metal_context()
             .ok_or_else(|| anyhow::anyhow!("Metal context unavailable"))?;
@@ -94,6 +94,100 @@ impl CanvasOverlay {
     }
 }
 
+#[cfg(target_os = "windows")]
+#[derive(Default)]
+pub(super) struct CanvasOverlay {
+    renderer: Option<zipzi_editor_render::WindowsOverlayRenderer>,
+    failed_device: Option<::windows::Win32::Graphics::Direct3D11::ID3D11Device>,
+}
+#[cfg(target_os = "windows")]
+impl CanvasOverlay {
+    fn paint(
+        &mut self,
+        bounds: Bounds<Pixels>,
+        overlay: &zipzi_editor_core::OverlaySnapshot,
+        style: zipzi_editor_render::OverlayStyle,
+        pass: zipzi_editor_render::OverlayPass,
+        window: &mut Window,
+    ) -> anyhow::Result<()> {
+        anyhow::ensure!(benchmark::native_mesh_overlay(), "GPUI diagnostic override");
+        if (pass == zipzi_editor_render::OverlayPass::Edges
+            && !benchmark::parameter_overlay::paint_edges())
+            || (pass == zipzi_editor_render::OverlayPass::Vertices
+                && !benchmark::parameter_overlay::paint_vertices())
+        {
+            return Ok(());
+        }
+        let device = window
+            .directx_device()
+            .ok_or_else(|| anyhow::anyhow!("D3D11 context unavailable"))?;
+        if self
+            .renderer
+            .as_ref()
+            .is_none_or(|r| !r.uses_device(&device))
+        {
+            self.renderer = None;
+            anyhow::ensure!(
+                self.failed_device.as_ref() != Some(&device),
+                "Overlay initialization failed"
+            );
+            match zipzi_editor_render::WindowsOverlayRenderer::new(device.clone()) {
+                Ok(renderer) => {
+                    self.renderer = Some(renderer);
+                    self.failed_device = None;
+                }
+                Err(e) => {
+                    self.failed_device = Some(device);
+                    eprintln!("Mesh overlay initialization failed; using GPUI: {e}");
+                    return Err(e);
+                }
+            }
+        }
+        if bounds.size.width <= px(0.) || bounds.size.height <= px(0.) {
+            return Ok(());
+        }
+        let scale = window.scale_factor();
+        let origin = [bounds.origin.x.as_f32(), bounds.origin.y.as_f32()];
+        let texture_origin = origin.map(|v| (v * scale).floor());
+        let extent = [
+            ((bounds.right().as_f32() * scale).ceil() - texture_origin[0]) as u32,
+            ((bounds.bottom().as_f32() * scale).ceil() - texture_origin[1]) as u32,
+        ];
+        let viewport = zipzi_editor_render::OverlayViewport {
+            extent,
+            scale,
+            origin,
+        };
+        if let Some(image) = self
+            .renderer
+            .as_mut()
+            .unwrap()
+            .draw_pass(viewport, overlay, style, pass)?
+        {
+            gpui_kit::frame_trace::emit(
+                gpui_kit::frame_trace::next_id(),
+                "overlay_shader_surface",
+                &[(
+                    "pass",
+                    match pass {
+                        zipzi_editor_render::OverlayPass::Edges => 1,
+                        zipzi_editor_render::OverlayPass::Vertices => 2,
+                        _ => 0,
+                    },
+                )],
+            );
+            window.paint_surface(
+                Bounds::new(
+                    point(px(texture_origin[0] / scale), px(texture_origin[1] / scale)),
+                    size(px(extent[0] as f32 / scale), px(extent[1] as f32 / scale)),
+                ),
+                SurfaceSource::DirectX(image),
+            );
+        }
+        Ok(())
+    }
+}
+
 impl ViewportSurface {
     pub(super) fn overlay_element(
         &self,
@@ -105,7 +199,7 @@ impl ViewportSurface {
         let view = cx.entity();
         let measure = view.clone();
         let mouse = view.clone();
-        #[cfg(target_os = "macos")]
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
         let overlay_renderer = self.overlay_renderer.clone();
         let selection_outline = palette.selection_region;
         let selection_fill = selection_outline.opacity(0.12);
@@ -164,18 +258,18 @@ impl ViewportSurface {
             move |bounds, _, window, _cx| {
                 benchmark::parameter_overlay::capture(4, || {
                     if benchmark::parameter_overlay::paint_any() {
-                        #[cfg(target_os = "macos")]
+                        #[cfg(any(target_os = "macos", target_os = "windows"))]
                         let result = overlay_renderer.borrow_mut().paint(
                             bounds,
                             &overlay,
-                            palette.metal(),
+                            palette.native(),
                             zipzi_editor_render::OverlayPass::Edges,
                             window,
                         );
                         // Preserve editing visibility if shader/device setup is unavailable.
-                        #[cfg(target_os = "macos")]
+                        #[cfg(any(target_os = "macos", target_os = "windows"))]
                         let gpui_edges = result.is_err();
-                        #[cfg(not(target_os = "macos"))]
+                        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
                         let gpui_edges = true;
                         if gpui_edges && benchmark::parameter_overlay::paint_edges() {
                             #[cfg(feature = "bench-instrumentation")]
@@ -216,17 +310,17 @@ impl ViewportSurface {
                                 window,
                             );
                         }
-                        #[cfg(target_os = "macos")]
+                        #[cfg(any(target_os = "macos", target_os = "windows"))]
                         let marker_result = overlay_renderer.borrow_mut().paint(
                             bounds,
                             &overlay,
-                            palette.metal(),
+                            palette.native(),
                             zipzi_editor_render::OverlayPass::Vertices,
                             window,
                         );
-                        #[cfg(target_os = "macos")]
+                        #[cfg(any(target_os = "macos", target_os = "windows"))]
                         let gpui_markers = marker_result.is_err();
-                        #[cfg(not(target_os = "macos"))]
+                        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
                         let gpui_markers = true;
                         if benchmark::parameter_overlay::paint_vertices() {
                             #[cfg(feature = "bench-instrumentation")]

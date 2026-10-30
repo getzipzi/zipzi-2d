@@ -214,6 +214,9 @@ impl Editor {
             || frame.version.request > presentation.sequence
             || frame.version.scene > session.scene_revision
             || (frame.version.scene != session.scene_revision
+                && !session
+                    .parameter_preview_floor
+                    .is_some_and(|floor| frame.version.scene >= floor)
                 && !session.modeling.tools.accepts_drag_frame(frame.version))
             || frame.version.viewport > session.view_state(binding.viewport).revision
             || presentation

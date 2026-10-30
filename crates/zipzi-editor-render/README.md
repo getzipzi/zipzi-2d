@@ -52,8 +52,28 @@ cargo run --locked -p zipzi-editor-render --features wgpu-backend --example wgpu
   models/local/mao/runtime/mao_pro.model3.json target/wgpu-mao
 ```
 
-macOS overlays remain native Metal. Windows uses GPUI paths/markers and a
-D3D12-to-D3D11 shared texture bridge in `src/wgpu_windows.rs`. The Editor selects
+Mesh edges and mesh vertex markers use native instanced overlay passes on both
+platforms: Metal (`overlay.rs`, `overlay.metal`) and D3D11 (`overlay_windows.rs`,
+`overlay.hlsl`). They share instance packing/cache keys in `overlay_data.rs`,
+including selection/hover/restriction flags and normal-before-emphasized ordering.
+Edges use 4x MSAA; markers use analytic circle coverage. Separate edge and vertex
+textures keep GPUI semantic/control lines between them, while non-mesh handles
+and interaction feedback remain GPUI primitives. Each published texture is
+immutable, so a retained old scene can be redrawn after later poses or renderer
+teardown. Shader/device failures retain the GPUI fallback.
+
+The Windows overlay renderer is confined to its owning UI thread. It records on
+a private deferred context and executes with state restoration on GPUI's same
+D3D11 immediate context; ready/consumed fences use the existing surface contract.
+No D3D12 copy or CPU readback is needed for these D3D11-native overlay textures.
+`ZIPZI_TRACE_BATCH_MESH_EDGES=1` with tracing enabled selects the former batched
+GPUI mesh path for comparisons, matching the Metal diagnostic switch. Trace
+metadata includes `diagnostics.native_mesh_overlay`; `overlay_shader_surface`
+records the Windows edge/vertex passes. The historical `metal_mesh_overlay`
+metadata key is retained for existing trace consumers.
+
+Windows model images use the D3D12-to-D3D11 shared texture bridge in
+`src/wgpu_windows.rs`. The Editor selects
 the D3D12 adapter by the GPUI device's LUID, renders to a normal wgpu RGBA8 target,
 then submits one native GPU copy into a shared committed texture. The source's
 COPY_SRC transition goes through wgpu's tracker; the native destination returns
@@ -81,10 +101,15 @@ linear RGBA/BGRA to straight BGRA on the GPU before mapping a tightly packed buf
 Its existing exhaustive conversion test and benchmark remain useful independently.
 
 ```powershell
-cargo test --locked -p zipzi-editor-render --features wgpu-backend --test windows_shared_texture -- --nocapture
+cargo test --locked -p zipzi-editor-render --features wgpu-backend --test windows_shared_texture --test windows_overlay -- --nocapture
 ```
 
-This hardware test uses the production GPUI Windows Fast pipeline offscreen and
+The overlay hardware tests check all eight selection/hover/restriction states
+against the Metal marker fragment formula at 1x/1.5x/2x DPI and fractional origins.
+They also check MSAA edge output, edge/control/marker layering, retained immutable
+frames, cached draws and empty/non-mesh inputs. Readback is confined to these tests.
+
+The shared-texture hardware test uses the production GPUI Windows Fast pipeline offscreen and
 reads back only the final test target. It checks premultiplied alpha, opacity,
 clipping, subsequent UI primitives, repeated draws, retained old frames, resizing,
 bounded-pool exhaustion/reuse, real model output, retained consumer frames after

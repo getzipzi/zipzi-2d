@@ -263,7 +263,9 @@ impl EditorView {
         }
         // Retain the displayed pose while its parameter preview is in flight.
         // Focus-only changes and render errors still invalidate immediately.
-        let pending = self.request_preview_for_input(frame_trace::current_input());
+        let pending = benchmark::parameter_overlay::capture(6, || {
+            self.request_preview_for_input(frame_trace::current_input())
+        });
         self.sync_viewport_notice(cx);
         if !pending || benchmark::parameter_overlay::eager_canvas() {
             self.notify_canvas(cx);

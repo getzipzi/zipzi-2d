@@ -27,8 +27,10 @@ def distribution(values):
     if not values:
         return {'n': 0}
     return {'n': len(values), 'p50': statistics.median(values),
-            'p95': values[math.ceil(.95 * len(values)) - 1], 'max': values[-1],
-            'over_16_67_ms': sum(v > 1000 / 60 for v in values)}
+            'p95': values[math.ceil(.95 * len(values)) - 1],
+            'p99': values[math.ceil(.99 * len(values)) - 1], 'max': values[-1],
+            'over_16_67_ms': sum(v > 1000 / 60 for v in values),
+            'over_25_ms': sum(v > 25 for v in values)}
 
 
 def diagnose(records):
@@ -58,7 +60,7 @@ def diagnose(records):
         return 0
 
     preview_tick = {e['id']: tick_for(e['fields'].get('input', 0))
-                    for e in events if e['stage'] == 'scene_begin'}
+                    for e in events if e['stage'] in ('scene_begin', 'animation_enqueued')}
     published = {e['id']: e['at_ns'] for e in events if e['stage'] == 'published'}
     grouped = defaultdict(list)
     for event in measured.values():
@@ -82,6 +84,11 @@ def diagnose(records):
         durations = defaultdict(list)
         opens = {}
         for event in selected:
+            # Outer injected input scope spans dispatch and App effect flushing.
+            # Do not mix nested widget scopes into the per-input distribution.
+            if event['stage'] == 'input_end' and event['id'] in measured:
+                durations['input_sync_ms'].append(
+                    (event['at_ns'] - measured[event['id']]['at_ns']) / 1e6)
             for label, (begin, finish) in PAIRS.items():
                 key = (label, event['id'])
                 if event['stage'] == begin:
@@ -147,7 +154,7 @@ def diagnose(records):
             'new_image_platform_returns_per_second': (
                 (len(first_submissions) - 1) * 1e9 / (first_submissions[-1] - first_submissions[0])
                 if len(first_submissions) > 1 and first_submissions[-1] > first_submissions[0] else None),
-            'requests': sum(e['stage'] == 'request' and preview_tick.get(e['id']) in measured for e in selected),
+            'requests': sum(e['stage'] in ('request', 'animation_enqueued') and preview_tick.get(e['id']) in measured for e in selected),
             'atlas_uploaded_bytes': sum(e['fields']['bytes'] for e in missed),
             'image_sizes_bytes': sorted({e['fields']['bytes'] for e in missed}),
             'metrics': {label: distribution(values) for label, values in durations.items()},

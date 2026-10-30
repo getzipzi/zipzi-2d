@@ -14,6 +14,8 @@ pub struct DocumentSession {
     pub(crate) views: HashMap<ViewportId, ViewportState>,
     manual_view: Option<(String, u32, u32, ViewportState)>,
     pub scene_revision: u64,
+    /// Earliest scene in the current run of parameter-only pose changes.
+    pub(crate) parameter_preview_floor: Option<u64>,
     cache: Option<SceneSnapshot>,
     geometry: Option<Arc<CanvasScene>>,
     previous_geometry: Option<Arc<CanvasScene>>,
@@ -32,6 +34,7 @@ impl DocumentSession {
             views: HashMap::new(),
             manual_view: None,
             scene_revision: 1,
+            parameter_preview_floor: None,
             cache: None,
             geometry: None,
             previous_geometry: None,
@@ -142,6 +145,7 @@ impl DocumentSession {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = zipzi_core::benchmark::span("editor.invalidate_scene");
         self.scene_revision += 1;
+        self.parameter_preview_floor = None;
         self.cache = None;
         self.previous_geometry = self
             .geometry
@@ -251,6 +255,12 @@ impl DocumentSession {
             EditorCommand::SetObjectsLocked { .. } | EditorCommand::Undo | EditorCommand::Redo
         );
         let preview_before = self.document.preview_revision();
+        let parameter_preview = matches!(
+            &command,
+            EditorCommand::SetPreviewParameter { .. } | EditorCommand::SetPreviewParameters { .. }
+        );
+        let parameter_floor = self.parameter_preview_floor;
+        let model_generation = self.document.model_generation();
         let is_preview = matches!(
             &command,
             EditorCommand::SetPreviewParameter { .. }
@@ -486,6 +496,16 @@ impl DocumentSession {
             && (!is_preview || had_pending || self.document.preview_revision() != preview_before)
         {
             self.invalidate_scene();
+            if parameter_preview
+                && result.is_ok()
+                && !had_pending
+                && !had_property
+                && self.document.model_generation() == model_generation
+            {
+                // A newer pose must not starve an already completed pose from
+                // this same preview run. Other scene invalidations end the run.
+                self.parameter_preview_floor = Some(parameter_floor.unwrap_or(self.scene_revision));
+            }
             if result.is_ok() {
                 self.appearance_geometry = reusable;
             }

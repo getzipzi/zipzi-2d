@@ -152,6 +152,7 @@ impl AnimationWorker {
             "animation_enqueued",
             &[
                 ("request", id.request),
+                ("input", frame_trace::current_input()),
                 ("time_us", (id.time as f64 * 1e6) as u64),
             ],
         );

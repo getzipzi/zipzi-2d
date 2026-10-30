@@ -1,29 +1,10 @@
 //! Immutable mesh-overlay textures on the consumer's Metal queue.
 use anyhow::{Result, ensure};
-use zipzi_editor_core::{OverlaySnapshot, OverlayVertexKind};
+use zipzi_editor_core::OverlaySnapshot;
 use zipzi_render_metal::metal::*;
 
-use crate::{OVERLAY_MARKER_RADIUS, OverlayPass, OverlayStyle, OverlayViewport};
-#[repr(C)]
-struct Uniforms {
-    viewport: [f32; 2],
-    scale: f32,
-    _padding: f32,
-    origin: [f32; 2],
-    texture_origin: [f32; 2],
-    edge: [f32; 4],
-    vertex: [f32; 4],
-    selected: [f32; 4],
-    restricted: [f32; 4],
-}
-#[derive(PartialEq)]
-struct Key {
-    viewport: OverlayViewport,
-    style: OverlayStyle,
-    edges: Vec<[f32; 4]>,
-    markers: Vec<[f32; 4]>,
-}
-
+use crate::overlay_data::Key;
+use crate::{OverlayPass, OverlayStyle, OverlayViewport};
 pub struct MetalOverlayRenderer {
     device: Device,
     queue: Option<CommandQueue>,
@@ -130,46 +111,9 @@ impl MetalOverlayRenderer {
             OverlayPass::Edges => 1,
             OverlayPass::Vertices => 2,
         };
-        let lines = if pass == OverlayPass::Vertices {
-            &[][..]
-        } else {
-            &overlay.lines
-        };
-        let vertices = if pass == OverlayPass::Edges {
-            &[][..]
-        } else {
-            &overlay.vertices
-        };
         #[cfg(feature = "bench-instrumentation")]
         let key_span = zipzi_core::benchmark::span("overlay.metal_key");
-        let key = Key {
-            viewport,
-            style,
-            edges: lines
-                .iter()
-                .filter(|(a, b)| [a.x, a.y, b.x, b.y].iter().all(|v| v.is_finite()))
-                .map(|(a, b)| [a.x, a.y, b.x, b.y])
-                .collect(),
-            markers: [false, true]
-                .into_iter()
-                .flat_map(|emphasized| {
-                    vertices
-                        .iter()
-                        .filter(move |v| (v.selected || v.hovered) == emphasized)
-                })
-                .filter(|v| v.kind == OverlayVertexKind::Mesh)
-                .filter(|v| v.position.x.is_finite() && v.position.y.is_finite())
-                .map(|v| {
-                    [
-                        v.position.x,
-                        v.position.y,
-                        OVERLAY_MARKER_RADIUS,
-                        (u8::from(v.selected) + 2 * u8::from(v.hovered) + 4 * u8::from(!v.editable))
-                            as f32,
-                    ]
-                })
-                .collect(),
-        };
+        let key = Key::new(viewport, overlay, style, pass)?;
         #[cfg(feature = "bench-instrumentation")]
         drop(key_span);
         if key.edges.is_empty() && key.markers.is_empty() {
@@ -183,17 +127,7 @@ impl MetalOverlayRenderer {
         }
         #[cfg(feature = "bench-instrumentation")]
         let resource_span = zipzi_core::benchmark::span("overlay.metal_resources");
-        let uniforms = Uniforms {
-            viewport: [extent[0] as f32, extent[1] as f32],
-            scale,
-            _padding: 0.,
-            origin,
-            texture_origin: origin.map(|v| (v * scale).floor()),
-            edge: style.edge,
-            vertex: style.vertex,
-            selected: style.selected,
-            restricted: style.restricted,
-        };
+        let uniforms = key.uniforms();
         let td = TextureDescriptor::new();
         td.set_width(extent[0] as u64);
         td.set_height(extent[1] as u64);
@@ -229,8 +163,8 @@ impl MetalOverlayRenderer {
             encoder.set_render_pipeline_state(pipeline);
             encoder.set_vertex_bytes(
                 1,
-                std::mem::size_of::<Uniforms>() as u64,
-                (&uniforms as *const Uniforms).cast(),
+                std::mem::size_of_val(&uniforms) as u64,
+                std::ptr::from_ref(&uniforms).cast(),
             );
             if !instances.is_empty() {
                 let buffer = self.device.new_buffer_with_data(

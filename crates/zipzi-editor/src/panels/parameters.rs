@@ -155,6 +155,8 @@ pub struct ParametersPanel {
     navigation_focused: bool,
     _focus_events: Vec<Subscription>,
     rows: Vec<ParameterRow>,
+    rows_disabled: bool,
+    owner_disabled: bool,
     scroll: UniformListScrollHandle,
     subscriptions: Vec<Subscription>,
     slider_drag: Option<Entity<SliderState>>,
@@ -211,6 +213,8 @@ impl ParametersPanel {
                 navigation: ParameterNavigation::default(),
                 navigation_focused: false,
                 rows: Vec::new(),
+                rows_disabled: false,
+                owner_disabled: false,
                 scroll: UniformListScrollHandle::new(),
                 subscriptions: Vec::new(),
                 slider_drag: None,
@@ -224,8 +228,56 @@ impl ParametersPanel {
     pub(crate) fn benchmark_slider_dragging(&self) -> bool {
         self.slider_drag.is_some() || self.pad_drag.is_some()
     }
-
+    pub(crate) fn benchmark_input_dragging(&self, cx: &App) -> bool {
+        if crate::benchmark::parameter_overlay::parameter_input() == "number" {
+            self.rows
+                .iter()
+                .any(|r| r.number_input.read(cx).is_sliding())
+        } else {
+            self.benchmark_slider_dragging()
+        }
+    }
+    pub(crate) fn benchmark_number_input(&self, cx: &App) -> Option<Entity<SlideNumberInput>> {
+        let parameter = self.benchmark_slider_parameter(cx)?;
+        self.rows
+            .iter()
+            .find(|r| r.parameter.id == parameter.id)
+            .map(|r| r.number_input.clone())
+    }
     pub(crate) fn benchmark_slider(&self, cx: &App) -> Option<(Bounds<Pixels>, Point<Pixels>)> {
+        let input = crate::benchmark::parameter_overlay::parameter_input();
+        if input == "number" {
+            let parameter = self.benchmark_slider_parameter(cx)?;
+            let row = self.rows.iter().find(|r| r.parameter.id == parameter.id)?;
+            let bounds = row.input.read(cx).input_bounds();
+            return Some((bounds, bounds.center()));
+        }
+        if input == "pad" {
+            for row in &self.rows {
+                let Some(linked) = row.view.read(cx).linked.as_ref() else {
+                    continue;
+                };
+                if linked.role != view::LinkedRole::Top {
+                    continue;
+                }
+                let bounds = track::pad_full_bounds(row.slider.read(cx).bounds(), linked.role);
+                let fraction = |p: &ParameterValue| (p.value - p.minimum) / (p.maximum - p.minimum);
+                let inset = crate::ui::compact::scaled(track::PAD_VERTICAL_INSET, cx);
+                let thumb = point(
+                    bounds.left() + bounds.size.width * fraction(&linked.top_parameter),
+                    bounds.top()
+                        + inset
+                        + (bounds.size.height - inset * 2.)
+                            * (1. - fraction(&linked.bottom_parameter)),
+                );
+                return Some((bounds, thumb));
+            }
+            return None;
+        }
+        self.benchmark_track(cx)
+    }
+
+    fn benchmark_track(&self, cx: &App) -> Option<(Bounds<Pixels>, Point<Pixels>)> {
         let viewport = self.scroll.0.borrow().base_handle.bounds();
         self.visible_rows.iter().find_map(|entry| {
             let ListRow::Parameter { index, .. } = entry else {
@@ -257,7 +309,7 @@ impl ParametersPanel {
         &self,
         cx: &App,
     ) -> Option<zipzi_editor_core::ParameterValue> {
-        let (_, thumb) = self.benchmark_slider(cx)?;
+        let (_, thumb) = self.benchmark_track(cx)?;
         self.rows
             .iter()
             .find(|row| row.slider.read(cx).bounds().contains(&thumb))
@@ -562,15 +614,11 @@ impl ParametersPanel {
             );
         };
         let Some(owner) = self.owner.upgrade() else {
-            return LinkToolbarState::unavailable(
-                t!("parameter.keyform_unavailable").into_owned(),
-            );
+            return LinkToolbarState::unavailable(t!("parameter.keyform_unavailable").into_owned());
         };
         let state = owner.read(cx);
         let Some(document) = state.editor.document() else {
-            return LinkToolbarState::unavailable(
-                t!("parameter.keyform_unavailable").into_owned(),
-            );
+            return LinkToolbarState::unavailable(t!("parameter.keyform_unavailable").into_owned());
         };
         if !self.rows.iter().any(|row| row.parameter.id == parameter_id) {
             return LinkToolbarState::unavailable(
@@ -757,18 +805,16 @@ impl crate::docking::header::PanelHeader for ParametersPanel {
 impl Render for ParametersPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let _span = crate::benchmark::parameter_overlay::ui_span("ui.parameters_render");
-        let Some(owner) = self.owner.upgrade() else {
-            return div().into_any_element();
-        };
-        let dialog_active = window.has_active_dialog(cx);
-        let state = owner.read(cx);
-        let disabled = state.modal || dialog_active || state.editor.is_busy();
+        // Owner notifications reconcile availability; preview value writes do not
+        // change it and must not subscribe this panel to the entire editor.
+        let disabled = self.owner_disabled || window.has_active_dialog(cx);
         if disabled {
             self.finish_slider_drag(cx);
         }
-        // Disabled state changes invalidate the row cache; ordinary drags do not.
-        for row in &self.rows {
-            if row.view.read(cx).disabled != disabled {
+        // Do not subscribe the whole panel to each row's changing thumb value.
+        if self.rows_disabled != disabled {
+            self.rows_disabled = disabled;
+            for row in &self.rows {
                 row.view.update(cx, |view, cx| {
                     view.disabled = disabled;
                     cx.notify();
@@ -780,6 +826,20 @@ impl Render for ParametersPanel {
         });
         let row_count = self.visible_rows.len();
         let panel = cx.entity();
+        // The list's prepaint callback only needs these immutable descriptions.
+        // Updating ParametersPanel there falsely writes its retained dependencies.
+        let entries: Vec<_> = self
+            .visible_rows
+            .iter()
+            .map(|entry| match entry.clone() {
+                ListRow::Parameter { index, .. } => {
+                    ParameterListEntry::Row(self.rows[index].view.clone())
+                }
+                ListRow::Group {
+                    id, name, depth, ..
+                } => ParameterListEntry::Group(self.group_header(id, name, depth, disabled, cx)),
+            })
+            .collect();
         let theme = cx.theme().clone();
 
         sorting::panel_actions(div().id("parameters-panel"), &self.sorting)
@@ -857,24 +917,18 @@ impl Render for ParametersPanel {
                 // A drag repaints this panel; keep work proportional to visible rows.
                 sorting::scroll_area(
                     uniform_list("parameters-scroll-area", row_count, move |range, _, cx| {
-                        panel.update(cx, |this, cx| {
-                            range
-                                .map(|index| match this.visible_rows[index].clone() {
-                                    // The cache supplies uniform_list's measured geometry;
-                                    // it must scale with the row's own content height.
-                                    ListRow::Parameter { index, .. } => this.rows[index]
-                                        .view
-                                        .clone()
-                                        .cached(StyleRefinement::default().w_full().h(
+                        range
+                            .map(|index| match entries[index].clone() {
+                                ParameterListEntry::Row(view) => view
+                                    .cached(
+                                        StyleRefinement::default().w_full().h(
                                             crate::ui::compact::scaled(PARAMETER_ROW_HEIGHT, cx),
-                                        ))
-                                        .into_any_element(),
-                                    ListRow::Group {
-                                        id, name, depth, ..
-                                    } => this.group_header(id, name, depth, disabled, cx),
-                                })
-                                .collect()
-                        })
+                                        ),
+                                    )
+                                    .into_any_element(),
+                                ParameterListEntry::Group(header) => header.into_any_element(),
+                            })
+                            .collect()
                     }),
                     &self.sorting,
                     &self.scroll,
@@ -924,4 +978,10 @@ mod tests {
             assert_eq!(format_value(value), expected, "value = {value}");
         }
     }
+}
+
+#[derive(Clone)]
+enum ParameterListEntry {
+    Row(Entity<ParameterRowView>),
+    Group(headers::ParameterGroupHeader),
 }

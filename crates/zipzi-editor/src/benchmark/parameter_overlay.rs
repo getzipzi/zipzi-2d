@@ -5,6 +5,8 @@ use zipzi_editor_core::{ObjectKind, ObjectRef};
 #[derive(Default)]
 struct Options {
     selection: String,
+    input: String,
+    viewport_style: String,
     paint: String,
     detail: bool,
     eager_canvas: bool,
@@ -15,10 +17,21 @@ struct Options {
     eager_viewport_layout: bool,
 }
 static OPTIONS: OnceLock<Options> = OnceLock::new();
+static INITIAL_HISTORY: OnceLock<(usize, usize)> = OnceLock::new();
 static INITIAL: OnceLock<std::sync::Arc<zipzi_core::DrawableFrame>> = OnceLock::new();
 
 pub(super) fn init(automatic: bool) -> anyhow::Result<()> {
     let selection = std::env::var("ZIPZI_BENCH_SELECTION").unwrap_or("first".into());
+    let viewport_style = std::env::var("ZIPZI_BENCH_VIEWPORT_STYLE").unwrap_or("modeling".into());
+    ensure!(
+        ["modeling", "animation"].contains(&viewport_style.as_str()),
+        "invalid benchmark viewport style"
+    );
+    let input = std::env::var("ZIPZI_BENCH_PARAMETER_INPUT").unwrap_or("track".into());
+    ensure!(
+        ["track", "number", "pad"].contains(&input.as_str()),
+        "invalid parameter input"
+    );
     let paint = std::env::var("ZIPZI_BENCH_OVERLAY_PAINT").unwrap_or("all".into());
     let detail = std::env::var("ZIPZI_BENCH_OVERLAY_DETAIL").is_ok_and(|v| v == "1");
     let eager_canvas = std::env::var("ZIPZI_BENCH_EAGER_CANVAS").is_ok_and(|v| v == "1");
@@ -43,7 +56,9 @@ pub(super) fn init(automatic: bool) -> anyhow::Result<()> {
         "overlay detail requires bench-instrumentation"
     );
     ensure!(
-        selection == "first"
+        input == "track"
+            && viewport_style == "modeling"
+            && selection == "first"
             && paint == "all"
             && !detail
             && !eager_canvas
@@ -57,6 +72,8 @@ pub(super) fn init(automatic: bool) -> anyhow::Result<()> {
     );
     let _ = OPTIONS.set(Options {
         selection,
+        input,
+        viewport_style,
         paint,
         detail,
         eager_canvas,
@@ -73,7 +90,7 @@ pub(super) fn init(automatic: bool) -> anyhow::Result<()> {
 pub(super) fn metadata() -> serde_json::Value {
     OPTIONS.get().map_or(serde_json::Value::Null, |o| {
         serde_json::json!({
-            "selection": o.selection, "paint": o.paint, "detail": o.detail,
+            "selection": o.selection, "input": o.input, "viewport_style": o.viewport_style, "paint": o.paint, "detail": o.detail,
             "eager_canvas": o.eager_canvas, "uncached_creation_menus": o.uncached_creation_menus,
             "unlayered_markers": o.unlayered_markers,
             "tessellated_edges": o.tessellated_edges,
@@ -81,6 +98,17 @@ pub(super) fn metadata() -> serde_json::Value {
             "eager_viewport_layout": o.eager_viewport_layout,
         })
     })
+}
+
+/// Keep Modeling frame provenance and parameter input, using Animation's presentation.
+pub(crate) fn animation_viewport_style() -> bool {
+    OPTIONS
+        .get()
+        .is_some_and(|o| o.viewport_style == "animation")
+}
+
+pub(crate) fn parameter_input() -> &'static str {
+    OPTIONS.get().map_or("track", |o| o.input.as_str())
 }
 
 pub(crate) fn eager_canvas() -> bool {
@@ -108,6 +136,14 @@ pub(super) fn prepare(
     cx: &mut Context<EditorView>,
 ) -> anyhow::Result<()> {
     let o = OPTIONS.get().unwrap();
+    if o.input == "pad" {
+        let id = view.editor.document().unwrap().parameters()[0].id.clone();
+        if view.editor.document().unwrap().parameter_links().is_empty() {
+            view.editor
+                .execute(EditorCommand::ToggleParameterLink { parameter_id: id })?;
+            view.refresh_document(window, cx);
+        }
+    }
     if o.selection != "first" {
         let frame = view.modeling_frame().context("no presented model")?;
         let objects = if o.selection == "all" {
@@ -128,6 +164,7 @@ pub(super) fn prepare(
         view.refresh_document(window, cx);
     }
     let document = view.editor.document().unwrap();
+    let _ = INITIAL_HISTORY.set(document.history_lengths());
     let overlay = view.editor.overlay();
     let source = &view
         .modeling_frame()
@@ -189,7 +226,22 @@ pub(super) fn finish_workload(view: &EditorView, cx: &App) -> anyhow::Result<()>
         changed_meshes > 0,
         "parameter workload did not deform any mesh"
     );
-    let audit = serde_json::json!({"changed_meshes": changed_meshes,
+    let changed_parameters = initial
+        .parameters
+        .iter()
+        .zip(&source.parameters)
+        .filter(|(a, b)| a.value != b.value)
+        .count();
+    ensure!(
+        changed_parameters >= if parameter_input() == "pad" { 2 } else { 1 },
+        "parameter controls did not change their evaluated pose values"
+    );
+    let history = view.editor.document().unwrap().history_lengths();
+    ensure!(
+        Some(&history) == INITIAL_HISTORY.get(),
+        "parameter drag changed authored history"
+    );
+    let audit = serde_json::json!({"changed_meshes": changed_meshes, "changed_parameters": changed_parameters, "history": history,
         "parameter_id": parameter.id, "parameter_name": parameter.name,
         "parameter_value": parameter.value, "minimum": parameter.minimum, "maximum": parameter.maximum,
         "evaluations": view.editor.evaluation_count(),

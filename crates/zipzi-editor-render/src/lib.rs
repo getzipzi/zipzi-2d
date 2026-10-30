@@ -50,3 +50,9 @@ pub struct OverlayViewport {
     /// Logical window origin; the texture starts at floor(origin * scale).
     pub origin: [f32; 2],
 }
+
+mod overlay_data;
+#[cfg(target_os = "windows")]
+mod overlay_windows;
+#[cfg(target_os = "windows")]
+pub use overlay_windows::WindowsOverlayRenderer;

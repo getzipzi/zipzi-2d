@@ -1121,3 +1121,137 @@ fn list_searchable_only_notifies_when_the_value_changes(cx: &mut TestAppContext)
         assert_eq!(notifications.get(), expected);
     }
 }
+
+#[gpui_kit::test]
+fn parameter_number_changes_request_distinct_poses_without_editor_notifications(
+    cx: &mut TestAppContext,
+) {
+    use super::slide_number_input::{press, release, slide};
+    use gpui_kit::{point, px};
+    let (document, assets) = super::document_fixture::sample_document_with_binding(true).unwrap();
+    let parameter = document.parameters()[0].id.clone();
+    let history = document.history_lengths();
+    let h = setup_with_document(cx, document, assets);
+    h.view.update(cx, |view, _| {
+        view._frames = None;
+        view.requests = Some(crate::preview::RequestSender::deferred());
+        view.edit_error = None;
+        view.message.clear();
+        view.feedback = None;
+        for frame in view.viewport_frames.values_mut() {
+            frame.error = None;
+        }
+    });
+    let origin = cx
+        .update_window(h.window, |_, window, cx| {
+            window.activate_window();
+            window.draw(cx).clear(cx);
+            let origin = window
+                .find(format!("parameter-value-{parameter}"))
+                .bounds()
+                .center();
+            press(window, origin, cx);
+            origin
+        })
+        .unwrap();
+    for _ in 0..3 {
+        cx.update_window(h.window, |_, window, cx| window.draw(cx).clear(cx))
+            .unwrap();
+    }
+    use std::{cell::Cell, rc::Rc};
+    let notifications = Rc::new(Cell::new(0));
+    let seen = notifications.clone();
+    let _observe = cx.update(|cx| cx.observe(&h.view, move |_, _| seen.set(seen.get() + 1)));
+    let mut previous = None;
+    for sample in 1..=12 {
+        cx.update_window(h.window, |_, window, cx| {
+            slide(
+                window,
+                origin + point(px(8. + sample as f32), px(0.)),
+                false,
+                cx,
+            );
+        })
+        .unwrap();
+        cx.run_until_parked();
+        h.view.update(cx, |view, cx| {
+            let request = view
+                .requests
+                .as_ref()
+                .unwrap()
+                .take_pending()
+                .expect("number did not request a pose");
+            assert_ne!(previous, Some(request.revision));
+            previous = Some(request.revision);
+            assert_eq!(view.editor.document().unwrap().history_lengths(), history);
+            view.receive_viewport_frame(
+                crate::preview::Frame {
+                    binding: Some(request.binding),
+                    trace_id: request.trace_id,
+                    revision: request.revision,
+                    canvas: request.canvas,
+                    animation: None,
+                    stats: (0, 0, 0),
+                    image: Ok(crate::preview::test_image()),
+                },
+                cx,
+            );
+        });
+        cx.run_until_parked();
+        cx.update_window(h.window, |_, window, cx| window.draw(cx).clear(cx))
+            .unwrap();
+    }
+    assert_eq!(
+        notifications.get(),
+        0,
+        "preview input notified the editor owner"
+    );
+    h.view.read_with(cx, |v, _| {
+        assert!(v.editor.document().unwrap().parameters()[0].value > 0.)
+    });
+    cx.update_window(h.window, |_, window, cx| release(window, origin, cx))
+        .unwrap();
+}
+
+#[gpui_kit::test]
+fn transient_feedback_only_notifies_the_status_bar(cx: &mut TestAppContext) {
+    let h = setup(cx);
+    h.view.update(cx, |v, _| {
+        v.requests = Some(crate::preview::RequestSender::deferred());
+        v.edit_error = None;
+        v.message.clear();
+        v.feedback = None;
+        for frame in v.viewport_frames.values_mut() {
+            frame.error = None;
+        }
+    });
+    for _ in 0..3 {
+        cx.run_until_parked();
+        cx.update_window(h.window, |_, w, cx| w.draw(cx).clear(cx))
+            .unwrap();
+    }
+    cx.update_window(h.window, |_, w, cx| w.draw(cx).clear(cx))
+        .unwrap();
+    use std::{cell::Cell, rc::Rc};
+    let notifications = Rc::new(Cell::new(0));
+    let seen = notifications.clone();
+    let _observe = cx.update(|cx| cx.observe(&h.view, move |_, _| seen.set(seen.get() + 1)));
+    for message in ["first notice", "updated notice"] {
+        h.view.update(cx, |v, cx| v.set_status_message(message, cx));
+        cx.run_until_parked();
+        cx.update_window(h.window, |_, w, cx| w.draw(cx).clear(cx))
+            .unwrap();
+        h.view.read_with(cx, |v, cx| {
+            assert_eq!(
+                v.status_bar.read(cx).displayed_message(),
+                Some((message, false))
+            );
+        });
+    }
+    h.view
+        .update(cx, |v, cx| v.clear_status_message("updated notice", cx));
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, w, cx| w.draw(cx).clear(cx))
+        .unwrap();
+    assert_eq!(notifications.get(), 0, "feedback notified the editor owner");
+}

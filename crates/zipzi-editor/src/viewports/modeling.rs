@@ -18,14 +18,24 @@ impl ModelingViewport {
             viewport,
             zipzi_editor_core::ViewportKind::Modeling,
             Self::content,
-            ViewportSurface::modeling_input,
-            toolbar::ToolbarRegistry::with_defaults(),
+            if benchmark::parameter_overlay::animation_viewport_style() {
+                |_, _, _, _| {}
+            } else {
+                ViewportSurface::modeling_input
+            },
+            if benchmark::parameter_overlay::animation_viewport_style() {
+                toolbar::ToolbarRegistry::navigation()
+            } else {
+                toolbar::ToolbarRegistry::with_defaults()
+            },
             window,
             cx,
         );
-        surface.update(cx, |surface, _| {
-            surface.object_menu = Some(ViewportSurface::object_menu)
-        });
+        if !benchmark::parameter_overlay::animation_viewport_style() {
+            surface.update(cx, |surface, _| {
+                surface.object_menu = Some(ViewportSurface::object_menu)
+            });
+        }
         cx.new(|cx| Self {
             _observe: cx.observe_in(&surface, window, |this: &mut Self, surface, window, cx| {
                 let next = ViewportSurface::header_state(&surface, window, cx);
@@ -40,6 +50,14 @@ impl ModelingViewport {
     }
     fn content(owner: &EditorView, viewport: zipzi_editor_core::ViewportId) -> SurfaceContent {
         let frame = owner.modeling_frame_for(viewport);
+        if benchmark::parameter_overlay::animation_viewport_style() {
+            // Animation presentation over the same Modeling frames: changing the
+            // core kind would reject them and require the motion worker instead.
+            return SurfaceContent::navigation(
+                frame.map(|f| (f.image.clone(), f.canvas.transform.metrics)),
+                owner.viewport_error(viewport).cloned(),
+            );
+        }
         let overlay = benchmark::parameter_overlay::capture(1, || {
             owner
                 .editor

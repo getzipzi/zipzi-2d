@@ -10,6 +10,7 @@ impl ParametersPanel {
         };
         let (document_id, parameters, revision, selection) = {
             let owner = owner.read(cx);
+            self.owner_disabled = owner.modal || owner.editor.is_busy();
             if owner.editor.is_busy() && self.document_id == owner.editor.active_id() {
                 return;
             }
@@ -164,7 +165,7 @@ impl ParametersPanel {
                     slider: slider.clone(),
                     input: input.clone(),
                     number_input: number_input.clone(),
-                    disabled: false,
+                    disabled: self.rows_disabled,
                     summary: String::new(),
                     directly_related: false,
                     indirectly_related: false,

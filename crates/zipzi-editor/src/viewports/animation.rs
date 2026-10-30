@@ -39,20 +39,16 @@ impl AnimationViewport {
         // The shared image accessor also admits this document's frozen image
         // while saving, when core deliberately has no live viewport binding.
         let frame = owner.animation_frame_for(viewport);
-        SurfaceContent {
-            image: frame.map(|f| (f.image.clone(), f.state.transform.metrics)),
-            overlay: Default::default(),
-            error: owner.viewport_error(viewport).cloned().or_else(|| {
+        SurfaceContent::navigation(
+            frame.map(|f| (f.image.clone(), f.state.transform.metrics)),
+            owner.viewport_error(viewport).cloned().or_else(|| {
                 owner.editor.animation().and_then(|a| {
                     a.error
                         .as_ref()
                         .map(crate::panels::animation_feedback::failure_text)
                 })
             }),
-            hand_tool: true,
-            controls: None,
-            cursor: None,
-        }
+        )
     }
 }
 viewport_panel!(AnimationViewport, "dock.animation_viewport", 176.);

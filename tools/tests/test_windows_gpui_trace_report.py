@@ -36,6 +36,41 @@ def fixture():
 
 
 class WindowsGpuiReport(unittest.TestCase):
+    def test_input_sync_uses_the_outer_tick_and_includes_effect_flush(self):
+        records = fixture()
+        for time, id, stage in [(22, 3, 'input_end'), (24, 2, 'input_end')]:
+            records.insert(-2, dict(type='event', at_ns=time * 1_000_000,
+                                    id=id, stage=stage, fields={}))
+        metric = report.diagnose(records)['workloads']['1']['metrics']['input_sync_ms']
+        self.assertEqual(metric, report.distribution([4]))
+
+    def test_long_interval_counts_do_not_label_normal_60_hz_jitter_as_stalls(self):
+        metric = report.distribution([16.66, 16.70, 19., 33.4, 50.])
+        self.assertEqual(metric['over_25_ms'], 2)
+        self.assertEqual(metric['p99'], 50.)
+
+    def test_animation_evaluation_joins_to_its_input_and_shared_surface(self):
+        records = fixture()
+        records[0]['workloads'] = [9]
+        records[0]['animation_drag'] = 'number'
+        for event in records:
+            if event.get('stage') == 'benchmark_tick':
+                event['fields']['mode'] = 9
+            elif event.get('stage') == 'scene_begin':
+                event['stage'] = 'animation_enqueued'
+            elif event.get('stage') == 'compose_image':
+                event['stage'] = 'paint_shared_surface'
+        records = [event for event in records if event.get('stage') != 'request']
+        result = report.diagnose(records)['workloads']['9']
+        self.assertEqual(result['requests'], 1)
+        self.assertEqual(result['inputs_with_image_platform_return'], 1)
+        self.assertEqual(result['metrics']['input_to_first_image_platform_return_ms']['p50'], 10)
+        for event in records:
+            if event.get('stage') == 'animation_enqueued':
+                event['fields']['input'] = 0
+        result = report.diagnose(records)['workloads']['9']
+        self.assertEqual(result['inputs_with_image_platform_return'], 0)
+
     def test_publish_to_paint_latency_ignores_later_repaints(self):
         records = fixture()
         # Repaint the same image both within and after the workload's settling

@@ -769,3 +769,89 @@ fn absolute_zoom_clamps_and_preserves_anchor_without_changing_history() -> anyho
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     Ok(())
 }
+
+#[test]
+fn parameter_preview_frames_progress_without_crossing_authoring_edits() -> anyhow::Result<()> {
+    let (doc, _dir) = support::sample_document_with_binding(true)?;
+    let mut editor = crate::support::editor_from_document(doc);
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 2.,
+    });
+    let initial = editor.preview()?.canvas.unwrap();
+    assert!(editor.present_frame(initial.clone()));
+    let parameter_id = editor.document().unwrap().parameters()[0].id.clone();
+    let history = editor.document().unwrap().history_lengths();
+    let mut frames = Vec::new();
+    for value in [0.25, 0.5, 0.75] {
+        editor.execute(EditorCommand::SetPreviewParameter {
+            parameter_id: parameter_id.clone(),
+            value,
+        })?;
+        frames.push(editor.preview()?.canvas.unwrap());
+    }
+    assert!(!editor.present_frame(initial));
+    let mut future = frames[0].clone();
+    future.version.scene = frames[2].version.scene + 1;
+    assert!(!editor.present_frame(future));
+    assert!(
+        editor.present_frame(frames[0].clone()),
+        "continuous parameter inputs starved a completed pose"
+    );
+    let point = editor.overlay().vertices[0].position;
+    assert!(
+        down(&mut editor, point, false).is_err(),
+        "a new edit must wait for the current pose"
+    );
+    assert!(editor.present_frame(frames[1].clone()));
+    assert!(!editor.present_frame(frames[0].clone()));
+    assert!(editor.present_frame(frames[2].clone()));
+    assert_eq!(editor.document().unwrap().history_lengths(), history);
+
+    editor.execute(EditorCommand::SetPreviewParameter {
+        parameter_id,
+        value: 0.9,
+    })?;
+    let delayed = editor.preview()?.canvas.unwrap();
+    editor.execute(EditorCommand::PreviewOpacity(0.4))?;
+    let authoring = editor.preview()?.canvas.unwrap();
+    assert!(
+        !editor.present_frame(delayed),
+        "parameter preview crossed an authoring edit"
+    );
+    assert!(editor.present_frame(authoring));
+    Ok(())
+}
+
+#[test]
+fn parameter_preview_frames_do_not_cross_resize_or_document_epochs() -> anyhow::Result<()> {
+    let (doc, _dir) = support::sample_document_with_binding(true)?;
+    let mut editor = crate::support::editor_from_document(doc);
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 2.,
+    });
+    let parameter_id = editor.document().unwrap().parameters()[0].id.clone();
+    editor.execute(EditorCommand::SetPreviewParameter {
+        parameter_id: parameter_id.clone(),
+        value: 0.25,
+    })?;
+    let before_resize = editor.preview()?.canvas.unwrap();
+    editor.execute(EditorCommand::SetPreviewParameter {
+        parameter_id,
+        value: 0.5,
+    })?;
+    let before_switch = editor.preview()?.canvas.unwrap();
+    let mut metrics = editor.canvas_metrics();
+    metrics.width += 20.;
+    editor.set_canvas_metrics(metrics);
+    assert!(!editor.present_frame(before_resize));
+    let resized = editor.preview()?.canvas.unwrap();
+    assert!(editor.present_frame(resized.clone()));
+    editor.new_document()?;
+    assert!(!editor.present_frame(before_switch));
+    assert!(!editor.present_frame(resized));
+    Ok(())
+}
