@@ -71,7 +71,7 @@ Choose the session you want to edit by its ID. Changes made through an Edit
 appear in the shared document and undo history, so a person can continue in the
 Editor and a script or agent can continue from their changes. Saving is separate.
 `zipzi.connect()` can also select an endpoint or start an explicitly specified
-host; see the [usage guide](https://github.com/getzipzi/zipzi-2d/blob/main/crates/zipzi-python2/client/python/zipzi/docs/guide.md).
+host; see the [usage guide](client/python/zipzi/docs/guide.md).
 
 Connected Python and Editor versions may differ when they share the stable wire
 protocol major (`zipzi-runtime-v2`). Compatible API additions and optional host
@@ -82,12 +82,23 @@ extraction changes Rust type identities and binary signatures. See the
 
 ## Explore the API
 
-- [Usage guide](https://github.com/getzipzi/zipzi-2d/blob/main/crates/zipzi-python2/client/python/zipzi/docs/guide.md): sessions, edits, collaboration, recovery and resource ownership.
-- [API reference](https://github.com/getzipzi/zipzi-2d/blob/main/crates/zipzi-python2/client/python/zipzi/docs/reference.md) and [recipes](https://github.com/getzipzi/zipzi-2d/blob/main/crates/zipzi-python2/client/python/zipzi/docs/recipes.py): signatures and executable workflows.
-- [Capabilities](https://github.com/getzipzi/zipzi-2d/blob/main/crates/zipzi-python2/CAPABILITIES.md): available operations and host requirements.
+- [Usage guide](client/python/zipzi/docs/guide.md): sessions, edits, collaboration, recovery and resource ownership.
+- [API reference](client/python/zipzi/docs/reference.md) and [recipes](client/python/zipzi/docs/recipes.py): signatures and executable workflows.
+- [Capabilities](CAPABILITIES.md): available operations and host requirements.
 
-The installed package also includes the guide, reference and recipes. Discover
-API entries without a host or network connection:
+The installed package includes a [README](client/python/zipzi/README.md), guide,
+reference and recipes with local links. Locate them without a host or network
+connection:
+
+```python
+from importlib.resources import files
+
+package = files("zipzi")
+print(package.joinpath("README.md").read_text(encoding="utf-8"))
+print(package.joinpath("docs/guide.md"))
+```
+
+Discover API entries offline:
 
 ```python
 import zipzi
@@ -129,14 +140,14 @@ using it. The service
 is unavailable on local or older hosts and enforces input and output limits.
 Positions are bottom-up source pixels and UVs are normalized; input alpha is
 top-down. Transform positions into the target model's coordinate system before
-creating or replacing a mesh. See the [capabilities guide](https://github.com/getzipzi/zipzi-2d/blob/main/crates/zipzi-python2/CAPABILITIES.md).
+creating or replacing a mesh. See the [capabilities guide](CAPABILITIES.md).
 
 ## Contributing
 
 From the repository root, run `./tools/test-sdk.sh python2` for the Python SDK
 checks or `./tools/test-sdk.sh python2-connected` for installed-client and host
-discovery checks. See [development and test coverage](https://github.com/getzipzi/zipzi-2d/blob/main/tools/README.md#test-coverage)
-and the [release guide](https://github.com/getzipzi/zipzi-2d/blob/main/docs/RELEASING.md)
+discovery checks. See [development and test coverage](../../tools/README.md#test-coverage)
+and the [release guide](../../docs/RELEASING.md)
 for source builds and packaging.
 
 The Rust contract exporter supplies a normalized type graph to the Python
@@ -157,7 +168,7 @@ the verification command. The replay validates each shard and the complete
 contract digest before rendering.
 
 The Python client and Runtime components are MIT licensed. Editor-provided
-services run in the GPL-3.0-only Editor; see the [licensing guide](https://github.com/getzipzi/zipzi-2d/blob/main/LICENSING.md).
+services run in the GPL-3.0-only Editor; see the [licensing guide](../../LICENSING.md).
 
 ### Dependency-cleaning deletion
 

@@ -64,14 +64,25 @@ def build_sdist(sdist_directory, config_settings=None):
         if len(roots) != 1:
             raise RuntimeError('Expected one source archive root')
         root = roots[0]
+        checkout = Path(__file__).resolve().parents[2]
         manifest = root / 'Cargo.toml'
         manifest.write_text(normalize_manifest(manifest.read_text(encoding='utf-8')))
         (root / 'build_backend.py').write_bytes(Path(__file__).read_bytes())
+        # Keep the SDK README's repository-relative documentation links usable
+        # after extraction, independently of the PyPI description.
+        for relative in ('tools/README.md', 'docs/RELEASING.md', 'LICENSING.md'):
+            document = root / relative
+            document.parent.mkdir(parents=True, exist_ok=True)
+            document.write_bytes((checkout / relative).read_bytes())
+        (root / 'README.md').write_text(
+            '# Zipzi native backend source\n\n'
+            'Start with the [Python SDK README](crates/zipzi-python2/README.md) '
+            'for installation, local documentation and source development.\n', encoding='utf-8')
         # Generation in the archive uses the same checkout-local lock primitive.
         support = root / 'tools/workspace/dev_platform.py'
         support.parent.mkdir(parents=True, exist_ok=True)
-        support.write_bytes((Path(__file__).resolve().parents[2] / 'tools/workspace/dev_platform.py').read_bytes())
-        verify_codegen_sources(root, Path(__file__).resolve().parents[2])
+        support.write_bytes((checkout / 'tools/workspace/dev_platform.py').read_bytes())
+        verify_codegen_sources(root, checkout)
         # Cargo preserves existing locked versions while removing the unused
         # desktop dependency graph. No build, generator or network is involved.
         versions = locked_versions(root / 'Cargo.lock')

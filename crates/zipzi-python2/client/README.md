@@ -1,6 +1,6 @@
 # zipzi
 
-A typed Python client for [Zipzi 2D](https://github.com/getzipzi/zipzi-2d), for
+A typed Python client for Zipzi 2D, for
 modeling, animation and programmatic collaboration with the Zipzi Editor.
 
 ## Install
@@ -38,16 +38,24 @@ Attach a session by ID to read and edit its document. Edits share the Editor's
 undo history; saving is separate. `zipzi.local()` provides the same Runtime API
 without an Editor window.
 
-For examples and installation details, see the [Python SDK README](https://github.com/getzipzi/zipzi-2d/tree/main/crates/zipzi-python2),
-[usage guide](https://github.com/getzipzi/zipzi-2d/blob/main/crates/zipzi-python2/client/python/zipzi/docs/guide.md),
-[API reference](https://github.com/getzipzi/zipzi-2d/blob/main/crates/zipzi-python2/client/python/zipzi/docs/reference.md)
-and [recipes](https://github.com/getzipzi/zipzi-2d/blob/main/crates/zipzi-python2/client/python/zipzi/docs/recipes.py).
-These documents are also included in the installed package. For offline API
-discovery, use `zipzi.describe("zipzi").format()`.
+For examples and API details, see the [package README](python/zipzi/README.md),
+[usage guide](python/zipzi/docs/guide.md),
+[API reference](python/zipzi/docs/reference.md)
+and [recipes](python/zipzi/docs/recipes.py).
+These documents are also included in the installed package. Locate the local
+README without a host or network connection:
+
+```python
+from importlib.resources import files
+
+print(files("zipzi").joinpath("README.md").read_text(encoding="utf-8"))
+```
+
+For offline API discovery, use `zipzi.describe("zipzi").format()`.
 
 If a response is lost, recover the original call with `OutcomeUnknown.recover()`
 or `zipzi.recover_call()` rather than sending it again. A timed-out `job.wait()`
 does not cancel the job. The guide covers recovery and resource ownership.
 
-The client is MIT licensed. See the [licensing guide](https://github.com/getzipzi/zipzi-2d/blob/main/LICENSING.md)
-for Editor and third-party terms.
+The client is [MIT licensed](LICENSE-MIT). See the
+[third-party notices](THIRD_PARTY_NOTICES.md) for dependency terms.

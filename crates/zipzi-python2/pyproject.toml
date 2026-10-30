@@ -11,7 +11,7 @@ description = "Optional in-process Runtime backend for zipzi"
 dependencies = ["zipzi==0.1.0a3"]
 license = "MIT"
 license-files = ["LICENSE-MIT", "THIRD_PARTY_NOTICES.md"]
-readme = "README.md"
+readme = "client/PYPI.md"
 
 [tool.maturin]
 python-source = "native"

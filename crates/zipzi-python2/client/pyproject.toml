@@ -9,8 +9,9 @@ requires-python = ">=3.14,<3.15"
 description = "Typed Python client for the Zipzi authoring Runtime"
 license = "MIT"
 license-files = ["LICENSE-MIT", "THIRD_PARTY_NOTICES.md"]
-readme = "README.md"
+readme = "PYPI.md"
 
 [tool.uv.build-backend]
 module-name = "zipzi"
 module-root = "python"
+source-include = ["README.md"]

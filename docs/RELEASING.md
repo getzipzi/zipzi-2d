@@ -151,6 +151,12 @@ uv run --locked python crates/zipzi-python2/tools/distribution.py \
   --output target/python-release-0.1.0a3
 ```
 
+Both distributions use `crates/zipzi-python2/client/PYPI.md` for their PyPI
+description, with absolute web links and instructions for locating installed
+documentation. Source READMEs retain relative links. The client wheel includes
+`zipzi/README.md` and `zipzi/docs/`, whose links resolve within the installed
+package and whose documentation matches that client version.
+
 ## Rust package preparation
 
 List the SDK crates in dependency order:
