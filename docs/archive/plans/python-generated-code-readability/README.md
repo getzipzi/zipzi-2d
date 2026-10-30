@@ -2,9 +2,11 @@
 
 日期：2026-10-30。状态：已实施并验收，2026-10-30 归档。
 
-实施收尾见 [P5 记录](../../plans/python-generated-code-readability-p5.md)、
-[审查与验收](../../plans/python-generated-code-readability-review.md)及
-[后续精简验收](../../plans/python-generated-code-slimming.md)。
+阶段记录：[P0](python-generated-code-readability-p0.md)、[P1](python-generated-code-readability-p1.md)、[P2](python-generated-code-readability-p2.md)、[P3](python-generated-code-readability-p3.md)、[P4](python-generated-code-readability-p4.md)、[P5](python-generated-code-readability-p5.md)。
+
+实施收尾见 [P5 记录](python-generated-code-readability-p5.md)、
+[审查与验收](python-generated-code-readability-review.md)及
+[后续精简验收](python-generated-code-slimming.md)。
 
 将 Python SDK 的生成产物按业务领域和职责拆分，消除重复文档、无效赋值和重复类型实现，
 保留显式类型、离线帮助、直接编解码及 Rust 契约来源。实施范围包括生成器、Python 客户端、
@@ -42,12 +44,12 @@
 
 主要实现入口：
 
-- [generate.py](../../../crates/zipzi-python2/tools/generate.py)：调度、缓存、输出所有权与写入。
-- [generate_modeling.py](../../../crates/zipzi-python2/tools/generate_modeling.py)：类型、校验和 Python/Rust 转换。
-- [generate_catalog.py](../../../crates/zipzi-python2/tools/generate_catalog.py)：AST 分析、文档和 catalog，目前还改写 Python 源码。
-- [generate_dtos.py](../../../crates/zipzi-python2/tools/generate_dtos.py)、[generate_api.py](../../../crates/zipzi-python2/tools/generate_api.py)：领域投影与公开导出。
-- [authoring_schema.rs](../../../crates/zipzi-contract/src/bin/authoring_schema.rs)：编译导出入口。
-- [installed_contract.py](../../../crates/zipzi-python2/tests/installed_contract.py)：离线符号、类型、文档与指纹验收。
+- [generate.py](../../../../crates/zipzi-python2/tools/generate.py)：调度、缓存、输出所有权与写入。
+- [generate_modeling.py](../../../../crates/zipzi-python2/tools/generate_modeling.py)：类型、校验和 Python/Rust 转换。
+- [generate_catalog.py](../../../../crates/zipzi-python2/tools/generate_catalog.py)：AST 分析、文档和 catalog，目前还改写 Python 源码。
+- [generate_dtos.py](../../../../crates/zipzi-python2/tools/generate_dtos.py)、[generate_api.py](../../../../crates/zipzi-python2/tools/generate_api.py)：领域投影与公开导出。
+- [authoring_schema.rs](../../../../crates/zipzi-contract/src/bin/authoring_schema.rs)：编译导出入口。
+- [installed_contract.py](../../../../crates/zipzi-python2/tests/installed_contract.py)：离线符号、类型、文档与指纹验收。
 
 ## 目标结构与边界
 
