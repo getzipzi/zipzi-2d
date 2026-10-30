@@ -50,7 +50,11 @@ fn attrs(attrs: &[syn::Attribute]) -> syn::Result<Serde> {
                 let path = m.value()?.parse::<syn::LitStr>()?;
                 if !matches!(
                     path.value().as_str(),
-                    "crate::serde_maps::usize_map" | "zipzi_core::serde_maps::u32_map"
+                    "crate::serde_maps::usize_map"
+                        | "crate::serde_maps::u32_map"
+                        | "zipzi_core::serde_maps::u32_map"
+                        | "zipzi_contract::serde_maps::usize_map"
+                        | "zipzi_contract::serde_maps::u32_map"
                 ) {
                     return Err(m.error("Unreviewed selected field deserializer"));
                 }
@@ -123,7 +127,7 @@ fn doc_text(attrs: &[syn::Attribute]) -> String {
 fn fields(
     fields: &Fields,
     rename_all: Option<&str>,
-    inherited_default: bool,
+    inherited_default: Option<&Option<String>>,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let values = fields.iter().enumerate().map(|(i,f)| {
         let a=attrs(&f.attrs)?;
@@ -146,15 +150,36 @@ fn fields(
         let rust=f.ident.as_ref().map(ToString::to_string).unwrap_or_else(||i.to_string());
         let name=if let Some(n)=a.rename { n } else if f.ident.is_none() { if fields.len()==1 { "value".into() } else { format!("value{i}") } } else { wire(&rust, rename_all)? };
         let ty=&f.ty;
-        let shape=if a.skip { quote!(zipzi_core::api_shape::Shape::Opaque {name: "__skipped".into()}) } else { quote!(<#ty as zipzi_core::api_shape::ApiShape>::api_shape()) };
+        let shape=if a.skip { quote!(zipzi_contract::api_shape::Shape::Opaque {name: "__skipped".into()}) } else { quote!(<#ty as zipzi_contract::api_shape::ApiShape>::api_shape()) };
         let skip=a.skip;
         let flatten=a.flatten;
         let option=matches!(ty, syn::Type::Path(p) if p.path.segments.last().is_some_and(|s|s.ident=="Option"));
-        let default=if skip {quote!(None)} else if let Some(default)=a.default.or(inherited_default.then_some(None)).or(option.then_some(None)) {
-            let expr=if let Some(path)=default {let path:syn::Path=syn::parse_str(&path)?;quote!(#path())} else {quote!(<#ty as Default>::default())};
-            quote!(zipzi_core::api_shape::serde_default(#expr))
-        } else {quote!(None)};
-        Ok(quote!(zipzi_core::api_shape::SerdeField {doc:#doc.into(),rust_name:#rust.into(), name:#name.into(), shape:#shape, skip:#skip, flatten:#flatten, default:#default}))
+        let default = if skip {
+            quote!(None)
+        } else if let Some(default) = a.default {
+            let expr = if let Some(path) = default {
+                let path: syn::Path = syn::parse_str(&path)?;
+                quote!(#path())
+            } else {
+                quote!(<#ty as Default>::default())
+            };
+            quote!(zipzi_contract::api_shape::serde_default(#expr))
+        } else if let Some(default) = inherited_default {
+            let member = f.ident.as_ref().map(|ident| syn::Member::Named(ident.clone()))
+                .unwrap_or_else(|| syn::Member::Unnamed(syn::Index::from(i)));
+            let expr = if let Some(path) = default {
+                let path: syn::Path = syn::parse_str(path)?;
+                quote!(#path().#member)
+            } else {
+                quote!(<Self as Default>::default().#member)
+            };
+            quote!(zipzi_contract::api_shape::serde_default(#expr))
+        } else if option {
+            quote!(zipzi_contract::api_shape::serde_default(<#ty as Default>::default()))
+        } else {
+            quote!(None)
+        };
+        Ok(quote!(zipzi_contract::api_shape::SerdeField {doc:#doc.into(),rust_name:#rust.into(), name:#name.into(), shape:#shape, skip:#skip, flatten:#flatten, default:#default}))
     }).collect::<syn::Result<Vec<_>>>()?;
     Ok(quote!(vec![#(#values),*]))
 }
@@ -170,10 +195,10 @@ pub fn api_fields(input: TokenStream) -> TokenStream {
                 .unwrap_or_else(|| if fields.len() == 1 { "value".into() } else { format!("value{index}") });
             let ty = &field.ty;
             let doc=doc_text(&field.attrs);
-            quote!(zipzi_core::api_shape::SerdeField {
+            quote!(zipzi_contract::api_shape::SerdeField {
                 doc:#doc.into(),
                 rust_name: #key.into(), name: #key.into(),
-                shape: zipzi_core::api_shape::Shape::Opaque { name: std::any::type_name::<#ty>().into() },
+                shape: zipzi_contract::api_shape::Shape::Opaque { name: std::any::type_name::<#ty>().into() },
                 skip: false, flatten: false, default: None,
             })
         }).collect::<Vec<_>>()
@@ -181,7 +206,7 @@ pub fn api_fields(input: TokenStream) -> TokenStream {
     let shape = match &input.data {
         syn::Data::Struct(data) => {
             let rows = field_rows(&data.fields);
-            quote!(zipzi_core::api_shape::Shape::SerdeRecord {
+            quote!(zipzi_contract::api_shape::Shape::SerdeRecord {
                 name: std::any::type_name::<Self>().into(),
                 fields: vec![#(#rows),*],
                 transparent: false,
@@ -195,11 +220,11 @@ pub fn api_fields(input: TokenStream) -> TokenStream {
                 let form = match &variant.fields {
                     Fields::Named(_) => "record", Fields::Unit => "unit", Fields::Unnamed(_) => "newtype",
                 };
-                quote!(zipzi_core::api_shape::SerdeVariant {
+                quote!(zipzi_contract::api_shape::SerdeVariant {
                     rust_name: #rust_name.into(), name: #rust_name.into(), form: #form.into(), fields: vec![#(#rows),*],
                 })
             });
-            quote!(zipzi_core::api_shape::Shape::SerdeEnum {
+            quote!(zipzi_contract::api_shape::Shape::SerdeEnum {
                 name: std::any::type_name::<Self>().into(),
                 tag: None,
                 content: None,
@@ -213,7 +238,7 @@ pub fn api_fields(input: TokenStream) -> TokenStream {
         }
     };
     quote!(impl #name {
-        pub fn api_fields() -> zipzi_core::api_shape::Shape { #shape }
+        pub fn api_fields() -> zipzi_contract::api_shape::Shape { #shape }
     })
     .into()
 }
@@ -239,15 +264,15 @@ fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
         generics
             .make_where_clause()
             .predicates
-            .push(syn::parse_quote!(#param:zipzi_core::api_shape::ApiShape));
+            .push(syn::parse_quote!(#param:zipzi_contract::api_shape::ApiShape));
     }
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let body = match input.data {
         syn::Data::Struct(data) => {
-            let fs = fields(&data.fields, a.rename_all.as_deref(), a.default.is_some())?;
+            let fs = fields(&data.fields, a.rename_all.as_deref(), a.default.as_ref())?;
             let transparent = a.transparent;
             let tuple = matches!(data.fields, Fields::Unnamed(_));
-            quote!(zipzi_core::api_shape::Shape::SerdeRecord {name:std::any::type_name::<Self>().into(),fields:#fs,transparent:#transparent,tuple:#tuple})
+            quote!(zipzi_contract::api_shape::Shape::SerdeRecord {name:std::any::type_name::<Self>().into(),fields:#fs,transparent:#transparent,tuple:#tuple})
         }
         syn::Data::Enum(data) => {
             let mut vs = vec![];
@@ -268,8 +293,8 @@ fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                     Fields::Unnamed(f) if f.unnamed.len() == 1 => "newtype",
                     Fields::Unnamed(_) => "tuple",
                 };
-                let fs = fields(&v.fields, None, false)?;
-                vs.push(quote!(zipzi_core::api_shape::SerdeVariant {rust_name:#rn.into(),name:#wn.into(),form:#form.into(),fields:#fs}));
+                let fs = fields(&v.fields, None, None)?;
+                vs.push(quote!(zipzi_contract::api_shape::SerdeVariant {rust_name:#rn.into(),name:#wn.into(),form:#form.into(),fields:#fs}));
             }
             let tag = a
                 .tag
@@ -279,12 +304,12 @@ fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                 .content
                 .map(|v| quote!(Some(#v.into())))
                 .unwrap_or(quote!(None));
-            quote!(zipzi_core::api_shape::Shape::SerdeEnum {name:std::any::type_name::<Self>().into(),tag:#tag,content:#content,variants:vec![#(#vs),*]})
+            quote!(zipzi_contract::api_shape::Shape::SerdeEnum {name:std::any::type_name::<Self>().into(),tag:#tag,content:#content,variants:vec![#(#vs),*]})
         }
         _ => return Err(syn::Error::new_spanned(name, "Unions are not API shapes")),
     };
     Ok(
-        quote!(impl #impl_generics zipzi_core::api_shape::ApiShape for #name #ty_generics #where_clause {fn api_shape()->zipzi_core::api_shape::Shape {#body}}),
+        quote!(impl #impl_generics zipzi_contract::api_shape::ApiShape for #name #ty_generics #where_clause {fn api_shape()->zipzi_contract::api_shape::Shape {#body}}),
     )
 }
 
@@ -322,7 +347,7 @@ fn binary_skip(attrs: &[syn::Attribute]) -> syn::Result<bool> {
 }
 fn binary_expand(input: DeriveInput, read: bool) -> syn::Result<proc_macro2::TokenStream> {
     let name = &input.ident;
-    let base = quote!(zipzi_core::binary_wire);
+    let base = quote!(zipzi_contract::binary_wire);
     let mut write_generics = input.generics.clone();
     let mut read_generics = input.generics.clone();
     let params = input
@@ -334,11 +359,11 @@ fn binary_expand(input: DeriveInput, read: bool) -> syn::Result<proc_macro2::Tok
         write_generics
             .make_where_clause()
             .predicates
-            .push(syn::parse_quote!(#param:zipzi_core::binary_wire::WireWrite));
+            .push(syn::parse_quote!(#param:zipzi_contract::binary_wire::WireWrite));
         read_generics
             .make_where_clause()
             .predicates
-            .push(syn::parse_quote!(#param:zipzi_core::binary_wire::WireRead));
+            .push(syn::parse_quote!(#param:zipzi_contract::binary_wire::WireRead));
     }
     let (wi, wt, ww) = write_generics.split_for_impl();
     let (ri, rt, rw) = read_generics.split_for_impl();

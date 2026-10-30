@@ -20,29 +20,7 @@ impl MotionEditPlan {
         self.domain.migrated_to_root()
     }
 }
-#[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
-pub struct MotionCapabilities {
-    /// Read this object while its identity/context remains valid.
-    pub inspect: CapabilityState,
-    /// Modify typed fields through a validated native intent/address.
-    pub patch: CapabilityState,
-    /// Duplicate the selected object while allocating fresh owned identities.
-    pub duplicate: CapabilityState,
-    /// Delete the selected object subject to native reference and lock rules.
-    pub delete: CapabilityState,
-    /// Move the selected object between compatible native owners.
-    pub move_object: CapabilityState,
-    /// Native preview eligibility; host preview API availability is advertised separately.
-    pub preview: CapabilityState,
-    /// Create owned child rows in this object.
-    pub create_child: CapabilityState,
-    /// Change ordered sibling membership without changing identity.
-    pub reorder: CapabilityState,
-    /// Repair an explicitly unresolved native reference.
-    pub repair: CapabilityState,
-    /// Edit the owning clip content, preserving stable track/key/event identities.
-    pub edit_content: CapabilityState,
-}
+pub use zipzi_contract::authoring::MotionCapabilities;
 #[derive(Debug, Clone)]
 pub struct MotionCollection {
     pub container: MotionContainer,
@@ -581,24 +559,7 @@ impl AuthoringSession {
     }
 }
 
-#[derive(Debug, Clone, zipzi_api_derive::ApiShape, serde::Serialize)]
-pub struct AttachmentCapabilities {
-    /// Current capability to read the current typed record; inspect its state/reason before
-    /// invoking the operation.
-    pub inspect: CapabilityState,
-    /// Current capability to modify fields through a captured address; inspect its state/reason
-    /// before invoking the operation.
-    pub patch: CapabilityState,
-    /// Current capability to duplicate this object; inspect its state/reason before invoking
-    /// the operation.
-    pub duplicate: CapabilityState,
-    /// Current capability to delete this object; inspect its state/reason before invoking the
-    /// operation.
-    pub delete: CapabilityState,
-    /// Current capability to load the referenced resource contents; inspect its state/reason
-    /// before invoking the operation.
-    pub load_content: CapabilityState,
-}
+pub use zipzi_contract::authoring::AttachmentCapabilities;
 impl AuthoringSession {
     pub fn attachment_capabilities(
         &self,

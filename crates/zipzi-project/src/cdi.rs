@@ -1,5 +1,7 @@
 //! CDI3 to Document boundary. Import builds an isolated candidate; export is pure.
+use crate::export_preflight::OpaqueExportProblemCode;
 use std::collections::{BTreeMap, HashMap, HashSet};
+use zipzi_core::document::ReferenceEntryAllocation;
 
 use serde_json::Value;
 use sha2::{Digest, Sha256};

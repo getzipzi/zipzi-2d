@@ -1,13 +1,8 @@
 //! Borrowed records avoid repeated hierarchy searches and row cloning.
 use super::*;
 use std::collections::BTreeMap;
+pub use zipzi_contract::changes::PoseReferenceChange;
 use zipzi_core::document::{PoseAsset, PoseEntry, PosePartRef};
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct PoseReferenceChange {
-    pub entity: EntityRef,
-    pub before: Option<PosePartRef>,
-    pub after: Option<PosePartRef>,
-}
 #[derive(PartialEq)]
 enum Field<'a> {
     Fade(Option<f32>),
@@ -107,7 +102,7 @@ pub(super) fn summarize_pose(before: &Document, after: &Document, out: &mut Chan
         }
         let fields_changed = old.map(|r| &r.field) != new.map(|r| &r.field);
         if fields_changed {
-            out.pose_field_changes.push((*id).into());
+            out.record_pose_field_change((*id).into());
         }
         let moved = old.map(|r| r.owner) != new.map(|r| r.owner);
         let content = old.map(|r| (r.entry.map(|e| &e.extensions), r.links_present))

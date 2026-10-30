@@ -2,6 +2,7 @@
 //! candidate and do not abort an SDK transaction or publish authoring history.
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use zipzi_core::document::MotionTrackEditing;
 
 use zipzi_animation::{
     motion_bezier_parameter, motion_bezier_time_is_monotonic, sample_motion_curve, CompiledCurve,

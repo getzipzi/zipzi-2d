@@ -1,4 +1,6 @@
 use super::*;
+use zipzi_core::BindingAxisEditing;
+use zipzi_core::WarpBezierEvaluation;
 
 #[test]
 fn shared_table_rebase_preserves_every_target_family_and_offscreen_neutral_slots() {

@@ -1,4 +1,5 @@
 use super::*;
+use zipzi_core::BindingAxisEditing;
 
 #[test]
 fn static_affine_reparent_preserves_unbound_and_bound_mesh_over_domain() {

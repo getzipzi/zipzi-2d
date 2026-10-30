@@ -1,6 +1,5 @@
 //! Thin Runtime bridge for zipzi-python2. Public values and errors live in
 //! the pure Python client; native calls own their inputs before releasing GIL.
-#![cfg(not(feature = "schema-export"))]
 use pyo3::{
     prelude::*,
     types::{PyAny, PyBytes, PyDict, PyList, PyModule},

@@ -1,4 +1,5 @@
 //! pose3 runtime IDs to persistent Part UUIDs and strict export.
+use crate::export_preflight::OpaqueExportProblemCode;
 use std::collections::{BTreeMap, HashMap};
 
 use thiserror::Error;

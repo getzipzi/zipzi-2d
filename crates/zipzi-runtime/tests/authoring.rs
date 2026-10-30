@@ -370,6 +370,40 @@ fn modeling_sample_admission_checks_exact_source_before_snapshot_and_keeps_edit_
 }
 
 #[test]
+fn sampling_keeps_its_reservation_through_serialization_and_releases_on_drop_or_error() {
+    let mut rt = Runtime::default();
+    let client = rt.register_client().unwrap();
+    let session = rt
+        .create_session(client, &id(1), ModelSetup::default())
+        .unwrap();
+    let budget = rt.transport_budget();
+    let before = budget.usage().transfer_bytes;
+    let query = || ModelingSampleQuery {
+        session,
+        edit: None,
+        parameters: vec![Default::default()],
+        checks: Default::default(),
+        expected: None,
+    };
+    let sampled = rt.sample_modeling(client, query()).unwrap();
+    let reserved = budget.usage().transfer_bytes;
+    assert!(reserved > before);
+    let json = serde_json::to_value(&sampled).unwrap();
+    assert!(json.get("source").is_some());
+    assert!(json.get("state").is_some());
+    assert!(json.get("samples").is_some());
+    assert!(json.get("lease").is_none());
+    assert!(json.get("data").is_none());
+    assert_eq!(budget.usage().transfer_bytes, reserved);
+    drop(sampled);
+    assert_eq!(budget.usage().transfer_bytes, before);
+    let mut invalid = query();
+    invalid.checks.min_triangle_area = -1.;
+    assert!(rt.sample_modeling(client, invalid).is_err());
+    assert_eq!(budget.usage().transfer_bytes, before);
+}
+
+#[test]
 fn binding_and_sample_response_expansion_refused_without_poisoning_candidate() {
     let mut rt = Runtime::new(RuntimeLimits {
         accounted_bytes: 1 << 20,

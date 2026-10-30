@@ -1,80 +1,10 @@
 use std::collections::HashMap;
 
-use zipzi_core::Vec2;
-
 use crate::{AuthoringSession, SdkError};
 
-#[derive(
-    Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, zipzi_api_derive::ApiShape,
-)]
-pub struct GeometryBounds {
-    /// Minimum XY corner of the geometry bounds in the snapshot coordinate space.
-    pub min: Vec2,
-    /// Maximum XY corner of the geometry bounds in the snapshot coordinate space.
-    pub max: Vec2,
-}
-
-#[derive(
-    Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, zipzi_api_derive::ApiShape,
-)]
-#[serde(default)]
-pub struct GeometryChecks {
-    /// Area in authored coordinates: model units squared at the root, or
-    /// the appropriate rotation-local / Warp-parameter units under a parent.
-    pub min_triangle_area: f64,
-    /// Optional expected model bounds for root meshes only.
-    pub model_bounds: Option<GeometryBounds>,
-    /// Include per-pose mesh quality in evaluated Y-up model space, relative to this
-    /// snapshot evaluated with default parameters. Only the requested poses are checked.
-    pub quality: bool,
-}
-
-impl Default for GeometryChecks {
-    fn default() -> Self {
-        Self {
-            min_triangle_area: 0.0,
-            model_bounds: None,
-            quality: false,
-        }
-    }
-}
-
-#[derive(
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    serde::Serialize,
-    serde::Deserialize,
-    zipzi_api_derive::ApiShape,
-    zipzi_api_derive::BinaryOutput,
-)]
-pub enum GeometryDiagnosticKind {
-    SmallTriangle,
-    InconsistentWinding,
-    OutsideModelBounds,
-}
-
-#[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Eq,
-    serde::Serialize,
-    serde::Deserialize,
-    zipzi_api_derive::ApiShape,
-    zipzi_api_derive::BinaryOutput,
-)]
-pub struct GeometryDiagnostic {
-    /// Typed geometry diagnostic category.
-    pub kind: GeometryDiagnosticKind,
-    /// Stable ID of the target mesh in this document.
-    pub mesh_id: String,
-    /// Optional zero-based index of the offending triangle; None means the diagnostic is not
-    /// triangle-specific.
-    pub triangle_index: Option<usize>,
-}
+pub use zipzi_contract::authoring::{
+    GeometryBounds, GeometryChecks, GeometryDiagnostic, GeometryDiagnosticKind,
+};
 
 impl AuthoringSession {
     /// Advisory source-geometry checks. These findings never reject an edit.

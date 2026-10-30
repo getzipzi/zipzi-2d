@@ -1,6 +1,7 @@
 //! Shadow local publication against full summaries using actual transaction
 //! inputs. The reference runs without tracker pruning on independent snapshots.
 use super::*;
+use crate::changes::ChangeSetExt;
 use crate::{AuthoringSession, EditSession};
 use zipzi_core::{document::*, Appearance, Mesh, ModelSetup};
 

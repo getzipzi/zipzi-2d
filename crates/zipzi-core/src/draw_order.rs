@@ -1,28 +1,9 @@
 //! Drawing groups are independent of the Part organization hierarchy.
 use crate::{Document, Status};
-use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use zipzi_core::SceneTrackEvaluation;
 
-#[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Eq,
-    Serialize,
-    Deserialize,
-    zipzi_api_derive::ApiShape,
-    zipzi_api_derive::BinaryWire,
-)]
-pub struct DrawOrderGroup {
-    /// Empty for the root; otherwise the stable ID of the Part driving this group.
-    pub owner: String,
-    /// Stable mesh/Part IDs, in tie-breaking order. A Part references its group.
-    pub items: Vec<String>,
-    /// Inclusive lower drawing-order bound for this group.
-    pub min_order: i32,
-    /// Inclusive upper drawing-order bound for this group.
-    pub max_order: i32,
-}
+pub use zipzi_contract::document::DrawOrderGroup;
 
 pub(crate) fn validate_groups(
     doc: &Document,

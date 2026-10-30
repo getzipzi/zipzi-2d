@@ -1,3 +1,4 @@
+use zipzi_core::BindingAxisEditing;
 use zipzi_core::{
     document::*, BindingAxis, Canvas, ImageAsset, Mesh, MeshBinding, MeshKeyform, Parameter, Part,
     Transform, Vec2,

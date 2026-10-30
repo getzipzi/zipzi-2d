@@ -1,54 +1,17 @@
-use crate::{ClientId, JobId, Result, RuntimeError, RuntimeInstanceId, SessionId, SessionInfo};
+use crate::{ClientId, JobId, Result, RuntimeError, RuntimeInstanceId, SessionId};
 use std::collections::VecDeque;
 use std::sync::Arc;
-use zipzi_sdk::{EditReceipt, SaveReceipt};
+use zipzi_sdk::EditReceiptSize;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiFields)]
-pub struct EventCursor {
-    /// Runtime instance identity; handles and cursors from another instance cannot be substituted.
-    pub runtime: RuntimeInstanceId,
-    /// None is the registry stream; it has no cross-session ordering guarantee.
-    pub session: Option<SessionId>,
-    /// Monotonic sequence within the selected registry or Session stream; no cross-stream
-    /// ordering is implied.
-    pub sequence: u64,
-}
+pub use zipzi_contract::runtime::EventCursor;
 
-#[derive(Debug, Clone, zipzi_api_derive::ApiFields)]
-pub enum EventKind {
-    Published(
-        /// Confirmed edit publication receipt, including before/after versions and changes.
-        Arc<EditReceipt>,
-    ),
-    Saved(
-        /// Save receipt with persistence paths, warnings and durability status.
-        SaveReceipt,
-    ),
-    StateChanged(
-        /// Session metadata captured at this lifecycle state transition.
-        SessionInfo,
-    ),
-    Created(#[doc = "Session metadata captured when the Session was created."] SessionInfo),
-    Closed(#[doc = "Final Session metadata captured when the document closed."] SessionInfo),
+pub use zipzi_contract::runtime::{EventKind, RuntimeEvent};
+
+pub(crate) trait RuntimeEventBytes {
+    fn estimated_bytes(&self) -> usize;
 }
-#[derive(Debug, Clone, zipzi_api_derive::ApiFields)]
-pub struct RuntimeEvent {
-    /// Exact event-stream position captured for this event; cursors are scoped to Runtime and
-    /// stream.
-    pub cursor: EventCursor,
-    /// Originating client identity; None means no client was attributed to the event.
-    pub client: Option<ClientId>,
-    /// Related Job identity; None means this event has no associated Job.
-    pub job: Option<JobId>,
-    /// Runtime operation identity used to correlate a published event with its original operation.
-    pub operation: crate::OperationId,
-    /// Typed event payload; publication, save and lifecycle events have different payload types.
-    pub kind: EventKind,
-}
-impl RuntimeEvent {
-    pub(crate) fn estimated_bytes(&self) -> usize {
+impl RuntimeEventBytes for RuntimeEvent {
+    fn estimated_bytes(&self) -> usize {
         std::mem::size_of::<Self>()
             + match &self.kind {
                 EventKind::Published(receipt) => receipt.estimated_bytes(),

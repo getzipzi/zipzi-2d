@@ -2,6 +2,7 @@
 use crate::control_edit::ControlSpace;
 use crate::{CanvasScene, Document, ModelPoint, ObjectRef};
 use std::{collections::HashMap, sync::OnceLock};
+use zipzi_core::WarpBezierEvaluation;
 use zipzi_core::{SceneTrack, Vec2, WarpBezier};
 
 pub(crate) const BEZIER_ID: u32 = 1 << 31;

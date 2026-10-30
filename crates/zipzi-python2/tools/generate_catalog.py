@@ -90,7 +90,7 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
                 destination='plan_values' if binding['name'] in {'PlanCost','PlanReport'} else file
                 bind(destination,binding['name'],shape)
     for rust,shape in shapes.items():
-        if rust in {s['name'] for s in contract['modeling']['roots']} or rust.startswith(('zipzi_core::','zipzi_sdk::','zipzi_runtime::','zipzi_animation::','zipzi_project::')):
+        if rust in {s['name'] for s in contract['modeling']['roots']} or rust.startswith(('zipzi_contract::','zipzi_core::','zipzi_sdk::','zipzi_runtime::','zipzi_animation::','zipzi_project::')):
             short=modeling_name(rust)
             if shape['kind'] in {'union','serde_enum'}:variants(shape,'modeling',short)
             else:bind('modeling',short,shape)
@@ -108,7 +108,7 @@ def render_catalog(contract,output,header,package,dto_names,modeling_name):
                 for f in shape['fields'] if f['name']+('_' if keyword.iskeyword(f['name']) else '') in selected and not f.get('skip')]
         if (file,node.name)==('plan_values','PlanReport'):
             # The bound Plan wrapper adds its captured Runtime source to the SDK report.
-            snapshot=shapes['zipzi_runtime::authoring::PlanSnapshot']
+            snapshot=shapes['zipzi_contract::runtime::PlanSnapshot']
             fields=[next(f for f in snapshot['fields'] if f['name']=='source')]+fields
         if 'kind' in selected and not any(f['name']=='kind' for f in fields):
             fields=fields+[dict(name='kind',doc='Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.')]

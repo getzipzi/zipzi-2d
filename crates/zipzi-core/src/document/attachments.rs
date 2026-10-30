@@ -2,23 +2,10 @@
 use std::collections::HashSet;
 use std::path::Component;
 
-use serde::{Deserialize, Serialize};
-
 use super::Document;
 use crate::types::{ChangeKind, EditResult, Status};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub struct PackageAttachment {
-    /// Stable document object ID used by references; it is distinct from the exported runtime_id.
-    pub id: String,
-    /// Normalized package-relative path using forward slashes; absolute paths, empty components
-    /// and .. are invalid.
-    pub path: String,
-    /// Optional owned file contents; None preserves an unavailable attachment, not an empty file.
-    pub bytes: Option<std::sync::Arc<Vec<u8>>>,
-}
+pub use zipzi_contract::document::{AttachmentEdit, AttachmentRef, PackageAttachment};
 
 pub fn valid_attachment_path(path: &str) -> bool {
     !path.is_empty()
@@ -32,31 +19,6 @@ pub fn valid_attachment_path(path: &str) -> bool {
             .all(|component| matches!(component, Component::Normal(_)))
 }
 
-/// Imported paths remain explicitly unresolved until a matching attachment is loaded.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub enum AttachmentRef {
-    Resolved {
-        /// Stable package-attachment ID, distinct from its relative package path.
-        attachment_id: String,
-    },
-    Unresolved {
-        /// Normalized package-relative attachment path using forward slashes; absolute paths
-        /// and .. components are invalid.
-        path: String,
-    },
-}
-impl From<String> for AttachmentRef {
-    fn from(path: String) -> Self {
-        Self::Unresolved { path }
-    }
-}
-impl From<&str> for AttachmentRef {
-    fn from(path: &str) -> Self {
-        path.to_owned().into()
-    }
-}
 impl Document {
     pub fn get_attachment(&self, id: &str) -> Option<&PackageAttachment> {
         self.package_attachments().iter().find(|a| a.id == id)
@@ -192,65 +154,6 @@ impl Document {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub enum AttachmentEdit {
-    Create {
-        /// New stable UUID for this object; it must not conflict with an existing identity.
-        id: String,
-        /// Normalized package-relative attachment path using forward slashes; absolute paths
-        /// and .. components are invalid.
-        path: String,
-    },
-    Replace {
-        /// Exact current field value used as an optimistic precondition; stale values reject
-        /// the edit.
-        expected: PackageAttachment,
-        /// Complete package attachment record to replace; bytes may be explicitly unavailable.
-        attachment: PackageAttachment,
-    },
-    Duplicate {
-        /// Stable ID of the existing source object to duplicate, not a filesystem path.
-        source: String,
-        /// New stable UUID for this object; it must not conflict with an existing identity.
-        id: String,
-        /// Normalized package-relative attachment path using forward slashes; absolute paths
-        /// and .. components are invalid.
-        path: String,
-    },
-    Delete {
-        /// Stable document object ID used by references; it is distinct from the exported
-        /// runtime_id.
-        id: String,
-    },
-    DeleteWithReplacement {
-        /// Stable document object ID used by references; it is distinct from the exported
-        /// runtime_id.
-        id: String,
-        /// Replacement attachment ID for existing references; None explicitly removes those
-        /// references.
-        replacement: Option<String>,
-    },
-    Reorder {
-        /// Ordered stable object IDs selected for this operation; visible names and row numbers
-        /// are not identities.
-        ids: Vec<String>,
-        /// Optional sibling ID before which to insert; None appends. The anchor must belong to
-        /// the selected destination.
-        before: Option<String>,
-    },
-    SetSound {
-        /// Motion-registration ID whose sound attachment is being changed.
-        registration: String,
-        /// Resolved attachment identity or explicitly unresolved package path.
-        reference: Option<AttachmentRef>,
-    },
-    SetUserData {
-        /// Resolved attachment identity or explicitly unresolved package path.
-        reference: Option<AttachmentRef>,
-    },
-}
 #[derive(Debug, Clone)]
 pub struct AttachmentPlan {
     snapshot: std::sync::Arc<()>,
@@ -260,6 +163,7 @@ pub struct AttachmentPlan {
     roots: Vec<super::MotionRegistration>,
     settings: super::Model3Settings,
 }
+
 impl Document {
     pub fn plan_attachment_edit(&self, edit: AttachmentEdit) -> Result<AttachmentPlan, Status> {
         if !self.initialized() {

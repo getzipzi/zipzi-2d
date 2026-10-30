@@ -6,6 +6,7 @@ use std::{
     process::{Child, Command, Stdio},
     time::{Duration, Instant},
 };
+use zipzi_core::SceneTrackEvaluation;
 use zipzi_editor_core::{Editor, EditorCommand};
 
 pub(super) fn client(

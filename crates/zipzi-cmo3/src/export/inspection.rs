@@ -1,4 +1,6 @@
 use super::*;
+use zipzi_core::document::PhysicsTargetProjection;
+use zipzi_core::SceneTrackEvaluation;
 
 pub(crate) fn inspect(doc: &Document) -> Result<Cmo3Report, Cmo3Error> {
     inspect_with_animation(doc, false)

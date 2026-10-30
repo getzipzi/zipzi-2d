@@ -46,14 +46,15 @@ def build_environment(cargo_target):
 
 
 def build_source_examples(source, output, run):
-    # One feature resolution for both executables avoids rebuilding the SDK
-    # dependency graph with separate schema-exporter and acceptance-host features.
-    run('source-examples', ['cargo', 'build', '--locked', '--release',
-        '--message-format=json-render-diagnostics', '-p', 'zipzi-python2', '-p', 'zipzi-runtime',
-        '--features', 'zipzi-runtime/gpu-observation',
-        '--example', 'authoring_schema', '--example', 'local_host_fixture'], cwd=source)
-    messages = '\n'.join(line for line in (output/'source-examples.log').read_text(encoding='utf-8').splitlines() if line.startswith('{'))
-    exporter = executable(messages, 'authoring_schema', 'example')
+    run('source-exporter', ['cargo', 'build', '--locked', '--release',
+        '--message-format=json-render-diagnostics', '-p', 'zipzi-contract',
+        '--bin', 'authoring-schema'], cwd=source)
+    messages = '\n'.join(line for line in (output/'source-exporter.log').read_text(encoding='utf-8').splitlines() if line.startswith('{'))
+    exporter = executable(messages, 'authoring-schema', 'bin')
+    run('source-host', ['cargo', 'build', '--locked', '--release',
+        '--message-format=json-render-diagnostics', '-p', 'zipzi-runtime',
+        '--features', 'gpu-observation', '--example', 'local_host_fixture'], cwd=source)
+    messages = '\n'.join(line for line in (output/'source-host.log').read_text(encoding='utf-8').splitlines() if line.startswith('{'))
     host = output/executable_name('local_host_fixture')
     shutil.copy2(executable(messages, 'local_host_fixture', 'example'), host)
     run('source-contract-export', [exporter], cwd=source)

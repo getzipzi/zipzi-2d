@@ -1,5 +1,6 @@
 use super::mesh_tests::{fixture as mesh_fixture, full_summary, id};
 use super::*;
+use crate::changes::ChangeSetExt;
 use crate::{AuthoringSession, EditSession};
 use zipzi_core::{document::*, preview::PreviewState};
 

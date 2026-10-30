@@ -1,4 +1,5 @@
 //! Candidate-document edits and atomic publication.
+use crate::changes::ChangeSetExt;
 use std::collections::HashSet;
 
 use crate::session::{keys_in, object_exists_in, AuthoringSession};

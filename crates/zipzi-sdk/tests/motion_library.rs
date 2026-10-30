@@ -1,3 +1,4 @@
+use zipzi_core::document::AllocateModelMetadata;
 use zipzi_core::document::{
     AttachmentEdit as A, AttachmentRef, MotionContainer as C, MotionEdit as E,
     MotionTrackTarget as T,
@@ -94,7 +95,7 @@ fn attachment_planning_preserves_resolved_scene_metadata() {
     .unwrap();
     let settings = Model3Settings {
         hit_areas: Some(vec![ModelHitArea {
-            id: zipzi_core::document::ModelHitArea::default().id,
+            id: zipzi_core::document::ModelHitArea::allocate().id,
             name: "Head".into(),
             mesh: ModelTargetRef::Resolved { object_id: id(51) },
             extensions: Default::default(),

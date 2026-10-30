@@ -1,12 +1,6 @@
 use super::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BindingReferenceChange {
-    pub entity: EntityRef,
-    pub field: String,
-    pub before: Option<String>,
-    pub after: Option<String>,
-}
+pub use zipzi_contract::changes::BindingReferenceChange;
 pub(super) fn summarize_bindings(
     before: &Document,
     after: &Document,

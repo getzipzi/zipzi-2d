@@ -1,4 +1,5 @@
 use zipzi_core::types::Status;
+use zipzi_core::OffscreenLookup;
 
 use crate::layout::checked;
 

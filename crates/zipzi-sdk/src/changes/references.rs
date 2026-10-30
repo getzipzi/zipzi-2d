@@ -1,23 +1,10 @@
 use super::*;
 use crate::reference_authoring::kind;
+pub use zipzi_contract::changes::ReferenceFieldChange;
+pub use zipzi_contract::changes::ReferenceSelectionChange;
 use zipzi_core::document::{
     ReferenceCollection as C, ReferenceFields as F, ReferenceSelectionField as S,
 };
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct ReferenceFieldChange {
-    pub entity: EntityRef,
-    pub before_owner: Option<String>,
-    pub after_owner: Option<String>,
-    pub before: Option<F>,
-    pub after: Option<F>,
-}
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct ReferenceSelectionChange {
-    pub entity: EntityRef,
-    pub field: S,
-    pub before: Vec<String>,
-    pub after: Vec<String>,
-}
 pub(super) fn summarize_references(before: &Document, after: &Document, out: &mut ChangeSet) {
     let ids = before
         .reference_identities()
@@ -155,8 +142,11 @@ pub(super) fn summarize_references(before: &Document, after: &Document, out: &mu
         }
     }
 }
-impl ReferenceFieldChange {
-    pub(super) fn extra_bytes(&self) -> usize {
+pub(super) trait ReferenceFieldChangeSize {
+    fn extra_bytes(&self) -> usize;
+}
+impl ReferenceFieldChangeSize for ReferenceFieldChange {
+    fn extra_bytes(&self) -> usize {
         let fields = |v: &F| match v {
             F::ModelParameterGroup { name } => name.capacity(),
             F::ModelHitArea { name, mesh } => name.capacity() + model_bytes(mesh),

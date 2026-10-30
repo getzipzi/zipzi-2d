@@ -219,7 +219,7 @@ impl Document {
                 registrations(original) == registrations(content)
             }
             && match (original.pose.as_deref(), content.pose.as_deref()) {
-                (Some(a), Some(b)) => a.same_execution(b),
+                (Some(a), Some(b)) => super::pose::same_execution(a, b),
                 (None, None) => true,
                 _ => false,
             }

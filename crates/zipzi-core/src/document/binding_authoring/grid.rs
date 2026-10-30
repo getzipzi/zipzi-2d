@@ -2,112 +2,8 @@ use super::*;
 
 /// These coordinates use the existing grid model. The plan captures the complete
 /// structural baseline; a changed grid requires a fresh plan before execution.
-#[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    zipzi_api_derive::ApiShape,
-    zipzi_api_derive::BinaryWire,
-)]
-pub enum MeshGridEdit {
-    Create {
-        /// New stable UUID for this object; it must not conflict with an existing identity.
-        id: String,
-        /// Stable ID of the target mesh in this document.
-        mesh_id: String,
-    },
-    AddAxis {
-        /// Stable binding ID owning the addressed axes or keyforms.
-        binding_id: String,
-        /// Axis definition with a parameter ID and ordered samples; axis identity is distinct
-        /// from the parameter ID.
-        axis: BindingAxis,
-    },
-    ReorderAxes {
-        /// Stable binding ID owning the addressed axes or keyforms.
-        binding_id: String,
-        /// Document parameter IDs in the requested axis order.
-        parameter_ids: Vec<String>,
-    },
-    InsertSample {
-        /// Stable binding ID owning the addressed axes or keyforms.
-        binding_id: String,
-        /// Stable document parameter ID, not its exported runtime identifier.
-        parameter_id: String,
-        /// Scalar value in the referenced parameter domain.
-        value: f32,
-    },
-    MoveSample {
-        /// Stable binding ID owning the addressed axes or keyforms.
-        binding_id: String,
-        /// Stable document parameter ID, not its exported runtime identifier.
-        parameter_id: String,
-        /// Existing sample value in the parameter domain, not a sample-array index.
-        from: f32,
-        /// New sample value in the same parameter domain.
-        to: f32,
-    },
-    DeleteSample {
-        /// Stable binding ID owning the addressed axes or keyforms.
-        binding_id: String,
-        /// Stable document parameter ID, not its exported runtime identifier.
-        parameter_id: String,
-        /// Scalar value in the referenced parameter domain.
-        value: f32,
-    },
-    RemoveAxis {
-        /// Stable binding ID owning the addressed axes or keyforms.
-        binding_id: String,
-        /// Stable document parameter ID, not its exported runtime identifier.
-        parameter_id: String,
-        /// Explicit parameter-domain reduction used when removing or replacing an axis.
-        reduction: AxisReduction,
-    },
-}
-#[derive(
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    zipzi_api_derive::ApiShape,
-    zipzi_api_derive::BinaryWire,
-)]
-pub enum AxisReduction {
-    Slice(
-        /// Parameter coordinate at which to slice the old grid while removing an axis.
-        f32,
-    ),
-    Resample(
-        /// Parameter coordinate used to resample the old grid while reducing an axis.
-        f32,
-    ),
-}
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum GridGuarantee {
-    BaseShape,
-    /// Piecewise multilinear Mesh positions, appearance and effective draw order
-    /// over the old grid's effective parameter domain, with float32 arithmetic.
-    PreservedOnDomain,
-    /// The underlying multilinear interpolant is preserved. Runtime precision
-    /// snapping around the new sample can change values within its snap window.
-    InterpolantPreserved {
-        parameter_id: String,
-        value: f32,
-    },
-    ParameterPlacementChanged,
-    DimensionRemoved {
-        parameter_id: String,
-        value: f32,
-    },
-    SamplesRemoved {
-        parameter_id: String,
-        value: f32,
-    },
-}
+pub use zipzi_contract::document::{AxisReduction, GridGuarantee, MeshGridEdit};
+
 #[derive(Debug, Clone)]
 pub struct MeshGridPlan {
     domain: BindingGridPlan,
@@ -130,19 +26,6 @@ impl MeshGridPlan {
     }
     pub fn result(&self) -> &MeshBinding {
         self.domain.mesh_binding().unwrap()
-    }
-}
-impl MeshGridEdit {
-    pub fn binding_id(&self) -> &str {
-        match self {
-            Self::Create { id, .. } => id,
-            Self::AddAxis { binding_id, .. }
-            | Self::ReorderAxes { binding_id, .. }
-            | Self::InsertSample { binding_id, .. }
-            | Self::MoveSample { binding_id, .. }
-            | Self::DeleteSample { binding_id, .. }
-            | Self::RemoveAxis { binding_id, .. } => binding_id,
-        }
     }
 }
 impl Document {

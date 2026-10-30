@@ -13,6 +13,7 @@ test-support = []
 bench-instrumentation = ["zipzi-project/bench-instrumentation"]
 
 [dependencies]
+zipzi-contract.workspace = true
 zipzi-api-derive = { version = "=0.1.0-alpha.3", path = "../zipzi-api-derive" }
 zipzi-core.workspace = true
 zipzi-sdk.workspace = true

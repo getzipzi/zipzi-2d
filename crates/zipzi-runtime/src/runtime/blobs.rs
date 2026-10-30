@@ -68,10 +68,7 @@ impl Runtime {
         let mut data = Vec::new();
         data.try_reserve_exact(length)
             .map_err(|_| RuntimeError::Budget("blob allocation"))?;
-        let id = BlobId {
-            runtime: self.instance,
-            serial: self.serial(),
-        };
+        let id = BlobId::from_parts(self.instance, self.serial());
         self.blobs.insert(
             id,
             BlobEntry {

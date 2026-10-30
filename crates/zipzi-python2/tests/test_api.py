@@ -747,7 +747,9 @@ class PythonSdk(unittest.TestCase):
 
     def test_native_plan_admission_precedes_string_conversion_and_keeps_edit_usable(self):
         class OverBudgetText(str):
-            def __len__(self):return 1<<30
+            # The native estimate charges four bytes per character; exceed the
+            # Runtime's 8 GiB aggregate default without allocating that string.
+            def __len__(self):return 1<<31
         class OverBudgetTuple(tuple):
             def __len__(self):return 1<<30
         with self.runtime("local") as runtime:

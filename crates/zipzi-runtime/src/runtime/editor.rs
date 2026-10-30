@@ -27,10 +27,7 @@ impl Runtime {
         let sdk = self.ready(session)?.begin_owned_edit(label, expected)?;
         let bytes = sdk.estimated_bytes();
         self.check_bytes(bytes, bytes, 0)?;
-        let id = EditId {
-            runtime: self.instance,
-            serial: self.serial(),
-        };
+        let id = EditId::from_parts(self.instance, self.serial());
         self.edits.insert(
             id,
             EditEntry {
@@ -129,10 +126,7 @@ impl Runtime {
         sdk.set_image_memory_budget(self.image_budget.clone())?;
         let bytes = sdk.estimated_bytes();
         self.check_bytes(bytes, bytes, 0)?;
-        let id = EditId {
-            runtime: self.instance,
-            serial: self.serial(),
-        };
+        let id = EditId::from_parts(self.instance, self.serial());
         self.edits.insert(
             id,
             EditEntry {
@@ -357,10 +351,7 @@ impl Runtime {
         if let Some(path) = &entry.info.path {
             self.paths.remove(path);
         }
-        let operation = OperationId {
-            runtime: self.instance,
-            serial: self.serial(),
-        };
+        let operation = OperationId::from_parts(self.instance, self.serial());
         let mut closed = entry.info.clone();
         closed.state = SessionState::Closed;
         self.registry
@@ -368,10 +359,7 @@ impl Runtime {
         // All fallible admission checks precede ownership removal. Re-key the
         // already validated entry rather than re-running filesystem admission
         // after moving its sole SDK instance out of the source host.
-        let id = SessionId {
-            runtime: target.instance,
-            serial: target.serial(),
-        };
+        let id = SessionId::from_parts(target.instance, target.serial());
         entry.info.id = id;
         entry.users = HashSet::from([target_client]);
         entry.events = EventLog::new(
@@ -387,10 +375,7 @@ impl Runtime {
         target.registry.push(
             Some(target_client),
             None,
-            OperationId {
-                runtime: id.runtime,
-                serial: id.serial,
-            },
+            OperationId::from_parts(id.runtime_instance(), id.serial()),
             EventKind::Created(entry.info.clone()),
         );
         target.sessions.insert(id, entry);

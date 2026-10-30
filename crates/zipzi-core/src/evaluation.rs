@@ -1,3 +1,4 @@
+use zipzi_core::SceneTrackEvaluation;
 mod evaluator;
 mod glue;
 mod glue_controls;
@@ -9,6 +10,7 @@ mod render;
 mod selection;
 mod transforms;
 mod types;
+pub use types::DrawableFrameBounds;
 
 pub use evaluator::{
     evaluate_frame, evaluate_frame_including_hidden, EvaluationTimings, FrameEvaluator,

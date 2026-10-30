@@ -53,18 +53,7 @@ impl SceneContentAddress {
         &self.expected
     }
 }
-#[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
-pub struct SceneContentCapabilities {
-    /// Current capability to read the current typed record; inspect its state/reason before
-    /// invoking the operation.
-    pub inspect: CapabilityState,
-    /// Current capability to edit geometry/content through this address; inspect its
-    /// state/reason before invoking the operation.
-    pub edit: CapabilityState,
-    /// Current capability to change topology while preserving or explicitly resolving
-    /// dependencies; inspect its state/reason before invoking the operation.
-    pub topology: CapabilityState,
-}
+pub use zipzi_contract::authoring::SceneContentCapabilities;
 impl AuthoringSession {
     pub fn plan_scene_content(
         &self,

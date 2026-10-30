@@ -1,72 +1,10 @@
 //! Texture records are authoring objects; content is immutable and optional.
 use super::*;
-use crate::{ImageAsset, ImageContent, SceneReference};
-use serde::{Deserialize, Serialize};
+use crate::ImageAsset;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "operation", rename_all = "snake_case", deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub enum ResourceEdit {
-    Create {
-        /// New stable UUID for this object; it must not conflict with an existing identity.
-        id: String,
-        /// Human-readable display name; use the stable ID for identity because names can change.
-        name: String,
-        /// Optional sibling ID before which to insert; None appends. The anchor must belong to
-        /// the selected destination.
-        before: Option<String>,
-    },
-    PatchName {
-        /// Stable document object ID used by references; it is distinct from the exported
-        /// runtime_id.
-        id: String,
-        /// Exact current field value used as an optimistic precondition; stale values reject
-        /// the edit.
-        expected: String,
-        /// Human-readable display name; use the stable ID for identity because names can change.
-        name: String,
-    },
-    SetContent {
-        /// Stable document object ID used by references; it is distinct from the exported
-        /// runtime_id.
-        id: String,
-        /// Exact current image-content metadata precondition; None requires the asset to have
-        /// no loaded content.
-        expected: Option<ImageContent>,
-        /// Image content metadata; None explicitly represents an asset with no loaded image
-        /// content.
-        content: Option<ImageContent>,
-    },
-    Reorder {
-        /// Ordered stable object IDs selected for this operation; visible names and row numbers
-        /// are not identities.
-        ids: Vec<String>,
-        /// Optional sibling ID before which to insert; None appends. The anchor must belong to
-        /// the selected destination.
-        before: Option<String>,
-    },
-    Duplicate {
-        /// Stable ID of the existing source object to duplicate, not a filesystem path.
-        source: String,
-        /// New stable UUID for this object; it must not conflict with an existing identity.
-        id: String,
-        /// Human-readable display name; use the stable ID for identity because names can change.
-        name: String,
-        /// Optional sibling ID before which to insert; None appends. The anchor must belong to
-        /// the selected destination.
-        before: Option<String>,
-    },
-    /// None rejects references; Some explicitly redirects or detaches every user.
-    Delete {
-        /// Stable document object ID used by references; it is distinct from the exported
-        /// runtime_id.
-        id: String,
-        /// None rejects deletion while referenced; Some explicitly redirects users to a
-        /// resolved target or an unresolved/detached reference.
-        replacement: Option<SceneReference>,
-    },
-}
+pub use zipzi_contract::document::ResourceEdit;
+
 #[derive(Debug, Clone)]
 pub struct ResourcePlan {
     snapshot: Arc<()>,

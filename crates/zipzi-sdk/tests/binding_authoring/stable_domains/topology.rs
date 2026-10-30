@@ -1,4 +1,5 @@
 use super::*;
+use zipzi_core::BindingAxisEditing;
 
 #[test]
 fn topology_replacement_cannot_revive_deleted_child_handles_in_one_edit() {

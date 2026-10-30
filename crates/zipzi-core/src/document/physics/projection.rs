@@ -35,15 +35,12 @@ pub struct PhysicsProjection {
     pub groups: Vec<PhysicsGroupSlots>,
     pub disabled: Vec<DisabledPhysicsChannel>,
 }
-impl PhysicsTarget {
-    pub fn parameter_id(&self) -> Option<&str> {
-        if let Self::Resolved { parameter_id } = self {
-            Some(parameter_id)
-        } else {
-            None
-        }
-    }
-    pub fn disabled_reason(&self) -> Option<PhysicsDisabledReason> {
+use super::model::{PhysicsDefinitionWire, PhysicsTargetValidation};
+pub trait PhysicsTargetProjection {
+    fn disabled_reason(&self) -> Option<PhysicsDisabledReason>;
+}
+impl PhysicsTargetProjection for PhysicsTarget {
+    fn disabled_reason(&self) -> Option<PhysicsDisabledReason> {
         match self {
             Self::Unspecified => Some(PhysicsDisabledReason::NeedsConfiguration),
             Self::Unresolved { runtime_id } => Some(PhysicsDisabledReason::UnresolvedParameter {

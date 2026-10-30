@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
     "crates/zipzi-api-derive",
+    "crates/zipzi-contract",
     "crates/zipzi-core",
     "crates/zipzi-live2d",
     "crates/zipzi-animation",
@@ -49,6 +50,7 @@ zipzi-render-metal = { version = "=0.1.0-alpha.3", path = "crates/zipzi-render-m
 gpui-kit = { git = "https://github.com/longbridge/gpui-kit", rev = "507e82b8115ac73af92b7d3856501f9d7b73b2c9", features = ["gpui-fast"] }
 gpui-fps = { git = "https://github.com/longbridge/gpui-kit", rev = "507e82b8115ac73af92b7d3856501f9d7b73b2c9", features = ["gpui-fast"] }
 async-channel = "2"
+zipzi-contract = { version = "=0.1.0-alpha.3", path = "crates/zipzi-contract" }
 zipzi-core = { version = "=0.1.0-alpha.3", path = "crates/zipzi-core" }
 zipzi-sdk = { version = "=0.1.0-alpha.3", path = "crates/zipzi-sdk" }
 zipzi-runtime = { version = "=0.1.0-alpha.3", path = "crates/zipzi-runtime" }

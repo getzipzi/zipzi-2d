@@ -1,5 +1,8 @@
 use zipzi_core::{ModelSetup, ParameterKind};
-use zipzi_sdk::{AuthoringSession, ParameterCreateSpec, ParameterOperation, ParameterPatch};
+use zipzi_sdk::{
+    AuthoringSession, ParameterCreateSpec, ParameterOperation, ParameterOperationApply,
+    ParameterPatch,
+};
 
 fn sdk() -> AuthoringSession {
     AuthoringSession::new(

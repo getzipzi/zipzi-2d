@@ -1,4 +1,5 @@
 use super::support;
+use zipzi_core::BindingAxisEditing;
 use zipzi_editor_core::{ObjectKind, ObjectRef, PropertyScope};
 use zipzi_sdk::{
     BindingAuthoringEdit as E, MeshGridEdit as G, ParameterRangeEdit, ParameterRangePolicy,

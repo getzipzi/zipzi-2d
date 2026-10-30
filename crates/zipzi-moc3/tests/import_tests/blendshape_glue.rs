@@ -1,3 +1,4 @@
+use zipzi_core::BindingAxisEditing;
 use zipzi_core::{PartKeyform, SceneTrack};
 
 use std::collections::HashMap;

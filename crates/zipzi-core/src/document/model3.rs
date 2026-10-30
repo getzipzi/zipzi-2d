@@ -1,112 +1,11 @@
 //! Typed supplemental model metadata. Known references use stable document IDs.
 use super::{Document, StructureIssue};
 use crate::types::{ChangeKind, EditResult, Status};
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use std::collections::BTreeMap;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub enum ModelTargetRef {
-    Unspecified,
-    Resolved {
-        /// Stable document ID of the object described or selected by this value.
-        object_id: String,
-    },
-    Unresolved {
-        /// External format/runtime identifier retained for import/export; not the document
-        /// object ID.
-        runtime_id: String,
-    },
-}
-impl ModelTargetRef {
-    pub fn object_id(&self) -> Option<&str> {
-        match self {
-            Self::Resolved { object_id } => Some(object_id),
-            _ => None,
-        }
-    }
-}
+pub use zipzi_contract::document::{
+    Model3Settings, ModelHitArea, ModelParameterGroup, ModelTargetRef,
+};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
-pub struct ModelParameterGroup {
-    /// Stable document object ID used by references; it is distinct from the exported runtime_id.
-    pub id: String,
-    /// Human-readable display name; use the stable ID for identity because names can change.
-    pub name: String,
-    /// Ordered stable reference-entry records selecting model parameters; entry IDs are
-    /// distinct from parameter IDs.
-    pub parameters: Vec<super::ReferenceEntry<ModelTargetRef>>,
-    #[serde(default)]
-    /// Preserved opaque import/export extension fields; retain unknown keys when editing known
-    /// fields.
-    pub extensions: BTreeMap<String, Value>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
-pub struct ModelHitArea {
-    /// Stable document object ID used by references; it is distinct from the exported runtime_id.
-    pub id: String,
-    /// Human-readable display name; use the stable ID for identity because names can change.
-    pub name: String,
-    /// Resolved mesh target or preserved unresolved mesh runtime identifier.
-    pub mesh: ModelTargetRef,
-    #[serde(default)]
-    /// Preserved opaque import/export extension fields; retain unknown keys when editing known
-    /// fields.
-    pub extensions: BTreeMap<String, Value>,
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
-pub struct Model3Settings {
-    /// Optional ordered model3 parameter groups; None preserves omission rather than an empty list.
-    pub groups: Option<Vec<ModelParameterGroup>>,
-    /// Optional model3 numeric layout map; None preserves omission and an empty map is
-    /// explicitly empty.
-    pub layout: Option<BTreeMap<String, f64>>,
-    /// Optional ordered named hit-area records with stable mesh references; None preserves
-    /// omission.
-    pub hit_areas: Option<Vec<ModelHitArea>>,
-    /// Optional model3 user-data attachment reference; None means the field was omitted.
-    pub user_data: Option<super::AttachmentRef>,
-    /// Preserved opaque import/export extension fields; retain unknown keys when editing known
-    /// fields.
-    pub extensions: BTreeMap<String, Value>,
-    /// Provenance is needed only for opaque metadata and unmanaged IDs inside UserData.
-    pub source_runtime_ids: Option<BTreeMap<String, String>>,
-    /// Preserved opaque imported model3 source metadata; None means none was retained.
-    pub source_content: Option<String>,
-}
-impl Model3Settings {
-    pub fn references_to(&self, id: &str) -> bool {
-        self.groups
-            .iter()
-            .flatten()
-            .flat_map(|group| group.parameters.iter().map(|p| &p.target))
-            .chain(self.hit_areas.iter().flatten().map(|area| &area.mesh))
-            .any(|target| target.object_id() == Some(id))
-    }
-    pub fn has_extensions(&self) -> bool {
-        !self.extensions.is_empty()
-            || self
-                .groups
-                .iter()
-                .flatten()
-                .any(|g| !g.extensions.is_empty())
-            || self
-                .hit_areas
-                .iter()
-                .flatten()
-                .any(|a| !a.extensions.is_empty())
-    }
-}
 impl Document {
     pub fn model3_settings(&self) -> &Model3Settings {
         &self.content.model3_settings
@@ -233,8 +132,11 @@ impl Document {
         }
     }
 }
-impl Default for ModelParameterGroup {
-    fn default() -> Self {
+pub trait AllocateModelMetadata: Sized {
+    fn allocate() -> Self;
+}
+impl AllocateModelMetadata for ModelParameterGroup {
+    fn allocate() -> Self {
         Self {
             id: uuid::Uuid::new_v4().to_string(),
             name: "Parameter Group".into(),
@@ -243,8 +145,8 @@ impl Default for ModelParameterGroup {
         }
     }
 }
-impl Default for ModelHitArea {
-    fn default() -> Self {
+impl AllocateModelMetadata for ModelHitArea {
+    fn allocate() -> Self {
         Self {
             id: uuid::Uuid::new_v4().to_string(),
             name: "Hit Area".into(),

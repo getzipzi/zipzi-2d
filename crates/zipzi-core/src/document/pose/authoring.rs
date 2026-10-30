@@ -2,114 +2,8 @@
 use super::*;
 use std::sync::Arc;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub enum PoseCollection {
-    Groups,
-    Entries {
-        /// Stable ID of the group owning the affected rows or node chain.
-        group_id: String,
-    },
-    Links {
-        /// Stable ID of the owning entry; links remain owned by that entry.
-        entry_id: String,
-    },
-}
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub enum PoseFields {
-    Asset {
-        /// Optional fade-in duration in seconds; None retains the format/runtime default.
-        fade_in: Option<f32>,
-    },
-    Group {
-        /// Human-readable display or registration name; distinct from persistent object identity.
-        name: String,
-    },
-    Entry {
-        /// Typed resolved/unresolved Part reference retained by the Pose entry or link.
-        part: PosePartRef,
-    },
-    Link {
-        /// Typed target reference; unresolved imported runtime labels remain explicit.
-        target: PosePartRef,
-    },
-}
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "operation", rename_all = "snake_case", deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub enum PoseEdit {
-    Create {
-        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-        id: String,
-    },
-    /// Also creates the singleton when absent, in the same transaction.
-    CreateGroup {
-        /// Stable Pose singleton ID; the operation may create it when absent.
-        pose_id: String,
-        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-        id: String,
-        /// Human-readable display or registration name; distinct from persistent object identity.
-        name: String,
-        /// Optional stable sibling ID before which to insert; None appends.
-        before: Option<String>,
-    },
-    CreateEntry {
-        /// Stable ID of the group owning the affected rows or node chain.
-        group_id: String,
-        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-        id: String,
-        /// Optional stable sibling ID before which to insert; None appends.
-        before: Option<String>,
-    },
-    CreateLink {
-        /// Stable ID of the owning entry; links remain owned by that entry.
-        entry_id: String,
-        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-        id: String,
-        /// Optional stable sibling ID before which to insert; None appends.
-        before: Option<String>,
-    },
-    Patch {
-        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-        id: String,
-        /// Exact current field values required by the optimistic edit; stale values reject it.
-        expected: PoseFields,
-        /// Typed replacement fields for the addressed object, applied atomically.
-        fields: PoseFields,
-    },
-    Move {
-        /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
-        ids: Vec<String>,
-        /// Explicit destination owner/container; order is controlled separately by before.
-        destination: PoseCollection,
-        /// Optional stable sibling ID before which to insert; None appends.
-        before: Option<String>,
-    },
-    Duplicate {
-        /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
-        ids: Vec<String>,
-        /// Explicit destination owner/container; order is controlled separately by before.
-        destination: PoseCollection,
-        /// Optional stable sibling ID before which to insert; None appends.
-        before: Option<String>,
-    },
-    Delete {
-        /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
-        ids: Vec<String>,
-    },
-    /// A Pose group has no root member container; a receiving group is required.
-    DissolveGroup {
-        /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-        id: String,
-        /// Explicit destination owner/container; order is controlled separately by before.
-        destination: String,
-        /// Optional stable sibling ID before which to insert; None appends.
-        before: Option<String>,
-    },
-}
+pub use zipzi_contract::document::{PoseCollection, PoseEdit, PoseFields};
+
 #[derive(Debug, Clone)]
 pub struct PosePlan {
     snapshot: Arc<()>,
@@ -124,19 +18,6 @@ impl PosePlan {
     }
     pub fn affected_ids(&self) -> &[String] {
         &self.affected
-    }
-}
-impl PoseAsset {
-    pub fn empty(id: String) -> Self {
-        Self {
-            id,
-            file_type: Some("Live2D Pose".into()),
-            fade_in: None,
-            groups: Default::default(),
-            extensions: BTreeMap::new(),
-            opaque_source_ids: None,
-            opaque_source_content_hash: None,
-        }
     }
 }
 impl Document {

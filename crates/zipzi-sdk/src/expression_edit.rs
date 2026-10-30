@@ -21,37 +21,7 @@ impl ExpressionEditPlan {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, zipzi_api_derive::ApiShape)]
-pub enum CapabilityState {
-    Available,
-    Unsupported {
-        /// Stable reason code explaining why this operation is unsupported for this object/domain.
-        code: &'static str,
-    },
-    Unavailable {
-        /// Stable reason code explaining why this operation is currently unavailable.
-        code: &'static str,
-    },
-}
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, zipzi_api_derive::ApiShape)]
-pub struct ExpressionCapabilities {
-    /// Read this object while its identity/context remains valid.
-    pub inspect: CapabilityState,
-    /// Create an owned expression entry.
-    pub create_entry: CapabilityState,
-    /// Modify typed fields through a validated native intent/address.
-    pub patch: CapabilityState,
-    /// Transfer expression entries between compatible owners.
-    pub move_entry: CapabilityState,
-    /// Duplicate the selected object while allocating fresh owned identities.
-    pub duplicate: CapabilityState,
-    /// Delete the selected object subject to native reference and lock rules.
-    pub delete: CapabilityState,
-    /// Repair an explicitly unresolved native reference.
-    pub repair: CapabilityState,
-    /// Native preview eligibility; host preview API availability is advertised separately.
-    pub preview: CapabilityState,
-}
+pub use zipzi_contract::authoring::{CapabilityState, ExpressionCapabilities};
 
 /// A field address captures both the living entry and the owner context. A move
 /// retains the object handle, but invalidates this owner-dependent address.

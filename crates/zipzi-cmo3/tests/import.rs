@@ -1,3 +1,4 @@
+use zipzi_core::document::AllocateModelMetadata;
 mod common;
 use common::*;
 use zipzi_cmo3::*;
@@ -301,7 +302,7 @@ fn exported_model_import_preserves_parameter_bound_geometry_and_texture_pixels()
         .is_ok());
     let mut settings = document.model3_settings().clone();
     settings.groups = Some(vec![zipzi_core::document::ModelParameterGroup {
-        id: zipzi_core::document::ModelParameterGroup::default().id,
+        id: zipzi_core::document::ModelParameterGroup::allocate().id,
         name: "EyeBlink".into(),
         parameters: vec![zipzi_core::document::ModelTargetRef::Resolved {
             object_id: PARAM.into(),

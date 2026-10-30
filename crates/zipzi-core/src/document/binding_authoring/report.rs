@@ -1,6 +1,7 @@
 use super::*;
 use crate::{BlendShapeBinding, DeltaKeyforms};
 use std::collections::BTreeMap;
+use zipzi_core::OffscreenLookup;
 
 /// Addresses are scoped to the plan's document/structural baseline. Keyforms
 /// use canonical sample sets; Offscreen slots retain dedicated topology indices.
@@ -36,23 +37,7 @@ pub struct ConversionRemapping {
     pub before: ConversionLocation,
     pub after: ConversionLocation,
 }
-#[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    zipzi_api_derive::ApiShape,
-    zipzi_api_derive::BinaryWire,
-)]
-pub struct ConversionDomain {
-    /// Stable document parameter ID, not its exported runtime identifier.
-    pub parameter_id: String,
-    /// Lower endpoint of the parameter domain, in parameter units.
-    pub minimum: f32,
-    /// Upper endpoint of the parameter domain, in parameter units.
-    pub maximum: f32,
-}
+pub use zipzi_contract::document::ConversionDomain;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ConversionReconstruction {
     pub destination: ConversionAddress,

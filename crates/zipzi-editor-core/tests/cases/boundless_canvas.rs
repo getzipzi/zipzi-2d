@@ -1,4 +1,5 @@
 use super::support;
+use zipzi_core::DrawableFrameBounds;
 use zipzi_core::{ModelSetup, Vec2};
 use zipzi_editor_core::*;
 use zipzi_sdk::{AuthoringSession, prepare_png_asset, rectangle_mesh};

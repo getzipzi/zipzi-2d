@@ -1,71 +1,8 @@
 use super::*;
 use crate::{Appearance, BindingSample, RotationPose, WarpBezier};
 
-#[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    zipzi_api_derive::ApiShape,
-    zipzi_api_derive::BinaryWire,
-)]
-pub enum GridOperation {
-    AddAxis {
-        /// Axis definition with a parameter ID and ordered samples; axis identity is distinct
-        /// from the parameter ID.
-        axis: BindingAxis,
-    },
-    RemapParameter {
-        /// Stable axis ID owned by this binding, not a parameter or sample ID.
-        axis_id: String,
-        /// Stable document parameter ID, not its exported runtime identifier.
-        parameter_id: String,
-        /// Explicit native conflict/conversion policy; no implicit removal or remapping is
-        /// requested.
-        policy: ParameterRangePolicy,
-    },
-    SetParameter {
-        /// Stable axis ID owned by this binding, not a parameter or sample ID.
-        axis_id: String,
-        /// Stable document parameter ID, not its exported runtime identifier.
-        parameter_id: String,
-        /// Explicit parameter-domain reduction used when removing or replacing an axis.
-        reduction: Option<AxisReduction>,
-    },
-    ReorderAxes {
-        /// Axis IDs in the requested new axis order; IDs refer to axes, not parameters.
-        axis_ids: Vec<String>,
-    },
-    InsertSample {
-        /// Stable axis ID owned by this binding, not a parameter or sample ID.
-        axis_id: String,
-        /// New stable UUID for this object; it must not conflict with an existing identity.
-        id: String,
-        /// Scalar value in the referenced parameter domain.
-        value: f32,
-    },
-    MoveSample {
-        /// Stable sample ID from the associated axis or BlendShape key table; not a numeric
-        /// parameter value.
-        sample_id: String,
-        /// Scalar value in the referenced parameter domain.
-        value: f32,
-    },
-    DeleteSample {
-        /// Stable sample ID from the associated axis or BlendShape key table; not a numeric
-        /// parameter value.
-        sample_id: String,
-    },
-    RemoveAxis {
-        /// Stable axis ID owned by this binding, not a parameter or sample ID.
-        axis_id: String,
-        /// Explicit parameter-domain reduction used when removing or replacing an axis.
-        reduction: Option<AxisReduction>,
-        /// Keep an axis with no parameter as pending instead of removing it from the binding.
-        keep_pending: bool,
-    },
-}
+pub use zipzi_contract::document::GridOperation;
+
 pub(super) struct Lattice {
     pub axes: Vec<BindingAxis>,
     pub weights: Vec<Vec<(usize, f32)>>,

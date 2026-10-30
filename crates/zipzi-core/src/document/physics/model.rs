@@ -3,22 +3,12 @@ use super::*;
 use crate::physics as wire;
 use std::sync::Arc;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub enum PhysicsTarget {
-    Unspecified,
-    Resolved {
-        /// Stable document parameter UUID; evaluation uses its declared range and default.
-        parameter_id: String,
-    },
-    Unresolved {
-        /// Imported/exported runtime label, distinct from the document object UUID.
-        runtime_id: String,
-    },
+pub use zipzi_contract::physics_document::PhysicsTarget;
+pub(super) trait PhysicsTargetValidation {
+    fn validation_key(&self) -> String;
 }
-impl PhysicsTarget {
-    pub(super) fn validation_key(&self) -> String {
+impl PhysicsTargetValidation for PhysicsTarget {
+    fn validation_key(&self) -> String {
         match self {
             Self::Unspecified => "__unconfigured__".into(),
             Self::Resolved { parameter_id } => parameter_id.clone(),
@@ -26,110 +16,15 @@ impl PhysicsTarget {
         }
     }
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub struct PhysicsInput {
-    /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-    pub id: String,
-    /// Typed parameter reference or stable source object ID, as declared by the enclosing operation.
-    pub source: PhysicsTarget,
-    /// Owned opaque fields attached to an imported Physics parameter reference.
-    pub reference_extensions: BTreeMap<String, serde_json::Value>,
-    /// Native Physics influence weight, expressed as a percentage.
-    pub weight: f32,
-    /// Native Physics axis/channel discriminator; distinct from an object identity.
-    pub kind: wire::PhysicsAxis,
-    /// Whether the native Physics mapping reflects the selected axis.
-    pub reflect: bool,
-    /// Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
-    pub extensions: BTreeMap<String, serde_json::Value>,
+pub use zipzi_contract::physics_document::{
+    PhysicsDefinition, PhysicsInput, PhysicsNode, PhysicsOutput, PhysicsSetting,
+};
+
+pub trait PhysicsSettingWire {
+    fn to_wire(&self, map: &impl Fn(&PhysicsTarget) -> String) -> wire::PhysicsSetting;
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub struct PhysicsOutput {
-    /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-    pub id: String,
-    /// Explicit destination owner/container; order is controlled separately by before.
-    pub destination: PhysicsTarget,
-    /// Owned opaque fields attached to an imported Physics parameter reference.
-    pub reference_extensions: BTreeMap<String, serde_json::Value>,
-    /// Stable node identity, independent of the node index used by exported Physics JSON.
-    pub node_id: String,
-    /// Native Physics output multiplier applied to the selected axis.
-    pub scale: f32,
-    /// Native Physics influence weight, expressed as a percentage.
-    pub weight: f32,
-    /// Native Physics axis/channel discriminator; distinct from an object identity.
-    pub kind: wire::PhysicsAxis,
-    /// Whether the native Physics mapping reflects the selected axis.
-    pub reflect: bool,
-    /// Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
-    pub extensions: BTreeMap<String, serde_json::Value>,
-}
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub struct PhysicsNode {
-    /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-    pub id: String,
-    /// Authored two-dimensional Physics node position or normalization domain, as declared by the field.
-    pub position: wire::PhysicsVector,
-    /// Native Physics node mobility coefficient.
-    pub mobility: f32,
-    /// Native Physics node delay coefficient.
-    pub delay: f32,
-    /// Native Physics node acceleration coefficient.
-    pub acceleration: f32,
-    /// Native Physics node segment length/radius.
-    pub radius: f32,
-    /// Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
-    pub extensions: BTreeMap<String, serde_json::Value>,
-}
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub struct PhysicsSetting {
-    /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-    pub id: String,
-    /// Imported/exported Physics rig label, distinct from its persistent group UUID.
-    pub external_id: String,
-    /// Ordered Physics input rows, each with a stable identity and typed parameter source.
-    pub inputs: Vec<PhysicsInput>,
-    /// Ordered Physics output rows, each with a stable identity and node reference.
-    pub outputs: Vec<PhysicsOutput>,
-    /// Ordered Physics node chain; outputs refer to stable node IDs.
-    pub vertices: Vec<PhysicsNode>,
-    /// Native position and angle normalization ranges for this Physics rig.
-    pub normalization: wire::PhysicsNormalization,
-    /// Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
-    pub extensions: BTreeMap<String, serde_json::Value>,
-}
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub struct PhysicsDefinition {
-    /// Native Physics format version number.
-    pub version: u32,
-    /// Physics format metadata and counts maintained by native authoring validation.
-    pub meta: wire::PhysicsMeta,
-    /// Ordered shared Physics rig definitions.
-    pub settings: Vec<Arc<PhysicsSetting>>,
-    /// Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
-    pub extensions: BTreeMap<String, serde_json::Value>,
-}
-impl PhysicsSetting {
-    pub fn entity_ids(&self) -> impl Iterator<Item = &str> {
-        std::iter::once(self.id.as_str())
-            .chain(self.inputs.iter().map(|v| v.id.as_str()))
-            .chain(self.outputs.iter().map(|v| v.id.as_str()))
-            .chain(self.vertices.iter().map(|v| v.id.as_str()))
-    }
-    pub fn node_index(&self, id: &str) -> Option<usize> {
-        self.vertices.iter().position(|v| v.id == id)
-    }
-    pub fn to_wire(&self, map: &impl Fn(&PhysicsTarget) -> String) -> wire::PhysicsSetting {
+impl PhysicsSettingWire for PhysicsSetting {
+    fn to_wire(&self, map: &impl Fn(&PhysicsTarget) -> String) -> wire::PhysicsSetting {
         wire::PhysicsSetting {
             id: self.external_id.clone(),
             inputs: self
@@ -181,8 +76,12 @@ impl PhysicsSetting {
         }
     }
 }
-impl PhysicsDefinition {
-    pub fn to_wire(&self, map: impl Fn(&PhysicsTarget) -> String) -> wire::PhysicsDefinition {
+
+pub trait PhysicsDefinitionWire {
+    fn to_wire(&self, map: impl Fn(&PhysicsTarget) -> String) -> wire::PhysicsDefinition;
+}
+impl PhysicsDefinitionWire for PhysicsDefinition {
+    fn to_wire(&self, map: impl Fn(&PhysicsTarget) -> String) -> wire::PhysicsDefinition {
         let mut meta = self.meta.clone();
         for d in &mut meta.dictionary {
             if let Some(g) = self.settings.iter().find(|g| g.id == d.id) {
@@ -206,30 +105,13 @@ impl PhysicsDefinition {
         result.meta.vertex_count = n;
         result
     }
-    pub fn actual_counts(&self) -> (usize, usize, usize, usize) {
-        (
-            self.settings.len(),
-            self.settings.iter().map(|g| g.inputs.len()).sum(),
-            self.settings.iter().map(|g| g.outputs.len()).sum(),
-            self.settings.iter().map(|g| g.vertices.len()).sum(),
-        )
-    }
-    pub fn counts_match(&self) -> bool {
-        self.actual_counts()
-            == (
-                self.meta.setting_count,
-                self.meta.input_count,
-                self.meta.output_count,
-                self.meta.vertex_count,
-            )
-    }
 }
-impl PhysicsAsset {
-    pub fn entity_ids(&self) -> impl Iterator<Item = &str> {
-        std::iter::once(self.id.as_str())
-            .chain(self.data.settings.iter().flat_map(|g| g.entity_ids()))
-    }
-    pub(super) fn identity_roles(&self) -> std::collections::HashMap<&str, u8> {
+
+pub(super) trait PhysicsAssetIdentity {
+    fn identity_roles(&self) -> std::collections::HashMap<&str, u8>;
+}
+impl PhysicsAssetIdentity for PhysicsAsset {
+    fn identity_roles(&self) -> std::collections::HashMap<&str, u8> {
         let mut roles = std::collections::HashMap::from([(self.id.as_str(), 0)]);
         for g in &self.data.settings {
             roles.insert(g.id.as_str(), 1);
@@ -239,22 +121,16 @@ impl PhysicsAsset {
         }
         roles
     }
-    pub fn reconcile_counts(&mut self) {
-        let (g, i, o, n) = self.data.actual_counts();
-        self.data.meta.setting_count = g;
-        self.data.meta.input_count = i;
-        self.data.meta.output_count = o;
-        self.data.meta.vertex_count = n;
-    }
-    pub fn group_name<'a>(&'a self, id: &'a str) -> &'a str {
-        self.data
-            .meta
-            .dictionary
-            .iter()
-            .find(|d| d.id == id)
-            .map_or(id, |d| d.name.as_str())
-    }
-    pub fn from_wire(
+}
+pub trait PhysicsAssetImport: Sized {
+    fn from_wire(
+        id: String,
+        data: wire::PhysicsDefinition,
+        resolve: impl Fn(&str) -> Option<String>,
+    ) -> Result<Self, Status>;
+}
+impl PhysicsAssetImport for PhysicsAsset {
+    fn from_wire(
         id: String,
         data: wire::PhysicsDefinition,
         resolve: impl Fn(&str) -> Option<String>,
@@ -343,6 +219,7 @@ impl PhysicsAsset {
         Ok(asset)
     }
 }
+
 impl Document {
     pub fn get_physics_group(&self, id: &str) -> Option<&PhysicsSetting> {
         self.physics()?

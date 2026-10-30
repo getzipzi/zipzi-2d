@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use zipzi_core::document::PhysicsAssetImport;
 use zipzi_core::{
     document::{
         PhysicsAsset, PhysicsAssetProperty, PhysicsPatch, PhysicsProperty as P, PhysicsRigPatch,

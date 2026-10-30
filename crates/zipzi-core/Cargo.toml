@@ -11,6 +11,7 @@ description = "Core document model, geometry, deformers and evaluation for Zipzi
 bench-instrumentation = []
 
 [dependencies]
+zipzi-contract.workspace = true
 zipzi-api-derive = { version = "=0.1.0-alpha.3", path = "../zipzi-api-derive" }
 uuid = { version = "1", features = ["v4"] }
 png = { workspace = true }

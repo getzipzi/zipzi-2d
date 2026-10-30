@@ -1,4 +1,5 @@
 use super::*;
+use crate::changes::ChangeSetExt;
 use crate::{AuthoringSession, EditSession};
 use zipzi_core::{
     document::*, Appearance, BindingAxis, Mesh, MeshBinding, MeshKeyform, ModelSetup, Parameter,

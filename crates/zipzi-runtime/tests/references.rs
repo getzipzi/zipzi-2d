@@ -1,6 +1,8 @@
 use zipzi_core::ModelSetup;
 use zipzi_runtime::{Runtime, RuntimeError, RuntimeLimits};
-use zipzi_sdk::{MeshCreateSpec, MeshGeometry, ObjectKind, PartCreateSpec, SceneOperation};
+use zipzi_sdk::{
+    MeshCreateSpec, MeshGeometry, ObjectKind, PartCreateSpec, SceneOperation, SceneOperationApply,
+};
 fn id(n: u32) -> String {
     format!("79900000-0000-4000-8000-{n:012x}")
 }

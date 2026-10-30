@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use zipzi_core::document::PhysicsDefinitionWire;
 use zipzi_core::{
     document::*,
     physics::{PhysicsAxis, PhysicsVector},

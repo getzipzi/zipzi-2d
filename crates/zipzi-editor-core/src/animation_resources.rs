@@ -4,6 +4,7 @@ use std::{
     collections::{BTreeSet, HashMap},
     sync::Arc,
 };
+use zipzi_core::document::PhysicsTargetProjection;
 use zipzi_core::document::{ExpressionTarget, MotionTrackTarget};
 use zipzi_sdk::MotionSnapshot;
 

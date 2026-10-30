@@ -21,9 +21,24 @@ mod types;
 mod workers;
 pub use workers::WorkerPool;
 
+pub use addressing::{AddressPatch, AddressSelector, Capabilities, CapabilityDomain};
+pub use authoring::{
+    EditOperation, ImagePixels, ImageQuery, ImageSnapshot, MeshQuery, MeshSnapshot, PlanIntent,
+    PlanQuery, PlanSnapshot, PreparedImageInfo, PreparedPixelsQuery, ResourceOperation,
+    ResourceUsage,
+};
 pub use config::RuntimeLimits;
+pub use editor_context::EditorContext;
 pub use events::{EventCursor, EventKind, RuntimeEvent};
 pub use jobs::{Completion, Executor, PreparedModelingPlan, Work};
+pub use modeling::ModelingCommand;
+pub use observation::{
+    ObservationBatch, ObservationImage, ObservationView, ObservedBounds, ObservedTexture,
+};
+pub use preview::{PreviewBatch, PreviewCommand, PreviewFrame, PreviewState};
+pub use project_io::{
+    ExportFormat, ImportFormat, ProjectDiagnostic, ProjectReport, ProjectRequest, TextureSlot,
+};
 pub use runtime::{
     CandidateWork, LabelAddressInfo, ModelingRecordBatch, ModelingRecordBlob,
     ModelingRecordResponse, ObjectRefInfo, RegistrySubscription, Runtime, SessionEventSubscription,

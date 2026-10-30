@@ -87,10 +87,7 @@ impl Runtime {
             &self.image_budget,
         )
         .map_err(preparation_error)?;
-        let id = ImageId {
-            runtime: self.instance,
-            serial: self.serial(),
-        };
+        let id = ImageId::from_parts(self.instance, self.serial());
         self.prepared_images
             .insert(id, ImageEntry { client, image });
         Ok(PreparedImageInfo {

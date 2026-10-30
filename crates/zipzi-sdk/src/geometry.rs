@@ -1,26 +1,8 @@
 //! Deterministic authoring geometry and dependency-preserving remeshing.
 use crate::{AuthoringSession, EditReceipt, SdkError, TopologyReplacement, Version};
-use zipzi_core::{BlendShapeTargetKind, DeltaKeyforms, Vec2, VertexId};
+use zipzi_core::{BlendShapeTargetKind, DeltaKeyforms, Vec2};
 
-zipzi_core::api_record! {
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-#[derive(zipzi_api_derive::BinaryWire)]
-pub struct MeshGeometry {
-    /// Stable vertex IDs in the same order as positions and UVs; IDs need not be contiguous.
-    pub vertex_ids: Vec<VertexId>,
-    /// Absolute XY coordinates in the mesh authoring space (model space without a deformation
-    /// parent, otherwise the parent's local/parameter space), ordered by vertex_ids.
-    pub positions: Vec<Vec2>,
-    /// Texture UV coordinates ordered by vertex_ids.
-    pub uvs: Vec<Vec2>,
-    /// Triangle entries reference vertex_ids values, never offsets into positions.
-    pub triangles: Vec<[VertexId; 3]>,
-    /// Optional canonical UV boundary and retained internal structure edges.
-    #[serde(default)]
-    pub meshing: Option<zipzi_core::MeshMeshing>,
-}
-}
+pub use zipzi_contract::authoring::MeshGeometry;
 
 fn invalid(message: &str) -> SdkError {
     SdkError::new("INVALID_RECTANGLE_GRID", message, "rectangle_grid_geometry")

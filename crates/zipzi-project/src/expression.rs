@@ -1,4 +1,5 @@
 //! Expression wire to persistent document UUIDs, and strict export.
+use crate::export_preflight::OpaqueExportProblemCode;
 use std::collections::{BTreeMap, HashMap};
 
 use thiserror::Error;

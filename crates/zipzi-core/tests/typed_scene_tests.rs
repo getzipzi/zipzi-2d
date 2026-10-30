@@ -1,3 +1,4 @@
+use zipzi_core::SceneTrackEvaluation;
 use zipzi_core::*;
 
 fn id(n: u32) -> String {

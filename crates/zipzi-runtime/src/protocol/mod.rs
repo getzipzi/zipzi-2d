@@ -18,7 +18,7 @@ mod values;
 use values::*;
 /// Wire major version, independent of package versions and API additions.
 /// Bump only for incompatible framing, envelope or existing operation changes.
-pub const CONTRACT: &str = "zipzi-runtime-v1";
+pub use zipzi_contract::protocol::CONTRACT;
 pub const SDK_BUILD: &str = env!("ZIPZI_RUNTIME_SDK_BUILD");
 pub const MAX_FRAME: usize = 16 << 20;
 

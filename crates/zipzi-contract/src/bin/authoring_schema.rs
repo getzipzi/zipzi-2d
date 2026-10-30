@@ -1,4 +1,51 @@
 //! Export only the reviewed P2 mesh/resource/Plan slices. Field definitions come from Rust.
+// Projection aliases preserve the reviewed native adapter paths while every
+// underlying value and operation declaration comes from the contract crate.
+mod zipzi_core {
+    pub use zipzi_contract::model::*;
+    pub mod api_shape {
+        pub use zipzi_contract::api_shape::*;
+    }
+    pub mod binary_wire {
+        pub use zipzi_contract::binary_wire::*;
+    }
+}
+mod zipzi_sdk {
+    pub use zipzi_contract::authoring::*;
+    pub use zipzi_contract::document::ConversionCost;
+    pub use zipzi_contract::spatial::*;
+}
+mod zipzi_runtime {
+    pub use zipzi_contract::runtime::*;
+    pub mod authoring {
+        pub use zipzi_contract::operations::{
+            IMAGE_QUERY, MESH_QUERY, PLAN_QUERY, PREPARED_PIXELS_QUERY,
+        };
+        pub use zipzi_contract::runtime::*;
+    }
+    pub mod addressing {
+        pub use zipzi_contract::runtime::*;
+    }
+    pub mod editor_context {
+        pub use zipzi_contract::runtime::*;
+    }
+    pub mod modeling {
+        pub use zipzi_contract::runtime::*;
+    }
+    pub mod observation {
+        pub use zipzi_contract::runtime::*;
+    }
+    pub mod preview {
+        pub use zipzi_contract::runtime::*;
+    }
+    pub mod project_io {
+        pub use zipzi_contract::project::*;
+    }
+    pub mod protocol {
+        pub use zipzi_contract::protocol::CONTRACT;
+    }
+}
+
 use serde::Serialize;
 use zipzi_core::api_shape::{ApiShape, Shape};
 
@@ -207,7 +254,12 @@ fn resource_contract() -> Contract {
                 "snapshot"
             ),
             binding!(zipzi_sdk::ConversionCost, "plans", "PlanCost", "record"),
-            binding!(zipzi_sdk::DeletionSummary, "plans", "DeletionSummary", "external"),
+            binding!(
+                zipzi_sdk::DeletionSummary,
+                "plans",
+                "DeletionSummary",
+                "external"
+            ),
             binding!(
                 zipzi_sdk::ModelingPlanReport,
                 "plans",
@@ -309,7 +361,7 @@ fn dto_contract() -> serde_json::Value {
         "parameters": [zipzi_sdk::ParameterOperation::api_shape(), zipzi_core::Parameter::api_shape()],
         "bindings": [zipzi_sdk::MeshBindingOperation::api_shape(), zipzi_core::MeshBinding::api_shape()],
         "sampling": [zipzi_sdk::GeometryChecks::api_shape(), zipzi_sdk::ModelingSamples::api_shape()],
-        "sampling_outer": zipzi_runtime::authoring::ModelingSampleBatch::api_fields(),
+        "sampling_outer": zipzi_contract::runtime::ModelingSampleData::api_fields(),
         "references": [zipzi_sdk::SceneCapabilities::api_shape(), zipzi_sdk::ObjectKind::api_shape()],
         "events": {"cursor":zipzi_runtime::EventCursor::api_fields(),"origin":zipzi_runtime::ClientId::api_fields(),"event":zipzi_runtime::RuntimeEvent::api_fields(),"kind":zipzi_runtime::EventKind::api_fields()},
         "planning": zipzi_sdk::ModelingIntent::api_shape(),

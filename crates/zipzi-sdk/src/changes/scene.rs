@@ -1,20 +1,7 @@
 use super::*;
-use zipzi_core::{
-    document::{SceneCollection, SceneField},
-    SceneReference,
-};
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct SceneFieldChange {
-    pub entity: EntityRef,
-    pub field: SceneField,
-}
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct SceneReferenceChange {
-    pub entity: EntityRef,
-    pub field: SceneField,
-    pub before: Vec<SceneReference>,
-    pub after: Vec<SceneReference>,
-}
+pub use zipzi_contract::changes::SceneFieldChange;
+pub use zipzi_contract::changes::SceneReferenceChange;
+use zipzi_core::document::{SceneCollection, SceneField};
 pub(super) fn summarize_scene(
     before: &Document,
     after: &Document,

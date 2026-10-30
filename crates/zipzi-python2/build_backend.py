@@ -50,6 +50,10 @@ def build_sdist(sdist_directory, config_settings=None):
         manifest = root / 'Cargo.toml'
         manifest.write_text(normalize_manifest(manifest.read_text(encoding='utf-8')))
         (root / 'build_backend.py').write_bytes(Path(__file__).read_bytes())
+        # Generation in the archive uses the same checkout-local lock primitive.
+        support = root / 'tools/workspace/dev_platform.py'
+        support.parent.mkdir(parents=True, exist_ok=True)
+        support.write_bytes((Path(__file__).resolve().parents[2] / 'tools/workspace/dev_platform.py').read_bytes())
         # Cargo preserves existing locked versions while removing the unused
         # desktop dependency graph. No build, generator or network is involved.
         versions = locked_versions(root / 'Cargo.lock')

@@ -1,4 +1,6 @@
 use super::*;
+use zipzi_core::OffscreenLookup;
+use zipzi_core::SceneTrackEvaluation;
 
 impl Exporter<'_> {
     pub(super) fn parts(&mut self) -> Vec<N> {

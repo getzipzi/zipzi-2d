@@ -1,4 +1,6 @@
 use super::*;
+use zipzi_core::document::PhysicsAssetImport;
+use zipzi_core::BindingAxisEditing;
 fn roots(roots: Vec<DeletionTarget>) -> DeletionRequest {
     DeletionRequest {
         roots,

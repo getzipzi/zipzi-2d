@@ -1,19 +1,6 @@
 use super::*;
-use zipzi_core::document::{AttachmentRef, MotionTrackTarget};
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum MotionReferenceValue {
-    Clip { id: String },
-    Track { target: MotionTrackTarget },
-    Attachment { reference: AttachmentRef },
-}
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct MotionReferenceChange {
-    pub entity: EntityRef,
-    pub field: String,
-    pub before: Option<MotionReferenceValue>,
-    pub after: Option<MotionReferenceValue>,
-}
+pub use zipzi_contract::changes::MotionReferenceChange;
+pub use zipzi_contract::changes::MotionReferenceValue;
 pub(super) fn summarize_motion(before: &Document, after: &Document, out: &mut ChangeSet) {
     let entity = |kind, id: &str| EntityRef::new(after.id(), kind, id);
     let collection = |owner: Option<String>, role: &str| CollectionRef::Motion {

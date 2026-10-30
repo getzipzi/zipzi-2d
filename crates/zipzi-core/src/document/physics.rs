@@ -1,7 +1,7 @@
 //! Persistent physics rig data with references bound to document parameter IDs.
 use std::collections::{BTreeMap, HashSet};
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 mod authoring;
 mod model;
@@ -14,20 +14,8 @@ use super::{Document, StructureIssue};
 use crate::types::{ChangeKind, EditResult, Status};
 pub use patch::{PhysicsAssetProperty, PhysicsPatch, PhysicsProperty, PhysicsRigPatch};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub struct PhysicsAsset {
-    /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-    pub id: String,
-    /// Complete persistent Physics definition; simulation state lives outside the document.
-    pub data: PhysicsDefinition,
-    /// Original runtime-ID namespace used to validate preservation of opaque imported fields.
-    pub opaque_source_ids: Option<BTreeMap<String, String>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    /// Original imported-content hash used to detect unsupported changes to opaque fields.
-    pub opaque_source_content_hash: Option<String>,
-}
+use model::PhysicsAssetIdentity;
+pub use zipzi_contract::physics_document::PhysicsAsset;
 
 impl Document {
     /// Share an immutable physics asset without copying its authored content.

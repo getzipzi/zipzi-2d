@@ -53,6 +53,9 @@ jobs:
           cache-dependency-glob: uv.lock
       - run: uv sync --locked
       - run: uv run --locked python tools/workspace/cargo_domain.py --check
+      - run: cargo test --locked -p zipzi-contract
+      - run: uv run --locked python tools/dev.py test tools -p test_python2_codegen.py -v
+      - run: uv run --locked python tools/dev.py test tools -p test_python2_distribution.py -v
       - run: uv run --locked python tools/dev.py test tools -p test_dev_entrypoint.py -v
       - run: uv run --locked python tools/dev.py test tools -p test_dev_process.py -v
       - run: uv run --locked python tools/dev.py test tools -p test_dev_lifecycle.py -v

@@ -17,46 +17,8 @@ impl PhysicsEditPlan {
         self.domain.affected_ids()
     }
 }
-#[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
-pub struct PhysicsCapabilities {
-    /// Read this object while its identity/context remains valid.
-    pub inspect: CapabilityState,
-    /// Modify typed fields through a validated native intent/address.
-    pub patch: CapabilityState,
-    /// Create owned child rows in this object.
-    pub create_child: CapabilityState,
-    /// Duplicate the selected object while allocating fresh owned identities.
-    pub duplicate: CapabilityState,
-    /// Delete the selected object subject to native reference and lock rules.
-    pub delete: CapabilityState,
-    /// Move the selected object between compatible native owners.
-    pub move_object: CapabilityState,
-    /// Change ordered sibling membership without changing identity.
-    pub reorder: CapabilityState,
-    /// Repair an explicitly unresolved native reference.
-    pub repair: CapabilityState,
-    /// Native preview eligibility; host preview API availability is advertised separately.
-    pub preview: CapabilityState,
-}
-#[derive(
-    Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, zipzi_api_derive::ApiShape,
-)]
-#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
-pub enum PhysicsCollection {
-    Groups,
-    Inputs {
-        /// Stable Physics rig ID owning the selected rows.
-        group_id: String,
-    },
-    Outputs {
-        /// Stable Physics rig ID owning the selected rows.
-        group_id: String,
-    },
-    Nodes {
-        /// Stable Physics rig ID owning the selected rows.
-        group_id: String,
-    },
-}
+pub use zipzi_contract::authoring::PhysicsCapabilities;
+pub use zipzi_contract::authoring::PhysicsCollection;
 #[derive(Debug, Clone, PartialEq)]
 enum FieldBaseline {
     Input(PhysicsInput),

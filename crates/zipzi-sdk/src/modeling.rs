@@ -1,65 +1,7 @@
 //! Shared modeling queries, frozen sampling and domain plans.
-use serde::{Deserialize, Serialize};
-/// Select explicit record IDs; empty lists return collection identities only.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape)]
-pub struct ModelingQuery {
-    /// Explicit IDs of image assets to read, in result-slot order; an empty list requests no
-    /// payloads, while collection IDs remain discoverable.
-    pub assets: Vec<String>,
-    /// Explicit IDs of meshes to read, in result-slot order; an empty list requests no
-    /// payloads, while collection IDs remain discoverable.
-    pub meshes: Vec<String>,
-    /// Explicit IDs of parameters to read, in result-slot order; an empty list requests no
-    /// payloads, while collection IDs remain discoverable.
-    pub parameters: Vec<String>,
-    /// Explicit IDs of Parts to read, in result-slot order; an empty list requests no payloads,
-    /// while collection IDs remain discoverable.
-    pub parts: Vec<String>,
-    /// Explicit IDs of deformation transforms to read, in result-slot order; an empty list
-    /// requests no payloads, while collection IDs remain discoverable.
-    pub transforms: Vec<String>,
-    /// Explicit IDs of ordinary mesh bindings to read, in result-slot order; an empty list
-    /// requests no payloads, while collection IDs remain discoverable.
-    pub bindings: Vec<String>,
-    /// Explicit IDs of scene bindings to read, in result-slot order; an empty list requests no
-    /// payloads, while collection IDs remain discoverable.
-    pub scene_bindings: Vec<String>,
-    /// Explicit IDs of BlendShape key tables to read, in result-slot order; an empty list
-    /// requests no payloads, while collection IDs remain discoverable.
-    pub blend_key_tables: Vec<String>,
-    /// Explicit IDs of BlendShape constraints to read, in result-slot order; an empty list
-    /// requests no payloads, while collection IDs remain discoverable.
-    pub blend_constraints: Vec<String>,
-    /// Explicit IDs of BlendShape bindings to read, in result-slot order; an empty list
-    /// requests no payloads, while collection IDs remain discoverable.
-    pub blend_bindings: Vec<String>,
-    /// Explicit IDs of Glue objects to read, in result-slot order; an empty list requests no
-    /// payloads, while collection IDs remain discoverable.
-    pub glues: Vec<String>,
-    /// Explicit IDs of Offscreen objects to read, in result-slot order; an empty list requests
-    /// no payloads, while collection IDs remain discoverable.
-    pub offscreens: Vec<String>,
-    /// Explicit IDs of CDI parameter groups to read, in result-slot order; an empty list
-    /// requests no payloads, while collection IDs remain discoverable.
-    pub parameter_groups: Vec<String>,
-    /// Explicit IDs of package attachments to read, in result-slot order; an empty list
-    /// requests no payloads, while collection IDs remain discoverable.
-    pub attachments: Vec<String>,
-    /// Explicit motion clip IDs; payload slots follow order and retain missing IDs.
-    pub motions: Vec<String>,
-    /// Explicit motion registration-group IDs; group payloads include their ordered entries.
-    pub motion_groups: Vec<String>,
-    /// Explicit registration IDs, including root and grouped registrations.
-    pub motion_registrations: Vec<String>,
-    /// Explicit expression asset IDs; entries are owned by the selected asset.
-    pub expressions: Vec<String>,
-    /// Request the Physics singleton payload; false requests no Physics content.
-    pub physics: bool,
-    /// Request the Pose singleton payload; false requests no Pose content.
-    pub pose: bool,
-}
+use serde::Serialize;
+pub use zipzi_contract::authoring::ModelingQuery;
+
 #[derive(Debug, Serialize, zipzi_api_derive::BinaryOutput)]
 pub struct ModelingRecords<'a> {
     pub document_id: &'a str,
@@ -91,82 +33,7 @@ pub struct ModelingRecords<'a> {
     pub physics: Option<&'a zipzi_core::document::PhysicsAsset>,
     pub pose: Option<&'a zipzi_core::document::PoseAsset>,
 }
-/// Owned selected query results. No mutation or query behavior lives in this DTO.
-#[derive(Debug, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
-pub struct OwnedModelingRecords {
-    /// Stable document UUID; not a Runtime Session handle.
-    pub document_id: String,
-    /// Model source-canvas and export-frame configuration.
-    pub setup: zipzi_core::ModelSetup,
-    /// Independent organization/deformation palette ranks; does not alter model relationships.
-    pub hierarchy_order: zipzi_core::document::HierarchyOrder,
-    /// Owned authoring visibility/lock metadata; separate from evaluated model appearance.
-    pub editor_state: zipzi_core::document::EditorState,
-    /// Owned CDI display metadata, including explicit imported unresolved references.
-    pub display_info: zipzi_core::document::DisplayInfo,
-    /// Owned model3 export metadata and reference registrations.
-    pub model3_settings: zipzi_core::document::Model3Settings,
-    /// Optional drawing-order groups; None leaves grouping absent instead of supplying an empty
-    /// group list.
-    pub draw_order_groups: Option<Vec<zipzi_core::draw_order::DrawOrderGroup>>,
-    /// Domain-name-to-ID directory of document collections; identities remain available even
-    /// when no record payloads were requested.
-    pub ids: std::collections::BTreeMap<String, Vec<String>>,
-    /// Owned image assets aligned with the corresponding query ID list; None marks a missing
-    /// requested ID and an empty query returns no payloads.
-    pub assets: Vec<Option<zipzi_core::ImageAsset>>,
-    /// Owned meshes aligned with the corresponding query ID list; None marks a missing
-    /// requested ID and an empty query returns no payloads.
-    pub meshes: Vec<Option<zipzi_core::Mesh>>,
-    /// Owned parameters aligned with the corresponding query ID list; None marks a missing
-    /// requested ID and an empty query returns no payloads.
-    pub parameters: Vec<Option<zipzi_core::Parameter>>,
-    /// Owned Parts aligned with the corresponding query ID list; None marks a missing requested
-    /// ID and an empty query returns no payloads.
-    pub parts: Vec<Option<zipzi_core::Part>>,
-    /// Owned deformation transforms aligned with the corresponding query ID list; None marks a
-    /// missing requested ID and an empty query returns no payloads.
-    pub transforms: Vec<Option<zipzi_core::Transform>>,
-    /// Owned ordinary mesh bindings aligned with the corresponding query ID list; None marks a
-    /// missing requested ID and an empty query returns no payloads.
-    pub bindings: Vec<Option<zipzi_core::MeshBinding>>,
-    /// Owned scene bindings aligned with the corresponding query ID list; None marks a missing
-    /// requested ID and an empty query returns no payloads.
-    pub scene_bindings: Vec<Option<zipzi_core::SceneBinding>>,
-    /// Owned BlendShape key tables aligned with the corresponding query ID list; None marks a
-    /// missing requested ID and an empty query returns no payloads.
-    pub blend_key_tables: Vec<Option<zipzi_core::BlendShapeKeyTable>>,
-    /// Owned BlendShape constraints aligned with the corresponding query ID list; None marks a
-    /// missing requested ID and an empty query returns no payloads.
-    pub blend_constraints: Vec<Option<zipzi_core::BlendShapeConstraint>>,
-    /// Owned BlendShape bindings aligned with the corresponding query ID list; None marks a
-    /// missing requested ID and an empty query returns no payloads.
-    pub blend_bindings: Vec<Option<zipzi_core::BlendShapeBinding>>,
-    /// Owned Glue objects aligned with the corresponding query ID list; None marks a missing
-    /// requested ID and an empty query returns no payloads.
-    pub glues: Vec<Option<zipzi_core::Glue>>,
-    /// Owned Offscreen objects aligned with the corresponding query ID list; None marks a
-    /// missing requested ID and an empty query returns no payloads.
-    pub offscreens: Vec<Option<zipzi_core::Offscreen>>,
-    /// Owned CDI parameter groups aligned with the corresponding query ID list; None marks a
-    /// missing requested ID and an empty query returns no payloads.
-    pub parameter_groups: Vec<Option<zipzi_core::document::CdiParameterGroup>>,
-    /// Owned package attachments aligned with the corresponding query ID list; None marks a
-    /// missing requested ID and an empty query returns no payloads.
-    pub attachments: Vec<Option<zipzi_core::document::PackageAttachment>>,
-    /// Owned selected motions aligned with query IDs; None marks a missing ID.
-    pub motions: Vec<Option<zipzi_core::document::MotionClip>>,
-    /// Owned selected motion_groups aligned with query IDs; None marks a missing ID.
-    pub motion_groups: Vec<Option<zipzi_core::document::MotionGroup>>,
-    /// Owned selected motion_registrations aligned with query IDs; None marks a missing ID.
-    pub motion_registrations: Vec<Option<zipzi_core::document::MotionRegistration>>,
-    /// Owned selected expressions aligned with query IDs; None marks a missing ID.
-    pub expressions: Vec<Option<zipzi_core::document::ExpressionAsset>>,
-    /// Owned Physics singleton when requested and present; None otherwise.
-    pub physics: Option<zipzi_core::document::PhysicsAsset>,
-    /// Owned Pose singleton when requested and present; None otherwise.
-    pub pose: Option<zipzi_core::document::PoseAsset>,
-}
+pub use zipzi_contract::authoring::OwnedModelingRecords;
 impl ModelingRecords<'_> {
     pub fn into_owned(self) -> OwnedModelingRecords {
         OwnedModelingRecords {
@@ -469,21 +336,7 @@ pub fn modeling_records<'a>(
         pose: query.pose.then(|| document.pose()).flatten(),
     }
 }
-#[derive(Debug, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
-pub struct ModelingSamples {
-    /// Exact SDK version captured for this value; not a best-effort latest-version marker.
-    pub version: crate::Version,
-    /// Effective parameter maps in the same order as requested poses; each map is keyed by
-    /// document parameter ID.
-    pub parameters: Vec<zipzi_core::PreviewValues>,
-    /// CPU-evaluated frames in the same order as requested parameter maps.
-    pub frames: Vec<zipzi_core::DrawableFrame>,
-    /// Structured diagnostics from this query or operation; an empty list means none were reported.
-    pub diagnostics: Vec<crate::GeometryDiagnostic>,
-    /// Per-pose evaluated mesh quality in frame order when Checks.quality is true; empty otherwise.
-    /// Uses default parameters of this same frozen source as the reference, without image coverage.
-    pub quality: Vec<Vec<crate::MeshQuality>>,
-}
+pub use zipzi_contract::authoring::ModelingSamples;
 impl crate::AuthoringSnapshot {
     /// All samples use the exact immutable source and explicit parameter maps.
     pub fn sample_modeling(
@@ -604,80 +457,8 @@ impl<S: std::borrow::Borrow<crate::AuthoringSnapshot>> ModelingSampler<S> {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(
-    tag = "domain",
-    content = "intent",
-    rename_all = "snake_case",
-    deny_unknown_fields
-)]
-#[derive(zipzi_api_derive::ApiShape)]
-pub enum ModelingIntent {
-    Deletion(
-        /// Shared dependency-cleaning deletion request and explicit resolutions.
-        crate::DeletionIntent,
-    ),
-    Scene(
-        /// Typed intent for scene lifecycle, hierarchy and drawing; apply/plan it against a
-        /// Session/Edit source rather than mutating this value.
-        crate::SceneEdit,
-    ),
-    Organization(
-        /// Typed intent for organization and parameter groups; apply/plan it against a
-        /// Session/Edit source rather than mutating this value.
-        crate::OrganizationEdit,
-    ),
-    Binding(
-        /// Typed intent for parameter bindings and grid conversions; apply/plan it against a
-        /// Session/Edit source rather than mutating this value.
-        crate::BindingAuthoringEdit,
-    ),
-    Content(
-        /// Typed intent for geometry and topology content; apply/plan it against a Session/Edit
-        /// source rather than mutating this value.
-        crate::SceneContentEdit,
-    ),
-    References(
-        /// Typed intent for metadata references and selections; apply/plan it against a
-        /// Session/Edit source rather than mutating this value.
-        crate::ReferenceEdit,
-    ),
-    Resource(
-        /// Typed intent for image asset metadata and references; apply/plan it against a
-        /// Session/Edit source rather than mutating this value.
-        crate::ResourceEdit,
-    ),
-    Document(
-        /// Typed intent for document configuration and metadata repair; apply/plan it against a
-        /// Session/Edit source rather than mutating this value.
-        crate::DocumentAuthoringEdit,
-    ),
-    Attachment(
-        /// Typed intent for package attachments and their references; apply/plan it against a
-        /// Session/Edit source rather than mutating this value.
-        zipzi_core::document::AttachmentEdit,
-    ),
-    /// Typed motion intent evaluated against the exact formal/candidate source.
-    Motion(
-        /// Typed native motion operation against this captured source.
-        zipzi_core::document::MotionEdit,
-    ),
-    /// Typed expression intent evaluated against the exact formal/candidate source.
-    Expression(
-        /// Typed native expression operation against this captured source.
-        zipzi_core::document::ExpressionEdit,
-    ),
-    /// Typed physics intent evaluated against the exact formal/candidate source.
-    Physics(
-        /// Typed native physics operation against this captured source.
-        zipzi_core::document::PhysicsEdit,
-    ),
-    /// Typed pose intent evaluated against the exact formal/candidate source.
-    Pose(
-        /// Typed native pose operation against this captured source.
-        zipzi_core::document::PoseEdit,
-    ),
-}
+pub use zipzi_contract::authoring::ModelingIntent;
+
 #[derive(Debug, Clone)]
 pub enum ModelingPlan {
     Deletion(crate::DeletionReviewPlan),
@@ -694,26 +475,7 @@ pub enum ModelingPlan {
     Physics(crate::PhysicsEditPlan),
     Pose(crate::PoseEditPlan),
 }
-zipzi_core::api_record! {
-#[derive(Debug, Clone, Serialize)]
-#[derive(zipzi_api_derive::BinaryOutput)]
-pub struct ModelingPlanReport {
-    /// Exact SDK version captured for this value; not a best-effort latest-version marker.
-    pub version: crate::Version,
-    /// Stable IDs conservatively affected by the planned operation.
-    pub affected_ids: Vec<String>,
-    /// Mapping from original object IDs to the new IDs allocated for copied objects.
-    pub copied_ids: std::collections::BTreeMap<String, String>,
-    /// Native plan cost estimates; inspect losses separately before applying the plan.
-    pub cost: Option<crate::ConversionCost>,
-    /// Explicit semantic losses predicted by conversion; empty means no losses were reported.
-    pub losses: Vec<String>,
-    /// Whether applying the plan would leave the document unchanged.
-    pub no_op: Option<bool>,
-    /// Bounded deletion readiness/count summary; detailed rows use frozen report pages.
-    pub deletion: Option<crate::DeletionSummary>,
-}
-}
+pub use zipzi_contract::authoring::ModelingPlanReport;
 impl ModelingPlan {
     pub fn report(&self) -> ModelingPlanReport {
         macro_rules! report {

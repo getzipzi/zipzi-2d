@@ -1,3 +1,4 @@
+use zipzi_core::BindingAxisEditing;
 use zipzi_core::{document::*, *};
 mod business;
 mod review;

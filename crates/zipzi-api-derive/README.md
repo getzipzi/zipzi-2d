@@ -1,7 +1,7 @@
 # zipzi-api-derive
 
 Internal compile-time descriptions for explicitly selected Rust authoring types.
-The derive emits `zipzi_core::api_shape::ApiShape`; the Python exporter chooses
+The derive emits `zipzi_contract::api_shape::ApiShape`; the Python exporter chooses
 its finite input/output roots. It neither validates documents nor implements
 SDK behavior. Selected serde defaults are evaluated in Rust during export.
 

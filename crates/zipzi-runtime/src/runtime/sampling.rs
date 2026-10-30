@@ -142,11 +142,13 @@ impl Runtime {
         };
         Ok(ModelingSampleBatch {
             lease: Some(Arc::new(lease)),
-            source,
-            state,
-            samples: snapshot
-                .snapshot
-                .sample_modeling(input.parameters, input.checks)?,
+            data: zipzi_contract::runtime::ModelingSampleData {
+                source,
+                state,
+                samples: snapshot
+                    .snapshot
+                    .sample_modeling(input.parameters, input.checks)?,
+            },
         })
     }
 }

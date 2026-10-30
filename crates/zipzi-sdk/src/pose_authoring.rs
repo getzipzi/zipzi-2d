@@ -18,29 +18,7 @@ impl PoseEditPlan {
         self.domain.affected_ids()
     }
 }
-#[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
-pub struct PoseCapabilities {
-    /// Read this object while its identity/context remains valid.
-    pub inspect: CapabilityState,
-    /// Modify typed fields through a validated native intent/address.
-    pub patch: CapabilityState,
-    /// Create owned child rows in this object.
-    pub create_child: CapabilityState,
-    /// Duplicate the selected object while allocating fresh owned identities.
-    pub duplicate: CapabilityState,
-    /// Delete the selected object subject to native reference and lock rules.
-    pub delete: CapabilityState,
-    /// Move the selected object between compatible native owners.
-    pub move_object: CapabilityState,
-    /// Change ordered sibling membership without changing identity.
-    pub reorder: CapabilityState,
-    /// Repair an explicitly unresolved native reference.
-    pub repair: CapabilityState,
-    /// Remove this container while moving owned content to an explicit destination.
-    pub dissolve: CapabilityState,
-    /// Native preview eligibility; host preview API availability is advertised separately.
-    pub preview: CapabilityState,
-}
+pub use zipzi_contract::authoring::PoseCapabilities;
 #[derive(Debug, Clone)]
 pub struct PoseCollectionCapabilities {
     pub create: CapabilityState,

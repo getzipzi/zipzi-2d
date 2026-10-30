@@ -1,42 +1,8 @@
 use super::*;
+use zipzi_core::BindingAxisEditing;
 
-#[derive(
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    Serialize,
-    Deserialize,
-    zipzi_api_derive::ApiShape,
-    zipzi_api_derive::BinaryWire,
-)]
-pub enum ParameterRangePolicy {
-    KeepKeyValues,
-    /// Map every dependent key by the same increasing affine change of domain.
-    MapKeyValues,
-}
-#[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    zipzi_api_derive::ApiShape,
-    zipzi_api_derive::BinaryWire,
-)]
-pub struct ParameterRangeEdit {
-    /// Stable document parameter ID, not its exported runtime identifier.
-    pub parameter_id: String,
-    /// Lower endpoint of the parameter domain, in parameter units.
-    pub minimum: f32,
-    /// Upper endpoint of the parameter domain, in parameter units.
-    pub maximum: f32,
-    /// Default parameter value within the declared domain.
-    pub default_value: f32,
-    /// Explicit native conflict/conversion policy; no implicit removal or remapping is requested.
-    pub policy: ParameterRangePolicy,
-}
+pub use zipzi_contract::document::{ParameterRangeEdit, ParameterRangePolicy};
+
 #[derive(Debug, Clone, Copy)]
 enum GridOwner {
     Mesh,

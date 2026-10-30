@@ -1,11 +1,6 @@
 use super::*;
+pub use zipzi_contract::changes::SceneContentChange;
 use zipzi_core::document::SceneContentDomain as D;
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct SceneContentChange {
-    pub entity: EntityRef,
-    pub domain: D,
-    pub topology: bool,
-}
 pub(super) fn summarize_content(
     before: &Document,
     after: &Document,
@@ -246,30 +241,13 @@ pub(super) fn record_content_change(
     out.categories.insert(ChangeCategory::EvaluationInputs);
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum SceneContentReferenceValue {
-    Absent,
-    Pair {
-        glue_id: String,
-        mesh_a: zipzi_core::SceneReference,
-        mesh_b: zipzi_core::SceneReference,
-        vertex_a: Option<zipzi_core::VertexId>,
-        vertex_b: Option<zipzi_core::VertexId>,
-    },
-    OffscreenMapping {
-        part_id: String,
-        indices: Vec<i32>,
-    },
+pub use zipzi_contract::changes::SceneContentReferenceChange;
+pub use zipzi_contract::changes::SceneContentReferenceValue;
+pub(super) trait SceneContentReferenceChangeSize {
+    fn extra_bytes(&self) -> usize;
 }
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct SceneContentReferenceChange {
-    pub entity: EntityRef,
-    pub before: SceneContentReferenceValue,
-    pub after: SceneContentReferenceValue,
-}
-impl SceneContentReferenceChange {
-    pub(super) fn extra_bytes(&self) -> usize {
+impl SceneContentReferenceChangeSize for SceneContentReferenceChange {
+    fn extra_bytes(&self) -> usize {
         let bytes = |v: &SceneContentReferenceValue| match v {
             SceneContentReferenceValue::Absent => 0,
             SceneContentReferenceValue::Pair {

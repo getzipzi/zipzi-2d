@@ -1,6 +1,7 @@
 //! Explicit model-space views for inspection renders.
 
 use crate::ObservationError;
+use zipzi_sdk::TopologyOverlayValidation;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ModelRoi {

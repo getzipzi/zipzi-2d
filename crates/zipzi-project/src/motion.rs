@@ -1,4 +1,5 @@
 //! motion3 conversion between runtime IDs and persistent document UUIDs.
+use crate::export_preflight::OpaqueExportProblemCode;
 use std::collections::{BTreeMap, HashMap};
 
 use sha2::{Digest, Sha256};

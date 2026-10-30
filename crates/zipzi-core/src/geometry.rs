@@ -131,7 +131,7 @@ pub fn finite_export_canvas(
 #[cfg(test)]
 mod export_tests {
     use super::*;
-    use crate::ExportSettings;
+    use crate::{DrawableFrameBounds, ExportSettings};
     #[test]
     fn auto_bounds_are_tight_padded_and_independent_of_ppu() {
         let points = [Vec2::new(-100., 0.), Vec2::new(100., 600.)];

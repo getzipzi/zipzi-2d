@@ -4,6 +4,8 @@ use crate::{
     CanvasScene, ControlGeometry, ControlKind, Document, ModelPoint, ObjectKind, ObjectRef,
 };
 use anyhow::{Result, bail, ensure};
+use zipzi_core::SceneTrackEvaluation;
+use zipzi_core::WarpBezierEvaluation;
 use zipzi_core::{Mesh, MeshBinding, SceneBinding, SceneTrack, Transform, Vec2};
 
 fn keyform_edit_hint(

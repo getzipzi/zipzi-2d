@@ -117,11 +117,11 @@ class Reader:
         if self.offset!=len(self.data): raise ValueError("Trailing binary fields")
 
 
-INPUT_SIGNATURE = '33cfbe95962026d21e4bc41217eaa803'
-MESH_SIGNATURE = '6f011cf86dfd4d3f0ee05751e6a6cc13'
-BINDING_SIGNATURE = '7e7f1d80974a2ca6fa5fe1ddac9f1ebf'
-SAMPLE_SIGNATURE = 'd439ee6cbc8d0f1feb2c30a437523a21'
-OUTPUT_SIGNATURE = '8cd0ae2d11ab948c6e8eb66fa80e5210'
+INPUT_SIGNATURE = 'e720bcfae4064ba5f5196abddfd2bc0d'
+MESH_SIGNATURE = 'f38a4fcb442823db2a155a06e4994cf2'
+BINDING_SIGNATURE = '6e1a318eb5a16ff93ca800ec381f81ea'
+SAMPLE_SIGNATURE = 'ef5b4e5a2e2a2c42e9845480d6815742'
+OUTPUT_SIGNATURE = 'db26608364f48c6599ea43e5586ed131'
 
 def _point(value: object) -> tuple[object, object]:
     if isinstance(value, tuple):
@@ -5120,21 +5120,21 @@ def decode_records(value: bytes, signature: str) -> m.OwnedModelingRecords:
     return result
 
 def decode_observation(value: bytes, signature: str) -> m.ObservationBatch:
-    if signature!='8b73326c4fcd706a667a86beb5326015': raise ValueError("Binary observation contract differs")
+    if signature!='cbbc2519950ba423722739d22a6944d0': raise ValueError("Binary observation contract differs")
     r=Reader(value)
     result=_read_observationbatch(r)
     r.finish()
     return result
 
 def decode_spatial(value: bytes, signature: str) -> m.SpatialSamples:
-    if signature!='ba2052a3db49636e40cd87d49098a564': raise ValueError("Binary spatial contract differs")
+    if signature!='f3baf2f6b72d920298a21191aaf823a2': raise ValueError("Binary spatial contract differs")
     r=Reader(value)
     result=_read_spatialsamples(r)
     r.finish()
     return result
 
 def decode_preview(value: bytes, signature: str) -> m.PreviewBatch:
-    if signature!='2d3615c77ec096438c86137436c2fcd2': raise ValueError("Binary preview contract differs")
+    if signature!='b17767ffe39f8046634ab6a887897558': raise ValueError("Binary preview contract differs")
     r=Reader(value)
     result=_read_previewbatch(r)
     r.finish()
@@ -5162,7 +5162,7 @@ def decode_bindings(value:bytes,signature:str)->tuple[m.MeshBinding,...]:
     return result
 
 def decode_images(value:bytes,signature:str)->tuple[Snapshot[resources.Image],...]:
-    if signature!='fbafcb840850220e3314b16301323be6': raise ValueError("Binary image contract differs")
+    if signature!='ad87c1c5f654d24b33239bad6607e861': raise ValueError("Binary image contract differs")
     r=Reader(value)
     result=tuple(_read_imagesnapshot(r) for _ in range(r.count()))
     r.finish()

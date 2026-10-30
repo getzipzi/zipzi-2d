@@ -2,6 +2,7 @@
 use crate::{ObservationError, RenderRequest, ViewMapping};
 use std::collections::{HashMap, HashSet};
 use zipzi_core::{DrawableFrame, Mesh, Part};
+use zipzi_sdk::TopologyThresholdValidation;
 use zipzi_sdk::{MeshQuality, TopologyOverlay};
 
 type Point = (f64, f64);

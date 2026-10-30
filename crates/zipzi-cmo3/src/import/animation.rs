@@ -4,6 +4,7 @@ use super::{
     invalid, Result,
 };
 use std::collections::{BTreeMap, BTreeSet};
+use zipzi_core::document::MotionClipEditing;
 use zipzi_core::{
     document::{
         ExpressionAsset, ExpressionBlend, ExpressionEntry, ExpressionTarget, MotionClip,

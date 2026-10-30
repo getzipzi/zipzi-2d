@@ -1,6 +1,7 @@
 use super::*;
 #[cfg(feature = "gpu-observation")]
 use crate::jobs::ReadTask;
+use crate::observation::ObservationViewRuntime;
 use crate::observation::*;
 
 #[cfg(all(test, feature = "gpu-observation"))]

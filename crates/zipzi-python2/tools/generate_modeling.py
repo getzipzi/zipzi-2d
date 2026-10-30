@@ -45,8 +45,11 @@ def render_modeling(contract, header, rust_header):
     if len(set(names.values()))!=len(names):raise ValueError('Duplicate selected modeling name')
     def path(s):
         n=s['name']
+        n=n.replace('zipzi_contract::document::DrawOrderGroup', 'zipzi_core::draw_order::DrawOrderGroup').replace('zipzi_contract::runtime::CollectionQuery', 'zipzi_runtime::addressing::CollectionQuery')
+        n=n.replace('zipzi_contract::model::', 'zipzi_core::').replace('zipzi_contract::authoring::', 'zipzi_sdk::').replace('zipzi_contract::animation::', 'zipzi_sdk::').replace('zipzi_contract::spatial::', 'zipzi_sdk::').replace('zipzi_contract::runtime::', 'zipzi_runtime::').replace('zipzi_contract::document::', 'zipzi_core::document::').replace('zipzi_contract::evaluation::', 'zipzi_core::evaluation::').replace('zipzi_contract::physics::', 'zipzi_core::physics::').replace('zipzi_contract::physics_document::', 'zipzi_core::document::').replace('zipzi_contract::scene_reference::', 'zipzi_core::').replace('zipzi_contract::warp_bezier::', 'zipzi_core::')
         n=re.sub(r'zipzi_core::document::(?:[a-z_0-9]+::)*', 'zipzi_core::document::', n)
         n=re.sub(r'zipzi_sdk::(?:[a-z_0-9]+::)*', 'zipzi_sdk::', n)
+        n=n.replace('zipzi_contract::project::OpaqueExportIssue', 'zipzi_sdk::DeletionExportFailure').replace('zipzi_contract::project::OpaqueExportProblem', 'zipzi_sdk::OpaqueExportProblem').replace('zipzi_contract::project::', 'zipzi_runtime::')
         n=n.replace('zipzi_project::export_preflight::OpaqueExportIssue', 'zipzi_sdk::DeletionExportFailure').replace('zipzi_project::export_preflight::OpaqueExportProblem', 'zipzi_sdk::OpaqueExportProblem')
         n=n.replace('zipzi_core::scene_reference::', 'zipzi_core::').replace('zipzi_core::evaluation::types::','zipzi_core::evaluation::')
         n=re.sub(r'zipzi_animation::(?:motion_preview|physics)::', 'zipzi_sdk::', n)

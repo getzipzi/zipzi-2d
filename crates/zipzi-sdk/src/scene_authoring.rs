@@ -70,33 +70,7 @@ impl DrawingGroupAddress {
         self.range
     }
 }
-#[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
-pub struct SceneCapabilities {
-    /// Current capability to read the current typed record; inspect its state/reason before
-    /// invoking the operation.
-    pub inspect: CapabilityState,
-    /// Current capability to modify fields through a captured address; inspect its state/reason
-    /// before invoking the operation.
-    pub patch: CapabilityState,
-    /// Current capability to move this object between collections; inspect its state/reason
-    /// before invoking the operation.
-    pub move_object: CapabilityState,
-    /// Current capability to change its deformation parent; inspect its state/reason before
-    /// invoking the operation.
-    pub reparent: CapabilityState,
-    /// Current capability to change its collection order; inspect its state/reason before
-    /// invoking the operation.
-    pub reorder: CapabilityState,
-    /// Current capability to duplicate this object; inspect its state/reason before invoking
-    /// the operation.
-    pub duplicate: CapabilityState,
-    /// Current capability to delete this object; inspect its state/reason before invoking the
-    /// operation.
-    pub delete: CapabilityState,
-    /// Current capability to remove its container while preserving contents; inspect its
-    /// state/reason before invoking the operation.
-    pub dissolve: CapabilityState,
-}
+pub use zipzi_contract::authoring::SceneCapabilities;
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct SceneCollectionCapabilities {
     pub create: CapabilityState,

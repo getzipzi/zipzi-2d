@@ -5,6 +5,7 @@ use crate::deformers::{
 use crate::document::Document;
 use crate::geometry::validate_positions;
 use crate::types::{Appearance, DeltaKeyforms, Status, Transform, TransformKind, Vec2};
+use zipzi_core::SceneTrackEvaluation;
 
 use super::evaluator::EvalContext;
 use super::prepared::PreparedEvaluation;

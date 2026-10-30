@@ -9145,6 +9145,7 @@ dependencies = [
  "thiserror 2.0.20",
  "uuid",
  "zipzi-api-derive",
+ "zipzi-contract",
  "zipzi-core",
  "zipzi-project",
 ]
@@ -9177,6 +9178,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "zipzi-contract"
+version = "0.1.0-alpha.3"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
+ "uuid",
+ "zipzi-api-derive",
+]
+
+[[package]]
 name = "zipzi-core"
 version = "0.1.0-alpha.3"
 dependencies = [
@@ -9188,6 +9200,7 @@ dependencies = [
  "thiserror 2.0.20",
  "uuid",
  "zipzi-api-derive",
+ "zipzi-contract",
 ]
 
 [[package]]
@@ -9326,6 +9339,7 @@ dependencies = [
  "uuid",
  "zipzi-api-derive",
  "zipzi-cmo3",
+ "zipzi-contract",
  "zipzi-core",
  "zipzi-live2d",
  "zipzi-moc3",
@@ -9352,6 +9366,7 @@ dependencies = [
  "pyo3",
  "serde",
  "serde_json",
+ "zipzi-contract",
  "zipzi-core",
  "zipzi-runtime",
  "zipzi-sdk",
@@ -9402,6 +9417,7 @@ dependencies = [
  "uuid",
  "windows-sys 0.61.2",
  "zipzi-api-derive",
+ "zipzi-contract",
  "zipzi-core",
  "zipzi-observe",
  "zipzi-project",
@@ -9421,6 +9437,7 @@ dependencies = [
  "uuid",
  "zipzi-animation",
  "zipzi-api-derive",
+ "zipzi-contract",
  "zipzi-core",
  "zipzi-project",
 ]

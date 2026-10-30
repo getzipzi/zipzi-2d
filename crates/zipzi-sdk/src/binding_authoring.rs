@@ -1,6 +1,5 @@
 //! Read-only grid/range/parent plans and one SDK transaction on execution.
 use crate::{AuthoringSession, EditReceipt, EditSession, SdkError, Version};
-use serde::{Deserialize, Serialize};
 pub use zipzi_core::document::{
     AuthoringLimits, AxisReduction, BindingGridEdit, BindingGridPlan, BindingGridTarget,
     BindingIdentityKind, BlendAuthoringEdit, BlendAuthoringPlan, BlendTableOperation,
@@ -11,42 +10,7 @@ pub use zipzi_core::document::{
 };
 use zipzi_core::Status;
 
-#[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    zipzi_api_derive::ApiShape,
-    zipzi_api_derive::BinaryWire,
-)]
-pub enum BindingAuthoringEdit {
-    Grid(
-        /// Typed intent for ordinary binding-grid edits; apply/plan it against a Session/Edit
-        /// source rather than mutating this value.
-        BindingGridEdit,
-    ),
-    Blend(
-        /// Typed intent for BlendShape authoring; apply/plan it against a Session/Edit source
-        /// rather than mutating this value.
-        BlendAuthoringEdit,
-    ),
-    MeshGrid(
-        /// Typed intent for mesh binding grid edits; apply/plan it against a Session/Edit
-        /// source rather than mutating this value.
-        MeshGridEdit,
-    ),
-    ParameterRange(
-        /// Typed intent for parameter range conversion; apply/plan it against a Session/Edit
-        /// source rather than mutating this value.
-        ParameterRangeEdit,
-    ),
-    Reparent(
-        /// Typed intent for deformation reparenting; apply/plan it against a Session/Edit
-        /// source rather than mutating this value.
-        ReparentEdit,
-    ),
-}
+pub use zipzi_contract::authoring::BindingAuthoringEdit;
 #[derive(Debug, Clone)]
 pub enum BindingConversion {
     Grid(BindingGridPlan),
@@ -300,22 +264,7 @@ impl BindingFieldAddress {
         self.owner.id()
     }
 }
-#[derive(Debug, Clone, Serialize, Deserialize, zipzi_api_derive::ApiShape)]
-pub enum BindingFieldPatch {
-    SampleValue(#[doc = "Scalar value in the referenced parameter domain."] f32),
-    ConstraintSample {
-        /// Scalar value in the referenced parameter domain.
-        value: f32,
-        /// Dimensionless interpolation weight applied to the referenced source vertex.
-        weight: f32,
-    },
-    AxisParameter {
-        /// Stable document parameter ID, not its exported runtime identifier.
-        parameter_id: String,
-        /// Explicit parameter-domain reduction used when removing or replacing an axis.
-        reduction: Option<AxisReduction>,
-    },
-}
+pub use zipzi_contract::authoring::BindingFieldPatch;
 impl AuthoringSession {
     pub fn binding_field_address(&self, id: &str) -> Result<BindingFieldAddress, SdkError> {
         let identity = self.document().binding_identity(id).ok_or_else(|| {
@@ -455,30 +404,7 @@ impl AuthoringSession {
     }
 }
 
-#[derive(Debug, Clone, zipzi_api_derive::ApiShape, serde::Serialize)]
-pub struct BindingCapabilities {
-    /// Current capability to read the current typed record; inspect its state/reason before
-    /// invoking the operation.
-    pub inspect: crate::CapabilityState,
-    /// Current capability to modify fields through a captured address; inspect its state/reason
-    /// before invoking the operation.
-    pub patch: crate::CapabilityState,
-    /// Current capability to create children in this collection; inspect its state/reason
-    /// before invoking the operation.
-    pub create_child: crate::CapabilityState,
-    /// Current capability to change its collection order; inspect its state/reason before
-    /// invoking the operation.
-    pub reorder: crate::CapabilityState,
-    /// Current capability to delete this object; inspect its state/reason before invoking the
-    /// operation.
-    pub delete: crate::CapabilityState,
-    /// Current capability to repair an unresolved or unavailable binding; inspect its
-    /// state/reason before invoking the operation.
-    pub repair: crate::CapabilityState,
-    /// Current capability to evaluate a conversion preview; inspect its state/reason before
-    /// invoking the operation.
-    pub preview: crate::CapabilityState,
-}
+pub use zipzi_contract::authoring::BindingCapabilities;
 impl AuthoringSession {
     pub fn binding_capabilities(
         &self,

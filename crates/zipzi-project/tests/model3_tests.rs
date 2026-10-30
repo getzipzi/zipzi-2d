@@ -1,4 +1,5 @@
 use serde_json::Value;
+use zipzi_core::document::AllocateModelMetadata;
 use zipzi_project::DocumentSession;
 
 #[test]
@@ -146,7 +147,7 @@ fn model3_groups_layout_and_hit_areas_survive_project_and_package() {
         .clone();
     let mut settings = session.document().model3_settings().clone();
     settings.hit_areas = Some(vec![zipzi_core::document::ModelHitArea {
-        id: zipzi_core::document::ModelHitArea::default().id,
+        id: zipzi_core::document::ModelHitArea::allocate().id,
         name: "".into(),
         mesh: zipzi_core::document::ModelTargetRef::Resolved {
             object_id: session.document().mesh_order()[0].clone(),

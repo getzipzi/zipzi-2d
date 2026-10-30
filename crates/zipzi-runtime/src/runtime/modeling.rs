@@ -184,10 +184,7 @@ impl Runtime {
             return Err(RuntimeError::Budget("plan bytes"));
         }
         self.check_bytes(bytes, 0, 0)?;
-        let id = PlanId {
-            runtime: self.instance,
-            serial: self.serial(),
-        };
+        let id = PlanId::from_parts(self.instance, self.serial());
         let identity = source.source;
         self.plans.insert(
             id,

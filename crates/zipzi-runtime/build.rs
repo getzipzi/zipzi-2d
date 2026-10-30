@@ -34,6 +34,7 @@ fn main() {
         "zipzi-render-wgpu",
         "zipzi-sdk",
         "zipzi-api-derive",
+        "zipzi-contract",
         "zipzi-core",
         "zipzi-project",
         "zipzi-animation",

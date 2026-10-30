@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use zipzi_core::DrawableFrameBounds;
 
 use zipzi_core::{draw_order::DrawOrderGroup, Canvas, Vec2};
 use zipzi_sdk::{

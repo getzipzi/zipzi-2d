@@ -1,5 +1,7 @@
 use serde_json::Value;
-use zipzi_core::document::{CdiCombinedSet, CdiParameterGroup, CdiParameterRef};
+use zipzi_core::document::{
+    CdiCombinedSet, CdiParameterGroup, CdiParameterRef, ReferenceEntry, ReferenceEntryAllocation,
+};
 use zipzi_core::{Canvas, Parameter, Vec2};
 use zipzi_sdk::{AuthoringSession, ObjectKind};
 
@@ -47,14 +49,12 @@ fn generated_cdi_group_edit_keeps_other_parameters_and_future_parameters() {
             edit.set_combined_parameters(CdiCombinedSet {
                 id: SET.into(),
                 members: vec![
-                    CdiParameterRef::Resolved {
+                    ReferenceEntry::new(CdiParameterRef::Resolved {
                         parameter_id: FIRST.into(),
-                    }
-                    .into(),
-                    CdiParameterRef::Resolved {
+                    }),
+                    ReferenceEntry::new(CdiParameterRef::Resolved {
                         parameter_id: SECOND.into(),
-                    }
-                    .into(),
+                    }),
                 ],
             })
         })

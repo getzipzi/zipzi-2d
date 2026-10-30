@@ -20,18 +20,7 @@ pub enum AuthoringCollection {
     Resources,
     Attachments,
 }
-#[derive(Clone, Debug, PartialEq, Eq, zipzi_api_derive::ApiShape, serde::Serialize)]
-pub struct CollectionCapabilities {
-    /// Current capability to create objects in this collection; inspect its state/reason before
-    /// invoking the operation.
-    pub create: CapabilityState,
-    /// Current capability to move existing objects into this collection; inspect its
-    /// state/reason before invoking the operation.
-    pub move_into: CapabilityState,
-    /// Current capability to change its collection order; inspect its state/reason before
-    /// invoking the operation.
-    pub reorder: CapabilityState,
-}
+pub use zipzi_contract::authoring::CollectionCapabilities;
 impl AuthoringSession {
     pub fn authoring_collection_capabilities(
         &self,

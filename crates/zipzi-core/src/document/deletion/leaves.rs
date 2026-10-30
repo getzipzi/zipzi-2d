@@ -1,6 +1,7 @@
 //! Native content edits on retained owners. These run only in the private
 //! candidate; native converters retain sample/key interpolation semantics.
 use super::*;
+use zipzi_core::document::MotionTrackEditing;
 impl Document {
     pub(super) fn install_leaf_deletion(
         &self,

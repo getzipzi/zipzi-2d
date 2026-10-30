@@ -1,5 +1,6 @@
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
+use zipzi_core::SceneTrackEvaluation;
 use zipzi_core::*;
 
 struct CountingAllocator;

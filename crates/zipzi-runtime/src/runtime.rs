@@ -1,3 +1,4 @@
+use crate::types::RuntimeErrorBytes;
 mod editor;
 pub use editor::CandidateWork;
 mod authoring;
@@ -23,7 +24,7 @@ pub(crate) mod previews;
 mod sampling;
 mod spatial;
 mod typed;
-use crate::events::EventLog;
+use crate::events::{EventLog, RuntimeEventBytes};
 use crate::jobs::{Task, WorkOutcome};
 use crate::*;
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -122,7 +123,7 @@ impl Default for Runtime {
 }
 impl Runtime {
     pub fn new(limits: RuntimeLimits) -> Self {
-        let instance = RuntimeInstanceId(uuid::Uuid::new_v4());
+        let instance = RuntimeInstanceId::from_uuid(uuid::Uuid::new_v4());
         let registry = EventLog::new(
             instance,
             None,
@@ -239,10 +240,7 @@ impl Runtime {
             return Err(RuntimeError::Budget("clients"));
         }
         self.check_bytes(512, 0, 0)?;
-        let id = ClientId {
-            runtime: self.instance,
-            serial: self.serial(),
-        };
+        let id = ClientId::from_parts(self.instance, self.serial());
         self.clients.insert(id);
         Ok(id)
     }
@@ -427,10 +425,7 @@ impl Runtime {
             return Err(RuntimeError::Budget("history"));
         }
         sdk.set_image_memory_budget(self.image_budget.clone())?;
-        let id = SessionId {
-            runtime: self.instance,
-            serial: self.serial(),
-        };
+        let id = SessionId::from_parts(self.instance, self.serial());
         let info = SessionInfo {
             id,
             state: SessionState::Ready,
@@ -466,10 +461,7 @@ impl Runtime {
             self.registry.push(
                 Some(client),
                 None,
-                OperationId {
-                    runtime: id.runtime,
-                    serial: id.serial,
-                },
+                OperationId::from_parts(id.runtime_instance(), id.serial()),
                 EventKind::Created(info),
             );
         }
@@ -585,10 +577,7 @@ impl Runtime {
         let sdk = self.ready(session)?.begin_owned_edit(label, expected)?;
         let bytes = sdk.estimated_bytes();
         self.check_bytes(bytes, bytes, 0)?;
-        let id = EditId {
-            runtime: self.instance,
-            serial: self.serial(),
-        };
+        let id = EditId::from_parts(self.instance, self.serial());
         self.edits.insert(
             id,
             EditEntry {
@@ -764,10 +753,7 @@ impl Runtime {
         self.client(client)?;
         self.ready(session)?;
         self.check_interaction(client, session)?;
-        let operation = OperationId {
-            runtime: self.instance,
-            serial: self.serial(),
-        };
+        let operation = OperationId::from_parts(self.instance, self.serial());
         let result = self.entry_mut(session)?.sdk.as_mut().unwrap().undo();
         self.refresh(session, Some(client), None, operation)?;
         Ok(result?)
@@ -776,10 +762,7 @@ impl Runtime {
         self.client(client)?;
         self.ready(session)?;
         self.check_interaction(client, session)?;
-        let operation = OperationId {
-            runtime: self.instance,
-            serial: self.serial(),
-        };
+        let operation = OperationId::from_parts(self.instance, self.serial());
         let result = self.entry_mut(session)?.sdk.as_mut().unwrap().redo();
         self.refresh(session, Some(client), None, operation)?;
         Ok(result?)
@@ -852,10 +835,7 @@ impl Runtime {
                 record.info.state = JobState::Cancelling;
             }
         }
-        let operation = OperationId {
-            runtime: self.instance,
-            serial: self.serial(),
-        };
+        let operation = OperationId::from_parts(self.instance, self.serial());
         let entry = self.entry_mut(session)?;
         entry.info.state = SessionState::Closing;
         entry.events.push(
@@ -1052,10 +1032,7 @@ impl Runtime {
             freeze_bytes,
         )?;
         let frozen = Arc::new(self.ready(session)?.read_snapshot());
-        let job = JobId {
-            runtime: self.instance,
-            serial: self.serial(),
-        };
+        let job = JobId::from_parts(self.instance, self.serial());
         let cancel = Arc::new(AtomicBool::new(false));
         let base = self.ready(session)?.version();
         self.jobs.insert(
@@ -1292,7 +1269,7 @@ impl Runtime {
         let Some(entry) = self.sessions.get(&session) else {
             return false;
         };
-        if job.runtime != self.instance
+        if job.runtime_instance() != self.instance
             || record.info.client != client
             || record.info.session != session
             || record.base != base
@@ -1554,10 +1531,7 @@ mod tests {
             transfer: None,
             outcome: WorkOutcome::Complete(Err(RuntimeError::WorkerPanic("injected".into()))),
         };
-        let wrong = SessionId {
-            runtime: runtime.instance_id(),
-            serial: u64::MAX,
-        };
+        let wrong = SessionId::from_parts(runtime.instance_id(), u64::MAX);
         assert!(!runtime.complete(completion(wrong, None)));
         assert_eq!(
             runtime.session_info(s).unwrap().state,

@@ -1,5 +1,6 @@
 use super::super::support::present_canvas as shown;
 use super::common::*;
+use zipzi_core::BindingAxisEditing;
 use zipzi_editor_core::*;
 
 #[test]

@@ -1,4 +1,5 @@
 use zipzi_core::types::{Status, TransformKind};
+use zipzi_core::SceneTrackEvaluation;
 
 use crate::layout::checked;
 use crate::schema::section;

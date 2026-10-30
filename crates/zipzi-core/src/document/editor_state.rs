@@ -1,45 +1,8 @@
 //! Persistent authoring preferences. Never read by runtime evaluation or export.
 use super::*;
-use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub struct ObjectEditorState {
-    #[serde(default, skip_serializing_if = "is_false")]
-    /// Editor-only hiding flag; does not replace the model enabled/visibility state.
-    pub hidden_in_editor: bool,
-    #[serde(default, skip_serializing_if = "is_false")]
-    /// Authoring lock state; native edit admission and capabilities enforce the lock.
-    pub locked: bool,
-}
-fn is_false(value: &bool) -> bool {
-    !value
-}
+pub use zipzi_contract::document::{EditorState, ObjectEditorState};
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub struct EditorState {
-    /// Explicit flags only, keyed by globally unique object ID. Defaults are omitted.
-    #[serde(default)]
-    pub objects: BTreeMap<String, ObjectEditorState>,
-}
-impl EditorState {
-    pub fn hidden_objects(&self) -> impl Iterator<Item = &str> {
-        self.objects
-            .iter()
-            .filter(|(_, state)| state.hidden_in_editor)
-            .map(|(id, _)| id.as_str())
-    }
-    pub fn is_empty(&self) -> bool {
-        self.objects.is_empty()
-    }
-    pub fn get(&self, id: &str) -> ObjectEditorState {
-        self.objects.get(id).copied().unwrap_or_default()
-    }
-}
 impl Document {
     pub fn editor_state(&self) -> &EditorState {
         &self.content.editor_state

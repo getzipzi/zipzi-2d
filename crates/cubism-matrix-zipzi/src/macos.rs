@@ -6,6 +6,7 @@ use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Instant;
+use zipzi_core::DrawableFrameBounds;
 
 use serde::Deserialize;
 use serde_json::json;

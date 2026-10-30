@@ -621,9 +621,10 @@ impl AuthoringSession {
             kind: zipzi_core::ChangeKind::Structure,
             object_ids: vec![self.document_id().into()],
             changed: true,
-            changes: crate::ChangeSet {
-                full_invalidation: true,
-                ..Default::default()
+            changes: {
+                let mut changes = crate::ChangeSet::default();
+                changes.full_invalidation = true;
+                changes
             },
         });
     }

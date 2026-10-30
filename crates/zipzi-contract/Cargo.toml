@@ -1,0 +1,19 @@
+[package]
+name = "zipzi-contract"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Shared data and metadata for Zipzi authoring contracts"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+thiserror.workspace = true
+
+zipzi-api-derive = { version = "=0.1.0-alpha.3", path = "../zipzi-api-derive" }
+
+[[bin]]
+name = "authoring-schema"
+path = "src/bin/authoring_schema.rs"

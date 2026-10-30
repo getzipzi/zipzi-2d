@@ -1,3 +1,5 @@
+use zipzi_core::BindingAxisEditing;
+use zipzi_core::WarpBezierEvaluation;
 use zipzi_core::{document::*, *};
 use zipzi_sdk::{
     AuthoringSession, ObjectKind, SceneContentEdit as E, SceneContentTarget as T,

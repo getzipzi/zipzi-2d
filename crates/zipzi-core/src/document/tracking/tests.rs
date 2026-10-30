@@ -1,5 +1,6 @@
 use super::*;
 use crate::{preview::PreviewState, Appearance, ModelSetup, Parameter, Vec2};
+use zipzi_core::BindingAxisEditing;
 
 fn id(n: u32) -> String {
     format!("00000000-0000-4000-8000-{n:012x}")

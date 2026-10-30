@@ -1,3 +1,4 @@
+use zipzi_core::BindingAxisEditing;
 use zipzi_core::{document::*, *};
 use zipzi_sdk::{
     AuthoringSession, CapabilityState, ChangeCategory, ObjectKind, SceneCollection as C,

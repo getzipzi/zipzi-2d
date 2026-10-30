@@ -74,7 +74,7 @@ Editor and a script or agent can continue from their changes. Saving is separate
 host; see the [usage guide](https://github.com/getzipzi/zipzi-2d/blob/main/crates/zipzi-python2/client/python/zipzi/docs/guide.md).
 
 Connected Python and Editor versions may differ when they share the stable wire
-protocol major (`zipzi-runtime-v1`). Compatible API additions and optional host
+protocol major (`zipzi-runtime-v2`). Compatible API additions and optional host
 services do not require a new handshake version. Earlier `rN` protocols need a
 coordinated upgrade to this baseline. See the
 [compatibility rules](../zipzi-runtime/README.md#local-protocol).

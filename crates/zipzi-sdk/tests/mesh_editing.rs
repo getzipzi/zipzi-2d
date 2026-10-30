@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use zipzi_core::{Canvas, Vec2};
 use zipzi_sdk::{
-    prepare_png_asset, rectangle_mesh, AuthoringSession, MeshProperties, TopologyReplacement,
+    prepare_png_asset, rectangle_mesh, AuthoringSession, MeshOperationApply, MeshProperties,
+    TopologyReplacement,
 };
 
 const DOCUMENT_ID: &str = "00000000-0000-4000-8000-000000000101";

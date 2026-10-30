@@ -1,5 +1,6 @@
 use super::*;
 use crate::{BlendShapeTargetKind, DeltaKeyforms, SceneTrack, WarpTransform};
+use zipzi_core::WarpBezierEvaluation;
 impl Document {
     pub(super) fn plan_warp_content(
         &self,

@@ -1,12 +1,7 @@
 use super::*;
 use std::collections::{BTreeMap, HashSet};
+pub use zipzi_contract::changes::OrganizationReferenceChange;
 use zipzi_core::document::OrganizationCollection;
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct OrganizationReferenceChange {
-    pub entity: EntityRef,
-    pub before: Option<String>,
-    pub after: Option<String>,
-}
 fn collections(d: &Document) -> BTreeMap<(u8, Option<String>), Vec<String>> {
     let mut out: BTreeMap<_, Vec<String>> = BTreeMap::new();
     for g in d.display_info().parameter_groups.iter().flatten() {

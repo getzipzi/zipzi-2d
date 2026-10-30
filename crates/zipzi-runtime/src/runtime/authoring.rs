@@ -1,5 +1,8 @@
 use super::*;
 use crate::authoring::{EditOperation, MeshSnapshot, PlanIntent, PlanSnapshot, WriteResult};
+use crate::modeling::ModelingCommandApply;
+use zipzi_sdk::{MeshBindingOperationApply, MeshOperationApply, ParameterOperationApply};
+use zipzi_sdk::{SceneOperationApply, SceneSummaryRead};
 
 enum ReadyOperation {
     ManualMesh(zipzi_sdk::ManualMeshPlan),

@@ -1,19 +1,8 @@
 use super::*;
 use std::collections::BTreeMap;
-use zipzi_core::document::{PhysicsAsset, PhysicsTarget};
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum PhysicsReferenceValue {
-    Parameter { target: PhysicsTarget },
-    Node { id: String },
-}
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct PhysicsReferenceChange {
-    pub entity: EntityRef,
-    pub field: String,
-    pub before: Option<PhysicsReferenceValue>,
-    pub after: Option<PhysicsReferenceValue>,
-}
+pub use zipzi_contract::changes::PhysicsReferenceChange;
+pub use zipzi_contract::changes::PhysicsReferenceValue;
+use zipzi_core::document::PhysicsAsset;
 fn references(asset: Option<&PhysicsAsset>) -> BTreeMap<(String, String), PhysicsReferenceValue> {
     let mut out = BTreeMap::new();
     if let Some(a) = asset {

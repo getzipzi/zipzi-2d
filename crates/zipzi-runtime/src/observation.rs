@@ -1,38 +1,18 @@
 //! Finite transport projections; all evaluation, view mapping and rendering are SDK-owned.
-use serde::{Deserialize, Serialize};
-use zipzi_core::PreviewValues;
+use serde::Serialize;
 #[cfg(feature = "gpu-observation")]
 use zipzi_observe::{Observer, ObserverConfig, ResolvedObservation};
+use zipzi_sdk::TopologyOverlayValidation;
 
-#[derive(
-    Debug, Clone, Serialize, Deserialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire,
-)]
-#[serde(deny_unknown_fields)]
-pub struct ObservationView {
-    /// Output width in pixels, 1..4096, subject to device and Runtime budgets.
-    pub width: u32,
-    /// Output height in pixels, 1..4096, subject to device and Runtime budgets.
-    pub height: u32,
-    /// Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.
-    pub roi: [f32; 4],
-    /// Nonnegative padding around the ROI in model units; aspect ratio is preserved.
-    #[serde(default)]
-    pub padding_model: f32,
-    /// Optional topology overlay in the same frozen Source and ROI mapping. It ignores
-    /// masks and occlusion; None preserves the ordinary GPU image.
-    #[serde(default)]
-    pub topology: Option<zipzi_sdk::TopologyOverlay>,
-    /// Include per-mesh evaluated quality and approximate source-alpha coverage.
-    /// Uses default parameters of the same source as reference; checks requested frames only.
-    #[serde(default)]
-    pub quality: bool,
-}
-impl ObservationView {
-    pub fn needs_quality(&self) -> bool {
-        self.quality || self.topology.as_ref().is_some_and(|o| o.needs_quality())
-    }
+pub use zipzi_contract::runtime::ObservationView;
+pub(crate) trait ObservationViewRuntime {
     #[cfg(feature = "gpu-observation")]
-    pub fn request(&self) -> zipzi_observe::RenderRequest {
+    fn request(&self) -> zipzi_observe::RenderRequest;
+    fn validate(&self) -> crate::Result<()>;
+}
+impl ObservationViewRuntime for ObservationView {
+    #[cfg(feature = "gpu-observation")]
+    fn request(&self) -> zipzi_observe::RenderRequest {
         let [x0, y0, x1, y1] = self.roi;
         zipzi_observe::RenderRequest {
             width: self.width,
@@ -43,7 +23,7 @@ impl ObservationView {
             quality: self.quality,
         }
     }
-    pub fn validate(&self) -> crate::Result<()> {
+    fn validate(&self) -> crate::Result<()> {
         if let Some(overlay) = &self.topology {
             overlay.validate()?;
         }
@@ -57,74 +37,10 @@ impl ObservationView {
     }
 }
 
-#[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
-pub struct ObservedTexture {
-    /// Stable asset UUID resolved from the frozen authoring source.
-    pub asset_id: String,
-    /// SHA256 of the exact immutable texture content uploaded by this capture.
-    pub sha256: String,
-}
-#[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
-pub struct ObservedBounds {
-    /// Stable authoring drawable UUID.
-    pub id: String,
-    /// Evaluated visibility; geometric bounds do not prove unoccluded painted pixels.
-    pub visible: bool,
-    /// Clipped image bounds [min_x,min_y,max_x,max_y], exclusive maximum; None if empty.
-    pub bounds: Option<[u32; 4]>,
-}
-#[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
-pub struct ObservationImage {
-    /// Output image width in pixels.
-    pub width: u32,
-    /// Output image height in pixels.
-    pub height: u32,
-    /// Raw renderer RGBA8, row-major, top-left image origin. Renderer alpha convention is preserved.
-    pub rgba: Vec<u8>,
-    /// PNG encoding of exactly the returned RGBA8; encoded by Rust, never by Python.
-    pub png: Vec<u8>,
-    /// Captured authoring document UUID.
-    pub document_id: String,
-    /// Captured geometry evaluation revision, distinct from the outer formal/candidate Source.
-    pub evaluation_revision: u64,
-    /// Shared acquisition UUID for this batch's once-resolved immutable texture set.
-    pub capture_id: String,
-    /// Digest of captured evaluated geometry, authoring records and resolved texture content.
-    pub scene_digest: String,
-    /// Digest of the exact source scene and explicit rendering settings.
-    pub render_digest: String,
-    /// Renderer hash of evaluated input, texture content and output view.
-    pub input_sha256: String,
-    /// Actual GPU adapter name, obtained only when a render executes.
-    pub adapter_name: String,
-    /// Actual renderer backend, Metal on macOS or the selected WGPU backend elsewhere.
-    pub adapter_backend: String,
-    /// Effective evaluated parameters keyed by stable document UUID.
-    pub parameters: PreviewValues,
-    /// Actual viewport model extent [min_x,min_y,max_x,max_y], including aspect-ratio expansion.
-    pub visible_roi: [f32; 4],
-    /// Model-to-image scale. Image X=x*scale+offset[0], Y=-y*scale+offset[1].
-    pub scale: f32,
-    /// Translation in top-left image pixels, parallel to the documented scale formula.
-    pub offset: [f32; 2],
-    /// Source texture identities and exact content hashes shared across this batch.
-    pub textures: Vec<ObservedTexture>,
-    /// Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.
-    pub drawable_bounds: Vec<ObservedBounds>,
-    /// Mesh quality in evaluated drawable order when View.quality is true; empty otherwise.
-    /// Texture coverage uses alpha >= 8, pixel centers, at most a 256x256 grid, ignoring masks,
-    /// filtering and UV repeat outside [0,1]. A step above 1 denotes approximate coverage.
-    pub quality: Vec<zipzi_sdk::MeshQuality>,
-}
-#[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
-pub struct ObservationBatch {
-    /// Owned explicit view shared by these ordered frames.
-    pub view: ObservationView,
-    /// Owned requested parameter maps in input order, including duplicates.
-    pub requested: Vec<PreviewValues>,
-    /// Rendered frames in requested pose order, sharing one resolved texture acquisition.
-    pub frames: Vec<ObservationImage>,
-}
+pub use zipzi_contract::runtime::{ObservationImage, ObservedBounds, ObservedTexture};
+
+pub use zipzi_contract::runtime::ObservationBatch;
+
 #[derive(Debug, Clone, Serialize)]
 pub struct ObservationSampleBatch {
     pub source: crate::SourceRef,

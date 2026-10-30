@@ -48,19 +48,21 @@ distribution=importlib.util.module_from_spec(SPEC);SPEC.loader.exec_module(distr
 from _support import publish_executable
 
 class Distribution(unittest.TestCase):
-    def test_source_examples_share_feature_resolution_and_publish_archived_executables(self):
+    def test_source_examples_build_separate_exporter_and_archived_host(self):
         with tempfile.TemporaryDirectory(prefix='source examples 中文 ') as folder:
             root = Path(folder)
             source = root / 'source'
             output = root / 'output'
             output.mkdir()
             files = {
-                'Cargo.toml': '[workspace]\nmembers=["python","runtime"]\nresolver="3"\n',
+                'Cargo.toml': '[workspace]\nmembers=["python","runtime","contract"]\nresolver="3"\n',
                 'runtime/Cargo.toml': '[package]\nname="zipzi-runtime"\nversion="0.0.0"\nedition="2021"\n[features]\ngpu-observation=[]\n',
                 'runtime/src/lib.rs': '#[cfg(feature="gpu-observation")] pub fn answer() -> u32 { 42 }',
                 'runtime/examples/local_host_fixture.rs': 'fn main() { println!("{}", zipzi_runtime::answer()); }',
                 'python/Cargo.toml': '[package]\nname="zipzi-python2"\nversion="0.0.0"\nedition="2021"\n[dependencies]\nzipzi-runtime={path="../runtime"}\n',
-                'python/examples/authoring_schema.rs': 'fn main() { println!("{{\\"release\\":{},\\"value\\":{}}}", !cfg!(debug_assertions), zipzi_runtime::answer()); }',
+                'python/src/lib.rs': '',
+                'contract/Cargo.toml': '[package]\nname="zipzi-contract"\nversion="0.0.0"\nedition="2021"\n',
+                'contract/src/bin/authoring-schema.rs': 'fn main() { println!("{{\\"release\\":true,\\"value\\":42}}"); }',
             }
             for name, text in files.items():
                 path = source / name

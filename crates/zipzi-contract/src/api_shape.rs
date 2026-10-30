@@ -362,3 +362,50 @@ impl ApiShape for &str {
         Shape::String
     }
 }
+
+#[cfg(test)]
+mod default_shape_tests {
+    use super::{ApiShape, Shape};
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Serialize, Deserialize, zipzi_api_derive::ApiShape)]
+    #[serde(default)]
+    struct CustomDefaults {
+        value: u32,
+        optional: Option<u32>,
+        #[serde(default)]
+        field_override: u32,
+    }
+    impl Default for CustomDefaults {
+        fn default() -> Self {
+            Self {
+                value: 7,
+                optional: Some(3),
+                field_override: 9,
+            }
+        }
+    }
+
+    #[derive(Serialize, Deserialize, zipzi_api_derive::ApiShape)]
+    #[serde(default = "custom_defaults")]
+    struct FunctionDefaults {
+        value: u32,
+    }
+    fn custom_defaults() -> FunctionDefaults {
+        FunctionDefaults { value: 12 }
+    }
+
+    #[test]
+    fn struct_defaults_and_field_overrides_match_serde() {
+        let Shape::SerdeRecord { fields, .. } = CustomDefaults::api_shape() else {
+            panic!("record")
+        };
+        assert_eq!(fields[0].default, Some(serde_json::json!(7)));
+        assert_eq!(fields[1].default, Some(serde_json::json!(3)));
+        assert_eq!(fields[2].default, Some(serde_json::json!(0)));
+        let Shape::SerdeRecord { fields, .. } = FunctionDefaults::api_shape() else {
+            panic!("record")
+        };
+        assert_eq!(fields[0].default, Some(serde_json::json!(12)));
+    }
+}

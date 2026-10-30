@@ -2,6 +2,7 @@ use super::*;
 use crate::geometry::validate_positions;
 use crate::types::{ChangeKind, EditResult, Status, Transform};
 use std::collections::{HashMap, HashSet};
+use zipzi_core::SceneTrackEvaluation;
 
 impl Document {
     pub fn transform_order(&self) -> &[String] {

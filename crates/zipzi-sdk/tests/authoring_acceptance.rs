@@ -1,4 +1,5 @@
 //! Cross-domain publication and persistence contracts for the Editor handoff.
+use zipzi_core::BindingAxisEditing;
 use zipzi_core::{document::*, Canvas, Mesh, Parameter, Part, Vec2};
 use zipzi_sdk::{AuthoringSession, BindingAuthoringEdit, ChangeSet, EditSession, ObjectKind};
 

@@ -123,10 +123,12 @@ impl ReadBatch {
                     _ => "closed",
                 };
                 JobValue::Sampled(Arc::new(crate::authoring::ModelingSampleBatch {
-                    source: source.source,
                     lease: None,
-                    state,
-                    samples,
+                    data: zipzi_contract::runtime::ModelingSampleData {
+                        source: source.source,
+                        state,
+                        samples,
+                    },
                 }))
             }
             BatchKind::Spatial(sampler) => {

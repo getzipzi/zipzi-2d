@@ -6,6 +6,8 @@ use super::{
 };
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, HashMap, HashSet};
+use zipzi_core::document::PhysicsAssetImport;
+use zipzi_core::document::ReferenceEntryAllocation;
 use zipzi_core::{
     document::{
         CdiParameterEntry, CdiParameterGroup, CdiPartEntry, DisplayInfo, DisplayInfoOrigin,

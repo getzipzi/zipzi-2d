@@ -20,7 +20,7 @@ Query `runtime.capabilities()` and `runtime.limits()` before selecting work. The
 describe current availability without reserving admission. Local has no Editor
 windows. `runtime.connection` caches handshake information.
 
-Connected compatibility uses the stable wire major `zipzi-runtime-v1`, separately
+Connected compatibility uses the stable wire major `zipzi-runtime-v2`, separately
 from package versions and source build hashes. Compatible API additions and
 different optional capabilities do not prevent connection. Check
 `runtime.connection.capabilities` before choosing optional services; unsupported

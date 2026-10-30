@@ -1,5 +1,6 @@
 use tempfile::TempDir;
 use uuid::Uuid;
+use zipzi_core::BindingAxisEditing;
 use zipzi_core::{Canvas, Mesh, Vec2};
 use zipzi_editor_core::{CanvasFrame, Document, Editor, ObjectKind, ObjectRef};
 use zipzi_sdk::{AuthoringSession, prepare_png_asset};

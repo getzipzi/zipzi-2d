@@ -1,5 +1,6 @@
 //! Frozen CPU work never moves the formal AuthoringSession out of the owner.
 use super::*;
+use crate::types::RuntimeErrorBytes;
 use crate::{
     authoring::{ModelingSampleQuery, PlanSnapshot},
     jobs::{ReadTask, Task},

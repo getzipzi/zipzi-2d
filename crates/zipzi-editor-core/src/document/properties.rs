@@ -985,6 +985,8 @@ mod tests {
     use super::*;
     use crate::{NewParameter, PropertyValue};
     use std::sync::atomic::Ordering;
+    use zipzi_core::BindingAxisEditing;
+    use zipzi_core::document::PhysicsAssetEditing;
 
     #[test]
     fn physics_field_candidates_reuse_indexes_and_keep_scalar_preview_snapshots_independent()

@@ -1,4 +1,6 @@
 use super::*;
+use zipzi_core::BindingAxisEditing;
+use zipzi_core::SceneTrackEvaluation;
 
 #[test]
 fn pending_axis_activation_reads_current_rotation_base_and_keeps_identity() {

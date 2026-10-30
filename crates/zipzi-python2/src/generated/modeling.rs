@@ -4,193 +4,165 @@ use crate::extension_bridge::{read_extension, write_extension};
 use crate::*;
 use pyo3::BoundObject;
 
-pub fn read_modelingcommand(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_runtime::modeling::ModelingCommand> {
+pub fn read_modelingcommand(value: &Bound<'_, PyAny>) -> PyResult<zipzi_runtime::ModelingCommand> {
     match value.getattr("_variant")?.extract::<String>()?.as_str() {
-        "create_asset" => Ok(zipzi_runtime::modeling::ModelingCommand::CreateAsset {
+        "create_asset" => Ok(zipzi_runtime::ModelingCommand::CreateAsset {
             asset: read_imageasset(&value.getattr("asset")?)?,
         }),
-        "replace_asset" => Ok(zipzi_runtime::modeling::ModelingCommand::ReplaceAsset {
+        "replace_asset" => Ok(zipzi_runtime::ModelingCommand::ReplaceAsset {
             asset: read_imageasset(&value.getattr("asset")?)?,
         }),
-        "create_mesh" => Ok(zipzi_runtime::modeling::ModelingCommand::CreateMesh {
+        "create_mesh" => Ok(zipzi_runtime::ModelingCommand::CreateMesh {
             mesh: read_mesh(&value.getattr("mesh")?)?,
         }),
-        "replace_mesh" => Ok(zipzi_runtime::modeling::ModelingCommand::ReplaceMesh {
+        "replace_mesh" => Ok(zipzi_runtime::ModelingCommand::ReplaceMesh {
             mesh: read_mesh(&value.getattr("mesh")?)?,
         }),
-        "create_parameter" => Ok(zipzi_runtime::modeling::ModelingCommand::CreateParameter {
+        "create_parameter" => Ok(zipzi_runtime::ModelingCommand::CreateParameter {
             parameter: read_parameter(&value.getattr("parameter")?)?,
         }),
-        "replace_parameter" => Ok(zipzi_runtime::modeling::ModelingCommand::ReplaceParameter {
+        "replace_parameter" => Ok(zipzi_runtime::ModelingCommand::ReplaceParameter {
             parameter: read_parameter(&value.getattr("parameter")?)?,
         }),
-        "create_part" => Ok(zipzi_runtime::modeling::ModelingCommand::CreatePart {
+        "create_part" => Ok(zipzi_runtime::ModelingCommand::CreatePart {
             part: read_part(&value.getattr("part")?)?,
         }),
-        "replace_part" => Ok(zipzi_runtime::modeling::ModelingCommand::ReplacePart {
+        "replace_part" => Ok(zipzi_runtime::ModelingCommand::ReplacePart {
             part: read_part(&value.getattr("part")?)?,
         }),
-        "create_transform" => Ok(zipzi_runtime::modeling::ModelingCommand::CreateTransform {
+        "create_transform" => Ok(zipzi_runtime::ModelingCommand::CreateTransform {
             transform: read_transform(&value.getattr("transform")?)?,
         }),
-        "replace_transform" => Ok(zipzi_runtime::modeling::ModelingCommand::ReplaceTransform {
+        "replace_transform" => Ok(zipzi_runtime::ModelingCommand::ReplaceTransform {
             transform: read_transform(&value.getattr("transform")?)?,
         }),
-        "create_binding" => Ok(zipzi_runtime::modeling::ModelingCommand::CreateBinding {
+        "create_binding" => Ok(zipzi_runtime::ModelingCommand::CreateBinding {
             binding: read_meshbinding(&value.getattr("binding")?)?,
         }),
-        "replace_binding" => Ok(zipzi_runtime::modeling::ModelingCommand::ReplaceBinding {
+        "replace_binding" => Ok(zipzi_runtime::ModelingCommand::ReplaceBinding {
             binding: read_meshbinding(&value.getattr("binding")?)?,
         }),
-        "create_scene_binding" => Ok(
-            zipzi_runtime::modeling::ModelingCommand::CreateSceneBinding {
-                binding: read_scenebinding(&value.getattr("binding")?)?,
-            },
-        ),
-        "replace_scene_binding" => Ok(
-            zipzi_runtime::modeling::ModelingCommand::ReplaceSceneBinding {
-                binding: read_scenebinding(&value.getattr("binding")?)?,
-            },
-        ),
-        "create_blend_key_table" => Ok(
-            zipzi_runtime::modeling::ModelingCommand::CreateBlendKeyTable {
-                table: read_blendshapekeytable(&value.getattr("table")?)?,
-            },
-        ),
-        "replace_blend_key_table" => Ok(
-            zipzi_runtime::modeling::ModelingCommand::ReplaceBlendKeyTable {
-                table: read_blendshapekeytable(&value.getattr("table")?)?,
-            },
-        ),
-        "create_blend_constraint" => Ok(
-            zipzi_runtime::modeling::ModelingCommand::CreateBlendConstraint {
-                constraint: read_blendshapeconstraint(&value.getattr("constraint")?)?,
-            },
-        ),
-        "replace_blend_constraint" => Ok(
-            zipzi_runtime::modeling::ModelingCommand::ReplaceBlendConstraint {
-                constraint: read_blendshapeconstraint(&value.getattr("constraint")?)?,
-            },
-        ),
-        "create_blend_binding" => Ok(
-            zipzi_runtime::modeling::ModelingCommand::CreateBlendBinding {
-                binding: read_blendshapebinding(&value.getattr("binding")?)?,
-            },
-        ),
-        "replace_blend_binding" => Ok(
-            zipzi_runtime::modeling::ModelingCommand::ReplaceBlendBinding {
-                binding: read_blendshapebinding(&value.getattr("binding")?)?,
-            },
-        ),
-        "create_glue" => Ok(zipzi_runtime::modeling::ModelingCommand::CreateGlue {
+        "create_scene_binding" => Ok(zipzi_runtime::ModelingCommand::CreateSceneBinding {
+            binding: read_scenebinding(&value.getattr("binding")?)?,
+        }),
+        "replace_scene_binding" => Ok(zipzi_runtime::ModelingCommand::ReplaceSceneBinding {
+            binding: read_scenebinding(&value.getattr("binding")?)?,
+        }),
+        "create_blend_key_table" => Ok(zipzi_runtime::ModelingCommand::CreateBlendKeyTable {
+            table: read_blendshapekeytable(&value.getattr("table")?)?,
+        }),
+        "replace_blend_key_table" => Ok(zipzi_runtime::ModelingCommand::ReplaceBlendKeyTable {
+            table: read_blendshapekeytable(&value.getattr("table")?)?,
+        }),
+        "create_blend_constraint" => Ok(zipzi_runtime::ModelingCommand::CreateBlendConstraint {
+            constraint: read_blendshapeconstraint(&value.getattr("constraint")?)?,
+        }),
+        "replace_blend_constraint" => Ok(zipzi_runtime::ModelingCommand::ReplaceBlendConstraint {
+            constraint: read_blendshapeconstraint(&value.getattr("constraint")?)?,
+        }),
+        "create_blend_binding" => Ok(zipzi_runtime::ModelingCommand::CreateBlendBinding {
+            binding: read_blendshapebinding(&value.getattr("binding")?)?,
+        }),
+        "replace_blend_binding" => Ok(zipzi_runtime::ModelingCommand::ReplaceBlendBinding {
+            binding: read_blendshapebinding(&value.getattr("binding")?)?,
+        }),
+        "create_glue" => Ok(zipzi_runtime::ModelingCommand::CreateGlue {
             glue: read_glue(&value.getattr("glue")?)?,
         }),
-        "replace_glue" => Ok(zipzi_runtime::modeling::ModelingCommand::ReplaceGlue {
+        "replace_glue" => Ok(zipzi_runtime::ModelingCommand::ReplaceGlue {
             glue: read_glue(&value.getattr("glue")?)?,
         }),
-        "create_offscreen" => Ok(zipzi_runtime::modeling::ModelingCommand::CreateOffscreen {
+        "create_offscreen" => Ok(zipzi_runtime::ModelingCommand::CreateOffscreen {
             offscreen: read_offscreen(&value.getattr("offscreen")?)?,
         }),
-        "replace_offscreen" => Ok(zipzi_runtime::modeling::ModelingCommand::ReplaceOffscreen {
+        "replace_offscreen" => Ok(zipzi_runtime::ModelingCommand::ReplaceOffscreen {
             offscreen: read_offscreen(&value.getattr("offscreen")?)?,
         }),
-        "deletion" => Ok(zipzi_runtime::modeling::ModelingCommand::Deletion {
+        "deletion" => Ok(zipzi_runtime::ModelingCommand::Deletion {
             intent: read_deletionintent(&value.getattr("intent")?)?,
         }),
-        "scene" => Ok(zipzi_runtime::modeling::ModelingCommand::Scene {
+        "scene" => Ok(zipzi_runtime::ModelingCommand::Scene {
             intent: read_sceneedit(&value.getattr("intent")?)?,
         }),
-        "organization" => Ok(zipzi_runtime::modeling::ModelingCommand::Organization {
+        "organization" => Ok(zipzi_runtime::ModelingCommand::Organization {
             intent: read_organizationedit(&value.getattr("intent")?)?,
         }),
-        "binding" => Ok(zipzi_runtime::modeling::ModelingCommand::Binding {
+        "binding" => Ok(zipzi_runtime::ModelingCommand::Binding {
             intent: read_bindingauthoringedit(&value.getattr("intent")?)?,
         }),
-        "content" => Ok(zipzi_runtime::modeling::ModelingCommand::Content {
+        "content" => Ok(zipzi_runtime::ModelingCommand::Content {
             intent: read_scenecontentedit(&value.getattr("intent")?)?,
         }),
-        "references" => Ok(zipzi_runtime::modeling::ModelingCommand::References {
+        "references" => Ok(zipzi_runtime::ModelingCommand::References {
             intent: read_referenceedit(&value.getattr("intent")?)?,
         }),
-        "resource" => Ok(zipzi_runtime::modeling::ModelingCommand::Resource {
+        "resource" => Ok(zipzi_runtime::ModelingCommand::Resource {
             intent: read_resourceedit(&value.getattr("intent")?)?,
         }),
-        "document" => Ok(zipzi_runtime::modeling::ModelingCommand::Document {
+        "document" => Ok(zipzi_runtime::ModelingCommand::Document {
             intent: read_documentauthoringedit(&value.getattr("intent")?)?,
         }),
-        "attachment" => Ok(zipzi_runtime::modeling::ModelingCommand::Attachment {
+        "attachment" => Ok(zipzi_runtime::ModelingCommand::Attachment {
             intent: read_attachmentedit(&value.getattr("intent")?)?,
         }),
-        "motion" => Ok(zipzi_runtime::modeling::ModelingCommand::Motion {
+        "motion" => Ok(zipzi_runtime::ModelingCommand::Motion {
             intent: read_motionedit(&value.getattr("intent")?)?,
         }),
-        "expression" => Ok(zipzi_runtime::modeling::ModelingCommand::Expression {
+        "expression" => Ok(zipzi_runtime::ModelingCommand::Expression {
             intent: read_expressionedit(&value.getattr("intent")?)?,
         }),
-        "physics" => Ok(zipzi_runtime::modeling::ModelingCommand::Physics {
+        "physics" => Ok(zipzi_runtime::ModelingCommand::Physics {
             intent: read_physicsedit(&value.getattr("intent")?)?,
         }),
-        "pose" => Ok(zipzi_runtime::modeling::ModelingCommand::Pose {
+        "pose" => Ok(zipzi_runtime::ModelingCommand::Pose {
             intent: read_poseedit(&value.getattr("intent")?)?,
         }),
-        "create_motion" => Ok(zipzi_runtime::modeling::ModelingCommand::CreateMotion {
+        "create_motion" => Ok(zipzi_runtime::ModelingCommand::CreateMotion {
             clip: read_motionclip(&value.getattr("clip")?)?,
         }),
-        "replace_motion" => Ok(zipzi_runtime::modeling::ModelingCommand::ReplaceMotion {
+        "replace_motion" => Ok(zipzi_runtime::ModelingCommand::ReplaceMotion {
             clip: read_motionclip(&value.getattr("clip")?)?,
         }),
-        "create_expression" => Ok(zipzi_runtime::modeling::ModelingCommand::CreateExpression {
+        "create_expression" => Ok(zipzi_runtime::ModelingCommand::CreateExpression {
             expression: read_expressionasset(&value.getattr("expression")?)?,
         }),
-        "replace_expression" => Ok(
-            zipzi_runtime::modeling::ModelingCommand::ReplaceExpression {
-                expression: read_expressionasset(&value.getattr("expression")?)?,
-            },
-        ),
-        "set_physics" => Ok(zipzi_runtime::modeling::ModelingCommand::SetPhysics {
+        "replace_expression" => Ok(zipzi_runtime::ModelingCommand::ReplaceExpression {
+            expression: read_expressionasset(&value.getattr("expression")?)?,
+        }),
+        "set_physics" => Ok(zipzi_runtime::ModelingCommand::SetPhysics {
             physics: read_physicsasset(&value.getattr("physics")?)?,
         }),
-        "set_pose" => Ok(zipzi_runtime::modeling::ModelingCommand::SetPose {
+        "set_pose" => Ok(zipzi_runtime::ModelingCommand::SetPose {
             pose: read_poseasset(&value.getattr("pose")?)?,
         }),
-        "replace_model_setup" => Ok(
-            zipzi_runtime::modeling::ModelingCommand::ReplaceModelSetup {
-                setup: read_modelsetup(&value.getattr("setup")?)?,
-            },
-        ),
-        "replace_hierarchy_order" => Ok(
-            zipzi_runtime::modeling::ModelingCommand::ReplaceHierarchyOrder {
-                order: read_hierarchyorder(&value.getattr("order")?)?,
-            },
-        ),
-        "replace_editor_state" => Ok(
-            zipzi_runtime::modeling::ModelingCommand::ReplaceEditorState {
-                state: read_editorstate(&value.getattr("state")?)?,
-            },
-        ),
-        "replace_draw_order_groups" => Ok(
-            zipzi_runtime::modeling::ModelingCommand::ReplaceDrawOrderGroups {
-                groups: value
-                    .getattr("groups")?
-                    .try_iter()?
-                    .map(|item| -> PyResult<_> {
-                        let item0 = item?;
-                        Ok(read_drawordergroup(&item0)?)
-                    })
-                    .collect::<PyResult<Vec<_>>>()?
-                    .into(),
-            },
-        ),
-        "erase_object" => Ok(zipzi_runtime::modeling::ModelingCommand::EraseObject {
+        "replace_model_setup" => Ok(zipzi_runtime::ModelingCommand::ReplaceModelSetup {
+            setup: read_modelsetup(&value.getattr("setup")?)?,
+        }),
+        "replace_hierarchy_order" => Ok(zipzi_runtime::ModelingCommand::ReplaceHierarchyOrder {
+            order: read_hierarchyorder(&value.getattr("order")?)?,
+        }),
+        "replace_editor_state" => Ok(zipzi_runtime::ModelingCommand::ReplaceEditorState {
+            state: read_editorstate(&value.getattr("state")?)?,
+        }),
+        "replace_draw_order_groups" => Ok(zipzi_runtime::ModelingCommand::ReplaceDrawOrderGroups {
+            groups: value
+                .getattr("groups")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(read_drawordergroup(&item0)?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+        }),
+        "erase_object" => Ok(zipzi_runtime::ModelingCommand::EraseObject {
             id: value.getattr("id")?.extract()?,
         }),
-        "rename_mesh" => Ok(zipzi_runtime::modeling::ModelingCommand::RenameMesh {
+        "rename_mesh" => Ok(zipzi_runtime::ModelingCommand::RenameMesh {
             id: value.getattr("id")?.extract()?,
             name: value.getattr("name")?.extract()?,
         }),
-        "update_positions" => Ok(zipzi_runtime::modeling::ModelingCommand::UpdatePositions {
+        "update_positions" => Ok(zipzi_runtime::ModelingCommand::UpdatePositions {
             id: value.getattr("id")?.extract()?,
             vertex_ids: value
                 .getattr("vertex_ids")?
@@ -211,26 +183,24 @@ pub fn read_modelingcommand(
                 .collect::<PyResult<Vec<_>>>()?
                 .into(),
         }),
-        "set_mesh_keyform" => Ok(zipzi_runtime::modeling::ModelingCommand::SetMeshKeyform {
+        "set_mesh_keyform" => Ok(zipzi_runtime::ModelingCommand::SetMeshKeyform {
             id: value.getattr("id")?.extract()?,
             keyform: read_meshkeyform(&value.getattr("keyform")?)?,
         }),
-        "set_scene_keyform" => Ok(zipzi_runtime::modeling::ModelingCommand::SetSceneKeyform {
+        "set_scene_keyform" => Ok(zipzi_runtime::ModelingCommand::SetSceneKeyform {
             id: value.getattr("id")?.extract()?,
             keyform: read_scenekeyform(&value.getattr("keyform")?)?,
         }),
-        "remesh_rectangle_grid" => Ok(
-            zipzi_runtime::modeling::ModelingCommand::RemeshRectangleGrid {
-                id: value.getattr("id")?.extract()?,
-                columns: value.getattr("columns")?.extract()?,
-                rows: value.getattr("rows")?.extract()?,
-            },
-        ),
-        "replace_topology" => Ok(zipzi_runtime::modeling::ModelingCommand::ReplaceTopology {
+        "remesh_rectangle_grid" => Ok(zipzi_runtime::ModelingCommand::RemeshRectangleGrid {
+            id: value.getattr("id")?.extract()?,
+            columns: value.getattr("columns")?.extract()?,
+            rows: value.getattr("rows")?.extract()?,
+        }),
+        "replace_topology" => Ok(zipzi_runtime::ModelingCommand::ReplaceTopology {
             source: read_geometrysnapshot(&value.getattr("source")?)?,
             replacement: read_topologyreplacement(&value.getattr("replacement")?)?,
         }),
-        "manual_mesh" => Ok(zipzi_runtime::modeling::ModelingCommand::ManualMesh {
+        "manual_mesh" => Ok(zipzi_runtime::ModelingCommand::ManualMesh {
             mesh_id: value.getattr("mesh_id")?.extract()?,
             expected: read_sourceref(&value.getattr("expected")?)?,
             operation: read_manualmeshoperation(&value.getattr("operation")?)?,
@@ -243,18 +213,18 @@ pub fn read_modelingcommand(
 
 pub fn write_modelingcommand(
     py: Python<'_>,
-    value: &zipzi_runtime::modeling::ModelingCommand,
+    value: &zipzi_runtime::ModelingCommand,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_modelingcommand_in(py, value, &classes)
 }
 fn write_modelingcommand_in(
     py: Python<'_>,
-    value: &zipzi_runtime::modeling::ModelingCommand,
+    value: &zipzi_runtime::ModelingCommand,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     match value {
-        zipzi_runtime::modeling::ModelingCommand::CreateAsset { asset: field0 } => {
+        zipzi_runtime::ModelingCommand::CreateAsset { asset: field0 } => {
             let content = PyDict::new(py);
             content.set_item("asset", write_imageasset_in(py, (field0), classes)?)?;
             Ok(classes
@@ -262,7 +232,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ReplaceAsset { asset: field0 } => {
+        zipzi_runtime::ModelingCommand::ReplaceAsset { asset: field0 } => {
             let content = PyDict::new(py);
             content.set_item("asset", write_imageasset_in(py, (field0), classes)?)?;
             Ok(classes
@@ -270,7 +240,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::CreateMesh { mesh: field0 } => {
+        zipzi_runtime::ModelingCommand::CreateMesh { mesh: field0 } => {
             let content = PyDict::new(py);
             content.set_item("mesh", write_mesh_in(py, (field0), classes)?)?;
             Ok(classes
@@ -278,7 +248,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ReplaceMesh { mesh: field0 } => {
+        zipzi_runtime::ModelingCommand::ReplaceMesh { mesh: field0 } => {
             let content = PyDict::new(py);
             content.set_item("mesh", write_mesh_in(py, (field0), classes)?)?;
             Ok(classes
@@ -286,7 +256,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::CreateParameter { parameter: field0 } => {
+        zipzi_runtime::ModelingCommand::CreateParameter { parameter: field0 } => {
             let content = PyDict::new(py);
             content.set_item("parameter", write_parameter_in(py, (field0), classes)?)?;
             Ok(classes
@@ -294,7 +264,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ReplaceParameter { parameter: field0 } => {
+        zipzi_runtime::ModelingCommand::ReplaceParameter { parameter: field0 } => {
             let content = PyDict::new(py);
             content.set_item("parameter", write_parameter_in(py, (field0), classes)?)?;
             Ok(classes
@@ -302,7 +272,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::CreatePart { part: field0 } => {
+        zipzi_runtime::ModelingCommand::CreatePart { part: field0 } => {
             let content = PyDict::new(py);
             content.set_item("part", write_part_in(py, (field0), classes)?)?;
             Ok(classes
@@ -310,7 +280,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ReplacePart { part: field0 } => {
+        zipzi_runtime::ModelingCommand::ReplacePart { part: field0 } => {
             let content = PyDict::new(py);
             content.set_item("part", write_part_in(py, (field0), classes)?)?;
             Ok(classes
@@ -318,7 +288,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::CreateTransform { transform: field0 } => {
+        zipzi_runtime::ModelingCommand::CreateTransform { transform: field0 } => {
             let content = PyDict::new(py);
             content.set_item("transform", write_transform_in(py, (field0), classes)?)?;
             Ok(classes
@@ -326,7 +296,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ReplaceTransform { transform: field0 } => {
+        zipzi_runtime::ModelingCommand::ReplaceTransform { transform: field0 } => {
             let content = PyDict::new(py);
             content.set_item("transform", write_transform_in(py, (field0), classes)?)?;
             Ok(classes
@@ -334,7 +304,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::CreateBinding { binding: field0 } => {
+        zipzi_runtime::ModelingCommand::CreateBinding { binding: field0 } => {
             let content = PyDict::new(py);
             content.set_item("binding", write_meshbinding_in(py, (field0), classes)?)?;
             Ok(classes
@@ -342,7 +312,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ReplaceBinding { binding: field0 } => {
+        zipzi_runtime::ModelingCommand::ReplaceBinding { binding: field0 } => {
             let content = PyDict::new(py);
             content.set_item("binding", write_meshbinding_in(py, (field0), classes)?)?;
             Ok(classes
@@ -350,7 +320,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::CreateSceneBinding { binding: field0 } => {
+        zipzi_runtime::ModelingCommand::CreateSceneBinding { binding: field0 } => {
             let content = PyDict::new(py);
             content.set_item("binding", write_scenebinding_in(py, (field0), classes)?)?;
             Ok(classes
@@ -358,7 +328,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ReplaceSceneBinding { binding: field0 } => {
+        zipzi_runtime::ModelingCommand::ReplaceSceneBinding { binding: field0 } => {
             let content = PyDict::new(py);
             content.set_item("binding", write_scenebinding_in(py, (field0), classes)?)?;
             Ok(classes
@@ -366,7 +336,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::CreateBlendKeyTable { table: field0 } => {
+        zipzi_runtime::ModelingCommand::CreateBlendKeyTable { table: field0 } => {
             let content = PyDict::new(py);
             content.set_item("table", write_blendshapekeytable_in(py, (field0), classes)?)?;
             Ok(classes
@@ -374,7 +344,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ReplaceBlendKeyTable { table: field0 } => {
+        zipzi_runtime::ModelingCommand::ReplaceBlendKeyTable { table: field0 } => {
             let content = PyDict::new(py);
             content.set_item("table", write_blendshapekeytable_in(py, (field0), classes)?)?;
             Ok(classes
@@ -382,7 +352,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::CreateBlendConstraint { constraint: field0 } => {
+        zipzi_runtime::ModelingCommand::CreateBlendConstraint { constraint: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "constraint",
@@ -393,7 +363,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ReplaceBlendConstraint { constraint: field0 } => {
+        zipzi_runtime::ModelingCommand::ReplaceBlendConstraint { constraint: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "constraint",
@@ -404,7 +374,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::CreateBlendBinding { binding: field0 } => {
+        zipzi_runtime::ModelingCommand::CreateBlendBinding { binding: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "binding",
@@ -415,7 +385,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ReplaceBlendBinding { binding: field0 } => {
+        zipzi_runtime::ModelingCommand::ReplaceBlendBinding { binding: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "binding",
@@ -426,7 +396,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::CreateGlue { glue: field0 } => {
+        zipzi_runtime::ModelingCommand::CreateGlue { glue: field0 } => {
             let content = PyDict::new(py);
             content.set_item("glue", write_glue_in(py, (field0), classes)?)?;
             Ok(classes
@@ -434,7 +404,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ReplaceGlue { glue: field0 } => {
+        zipzi_runtime::ModelingCommand::ReplaceGlue { glue: field0 } => {
             let content = PyDict::new(py);
             content.set_item("glue", write_glue_in(py, (field0), classes)?)?;
             Ok(classes
@@ -442,7 +412,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::CreateOffscreen { offscreen: field0 } => {
+        zipzi_runtime::ModelingCommand::CreateOffscreen { offscreen: field0 } => {
             let content = PyDict::new(py);
             content.set_item("offscreen", write_offscreen_in(py, (field0), classes)?)?;
             Ok(classes
@@ -450,7 +420,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ReplaceOffscreen { offscreen: field0 } => {
+        zipzi_runtime::ModelingCommand::ReplaceOffscreen { offscreen: field0 } => {
             let content = PyDict::new(py);
             content.set_item("offscreen", write_offscreen_in(py, (field0), classes)?)?;
             Ok(classes
@@ -458,7 +428,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::Deletion { intent: field0 } => {
+        zipzi_runtime::ModelingCommand::Deletion { intent: field0 } => {
             let content = PyDict::new(py);
             content.set_item("intent", write_deletionintent_in(py, (field0), classes)?)?;
             Ok(classes
@@ -466,7 +436,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::Scene { intent: field0 } => {
+        zipzi_runtime::ModelingCommand::Scene { intent: field0 } => {
             let content = PyDict::new(py);
             content.set_item("intent", write_sceneedit_in(py, (field0), classes)?)?;
             Ok(classes
@@ -474,7 +444,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::Organization { intent: field0 } => {
+        zipzi_runtime::ModelingCommand::Organization { intent: field0 } => {
             let content = PyDict::new(py);
             content.set_item("intent", write_organizationedit_in(py, (field0), classes)?)?;
             Ok(classes
@@ -482,7 +452,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::Binding { intent: field0 } => {
+        zipzi_runtime::ModelingCommand::Binding { intent: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "intent",
@@ -493,7 +463,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::Content { intent: field0 } => {
+        zipzi_runtime::ModelingCommand::Content { intent: field0 } => {
             let content = PyDict::new(py);
             content.set_item("intent", write_scenecontentedit_in(py, (field0), classes)?)?;
             Ok(classes
@@ -501,7 +471,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::References { intent: field0 } => {
+        zipzi_runtime::ModelingCommand::References { intent: field0 } => {
             let content = PyDict::new(py);
             content.set_item("intent", write_referenceedit_in(py, (field0), classes)?)?;
             Ok(classes
@@ -509,7 +479,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::Resource { intent: field0 } => {
+        zipzi_runtime::ModelingCommand::Resource { intent: field0 } => {
             let content = PyDict::new(py);
             content.set_item("intent", write_resourceedit_in(py, (field0), classes)?)?;
             Ok(classes
@@ -517,7 +487,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::Document { intent: field0 } => {
+        zipzi_runtime::ModelingCommand::Document { intent: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "intent",
@@ -528,7 +498,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::Attachment { intent: field0 } => {
+        zipzi_runtime::ModelingCommand::Attachment { intent: field0 } => {
             let content = PyDict::new(py);
             content.set_item("intent", write_attachmentedit_in(py, (field0), classes)?)?;
             Ok(classes
@@ -536,7 +506,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::Motion { intent: field0 } => {
+        zipzi_runtime::ModelingCommand::Motion { intent: field0 } => {
             let content = PyDict::new(py);
             content.set_item("intent", write_motionedit_in(py, (field0), classes)?)?;
             Ok(classes
@@ -544,7 +514,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::Expression { intent: field0 } => {
+        zipzi_runtime::ModelingCommand::Expression { intent: field0 } => {
             let content = PyDict::new(py);
             content.set_item("intent", write_expressionedit_in(py, (field0), classes)?)?;
             Ok(classes
@@ -552,7 +522,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::Physics { intent: field0 } => {
+        zipzi_runtime::ModelingCommand::Physics { intent: field0 } => {
             let content = PyDict::new(py);
             content.set_item("intent", write_physicsedit_in(py, (field0), classes)?)?;
             Ok(classes
@@ -560,7 +530,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::Pose { intent: field0 } => {
+        zipzi_runtime::ModelingCommand::Pose { intent: field0 } => {
             let content = PyDict::new(py);
             content.set_item("intent", write_poseedit_in(py, (field0), classes)?)?;
             Ok(classes
@@ -568,7 +538,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::CreateMotion { clip: field0 } => {
+        zipzi_runtime::ModelingCommand::CreateMotion { clip: field0 } => {
             let content = PyDict::new(py);
             content.set_item("clip", write_motionclip_in(py, (field0), classes)?)?;
             Ok(classes
@@ -576,7 +546,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ReplaceMotion { clip: field0 } => {
+        zipzi_runtime::ModelingCommand::ReplaceMotion { clip: field0 } => {
             let content = PyDict::new(py);
             content.set_item("clip", write_motionclip_in(py, (field0), classes)?)?;
             Ok(classes
@@ -584,7 +554,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::CreateExpression { expression: field0 } => {
+        zipzi_runtime::ModelingCommand::CreateExpression { expression: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "expression",
@@ -595,7 +565,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ReplaceExpression { expression: field0 } => {
+        zipzi_runtime::ModelingCommand::ReplaceExpression { expression: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "expression",
@@ -606,7 +576,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::SetPhysics { physics: field0 } => {
+        zipzi_runtime::ModelingCommand::SetPhysics { physics: field0 } => {
             let content = PyDict::new(py);
             content.set_item("physics", write_physicsasset_in(py, (field0), classes)?)?;
             Ok(classes
@@ -614,7 +584,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::SetPose { pose: field0 } => {
+        zipzi_runtime::ModelingCommand::SetPose { pose: field0 } => {
             let content = PyDict::new(py);
             content.set_item("pose", write_poseasset_in(py, (field0), classes)?)?;
             Ok(classes
@@ -622,7 +592,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ReplaceModelSetup { setup: field0 } => {
+        zipzi_runtime::ModelingCommand::ReplaceModelSetup { setup: field0 } => {
             let content = PyDict::new(py);
             content.set_item("setup", write_modelsetup_in(py, (field0), classes)?)?;
             Ok(classes
@@ -630,7 +600,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ReplaceHierarchyOrder { order: field0 } => {
+        zipzi_runtime::ModelingCommand::ReplaceHierarchyOrder { order: field0 } => {
             let content = PyDict::new(py);
             content.set_item("order", write_hierarchyorder_in(py, (field0), classes)?)?;
             Ok(classes
@@ -638,7 +608,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ReplaceEditorState { state: field0 } => {
+        zipzi_runtime::ModelingCommand::ReplaceEditorState { state: field0 } => {
             let content = PyDict::new(py);
             content.set_item("state", write_editorstate_in(py, (field0), classes)?)?;
             Ok(classes
@@ -646,7 +616,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ReplaceDrawOrderGroups { groups: field0 } => {
+        zipzi_runtime::ModelingCommand::ReplaceDrawOrderGroups { groups: field0 } => {
             let content = PyDict::new(py);
             content.set_item("groups", {
                 let out = PyList::empty(py);
@@ -660,7 +630,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::EraseObject { id: field0 } => {
+        zipzi_runtime::ModelingCommand::EraseObject { id: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "id",
@@ -671,7 +641,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::RenameMesh {
+        zipzi_runtime::ModelingCommand::RenameMesh {
             id: field0,
             name: field1,
         } => {
@@ -689,7 +659,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::UpdatePositions {
+        zipzi_runtime::ModelingCommand::UpdatePositions {
             id: field0,
             vertex_ids: field1,
             positions: field2,
@@ -718,7 +688,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::SetMeshKeyform {
+        zipzi_runtime::ModelingCommand::SetMeshKeyform {
             id: field0,
             keyform: field1,
         } => {
@@ -733,7 +703,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::SetSceneKeyform {
+        zipzi_runtime::ModelingCommand::SetSceneKeyform {
             id: field0,
             keyform: field1,
         } => {
@@ -748,7 +718,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::RemeshRectangleGrid {
+        zipzi_runtime::ModelingCommand::RemeshRectangleGrid {
             id: field0,
             columns: field1,
             rows: field2,
@@ -771,7 +741,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ReplaceTopology {
+        zipzi_runtime::ModelingCommand::ReplaceTopology {
             source: field0,
             replacement: field1,
         } => {
@@ -786,7 +756,7 @@ fn write_modelingcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::modeling::ModelingCommand::ManualMesh {
+        zipzi_runtime::ModelingCommand::ManualMesh {
             mesh_id: field0,
             expected: field1,
             operation: field2,
@@ -809,8 +779,8 @@ fn write_modelingcommand_in(
     }
 }
 
-pub fn read_imageasset(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::ImageAsset> {
-    Ok(zipzi_core::types::ImageAsset {
+pub fn read_imageasset(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::ImageAsset> {
+    Ok(zipzi_core::ImageAsset {
         unresolved_source: if value.getattr("unresolved_source")?.is_none() {
             None
         } else {
@@ -826,16 +796,13 @@ pub fn read_imageasset(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::
     })
 }
 
-pub fn write_imageasset(
-    py: Python<'_>,
-    value: &zipzi_core::types::ImageAsset,
-) -> PyResult<Py<PyAny>> {
+pub fn write_imageasset(py: Python<'_>, value: &zipzi_core::ImageAsset) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_imageasset_in(py, value, &classes)
 }
 fn write_imageasset_in(
     py: Python<'_>,
-    value: &zipzi_core::types::ImageAsset,
+    value: &zipzi_core::ImageAsset,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -873,8 +840,8 @@ fn write_imageasset_in(
         .unbind())
 }
 
-pub fn read_imagecontent(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::ImageContent> {
-    Ok(zipzi_core::types::ImageContent {
+pub fn read_imagecontent(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::ImageContent> {
+    Ok(zipzi_core::ImageContent {
         source: value.getattr("source")?.extract()?,
         width: value.getattr("width")?.extract()?,
         height: value.getattr("height")?.extract()?,
@@ -882,16 +849,13 @@ pub fn read_imagecontent(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types
     })
 }
 
-pub fn write_imagecontent(
-    py: Python<'_>,
-    value: &zipzi_core::types::ImageContent,
-) -> PyResult<Py<PyAny>> {
+pub fn write_imagecontent(py: Python<'_>, value: &zipzi_core::ImageContent) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_imagecontent_in(py, value, &classes)
 }
 fn write_imagecontent_in(
     py: Python<'_>,
-    value: &zipzi_core::types::ImageContent,
+    value: &zipzi_core::ImageContent,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -933,8 +897,8 @@ fn write_imagecontent_in(
         .unbind())
 }
 
-pub fn read_mesh(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Mesh> {
-    Ok(zipzi_core::types::Mesh {
+pub fn read_mesh(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::Mesh> {
+    Ok(zipzi_core::Mesh {
         id: value.getattr("id")?.extract()?,
         name: value.getattr("name")?.extract()?,
         texture_asset_id: read_scenereference(&value.getattr("texture_asset_id")?)?,
@@ -1019,13 +983,13 @@ pub fn read_mesh(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Mesh> 
     })
 }
 
-pub fn write_mesh(py: Python<'_>, value: &zipzi_core::types::Mesh) -> PyResult<Py<PyAny>> {
+pub fn write_mesh(py: Python<'_>, value: &zipzi_core::Mesh) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_mesh_in(py, value, &classes)
 }
 fn write_mesh_in(
     py: Python<'_>,
-    value: &zipzi_core::types::Mesh,
+    value: &zipzi_core::Mesh,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -1224,27 +1188,27 @@ fn write_scenereference_in(
     }
 }
 
-pub fn read_vec2(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Vec2> {
-    Ok(zipzi_core::types::Vec2 {
+pub fn read_vec2(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::Vec2> {
+    Ok(zipzi_core::Vec2 {
         x: value.get_item(0)?.extract()?,
         y: value.get_item(1)?.extract()?,
     })
 }
 
-pub fn write_vec2(py: Python<'_>, value: &zipzi_core::types::Vec2) -> PyResult<Py<PyAny>> {
+pub fn write_vec2(py: Python<'_>, value: &zipzi_core::Vec2) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_vec2_in(py, value, &classes)
 }
 fn write_vec2_in(
     py: Python<'_>,
-    value: &zipzi_core::types::Vec2,
+    value: &zipzi_core::Vec2,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     Ok(classes.getattr("Vec2")?.call1((value.x, value.y))?.unbind())
 }
 
-pub fn read_meshmeshing(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::MeshMeshing> {
-    Ok(zipzi_core::types::MeshMeshing {
+pub fn read_meshmeshing(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::MeshMeshing> {
+    Ok(zipzi_core::MeshMeshing {
         boundary: value
             .getattr("boundary")?
             .try_iter()?
@@ -1266,16 +1230,13 @@ pub fn read_meshmeshing(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
     })
 }
 
-pub fn write_meshmeshing(
-    py: Python<'_>,
-    value: &zipzi_core::types::MeshMeshing,
-) -> PyResult<Py<PyAny>> {
+pub fn write_meshmeshing(py: Python<'_>, value: &zipzi_core::MeshMeshing) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_meshmeshing_in(py, value, &classes)
 }
 fn write_meshmeshing_in(
     py: Python<'_>,
-    value: &zipzi_core::types::MeshMeshing,
+    value: &zipzi_core::MeshMeshing,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -1299,10 +1260,8 @@ fn write_meshmeshing_in(
         .unbind())
 }
 
-pub fn read_meshconstraint(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::types::MeshConstraint> {
-    Ok(zipzi_core::types::MeshConstraint {
+pub fn read_meshconstraint(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::MeshConstraint> {
+    Ok(zipzi_core::MeshConstraint {
         endpoints: value
             .getattr("endpoints")?
             .try_iter()?
@@ -1319,14 +1278,14 @@ pub fn read_meshconstraint(
 
 pub fn write_meshconstraint(
     py: Python<'_>,
-    value: &zipzi_core::types::MeshConstraint,
+    value: &zipzi_core::MeshConstraint,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_meshconstraint_in(py, value, &classes)
 }
 fn write_meshconstraint_in(
     py: Python<'_>,
-    value: &zipzi_core::types::MeshConstraint,
+    value: &zipzi_core::MeshConstraint,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -1349,10 +1308,10 @@ fn write_meshconstraint_in(
 
 pub fn read_meshconstraintkind(
     value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::types::MeshConstraintKind> {
+) -> PyResult<zipzi_core::MeshConstraintKind> {
     match value.getattr("value")?.extract::<String>()?.as_str() {
-        "user" => Ok(zipzi_core::types::MeshConstraintKind::User),
-        "edge_support" => Ok(zipzi_core::types::MeshConstraintKind::EdgeSupport),
+        "user" => Ok(zipzi_core::MeshConstraintKind::User),
+        "edge_support" => Ok(zipzi_core::MeshConstraintKind::EdgeSupport),
         _ => Err(pyo3::exceptions::PyValueError::new_err(
             "Unknown enum value",
         )),
@@ -1361,19 +1320,19 @@ pub fn read_meshconstraintkind(
 
 pub fn write_meshconstraintkind(
     py: Python<'_>,
-    value: &zipzi_core::types::MeshConstraintKind,
+    value: &zipzi_core::MeshConstraintKind,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_meshconstraintkind_in(py, value, &classes)
 }
 fn write_meshconstraintkind_in(
     py: Python<'_>,
-    value: &zipzi_core::types::MeshConstraintKind,
+    value: &zipzi_core::MeshConstraintKind,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let name = match value {
-        zipzi_core::types::MeshConstraintKind::User => "user",
-        zipzi_core::types::MeshConstraintKind::EdgeSupport => "edge_support",
+        zipzi_core::MeshConstraintKind::User => "user",
+        zipzi_core::MeshConstraintKind::EdgeSupport => "edge_support",
     };
     Ok(classes
         .getattr("MeshConstraintKind")?
@@ -1381,8 +1340,8 @@ fn write_meshconstraintkind_in(
         .unbind())
 }
 
-pub fn read_appearance(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Appearance> {
-    Ok(zipzi_core::types::Appearance {
+pub fn read_appearance(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::Appearance> {
+    Ok(zipzi_core::Appearance {
         opacity: value.getattr("opacity")?.extract()?,
         multiply: value
             .getattr("multiply")?
@@ -1407,16 +1366,13 @@ pub fn read_appearance(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::
     })
 }
 
-pub fn write_appearance(
-    py: Python<'_>,
-    value: &zipzi_core::types::Appearance,
-) -> PyResult<Py<PyAny>> {
+pub fn write_appearance(py: Python<'_>, value: &zipzi_core::Appearance) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_appearance_in(py, value, &classes)
 }
 fn write_appearance_in(
     py: Python<'_>,
-    value: &zipzi_core::types::Appearance,
+    value: &zipzi_core::Appearance,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -1448,39 +1404,36 @@ fn write_appearance_in(
         .unbind())
 }
 
-pub fn read_blendmode(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::BlendMode> {
+pub fn read_blendmode(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::BlendMode> {
     match value.getattr("value")?.extract::<String>()?.as_str() {
-        "normal" => Ok(zipzi_core::types::BlendMode::Normal),
-        "additive" => Ok(zipzi_core::types::BlendMode::Additive),
-        "multiplicative" => Ok(zipzi_core::types::BlendMode::Multiplicative),
+        "normal" => Ok(zipzi_core::BlendMode::Normal),
+        "additive" => Ok(zipzi_core::BlendMode::Additive),
+        "multiplicative" => Ok(zipzi_core::BlendMode::Multiplicative),
         _ => Err(pyo3::exceptions::PyValueError::new_err(
             "Unknown enum value",
         )),
     }
 }
 
-pub fn write_blendmode(
-    py: Python<'_>,
-    value: &zipzi_core::types::BlendMode,
-) -> PyResult<Py<PyAny>> {
+pub fn write_blendmode(py: Python<'_>, value: &zipzi_core::BlendMode) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_blendmode_in(py, value, &classes)
 }
 fn write_blendmode_in(
     py: Python<'_>,
-    value: &zipzi_core::types::BlendMode,
+    value: &zipzi_core::BlendMode,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let name = match value {
-        zipzi_core::types::BlendMode::Normal => "normal",
-        zipzi_core::types::BlendMode::Additive => "additive",
-        zipzi_core::types::BlendMode::Multiplicative => "multiplicative",
+        zipzi_core::BlendMode::Normal => "normal",
+        zipzi_core::BlendMode::Additive => "additive",
+        zipzi_core::BlendMode::Multiplicative => "multiplicative",
     };
     Ok(classes.getattr("BlendMode")?.call1((name,))?.unbind())
 }
 
-pub fn read_parameter(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Parameter> {
-    Ok(zipzi_core::types::Parameter {
+pub fn read_parameter(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::Parameter> {
+    Ok(zipzi_core::Parameter {
         id: value.getattr("id")?.extract()?,
         runtime_id: value.getattr("runtime_id")?.extract()?,
         name: value.getattr("name")?.extract()?,
@@ -1493,16 +1446,13 @@ pub fn read_parameter(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::P
     })
 }
 
-pub fn write_parameter(
-    py: Python<'_>,
-    value: &zipzi_core::types::Parameter,
-) -> PyResult<Py<PyAny>> {
+pub fn write_parameter(py: Python<'_>, value: &zipzi_core::Parameter) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_parameter_in(py, value, &classes)
 }
 fn write_parameter_in(
     py: Python<'_>,
-    value: &zipzi_core::types::Parameter,
+    value: &zipzi_core::Parameter,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -1574,10 +1524,10 @@ fn write_parameter_in(
     Ok(classes.getattr("Parameter")?.call((), Some(&out))?.unbind())
 }
 
-pub fn read_parameterkind(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::ParameterKind> {
+pub fn read_parameterkind(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::ParameterKind> {
     match value.getattr("value")?.extract::<String>()?.as_str() {
-        "normal" => Ok(zipzi_core::types::ParameterKind::Normal),
-        "blend_shape" => Ok(zipzi_core::types::ParameterKind::BlendShape),
+        "normal" => Ok(zipzi_core::ParameterKind::Normal),
+        "blend_shape" => Ok(zipzi_core::ParameterKind::BlendShape),
         _ => Err(pyo3::exceptions::PyValueError::new_err(
             "Unknown enum value",
         )),
@@ -1586,25 +1536,25 @@ pub fn read_parameterkind(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::type
 
 pub fn write_parameterkind(
     py: Python<'_>,
-    value: &zipzi_core::types::ParameterKind,
+    value: &zipzi_core::ParameterKind,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_parameterkind_in(py, value, &classes)
 }
 fn write_parameterkind_in(
     py: Python<'_>,
-    value: &zipzi_core::types::ParameterKind,
+    value: &zipzi_core::ParameterKind,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let name = match value {
-        zipzi_core::types::ParameterKind::Normal => "normal",
-        zipzi_core::types::ParameterKind::BlendShape => "blend_shape",
+        zipzi_core::ParameterKind::Normal => "normal",
+        zipzi_core::ParameterKind::BlendShape => "blend_shape",
     };
     Ok(classes.getattr("ParameterKind")?.call1((name,))?.unbind())
 }
 
-pub fn read_part(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Part> {
-    Ok(zipzi_core::types::Part {
+pub fn read_part(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::Part> {
+    Ok(zipzi_core::Part {
         id: value.getattr("id")?.extract()?,
         runtime_id: value.getattr("runtime_id")?.extract()?,
         name: value.getattr("name")?.extract()?,
@@ -1614,13 +1564,13 @@ pub fn read_part(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Part> 
     })
 }
 
-pub fn write_part(py: Python<'_>, value: &zipzi_core::types::Part) -> PyResult<Py<PyAny>> {
+pub fn write_part(py: Python<'_>, value: &zipzi_core::Part) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_part_in(py, value, &classes)
 }
 fn write_part_in(
     py: Python<'_>,
-    value: &zipzi_core::types::Part,
+    value: &zipzi_core::Part,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -1675,8 +1625,8 @@ fn write_part_in(
     Ok(classes.getattr("Part")?.call((), Some(&out))?.unbind())
 }
 
-pub fn read_transform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Transform> {
-    Ok(zipzi_core::types::Transform {
+pub fn read_transform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::Transform> {
+    Ok(zipzi_core::Transform {
         id: value.getattr("id")?.extract()?,
         runtime_id: value.getattr("runtime_id")?.extract()?,
         name: value.getattr("name")?.extract()?,
@@ -1696,16 +1646,13 @@ pub fn read_transform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::T
     })
 }
 
-pub fn write_transform(
-    py: Python<'_>,
-    value: &zipzi_core::types::Transform,
-) -> PyResult<Py<PyAny>> {
+pub fn write_transform(py: Python<'_>, value: &zipzi_core::Transform) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_transform_in(py, value, &classes)
 }
 fn write_transform_in(
     py: Python<'_>,
-    value: &zipzi_core::types::Transform,
+    value: &zipzi_core::Transform,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -1761,17 +1708,17 @@ fn write_transform_in(
     Ok(classes.getattr("Transform")?.call((), Some(&out))?.unbind())
 }
 
-pub fn read_partid(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::PartId> {
+pub fn read_partid(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::PartId> {
     Ok(value.getattr("value")?.extract::<String>()?.into())
 }
 
-pub fn write_partid(py: Python<'_>, value: &zipzi_core::types::PartId) -> PyResult<Py<PyAny>> {
+pub fn write_partid(py: Python<'_>, value: &zipzi_core::PartId) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_partid_in(py, value, &classes)
 }
 fn write_partid_in(
     py: Python<'_>,
-    value: &zipzi_core::types::PartId,
+    value: &zipzi_core::PartId,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     Ok(classes
@@ -1787,20 +1734,17 @@ fn write_partid_in(
         .unbind())
 }
 
-pub fn read_transformid(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::TransformId> {
+pub fn read_transformid(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::TransformId> {
     Ok(value.getattr("value")?.extract::<String>()?.into())
 }
 
-pub fn write_transformid(
-    py: Python<'_>,
-    value: &zipzi_core::types::TransformId,
-) -> PyResult<Py<PyAny>> {
+pub fn write_transformid(py: Python<'_>, value: &zipzi_core::TransformId) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_transformid_in(py, value, &classes)
 }
 fn write_transformid_in(
     py: Python<'_>,
-    value: &zipzi_core::types::TransformId,
+    value: &zipzi_core::TransformId,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     Ok(classes
@@ -1816,14 +1760,14 @@ fn write_transformid_in(
         .unbind())
 }
 
-pub fn read_transformdata(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::TransformData> {
+pub fn read_transformdata(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::TransformData> {
     match value.getattr("_variant")?.extract::<String>()?.as_str() {
-        "Warp" => Ok(zipzi_core::types::TransformData::Warp(read_warptransform(
+        "Warp" => Ok(zipzi_core::TransformData::Warp(read_warptransform(
             &value.getattr("value")?,
         )?)),
-        "Rotation" => Ok(zipzi_core::types::TransformData::Rotation(
-            read_rotationtransform(&value.getattr("value")?)?,
-        )),
+        "Rotation" => Ok(zipzi_core::TransformData::Rotation(read_rotationtransform(
+            &value.getattr("value")?,
+        )?)),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
         )),
@@ -1832,18 +1776,18 @@ pub fn read_transformdata(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::type
 
 pub fn write_transformdata(
     py: Python<'_>,
-    value: &zipzi_core::types::TransformData,
+    value: &zipzi_core::TransformData,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_transformdata_in(py, value, &classes)
 }
 fn write_transformdata_in(
     py: Python<'_>,
-    value: &zipzi_core::types::TransformData,
+    value: &zipzi_core::TransformData,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     match value {
-        zipzi_core::types::TransformData::Warp(field0) => {
+        zipzi_core::TransformData::Warp(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item("value", write_warptransform_in(py, (field0), classes)?)?;
             Ok(classes
@@ -1851,7 +1795,7 @@ fn write_transformdata_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_core::types::TransformData::Rotation(field0) => {
+        zipzi_core::TransformData::Rotation(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item("value", write_rotationtransform_in(py, (field0), classes)?)?;
             Ok(classes
@@ -1862,8 +1806,8 @@ fn write_transformdata_in(
     }
 }
 
-pub fn read_warptransform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::WarpTransform> {
-    Ok(zipzi_core::types::WarpTransform {
+pub fn read_warptransform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::WarpTransform> {
+    Ok(zipzi_core::WarpTransform {
         bezier: if value.getattr("bezier")?.is_none() {
             None
         } else {
@@ -1886,14 +1830,14 @@ pub fn read_warptransform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::type
 
 pub fn write_warptransform(
     py: Python<'_>,
-    value: &zipzi_core::types::WarpTransform,
+    value: &zipzi_core::WarpTransform,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_warptransform_in(py, value, &classes)
 }
 fn write_warptransform_in(
     py: Python<'_>,
-    value: &zipzi_core::types::WarpTransform,
+    value: &zipzi_core::WarpTransform,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -1940,8 +1884,8 @@ fn write_warptransform_in(
         .unbind())
 }
 
-pub fn read_warpbezier(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::warp_bezier::WarpBezier> {
-    Ok(zipzi_core::warp_bezier::WarpBezier {
+pub fn read_warpbezier(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::WarpBezier> {
+    Ok(zipzi_core::WarpBezier {
         rows: value.getattr("rows")?.extract()?,
         columns: value.getattr("columns")?.extract()?,
         nodes: value
@@ -1956,16 +1900,13 @@ pub fn read_warpbezier(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::warp_be
     })
 }
 
-pub fn write_warpbezier(
-    py: Python<'_>,
-    value: &zipzi_core::warp_bezier::WarpBezier,
-) -> PyResult<Py<PyAny>> {
+pub fn write_warpbezier(py: Python<'_>, value: &zipzi_core::WarpBezier) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_warpbezier_in(py, value, &classes)
 }
 fn write_warpbezier_in(
     py: Python<'_>,
-    value: &zipzi_core::warp_bezier::WarpBezier,
+    value: &zipzi_core::WarpBezier,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -1998,10 +1939,8 @@ fn write_warpbezier_in(
         .unbind())
 }
 
-pub fn read_warpbeziernode(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::warp_bezier::WarpBezierNode> {
-    Ok(zipzi_core::warp_bezier::WarpBezierNode {
+pub fn read_warpbeziernode(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::WarpBezierNode> {
+    Ok(zipzi_core::WarpBezierNode {
         position: read_vec2(&value.getattr("position")?)?,
         handles: value
             .getattr("handles")?
@@ -2018,14 +1957,14 @@ pub fn read_warpbeziernode(
 
 pub fn write_warpbeziernode(
     py: Python<'_>,
-    value: &zipzi_core::warp_bezier::WarpBezierNode,
+    value: &zipzi_core::WarpBezierNode,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_warpbeziernode_in(py, value, &classes)
 }
 fn write_warpbeziernode_in(
     py: Python<'_>,
-    value: &zipzi_core::warp_bezier::WarpBezierNode,
+    value: &zipzi_core::WarpBezierNode,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -2043,10 +1982,8 @@ fn write_warpbeziernode_in(
         .unbind())
 }
 
-pub fn read_rotationtransform(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::types::RotationTransform> {
-    Ok(zipzi_core::types::RotationTransform {
+pub fn read_rotationtransform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::RotationTransform> {
+    Ok(zipzi_core::RotationTransform {
         base_angle: value.getattr("base_angle")?.extract()?,
         pose: read_rotationpose(&value.getattr("pose")?)?,
     })
@@ -2054,14 +1991,14 @@ pub fn read_rotationtransform(
 
 pub fn write_rotationtransform(
     py: Python<'_>,
-    value: &zipzi_core::types::RotationTransform,
+    value: &zipzi_core::RotationTransform,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_rotationtransform_in(py, value, &classes)
 }
 fn write_rotationtransform_in(
     py: Python<'_>,
-    value: &zipzi_core::types::RotationTransform,
+    value: &zipzi_core::RotationTransform,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -2080,8 +2017,8 @@ fn write_rotationtransform_in(
         .unbind())
 }
 
-pub fn read_rotationpose(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::RotationPose> {
-    Ok(zipzi_core::types::RotationPose {
+pub fn read_rotationpose(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::RotationPose> {
+    Ok(zipzi_core::RotationPose {
         origin: read_precisevec2(&value.getattr("origin")?)?,
         angle: value.getattr("angle")?.extract()?,
         scale: value.getattr("scale")?.extract()?,
@@ -2090,16 +2027,13 @@ pub fn read_rotationpose(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types
     })
 }
 
-pub fn write_rotationpose(
-    py: Python<'_>,
-    value: &zipzi_core::types::RotationPose,
-) -> PyResult<Py<PyAny>> {
+pub fn write_rotationpose(py: Python<'_>, value: &zipzi_core::RotationPose) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_rotationpose_in(py, value, &classes)
 }
 fn write_rotationpose_in(
     py: Python<'_>,
-    value: &zipzi_core::types::RotationPose,
+    value: &zipzi_core::RotationPose,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -2145,23 +2079,20 @@ fn write_rotationpose_in(
         .unbind())
 }
 
-pub fn read_precisevec2(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::PreciseVec2> {
-    Ok(zipzi_core::types::PreciseVec2 {
+pub fn read_precisevec2(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::PreciseVec2> {
+    Ok(zipzi_core::PreciseVec2 {
         x: value.get_item(0)?.extract()?,
         y: value.get_item(1)?.extract()?,
     })
 }
 
-pub fn write_precisevec2(
-    py: Python<'_>,
-    value: &zipzi_core::types::PreciseVec2,
-) -> PyResult<Py<PyAny>> {
+pub fn write_precisevec2(py: Python<'_>, value: &zipzi_core::PreciseVec2) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_precisevec2_in(py, value, &classes)
 }
 fn write_precisevec2_in(
     py: Python<'_>,
-    value: &zipzi_core::types::PreciseVec2,
+    value: &zipzi_core::PreciseVec2,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     Ok(classes
@@ -2170,8 +2101,8 @@ fn write_precisevec2_in(
         .unbind())
 }
 
-pub fn read_meshbinding(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::MeshBinding> {
-    Ok(zipzi_core::types::MeshBinding {
+pub fn read_meshbinding(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::MeshBinding> {
+    Ok(zipzi_core::MeshBinding {
         id: value.getattr("id")?.extract()?,
         mesh_id: value.getattr("mesh_id")?.extract()?,
         axes: value
@@ -2195,16 +2126,13 @@ pub fn read_meshbinding(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
     })
 }
 
-pub fn write_meshbinding(
-    py: Python<'_>,
-    value: &zipzi_core::types::MeshBinding,
-) -> PyResult<Py<PyAny>> {
+pub fn write_meshbinding(py: Python<'_>, value: &zipzi_core::MeshBinding) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_meshbinding_in(py, value, &classes)
 }
 fn write_meshbinding_in(
     py: Python<'_>,
-    value: &zipzi_core::types::MeshBinding,
+    value: &zipzi_core::MeshBinding,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -2244,8 +2172,8 @@ fn write_meshbinding_in(
         .unbind())
 }
 
-pub fn read_bindingaxis(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::BindingAxis> {
-    Ok(zipzi_core::types::BindingAxis {
+pub fn read_bindingaxis(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::BindingAxis> {
+    Ok(zipzi_core::BindingAxis {
         id: value.getattr("id")?.extract()?,
         samples: value
             .getattr("samples")?
@@ -2261,16 +2189,13 @@ pub fn read_bindingaxis(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
     })
 }
 
-pub fn write_bindingaxis(
-    py: Python<'_>,
-    value: &zipzi_core::types::BindingAxis,
-) -> PyResult<Py<PyAny>> {
+pub fn write_bindingaxis(py: Python<'_>, value: &zipzi_core::BindingAxis) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_bindingaxis_in(py, value, &classes)
 }
 fn write_bindingaxis_in(
     py: Python<'_>,
-    value: &zipzi_core::types::BindingAxis,
+    value: &zipzi_core::BindingAxis,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -2303,8 +2228,8 @@ fn write_bindingaxis_in(
         .unbind())
 }
 
-pub fn read_bindingsample(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::BindingSample> {
-    Ok(zipzi_core::types::BindingSample {
+pub fn read_bindingsample(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::BindingSample> {
+    Ok(zipzi_core::BindingSample {
         id: value.getattr("id")?.extract()?,
         value: value.getattr("value")?.extract()?,
     })
@@ -2312,14 +2237,14 @@ pub fn read_bindingsample(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::type
 
 pub fn write_bindingsample(
     py: Python<'_>,
-    value: &zipzi_core::types::BindingSample,
+    value: &zipzi_core::BindingSample,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_bindingsample_in(py, value, &classes)
 }
 fn write_bindingsample_in(
     py: Python<'_>,
-    value: &zipzi_core::types::BindingSample,
+    value: &zipzi_core::BindingSample,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -2345,8 +2270,8 @@ fn write_bindingsample_in(
         .unbind())
 }
 
-pub fn read_meshkeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::MeshKeyform> {
-    Ok(zipzi_core::types::MeshKeyform {
+pub fn read_meshkeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::MeshKeyform> {
+    Ok(zipzi_core::MeshKeyform {
         keys: Default::default(),
         samples: value
             .getattr("samples")?
@@ -2375,16 +2300,13 @@ pub fn read_meshkeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
     })
 }
 
-pub fn write_meshkeyform(
-    py: Python<'_>,
-    value: &zipzi_core::types::MeshKeyform,
-) -> PyResult<Py<PyAny>> {
+pub fn write_meshkeyform(py: Python<'_>, value: &zipzi_core::MeshKeyform) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_meshkeyform_in(py, value, &classes)
 }
 fn write_meshkeyform_in(
     py: Python<'_>,
-    value: &zipzi_core::types::MeshKeyform,
+    value: &zipzi_core::MeshKeyform,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -2418,8 +2340,8 @@ fn write_meshkeyform_in(
         .unbind())
 }
 
-pub fn read_scenebinding(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::SceneBinding> {
-    Ok(zipzi_core::types::SceneBinding {
+pub fn read_scenebinding(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::SceneBinding> {
+    Ok(zipzi_core::SceneBinding {
         id: value.getattr("id")?.extract()?,
         axes: value
             .getattr("axes")?
@@ -2434,16 +2356,13 @@ pub fn read_scenebinding(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types
     })
 }
 
-pub fn write_scenebinding(
-    py: Python<'_>,
-    value: &zipzi_core::types::SceneBinding,
-) -> PyResult<Py<PyAny>> {
+pub fn write_scenebinding(py: Python<'_>, value: &zipzi_core::SceneBinding) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_scenebinding_in(py, value, &classes)
 }
 fn write_scenebinding_in(
     py: Python<'_>,
-    value: &zipzi_core::types::SceneBinding,
+    value: &zipzi_core::SceneBinding,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -2469,9 +2388,9 @@ fn write_scenebinding_in(
         .unbind())
 }
 
-pub fn read_scenetrack(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::SceneTrack> {
+pub fn read_scenetrack(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::SceneTrack> {
     match value.getattr("_variant")?.extract::<String>()?.as_str() {
-        "Warp" => Ok(zipzi_core::types::SceneTrack::Warp {
+        "Warp" => Ok(zipzi_core::SceneTrack::Warp {
             target_id: read_transformid(&value.getattr("target_id")?)?,
             keyforms: value
                 .getattr("keyforms")?
@@ -2483,7 +2402,7 @@ pub fn read_scenetrack(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::
                 .collect::<PyResult<Vec<_>>>()?
                 .into(),
         }),
-        "Rotation" => Ok(zipzi_core::types::SceneTrack::Rotation {
+        "Rotation" => Ok(zipzi_core::SceneTrack::Rotation {
             target_id: read_transformid(&value.getattr("target_id")?)?,
             keyforms: value
                 .getattr("keyforms")?
@@ -2495,7 +2414,7 @@ pub fn read_scenetrack(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::
                 .collect::<PyResult<Vec<_>>>()?
                 .into(),
         }),
-        "Part" => Ok(zipzi_core::types::SceneTrack::Part {
+        "Part" => Ok(zipzi_core::SceneTrack::Part {
             target_id: read_partid(&value.getattr("target_id")?)?,
             keyforms: value
                 .getattr("keyforms")?
@@ -2513,20 +2432,17 @@ pub fn read_scenetrack(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::
     }
 }
 
-pub fn write_scenetrack(
-    py: Python<'_>,
-    value: &zipzi_core::types::SceneTrack,
-) -> PyResult<Py<PyAny>> {
+pub fn write_scenetrack(py: Python<'_>, value: &zipzi_core::SceneTrack) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_scenetrack_in(py, value, &classes)
 }
 fn write_scenetrack_in(
     py: Python<'_>,
-    value: &zipzi_core::types::SceneTrack,
+    value: &zipzi_core::SceneTrack,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     match value {
-        zipzi_core::types::SceneTrack::Warp {
+        zipzi_core::SceneTrack::Warp {
             target_id: field0,
             keyforms: field1,
         } => {
@@ -2544,7 +2460,7 @@ fn write_scenetrack_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_core::types::SceneTrack::Rotation {
+        zipzi_core::SceneTrack::Rotation {
             target_id: field0,
             keyforms: field1,
         } => {
@@ -2562,7 +2478,7 @@ fn write_scenetrack_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_core::types::SceneTrack::Part {
+        zipzi_core::SceneTrack::Part {
             target_id: field0,
             keyforms: field1,
         } => {
@@ -2583,8 +2499,8 @@ fn write_scenetrack_in(
     }
 }
 
-pub fn read_warpkeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::WarpKeyform> {
-    Ok(zipzi_core::types::WarpKeyform {
+pub fn read_warpkeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::WarpKeyform> {
+    Ok(zipzi_core::WarpKeyform {
         bezier: if value.getattr("bezier")?.is_none() {
             None
         } else {
@@ -2613,16 +2529,13 @@ pub fn read_warpkeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
     })
 }
 
-pub fn write_warpkeyform(
-    py: Python<'_>,
-    value: &zipzi_core::types::WarpKeyform,
-) -> PyResult<Py<PyAny>> {
+pub fn write_warpkeyform(py: Python<'_>, value: &zipzi_core::WarpKeyform) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_warpkeyform_in(py, value, &classes)
 }
 fn write_warpkeyform_in(
     py: Python<'_>,
-    value: &zipzi_core::types::WarpKeyform,
+    value: &zipzi_core::WarpKeyform,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -2656,10 +2569,8 @@ fn write_warpkeyform_in(
         .unbind())
 }
 
-pub fn read_rotationkeyform(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::types::RotationKeyform> {
-    Ok(zipzi_core::types::RotationKeyform {
+pub fn read_rotationkeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::RotationKeyform> {
+    Ok(zipzi_core::RotationKeyform {
         keys: Default::default(),
         samples: value
             .getattr("samples")?
@@ -2677,14 +2588,14 @@ pub fn read_rotationkeyform(
 
 pub fn write_rotationkeyform(
     py: Python<'_>,
-    value: &zipzi_core::types::RotationKeyform,
+    value: &zipzi_core::RotationKeyform,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_rotationkeyform_in(py, value, &classes)
 }
 fn write_rotationkeyform_in(
     py: Python<'_>,
-    value: &zipzi_core::types::RotationKeyform,
+    value: &zipzi_core::RotationKeyform,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -2709,8 +2620,8 @@ fn write_rotationkeyform_in(
         .unbind())
 }
 
-pub fn read_partkeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::PartKeyform> {
-    Ok(zipzi_core::types::PartKeyform {
+pub fn read_partkeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::PartKeyform> {
+    Ok(zipzi_core::PartKeyform {
         keys: Default::default(),
         samples: value
             .getattr("samples")?
@@ -2725,16 +2636,13 @@ pub fn read_partkeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
     })
 }
 
-pub fn write_partkeyform(
-    py: Python<'_>,
-    value: &zipzi_core::types::PartKeyform,
-) -> PyResult<Py<PyAny>> {
+pub fn write_partkeyform(py: Python<'_>, value: &zipzi_core::PartKeyform) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_partkeyform_in(py, value, &classes)
 }
 fn write_partkeyform_in(
     py: Python<'_>,
-    value: &zipzi_core::types::PartKeyform,
+    value: &zipzi_core::PartKeyform,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -2761,8 +2669,8 @@ fn write_partkeyform_in(
 
 pub fn read_blendshapekeytable(
     value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::types::BlendShapeKeyTable> {
-    Ok(zipzi_core::types::BlendShapeKeyTable {
+) -> PyResult<zipzi_core::BlendShapeKeyTable> {
+    Ok(zipzi_core::BlendShapeKeyTable {
         samples: value
             .getattr("samples")?
             .try_iter()?
@@ -2782,14 +2690,14 @@ pub fn read_blendshapekeytable(
 
 pub fn write_blendshapekeytable(
     py: Python<'_>,
-    value: &zipzi_core::types::BlendShapeKeyTable,
+    value: &zipzi_core::BlendShapeKeyTable,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_blendshapekeytable_in(py, value, &classes)
 }
 fn write_blendshapekeytable_in(
     py: Python<'_>,
-    value: &zipzi_core::types::BlendShapeKeyTable,
+    value: &zipzi_core::BlendShapeKeyTable,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -2832,8 +2740,8 @@ fn write_blendshapekeytable_in(
 
 pub fn read_blendshapeconstraint(
     value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::types::BlendShapeConstraint> {
-    Ok(zipzi_core::types::BlendShapeConstraint {
+) -> PyResult<zipzi_core::BlendShapeConstraint> {
+    Ok(zipzi_core::BlendShapeConstraint {
         samples: value
             .getattr("samples")?
             .try_iter()?
@@ -2852,14 +2760,14 @@ pub fn read_blendshapeconstraint(
 
 pub fn write_blendshapeconstraint(
     py: Python<'_>,
-    value: &zipzi_core::types::BlendShapeConstraint,
+    value: &zipzi_core::BlendShapeConstraint,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_blendshapeconstraint_in(py, value, &classes)
 }
 fn write_blendshapeconstraint_in(
     py: Python<'_>,
-    value: &zipzi_core::types::BlendShapeConstraint,
+    value: &zipzi_core::BlendShapeConstraint,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -2892,10 +2800,8 @@ fn write_blendshapeconstraint_in(
         .unbind())
 }
 
-pub fn read_constraintsample(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::types::ConstraintSample> {
-    Ok(zipzi_core::types::ConstraintSample {
+pub fn read_constraintsample(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::ConstraintSample> {
+    Ok(zipzi_core::ConstraintSample {
         id: value.getattr("id")?.extract()?,
         value: value.getattr("value")?.extract()?,
         weight: value.getattr("weight")?.extract()?,
@@ -2904,14 +2810,14 @@ pub fn read_constraintsample(
 
 pub fn write_constraintsample(
     py: Python<'_>,
-    value: &zipzi_core::types::ConstraintSample,
+    value: &zipzi_core::ConstraintSample,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_constraintsample_in(py, value, &classes)
 }
 fn write_constraintsample_in(
     py: Python<'_>,
-    value: &zipzi_core::types::ConstraintSample,
+    value: &zipzi_core::ConstraintSample,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -2945,10 +2851,8 @@ fn write_constraintsample_in(
         .unbind())
 }
 
-pub fn read_blendshapebinding(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::types::BlendShapeBinding> {
-    Ok(zipzi_core::types::BlendShapeBinding {
+pub fn read_blendshapebinding(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::BlendShapeBinding> {
+    Ok(zipzi_core::BlendShapeBinding {
         id: value.getattr("id")?.extract()?,
         target_id: value.getattr("target_id")?.extract()?,
         target_kind: read_blendshapetargetkind(&value.getattr("target_kind")?)?,
@@ -2968,14 +2872,14 @@ pub fn read_blendshapebinding(
 
 pub fn write_blendshapebinding(
     py: Python<'_>,
-    value: &zipzi_core::types::BlendShapeBinding,
+    value: &zipzi_core::BlendShapeBinding,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_blendshapebinding_in(py, value, &classes)
 }
 fn write_blendshapebinding_in(
     py: Python<'_>,
-    value: &zipzi_core::types::BlendShapeBinding,
+    value: &zipzi_core::BlendShapeBinding,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -3026,14 +2930,14 @@ fn write_blendshapebinding_in(
 
 pub fn read_blendshapetargetkind(
     value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::types::BlendShapeTargetKind> {
+) -> PyResult<zipzi_core::BlendShapeTargetKind> {
     match value.getattr("value")?.extract::<String>()?.as_str() {
-        "mesh" => Ok(zipzi_core::types::BlendShapeTargetKind::Mesh),
-        "warp" => Ok(zipzi_core::types::BlendShapeTargetKind::Warp),
-        "rotation" => Ok(zipzi_core::types::BlendShapeTargetKind::Rotation),
-        "part" => Ok(zipzi_core::types::BlendShapeTargetKind::Part),
-        "glue" => Ok(zipzi_core::types::BlendShapeTargetKind::Glue),
-        "offscreen" => Ok(zipzi_core::types::BlendShapeTargetKind::Offscreen),
+        "mesh" => Ok(zipzi_core::BlendShapeTargetKind::Mesh),
+        "warp" => Ok(zipzi_core::BlendShapeTargetKind::Warp),
+        "rotation" => Ok(zipzi_core::BlendShapeTargetKind::Rotation),
+        "part" => Ok(zipzi_core::BlendShapeTargetKind::Part),
+        "glue" => Ok(zipzi_core::BlendShapeTargetKind::Glue),
+        "offscreen" => Ok(zipzi_core::BlendShapeTargetKind::Offscreen),
         _ => Err(pyo3::exceptions::PyValueError::new_err(
             "Unknown enum value",
         )),
@@ -3042,23 +2946,23 @@ pub fn read_blendshapetargetkind(
 
 pub fn write_blendshapetargetkind(
     py: Python<'_>,
-    value: &zipzi_core::types::BlendShapeTargetKind,
+    value: &zipzi_core::BlendShapeTargetKind,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_blendshapetargetkind_in(py, value, &classes)
 }
 fn write_blendshapetargetkind_in(
     py: Python<'_>,
-    value: &zipzi_core::types::BlendShapeTargetKind,
+    value: &zipzi_core::BlendShapeTargetKind,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let name = match value {
-        zipzi_core::types::BlendShapeTargetKind::Mesh => "mesh",
-        zipzi_core::types::BlendShapeTargetKind::Warp => "warp",
-        zipzi_core::types::BlendShapeTargetKind::Rotation => "rotation",
-        zipzi_core::types::BlendShapeTargetKind::Part => "part",
-        zipzi_core::types::BlendShapeTargetKind::Glue => "glue",
-        zipzi_core::types::BlendShapeTargetKind::Offscreen => "offscreen",
+        zipzi_core::BlendShapeTargetKind::Mesh => "mesh",
+        zipzi_core::BlendShapeTargetKind::Warp => "warp",
+        zipzi_core::BlendShapeTargetKind::Rotation => "rotation",
+        zipzi_core::BlendShapeTargetKind::Part => "part",
+        zipzi_core::BlendShapeTargetKind::Glue => "glue",
+        zipzi_core::BlendShapeTargetKind::Offscreen => "offscreen",
     };
     Ok(classes
         .getattr("BlendShapeTargetKind")?
@@ -3066,9 +2970,9 @@ fn write_blendshapetargetkind_in(
         .unbind())
 }
 
-pub fn read_deltakeyforms(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::DeltaKeyforms> {
+pub fn read_deltakeyforms(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::DeltaKeyforms> {
     match value.getattr("_variant")?.extract::<String>()?.as_str() {
-        "mesh" => Ok(zipzi_core::types::DeltaKeyforms::Mesh(
+        "mesh" => Ok(zipzi_core::DeltaKeyforms::Mesh(
             value
                 .getattr("value")?
                 .try_iter()?
@@ -3079,7 +2983,7 @@ pub fn read_deltakeyforms(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::type
                 .collect::<PyResult<Vec<_>>>()?
                 .into(),
         )),
-        "warp" => Ok(zipzi_core::types::DeltaKeyforms::Warp(
+        "warp" => Ok(zipzi_core::DeltaKeyforms::Warp(
             value
                 .getattr("value")?
                 .try_iter()?
@@ -3090,7 +2994,7 @@ pub fn read_deltakeyforms(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::type
                 .collect::<PyResult<Vec<_>>>()?
                 .into(),
         )),
-        "rotation" => Ok(zipzi_core::types::DeltaKeyforms::Rotation(
+        "rotation" => Ok(zipzi_core::DeltaKeyforms::Rotation(
             value
                 .getattr("value")?
                 .try_iter()?
@@ -3101,7 +3005,7 @@ pub fn read_deltakeyforms(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::type
                 .collect::<PyResult<Vec<_>>>()?
                 .into(),
         )),
-        "part" => Ok(zipzi_core::types::DeltaKeyforms::Part(
+        "part" => Ok(zipzi_core::DeltaKeyforms::Part(
             value
                 .getattr("value")?
                 .try_iter()?
@@ -3112,7 +3016,7 @@ pub fn read_deltakeyforms(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::type
                 .collect::<PyResult<Vec<_>>>()?
                 .into(),
         )),
-        "glue" => Ok(zipzi_core::types::DeltaKeyforms::Glue(
+        "glue" => Ok(zipzi_core::DeltaKeyforms::Glue(
             value
                 .getattr("value")?
                 .try_iter()?
@@ -3123,7 +3027,7 @@ pub fn read_deltakeyforms(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::type
                 .collect::<PyResult<Vec<_>>>()?
                 .into(),
         )),
-        "offscreen" => Ok(zipzi_core::types::DeltaKeyforms::Offscreen(
+        "offscreen" => Ok(zipzi_core::DeltaKeyforms::Offscreen(
             value
                 .getattr("value")?
                 .try_iter()?
@@ -3142,18 +3046,18 @@ pub fn read_deltakeyforms(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::type
 
 pub fn write_deltakeyforms(
     py: Python<'_>,
-    value: &zipzi_core::types::DeltaKeyforms,
+    value: &zipzi_core::DeltaKeyforms,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_deltakeyforms_in(py, value, &classes)
 }
 fn write_deltakeyforms_in(
     py: Python<'_>,
-    value: &zipzi_core::types::DeltaKeyforms,
+    value: &zipzi_core::DeltaKeyforms,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     match value {
-        zipzi_core::types::DeltaKeyforms::Mesh(field0) => {
+        zipzi_core::DeltaKeyforms::Mesh(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item("value", {
                 let out = PyList::empty(py);
@@ -3167,7 +3071,7 @@ fn write_deltakeyforms_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_core::types::DeltaKeyforms::Warp(field0) => {
+        zipzi_core::DeltaKeyforms::Warp(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item("value", {
                 let out = PyList::empty(py);
@@ -3181,7 +3085,7 @@ fn write_deltakeyforms_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_core::types::DeltaKeyforms::Rotation(field0) => {
+        zipzi_core::DeltaKeyforms::Rotation(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item("value", {
                 let out = PyList::empty(py);
@@ -3195,7 +3099,7 @@ fn write_deltakeyforms_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_core::types::DeltaKeyforms::Part(field0) => {
+        zipzi_core::DeltaKeyforms::Part(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item("value", {
                 let out = PyList::empty(py);
@@ -3209,7 +3113,7 @@ fn write_deltakeyforms_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_core::types::DeltaKeyforms::Glue(field0) => {
+        zipzi_core::DeltaKeyforms::Glue(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item("value", {
                 let out = PyList::empty(py);
@@ -3223,7 +3127,7 @@ fn write_deltakeyforms_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_core::types::DeltaKeyforms::Offscreen(field0) => {
+        zipzi_core::DeltaKeyforms::Offscreen(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item("value", {
                 let out = PyList::empty(py);
@@ -3240,10 +3144,8 @@ fn write_deltakeyforms_in(
     }
 }
 
-pub fn read_deltameshkeyform(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::types::DeltaMeshKeyform> {
-    Ok(zipzi_core::types::DeltaMeshKeyform {
+pub fn read_deltameshkeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::DeltaMeshKeyform> {
+    Ok(zipzi_core::DeltaMeshKeyform {
         sample_id: value.getattr("sample_id")?.extract()?,
         positions: value
             .getattr("positions")?
@@ -3305,14 +3207,14 @@ pub fn read_deltameshkeyform(
 
 pub fn write_deltameshkeyform(
     py: Python<'_>,
-    value: &zipzi_core::types::DeltaMeshKeyform,
+    value: &zipzi_core::DeltaMeshKeyform,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_deltameshkeyform_in(py, value, &classes)
 }
 fn write_deltameshkeyform_in(
     py: Python<'_>,
-    value: &zipzi_core::types::DeltaMeshKeyform,
+    value: &zipzi_core::DeltaMeshKeyform,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -3373,10 +3275,8 @@ fn write_deltameshkeyform_in(
         .unbind())
 }
 
-pub fn read_deltawarpkeyform(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::types::DeltaWarpKeyform> {
-    Ok(zipzi_core::types::DeltaWarpKeyform {
+pub fn read_deltawarpkeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::DeltaWarpKeyform> {
+    Ok(zipzi_core::DeltaWarpKeyform {
         sample_id: value.getattr("sample_id")?.extract()?,
         points: value
             .getattr("points")?
@@ -3433,14 +3333,14 @@ pub fn read_deltawarpkeyform(
 
 pub fn write_deltawarpkeyform(
     py: Python<'_>,
-    value: &zipzi_core::types::DeltaWarpKeyform,
+    value: &zipzi_core::DeltaWarpKeyform,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_deltawarpkeyform_in(py, value, &classes)
 }
 fn write_deltawarpkeyform_in(
     py: Python<'_>,
-    value: &zipzi_core::types::DeltaWarpKeyform,
+    value: &zipzi_core::DeltaWarpKeyform,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -3497,8 +3397,8 @@ fn write_deltawarpkeyform_in(
 
 pub fn read_deltarotationkeyform(
     value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::types::DeltaRotationKeyform> {
-    Ok(zipzi_core::types::DeltaRotationKeyform {
+) -> PyResult<zipzi_core::DeltaRotationKeyform> {
+    Ok(zipzi_core::DeltaRotationKeyform {
         sample_id: value.getattr("sample_id")?.extract()?,
         origin: if value.getattr("origin")?.is_none() {
             None
@@ -3561,14 +3461,14 @@ pub fn read_deltarotationkeyform(
 
 pub fn write_deltarotationkeyform(
     py: Python<'_>,
-    value: &zipzi_core::types::DeltaRotationKeyform,
+    value: &zipzi_core::DeltaRotationKeyform,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_deltarotationkeyform_in(py, value, &classes)
 }
 fn write_deltarotationkeyform_in(
     py: Python<'_>,
-    value: &zipzi_core::types::DeltaRotationKeyform,
+    value: &zipzi_core::DeltaRotationKeyform,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -3634,10 +3534,8 @@ fn write_deltarotationkeyform_in(
         .unbind())
 }
 
-pub fn read_deltapartkeyform(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::types::DeltaPartKeyform> {
-    Ok(zipzi_core::types::DeltaPartKeyform {
+pub fn read_deltapartkeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::DeltaPartKeyform> {
+    Ok(zipzi_core::DeltaPartKeyform {
         sample_id: value.getattr("sample_id")?.extract()?,
         draw_order: value.getattr("draw_order")?.extract()?,
     })
@@ -3645,14 +3543,14 @@ pub fn read_deltapartkeyform(
 
 pub fn write_deltapartkeyform(
     py: Python<'_>,
-    value: &zipzi_core::types::DeltaPartKeyform,
+    value: &zipzi_core::DeltaPartKeyform,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_deltapartkeyform_in(py, value, &classes)
 }
 fn write_deltapartkeyform_in(
     py: Python<'_>,
-    value: &zipzi_core::types::DeltaPartKeyform,
+    value: &zipzi_core::DeltaPartKeyform,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -3678,10 +3576,8 @@ fn write_deltapartkeyform_in(
         .unbind())
 }
 
-pub fn read_deltagluekeyform(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::types::DeltaGlueKeyform> {
-    Ok(zipzi_core::types::DeltaGlueKeyform {
+pub fn read_deltagluekeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::DeltaGlueKeyform> {
+    Ok(zipzi_core::DeltaGlueKeyform {
         sample_id: value.getattr("sample_id")?.extract()?,
         intensity: value.getattr("intensity")?.extract()?,
     })
@@ -3689,14 +3585,14 @@ pub fn read_deltagluekeyform(
 
 pub fn write_deltagluekeyform(
     py: Python<'_>,
-    value: &zipzi_core::types::DeltaGlueKeyform,
+    value: &zipzi_core::DeltaGlueKeyform,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_deltagluekeyform_in(py, value, &classes)
 }
 fn write_deltagluekeyform_in(
     py: Python<'_>,
-    value: &zipzi_core::types::DeltaGlueKeyform,
+    value: &zipzi_core::DeltaGlueKeyform,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -3724,8 +3620,8 @@ fn write_deltagluekeyform_in(
 
 pub fn read_deltaoffscreenkeyform(
     value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::types::DeltaOffscreenKeyform> {
-    Ok(zipzi_core::types::DeltaOffscreenKeyform {
+) -> PyResult<zipzi_core::DeltaOffscreenKeyform> {
+    Ok(zipzi_core::DeltaOffscreenKeyform {
         sample_id: value.getattr("sample_id")?.extract()?,
         opacity: value.getattr("opacity")?.extract()?,
         multiply: if value.getattr("multiply")?.is_none() {
@@ -3769,14 +3665,14 @@ pub fn read_deltaoffscreenkeyform(
 
 pub fn write_deltaoffscreenkeyform(
     py: Python<'_>,
-    value: &zipzi_core::types::DeltaOffscreenKeyform,
+    value: &zipzi_core::DeltaOffscreenKeyform,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_deltaoffscreenkeyform_in(py, value, &classes)
 }
 fn write_deltaoffscreenkeyform_in(
     py: Python<'_>,
-    value: &zipzi_core::types::DeltaOffscreenKeyform,
+    value: &zipzi_core::DeltaOffscreenKeyform,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -3826,8 +3722,8 @@ fn write_deltaoffscreenkeyform_in(
         .unbind())
 }
 
-pub fn read_glue(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Glue> {
-    Ok(zipzi_core::types::Glue {
+pub fn read_glue(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::Glue> {
+    Ok(zipzi_core::Glue {
         id: value.getattr("id")?.extract()?,
         runtime_id: value.getattr("runtime_id")?.extract()?,
         name: value.getattr("name")?.extract()?,
@@ -3851,13 +3747,13 @@ pub fn read_glue(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Glue> 
     })
 }
 
-pub fn write_glue(py: Python<'_>, value: &zipzi_core::types::Glue) -> PyResult<Py<PyAny>> {
+pub fn write_glue(py: Python<'_>, value: &zipzi_core::Glue) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_glue_in(py, value, &classes)
 }
 fn write_glue_in(
     py: Python<'_>,
-    value: &zipzi_core::types::Glue,
+    value: &zipzi_core::Glue,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -3917,10 +3813,8 @@ fn write_glue_in(
     Ok(classes.getattr("Glue")?.call((), Some(&out))?.unbind())
 }
 
-pub fn read_gluevertexpair(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::types::GlueVertexPair> {
-    Ok(zipzi_core::types::GlueVertexPair {
+pub fn read_gluevertexpair(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::GlueVertexPair> {
+    Ok(zipzi_core::GlueVertexPair {
         id: value.getattr("id")?.extract()?,
         vertex_a: if value.getattr("vertex_a")?.is_none() {
             None
@@ -3939,14 +3833,14 @@ pub fn read_gluevertexpair(
 
 pub fn write_gluevertexpair(
     py: Python<'_>,
-    value: &zipzi_core::types::GlueVertexPair,
+    value: &zipzi_core::GlueVertexPair,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_gluevertexpair_in(py, value, &classes)
 }
 fn write_gluevertexpair_in(
     py: Python<'_>,
-    value: &zipzi_core::types::GlueVertexPair,
+    value: &zipzi_core::GlueVertexPair,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -3992,8 +3886,8 @@ fn write_gluevertexpair_in(
         .unbind())
 }
 
-pub fn read_gluebinding(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::GlueBinding> {
-    Ok(zipzi_core::types::GlueBinding {
+pub fn read_gluebinding(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::GlueBinding> {
+    Ok(zipzi_core::GlueBinding {
         axes: value
             .getattr("axes")?
             .try_iter()?
@@ -4015,16 +3909,13 @@ pub fn read_gluebinding(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
     })
 }
 
-pub fn write_gluebinding(
-    py: Python<'_>,
-    value: &zipzi_core::types::GlueBinding,
-) -> PyResult<Py<PyAny>> {
+pub fn write_gluebinding(py: Python<'_>, value: &zipzi_core::GlueBinding) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_gluebinding_in(py, value, &classes)
 }
 fn write_gluebinding_in(
     py: Python<'_>,
-    value: &zipzi_core::types::GlueBinding,
+    value: &zipzi_core::GlueBinding,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -4048,8 +3939,8 @@ fn write_gluebinding_in(
         .unbind())
 }
 
-pub fn read_gluekeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::GlueKeyform> {
-    Ok(zipzi_core::types::GlueKeyform {
+pub fn read_gluekeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::GlueKeyform> {
+    Ok(zipzi_core::GlueKeyform {
         samples: value
             .getattr("samples")?
             .try_iter()?
@@ -4063,16 +3954,13 @@ pub fn read_gluekeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types:
     })
 }
 
-pub fn write_gluekeyform(
-    py: Python<'_>,
-    value: &zipzi_core::types::GlueKeyform,
-) -> PyResult<Py<PyAny>> {
+pub fn write_gluekeyform(py: Python<'_>, value: &zipzi_core::GlueKeyform) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_gluekeyform_in(py, value, &classes)
 }
 fn write_gluekeyform_in(
     py: Python<'_>,
-    value: &zipzi_core::types::GlueKeyform,
+    value: &zipzi_core::GlueKeyform,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -4097,8 +3985,8 @@ fn write_gluekeyform_in(
         .unbind())
 }
 
-pub fn read_offscreen(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Offscreen> {
-    Ok(zipzi_core::types::Offscreen {
+pub fn read_offscreen(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::Offscreen> {
+    Ok(zipzi_core::Offscreen {
         id: value.getattr("id")?.extract()?,
         runtime_id: value.getattr("runtime_id")?.extract()?,
         name: value.getattr("name")?.extract()?,
@@ -4136,16 +4024,13 @@ pub fn read_offscreen(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::O
     })
 }
 
-pub fn write_offscreen(
-    py: Python<'_>,
-    value: &zipzi_core::types::Offscreen,
-) -> PyResult<Py<PyAny>> {
+pub fn write_offscreen(py: Python<'_>, value: &zipzi_core::Offscreen) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_offscreen_in(py, value, &classes)
 }
 fn write_offscreen_in(
     py: Python<'_>,
-    value: &zipzi_core::types::Offscreen,
+    value: &zipzi_core::Offscreen,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -4229,10 +4114,8 @@ fn write_offscreen_in(
     Ok(classes.getattr("Offscreen")?.call((), Some(&out))?.unbind())
 }
 
-pub fn read_offscreenkeyform(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::types::OffscreenKeyform> {
-    Ok(zipzi_core::types::OffscreenKeyform {
+pub fn read_offscreenkeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::OffscreenKeyform> {
+    Ok(zipzi_core::OffscreenKeyform {
         opacity: value.getattr("opacity")?.extract()?,
         multiply: if value.getattr("multiply")?.is_none() {
             None
@@ -4275,14 +4158,14 @@ pub fn read_offscreenkeyform(
 
 pub fn write_offscreenkeyform(
     py: Python<'_>,
-    value: &zipzi_core::types::OffscreenKeyform,
+    value: &zipzi_core::OffscreenKeyform,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_offscreenkeyform_in(py, value, &classes)
 }
 fn write_offscreenkeyform_in(
     py: Python<'_>,
-    value: &zipzi_core::types::OffscreenKeyform,
+    value: &zipzi_core::OffscreenKeyform,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -10667,10 +10550,8 @@ fn write_documentvalue_in(
     }
 }
 
-pub fn read_exportsettings(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_core::types::ExportSettings> {
-    Ok(zipzi_core::types::ExportSettings {
+pub fn read_exportsettings(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::ExportSettings> {
+    Ok(zipzi_core::ExportSettings {
         pixels_per_unit: value.getattr("pixels_per_unit")?.extract()?,
         bounds: if value.getattr("bounds")?.is_none() {
             None
@@ -10698,14 +10579,14 @@ pub fn read_exportsettings(
 
 pub fn write_exportsettings(
     py: Python<'_>,
-    value: &zipzi_core::types::ExportSettings,
+    value: &zipzi_core::ExportSettings,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_exportsettings_in(py, value, &classes)
 }
 fn write_exportsettings_in(
     py: Python<'_>,
-    value: &zipzi_core::types::ExportSettings,
+    value: &zipzi_core::ExportSettings,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -10759,8 +10640,8 @@ fn write_exportsettings_in(
         .unbind())
 }
 
-pub fn read_canvas(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Canvas> {
-    Ok(zipzi_core::types::Canvas {
+pub fn read_canvas(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::Canvas> {
+    Ok(zipzi_core::Canvas {
         width: value.getattr("width")?.extract()?,
         height: value.getattr("height")?.extract()?,
         origin: read_vec2(&value.getattr("origin")?)?,
@@ -10769,13 +10650,13 @@ pub fn read_canvas(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::Canv
     })
 }
 
-pub fn write_canvas(py: Python<'_>, value: &zipzi_core::types::Canvas) -> PyResult<Py<PyAny>> {
+pub fn write_canvas(py: Python<'_>, value: &zipzi_core::Canvas) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_canvas_in(py, value, &classes)
 }
 fn write_canvas_in(
     py: Python<'_>,
-    value: &zipzi_core::types::Canvas,
+    value: &zipzi_core::Canvas,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -16231,8 +16112,8 @@ fn write_poselink_in(
     Ok(classes.getattr("PoseLink")?.call((), Some(&out))?.unbind())
 }
 
-pub fn read_modelsetup(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::ModelSetup> {
-    Ok(zipzi_core::types::ModelSetup {
+pub fn read_modelsetup(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::ModelSetup> {
+    Ok(zipzi_core::ModelSetup {
         source_canvas: if value.getattr("source_canvas")?.is_none() {
             None
         } else {
@@ -16242,16 +16123,13 @@ pub fn read_modelsetup(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::
     })
 }
 
-pub fn write_modelsetup(
-    py: Python<'_>,
-    value: &zipzi_core::types::ModelSetup,
-) -> PyResult<Py<PyAny>> {
+pub fn write_modelsetup(py: Python<'_>, value: &zipzi_core::ModelSetup) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_modelsetup_in(py, value, &classes)
 }
 fn write_modelsetup_in(
     py: Python<'_>,
-    value: &zipzi_core::types::ModelSetup,
+    value: &zipzi_core::ModelSetup,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -16504,15 +16382,15 @@ fn write_drawordergroup_in(
         .unbind())
 }
 
-pub fn read_scenekeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types::SceneKeyform> {
+pub fn read_scenekeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::SceneKeyform> {
     match value.getattr("_variant")?.extract::<String>()?.as_str() {
-        "Warp" => Ok(zipzi_core::types::SceneKeyform::Warp(read_warpkeyform(
+        "Warp" => Ok(zipzi_core::SceneKeyform::Warp(read_warpkeyform(
             &value.getattr("value")?,
         )?)),
-        "Rotation" => Ok(zipzi_core::types::SceneKeyform::Rotation(
-            read_rotationkeyform(&value.getattr("value")?)?,
-        )),
-        "Part" => Ok(zipzi_core::types::SceneKeyform::Part(read_partkeyform(
+        "Rotation" => Ok(zipzi_core::SceneKeyform::Rotation(read_rotationkeyform(
+            &value.getattr("value")?,
+        )?)),
+        "Part" => Ok(zipzi_core::SceneKeyform::Part(read_partkeyform(
             &value.getattr("value")?,
         )?)),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
@@ -16521,20 +16399,17 @@ pub fn read_scenekeyform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::types
     }
 }
 
-pub fn write_scenekeyform(
-    py: Python<'_>,
-    value: &zipzi_core::types::SceneKeyform,
-) -> PyResult<Py<PyAny>> {
+pub fn write_scenekeyform(py: Python<'_>, value: &zipzi_core::SceneKeyform) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_scenekeyform_in(py, value, &classes)
 }
 fn write_scenekeyform_in(
     py: Python<'_>,
-    value: &zipzi_core::types::SceneKeyform,
+    value: &zipzi_core::SceneKeyform,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     match value {
-        zipzi_core::types::SceneKeyform::Warp(field0) => {
+        zipzi_core::SceneKeyform::Warp(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item("value", write_warpkeyform_in(py, (field0), classes)?)?;
             Ok(classes
@@ -16542,7 +16417,7 @@ fn write_scenekeyform_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_core::types::SceneKeyform::Rotation(field0) => {
+        zipzi_core::SceneKeyform::Rotation(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item("value", write_rotationkeyform_in(py, (field0), classes)?)?;
             Ok(classes
@@ -16550,7 +16425,7 @@ fn write_scenekeyform_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_core::types::SceneKeyform::Part(field0) => {
+        zipzi_core::SceneKeyform::Part(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item("value", write_partkeyform_in(py, (field0), classes)?)?;
             Ok(classes
@@ -18422,57 +18297,51 @@ fn write_motiongroup_in(
         .unbind())
 }
 
-pub fn read_addressselector(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_runtime::addressing::AddressSelector> {
+pub fn read_addressselector(value: &Bound<'_, PyAny>) -> PyResult<zipzi_runtime::AddressSelector> {
     match value.getattr("_variant")?.extract::<String>()?.as_str() {
-        "scene" => Ok(zipzi_runtime::addressing::AddressSelector::Scene {
+        "scene" => Ok(zipzi_runtime::AddressSelector::Scene {
             id: value.getattr("id")?.extract()?,
             field: read_scenefield(&value.getattr("field")?)?,
         }),
-        "drawing_group" => Ok(zipzi_runtime::addressing::AddressSelector::DrawingGroup {
+        "drawing_group" => Ok(zipzi_runtime::AddressSelector::DrawingGroup {
             owner: value.getattr("owner")?.extract()?,
         }),
-        "binding" => Ok(zipzi_runtime::addressing::AddressSelector::Binding {
+        "binding" => Ok(zipzi_runtime::AddressSelector::Binding {
             id: value.getattr("id")?.extract()?,
         }),
-        "organization" => Ok(zipzi_runtime::addressing::AddressSelector::Organization {
+        "organization" => Ok(zipzi_runtime::AddressSelector::Organization {
             id: value.getattr("id")?.extract()?,
         }),
-        "content" => Ok(zipzi_runtime::addressing::AddressSelector::Content {
+        "content" => Ok(zipzi_runtime::AddressSelector::Content {
             id: value.getattr("id")?.extract()?,
             target: read_scenecontenttarget(&value.getattr("target")?)?,
         }),
-        "reference" => Ok(zipzi_runtime::addressing::AddressSelector::Reference {
+        "reference" => Ok(zipzi_runtime::AddressSelector::Reference {
             id: value.getattr("id")?.extract()?,
         }),
-        "selection" => Ok(zipzi_runtime::addressing::AddressSelector::Selection {
+        "selection" => Ok(zipzi_runtime::AddressSelector::Selection {
             owner: value.getattr("owner")?.extract()?,
             field: read_referenceselectionfield(&value.getattr("field")?)?,
         }),
-        "resource_name" => Ok(zipzi_runtime::addressing::AddressSelector::ResourceName {
+        "resource_name" => Ok(zipzi_runtime::AddressSelector::ResourceName {
             id: value.getattr("id")?.extract()?,
         }),
-        "attachment_path" => Ok(zipzi_runtime::addressing::AddressSelector::AttachmentPath {
+        "attachment_path" => Ok(zipzi_runtime::AddressSelector::AttachmentPath {
             id: value.getattr("id")?.extract()?,
         }),
-        "document" => Ok(zipzi_runtime::addressing::AddressSelector::Document {
+        "document" => Ok(zipzi_runtime::AddressSelector::Document {
             field: read_documentfield(&value.getattr("field")?)?,
         }),
-        "motion_registration" => Ok(
-            zipzi_runtime::addressing::AddressSelector::MotionRegistration {
-                id: value.getattr("id")?.extract()?,
-            },
-        ),
-        "expression_entry" => Ok(
-            zipzi_runtime::addressing::AddressSelector::ExpressionEntry {
-                id: value.getattr("id")?.extract()?,
-            },
-        ),
-        "physics" => Ok(zipzi_runtime::addressing::AddressSelector::Physics {
+        "motion_registration" => Ok(zipzi_runtime::AddressSelector::MotionRegistration {
             id: value.getattr("id")?.extract()?,
         }),
-        "pose" => Ok(zipzi_runtime::addressing::AddressSelector::Pose {
+        "expression_entry" => Ok(zipzi_runtime::AddressSelector::ExpressionEntry {
+            id: value.getattr("id")?.extract()?,
+        }),
+        "physics" => Ok(zipzi_runtime::AddressSelector::Physics {
+            id: value.getattr("id")?.extract()?,
+        }),
+        "pose" => Ok(zipzi_runtime::AddressSelector::Pose {
             id: value.getattr("id")?.extract()?,
         }),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
@@ -18483,18 +18352,18 @@ pub fn read_addressselector(
 
 pub fn write_addressselector(
     py: Python<'_>,
-    value: &zipzi_runtime::addressing::AddressSelector,
+    value: &zipzi_runtime::AddressSelector,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_addressselector_in(py, value, &classes)
 }
 fn write_addressselector_in(
     py: Python<'_>,
-    value: &zipzi_runtime::addressing::AddressSelector,
+    value: &zipzi_runtime::AddressSelector,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     match value {
-        zipzi_runtime::addressing::AddressSelector::Scene {
+        zipzi_runtime::AddressSelector::Scene {
             id: field0,
             field: field1,
         } => {
@@ -18509,7 +18378,7 @@ fn write_addressselector_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressSelector::DrawingGroup { owner: field0 } => {
+        zipzi_runtime::AddressSelector::DrawingGroup { owner: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "owner",
@@ -18520,7 +18389,7 @@ fn write_addressselector_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressSelector::Binding { id: field0 } => {
+        zipzi_runtime::AddressSelector::Binding { id: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "id",
@@ -18531,7 +18400,7 @@ fn write_addressselector_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressSelector::Organization { id: field0 } => {
+        zipzi_runtime::AddressSelector::Organization { id: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "id",
@@ -18542,7 +18411,7 @@ fn write_addressselector_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressSelector::Content {
+        zipzi_runtime::AddressSelector::Content {
             id: field0,
             target: field1,
         } => {
@@ -18560,7 +18429,7 @@ fn write_addressselector_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressSelector::Reference { id: field0 } => {
+        zipzi_runtime::AddressSelector::Reference { id: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "id",
@@ -18571,7 +18440,7 @@ fn write_addressselector_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressSelector::Selection {
+        zipzi_runtime::AddressSelector::Selection {
             owner: field0,
             field: field1,
         } => {
@@ -18589,7 +18458,7 @@ fn write_addressselector_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressSelector::ResourceName { id: field0 } => {
+        zipzi_runtime::AddressSelector::ResourceName { id: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "id",
@@ -18600,7 +18469,7 @@ fn write_addressselector_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressSelector::AttachmentPath { id: field0 } => {
+        zipzi_runtime::AddressSelector::AttachmentPath { id: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "id",
@@ -18611,7 +18480,7 @@ fn write_addressselector_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressSelector::Document { field: field0 } => {
+        zipzi_runtime::AddressSelector::Document { field: field0 } => {
             let content = PyDict::new(py);
             content.set_item("field", write_documentfield_in(py, (field0), classes)?)?;
             Ok(classes
@@ -18619,7 +18488,7 @@ fn write_addressselector_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressSelector::MotionRegistration { id: field0 } => {
+        zipzi_runtime::AddressSelector::MotionRegistration { id: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "id",
@@ -18630,7 +18499,7 @@ fn write_addressselector_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressSelector::ExpressionEntry { id: field0 } => {
+        zipzi_runtime::AddressSelector::ExpressionEntry { id: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "id",
@@ -18641,7 +18510,7 @@ fn write_addressselector_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressSelector::Physics { id: field0 } => {
+        zipzi_runtime::AddressSelector::Physics { id: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "id",
@@ -18652,7 +18521,7 @@ fn write_addressselector_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressSelector::Pose { id: field0 } => {
+        zipzi_runtime::AddressSelector::Pose { id: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "id",
@@ -18920,15 +18789,13 @@ fn write_documentfield_in(
     Ok(classes.getattr("DocumentField")?.call1((name,))?.unbind())
 }
 
-pub fn read_addresspatch(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_runtime::addressing::AddressPatch> {
+pub fn read_addresspatch(value: &Bound<'_, PyAny>) -> PyResult<zipzi_runtime::AddressPatch> {
     match value.getattr("_variant")?.extract::<String>()?.as_str() {
-        "scene" => Ok(zipzi_runtime::addressing::AddressPatch::Scene {
+        "scene" => Ok(zipzi_runtime::AddressPatch::Scene {
             value: read_scenefieldvalue(&value.getattr("value")?)?,
             clear_glue_pairs: value.getattr("clear_glue_pairs")?.extract()?,
         }),
-        "drawing_range" => Ok(zipzi_runtime::addressing::AddressPatch::DrawingRange {
+        "drawing_range" => Ok(zipzi_runtime::AddressPatch::DrawingRange {
             range: value
                 .getattr("range")?
                 .try_iter()?
@@ -18942,19 +18809,19 @@ pub fn read_addresspatch(
                     pyo3::exceptions::PyValueError::new_err("Invalid fixed array length")
                 })?,
         }),
-        "binding" => Ok(zipzi_runtime::addressing::AddressPatch::Binding {
+        "binding" => Ok(zipzi_runtime::AddressPatch::Binding {
             patch: read_bindingfieldpatch(&value.getattr("patch")?)?,
         }),
-        "organization" => Ok(zipzi_runtime::addressing::AddressPatch::Organization {
+        "organization" => Ok(zipzi_runtime::AddressPatch::Organization {
             intent: read_organizationedit(&value.getattr("intent")?)?,
         }),
-        "content" => Ok(zipzi_runtime::addressing::AddressPatch::Content {
+        "content" => Ok(zipzi_runtime::AddressPatch::Content {
             value: read_scenecontentvalue(&value.getattr("value")?)?,
         }),
-        "reference" => Ok(zipzi_runtime::addressing::AddressPatch::Reference {
+        "reference" => Ok(zipzi_runtime::AddressPatch::Reference {
             fields: read_referencefields(&value.getattr("fields")?)?,
         }),
-        "selection" => Ok(zipzi_runtime::addressing::AddressPatch::Selection {
+        "selection" => Ok(zipzi_runtime::AddressPatch::Selection {
             targets: value
                 .getattr("targets")?
                 .try_iter()?
@@ -18965,24 +18832,22 @@ pub fn read_addresspatch(
                 .collect::<PyResult<Vec<_>>>()?
                 .into(),
         }),
-        "resource_name" => Ok(zipzi_runtime::addressing::AddressPatch::ResourceName {
+        "resource_name" => Ok(zipzi_runtime::AddressPatch::ResourceName {
             name: value.getattr("name")?.extract()?,
         }),
-        "attachment_path" => Ok(zipzi_runtime::addressing::AddressPatch::AttachmentPath {
+        "attachment_path" => Ok(zipzi_runtime::AddressPatch::AttachmentPath {
             path: value.getattr("path")?.extract()?,
         }),
-        "document" => Ok(zipzi_runtime::addressing::AddressPatch::Document {
+        "document" => Ok(zipzi_runtime::AddressPatch::Document {
             value: read_documentvalue(&value.getattr("value")?)?,
         }),
-        "motion_registration" => Ok(
-            zipzi_runtime::addressing::AddressPatch::MotionRegistration {
-                entry: read_motionregistration(&value.getattr("entry")?)?,
-            },
-        ),
-        "expression_entry" => Ok(zipzi_runtime::addressing::AddressPatch::ExpressionEntry {
+        "motion_registration" => Ok(zipzi_runtime::AddressPatch::MotionRegistration {
+            entry: read_motionregistration(&value.getattr("entry")?)?,
+        }),
+        "expression_entry" => Ok(zipzi_runtime::AddressPatch::ExpressionEntry {
             fields: read_expressionentryfields(&value.getattr("fields")?)?,
         }),
-        "physics" => Ok(zipzi_runtime::addressing::AddressPatch::Physics {
+        "physics" => Ok(zipzi_runtime::AddressPatch::Physics {
             changes: value
                 .getattr("changes")?
                 .try_iter()?
@@ -18993,7 +18858,7 @@ pub fn read_addresspatch(
                 .collect::<PyResult<Vec<_>>>()?
                 .into(),
         }),
-        "pose" => Ok(zipzi_runtime::addressing::AddressPatch::Pose {
+        "pose" => Ok(zipzi_runtime::AddressPatch::Pose {
             fields: read_posefields(&value.getattr("fields")?)?,
         }),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
@@ -19004,18 +18869,18 @@ pub fn read_addresspatch(
 
 pub fn write_addresspatch(
     py: Python<'_>,
-    value: &zipzi_runtime::addressing::AddressPatch,
+    value: &zipzi_runtime::AddressPatch,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_addresspatch_in(py, value, &classes)
 }
 fn write_addresspatch_in(
     py: Python<'_>,
-    value: &zipzi_runtime::addressing::AddressPatch,
+    value: &zipzi_runtime::AddressPatch,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     match value {
-        zipzi_runtime::addressing::AddressPatch::Scene {
+        zipzi_runtime::AddressPatch::Scene {
             value: field0,
             clear_glue_pairs: field1,
         } => {
@@ -19030,7 +18895,7 @@ fn write_addresspatch_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressPatch::DrawingRange { range: field0 } => {
+        zipzi_runtime::AddressPatch::DrawingRange { range: field0 } => {
             let content = PyDict::new(py);
             content.set_item("range", {
                 let out = PyList::empty(py);
@@ -19044,7 +18909,7 @@ fn write_addresspatch_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressPatch::Binding { patch: field0 } => {
+        zipzi_runtime::AddressPatch::Binding { patch: field0 } => {
             let content = PyDict::new(py);
             content.set_item("patch", write_bindingfieldpatch_in(py, (field0), classes)?)?;
             Ok(classes
@@ -19052,7 +18917,7 @@ fn write_addresspatch_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressPatch::Organization { intent: field0 } => {
+        zipzi_runtime::AddressPatch::Organization { intent: field0 } => {
             let content = PyDict::new(py);
             content.set_item("intent", write_organizationedit_in(py, (field0), classes)?)?;
             Ok(classes
@@ -19060,7 +18925,7 @@ fn write_addresspatch_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressPatch::Content { value: field0 } => {
+        zipzi_runtime::AddressPatch::Content { value: field0 } => {
             let content = PyDict::new(py);
             content.set_item("value", write_scenecontentvalue_in(py, (field0), classes)?)?;
             Ok(classes
@@ -19068,7 +18933,7 @@ fn write_addresspatch_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressPatch::Reference { fields: field0 } => {
+        zipzi_runtime::AddressPatch::Reference { fields: field0 } => {
             let content = PyDict::new(py);
             content.set_item("fields", write_referencefields_in(py, (field0), classes)?)?;
             Ok(classes
@@ -19076,7 +18941,7 @@ fn write_addresspatch_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressPatch::Selection { targets: field0 } => {
+        zipzi_runtime::AddressPatch::Selection { targets: field0 } => {
             let content = PyDict::new(py);
             content.set_item("targets", {
                 let out = PyList::empty(py);
@@ -19090,7 +18955,7 @@ fn write_addresspatch_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressPatch::ResourceName { name: field0 } => {
+        zipzi_runtime::AddressPatch::ResourceName { name: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "name",
@@ -19101,7 +18966,7 @@ fn write_addresspatch_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressPatch::AttachmentPath { path: field0 } => {
+        zipzi_runtime::AddressPatch::AttachmentPath { path: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "path",
@@ -19112,7 +18977,7 @@ fn write_addresspatch_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressPatch::Document { value: field0 } => {
+        zipzi_runtime::AddressPatch::Document { value: field0 } => {
             let content = PyDict::new(py);
             content.set_item("value", write_documentvalue_in(py, (field0), classes)?)?;
             Ok(classes
@@ -19120,7 +18985,7 @@ fn write_addresspatch_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressPatch::MotionRegistration { entry: field0 } => {
+        zipzi_runtime::AddressPatch::MotionRegistration { entry: field0 } => {
             let content = PyDict::new(py);
             content.set_item("entry", write_motionregistration_in(py, (field0), classes)?)?;
             Ok(classes
@@ -19128,7 +18993,7 @@ fn write_addresspatch_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressPatch::ExpressionEntry { fields: field0 } => {
+        zipzi_runtime::AddressPatch::ExpressionEntry { fields: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "fields",
@@ -19139,7 +19004,7 @@ fn write_addresspatch_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressPatch::Physics { changes: field0 } => {
+        zipzi_runtime::AddressPatch::Physics { changes: field0 } => {
             let content = PyDict::new(py);
             content.set_item("changes", {
                 let out = PyList::empty(py);
@@ -19153,7 +19018,7 @@ fn write_addresspatch_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::addressing::AddressPatch::Pose { fields: field0 } => {
+        zipzi_runtime::AddressPatch::Pose { fields: field0 } => {
             let content = PyDict::new(py);
             content.set_item("fields", write_posefields_in(py, (field0), classes)?)?;
             Ok(classes
@@ -19355,19 +19220,19 @@ fn write_scenecontentvalue_in(
 
 pub fn read_capabilitydomain(
     value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_runtime::addressing::CapabilityDomain> {
+) -> PyResult<zipzi_runtime::CapabilityDomain> {
     match value.getattr("value")?.extract::<String>()?.as_str() {
-        "scene" => Ok(zipzi_runtime::addressing::CapabilityDomain::Scene),
-        "organization" => Ok(zipzi_runtime::addressing::CapabilityDomain::Organization),
-        "binding" => Ok(zipzi_runtime::addressing::CapabilityDomain::Binding),
-        "content" => Ok(zipzi_runtime::addressing::CapabilityDomain::Content),
-        "references" => Ok(zipzi_runtime::addressing::CapabilityDomain::References),
-        "resource" => Ok(zipzi_runtime::addressing::CapabilityDomain::Resource),
-        "attachment" => Ok(zipzi_runtime::addressing::CapabilityDomain::Attachment),
-        "motion" => Ok(zipzi_runtime::addressing::CapabilityDomain::Motion),
-        "expression" => Ok(zipzi_runtime::addressing::CapabilityDomain::Expression),
-        "physics" => Ok(zipzi_runtime::addressing::CapabilityDomain::Physics),
-        "pose" => Ok(zipzi_runtime::addressing::CapabilityDomain::Pose),
+        "scene" => Ok(zipzi_runtime::CapabilityDomain::Scene),
+        "organization" => Ok(zipzi_runtime::CapabilityDomain::Organization),
+        "binding" => Ok(zipzi_runtime::CapabilityDomain::Binding),
+        "content" => Ok(zipzi_runtime::CapabilityDomain::Content),
+        "references" => Ok(zipzi_runtime::CapabilityDomain::References),
+        "resource" => Ok(zipzi_runtime::CapabilityDomain::Resource),
+        "attachment" => Ok(zipzi_runtime::CapabilityDomain::Attachment),
+        "motion" => Ok(zipzi_runtime::CapabilityDomain::Motion),
+        "expression" => Ok(zipzi_runtime::CapabilityDomain::Expression),
+        "physics" => Ok(zipzi_runtime::CapabilityDomain::Physics),
+        "pose" => Ok(zipzi_runtime::CapabilityDomain::Pose),
         _ => Err(pyo3::exceptions::PyValueError::new_err(
             "Unknown enum value",
         )),
@@ -19376,28 +19241,28 @@ pub fn read_capabilitydomain(
 
 pub fn write_capabilitydomain(
     py: Python<'_>,
-    value: &zipzi_runtime::addressing::CapabilityDomain,
+    value: &zipzi_runtime::CapabilityDomain,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_capabilitydomain_in(py, value, &classes)
 }
 fn write_capabilitydomain_in(
     py: Python<'_>,
-    value: &zipzi_runtime::addressing::CapabilityDomain,
+    value: &zipzi_runtime::CapabilityDomain,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let name = match value {
-        zipzi_runtime::addressing::CapabilityDomain::Scene => "scene",
-        zipzi_runtime::addressing::CapabilityDomain::Organization => "organization",
-        zipzi_runtime::addressing::CapabilityDomain::Binding => "binding",
-        zipzi_runtime::addressing::CapabilityDomain::Content => "content",
-        zipzi_runtime::addressing::CapabilityDomain::References => "references",
-        zipzi_runtime::addressing::CapabilityDomain::Resource => "resource",
-        zipzi_runtime::addressing::CapabilityDomain::Attachment => "attachment",
-        zipzi_runtime::addressing::CapabilityDomain::Motion => "motion",
-        zipzi_runtime::addressing::CapabilityDomain::Expression => "expression",
-        zipzi_runtime::addressing::CapabilityDomain::Physics => "physics",
-        zipzi_runtime::addressing::CapabilityDomain::Pose => "pose",
+        zipzi_runtime::CapabilityDomain::Scene => "scene",
+        zipzi_runtime::CapabilityDomain::Organization => "organization",
+        zipzi_runtime::CapabilityDomain::Binding => "binding",
+        zipzi_runtime::CapabilityDomain::Content => "content",
+        zipzi_runtime::CapabilityDomain::References => "references",
+        zipzi_runtime::CapabilityDomain::Resource => "resource",
+        zipzi_runtime::CapabilityDomain::Attachment => "attachment",
+        zipzi_runtime::CapabilityDomain::Motion => "motion",
+        zipzi_runtime::CapabilityDomain::Expression => "expression",
+        zipzi_runtime::CapabilityDomain::Physics => "physics",
+        zipzi_runtime::CapabilityDomain::Pose => "pose",
     };
     Ok(classes
         .getattr("CapabilityDomain")?
@@ -19641,18 +19506,18 @@ fn write_physicscollection_in(
 
 pub fn write_capabilities(
     py: Python<'_>,
-    value: &zipzi_runtime::addressing::Capabilities,
+    value: &zipzi_runtime::Capabilities,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_capabilities_in(py, value, &classes)
 }
 fn write_capabilities_in(
     py: Python<'_>,
-    value: &zipzi_runtime::addressing::Capabilities,
+    value: &zipzi_runtime::Capabilities,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     match value {
-        zipzi_runtime::addressing::Capabilities::Scene(field0) => {
+        zipzi_runtime::Capabilities::Scene(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item("value", write_scenecapabilities_in(py, (field0), classes)?)?;
             Ok(classes
@@ -19660,7 +19525,7 @@ fn write_capabilities_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_runtime::addressing::Capabilities::Organization(field0) => {
+        zipzi_runtime::Capabilities::Organization(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item(
                 "value",
@@ -19671,7 +19536,7 @@ fn write_capabilities_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_runtime::addressing::Capabilities::Binding(field0) => {
+        zipzi_runtime::Capabilities::Binding(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item(
                 "value",
@@ -19682,7 +19547,7 @@ fn write_capabilities_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_runtime::addressing::Capabilities::Content(field0) => {
+        zipzi_runtime::Capabilities::Content(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item(
                 "value",
@@ -19693,7 +19558,7 @@ fn write_capabilities_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_runtime::addressing::Capabilities::References(field0) => {
+        zipzi_runtime::Capabilities::References(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item(
                 "value",
@@ -19704,7 +19569,7 @@ fn write_capabilities_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_runtime::addressing::Capabilities::Resource(field0) => {
+        zipzi_runtime::Capabilities::Resource(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item(
                 "value",
@@ -19715,7 +19580,7 @@ fn write_capabilities_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_runtime::addressing::Capabilities::Attachment(field0) => {
+        zipzi_runtime::Capabilities::Attachment(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item(
                 "value",
@@ -19726,7 +19591,7 @@ fn write_capabilities_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_runtime::addressing::Capabilities::Collection(field0) => {
+        zipzi_runtime::Capabilities::Collection(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item(
                 "value",
@@ -19737,7 +19602,7 @@ fn write_capabilities_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_runtime::addressing::Capabilities::Document(field0) => {
+        zipzi_runtime::Capabilities::Document(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item("value", write_capabilitystate_in(py, (field0), classes)?)?;
             Ok(classes
@@ -19745,7 +19610,7 @@ fn write_capabilities_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_runtime::addressing::Capabilities::Motion(field0) => {
+        zipzi_runtime::Capabilities::Motion(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item("value", write_motioncapabilities_in(py, (field0), classes)?)?;
             Ok(classes
@@ -19753,7 +19618,7 @@ fn write_capabilities_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_runtime::addressing::Capabilities::Expression(field0) => {
+        zipzi_runtime::Capabilities::Expression(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item(
                 "value",
@@ -19764,7 +19629,7 @@ fn write_capabilities_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_runtime::addressing::Capabilities::Physics(field0) => {
+        zipzi_runtime::Capabilities::Physics(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item(
                 "value",
@@ -19775,7 +19640,7 @@ fn write_capabilities_in(
                 .call((), Some(&kwargs))?
                 .unbind())
         }
-        zipzi_runtime::addressing::Capabilities::Pose(field0) => {
+        zipzi_runtime::Capabilities::Pose(field0) => {
             let kwargs = PyDict::new(py);
             kwargs.set_item("value", write_posecapabilities_in(py, (field0), classes)?)?;
             Ok(classes
@@ -21376,12 +21241,10 @@ fn write_texturecoverage_in(
         .unbind())
 }
 
-pub fn read_projectrequest(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_runtime::project_io::ProjectRequest> {
+pub fn read_projectrequest(value: &Bound<'_, PyAny>) -> PyResult<zipzi_runtime::ProjectRequest> {
     match value.getattr("_variant")?.extract::<String>()?.as_str() {
-        "diagnose" => Ok(zipzi_runtime::project_io::ProjectRequest::Diagnose),
-        "import" => Ok(zipzi_runtime::project_io::ProjectRequest::Import {
+        "diagnose" => Ok(zipzi_runtime::ProjectRequest::Diagnose),
+        "import" => Ok(zipzi_runtime::ProjectRequest::Import {
             path: value.getattr("path")?.extract()?,
             format: read_importformat(&value.getattr("format")?)?,
             textures: value
@@ -21394,14 +21257,14 @@ pub fn read_projectrequest(
                 .collect::<PyResult<Vec<_>>>()?
                 .into(),
         }),
-        "open" => Ok(zipzi_runtime::project_io::ProjectRequest::Open {
+        "open" => Ok(zipzi_runtime::ProjectRequest::Open {
             path: value.getattr("path")?.extract()?,
         }),
-        "new" => Ok(zipzi_runtime::project_io::ProjectRequest::New {
+        "new" => Ok(zipzi_runtime::ProjectRequest::New {
             document_id: value.getattr("document_id")?.extract()?,
             setup: read_modelsetup(&value.getattr("setup")?)?,
         }),
-        "export" => Ok(zipzi_runtime::project_io::ProjectRequest::Export {
+        "export" => Ok(zipzi_runtime::ProjectRequest::Export {
             path: value.getattr("path")?.extract()?,
             format: read_exportformat(&value.getattr("format")?)?,
             name: value.getattr("name")?.extract()?,
@@ -21422,21 +21285,21 @@ pub fn read_projectrequest(
 
 pub fn write_projectrequest(
     py: Python<'_>,
-    value: &zipzi_runtime::project_io::ProjectRequest,
+    value: &zipzi_runtime::ProjectRequest,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_projectrequest_in(py, value, &classes)
 }
 fn write_projectrequest_in(
     py: Python<'_>,
-    value: &zipzi_runtime::project_io::ProjectRequest,
+    value: &zipzi_runtime::ProjectRequest,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     match value {
-        zipzi_runtime::project_io::ProjectRequest::Diagnose => {
+        zipzi_runtime::ProjectRequest::Diagnose => {
             Ok(classes.getattr("ProjectRequestDiagnose")?.call0()?.unbind())
         }
-        zipzi_runtime::project_io::ProjectRequest::Import {
+        zipzi_runtime::ProjectRequest::Import {
             path: field0,
             format: field1,
             textures: field2,
@@ -21459,7 +21322,7 @@ fn write_projectrequest_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::project_io::ProjectRequest::Open { path: field0 } => {
+        zipzi_runtime::ProjectRequest::Open { path: field0 } => {
             let content = PyDict::new(py);
             content.set_item(
                 "path",
@@ -21470,7 +21333,7 @@ fn write_projectrequest_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::project_io::ProjectRequest::New {
+        zipzi_runtime::ProjectRequest::New {
             document_id: field0,
             setup: field1,
         } => {
@@ -21485,7 +21348,7 @@ fn write_projectrequest_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::project_io::ProjectRequest::Export {
+        zipzi_runtime::ProjectRequest::Export {
             path: field0,
             format: field1,
             name: field2,
@@ -21530,14 +21393,12 @@ fn write_projectrequest_in(
     }
 }
 
-pub fn read_importformat(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_runtime::project_io::ImportFormat> {
+pub fn read_importformat(value: &Bound<'_, PyAny>) -> PyResult<zipzi_runtime::ImportFormat> {
     match value.getattr("value")?.extract::<String>()?.as_str() {
-        "model3" => Ok(zipzi_runtime::project_io::ImportFormat::Model3),
-        "psd" => Ok(zipzi_runtime::project_io::ImportFormat::Psd),
-        "cubism" => Ok(zipzi_runtime::project_io::ImportFormat::Cubism),
-        "moc3" => Ok(zipzi_runtime::project_io::ImportFormat::Moc3),
+        "model3" => Ok(zipzi_runtime::ImportFormat::Model3),
+        "psd" => Ok(zipzi_runtime::ImportFormat::Psd),
+        "cubism" => Ok(zipzi_runtime::ImportFormat::Cubism),
+        "moc3" => Ok(zipzi_runtime::ImportFormat::Moc3),
         _ => Err(pyo3::exceptions::PyValueError::new_err(
             "Unknown enum value",
         )),
@@ -21546,29 +21407,27 @@ pub fn read_importformat(
 
 pub fn write_importformat(
     py: Python<'_>,
-    value: &zipzi_runtime::project_io::ImportFormat,
+    value: &zipzi_runtime::ImportFormat,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_importformat_in(py, value, &classes)
 }
 fn write_importformat_in(
     py: Python<'_>,
-    value: &zipzi_runtime::project_io::ImportFormat,
+    value: &zipzi_runtime::ImportFormat,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let name = match value {
-        zipzi_runtime::project_io::ImportFormat::Model3 => "model3",
-        zipzi_runtime::project_io::ImportFormat::Psd => "psd",
-        zipzi_runtime::project_io::ImportFormat::Cubism => "cubism",
-        zipzi_runtime::project_io::ImportFormat::Moc3 => "moc3",
+        zipzi_runtime::ImportFormat::Model3 => "model3",
+        zipzi_runtime::ImportFormat::Psd => "psd",
+        zipzi_runtime::ImportFormat::Cubism => "cubism",
+        zipzi_runtime::ImportFormat::Moc3 => "moc3",
     };
     Ok(classes.getattr("ImportFormat")?.call1((name,))?.unbind())
 }
 
-pub fn read_textureslot(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_runtime::project_io::TextureSlot> {
-    Ok(zipzi_runtime::project_io::TextureSlot {
+pub fn read_textureslot(value: &Bound<'_, PyAny>) -> PyResult<zipzi_runtime::TextureSlot> {
+    Ok(zipzi_runtime::TextureSlot {
         slot: value.getattr("slot")?.extract()?,
         path: value.getattr("path")?.extract()?,
     })
@@ -21576,14 +21435,14 @@ pub fn read_textureslot(
 
 pub fn write_textureslot(
     py: Python<'_>,
-    value: &zipzi_runtime::project_io::TextureSlot,
+    value: &zipzi_runtime::TextureSlot,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_textureslot_in(py, value, &classes)
 }
 fn write_textureslot_in(
     py: Python<'_>,
-    value: &zipzi_runtime::project_io::TextureSlot,
+    value: &zipzi_runtime::TextureSlot,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -21609,19 +21468,17 @@ fn write_textureslot_in(
         .unbind())
 }
 
-pub fn read_exportformat(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_runtime::project_io::ExportFormat> {
+pub fn read_exportformat(value: &Bound<'_, PyAny>) -> PyResult<zipzi_runtime::ExportFormat> {
     match value.getattr("value")?.extract::<String>()?.as_str() {
-        "package" => Ok(zipzi_runtime::project_io::ExportFormat::Package),
-        "cmo3" => Ok(zipzi_runtime::project_io::ExportFormat::Cmo3),
-        "can3" => Ok(zipzi_runtime::project_io::ExportFormat::Can3),
-        "cubism" => Ok(zipzi_runtime::project_io::ExportFormat::Cubism),
-        "motion3" => Ok(zipzi_runtime::project_io::ExportFormat::Motion3),
-        "expression3" => Ok(zipzi_runtime::project_io::ExportFormat::Expression3),
-        "physics3" => Ok(zipzi_runtime::project_io::ExportFormat::Physics3),
-        "pose3" => Ok(zipzi_runtime::project_io::ExportFormat::Pose3),
-        "cdi3" => Ok(zipzi_runtime::project_io::ExportFormat::Cdi3),
+        "package" => Ok(zipzi_runtime::ExportFormat::Package),
+        "cmo3" => Ok(zipzi_runtime::ExportFormat::Cmo3),
+        "can3" => Ok(zipzi_runtime::ExportFormat::Can3),
+        "cubism" => Ok(zipzi_runtime::ExportFormat::Cubism),
+        "motion3" => Ok(zipzi_runtime::ExportFormat::Motion3),
+        "expression3" => Ok(zipzi_runtime::ExportFormat::Expression3),
+        "physics3" => Ok(zipzi_runtime::ExportFormat::Physics3),
+        "pose3" => Ok(zipzi_runtime::ExportFormat::Pose3),
+        "cdi3" => Ok(zipzi_runtime::ExportFormat::Cdi3),
         _ => Err(pyo3::exceptions::PyValueError::new_err(
             "Unknown enum value",
         )),
@@ -21630,40 +21487,40 @@ pub fn read_exportformat(
 
 pub fn write_exportformat(
     py: Python<'_>,
-    value: &zipzi_runtime::project_io::ExportFormat,
+    value: &zipzi_runtime::ExportFormat,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_exportformat_in(py, value, &classes)
 }
 fn write_exportformat_in(
     py: Python<'_>,
-    value: &zipzi_runtime::project_io::ExportFormat,
+    value: &zipzi_runtime::ExportFormat,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let name = match value {
-        zipzi_runtime::project_io::ExportFormat::Package => "package",
-        zipzi_runtime::project_io::ExportFormat::Cmo3 => "cmo3",
-        zipzi_runtime::project_io::ExportFormat::Can3 => "can3",
-        zipzi_runtime::project_io::ExportFormat::Cubism => "cubism",
-        zipzi_runtime::project_io::ExportFormat::Motion3 => "motion3",
-        zipzi_runtime::project_io::ExportFormat::Expression3 => "expression3",
-        zipzi_runtime::project_io::ExportFormat::Physics3 => "physics3",
-        zipzi_runtime::project_io::ExportFormat::Pose3 => "pose3",
-        zipzi_runtime::project_io::ExportFormat::Cdi3 => "cdi3",
+        zipzi_runtime::ExportFormat::Package => "package",
+        zipzi_runtime::ExportFormat::Cmo3 => "cmo3",
+        zipzi_runtime::ExportFormat::Can3 => "can3",
+        zipzi_runtime::ExportFormat::Cubism => "cubism",
+        zipzi_runtime::ExportFormat::Motion3 => "motion3",
+        zipzi_runtime::ExportFormat::Expression3 => "expression3",
+        zipzi_runtime::ExportFormat::Physics3 => "physics3",
+        zipzi_runtime::ExportFormat::Pose3 => "pose3",
+        zipzi_runtime::ExportFormat::Cdi3 => "cdi3",
     };
     Ok(classes.getattr("ExportFormat")?.call1((name,))?.unbind())
 }
 
 pub fn write_projectreport(
     py: Python<'_>,
-    value: &zipzi_runtime::project_io::ProjectReport,
+    value: &zipzi_runtime::ProjectReport,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_projectreport_in(py, value, &classes)
 }
 fn write_projectreport_in(
     py: Python<'_>,
-    value: &zipzi_runtime::project_io::ProjectReport,
+    value: &zipzi_runtime::ProjectReport,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -21714,14 +21571,14 @@ fn write_projectreport_in(
 
 pub fn write_projectdiagnostic(
     py: Python<'_>,
-    value: &zipzi_runtime::project_io::ProjectDiagnostic,
+    value: &zipzi_runtime::ProjectDiagnostic,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_projectdiagnostic_in(py, value, &classes)
 }
 fn write_projectdiagnostic_in(
     py: Python<'_>,
-    value: &zipzi_runtime::project_io::ProjectDiagnostic,
+    value: &zipzi_runtime::ProjectDiagnostic,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -21765,14 +21622,14 @@ fn write_projectdiagnostic_in(
 
 pub fn write_editorcontext(
     py: Python<'_>,
-    value: &zipzi_runtime::editor_context::EditorContext,
+    value: &zipzi_runtime::EditorContext,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_editorcontext_in(py, value, &classes)
 }
 fn write_editorcontext_in(
     py: Python<'_>,
-    value: &zipzi_runtime::editor_context::EditorContext,
+    value: &zipzi_runtime::EditorContext,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -21830,38 +21687,34 @@ fn write_editorcontext_in(
         .unbind())
 }
 
-pub fn read_previewcommand(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_runtime::preview::PreviewCommand> {
+pub fn read_previewcommand(value: &Bound<'_, PyAny>) -> PyResult<zipzi_runtime::PreviewCommand> {
     match value.getattr("_variant")?.extract::<String>()?.as_str() {
-        "set_parameter" => Ok(zipzi_runtime::preview::PreviewCommand::SetParameter {
+        "set_parameter" => Ok(zipzi_runtime::PreviewCommand::SetParameter {
             id: value.getattr("id")?.extract()?,
             value: value.getattr("value")?.extract()?,
         }),
-        "schedule_motion" => Ok(zipzi_runtime::preview::PreviewCommand::ScheduleMotion {
+        "schedule_motion" => Ok(zipzi_runtime::PreviewCommand::ScheduleMotion {
             id: value.getattr("id")?.extract()?,
             time: value.getattr("time")?.extract()?,
         }),
-        "schedule_registration" => Ok(
-            zipzi_runtime::preview::PreviewCommand::ScheduleRegistration {
-                id: value.getattr("id")?.extract()?,
-                time: value.getattr("time")?.extract()?,
-            },
-        ),
-        "schedule_expression" => Ok(zipzi_runtime::preview::PreviewCommand::ScheduleExpression {
+        "schedule_registration" => Ok(zipzi_runtime::PreviewCommand::ScheduleRegistration {
             id: value.getattr("id")?.extract()?,
             time: value.getattr("time")?.extract()?,
         }),
-        "schedule_parameter" => Ok(zipzi_runtime::preview::PreviewCommand::ScheduleParameter {
+        "schedule_expression" => Ok(zipzi_runtime::PreviewCommand::ScheduleExpression {
+            id: value.getattr("id")?.extract()?,
+            time: value.getattr("time")?.extract()?,
+        }),
+        "schedule_parameter" => Ok(zipzi_runtime::PreviewCommand::ScheduleParameter {
             id: value.getattr("id")?.extract()?,
             time: value.getattr("time")?.extract()?,
             value: value.getattr("value")?.extract()?,
         }),
-        "set_physics" => Ok(zipzi_runtime::preview::PreviewCommand::SetPhysics {
+        "set_physics" => Ok(zipzi_runtime::PreviewCommand::SetPhysics {
             enabled: value.getattr("enabled")?.extract()?,
             stabilized_start: value.getattr("stabilized_start")?.extract()?,
         }),
-        "reset" => Ok(zipzi_runtime::preview::PreviewCommand::Reset),
+        "reset" => Ok(zipzi_runtime::PreviewCommand::Reset),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
         )),
@@ -21870,18 +21723,18 @@ pub fn read_previewcommand(
 
 pub fn write_previewcommand(
     py: Python<'_>,
-    value: &zipzi_runtime::preview::PreviewCommand,
+    value: &zipzi_runtime::PreviewCommand,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_previewcommand_in(py, value, &classes)
 }
 fn write_previewcommand_in(
     py: Python<'_>,
-    value: &zipzi_runtime::preview::PreviewCommand,
+    value: &zipzi_runtime::PreviewCommand,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     match value {
-        zipzi_runtime::preview::PreviewCommand::SetParameter {
+        zipzi_runtime::PreviewCommand::SetParameter {
             id: field0,
             value: field1,
         } => {
@@ -21899,7 +21752,7 @@ fn write_previewcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::preview::PreviewCommand::ScheduleMotion {
+        zipzi_runtime::PreviewCommand::ScheduleMotion {
             id: field0,
             time: field1,
         } => {
@@ -21917,7 +21770,7 @@ fn write_previewcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::preview::PreviewCommand::ScheduleRegistration {
+        zipzi_runtime::PreviewCommand::ScheduleRegistration {
             id: field0,
             time: field1,
         } => {
@@ -21935,7 +21788,7 @@ fn write_previewcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::preview::PreviewCommand::ScheduleExpression {
+        zipzi_runtime::PreviewCommand::ScheduleExpression {
             id: field0,
             time: field1,
         } => {
@@ -21953,7 +21806,7 @@ fn write_previewcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::preview::PreviewCommand::ScheduleParameter {
+        zipzi_runtime::PreviewCommand::ScheduleParameter {
             id: field0,
             time: field1,
             value: field2,
@@ -21976,7 +21829,7 @@ fn write_previewcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::preview::PreviewCommand::SetPhysics {
+        zipzi_runtime::PreviewCommand::SetPhysics {
             enabled: field0,
             stabilized_start: field1,
         } => {
@@ -21994,7 +21847,7 @@ fn write_previewcommand_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_runtime::preview::PreviewCommand::Reset => {
+        zipzi_runtime::PreviewCommand::Reset => {
             Ok(classes.getattr("PreviewCommandReset")?.call0()?.unbind())
         }
     }
@@ -22002,14 +21855,14 @@ fn write_previewcommand_in(
 
 pub fn write_previewstate(
     py: Python<'_>,
-    value: &zipzi_runtime::preview::PreviewState,
+    value: &zipzi_runtime::PreviewState,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_previewstate_in(py, value, &classes)
 }
 fn write_previewstate_in(
     py: Python<'_>,
-    value: &zipzi_runtime::preview::PreviewState,
+    value: &zipzi_runtime::PreviewState,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -22037,14 +21890,14 @@ fn write_previewstate_in(
 
 pub fn write_previewbatch(
     py: Python<'_>,
-    value: &zipzi_runtime::preview::PreviewBatch,
+    value: &zipzi_runtime::PreviewBatch,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_previewbatch_in(py, value, &classes)
 }
 fn write_previewbatch_in(
     py: Python<'_>,
-    value: &zipzi_runtime::preview::PreviewBatch,
+    value: &zipzi_runtime::PreviewBatch,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -22082,10 +21935,8 @@ fn write_previewbatch_in(
         .unbind())
 }
 
-pub fn read_observationview(
-    value: &Bound<'_, PyAny>,
-) -> PyResult<zipzi_runtime::observation::ObservationView> {
-    Ok(zipzi_runtime::observation::ObservationView {
+pub fn read_observationview(value: &Bound<'_, PyAny>) -> PyResult<zipzi_runtime::ObservationView> {
+    Ok(zipzi_runtime::ObservationView {
         width: value.getattr("width")?.extract()?,
         height: value.getattr("height")?.extract()?,
         roi: value
@@ -22110,14 +21961,14 @@ pub fn read_observationview(
 
 pub fn write_observationview(
     py: Python<'_>,
-    value: &zipzi_runtime::observation::ObservationView,
+    value: &zipzi_runtime::ObservationView,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_observationview_in(py, value, &classes)
 }
 fn write_observationview_in(
     py: Python<'_>,
-    value: &zipzi_runtime::observation::ObservationView,
+    value: &zipzi_runtime::ObservationView,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -22542,14 +22393,14 @@ fn write_spatialquery_in(
 
 pub fn write_previewframe(
     py: Python<'_>,
-    value: &zipzi_runtime::preview::PreviewFrame,
+    value: &zipzi_runtime::PreviewFrame,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_previewframe_in(py, value, &classes)
 }
 fn write_previewframe_in(
     py: Python<'_>,
-    value: &zipzi_runtime::preview::PreviewFrame,
+    value: &zipzi_runtime::PreviewFrame,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -22608,14 +22459,14 @@ fn write_previewframe_in(
 
 pub fn write_observationimage(
     py: Python<'_>,
-    value: &zipzi_runtime::observation::ObservationImage,
+    value: &zipzi_runtime::ObservationImage,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_observationimage_in(py, value, &classes)
 }
 fn write_observationimage_in(
     py: Python<'_>,
-    value: &zipzi_runtime::observation::ObservationImage,
+    value: &zipzi_runtime::ObservationImage,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -22762,14 +22613,14 @@ fn write_observationimage_in(
 
 pub fn write_observedtexture(
     py: Python<'_>,
-    value: &zipzi_runtime::observation::ObservedTexture,
+    value: &zipzi_runtime::ObservedTexture,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_observedtexture_in(py, value, &classes)
 }
 fn write_observedtexture_in(
     py: Python<'_>,
-    value: &zipzi_runtime::observation::ObservedTexture,
+    value: &zipzi_runtime::ObservedTexture,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -22797,14 +22648,14 @@ fn write_observedtexture_in(
 
 pub fn write_observedbounds(
     py: Python<'_>,
-    value: &zipzi_runtime::observation::ObservedBounds,
+    value: &zipzi_runtime::ObservedBounds,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_observedbounds_in(py, value, &classes)
 }
 fn write_observedbounds_in(
     py: Python<'_>,
-    value: &zipzi_runtime::observation::ObservedBounds,
+    value: &zipzi_runtime::ObservedBounds,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);
@@ -23537,14 +23388,14 @@ fn write_spatialframe_in(
 
 pub fn write_observationbatch(
     py: Python<'_>,
-    value: &zipzi_runtime::observation::ObservationBatch,
+    value: &zipzi_runtime::ObservationBatch,
 ) -> PyResult<Py<PyAny>> {
     let classes = PyModule::import(py, "zipzi._generated.modeling")?;
     write_observationbatch_in(py, value, &classes)
 }
 fn write_observationbatch_in(
     py: Python<'_>,
-    value: &zipzi_runtime::observation::ObservationBatch,
+    value: &zipzi_runtime::ObservationBatch,
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     let out = PyDict::new(py);

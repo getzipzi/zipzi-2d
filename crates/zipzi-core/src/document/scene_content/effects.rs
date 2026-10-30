@@ -1,4 +1,5 @@
 use super::*;
+use zipzi_core::OffscreenLookup;
 impl Document {
     pub(super) fn plan_effect_content(
         &self,

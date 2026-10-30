@@ -19,7 +19,7 @@ mod offscreen;
 mod organization;
 mod parameters;
 pub use organization::*;
-pub use parameters::{ParameterRangeError, validate_parameter_range};
+pub use parameters::{validate_parameter_range, ParameterRangeError};
 mod scene;
 pub use scene::*;
 mod scene_content;
@@ -34,7 +34,7 @@ mod reference_authoring;
 mod references;
 pub use reference_authoring::*;
 mod reference_entry;
-pub use reference_entry::ReferenceEntry;
+pub use reference_entry::{ReferenceEntry, ReferenceEntryAllocation};
 mod structure;
 mod tracking;
 pub use tracking::TrackedRecord;
@@ -44,7 +44,7 @@ mod validation;
 mod vertices;
 
 pub use attachments::{
-    AttachmentEdit, AttachmentPlan, AttachmentRef, PackageAttachment, valid_attachment_path,
+    valid_attachment_path, AttachmentEdit, AttachmentPlan, AttachmentRef, PackageAttachment,
 };
 pub use binding_authoring::*;
 pub use checkpoint::DocumentCheckpoint;
@@ -55,11 +55,13 @@ pub use display_info::{
 pub use editor_state::{EditorState, ObjectEditorState};
 pub use expressions::*;
 pub use hierarchy_order::HierarchyOrder;
-pub use model3::{Model3Settings, ModelHitArea, ModelParameterGroup, ModelTargetRef};
+pub use model3::{
+    AllocateModelMetadata, Model3Settings, ModelHitArea, ModelParameterGroup, ModelTargetRef,
+};
 pub use motions::{
-    DisabledMotionTrack, MotionClip, MotionContainer, MotionDisabledReason, MotionEdit,
-    MotionEvent, MotionGroup, MotionKey, MotionPlan, MotionPoint, MotionProjection,
-    MotionRegistration, MotionSegment, MotionTrack, MotionTrackTarget,
+    DisabledMotionTrack, MotionClip, MotionClipEditing, MotionContainer, MotionDisabledReason,
+    MotionEdit, MotionEvent, MotionGroup, MotionKey, MotionPlan, MotionPoint, MotionProjection,
+    MotionRegistration, MotionSegment, MotionTrack, MotionTrackEditing, MotionTrackTarget,
 };
 pub use physics::*;
 pub use pose::*;

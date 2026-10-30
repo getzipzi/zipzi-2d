@@ -1,7 +1,6 @@
 //! Composable publication summaries. Expression deltas are derived from borrowed
 //! domain storage, so direct edits, imports, candidates and history agree.
 use crate::types::{ObjectKey, ObjectKind};
-use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use zipzi_core::document::ExpressionTarget;
 use zipzi_core::{ChangeKind, Document};
@@ -10,12 +9,14 @@ mod content;
 mod document;
 mod references;
 mod resources;
+use references::ReferenceFieldChangeSize;
 pub use references::{ReferenceFieldChange, ReferenceSelectionChange};
 mod mesh;
 mod motion;
 pub(crate) use mesh::MeshPublication;
 mod organization;
 mod scene;
+use content::SceneContentReferenceChangeSize;
 pub use content::{SceneContentChange, SceneContentReferenceChange, SceneContentReferenceValue};
 pub use scene::{SceneFieldChange, SceneReferenceChange};
 mod physics;
@@ -26,111 +27,14 @@ pub use organization::OrganizationReferenceChange;
 pub use physics::{PhysicsReferenceChange, PhysicsReferenceValue};
 pub use pose::PoseReferenceChange;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ChangeCategory {
-    Labels,
-    Order,
-    References,
-    Content,
-    Topology,
-    EvaluationInputs,
-    EditorState,
+pub use zipzi_contract::changes::{
+    ChangeCategory, ChangeSet, CollectionRef, EntityRef, ReferenceChange,
+};
+
+trait CollectionRefExt {
+    fn extra_bytes(&self) -> usize;
 }
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct EntityRef {
-    pub document_id: String,
-    pub kind: ObjectKind,
-    pub id: String,
-}
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum CollectionRef {
-    Resources {
-        document_id: String,
-    },
-    References {
-        document_id: String,
-        collection: zipzi_core::document::ReferenceCollection,
-    },
-    SceneContent {
-        document_id: String,
-        owner_id: String,
-        domain: zipzi_core::document::SceneContentDomain,
-    },
-    Scene {
-        document_id: String,
-        collection: zipzi_core::document::SceneCollection,
-    },
-    Organization {
-        document_id: String,
-        collection: zipzi_core::document::OrganizationCollection,
-    },
-    DeformationChildren {
-        document_id: String,
-        parent_id: String,
-    },
-    BindingGrid {
-        document_id: String,
-        binding_id: String,
-    },
-    Pose {
-        document_id: String,
-        owner: Option<String>,
-        role: String,
-    },
-    Physics {
-        document_id: String,
-        owner: Option<String>,
-        role: String,
-    },
-    Motion {
-        document_id: String,
-        owner: Option<String>,
-        role: String,
-    },
-    Expressions {
-        document_id: String,
-    },
-    ExpressionEntries {
-        document_id: String,
-        expression_id: String,
-    },
-}
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct ReferenceChange {
-    pub entry: EntityRef,
-    pub before: Option<ExpressionTarget>,
-    pub after: Option<ExpressionTarget>,
-}
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
-pub struct ChangeSet {
-    pub document_fields: Vec<zipzi_core::document::DocumentField>,
-    pub created: Vec<EntityRef>,
-    pub deleted: Vec<EntityRef>,
-    pub modified: Vec<EntityRef>,
-    pub collections: Vec<CollectionRef>,
-    pub references: Vec<ReferenceChange>,
-    pub motion_references: Vec<MotionReferenceChange>,
-    pub reference_fields: Vec<ReferenceFieldChange>,
-    pub reference_selections: Vec<ReferenceSelectionChange>,
-    pub content_references: Vec<SceneContentReferenceChange>,
-    pub content_changes: Vec<SceneContentChange>,
-    pub scene_fields: Vec<SceneFieldChange>,
-    pub scene_references: Vec<SceneReferenceChange>,
-    pub organization_references: Vec<OrganizationReferenceChange>,
-    pub pose_references: Vec<PoseReferenceChange>,
-    // Root `modified` also describes child payload changes; only actual Pose
-    // fields retire field addresses. Keep this publication metadata off wire.
-    #[serde(skip)]
-    pub(crate) pose_field_changes: Vec<String>,
-    pub physics_references: Vec<PhysicsReferenceChange>,
-    pub binding_references: Vec<BindingReferenceChange>,
-    pub resource_content: Vec<EntityRef>,
-    pub categories: BTreeSet<ChangeCategory>,
-    pub full_invalidation: bool,
-}
-impl CollectionRef {
+impl CollectionRefExt for CollectionRef {
     fn extra_bytes(&self) -> usize {
         match self {
             CollectionRef::Resources { document_id } => document_id.capacity(),
@@ -225,7 +129,11 @@ impl CollectionRef {
     }
 }
 
-impl EntityRef {
+trait EntityRefExt: Sized {
+    fn new(document_id: &str, kind: ObjectKind, id: &str) -> Self;
+    fn extra_bytes(&self) -> usize;
+}
+impl EntityRefExt for EntityRef {
     fn new(document_id: &str, kind: ObjectKind, id: &str) -> Self {
         Self {
             document_id: document_id.into(),
@@ -257,9 +165,15 @@ fn paired_records<'a, K: Ord, V>(
         .map(|key| (key, before.get(key), after.get(key)))
 }
 
-impl ChangeSet {
+pub(crate) trait ChangeSetExt: Sized {
+    fn affected_entities(&self) -> impl Iterator<Item = &EntityRef>;
+    fn retain_existing_modified(&mut self);
+    fn inverted(&self) -> Self;
+    fn estimated_bytes(&self) -> usize;
+}
+impl ChangeSetExt for ChangeSet {
     /// Publication order is preserved; callers choose whether to deduplicate IDs.
-    pub(crate) fn affected_entities(&self) -> impl Iterator<Item = &EntityRef> {
+    fn affected_entities(&self) -> impl Iterator<Item = &EntityRef> {
         self.created
             .iter()
             .chain(&self.deleted)
@@ -271,7 +185,7 @@ impl ChangeSet {
             .retain(|e| !self.created.contains(e) && !self.deleted.contains(e));
     }
 
-    pub(crate) fn inverted(&self) -> Self {
+    fn inverted(&self) -> Self {
         let mut inverse = self.clone();
         std::mem::swap(&mut inverse.created, &mut inverse.deleted);
         macro_rules! invert_edges {
@@ -298,7 +212,7 @@ impl ChangeSet {
         }
         inverse
     }
-    pub(crate) fn estimated_bytes(&self) -> usize {
+    fn estimated_bytes(&self) -> usize {
         std::mem::size_of::<Self>()
             + self.document_fields.capacity()
                 * std::mem::size_of::<zipzi_core::document::DocumentField>()
@@ -316,7 +230,7 @@ impl ChangeSet {
             + vec_bytes(&self.created, EntityRef::extra_bytes)
             + vec_bytes(&self.deleted, EntityRef::extra_bytes)
             + vec_bytes(&self.modified, EntityRef::extra_bytes)
-            + vec_bytes(&self.pose_field_changes, String::capacity)
+            + vec_bytes(self.pose_field_changes(), String::capacity)
             + vec_bytes(&self.collections, CollectionRef::extra_bytes)
             + vec_bytes(&self.references, |r| {
                 r.entry.extra_bytes() + target_bytes(&r.before) + target_bytes(&r.after)

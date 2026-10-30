@@ -3,6 +3,8 @@ use super::bindings::grid_points;
 use super::properties::deformer_properties;
 use super::{BindingInfo, ObjectIndex, ObjectInfo, ObjectKind, ObjectRef, Relation, RelationKind};
 use serde_json::{Value, json};
+use zipzi_core::SceneTrackEvaluation;
+use zipzi_core::document::PhysicsTargetProjection;
 use zipzi_core::document::{
     CdiParameterEntry, ExpressionTarget, ModelTargetRef, MotionTrackTarget, PosePartRef,
 };

@@ -6,7 +6,7 @@ use std::{
     sync::Arc,
 };
 use zipzi_core::{
-    document::{AuthoringLimits, ConversionControl, ConversionCost},
+    document::{AuthoringLimits, ConversionControl},
     DeltaKeyforms, Document, Mesh, Vec2, VertexId,
 };
 
@@ -164,37 +164,7 @@ pub enum VertexProvenance {
     AffineExtension,
 }
 
-#[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    serde::Serialize,
-    serde::Deserialize,
-    zipzi_api_derive::ApiShape,
-    zipzi_api_derive::BinaryOutput,
-)]
-pub struct ManualMeshTransferReport {
-    /// Number of newly allocated vertices.
-    pub added: usize,
-    /// Retained identities whose UV sampling location changed.
-    pub moved: usize,
-    /// Retired identities, including isolated vertices removed by edge deletion.
-    pub removed: usize,
-    /// Stored base, ordinary and BlendShape channels processed; no Cartesian expansion.
-    pub shape_count: usize,
-    /// Whether triangle connectivity changed.
-    pub reconnected: bool,
-    /// Whether a referenced Glue endpoint was resampled.
-    pub glue_endpoints: bool,
-    /// A Warp occurs anywhere in the actual parent chain.
-    pub non_affine_parent: bool,
-    /// Dependency-free affine extension outside the previous UV coverage.
-    pub affine_extension: bool,
-    /// Reasons the plan does not promise identical appearance in every pose.
-    pub appearance_limits: Vec<String>,
-    /// Conservative result, workspace and history accounting.
-    pub cost: ConversionCost,
-}
+pub use zipzi_contract::authoring::ManualMeshTransferReport;
 
 /// Complete frozen authoring source, including inactive and incomplete dependencies.
 #[derive(Clone, Debug)]

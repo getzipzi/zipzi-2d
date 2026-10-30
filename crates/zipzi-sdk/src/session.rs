@@ -1,4 +1,5 @@
 //! Authoring session lifecycle, project IO, reads, history and preview.
+use crate::changes::ChangeSetExt;
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
@@ -1003,7 +1004,7 @@ impl AuthoringSession {
                     .expect("animation field epoch exhausted");
             }
         }
-        for id in &changes.pose_field_changes {
+        for id in changes.pose_field_changes() {
             let epoch = self.animation_field_epochs.entry(id.clone()).or_default();
             *epoch = epoch
                 .checked_add(1)

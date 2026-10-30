@@ -1,5 +1,8 @@
 //! physics3 import and export with stable parameter bindings.
+use crate::export_preflight::OpaqueExportProblemCode;
 use std::collections::BTreeMap;
+use zipzi_core::document::PhysicsTargetProjection;
+use zipzi_core::document::{PhysicsAssetImport, PhysicsDefinitionWire};
 
 use thiserror::Error;
 use zipzi_core::document::PhysicsAsset;

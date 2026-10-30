@@ -1,8 +1,8 @@
 //! Engine-independent Rust authoring SDK with project open/save and checkpoint history.
 mod alpha_mesh;
 mod assets;
-mod diagnostics;
 mod deletion;
+mod diagnostics;
 pub use deletion::*;
 mod edit;
 mod mesh_quality;
@@ -23,8 +23,8 @@ pub use assets::{
 pub use diagnostics::{GeometryBounds, GeometryChecks, GeometryDiagnostic, GeometryDiagnosticKind};
 pub use edit::EditSession;
 pub use mesh_quality::{
-    mesh_quality, MeshQuality, TextureCoverage, TopologyOverlay, TopologyThresholds,
-    TriangleQuality,
+    mesh_quality, MeshQuality, TextureCoverage, TopologyOverlay, TopologyOverlayValidation,
+    TopologyThresholdValidation, TopologyThresholds, TriangleQuality,
 };
 pub use session::{AuthoringSession, AuthoringSnapshot};
 pub use spatial::{
@@ -33,9 +33,9 @@ pub use spatial::{
     SpatialFrame, SpatialQuery, SpatialResult, SpatialSampler, SpatialSamples, TriangleHit,
 };
 pub use types::{
-    EditReceipt, GeometrySnapshot, GeometrySpace, HistoryLimits, HistoryState, ImportReceipt,
-    MeshProperties, ObjectHandle, ObjectKind, PsdImportReceipt, SaveReceipt, SdkError,
-    TopologyReplacement, Version,
+    EditReceipt, EditReceiptSize, GeometrySnapshot, GeometrySpace, HistoryLimits, HistoryState,
+    ImportReceipt, MeshProperties, ObjectHandle, ObjectKind, PsdImportReceipt, SaveReceipt,
+    SdkError, TopologyReplacement, Version,
 };
 pub use zipzi_animation::{
     apply_model_opacity, AnimationError, ExpressionPreview, ExpressionTransition, MotionEventFired,
@@ -67,15 +67,19 @@ mod mesh_binding_edit;
 mod mesh_edit;
 mod scene_edit;
 pub use mesh_binding_edit::{
-    MeshBindingAxisSpec, MeshBindingCreateSpec, MeshBindingOperation, MeshKeyformSpec,
+    MeshBindingAxisSpec, MeshBindingCreateSpec, MeshBindingOperation, MeshBindingOperationApply,
+    MeshKeyformSpec,
 };
-pub use mesh_edit::{MeshCreateSpec, MeshOperation};
+pub use mesh_edit::{MeshCreateSpec, MeshOperation, MeshOperationApply};
 pub use scene_edit::{
     GluePairSpec, OffscreenFormSpec, ParameterGroupCreateSpec, PartCreateSpec, ScalarSample,
-    SceneOperation, ScenePlacement, SceneSummary, VertexPatchSpec, VertexWeightSpec,
+    SceneOperation, SceneOperationApply, ScenePlacement, SceneSummary, SceneSummaryRead,
+    VertexPatchSpec, VertexWeightSpec,
 };
 mod parameter_edit;
-pub use parameter_edit::{ParameterCreateSpec, ParameterOperation, ParameterPatch};
+pub use parameter_edit::{
+    ParameterCreateSpec, ParameterOperation, ParameterOperationApply, ParameterPatch,
+};
 mod image_edit;
 pub use image_edit::ImageCreateSpec;
 

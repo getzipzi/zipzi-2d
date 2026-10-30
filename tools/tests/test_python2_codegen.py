@@ -16,6 +16,57 @@ gen = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(gen)
 
 class Python2Codegen(unittest.TestCase):
+    def test_exporter_dependency_closure_contains_no_implementation_packages(self):
+        metadata = json.loads(subprocess.check_output(
+            ['cargo', 'metadata', '--locked', '--no-deps', '--format-version', '1'], cwd=ROOT))
+        owned = {p['name'] for p in metadata['packages'] if p['id'] in metadata['workspace_members']}
+        tree = subprocess.check_output(
+            ['cargo', 'tree', '--locked', '-p', 'zipzi-contract', '-e', 'normal,build',
+             '--prefix', 'none', '--format', '{p}'], cwd=ROOT, text=True)
+        names = {line.split(' v', 1)[0] for line in tree.splitlines()}
+        self.assertEqual(names & owned, {'zipzi-contract', 'zipzi-api-derive'})
+        self.assertFalse(names & {'pyo3', 'wgpu', 'wgpu-core', 'wgpu-hal', 'naga', 'metal'})
+
+    def test_export_uses_checkout_target_even_with_external_cargo_target(self):
+        result = unittest.mock.Mock(returncode=0, stdout='{}', stderr='')
+        with patch.dict(os.environ, {'CARGO_TARGET_DIR': '/external/target'}), \
+             patch.object(gen.subprocess, 'run', return_value=result) as run:
+            self.assertEqual(gen.export(), {})
+        command = run.call_args.args[0]
+        self.assertEqual(command[command.index('--target-dir') + 1], str(ROOT / 'target/python2/schema-cargo'))
+        self.assertEqual(command[command.index('-p') + 1], 'zipzi-contract')
+
+    def test_generation_and_check_hold_the_same_checkout_lock_through_writes(self):
+        from contextlib import contextmanager
+        held = False
+        paths = []
+
+        @contextmanager
+        def lock(path):
+            nonlocal held
+            self.assertFalse(held)
+            held = True
+            paths.append(path)
+            try:
+                yield
+            finally:
+                held = False
+
+        def require_lock(*args, **kwargs):
+            self.assertTrue(held)
+            return {}
+
+        for check in (False, True):
+            args = ['generate.py'] + (['--check'] if check else [])
+            with patch.object(gen.sys, 'argv', args), patch.object(gen, 'file_lock', lock), \
+                 patch.object(gen, 'export', side_effect=require_lock), \
+                 patch.object(gen, 'cached_render', side_effect=require_lock), \
+                 patch.object(gen, 'write_outputs', side_effect=require_lock) as write:
+                gen.main()
+            self.assertFalse(held)
+            self.assertEqual(write.call_args.args[1], check)
+        self.assertEqual(paths, [ROOT / 'target/python2/generate.lock'] * 2)
+
     def test_render_cache_reuses_and_invalidates_inputs_and_recovers_from_corruption(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
@@ -345,6 +396,18 @@ class Python2Codegen(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Field shadows generated API'):
             gen.Model(contract)
 
+    def test_struct_default_change_updates_generated_python(self):
+        contract = self.contract()
+        checks = contract['dtos']['sampling'][0]
+        field = next(f for f in checks['fields'] if f['name'] == 'min_triangle_area')
+        self.assertEqual(field['default'], 0.0)
+        field['default'] = 0.5
+        output = gen.render(contract)
+        self.assertIn('min_triangle_area: float = 0.5',
+                      output['client/python/zipzi/_generated/sampling_values.py'])
+        self.assertIn('min_triangle_area: float=0.5',
+                      output['client/python/zipzi/_generated/catalog.py'])
+
     def test_rust_field_change_updates_python_wire_and_native_shapes_together(self):
         contract = self.contract()
         def change(node):
@@ -374,15 +437,18 @@ class Python2Codegen(unittest.TestCase):
             (folder / 'src').mkdir()
             (folder / 'Cargo.toml').write_text('[package]\nname="zipzi_schema_compile_controls"\nversion="0.0.0"\nedition="2021"\n[workspace]\n[dependencies]\n'
                 + 'zipzi-core={path=' + json.dumps(str(ROOT / 'crates/zipzi-core')) + '}\n'
+                + 'zipzi-contract={path=' + json.dumps(str(ROOT / 'crates/zipzi-contract')) + '}\n'
                 + 'zipzi-runtime={path=' + json.dumps(str(ROOT / 'crates/zipzi-runtime')) + '}\n'
                 + 'zipzi-api-derive={path=' + json.dumps(str(ROOT / 'crates/zipzi-api-derive')) + '}\n'
                 + 'serde={version="1",features=["derive"]}\n')
             cases = (
                 ('use zipzi_runtime::authoring::*; fn main() { let _ = MESH_QUERY.shapes(); }', None),
                 ('use zipzi_runtime::authoring::*; fn main() { let _ = (IMAGE_QUERY.shapes(), PLAN_QUERY.shapes(), PREPARED_PIXELS_QUERY.shapes()); }', None),
-                ('use zipzi_runtime::{authoring::*,*}; fn wrong(_: &mut Runtime, _: ClientId, _: PlanQuery) -> Result<ImagePixels> { todo!() } fn main() { let _ = Registered::<PlanQuery,PlanSnapshot>::new("bad", wrong); }', 'E0308'),
-                ('use zipzi_runtime::authoring::*; fn main() { let _ = Registered::<MeshQuery,MeshSnapshot>::new("missing"); }', 'E0061'),
-                ('use zipzi_runtime::{authoring::*,*}; fn wrong(_: &mut Runtime, _: ClientId, _: MeshQuery) -> Result<()> { Ok(()) } fn main() { let _ = Registered::<MeshQuery,MeshSnapshot>::new("bad", wrong); }', 'E0308'),
+                ('use zipzi_runtime::{authoring::*,*}; fn wrong(_: &mut Runtime, _: ClientId, _: PlanQuery) -> Result<ImagePixels> { todo!() } fn main() { let _ = Registered::<PlanQuery,PlanSnapshot>::bind(zipzi_contract::operations::PLAN_QUERY, wrong); }', 'E0308'),
+                ('use zipzi_runtime::authoring::*; fn main() { let _ = Registered::<MeshQuery,MeshSnapshot>::bind(zipzi_contract::operations::MESH_QUERY); }', 'E0061'),
+                ('use zipzi_runtime::{authoring::*,*}; fn wrong(_: &mut Runtime, _: ClientId, _: MeshQuery) -> Result<()> { Ok(()) } fn main() { let _ = Registered::<MeshQuery,MeshSnapshot>::bind(zipzi_contract::operations::MESH_QUERY, wrong); }', 'E0308'),
+                ('const _: () = zipzi_contract::operations::assert_unique(&["same", "same"]); fn main() {}', 'E0080'),
+                ('macro_rules! handler { (MESH_QUERY) => {} } macro_rules! bindings { ($($id:ident: $input:ty => $output:ty = $name:literal;)*) => { $(handler!($id);)* }; } zipzi_contract::authoring_operations!(bindings); fn main() {}', 'macro'),
                 ('zipzi_core::api_record! { pub struct Supported { pub values: std::collections::HashMap<String,String> } } fn main() {}', None),
                 ('zipzi_core::api_record! { pub struct Unsupported { pub values: std::collections::HashMap<bool,String> } } fn main() {}', 'E0277'),
                 ('zipzi_core::api_record! { pub struct Supported { pub values: std::collections::BTreeMap<String,u32> } } fn main() {}', None),

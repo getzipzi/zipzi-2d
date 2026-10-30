@@ -1,83 +1,22 @@
 //! Public SDK value types and crate-internal history identities.
-use std::collections::{HashMap, HashSet};
+use crate::changes::ChangeSetExt;
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 use zipzi_core::document::DocumentCheckpoint;
-use zipzi_core::{
-    Appearance, BlendMode, BlendShapeBinding, ChangeKind, Glue, Mesh, MeshBinding, Status, Vec2,
-    VertexId,
-};
+use zipzi_core::{Appearance, BlendMode, ChangeKind, Mesh};
 use zipzi_project::{ImportReport, ProjectResult, PsdImportReport};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-#[derive(zipzi_api_derive::BinaryWire)]
-pub struct Version {
-    pub session_id: u64,
-    pub generation: u64,
-    pub revision: u64,
-}
+pub use zipzi_contract::authoring::Version;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SdkError {
-    pub code: Box<str>,
-    pub message: Box<str>,
-    pub operation: &'static str,
-    pub object_ids: Vec<String>,
-    pub field_path: Option<Box<str>>,
-    pub expected_version: Option<Box<Version>>,
-    pub actual_version: Option<Box<Version>>,
-    pub referrers: Box<[String]>,
-}
+pub use zipzi_contract::authoring::{EditReceipt, SaveReceipt, SdkError};
 
-impl std::fmt::Display for SdkError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.code, self.message)
-    }
+pub trait EditReceiptSize {
+    fn estimated_bytes(&self) -> usize;
 }
-impl std::error::Error for SdkError {}
-
-impl SdkError {
-    pub(crate) fn new(code: &str, message: &str, operation: &'static str) -> Self {
-        Self {
-            code: code.into(),
-            message: message.into(),
-            operation,
-            object_ids: Vec::new(),
-            field_path: None,
-            expected_version: None,
-            actual_version: None,
-            referrers: Box::new([]),
-        }
-    }
-    pub(crate) fn from_status(status: Status, operation: &'static str, ids: Vec<String>) -> Self {
-        Self {
-            code: status.code.into_boxed_str(),
-            message: status.message.into_boxed_str(),
-            operation,
-            object_ids: ids,
-            field_path: None,
-            expected_version: None,
-            actual_version: None,
-            referrers: Box::new([]),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EditReceipt {
-    pub label: String,
-    pub before: Version,
-    pub after: Version,
-    pub kind: ChangeKind,
-    pub object_ids: Vec<String>,
-    pub changed: bool,
-    pub changes: crate::ChangeSet,
-}
-
-impl EditReceipt {
+impl EditReceiptSize for EditReceipt {
     /// Conservative owned payload estimate for bounded host event streams.
-    pub fn estimated_bytes(&self) -> usize {
+    fn estimated_bytes(&self) -> usize {
         std::mem::size_of::<Self>()
             + self.label.capacity()
             + self.changes.estimated_bytes()
@@ -87,16 +26,6 @@ impl EditReceipt {
                 .map(|id| std::mem::size_of::<String>() + id.capacity())
                 .sum::<usize>()
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SaveReceipt {
-    pub before: Version,
-    pub after: Version,
-    pub manifest: PathBuf,
-    pub warnings: Vec<String>,
-    pub history_warnings: Vec<String>,
-    pub durable: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -117,103 +46,7 @@ pub struct PsdImportReceipt {
     pub manifest: PathBuf,
 }
 
-#[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Eq,
-    serde::Serialize,
-    serde::Deserialize,
-    zipzi_api_derive::ApiShape,
-    zipzi_api_derive::BinaryWire,
-)]
-pub enum GeometrySpace {
-    Model,
-    RotationLocal(
-        /// Stable rotation-transform ID defining the local position space.
-        String,
-    ),
-    WarpParameter(
-        /// Stable warp-transform ID defining the parameter/lattice position space.
-        String,
-    ),
-}
-
-#[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    serde::Serialize,
-    serde::Deserialize,
-    zipzi_api_derive::ApiShape,
-    zipzi_api_derive::BinaryWire,
-)]
-pub struct GeometrySnapshot {
-    /// Exact SDK version captured for this value; not a best-effort latest-version marker.
-    pub version: Version,
-    /// Stable ID of the target mesh in this document.
-    pub mesh_id: String,
-    /// Stable u32 vertex IDs in the same order as positions and UVs; IDs need not be contiguous.
-    pub vertex_ids: Vec<VertexId>,
-    /// Absolute XY vertices in the explicitly recorded GeometrySpace, aligned with vertex_ids.
-    pub positions: Vec<Vec2>,
-    /// Texture UV pairs ordered by vertex_ids; keep one UV for each position.
-    pub uvs: Vec<Vec2>,
-    /// Triangle triples of stable vertex IDs; preserve winding and do not substitute position-
-    /// array offsets.
-    pub triangles: Vec<[VertexId; 3]>,
-    /// Optional canonical UV boundary and retained internal structure edges.
-    #[serde(default)]
-    pub meshing: Option<zipzi_core::MeshMeshing>,
-    /// Coordinate space of positions; local-space variants carry the controlling transform ID.
-    pub space: GeometrySpace,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "snake_case")]
-#[derive(zipzi_api_derive::ApiShape)]
-pub enum ObjectKind {
-    Asset,
-    Mesh,
-    Parameter,
-    MeshBinding,
-    BindingAxis,
-    BindingSample,
-    Part,
-    Transform,
-    SceneBinding,
-    BlendKeyTable,
-    BlendConstraint,
-    BlendBinding,
-    Glue,
-    GlueVertexPair,
-    Offscreen,
-    DrawOrderGroup,
-    CdiParameterGroup,
-    CdiCombinedSet,
-    CdiCombinedMember,
-    ModelParameterGroup,
-    ModelParameterMember,
-    ModelHitArea,
-    Expression,
-    ExpressionEntry,
-    Motion,
-    MotionGroup,
-    MotionRegistration,
-    MotionTrack,
-    MotionKey,
-    MotionEvent,
-    Attachment,
-    Pose,
-    PoseGroup,
-    PoseEntry,
-    PoseLink,
-    Physics,
-    PhysicsGroup,
-    PhysicsInput,
-    PhysicsOutput,
-    PhysicsNode,
-}
+pub use zipzi_contract::authoring::{GeometrySnapshot, GeometrySpace, ObjectKind};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ObjectHandle {
@@ -278,29 +111,7 @@ impl From<&Mesh> for MeshProperties {
 
 /// All geometry dependencies are explicit. For an unbound mesh, pass None and
 /// empty vectors; mapping must mention every previous vertex ID exactly once.
-#[derive(
-    Debug,
-    Clone,
-    serde::Serialize,
-    serde::Deserialize,
-    zipzi_api_derive::ApiShape,
-    zipzi_api_derive::BinaryWire,
-)]
-pub struct TopologyReplacement {
-    /// Complete replacement mesh geometry and metadata. Setting meshing to None explicitly
-    /// discards previous modeling topology; ordinary mesh replacements must preserve it.
-    pub mesh: Mesh,
-    /// Optional replacement ordinary mesh binding; None supplies no ordinary binding.
-    pub binding: Option<MeshBinding>,
-    /// Complete replacement BlendShape bindings for the remeshed object.
-    pub blend_bindings: Vec<BlendShapeBinding>,
-    /// Complete replacement Glue records affected by the remesh.
-    pub glues: Vec<Glue>,
-    #[serde(deserialize_with = "zipzi_core::serde_maps::u32_map")]
-    /// Old vertex ID to replacement ID map; Some(new_id) remaps an identity and None explicitly
-    /// removes it.
-    pub vertex_mapping: HashMap<VertexId, Option<VertexId>>,
-}
+pub use zipzi_contract::authoring::TopologyReplacement;
 
 pub(crate) struct HistoryEntry {
     // Checkpoints are immutable between exchange/relocation boundaries. Runtime
@@ -366,11 +177,4 @@ pub struct HistoryState {
     pub estimated_bytes: usize,
     pub max_steps: usize,
     pub max_bytes: usize,
-}
-impl zipzi_core::api_shape::ApiShape for Version {
-    fn api_shape() -> zipzi_core::api_shape::Shape {
-        zipzi_core::api_shape::Shape::Opaque {
-            name: concat!(module_path!(), "::Version").into(),
-        }
-    }
 }

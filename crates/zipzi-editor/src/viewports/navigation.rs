@@ -1,6 +1,7 @@
 //! Input-device-specific navigation. Only discrete wheel input needs interpolation.
 use super::*;
 use std::time::{Duration, Instant};
+use zipzi_core::SceneTrackEvaluation;
 use zipzi_editor_core::{MAX_ZOOM, MIN_ZOOM, ViewState, ViewportBinding};
 
 const WHEEL_ZOOM_DURATION: Duration = Duration::from_millis(80);

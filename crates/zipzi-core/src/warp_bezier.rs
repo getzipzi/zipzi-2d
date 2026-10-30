@@ -1,40 +1,7 @@
-//! Authoring-only bicubic controllers. Runtime evaluation still consumes the
-//! baked conversion lattice; controller edits apply deltas to preserve imports.
-use crate::{Status, Vec2};
-use serde::{Deserialize, Serialize};
+//! Bezier evaluation and lattice algorithms.
+use crate::Vec2;
+pub use zipzi_contract::warp_bezier::{WarpBezier, WarpBezierNode};
 
-#[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    zipzi_api_derive::ApiShape,
-    zipzi_api_derive::BinaryWire,
-)]
-pub struct WarpBezierNode {
-    /// Absolute Bezier anchor position in lattice coordinates; not a handle offset.
-    pub position: Vec2,
-    /// Absolute positions: left, right, up, down in lattice coordinates.
-    pub handles: [Vec2; 4],
-}
-#[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    zipzi_api_derive::ApiShape,
-    zipzi_api_derive::BinaryWire,
-)]
-pub struct WarpBezier {
-    /// Number of warp lattice cells vertically; a lattice has rows + 1 point rows.
-    pub rows: u32,
-    /// Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.
-    pub columns: u32,
-    /// Bezier nodes in row-major order; exactly (rows + 1) * (columns + 1) nodes.
-    pub nodes: Vec<WarpBezierNode>,
-}
 fn add(a: Vec2, b: Vec2) -> Vec2 {
     Vec2::new(a.x + b.x, a.y + b.y)
 }
@@ -44,38 +11,13 @@ fn sub(a: Vec2, b: Vec2) -> Vec2 {
 fn mul(a: Vec2, b: f32) -> Vec2 {
     Vec2::new(a.x * b, a.y * b)
 }
-impl WarpBezier {
-    pub fn validate(&self) -> Status {
-        if self.rows == 0
-            || self.columns == 0
-            || self.rows > 32
-            || self.columns > 32
-            || self.nodes.len() != ((self.rows + 1) * (self.columns + 1)) as usize
-        {
-            return Status::error("INVALID_WARP_BEZIER", "Invalid controller dimensions");
-        }
-        if self
-            .nodes
-            .iter()
-            .flat_map(|n| std::iter::once(&n.position).chain(n.handles.iter()))
-            .any(|p| !p.x.is_finite() || !p.y.is_finite())
-        {
-            return Status::error("INVALID_WARP_BEZIER", "Non-finite controller position");
-        }
-        Status::ok()
-    }
-    pub fn has_handle(&self, node: usize, handle: usize) -> bool {
-        let x = node % (self.columns as usize + 1);
-        let y = node / (self.columns as usize + 1);
-        match handle {
-            0 => x > 0,
-            1 => x < self.columns as usize,
-            2 => y > 0,
-            3 => y < self.rows as usize,
-            _ => false,
-        }
-    }
-    pub fn from_lattice(rows: u32, columns: u32, quad: bool, points: &[Vec2]) -> Self {
+pub trait WarpBezierEvaluation: Sized {
+    fn from_lattice(rows: u32, columns: u32, quad: bool, points: &[Vec2]) -> Self;
+    fn sample(&self, u: f32, v: f32) -> Vec2;
+    fn apply_delta(&self, before: &Self, rows: u32, columns: u32, points: &[Vec2]) -> Vec<Vec2>;
+}
+impl WarpBezierEvaluation for WarpBezier {
+    fn from_lattice(rows: u32, columns: u32, quad: bool, points: &[Vec2]) -> Self {
         let flat: Vec<_> = points.iter().flat_map(|p| [p.x, p.y]).collect();
         let sample = |u: f32, v: f32| {
             let x = u * columns as f32;
@@ -128,7 +70,7 @@ impl WarpBezier {
             nodes,
         }
     }
-    pub fn sample(&self, u: f32, v: f32) -> Vec2 {
+    fn sample(&self, u: f32, v: f32) -> Vec2 {
         let u = u.clamp(0., 1.) * self.columns as f32;
         let v = v.clamp(0., 1.) * self.rows as f32;
         let x = (u.floor() as u32).min(self.columns - 1);
@@ -175,13 +117,7 @@ impl WarpBezier {
         }
         p
     }
-    pub fn apply_delta(
-        &self,
-        before: &Self,
-        rows: u32,
-        columns: u32,
-        points: &[Vec2],
-    ) -> Vec<Vec2> {
+    fn apply_delta(&self, before: &Self, rows: u32, columns: u32, points: &[Vec2]) -> Vec<Vec2> {
         points
             .iter()
             .enumerate()

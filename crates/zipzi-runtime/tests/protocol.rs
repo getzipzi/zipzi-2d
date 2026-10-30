@@ -181,7 +181,7 @@ fn handshake_extensions_do_not_block_existing_operations() {
         json!({"protocol": CONTRACT, "client_version": "99.0", "extensions": ["future"]}),
         now,
     );
-    assert_eq!(hello["ok"]["protocol"], "zipzi-runtime-v1");
+    assert_eq!(hello["ok"]["protocol"], "zipzi-runtime-v2");
     let client: ClientId = serde_json::from_value(hello["ok"]["client"].clone()).unwrap();
     let connection = hello["ok"]["connection"].as_u64().unwrap();
     let envelope = json!({"protocol": CONTRACT, "runtime": rt.instance_id(),
@@ -239,7 +239,7 @@ fn incompatible_protocol_and_explicit_build_pin_never_register_clients() {
     let mut p = Protocol::default();
     let now = Instant::now();
     for protocol in [
-        "zipzi-runtime-v2",
+        "zipzi-runtime-v3",
         "zipzi-runtime-r8-quality-topology-1",
         "",
     ] {

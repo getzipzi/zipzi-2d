@@ -1,4 +1,6 @@
 use super::*;
+use zipzi_core::BindingAxisEditing;
+use zipzi_core::WarpBezierEvaluation;
 
 #[test]
 fn warp_grid_add_insert_reduce_preserves_controllers_and_domain() {

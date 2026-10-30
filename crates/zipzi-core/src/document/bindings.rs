@@ -5,6 +5,7 @@ use crate::types::{
     SceneKeyform, SceneTrack, Status, TransformKind,
 };
 use std::collections::HashSet;
+use zipzi_core::SceneTrackEvaluation;
 
 impl Document {
     pub fn binding_order(&self) -> &[String] {

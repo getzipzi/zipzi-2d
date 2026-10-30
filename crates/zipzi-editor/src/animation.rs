@@ -7,6 +7,7 @@ use std::sync::{
 #[cfg(test)]
 use std::time::Duration;
 use std::time::Instant;
+use zipzi_core::SceneTrackEvaluation;
 use zipzi_editor_core::{
     AnimationEvaluated, AnimationEvaluator, AnimationIdentity, AnimationRequest, WorkspaceKind,
 };

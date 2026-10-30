@@ -2,6 +2,7 @@
 use serde::Deserialize;
 use serde_json::{Map, Value};
 use std::collections::{BTreeMap, HashSet};
+use zipzi_core::document::ReferenceEntryAllocation;
 use zipzi_core::document::{Model3Settings, ModelHitArea, ModelParameterGroup, ModelTargetRef};
 use zipzi_core::{types::Status, Document};
 

@@ -1,4 +1,5 @@
 use zipzi_core::{ModelSetup, Parameter, PreviewValues, Vec2};
+use zipzi_sdk::MeshBindingOperationApply;
 use zipzi_sdk::{
     AuthoringSession, MeshBindingAxisSpec, MeshBindingCreateSpec, MeshBindingOperation,
     MeshCreateSpec, MeshGeometry, MeshKeyformSpec,

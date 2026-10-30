@@ -1,56 +1,14 @@
-use super::lattice::{self, active, GridOperation};
+use super::lattice::{self, active};
 use super::*;
 use crate::{
     GlueBinding, GlueKeyform, MeshKeyform, OffscreenKeyform, PartKeyform, RotationKeyform,
     SceneTrack, WarpKeyform,
 };
+use zipzi_core::OffscreenLookup;
+use zipzi_core::SceneTrackEvaluation;
 
-#[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    zipzi_api_derive::ApiShape,
-    zipzi_api_derive::BinaryWire,
-)]
-pub enum BindingGridTarget {
-    Mesh(#[doc = "Stable ID of the target mesh whose ordinary grid is being created."] String),
-    Scene(
-        /// Stable ID of the target scene transform or Part whose ordinary grid is being created.
-        String,
-    ),
-    Glue(#[doc = "Stable ID of the target Glue whose ordinary grid is being created."] String),
-}
-#[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    zipzi_api_derive::ApiShape,
-    zipzi_api_derive::BinaryWire,
-)]
-pub enum BindingGridEdit {
-    /// Explicitly discard owned shapes and return to the unchanged base target.
-    Delete {
-        /// Stable owner ID for the addressed drawing group, collection or reference selection.
-        owner: String,
-    },
-    Create {
-        /// New stable UUID for this object; it must not conflict with an existing identity.
-        id: String,
-        /// Explicit base/ordinary/BlendShape content selector; default Base edits the
-        /// undeformed base shape.
-        target: BindingGridTarget,
-    },
-    Edit {
-        /// Stable owner ID for the addressed drawing group, collection or reference selection.
-        owner: String,
-        /// Typed axis/sample grid edit to perform on this owner; not a Runtime operation ID.
-        operation: GridOperation,
-    },
-}
+pub use zipzi_contract::document::{BindingGridEdit, BindingGridTarget};
+
 #[derive(Debug, Clone)]
 pub(super) enum GridFragment {
     Delete {
@@ -71,6 +29,7 @@ pub(super) enum GridFragment {
     },
     Glue(Glue),
 }
+
 #[derive(Debug, Clone)]
 pub struct BindingGridPlan {
     control: ConversionControl,

@@ -19,6 +19,7 @@ path = "tests/alpha_mesh.rs"
 bench-instrumentation = ["zipzi-core/bench-instrumentation"]
 
 [dependencies]
+zipzi-contract.workspace = true
 zipzi-api-derive = { version = "=0.1.0-alpha.3", path = "../zipzi-api-derive" }
 zipzi-core = { version = "=0.1.0-alpha.3", path = "../zipzi-core" }
 zipzi-animation = { version = "=0.1.0-alpha.3", path = "../zipzi-animation" }

@@ -47,20 +47,7 @@ impl Default for AuthoringLimits {
         }
     }
 }
-crate::api_record! {
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[derive(zipzi_api_derive::BinaryOutput)]
-pub struct ConversionCost {
-    /// Number of shape-sample combinations the conversion must process.
-    pub sample_combinations: usize,
-    /// Estimated owned result payload in bytes; not total process RSS.
-    pub payload_bytes: usize,
-    /// Estimated temporary working storage in bytes; not total process RSS.
-    pub temporary_bytes: usize,
-    /// Includes the SDK's complete previous checkpoint and new candidate.
-    pub history_bytes: usize,
-}
-}
+pub use zipzi_contract::document::ConversionCost;
 impl AuthoringLimits {
     pub fn check_grid(
         self,

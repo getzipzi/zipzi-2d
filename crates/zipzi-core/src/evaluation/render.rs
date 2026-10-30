@@ -1,5 +1,6 @@
 use crate::document::Document;
 use crate::types::{DeltaKeyforms, Status};
+use zipzi_core::OffscreenLookup;
 
 use super::evaluator::EvalContext;
 use super::prepared::{DrawItemSource, PreparedEvaluation};

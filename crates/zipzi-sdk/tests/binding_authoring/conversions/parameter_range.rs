@@ -1,4 +1,5 @@
 use super::*;
+use zipzi_core::BindingAxisEditing;
 
 #[test]
 fn range_and_grid_final_state_succeeds_when_both_setter_orders_fail() {

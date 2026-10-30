@@ -1,5 +1,6 @@
 //! Render a sampled synthetic Motion/Pose frame using the public observation path.
 use std::{collections::HashMap, env, fs, path::PathBuf};
+use zipzi_core::DrawableFrameBounds;
 
 use zipzi_core::{Canvas, Vec2};
 use zipzi_observe::{

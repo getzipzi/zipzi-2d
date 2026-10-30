@@ -1,32 +1,8 @@
 //! Palette order is independent of object storage and runtime draw order.
 use super::*;
-use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-/// Independent palette ranks for the organization and deformation projections.
-/// Partial lists are allowed: consumers retain source order for unlisted objects.
-/// Entries use globally unique scene object IDs, never visible row indices.
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub struct HierarchyOrder {
-    #[serde(default)]
-    /// Partial organization-palette order expressed as object IDs; unlisted IDs keep their
-    /// source order.
-    pub organization: Vec<String>,
-    #[serde(default)]
-    /// Partial deformation-palette order expressed as object IDs; does not reparent objects.
-    pub deformation: Vec<String>,
-    /// Management order only. Glue evaluation retains its native execution order.
-    #[serde(default)]
-    pub glues: Vec<String>,
-}
-
-impl HierarchyOrder {
-    pub fn is_empty(&self) -> bool {
-        self.organization.is_empty() && self.deformation.is_empty() && self.glues.is_empty()
-    }
-}
+pub use zipzi_contract::document::HierarchyOrder;
 
 impl Document {
     /// Palette ordering has no effect on relationships or evaluated draw order.

@@ -1,6 +1,7 @@
 //! Ordinary binding workflow. SDK plans own all grid conversion and validation.
 use super::*;
 use anyhow::{Result, ensure};
+use zipzi_core::BindingAxisEditing;
 use zipzi_sdk::{BindingAuthoringEdit, BindingGridEdit, BindingGridTarget, GridOperation};
 
 #[derive(Clone, Debug)]

@@ -1,9 +1,6 @@
 //! Persistent Expression assets; playback state remains outside the document.
 use std::collections::{BTreeMap, HashSet};
 
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-
 use super::{Document, StructureIssue};
 use crate::types::{ChangeKind, EditResult, Status};
 
@@ -12,104 +9,9 @@ mod projection;
 pub use authoring::*;
 pub use projection::*;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub enum ExpressionBlend {
-    Add,
-    Multiply,
-    Overwrite,
-}
+pub use zipzi_contract::document::{ExpressionBlend, ExpressionEntry, ExpressionTarget};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub enum ExpressionTarget {
-    Unspecified,
-    Resolved {
-        /// Stable document parameter UUID; evaluation uses its declared range and default.
-        parameter_id: String,
-    },
-    Unresolved {
-        /// Imported/exported runtime label, distinct from the document object UUID.
-        runtime_id: String,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub struct ExpressionEntry {
-    /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-    pub id: String,
-    /// Typed target reference; unresolved imported runtime labels remain explicit.
-    pub target: ExpressionTarget,
-    /// Channel value or replacement payload in the domain declared by this field type.
-    pub value: f32,
-    /// Missing means Framework's default Add blend.
-    pub blend: Option<ExpressionBlend>,
-    /// Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
-    pub extensions: BTreeMap<String, Value>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-pub struct ExpressionAsset {
-    /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-    pub id: String,
-    /// Registration name in model3; independent of parameter display names.
-    pub name: String,
-    /// Optional format type label retained from the imported expression or Pose asset.
-    pub file_type: Option<String>,
-    /// Optional fade-in duration in seconds; None retains the format/runtime default.
-    pub fade_in: Option<f32>,
-    /// Optional fade-out duration in seconds; None retains the format/runtime default.
-    pub fade_out: Option<f32>,
-    /// Ordered owned registrations or expression/Pose entries, with stable identities.
-    pub entries: Vec<ExpressionEntry>,
-    /// Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
-    pub extensions: BTreeMap<String, Value>,
-    /// Full Parameter UUID-to-runtime-ID namespace when opaque fields exist.
-    pub opaque_source_ids: Option<BTreeMap<String, String>>,
-    /// Hash of imported content when opaque fields exist; known-field edits
-    /// cannot silently change the meaning of those fields.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub opaque_source_content_hash: Option<String>,
-}
-
-impl ExpressionAsset {
-    /// CAN3 scene layout and initial non-parameter state are authoring data,
-    /// separate from the expression's runtime parameter overrides.
-    pub fn source_scene(&self) -> Option<super::MotionClip> {
-        self.extensions
-            .get("ZipziSourceScene")
-            .and_then(|value| serde_json::from_value(value.clone()).ok())
-    }
-
-    pub fn preserve_source_scene(&mut self, scene: &super::MotionClip) {
-        self.extensions.insert(
-            "ZipziSourceScene".into(),
-            serde_json::to_value(scene).expect("validated source scene serializes"),
-        );
-    }
-
-    pub fn runtime_extensions(&self) -> BTreeMap<String, Value> {
-        self.extensions
-            .iter()
-            .filter(|(key, _)| key.as_str() != "ZipziSourceScene")
-            .map(|(key, value)| (key.clone(), value.clone()))
-            .collect()
-    }
-
-    pub fn has_extensions(&self) -> bool {
-        self.extensions.keys().any(|key| key != "ZipziSourceScene")
-            || self
-                .entries
-                .iter()
-                .any(|entry| !entry.extensions.is_empty())
-    }
-}
+pub use zipzi_contract::document::ExpressionAsset;
 
 impl Document {
     fn contains_expression_identity(&self, id: &str) -> bool {

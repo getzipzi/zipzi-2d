@@ -3,6 +3,7 @@
 use super::*;
 use crate::authoring::PlanSnapshot;
 use serde::Serialize;
+use zipzi_sdk::SceneSummaryRead;
 
 pub(super) struct RefEntry {
     pub client: ClientId,

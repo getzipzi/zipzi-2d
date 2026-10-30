@@ -1,4 +1,5 @@
 use super::*;
+use zipzi_core::BindingAxisEditing;
 
 #[test]
 fn stable_axis_sample_ids_roundtrip_and_old_addresses_do_not_revive() {

@@ -1,5 +1,6 @@
 //! Parameter and hierarchy presentation derived from the current document.
 use super::*;
+use zipzi_core::document::ReferenceEntryAllocation;
 
 impl Document {
     pub fn parameters(&self) -> Vec<ParameterValue> {
@@ -177,14 +178,16 @@ impl Document {
             sets.push(zipzi_core::document::CdiCombinedSet {
                 id: Uuid::new_v4().to_string(),
                 members: vec![
-                    zipzi_core::document::CdiParameterRef::Resolved {
-                        parameter_id: parameter_id.to_owned(),
-                    }
-                    .into(),
-                    zipzi_core::document::CdiParameterRef::Resolved {
-                        parameter_id: next_id.clone(),
-                    }
-                    .into(),
+                    zipzi_core::document::ReferenceEntry::new(
+                        zipzi_core::document::CdiParameterRef::Resolved {
+                            parameter_id: parameter_id.to_owned(),
+                        },
+                    ),
+                    zipzi_core::document::ReferenceEntry::new(
+                        zipzi_core::document::CdiParameterRef::Resolved {
+                            parameter_id: next_id.clone(),
+                        },
+                    ),
                 ],
             });
             Ok(candidate.replace_display_info(info)?)

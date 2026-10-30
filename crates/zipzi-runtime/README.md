@@ -69,7 +69,7 @@ available shared budget; limits are admission ceilings, not preallocated memory.
 The `protocol` and Unix `local` modules provide authenticated connections,
 request deduplication, recovery, reconnect grace and endpoint ownership. The
 Editor assembles the listener on its application thread. The protocol uses
-bounded JSON control frames and binary blobs. `zipzi-runtime-v1` identifies the
+bounded JSON control frames and binary blobs. `zipzi-runtime-v2` identifies the
 wire **major**, independently of package versions, source hashes and additive API
 changes. A disconnected client can resume within its grace period; expiry
 releases its edits but retains formal sessions and entered jobs.

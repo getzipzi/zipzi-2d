@@ -350,7 +350,15 @@ fn repeated_motion_events_are_admitted_before_advancing_or_allocating_results() 
     ] {
         for incremental in [false, true] {
             assert!(matches!(
-                rt.request_preview_frames(c, p, vec![2. / 60.], false, incremental, vec![], view),
+                rt.request_preview_frames(
+                    c,
+                    p,
+                    vec![2. / 60.],
+                    false,
+                    incremental,
+                    vec![],
+                    view.clone()
+                ),
                 Err(RuntimeError::Budget(_))
             ));
             assert_eq!(

@@ -2,6 +2,8 @@
 //! sync with DocumentContent and the value types stored in its collections.
 use std::collections::{BTreeMap, HashMap};
 use std::mem::size_of;
+#[cfg(test)]
+use zipzi_core::document::PhysicsAssetEditing;
 
 use crate::draw_order::DrawOrderGroup;
 use crate::types::{

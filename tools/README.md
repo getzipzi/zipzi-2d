@@ -249,7 +249,10 @@ The independent [zipzi-python2 package](../crates/zipzi-python2/README.md) owns 
 P0/P1 tools under `crates/zipzi-python2/tools/`. `test.py` builds its native adapter
 and validates Local/Connected behavior and public static types; `baseline.py`
 measures this package's selected workloads. `./tools/test-sdk.sh python2` is the
-repository entrypoint.
+repository entrypoint. The Python generator exports from `zipzi-contract` into a
+checkout-local `target/python2/schema-cargo` build directory. Generation and
+checking share a checkout-local lock; `--check` verifies tracked outputs without
+rewriting them.
 
 Generated JSON inventories and reports belong under `target/`; plan directories
 retain Markdown acceptance results only.
