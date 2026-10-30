@@ -266,6 +266,71 @@ fn r2_worker_panic_keeps_frozen_view_and_never_leaves_editor_busy() -> anyhow::R
 }
 
 #[test]
+fn external_save_scene_creation_queries_before_workspace_sync_return_busy() -> anyhow::Result<()> {
+    use zipzi_editor_core::{Document, PaletteProjection, SceneObjectType};
+
+    let mut document = Document::new_blank()?;
+    let mut selections = Vec::new();
+    for kind in [
+        SceneObjectType::Part,
+        SceneObjectType::Mesh,
+        SceneObjectType::Warp,
+    ] {
+        let plan = document.plan_scene_object_creation(kind, "Selected".into(), &[])?;
+        selections.push(
+            document
+                .execute_scene_object_creation(&plan)?
+                .suggested_selection
+                .into_iter()
+                .filter(|object| object.kind == kind.object_kind())
+                .collect::<Vec<_>>(),
+        );
+    }
+    selections.push(Vec::new());
+    let host = document.runtime_host();
+    let session = document.runtime_session_id();
+    let agent = host.write().register_client()?;
+    let target = tempfile::tempdir()?;
+    let job = host.write().request_save(agent, session, target.path())?;
+
+    // Retain the UI's Document after external admission, without syncing it.
+    // A selection reaches handle(); an empty selection reaches collection capabilities.
+    for selection in &selections {
+        for (projection, kind) in [
+            (PaletteProjection::Organization, SceneObjectType::Part),
+            (PaletteProjection::Deformation, SceneObjectType::Mesh),
+        ] {
+            if projection == PaletteProjection::Deformation
+                && selection
+                    .first()
+                    .is_some_and(|object| object.kind == zipzi_editor_core::ObjectKind::Part)
+            {
+                continue;
+            }
+            let error = document
+                .validate_scene_object_creation_in(projection, kind, selection)
+                .unwrap_err();
+            assert_eq!(
+                error
+                    .downcast_ref::<zipzi_sdk::SdkError>()
+                    .unwrap()
+                    .code
+                    .as_ref(),
+                "BUSY"
+            );
+        }
+    }
+    let work = host.write().take_work(job)?;
+    assert!(host.write().complete(work.run()));
+    host.write().release_job(agent, job)?;
+    for selection in &selections {
+        document.validate_scene_object_creation_context(SceneObjectType::Part, selection)?;
+    }
+    assert!(target.path().join("project.zipzi.json").is_file());
+    Ok(())
+}
+
+#[test]
 fn external_busy_command_queries_do_not_require_a_workspace_sync() -> anyhow::Result<()> {
     use zipzi_editor_core::{CommandDisabledReason, CommandId};
 

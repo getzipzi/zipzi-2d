@@ -121,6 +121,7 @@ impl Background {
                 None,
                 vec![Default::default(); 4],
                 zipzi_runtime::observation::ObservationView {
+                    texture_policy: Default::default(),
                     width: 96,
                     height: 96,
                     roi: [-4., -4., 4., 4.],

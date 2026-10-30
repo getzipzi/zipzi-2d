@@ -10,19 +10,20 @@ impl HostedSession {
         &self,
         handle: &ObjectHandle,
     ) -> Result<AttachmentCapabilities, SdkError> {
-        self.read().attachment_capabilities(handle)
+        self.try_read()?.attachment_capabilities(handle)
     }
     pub fn attachment_load_token(&self, id: &str) -> Result<AttachmentLoadToken, SdkError> {
-        self.read().attachment_load_token(id)
+        self.try_read()?.attachment_load_token(id)
     }
     pub fn attachment_path_address(&self, id: &str) -> Result<AttachmentPathAddress, SdkError> {
-        self.read().attachment_path_address(id)
+        self.try_read()?.attachment_path_address(id)
     }
     pub fn authoring_collection_capabilities(
         &self,
         collection: &AuthoringCollection,
     ) -> Result<CollectionCapabilities, SdkError> {
-        self.read().authoring_collection_capabilities(collection)
+        self.try_read()?
+            .authoring_collection_capabilities(collection)
     }
     pub fn authoring_limits(&self) -> AuthoringLimits {
         self.read().authoring_limits()
@@ -31,10 +32,10 @@ impl HostedSession {
         &self,
         handle: &zipzi_sdk::ObjectHandle,
     ) -> Result<BindingCapabilities, SdkError> {
-        self.read().binding_capabilities(handle)
+        self.try_read()?.binding_capabilities(handle)
     }
     pub fn binding_field_address(&self, id: &str) -> Result<BindingFieldAddress, SdkError> {
-        self.read().binding_field_address(id)
+        self.try_read()?.binding_field_address(id)
     }
     pub fn binding_for_mesh(&self, mesh_id: &str) -> Option<MeshBinding> {
         self.read().binding_for_mesh(mesh_id)
@@ -49,13 +50,13 @@ impl HostedSession {
         &self,
         field: DocumentField,
     ) -> Result<DocumentFieldAddress, SdkError> {
-        self.read().document_field_address(field)
+        self.try_read()?.document_field_address(field)
     }
     pub fn document_field_capability(&self, field: DocumentField) -> CapabilityState {
         self.read().document_field_capability(field)
     }
     pub fn drawing_group_address(&self, owner: &str) -> Result<DrawingGroupAddress, SdkError> {
-        self.read().drawing_group_address(owner)
+        self.try_read()?.drawing_group_address(owner)
     }
     pub fn evaluation_revision(&self) -> u64 {
         self.document().evaluation_revision()
@@ -64,13 +65,13 @@ impl HostedSession {
         &self,
         handle: &ObjectHandle,
     ) -> Result<ExpressionCapabilities, SdkError> {
-        self.read().expression_capabilities(handle)
+        self.try_read()?.expression_capabilities(handle)
     }
     pub fn expression_entry_address(&self, id: &str) -> Result<ExpressionEntryAddress, SdkError> {
-        self.read().expression_entry_address(id)
+        self.try_read()?.expression_entry_address(id)
     }
     pub fn handle(&self, kind: ObjectKind, id: &str) -> Result<ObjectHandle, SdkError> {
-        self.read().handle(kind, id)
+        self.try_read()?.handle(kind, id)
     }
     pub fn history_lengths(&self) -> (usize, usize) {
         self.host
@@ -80,7 +81,7 @@ impl HostedSession {
             .history_lengths
     }
     pub fn image_load_token(&self, id: &str) -> Result<ImageLoadToken, SdkError> {
-        self.read().image_load_token(id)
+        self.try_read()?.image_load_token(id)
     }
     pub fn mesh(&self, id: &str) -> Option<Mesh> {
         self.document().get_mesh(id).cloned()
@@ -99,28 +100,28 @@ impl HostedSession {
         &self,
         handle: &ObjectHandle,
     ) -> Result<MotionCapabilities, SdkError> {
-        self.read().motion_capabilities(handle)
+        self.try_read()?.motion_capabilities(handle)
     }
     pub fn organization_address(&self, id: &str) -> Result<OrganizationAddress, SdkError> {
-        self.read().organization_address(id)
+        self.try_read()?.organization_address(id)
     }
     pub fn organization_capabilities(
         &self,
         h: &ObjectHandle,
     ) -> Result<OrganizationCapabilities, SdkError> {
-        self.read().organization_capabilities(h)
+        self.try_read()?.organization_capabilities(h)
     }
     pub fn organization_collection(
         &self,
         collection: OrganizationCollection,
     ) -> Result<Vec<ObjectHandle>, SdkError> {
-        self.read().organization_collection(collection)
+        self.try_read()?.organization_collection(collection)
     }
     pub fn organization_collection_capabilities(
         &self,
         c: &OrganizationCollection,
     ) -> Result<OrganizationCollectionCapabilities, SdkError> {
-        self.read().organization_collection_capabilities(c)
+        self.try_read()?.organization_collection_capabilities(c)
     }
     pub fn parameter(&self, id: &str) -> Option<Parameter> {
         self.read().parameter(id)
@@ -132,39 +133,39 @@ impl HostedSession {
         &self,
         handle: &ObjectHandle,
     ) -> Result<PhysicsCapabilities, SdkError> {
-        self.read().physics_capabilities(handle)
+        self.try_read()?.physics_capabilities(handle)
     }
     pub fn physics_collection(
         &self,
         collection: PhysicsCollection,
     ) -> Result<Vec<ObjectHandle>, SdkError> {
-        self.read().physics_collection(collection)
+        self.try_read()?.physics_collection(collection)
     }
     pub fn plan_attachment_edit(
         &self,
         intent: zipzi_core::document::AttachmentEdit,
     ) -> Result<AttachmentEditPlan, SdkError> {
-        self.read().plan_attachment_edit(intent)
+        self.try_read()?.plan_attachment_edit(intent)
     }
     pub fn plan_attachment_path_patch(
         &self,
         a: &AttachmentPathAddress,
         path: String,
     ) -> Result<zipzi_sdk::AttachmentEditPlan, SdkError> {
-        self.read().plan_attachment_path_patch(a, path)
+        self.try_read()?.plan_attachment_path_patch(a, path)
     }
     pub fn plan_binding_authoring(
         &self,
         edit: BindingAuthoringEdit,
     ) -> Result<BindingEditPlan, SdkError> {
-        self.read().plan_binding_authoring(edit)
+        self.try_read()?.plan_binding_authoring(edit)
     }
     pub fn plan_binding_authoring_with_control(
         &self,
         edit: BindingAuthoringEdit,
         control: &ConversionControl,
     ) -> Result<BindingEditPlan, SdkError> {
-        self.read()
+        self.try_read()?
             .plan_binding_authoring_with_control(edit, control)
     }
     pub fn plan_binding_field_patch(
@@ -172,108 +173,109 @@ impl HostedSession {
         address: &BindingFieldAddress,
         patch: BindingFieldPatch,
     ) -> Result<BindingEditPlan, SdkError> {
-        self.read().plan_binding_field_patch(address, patch)
+        self.try_read()?.plan_binding_field_patch(address, patch)
     }
     pub fn plan_document_edit(
         &self,
         intent: DocumentAuthoringEdit,
     ) -> Result<DocumentEditPlan, SdkError> {
-        self.read().plan_document_edit(intent)
+        self.try_read()?.plan_document_edit(intent)
     }
     pub fn plan_document_field_patch(
         &self,
         a: &DocumentFieldAddress,
         value: DocumentValue,
     ) -> Result<DocumentEditPlan, SdkError> {
-        self.read().plan_document_field_patch(a, value)
+        self.try_read()?.plan_document_field_patch(a, value)
     }
     pub fn plan_drawing_range_patch(
         &self,
         address: &DrawingGroupAddress,
         range: [i32; 2],
     ) -> Result<SceneEditPlan, SdkError> {
-        self.read().plan_drawing_range_patch(address, range)
+        self.try_read()?.plan_drawing_range_patch(address, range)
     }
     pub fn plan_expression_edit(
         &self,
         edit: ExpressionEdit,
     ) -> Result<ExpressionEditPlan, SdkError> {
-        self.read().plan_expression_edit(edit)
+        self.try_read()?.plan_expression_edit(edit)
     }
     pub fn plan_expression_entry_patch(
         &self,
         address: &ExpressionEntryAddress,
         fields: ExpressionEntryFields,
     ) -> Result<ExpressionEditPlan, SdkError> {
-        self.read().plan_expression_entry_patch(address, fields)
+        self.try_read()?
+            .plan_expression_entry_patch(address, fields)
     }
     pub fn plan_motion_edit(&self, intent: MotionEdit) -> Result<MotionEditPlan, SdkError> {
-        self.read().plan_motion_edit(intent)
+        self.try_read()?.plan_motion_edit(intent)
     }
     pub fn plan_organization_edit(
         &self,
         intent: OrganizationEdit,
     ) -> Result<OrganizationEditPlan, SdkError> {
-        self.read().plan_organization_edit(intent)
+        self.try_read()?.plan_organization_edit(intent)
     }
     pub fn plan_physics_edit(&self, intent: PhysicsEdit) -> Result<PhysicsEditPlan, SdkError> {
-        self.read().plan_physics_edit(intent)
+        self.try_read()?.plan_physics_edit(intent)
     }
     pub fn plan_pose_edit(&self, intent: PoseEdit) -> Result<PoseEditPlan, SdkError> {
-        self.read().plan_pose_edit(intent)
+        self.try_read()?.plan_pose_edit(intent)
     }
     pub fn plan_pose_field_patch(
         &self,
         address: &PoseFieldAddress,
         fields: PoseFields,
     ) -> Result<PoseEditPlan, SdkError> {
-        self.read().plan_pose_field_patch(address, fields)
+        self.try_read()?.plan_pose_field_patch(address, fields)
     }
     pub fn plan_reference_edit(
         &self,
         intent: ReferenceEdit,
     ) -> Result<ReferenceEditPlan, SdkError> {
-        self.read().plan_reference_edit(intent)
+        self.try_read()?.plan_reference_edit(intent)
     }
     pub fn plan_reference_field_patch(
         &self,
         a: &ReferenceFieldAddress,
         fields: ReferenceFields,
     ) -> Result<ReferenceEditPlan, SdkError> {
-        self.read().plan_reference_field_patch(a, fields)
+        self.try_read()?.plan_reference_field_patch(a, fields)
     }
     pub fn plan_reference_selection_patch(
         &self,
         a: &ReferenceSelectionAddress,
         targets: Vec<String>,
     ) -> Result<ReferenceEditPlan, SdkError> {
-        self.read().plan_reference_selection_patch(a, targets)
+        self.try_read()?.plan_reference_selection_patch(a, targets)
     }
     pub fn plan_resource_edit(&self, intent: ResourceEdit) -> Result<ResourceEditPlan, SdkError> {
-        self.read().plan_resource_edit(intent)
+        self.try_read()?.plan_resource_edit(intent)
     }
     pub fn plan_resource_name_patch(
         &self,
         address: &ResourceNameAddress,
         name: String,
     ) -> Result<ResourceEditPlan, SdkError> {
-        self.read().plan_resource_name_patch(address, name)
+        self.try_read()?.plan_resource_name_patch(address, name)
     }
     pub fn plan_scene_content(
         &self,
         intent: SceneContentEdit,
     ) -> Result<SceneContentEditPlan, SdkError> {
-        self.read().plan_scene_content(intent)
+        self.try_read()?.plan_scene_content(intent)
     }
     pub fn plan_scene_content_patch(
         &self,
         address: &SceneContentAddress,
         value: SceneContentValue,
     ) -> Result<SceneContentEditPlan, SdkError> {
-        self.read().plan_scene_content_patch(address, value)
+        self.try_read()?.plan_scene_content_patch(address, value)
     }
     pub fn plan_scene_edit(&self, intent: SceneEdit) -> Result<SceneEditPlan, SdkError> {
-        self.read().plan_scene_edit(intent)
+        self.try_read()?.plan_scene_edit(intent)
     }
     pub fn plan_scene_field_patch(
         &self,
@@ -281,20 +283,20 @@ impl HostedSession {
         value: SceneFieldValue,
         clear_glue_pairs: bool,
     ) -> Result<SceneEditPlan, SdkError> {
-        self.read()
+        self.try_read()?
             .plan_scene_field_patch(address, value, clear_glue_pairs)
     }
     pub fn pose_capabilities(&self, handle: &ObjectHandle) -> Result<PoseCapabilities, SdkError> {
-        self.read().pose_capabilities(handle)
+        self.try_read()?.pose_capabilities(handle)
     }
     pub fn pose_collection(
         &self,
         collection: PoseCollection,
     ) -> Result<Vec<ObjectHandle>, SdkError> {
-        self.read().pose_collection(collection)
+        self.try_read()?.pose_collection(collection)
     }
     pub fn pose_field_address(&self, id: &str) -> Result<PoseFieldAddress, SdkError> {
-        self.read().pose_field_address(id)
+        self.try_read()?.pose_field_address(id)
     }
     pub fn prepare_rgba_image(
         &self,
@@ -302,7 +304,7 @@ impl HostedSession {
         height: u32,
         rgba: std::sync::Arc<[u8]>,
     ) -> Result<zipzi_sdk::PreparedImageContent, SdkError> {
-        self.read().prepare_rgba_image(width, height, rgba)
+        self.try_read()?.prepare_rgba_image(width, height, rgba)
     }
     pub fn read_snapshot(&self) -> AuthoringSnapshot {
         self.read().read_snapshot()
@@ -311,79 +313,79 @@ impl HostedSession {
         &self,
         h: &ObjectHandle,
     ) -> Result<ReferenceCapabilities, SdkError> {
-        self.read().reference_capabilities(h)
+        self.try_read()?.reference_capabilities(h)
     }
     pub fn reference_collection(
         &self,
         c: &ReferenceCollection,
     ) -> Result<Vec<ObjectHandle>, SdkError> {
-        self.read().reference_collection(c)
+        self.try_read()?.reference_collection(c)
     }
     pub fn reference_field_address(&self, id: &str) -> Result<ReferenceFieldAddress, SdkError> {
-        self.read().reference_field_address(id)
+        self.try_read()?.reference_field_address(id)
     }
     pub fn reference_selection_address(
         &self,
         owner: &str,
         field: ReferenceSelectionField,
     ) -> Result<ReferenceSelectionAddress, SdkError> {
-        self.read().reference_selection_address(owner, field)
+        self.try_read()?.reference_selection_address(owner, field)
     }
     pub fn references_to(&self, id: &str) -> Vec<String> {
         self.read().references_to(id)
     }
     pub fn reparent_support(&self, edit: &ReparentEdit) -> Result<ReparentSupport, SdkError> {
-        self.read().reparent_support(edit)
+        self.try_read()?.reparent_support(edit)
     }
     pub fn resource_capabilities(
         &self,
         handle: &ObjectHandle,
     ) -> Result<ResourceCapabilities, SdkError> {
-        self.read().resource_capabilities(handle)
+        self.try_read()?.resource_capabilities(handle)
     }
     pub fn resource_collection(&self) -> Result<Vec<ObjectHandle>, SdkError> {
-        self.read().resource_collection()
+        self.try_read()?.resource_collection()
     }
     pub fn resource_collection_capabilities(&self) -> ResourceCollectionCapabilities {
         self.read().resource_collection_capabilities()
     }
     pub fn resource_name_address(&self, id: &str) -> Result<ResourceNameAddress, SdkError> {
-        self.read().resource_name_address(id)
+        self.try_read()?.resource_name_address(id)
     }
     pub fn scene_capabilities(&self, handle: &ObjectHandle) -> Result<SceneCapabilities, SdkError> {
-        self.read().scene_capabilities(handle)
+        self.try_read()?.scene_capabilities(handle)
     }
     pub fn scene_collection(&self, c: &SceneCollection) -> Result<Vec<ObjectHandle>, SdkError> {
-        self.read().scene_collection(c)
+        self.try_read()?.scene_collection(c)
     }
     pub fn scene_collection_capabilities(
         &self,
         c: &SceneCollection,
     ) -> Result<SceneCollectionCapabilities, SdkError> {
-        self.read().scene_collection_capabilities(c)
+        self.try_read()?.scene_collection_capabilities(c)
     }
     pub fn scene_content_address(
         &self,
         owner_id: &str,
         target: SceneContentTarget,
     ) -> Result<SceneContentAddress, SdkError> {
-        self.read().scene_content_address(owner_id, target)
+        self.try_read()?.scene_content_address(owner_id, target)
     }
     pub fn scene_content_capabilities(
         &self,
         owner: &ObjectHandle,
     ) -> Result<SceneContentCapabilities, SdkError> {
-        self.read().scene_content_capabilities(owner)
+        self.try_read()?.scene_content_capabilities(owner)
     }
     pub fn scene_field_address(
         &self,
         id: &str,
         field: SceneField,
     ) -> Result<SceneFieldAddress, SdkError> {
-        self.read().scene_field_address(id, field)
+        self.try_read()?.scene_field_address(id, field)
     }
     pub fn transfer_snapshot(&self) -> Result<zipzi_project::TransferSnapshot, SdkError> {
-        self.read().transfer_snapshot()
+        self.try_read()?.transfer_snapshot()
     }
     pub fn version(&self) -> Version {
         self.host

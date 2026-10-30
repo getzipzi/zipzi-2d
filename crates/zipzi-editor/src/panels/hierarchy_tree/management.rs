@@ -17,23 +17,24 @@ pub(super) fn new_part_button<const DEFORMER: bool>(
     let mut selection = Vec::new();
     if let Some(entity) = owner.upgrade() {
         let state = entity.read(cx);
-        context = AuthoringContext::capture(&state.editor);
-        if let Some(document) = state.editor.document() {
-            selection = document.context().selections.clone();
-            let available = document.validate_scene_object_creation_in(
-                PaletteProjection::Organization,
-                SceneObjectType::Part,
-                &selection,
-            );
-            if let Err(error) = &available {
-                hint = creation_error(error);
+        if !state.modal
+            && !state.editor.is_busy()
+            && state.editor.active_id() == panel.document_id
+            && state.editor.editing_context() == Some(EditingContext::Modeling)
+        {
+            context = AuthoringContext::capture(&state.editor);
+            if let Some(document) = state.editor.document() {
+                selection = document.context().selections.clone();
+                let available = document.validate_scene_object_creation_in(
+                    PaletteProjection::Organization,
+                    SceneObjectType::Part,
+                    &selection,
+                );
+                if let Err(error) = &available {
+                    hint = creation_error(error);
+                }
+                disabled = context.is_none() || available.is_err();
             }
-            disabled = state.modal
-                || state.editor.is_busy()
-                || context.is_none()
-                || state.editor.active_id() != panel.document_id
-                || state.editor.editing_context() != Some(EditingContext::Modeling)
-                || available.is_err();
         }
     }
     crate::ui::compact::new_group_button(Button::new("parts-tree-new-part"))

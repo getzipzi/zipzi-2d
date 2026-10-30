@@ -305,6 +305,53 @@ fn modify(harness: &Harness, cx: &mut TestAppContext) {
 }
 
 #[gpui_kit::test]
+fn parts_header_renders_external_save_without_workspace_sync(cx: &mut TestAppContext) {
+    use crate::docking::header::PanelHeader;
+    use zipzi_editor_core::{EditorCommand, ObjectKind, ObjectRef};
+
+    let (harness, host) = hosted(cx);
+    harness.view.update(cx, |view, _| {
+        let mesh = view.editor.layers()[0].id.clone();
+        view.editor
+            .execute(EditorCommand::SelectObjects(vec![ObjectRef::new(
+                ObjectKind::Mesh,
+                mesh,
+            )]))
+            .unwrap();
+    });
+    cx.run_until_parked();
+    let (session, panel) = harness.view.read_with(cx, |view, _| {
+        (
+            view.editor.document().unwrap().runtime_session_id(),
+            view.dock.as_ref().unwrap().part_tree.clone(),
+        )
+    });
+    let agent = host.runtime.write().register_client().unwrap();
+    let target = harness._config_dir.path().join("header-external-save");
+    cx.update_window(harness.window, |_, window, cx| {
+        let job = host
+            .runtime
+            .write()
+            .request_save(agent, session, &target)
+            .unwrap();
+        // The retained header can render independently of EditorView::render.
+        // Do not let its root sync_runtime or the notification task run first.
+        assert!(harness.view.read(cx).editor.document().is_some());
+        panel.update(cx, |panel, cx| drop(panel.render_header(window, cx)));
+        assert!(harness.view.read(cx).editor.document().is_some());
+        let work = host.runtime.write().take_work(job).unwrap();
+        assert!(host.runtime.write().complete(work.run()));
+        host.runtime.write().release_job(agent, job).unwrap();
+        panel.update(cx, |panel, cx| drop(panel.render_header(window, cx)));
+        harness.view.update(cx, |_, cx| cx.notify());
+        window.render_frame(cx);
+        assert_ne!(window.find("parts-tree-new-part").disabled(), Some(true));
+    })
+    .unwrap();
+    assert!(target.join("project.zipzi.json").is_file());
+}
+
+#[gpui_kit::test]
 fn rendering_external_busy_job_before_notification_freezes_and_restores_the_view(
     cx: &mut TestAppContext,
 ) {

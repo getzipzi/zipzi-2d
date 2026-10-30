@@ -274,6 +274,22 @@ impl HostedSession {
             id: self.id,
         }
     }
+    /// Fallible queries must tolerate an external job taking SDK ownership
+    /// between UI reads. Keep the checked guard through the query so admission
+    /// cannot race the readiness check.
+    pub(crate) fn try_read(&self) -> Result<SessionRead<'_>, SdkError> {
+        let read = self.read();
+        read.guard.session(self.id).map_err(|error| {
+            let code = match error {
+                zipzi_runtime::RuntimeError::Busy => "BUSY",
+                zipzi_runtime::RuntimeError::Faulted => "FAULTED",
+                zipzi_runtime::RuntimeError::InvalidReference => "INVALID_REFERENCE",
+                _ => "SESSION_UNAVAILABLE",
+            };
+            SdkError::new(code, &error.to_string(), "hosted_session.read")
+        })?;
+        Ok(read)
+    }
     pub(crate) fn document(&self) -> ModelRead<'_> {
         let guard = self.host.read();
         if guard.session(self.id).is_ok() {
@@ -400,7 +416,8 @@ impl HostedSession {
         plan: zipzi_runtime::PlanId,
         expected: Version,
     ) -> zipzi_runtime::Result<EditReceipt> {
-        let edit = self.begin_owned_edit("Delete objects and clean dependencies", Some(expected))?;
+        let edit =
+            self.begin_owned_edit("Delete objects and clean dependencies", Some(expected))?;
         self.host
             .write()
             .promote_edit(self.client, edit.id.unwrap())?;
