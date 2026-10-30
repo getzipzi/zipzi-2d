@@ -5,7 +5,7 @@ from ._calls import known
 from ._results import Batch, Snapshot, Page, PageCursor
 from ._values import Source, WriteResult, record, sequence, string
 from . import _queries as queries, sampling, modeling, resources, ops
-from ._generated import modeling as _modeling_codec
+from ._generated import codecs as _modeling_codec
 if TYPE_CHECKING:
     from ._lifecycle import Session, Edit, Job
 class _DomainOwner(Protocol):

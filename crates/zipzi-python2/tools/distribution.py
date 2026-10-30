@@ -108,8 +108,10 @@ def main():
         pure=next((output/'wheels').glob(f'zipzi-{version}-*.whl'))
         extension=next((output/'wheels').glob(f'zipzi_native-{version}-*.whl'))
         with zipfile.ZipFile(pure) as wheel:
-            for source in (PACKAGE/'client/python/zipzi/_generated').glob('*.py'):
-                assert wheel.read('zipzi/_generated/'+source.name)==source.read_bytes()
+            for source in (PACKAGE/'client/python/zipzi').rglob('*'):
+                if not source.is_file() or '__pycache__' in source.parts:continue
+                relative=source.relative_to(PACKAGE/'client/python').as_posix()
+                assert wheel.read(relative)==source.read_bytes(),relative
         for mode in ('connected','local'):
             venv=output/(mode+'-venv')
             run(mode+'-venv',['uv','venv','--python','3.14',venv])

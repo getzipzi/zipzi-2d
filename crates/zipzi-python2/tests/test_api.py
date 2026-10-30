@@ -41,18 +41,18 @@ class PythonSdk(unittest.TestCase):
                     a = edit.meshes.create(meshes.MeshSpec("Mask", GEOMETRY, id=uid(2)))
                     b = edit.meshes.create(meshes.MeshSpec("Consumer", GEOMETRY, id=uid(3)))
                     consumer = edit.modeling.records(m.ModelingQuery(meshes=(b,))).value.meshes[0]
-                    edit.apply(m.ModelingCommandReplaceMesh(mesh=replace(consumer, masks=(a,), inverted_mask=True)))
-                intent = m.ModelingCommandDeletion(intent=m.DeletionIntent(request=m.DeletionRequest(roots=(m.DeletionTargetMesh(value=a),))))
+                    edit.apply(m.commands.ModelingCommandReplaceMesh(mesh=replace(consumer, masks=(a,), inverted_mask=True)))
+                intent = m.commands.ModelingCommandDeletion(intent=m.deletion.DeletionIntent(request=m.deletion.DeletionRequest(roots=(m.deletion.DeletionTargetMesh(value=a),))))
                 with session.plan_async(intent).wait() as plan:
-                    self.assertEqual(plan.report.deletion.state, m.DeletionReviewState.NEEDS_CONFIRMATION)
+                    self.assertEqual(plan.report.deletion.state, m.deletion.DeletionReviewState.NEEDS_CONFIRMATION)
                     self.assertEqual(plan.report.affected_ids, ())
-                    removed = plan.deletion_page(m.DeletionSection.REMOVED, limit=1)
+                    removed = plan.deletion_page(m.deletion.DeletionSection.REMOVED, limit=1)
                     self.assertEqual(removed.rows[0].removal.object.id, a)
-                    rewritten = plan.deletion_page(m.DeletionSection.REWRITTEN, limit=1)
+                    rewritten = plan.deletion_page(m.deletion.DeletionSection.REWRITTEN, limit=1)
                     self.assertEqual(rewritten.rows[0].relation.owner.id, b)
                     self.assertIsNotNone(rewritten.next_offset)
                     with self.assertRaises(ValueError):
-                        plan.deletion_page(m.DeletionSection.REMOVED, limit=257)
+                        plan.deletion_page(m.deletion.DeletionSection.REMOVED, limit=257)
                     with session.edit("Delete and clean") as edit:
                         edit.apply(plan)
                 self.assertEqual(session.modeling.records(m.ModelingQuery(meshes=(a,))).value.meshes, (None,))
@@ -63,16 +63,16 @@ class PythonSdk(unittest.TestCase):
                 session.undo().wait()
                 self.assertEqual(session.modeling.records(m.ModelingQuery(meshes=(b,))).value.meshes[0].masks, (a,))
                 with session.plan(intent) as stale:
-                    page = stale.deletion_page(m.DeletionSection.REMOVED)
+                    page = stale.deletion_page(m.deletion.DeletionSection.REMOVED)
                     with session.edit("Rename") as edit:
                         edit.apply(meshes.Rename(b, "New"))
-                    self.assertEqual(stale.deletion_page(m.DeletionSection.REMOVED), page)
+                    self.assertEqual(stale.deletion_page(m.deletion.DeletionSection.REMOVED), page)
                     with self.assertRaises(zipzi.SdkFailure):
                         with session.edit("stale deletion") as edit:
                             edit.apply(stale)
                 self.assertIsNotNone(session.modeling.records(m.ModelingQuery(meshes=(a,))).value.meshes[0])
                 with self.assertRaises(zipzi.SdkFailure):
-                    stale.deletion_page(m.DeletionSection.REMOVED)
+                    stale.deletion_page(m.deletion.DeletionSection.REMOVED)
 
     def test_parameter_deletion_uses_frozen_default_and_retires_dimension_on_both_backends(self):
         for mode in ("local", "connected"):
@@ -85,11 +85,11 @@ class PythonSdk(unittest.TestCase):
                         bindings.Keyform((0.,), GEOMETRY.positions),
                         bindings.Keyform((1.,), ((0., 0.), (2., 0.), (0., 1.))),
                     )))
-                intent = m.ModelingCommandDeletion(intent=m.DeletionIntent(request=m.DeletionRequest(roots=(m.DeletionTargetParameter(value=p),))))
+                intent = m.commands.ModelingCommandDeletion(intent=m.deletion.DeletionIntent(request=m.deletion.DeletionRequest(roots=(m.deletion.DeletionTargetParameter(value=p),))))
                 with session.plan_async(intent).wait() as plan:
-                    self.assertEqual(plan.report.deletion.state, m.DeletionReviewState.NEEDS_CONFIRMATION)
-                    effects = plan.deletion_page(m.DeletionSection.EFFECTS)
-                    dimensions = [r.effect for r in effects.rows if isinstance(r.effect, m.DeletionEffectParameterDimensionRemoved)]
+                    self.assertEqual(plan.report.deletion.state, m.deletion.DeletionReviewState.NEEDS_CONFIRMATION)
+                    effects = plan.deletion_page(m.deletion.DeletionSection.EFFECTS)
+                    dimensions = [r.effect for r in effects.rows if isinstance(r.effect, m.deletion.DeletionEffectParameterDimensionRemoved)]
                     self.assertEqual(len(dimensions), 1)
                     self.assertAlmostEqual(dimensions[0].value, 0.4)
                     with session.edit("Delete parameter") as edit:
@@ -108,10 +108,10 @@ class PythonSdk(unittest.TestCase):
             session = runtime.sessions.create(uid(1))
             with session.edit("Fixture") as edit:
                 mesh = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY, id=uid(2)))
-            intent = m.ModelingCommandDeletion(intent=m.DeletionIntent(request=m.DeletionRequest(roots=(m.DeletionTargetMesh(value=mesh),))))
+            intent = m.commands.ModelingCommandDeletion(intent=m.deletion.DeletionIntent(request=m.deletion.DeletionRequest(roots=(m.deletion.DeletionTargetMesh(value=mesh),))))
             with session.plan(intent) as plan:
                 with self.assertRaises(zipzi.OutcomeUnknown) as unknown:
-                    plan.deletion_page(m.DeletionSection.REMOVED)
+                    plan.deletion_page(m.deletion.DeletionSection.REMOVED)
                 page = unknown.exception.recover()
                 self.assertEqual(page.rows[0].removal.object.id, mesh)
                 self.assertEqual(session.info().history,(1,0))
@@ -187,11 +187,11 @@ class PythonSdk(unittest.TestCase):
                 runtime = self.runtime(mode)
                 session = runtime.sessions.create(uid(1))
                 with session.edit("Tiny rotation at large origin") as edit:
-                    edit.apply(m.ModelingCommandCreateTransform(transform=m.Transform(
+                    edit.apply(m.commands.ModelingCommandCreateTransform(transform=m.scene.Transform(
                         id=uid(2), runtime_id="Tiny", name="Parent", enabled=True,
-                        appearance=m.Appearance(opacity=1., multiply=(1., 1., 1.), screen=(0., 0., 0.)),
-                        data=m.TransformDataRotation(value=m.RotationTransform(base_angle=0.,
-                            pose=m.RotationPose(origin=m.PreciseVec2(10000., 10000.),
+                        appearance=m.scene.Appearance(opacity=1., multiply=(1., 1., 1.), screen=(0., 0., 0.)),
+                        data=m.scene.TransformDataRotation(value=m.scene.RotationTransform(base_angle=0.,
+                            pose=m.scene.RotationPose(origin=m.common.PreciseVec2(10000., 10000.),
                                 angle=0., scale=0.0001, reflect_x=True, reflect_y=False))))))
                 frame = session.modeling.sample(({},)).value.frames[0]
                 deformer = frame.deformers[0]
@@ -235,23 +235,23 @@ class PythonSdk(unittest.TestCase):
                 before=session.modeling.records(query).value
                 with session.edit("insert with dependencies") as edit:
                     def manual(operation):
-                        return edit.apply(m.ModelingCommandManualMesh(mesh_id=uid(2),expected=edit.meshes.get(uid(2)).source,operation=operation))
+                        return edit.apply(m.commands.ModelingCommandManualMesh(mesh_id=uid(2),expected=edit.meshes.get(uid(2)).source,operation=operation))
                     # Geometric rejection must not abort this candidate.
                     with self.assertRaises(zipzi.SdkFailure) as invalid:
-                        manual(m.ManualMeshOperationInsertVertex(id=100,uv=m.Vec2(.9,.9)))
+                        manual(m.mesh.ManualMeshOperationInsertVertex(id=100,uv=m.common.Vec2(.9,.9)))
                     self.assertEqual(invalid.exception.code,"OUTSIDE_TRANSFER_DOMAIN")
                     # 6,000 vertex targets force Connected binary upload. A
                     # duplicate-ID refusal must release only the upload buffer.
                     with self.assertRaises(zipzi.SdkFailure) as binary_invalid:
-                        manual(m.ManualMeshOperationMoveVertices(targets=tuple(
-                            m.ManualVertexTarget(id=42,uv=m.Vec2(.25,.25)) for _ in range(6000))))
+                        manual(m.mesh.ManualMeshOperationMoveVertices(targets=tuple(
+                            m.mesh.ManualVertexTarget(id=42,uv=m.common.Vec2(.25,.25)) for _ in range(6000))))
                     self.assertEqual(binary_invalid.exception.code,"INVALID_MANUAL_MESH")
-                    result=manual(m.ManualMeshOperationInsertVertex(id=101,uv=m.Vec2(.25,.25)))
+                    result=manual(m.mesh.ManualMeshOperationInsertVertex(id=101,uv=m.common.Vec2(.25,.25)))
                     self.assertEqual(result.mesh_transfer.shape_count,7)
                     self.assertEqual(result.mesh_transfer.added,1)
                     self.assertGreater(result.mesh_transfer.cost.temporary_bytes,0)
                     with self.assertRaises(zipzi.SdkFailure) as referenced:
-                        manual(m.ManualMeshOperationDeleteVertices(ids=(42,)))
+                        manual(m.mesh.ManualMeshOperationDeleteVertices(ids=(42,)))
                     self.assertEqual(referenced.exception.code,"GLUE_VERTEX_REFERENCED")
                     current=edit.modeling.records(query).value
                     self.assertEqual(current.meshes[0].deformer_id,uid(6))
@@ -260,7 +260,7 @@ class PythonSdk(unittest.TestCase):
                     self.assertEqual(current.blend_key_tables,before.blend_key_tables)
                     self.assertEqual(current.glues,before.glues)
                     for b in current.blend_bindings:
-                        self.assertIsInstance(b.keyforms,m.DeltaKeyformsMesh)
+                        self.assertIsInstance(b.keyforms,m.bindings.DeltaKeyformsMesh)
                         self.assertEqual(b.keyforms.value[0].positions[-1],(0.,0.))
                         self.assertEqual(b.keyforms.value[1].positions[-1],(2.5,3.))
                 self.assertEqual(session.info().history,(2,0))
@@ -276,7 +276,9 @@ class PythonSdk(unittest.TestCase):
 
 
     def test_manual_mesh_source_contract_and_existing_large_writes(self):
-        from zipzi._generated import binary, modeling as wire
+        from zipzi._generated import codecs as wire
+        from zipzi._generated.binary.support import Writer, Reader
+        from zipzi._generated.binary.common import _write_sourceref, _read_sourceref
         for mode in ("local", "connected"):
             with self.subTest(mode=mode):
                 runtime=self.runtime(mode)
@@ -284,15 +286,15 @@ class PythonSdk(unittest.TestCase):
                 with session.edit("mesh") as edit:
                     mesh=edit.meshes.create(meshes.MeshSpec("Mesh",GEOMETRY,id=uid(2)))
                     captured=edit.meshes.get(mesh).source
-                    operation=m.ModelingCommandManualMesh(mesh_id=mesh,expected=captured,
-                        operation=m.ManualMeshOperationInsertVertex(id=100,uv=m.Vec2(.25,.25)))
+                    operation=m.commands.ModelingCommandManualMesh(mesh_id=mesh,expected=captured,
+                        operation=m.mesh.ManualMeshOperationInsertVertex(id=100,uv=m.common.Vec2(.25,.25)))
                     self.assertEqual(wire.read_ModelingCommand(wire.encode_ModelingCommand(operation)),operation)
                     # Independently check the opaque source writer against the
                     # established source reader, including candidate sequence.
                     for source in (captured,session.meshes.list().source):
-                        writer=binary.Writer();binary._write_sourceref(source,writer)
-                        reader=binary.Reader(bytes(writer.data))
-                        self.assertEqual(binary._read_sourceref(reader),source);reader.finish()
+                        writer=Writer();_write_sourceref(source,writer)
+                        reader=Reader(bytes(writer.data))
+                        self.assertEqual(_read_sourceref(reader),source);reader.finish()
                     edit.apply(operation)
                     self.assertEqual(edit.meshes.get(mesh).value.geometry.vertex_ids, (42,7,99,100))
                 with self.assertRaises(zipzi.SdkFailure):
@@ -471,14 +473,14 @@ class PythonSdk(unittest.TestCase):
                 before = session.info()
                 with self.assertRaisesRegex(ValueError, "overlap declared fields"):
                     with session.edit("Invalid flattened metadata") as edit:
-                        edit.apply(m.ModelingCommandPhysics(intent=m.PhysicsEditCreateGroup(
+                        edit.apply(m.commands.ModelingCommandPhysics(intent=m.physics.PhysicsEditCreateGroup(
                             asset_id=uid(2), id=uid(3), name="Rig")))
                         physics = edit.modeling.records(m.ModelingQuery(physics=True)).value.physics
                         group = physics.data.settings[0]
                         normalized = replace(group.normalization, extensions={"Position": 42})
                         invalid = replace(physics, data=replace(physics.data,
                             settings=(replace(group, normalization=normalized),)))
-                        edit.apply(m.ModelingCommandSetPhysics(physics=invalid))
+                        edit.apply(m.commands.ModelingCommandSetPhysics(physics=invalid))
                 self.assertEqual(session.info(), before)
                 self.assertIsNone(session.modeling.records(m.ModelingQuery(physics=True)).value.physics)
 
@@ -491,14 +493,14 @@ class PythonSdk(unittest.TestCase):
                 session = runtime.sessions.create(uid(1))
                 with session.edit("Large motion graph") as edit:
                     parameter = edit.parameters.create(parameters.ParameterSpec("P", -1., 1., 0., id=uid(2)))
-                    edit.apply(m.ModelingCommandMotion(intent=m.MotionEditCreate(id=uid(3), name="Large",
-                        registration_id=uid(4), destination=m.MotionContainerRoot())))
+                    edit.apply(m.commands.ModelingCommandMotion(intent=m.motion.MotionEditCreate(id=uid(3), name="Large",
+                        registration_id=uid(4), destination=m.motion.MotionContainerRoot())))
                     clip = edit.modeling.records(m.ModelingQuery(motions=(uid(3),))).value.motions[0]
-                    segments = tuple(m.MotionSegmentLinear(end=m.MotionKey(id=uid(10_000+i),
+                    segments = tuple(m.motion.MotionSegmentLinear(end=m.motion.MotionKey(id=uid(10_000+i),
                         time=float(i), value=float(i % 2))) for i in range(1, 4097))
-                    track = m.MotionTrack(id=uid(5), target=m.MotionTrackTargetParameter(parameter_id=parameter),
-                        initial=m.MotionKey(id=uid(6), time=0., value=0.), segments=segments, extensions={})
-                    operation = m.ModelingCommandReplaceMotion(clip=replace(clip, duration=4096., tracks=(track,)))
+                    track = m.motion.MotionTrack(id=uid(5), target=m.motion.MotionTrackTargetParameter(parameter_id=parameter),
+                        initial=m.motion.MotionKey(id=uid(6), time=0., value=0.), segments=segments, extensions={})
+                    operation = m.commands.ModelingCommandReplaceMotion(clip=replace(clip, duration=4096., tracks=(track,)))
                     if phase == "apply_authoring_blob":
                         with self.assertRaises(zipzi.OutcomeUnknown) as lost:
                             edit.apply(operation)
@@ -527,11 +529,11 @@ class PythonSdk(unittest.TestCase):
             session = runtime.sessions.create(uid(1))
             with session.edit("Direct animation") as edit:
                 edit.apply_many((
-                    m.ModelingCommandMotion(intent=m.MotionEditCreate(id=uid(2), name="Motion",
-                        registration_id=uid(3), destination=m.MotionContainerRoot())),
-                    m.ModelingCommandExpression(intent=m.ExpressionEditCreate(id=uid(4), name="Expression")),
-                    m.ModelingCommandPhysics(intent=m.PhysicsEditCreateGroup(asset_id=uid(5), id=uid(6), name="Physics")),
-                    m.ModelingCommandPose(intent=m.PoseEditCreateGroup(pose_id=uid(7), id=uid(8), name="Pose")),
+                    m.commands.ModelingCommandMotion(intent=m.motion.MotionEditCreate(id=uid(2), name="Motion",
+                        registration_id=uid(3), destination=m.motion.MotionContainerRoot())),
+                    m.commands.ModelingCommandExpression(intent=m.expression.ExpressionEditCreate(id=uid(4), name="Expression")),
+                    m.commands.ModelingCommandPhysics(intent=m.physics.PhysicsEditCreateGroup(asset_id=uid(5), id=uid(6), name="Physics")),
+                    m.commands.ModelingCommandPose(intent=m.pose.PoseEditCreateGroup(pose_id=uid(7), id=uid(8), name="Pose")),
                 ))
                 selected = edit.modeling.records(m.ModelingQuery(motions=(uid(2),), expressions=(uid(4),), physics=True, pose=True))
                 self.assertEqual(selected.value.motions[0].name, "Motion")
@@ -566,9 +568,9 @@ class PythonSdk(unittest.TestCase):
                 self.assertEqual(session.meshes.get(mesh).value.geometry, geometry)
                 before = session.modeling.records(m.ModelingQuery(meshes=(mesh,))).value.meshes[0]
                 self.assertEqual(before.meshing.boundary, (10,20,30,40))
-                user = replace(before.meshing, constraints=(replace(before.meshing.constraints[0], kind=m.MeshConstraintKind.USER),))
+                user = replace(before.meshing, constraints=(replace(before.meshing.constraints[0], kind=m.mesh.MeshConstraintKind.USER),))
                 with session.edit("fix support") as edit:
-                    edit.apply(m.ModelingCommandReplaceMesh(mesh=replace(before, meshing=user)))
+                    edit.apply(m.commands.ModelingCommandReplaceMesh(mesh=replace(before, meshing=user)))
                 expected = replace(geometry, meshing=meshes.Meshing((10,20,30,40), [meshes.Constraint((10,30), meshes.ConstraintKind.USER)]))
                 self.assertEqual(session.meshes.get(mesh).value.geometry, expected)
                 self.assertEqual(session.info().history, (2,0))
@@ -581,7 +583,7 @@ class PythonSdk(unittest.TestCase):
                 self.assertEqual(session.meshes.get(mesh).value.geometry, expected)
                 with self.assertRaises(zipzi.SdkFailure):
                     with session.edit("do not discard structure") as edit:
-                        edit.apply(m.ModelingCommandReplaceMesh(mesh=replace(before, meshing=None)))
+                        edit.apply(m.commands.ModelingCommandReplaceMesh(mesh=replace(before, meshing=None)))
                 saved = session.project.save(self.folder / (mode + "-manual-mesh")).wait()
                 reopened = self.runtime(mode).sessions.open(saved.manifest).wait()
                 self.assertEqual(reopened.meshes.get(mesh).value.geometry, expected)
@@ -687,7 +689,7 @@ class PythonSdk(unittest.TestCase):
         self.assertEqual(axis.keys, (0.,1.))
         for cls in (parameters.Create, parameters.ParameterSpec, parameters.ParameterPatch,
                     bindings.Keyform, sampling.Checks, sampling.Frame, events.Published,
-                    m.ModelingCommandScene, m.ModelingCommandResource):
+                    m.commands.ModelingCommandScene, m.commands.ModelingCommandResource):
             typing.get_type_hints(cls)
             self.assertNotIn("_variant", inspect.signature(cls).parameters)
             if typing.get_origin(typing.get_type_hints(cls).get("kind")) is typing.ClassVar:
@@ -782,13 +784,13 @@ class PythonSdk(unittest.TestCase):
                     mesh=edit.meshes.create(meshes.MeshSpec("Rectangle",rectangle,id=uid(2)))
                     parameter=edit.parameters.create(parameters.ParameterSpec("P",0.,1.,0.,id=uid(3)))
                     binding=edit.bindings.create(bindings.MeshBindingSpec(mesh,(bindings.Axis(parameter,(0.,1.)),),(bindings.Keyform((0.,),corners),bindings.Keyform((1.,),tuple((x+2.,y) for x,y in corners))),id=uid(4)))
-                    edit.apply(m.ModelingCommandRemeshRectangleGrid(id=mesh,columns=3,rows=3))
+                    edit.apply(m.commands.ModelingCommandRemeshRectangleGrid(id=mesh,columns=3,rows=3))
                     self.assertEqual(len(edit.meshes.get(mesh).value.geometry.vertex_ids),16)
                     self.assertEqual(len(edit.bindings.get(binding).value.keyforms[0].positions),16)
                     self.assertEqual(edit.modeling.sample(({parameter:.5},)).value.frames[0].drawables[0].positions[-1],(4.,3.))
                 before=session.info()
                 with self.assertRaises(zipzi.SdkFailure) as rejected:
-                    with session.edit("outside limit") as edit:edit.apply(m.ModelingCommandRemeshRectangleGrid(id=mesh,columns=256,rows=256))
+                    with session.edit("outside limit") as edit:edit.apply(m.commands.ModelingCommandRemeshRectangleGrid(id=mesh,columns=256,rows=256))
                 self.assertEqual(rejected.exception.code,"INVALID_RECTANGLE_GRID")
                 self.assertEqual(session.info(),before)
                 session.undo().wait()
@@ -801,10 +803,10 @@ class PythonSdk(unittest.TestCase):
                 runtime=self.runtime("connected",drop=phase,drop_after=after)
                 session=runtime.sessions.create(uid(1))
                 with session.edit("binary attachment") as edit:
-                    edit.apply(m.ModelingCommandAttachment(intent=m.AttachmentEditCreate(id=uid(2),path="extras/data.bin")))
+                    edit.apply(m.commands.ModelingCommandAttachment(intent=m.scene.AttachmentEditCreate(id=uid(2),path="extras/data.bin")))
                     old=edit.modeling.records(m.ModelingQuery(attachments=(uid(2),))).value.attachments[0]
                     with self.assertRaises(zipzi.OutcomeUnknown) as unknown:
-                        edit.apply(m.ModelingCommandAttachment(intent=m.AttachmentEditReplace(expected=old,attachment=replace(old,bytes=content))))
+                        edit.apply(m.commands.ModelingCommandAttachment(intent=m.scene.AttachmentEditReplace(expected=old,attachment=replace(old,bytes=content))))
                     result=unknown.exception.recover()
                     self.assertIsInstance(result,zipzi.WriteResult)
                     self.assertEqual(result.source.sequence,2)
@@ -819,9 +821,9 @@ class PythonSdk(unittest.TestCase):
                 session=runtime.sessions.create(uid(1))
                 edit=session.edit("invalid binary content")
                 # A stale expected attachment reaches the actual SDK validator.
-                absent=m.PackageAttachment(id=uid(2),path="extras/data.bin",bytes=content)
+                absent=m.project.PackageAttachment(id=uid(2),path="extras/data.bin",bytes=content)
                 with self.assertRaises(zipzi.SdkFailure) as original:
-                    edit.apply(m.ModelingCommandAttachment(intent=m.AttachmentEditReplace(expected=absent,attachment=absent)))
+                    edit.apply(m.commands.ModelingCommandAttachment(intent=m.scene.AttachmentEditReplace(expected=absent,attachment=absent)))
                 self.assertNotIsInstance(original.exception,zipzi.OutcomeUnknown)
                 self.assertIsNotNone(original.exception.cleanup)
                 self.assertIsNone(original.exception.cleanup.recover())
@@ -896,7 +898,7 @@ class PythonSdk(unittest.TestCase):
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as folder:
                 runtime=self.runtime(mode)
                 folder=Path(folder)
-                session=runtime.sessions.import_(ROOT/"crates/zipzi-psd/tests/fixtures/layered.psd",m.ImportFormat.PSD).wait()
+                session=runtime.sessions.import_(ROOT/"crates/zipzi-psd/tests/fixtures/layered.psd",m.project.ImportFormat.PSD).wait()
                 info=session.info()
                 records=session.modeling.records(m.ModelingQuery())
                 self.assertTrue(records.value.ids["assets"])
@@ -907,7 +909,7 @@ class PythonSdk(unittest.TestCase):
                     mesh=edit.meshes.create(meshes.MeshSpec("Constructed",GEOMETRY,texture_asset_id=asset,id=uid(2)))
                 self.assertEqual(session.info().history,(1,0))
                 before=session.info()
-                for format,name in ((m.ExportFormat.CMO3,"model.cmo3"),(m.ExportFormat.CAN3,"model.can3"),(m.ExportFormat.CUBISM,"cubism"),(m.ExportFormat.CDI3,"model.cdi3.json")):
+                for format,name in ((m.project.ExportFormat.CMO3,"model.cmo3"),(m.project.ExportFormat.CAN3,"model.can3"),(m.project.ExportFormat.CUBISM,"cubism"),(m.project.ExportFormat.CDI3,"model.cdi3.json")):
                     report=session.project.export(folder/name,format,allow_loss=True).wait()
                     self.assertTrue(report.published)
                     self.assertEqual(report.before,before.version)
@@ -921,12 +923,12 @@ class PythonSdk(unittest.TestCase):
                 self.assertEqual(session.resources.get(asset).value.pixels.rgba,pixels)
                 self.assertEqual(session.info().history,(0,0))
                 self.assertEqual(session.meshes.get(mesh).value.name,"Constructed")
-                failed=session.project.replace(folder/"missing.psd",m.ImportFormat.PSD)
+                failed=session.project.replace(folder/"missing.psd",m.project.ImportFormat.PSD)
                 before=session.info()
                 with self.assertRaises(zipzi.SdkFailure):failed.wait()
                 self.assertEqual(session.info().version,before.version)
                 self.assertEqual(session.meshes.get(mesh).value.name,"Constructed")
-                session.project.export(folder/"package",m.ExportFormat.PACKAGE).wait()
+                session.project.export(folder/"package",m.project.ExportFormat.PACKAGE).wait()
                 self.assertTrue((folder/"package").is_dir())
 
     def test_large_binary_authoring_records_sampling_and_attachment(self):
@@ -972,8 +974,8 @@ class PythonSdk(unittest.TestCase):
                 self.control(runtime,"pause_dispatch")
                 try:
                     sample_job = session.modeling.sample_async(({}, {}, {}))
-                    plan_job = session.plan_async(m.ModelingCommandScene(intent=m.SceneEditPatch(id=mesh,
-                        expected=m.SceneFieldValueLabel(value="Mesh"),value=m.SceneFieldValueLabel(value="Planned"),clear_glue_pairs=False)))
+                    plan_job = session.plan_async(m.commands.ModelingCommandScene(intent=m.scene.SceneEditPatch(id=mesh,
+                        expected=m.scene.SceneFieldValueLabel(value="Mesh"),value=m.scene.SceneFieldValueLabel(value="Planned"),clear_glue_pairs=False)))
                     cancelled = session.modeling.sample_async(({},))
                     cancelled.cancel()
                     self.assertEqual(cancelled.state(),"cancelled")
@@ -1063,8 +1065,8 @@ class PythonSdk(unittest.TestCase):
                 session = runtime.sessions.create(uid(1))
                 if operation == "request_modeling_plan":
                     with self.assertRaises(zipzi.OutcomeUnknown) as unknown:
-                        session.plan_async(m.ModelingCommandDocument(intent=m.DocumentAuthoringEditPatch(
-                            expected=m.DocumentValueLayout(value=None),value=m.DocumentValueLayout(value={"CenterX":2.}))))
+                        session.plan_async(m.commands.ModelingCommandDocument(intent=m.project.DocumentAuthoringEditPatch(
+                            expected=m.project.DocumentValueLayout(value=None),value=m.project.DocumentValueLayout(value={"CenterX":2.}))))
                     job = unknown.exception.recover()
                     with job.wait() as plan:
                         self.assertEqual(plan.report.source.version,session.info().version)
@@ -1097,20 +1099,20 @@ class PythonSdk(unittest.TestCase):
                         edit.parameters.create(parameters.ParameterSpec("P",-1.,1.,0.,id=uid(4)))
                         binding = edit.bindings.create(bindings.MeshBindingSpec(uid(2),(bindings.Axis(uid(4),(-1.,1.)),),(
                             bindings.Keyform((-1.,),GEOMETRY.positions),bindings.Keyform((1.,),GEOMETRY.positions)),id=uid(30)))
-                        edit.apply(m.ModelingCommandAttachment(intent=m.AttachmentEditCreate(id=uid(70),path="extras/a.txt")))
-                        edit.apply(m.ModelingCommandReferences(intent=m.ReferenceEditCreateModelHitArea(id=uid(80),name="Hit",before=None)))
+                        edit.apply(m.commands.ModelingCommandAttachment(intent=m.scene.AttachmentEditCreate(id=uid(70),path="extras/a.txt")))
+                        edit.apply(m.commands.ModelingCommandReferences(intent=m.addressing.ReferenceEditCreateModelHitArea(id=uid(80),name="Hit",before=None)))
                 sample = session.bindings.get(binding).value.axes[0].samples[0].id
                 cases = (
-                    (m.AddressSelectorScene(id=uid(2),field=m.SceneField.ENABLED), m.AddressPatchScene(value=m.SceneFieldValueEnabled(value=False),clear_glue_pairs=False)),
-                    (m.AddressSelectorDrawingGroup(owner=""),m.AddressPatchDrawingRange(range=(-100,100))),
-                    (m.AddressSelectorBinding(id=sample),m.AddressPatchBinding(patch=m.BindingFieldPatchSampleValue(value=-.5))),
-                    (m.AddressSelectorOrganization(id=uid(4)),m.AddressPatchOrganization(intent=m.OrganizationEditSetParameterGroup(parameter_id=uid(4),group_id=uid(11)))),
-                    (m.AddressSelectorContent(id=uid(2),target=m.SceneContentTargetVertexUv(vertex_id=42)),m.AddressPatchContent(value=m.SceneContentValuePoint(value=m.Vec2(x=.25,y=.5)))),
-                    (m.AddressSelectorReference(id=uid(80)),m.AddressPatchReference(fields=m.ReferenceFieldsModelHitArea(name="New hit",mesh=m.ModelTargetRefResolved(object_id=uid(3))))),
-                    (m.AddressSelectorSelection(owner=uid(2),field=m.ReferenceSelectionField.MESH_MASKS),m.AddressPatchSelection(targets=(uid(3),))),
-                    (m.AddressSelectorResourceName(id=uid(5)),m.AddressPatchResourceName(name="Renamed")),
-                    (m.AddressSelectorAttachmentPath(id=uid(70)),m.AddressPatchAttachmentPath(path="extras/new.txt")),
-                    (m.AddressSelectorDocument(field=m.DocumentField.LAYOUT),m.AddressPatchDocument(value=m.DocumentValueLayout(value={"CenterX":1.}))),
+                    (m.addressing.AddressSelectorScene(id=uid(2),field=m.scene.SceneField.ENABLED), m.addressing.AddressPatchScene(value=m.scene.SceneFieldValueEnabled(value=False),clear_glue_pairs=False)),
+                    (m.addressing.AddressSelectorDrawingGroup(owner=""),m.addressing.AddressPatchDrawingRange(range=(-100,100))),
+                    (m.addressing.AddressSelectorBinding(id=sample),m.addressing.AddressPatchBinding(patch=m.bindings.BindingFieldPatchSampleValue(value=-.5))),
+                    (m.addressing.AddressSelectorOrganization(id=uid(4)),m.addressing.AddressPatchOrganization(intent=m.scene.OrganizationEditSetParameterGroup(parameter_id=uid(4),group_id=uid(11)))),
+                    (m.addressing.AddressSelectorContent(id=uid(2),target=m.scene.SceneContentTargetVertexUv(vertex_id=42)),m.addressing.AddressPatchContent(value=m.scene.SceneContentValuePoint(value=m.common.Vec2(x=.25,y=.5)))),
+                    (m.addressing.AddressSelectorReference(id=uid(80)),m.addressing.AddressPatchReference(fields=m.addressing.ReferenceFieldsModelHitArea(name="New hit",mesh=m.project.ModelTargetRefResolved(object_id=uid(3))))),
+                    (m.addressing.AddressSelectorSelection(owner=uid(2),field=m.addressing.ReferenceSelectionField.MESH_MASKS),m.addressing.AddressPatchSelection(targets=(uid(3),))),
+                    (m.addressing.AddressSelectorResourceName(id=uid(5)),m.addressing.AddressPatchResourceName(name="Renamed")),
+                    (m.addressing.AddressSelectorAttachmentPath(id=uid(70)),m.addressing.AddressPatchAttachmentPath(path="extras/new.txt")),
+                    (m.addressing.AddressSelectorDocument(field=m.project.DocumentField.LAYOUT),m.addressing.AddressPatchDocument(value=m.project.DocumentValueLayout(value={"CenterX":1.}))),
                 )
                 for selector,patch_value in cases:
                     with self.subTest(selector=selector):
@@ -1126,12 +1128,12 @@ class PythonSdk(unittest.TestCase):
                                 address.plan(patch_value)
                             self.assertIn(stale.exception.code, {"STALE_FIELD_ADDRESS", "STALE_FIELD", "STALE_OBJECT", "STALE_CONTENT_ADDRESS"})
                 with session.reference("mesh",uid(2)) as reference:
-                    caps = reference.capabilities(m.CapabilityDomain.CONTENT)
+                    caps = reference.capabilities(m.addressing.CapabilityDomain.CONTENT)
                     self.assertEqual(caps.source.version,session.info().version)
-                    self.assertIsInstance(caps.value,m.CapabilitiesContent)
-                    self.assertIsInstance(caps.value.value.topology,m.CapabilityStateAvailable)
-                collection = session.capabilities(m.CollectionQueryResources())
-                self.assertIsInstance(collection.value.value.create,m.CapabilityStateAvailable)
+                    self.assertIsInstance(caps.value,m.addressing.CapabilitiesContent)
+                    self.assertIsInstance(caps.value.value.topology,m.addressing.CapabilityStateAvailable)
+                collection = session.capabilities(m.queries.CollectionQueryResources())
+                self.assertIsInstance(collection.value.value.create,m.addressing.CapabilityStateAvailable)
 
     def test_canonical_modeling_records_plans_and_bound_topology_recipe(self):
         results = []
@@ -1152,19 +1154,19 @@ class PythonSdk(unittest.TestCase):
                     self.assertEqual(batch.value.meshes[0].raw_blend_mode, None)
                     self.assertEqual(batch.source.sequence, 4)
                     bound = batch.value.bindings[0]
-                    form = replace(bound.keyforms[1], positions=tuple(m.Vec2(x=x+20., y=y) for x,y in GEOMETRY.positions))
-                    edit.apply(m.ModelingCommandSetMeshKeyform(id=binding, keyform=form))
+                    form = replace(bound.keyforms[1], positions=tuple(m.common.Vec2(x=x+20., y=y) for x,y in GEOMETRY.positions))
+                    edit.apply(m.commands.ModelingCommandSetMeshKeyform(id=binding, keyform=form))
                     first, second = uid(61), uid(62)
-                    axis = m.BindingAxis(id=uid(60), parameter_id=parameter, samples=(m.BindingSample(id=first, value=-1.), m.BindingSample(id=second, value=1.)))
-                    scene_binding = m.SceneBinding(id=uid(63), axes=(axis,), track=m.SceneTrackPart(target_id=m.PartId(value=uid(10)), keyforms=(
-                        m.PartKeyform(samples=(first,), draw_order=-2.), m.PartKeyform(samples=(second,), draw_order=2.))))
-                    edit.apply(m.ModelingCommandCreateSceneBinding(binding=scene_binding))
-                    with edit.plan(m.ModelingCommandDocument(intent=m.DocumentAuthoringEditPatch(
-                        expected=m.DocumentValueLayout(value=None), value=m.DocumentValueLayout(value={"CenterX": 1.5})))) as plan:
+                    axis = m.bindings.BindingAxis(id=uid(60), parameter_id=parameter, samples=(m.bindings.BindingSample(id=first, value=-1.), m.bindings.BindingSample(id=second, value=1.)))
+                    scene_binding = m.bindings.SceneBinding(id=uid(63), axes=(axis,), track=m.bindings.SceneTrackPart(target_id=m.scene.PartId(value=uid(10)), keyforms=(
+                        m.bindings.PartKeyform(samples=(first,), draw_order=-2.), m.bindings.PartKeyform(samples=(second,), draw_order=2.))))
+                    edit.apply(m.commands.ModelingCommandCreateSceneBinding(binding=scene_binding))
+                    with edit.plan(m.commands.ModelingCommandDocument(intent=m.project.DocumentAuthoringEditPatch(
+                        expected=m.project.DocumentValueLayout(value=None), value=m.project.DocumentValueLayout(value={"CenterX": 1.5})))) as plan:
                         edit.apply(plan)
-                    edit.apply(m.ModelingCommandAttachment(intent=m.AttachmentEditCreate(id=uid(70), path="extras/note.txt")))
+                    edit.apply(m.commands.ModelingCommandAttachment(intent=m.scene.AttachmentEditCreate(id=uid(70), path="extras/note.txt")))
                     old = edit.modeling.records(m.ModelingQuery(attachments=(uid(70),))).value.attachments[0]
-                    edit.apply(m.ModelingCommandAttachment(intent=m.AttachmentEditReplace(expected=old, attachment=replace(old, bytes=b"model attachment"))))
+                    edit.apply(m.commands.ModelingCommandAttachment(intent=m.scene.AttachmentEditReplace(expected=old, attachment=replace(old, bytes=b"model attachment"))))
                     swept = edit.modeling.sample(({parameter:-1.}, {parameter:0.}, {parameter:1.}))
                     self.assertEqual([f.drawables[0].positions[0][0] for f in swept.value.frames], [0.,10.,20.])
                     final = edit.modeling.records(m.ModelingQuery(meshes=(mesh,), bindings=(binding,), scene_bindings=(uid(63),), attachments=(uid(70),)))
@@ -1175,12 +1177,12 @@ class PythonSdk(unittest.TestCase):
                 mesh_value, binding_value = base.value.meshes[0], base.value.bindings[0]
                 # An explicit stable vertex map and all existing dependencies are
                 # required by the SDK, even when only triangle winding changes.
-                source = m.GeometrySnapshot(version=base.source.version, mesh_id=mesh, vertex_ids=mesh_value.vertex_ids,
-                    positions=mesh_value.base_positions, uvs=mesh_value.uvs, triangles=mesh_value.triangles, space=m.GeometrySpaceModel())
-                replacement = m.TopologyReplacement(mesh=replace(mesh_value, triangles=((99,7,42),)), binding=binding_value,
+                source = m.sampling.GeometrySnapshot(version=base.source.version, mesh_id=mesh, vertex_ids=mesh_value.vertex_ids,
+                    positions=mesh_value.base_positions, uvs=mesh_value.uvs, triangles=mesh_value.triangles, space=m.sampling.GeometrySpaceModel())
+                replacement = m.mesh.TopologyReplacement(mesh=replace(mesh_value, triangles=((99,7,42),)), binding=binding_value,
                     blend_bindings=(), glues=(), vertex_mapping={42:42,7:7,99:99})
                 with session.edit("Bound topology") as edit:
-                    edit.apply(m.ModelingCommandReplaceTopology(source=source,replacement=replacement))
+                    edit.apply(m.commands.ModelingCommandReplaceTopology(source=source,replacement=replacement))
                 self.assertEqual(session.meshes.get(mesh).value.geometry.triangles, ((99,7,42),))
                 self.assertEqual(session.info().history, (2,0))
                 results.append((final.value, swept.value.frames))

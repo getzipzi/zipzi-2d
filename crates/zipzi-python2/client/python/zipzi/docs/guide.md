@@ -72,10 +72,10 @@ if mesh is not None:
     parent_id = mesh.deformer_id or None
     print(part_id, parent_id, mesh.appearance, mesh.draw_order)
     texture = mesh.texture_asset_id
-    if isinstance(texture, modeling.SceneReferenceResolved):
+    if isinstance(texture, modeling.scene.SceneReferenceResolved):
         image = session.resources.get(texture.object_id, expected=snapshot.source)
         print(image.value)
-    elif isinstance(texture, modeling.SceneReferenceUnresolved):
+    elif isinstance(texture, modeling.scene.SceneReferenceUnresolved):
         print("Texture reference is unresolved:", texture)
     else:
         print("No texture reference was specified")

@@ -94,6 +94,7 @@ class DocEntry:
     children: tuple[str, ...]
     example: str | None
     inherited: str | None = None
+    identity: int | None = None
 
     @classmethod
     def from_row(cls, path: str, row: dict[str, Any], common: dict[str, str]) -> 'DocEntry':
@@ -108,7 +109,7 @@ class DocEntry:
         method = path.rsplit('.', 1)[-1]
         inherited = method if method in common and summary == common[method] else None
         return cls(path, row['kind'], row.get('signature', ''), summary, fields,
-                   tuple(sorted(set(row.get('children', ())))), row.get('example'), inherited)
+                   tuple(sorted(set(row.get('children', ())))), row.get('example'), inherited, row.get('_identity'))
 
     def row(self) -> dict[str, Any]:
         result: dict[str, Any] = {'kind': self.kind, 'signature': self.signature,

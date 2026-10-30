@@ -21,6 +21,8 @@ def audit()->dict[str,object]:
     if '/site-packages/zipzi/' not in zipzi.__file__:raise RuntimeError('Audit requires an installed wheel')
     if importlib.util.find_spec('zipzi_native') is not None:raise RuntimeError('Offline audit must use the pure wheel only')
     modules=[zipzi,*[getattr(zipzi,n) for n in ('meshes','parameters','bindings','resources','scene','sampling','events','references','modeling','ops','animation','spatial','observation','inspection')]]
+    modules.extend(value for name in zipzi.modeling.__all__
+                   if inspect.ismodule(value:=getattr(zipzi.modeling,name)))
     def visit(path:str,value:object,constructor:bool=True)->None:
         counts['symbols']+=1
         if path not in paths:failures['D01'].append(path+': missing from installed catalog')

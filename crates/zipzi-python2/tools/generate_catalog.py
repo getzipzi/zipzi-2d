@@ -10,5 +10,5 @@ TARGETS=frozenset({'client/python/zipzi/_generated/metadata.py','client/python/z
 
 
 def render_catalog(contract,model,header,contract_hash):
-    entries,domains,common,package_version,source_sha,prefix=model
+    entries,domains,common,package_version,source_sha,prefix,_projections=model
     return _catalog_output.render(entries,contract,contract_hash,domains,common,package_version,source_sha,prefix,header)

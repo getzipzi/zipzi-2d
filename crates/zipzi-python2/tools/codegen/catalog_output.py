@@ -2,6 +2,13 @@
 import json
 import pprint
 
+SPLITS = {
+    'scene': {'edits': ('SceneOperation', 'SceneEdit', 'SceneContentEdit', 'OrganizationEdit', 'ReparentEdit', 'AttachmentEdit')},
+    'bindings': {'edits': ('BindingAuthoringEdit', 'BindingGridEdit', 'BlendAuthoringEdit', 'MeshGridEdit')},
+    'addressing': {'kinds': ('ObjectKind',), 'patches': ('AddressPatch',), 'selectors': ('AddressSelector',)},
+    'deletion': {'decisions': ('DeletionChoice', 'DeletionDecision', 'DeletionEffect', 'DeletionReason')},
+}
+
 
 def render(entries, contract, contract_hash, domains, common, package_version, source_sha, prefix, header):
     entry_index = {entry.path: entry for entry in entries}
@@ -13,9 +20,19 @@ def render(entries, contract, contract_hash, domains, common, package_version, s
             row['documentation'] = row['documentation'].partition('\n\nFields:\n')[0]
 
     def group(path):
-        segment = path.split('.')[1] if '.' in path else ''
+        parts=path.split('.')
+        segment = parts[1] if len(parts)>1 else ''
+        if segment=='modeling' and len(parts)>2 and parts[2] in modeling_domains:
+            if len(parts)>3:
+                for suffix,prefixes in SPLITS.get(parts[2],{}).items():
+                    if parts[3].startswith(prefixes):return 'modeling_'+parts[2]+'_'+suffix
+            return 'modeling_'+parts[2]
+        if segment in {'Session','Edit'}:return 'runtime_'+segment.lower()
         return segment if segment in domains else 'runtime'
 
+    modeling_domains={entry.path.rsplit('.',1)[-1] for entry in entries
+                      if entry.kind=='module' and entry.path.startswith('zipzi.modeling.')
+                      and entry.path.count('.')==2}
     groups = sorted({group(path) for path in catalog})
     pages = {name: [header.rstrip(), '# '+name.title()+' API', '',
                     'See [common behavior](common.md) for inherited owned-value methods.', '']
@@ -42,11 +59,12 @@ def render(entries, contract, contract_hash, domains, common, package_version, s
     for path, row in sorted(catalog.items()):
         comparable = dict(row)
         comparable['children'] = tuple('@'+c[len(path):] if c.startswith(path+'.') else c for c in row['children'])
-        key = json.dumps(comparable, sort_keys=True)
-        if key in canonical:
+        identity = entry_index[path].identity
+        key = (identity, json.dumps(comparable, sort_keys=True))
+        if identity is not None and key in canonical:
             value = {'alias': canonical[key]}
         else:
-            canonical[key] = path
+            if identity is not None:canonical[key] = path
             value = dict(row)
             inherited = entry_index[path].inherited
             if inherited:
@@ -71,7 +89,7 @@ def render(entries, contract, contract_hash, domains, common, package_version, s
         result[catalog_prefix+name+'.py'] = header+'from .index import Entry\nDATA: dict[str, Entry] = '+pprint.pformat(rows, width=120, sort_dicts=True)+'\n'
     result[catalog_prefix+'index.py'] = (header+'"""Deterministic path routing; shards load only on demand."""\n'
         'from importlib import import_module\nfrom collections.abc import Iterator, Sequence\nfrom typing import Required, TypedDict, cast\n\n'
-        'GROUPS = '+repr(tuple(groups))+'\nDOMAINS = '+repr(tuple(domains))+'''
+        'GROUPS = '+repr(tuple(groups))+'\nDOMAINS = '+repr(tuple(domains))+'\nMODELING_DOMAINS = '+repr(tuple(sorted(modeling_domains)))+'\nSPLITS = '+repr(SPLITS)+'''
 
 class Entry(TypedDict, total=False):
     kind: str
@@ -93,7 +111,16 @@ class Resolved(TypedDict, total=False):
     common: str
 
 def _group(path: str) -> str:
-    segment = path.split('.')[1] if '.' in path else ''
+    parts = path.split('.')
+    segment = parts[1] if len(parts)>1 else ''
+    if segment == 'modeling' and len(parts)>2 and parts[2] in MODELING_DOMAINS:
+        if len(parts)>3:
+            for suffix, prefixes in SPLITS.get(parts[2], {}).items():
+                if parts[3].startswith(prefixes):
+                    return 'modeling_' + parts[2] + '_' + suffix
+        return 'modeling_' + parts[2]
+    if segment in {'Session', 'Edit'}:
+        return 'runtime_' + segment.lower()
     return segment if segment in DOMAINS else 'runtime'
 
 def _data(name: str) -> dict[str, Entry]:

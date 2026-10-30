@@ -536,7 +536,12 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                             'screen: tuple[float, float, float] | None = None)'},
  'zipzi.scene.OffscreenForm.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.OffscreenForm.summary': {'alias': 'zipzi.ApiDescription.summary'},
- 'zipzi.scene.Operation': {'alias': 'zipzi.JobState'},
+ 'zipzi.scene.Operation': {'children': (),
+                           'documentation': 'Typed public API entry.',
+                           'example': 'docs/recipes.py',
+                           'fields': [],
+                           'kind': 'value',
+                           'signature': ''},
  'zipzi.scene.ParameterGroupSpec': {'children': ('zipzi.scene.ParameterGroupSpec.__repr__',
                                                  'zipzi.scene.ParameterGroupSpec.summary'),
                                     'documentation': 'Immutable owned ParameterGroupSpec value. Construction owns '
@@ -847,6 +852,17 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                           'tuple[float, float] | None = None)'},
  'zipzi.scene.VertexPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.VertexPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
- 'zipzi.scene.VertexWeight': {'alias': 'zipzi.modeling.VertexWeight'},
+ 'zipzi.scene.VertexWeight': {'children': ('zipzi.scene.VertexWeight.__repr__', 'zipzi.scene.VertexWeight.summary'),
+                              'documentation': 'Immutable owned VertexWeight value. Construction owns declared '
+                                               'collections; reading fields, repr and summary performs no IO.',
+                              'example': 'docs/recipes.py',
+                              'fields': [('vertex_id',
+                                          'Stable u32 vertex ID within the mesh, not an offset into its position '
+                                          'array.'),
+                                         ('weight',
+                                          'Dimensionless interpolation weight applied to the referenced source '
+                                          'vertex.')],
+                              'kind': 'type',
+                              'signature': '(vertex_id: int, weight: float)'},
  'zipzi.scene.VertexWeight.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.VertexWeight.summary': {'alias': 'zipzi.ApiDescription.summary'}}

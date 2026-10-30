@@ -131,6 +131,13 @@ def inventory() -> dict:
         if not path.name.startswith("_"):
             name = f"zipzi.{path.stem}"
             modules[name] = importlib.import_module(name)
+    modeling = SOURCE / "zipzi/modeling"
+    if modeling.is_dir():
+        modules["zipzi.modeling"] = importlib.import_module("zipzi.modeling")
+        for path in sorted(modeling.glob("*.py")):
+            if not path.name.startswith("_"):
+                name = f"zipzi.modeling.{path.stem}"
+                modules[name] = importlib.import_module(name)
     aliases = {}
     for name, module in sorted(modules.items(), key=lambda item: -len(item[0])):
         for key, value in vars(module).items():

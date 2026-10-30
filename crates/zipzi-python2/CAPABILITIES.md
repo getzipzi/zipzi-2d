@@ -27,12 +27,12 @@ and the [guide](client/python/zipzi/docs/guide.md),
 | Edits and history | `session.edit()`, `edit.apply/apply_many`, commit, undo and redo | Operations share an isolated candidate and publish through the same document history. A failed write aborts its candidate. |
 | Meshes | `session/edit.meshes`, `meshes` operations | Create and edit meshes, positions and topology; query individual meshes or batches. |
 | Parameters and bindings | `session/edit.parameters`, `session/edit.bindings`, `parameters` and `bindings` operations | Create, patch and query parameters and mesh bindings, including keyforms. Rust allocates identities and validates inputs. |
-| Scene and modeling | `session/edit.scene`, `modeling.ModelingCommand*` | Parts, groups, deformers, BlendShapes, Glue, Offscreen, organization, topology and conversions use SDK modeling operations. |
-| Animation authoring | `modeling.ModelingCommandMotion/Expression/Physics/Pose` | Edit animation assets and query selected records, plans, addresses and capabilities. |
-| Object deletion | `modeling.ModelingCommandDeletion`, `Plan.deletion_page()` | Shared cleanup for scene objects, parameters/folders, textures, attachments and typed business/child records; native dimension reduction, replacements, locks and export regressions, with source-bound paged reports. |
+| Scene and modeling | `session/edit.scene`, `modeling.commands.ModelingCommand*` | Parts, groups, deformers, BlendShapes, Glue, Offscreen, organization, topology and conversions use SDK modeling operations. |
+| Animation authoring | `modeling.commands.ModelingCommandMotion`, `ModelingCommandExpression`, `ModelingCommandPhysics`, `ModelingCommandPose` | Edit animation assets and query selected records, plans, addresses and capabilities. |
+| Object deletion | `modeling.commands.ModelingCommandDeletion`, `Plan.deletion_page()` | Shared cleanup for scene objects, parameters/folders, textures, attachments and typed business/child records; native dimension reduction, replacements, locks and export regressions, with source-bound paged reports. |
 | Plans and references | `session/edit.plan()`, `session.reference()`, `session.address()` | Plans retain their source and cost/loss report. References and addresses are subject to identity and field-epoch validation. |
 | Reads and collections | `get`, `get_many`, `list` | Reads return source-bound `Snapshot` or `Batch` values. Collection pages have source-bound cursors; restart pagination on `STALE_SOURCE`. |
-| Attachments | `modeling.ModelingCommandAttachment` and selected records | Attachments use modeling operations and project I/O. |
+| Attachments | `modeling.commands.ModelingCommandAttachment` and selected records | Attachments use modeling operations and project I/O. |
 
 ## Resources, projects and observation
 

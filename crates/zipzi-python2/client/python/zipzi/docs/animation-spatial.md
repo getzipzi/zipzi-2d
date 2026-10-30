@@ -10,8 +10,8 @@ from zipzi import modeling as m
 
 group_id = str(uuid4())
 with session.edit("Animation group") as edit:
-    edit.apply(m.ModelingCommandMotion(
-        intent=m.MotionEditCreateGroup(id=group_id, name="Idle")))
+    edit.apply(m.commands.ModelingCommandMotion(
+        intent=m.motion.MotionEditCreateGroup(id=group_id, name="Idle")))
 snapshot = session.modeling.records(m.ModelingQuery(motion_groups=(group_id,)))
 assert snapshot.value.motion_groups[0].name == "Idle"
 ```

@@ -1,5 +1,5 @@
 """Handwritten ownership/known-state wrappers. Runtime remains authoritative."""
-from ._generated import modeling as _modeling_codec
+from ._generated import codecs as _modeling_codec
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TypeVar, overload
@@ -119,9 +119,9 @@ class Sessions:
         backend = self._runtime._backend
         path = absolute(path)
         return known(lambda: self._opened(backend.open(path, self)), lambda: self._opened(backend.recover(self)))
-    def import_(self,path:Path,format:modeling.ImportFormat,*,textures:tuple[modeling.TextureSlot,...]=())->Job["Session"]:
+    def import_(self,path:Path,format:modeling.project.ImportFormat,*,textures:tuple[modeling.project.TextureSlot,...]=())->Job["Session"]:
         'Submit an explicit host format import into a new session. Textures are explicit host paths. Wait for Job[Session]; cancellation reports the real outcome if IO has already entered.'
-        request=modeling.ProjectRequestImport(path=str(absolute(path)),format=format,textures=textures)
+        request=modeling.project.ProjectRequestImport(path=str(absolute(path)),format=format,textures=textures)
         return Job[Session]._start(self._runtime._backend,lambda owner:self._runtime._backend.project(None,request,owner),"project",lambda raw:Session(self._runtime,record(raw)["session"]))
     def _opened(self, value: object) -> Job["Session"]:
         backend = self._runtime._backend
@@ -196,11 +196,11 @@ class Session:
         'Submit a registered expensive modeling plan at the captured Source. Returns Job[Plan]; wait before applying and close the resulting Plan. Input type determines this explicit Job API.'
         return _plan_job(self._backend, self._token, None, operation)
 
-    def address(self, selector: modeling.AddressSelector) -> references.FieldAddress:
+    def address(self, selector: modeling.addressing.AddressSelector) -> references.FieldAddress:
         'Capture a field address with incarnation, context and field epochs. The returned handle owns a lease and must be closed; recreated IDs cannot revive an old address.'
         return references.FieldAddress._create(self._backend, self._token, selector)
 
-    def capabilities(self, query: modeling.CollectionQuery) -> Snapshot[modeling.Capabilities]:
+    def capabilities(self, query: modeling.queries.CollectionQuery) -> Snapshot[modeling.addressing.Capabilities]:
         'Query selected collection capabilities at the captured formal Source. Results explain available/unavailable/unsupported states and do not reserve future admission.'
         _modeling_codec.validate_CollectionQuery(query)
         return known(lambda: queries.capabilities(self._backend.collection_capabilities(self._token, query, self)),
@@ -213,7 +213,7 @@ class Session:
         'Read current version, modified state, history lengths, path and host state. Returns an owned value; a lost response recovers the original query.'
         return known(lambda: SessionInfo._read(self._backend.info(self._token, self)),
             lambda: SessionInfo._read(self._backend.recover(self)))
-    def editor_context(self)->Snapshot[modeling.EditorContext | None]:
+    def editor_context(self)->Snapshot[modeling.runtime.EditorContext | None]:
         'Read an owned optional Editor context and exact formal Source. Local or non-Editor hosts can return None; no Editor object is exposed.'
         return known(lambda:queries.editor_context(self._backend.editor_context(self._token,self)),lambda:queries.editor_context(self._backend.recover(self)))
     def show_window(self) -> None:
@@ -243,23 +243,23 @@ class Project:
     'Host-side format and persistence operations. Every path is absolute on the selected execution host; IO returns explicit Jobs.'
     def __init__(self, session: Session):
         self._session = session
-    def run(self, request:modeling.ProjectRequest)->Job[modeling.ProjectReport]:
+    def run(self, request:modeling.project.ProjectRequest)->Job[modeling.project.ProjectReport]:
         'Submit one typed ProjectRequest and return Job[ProjectReport]. Input selects explicit format/IO policy; losses and notices belong to the report. Wait and verify before claiming publication.'
         _modeling_codec.validate_ProjectRequest(request)
         s=self._session
-        return Job[modeling.ProjectReport]._start(s._backend,lambda owner:s._backend.project(s._token,request,owner),"project",lambda raw:_modeling_codec.read_ProjectReport(record(raw)["report"]))
-    def diagnose(self)->Job[modeling.ProjectReport]:
+        return Job[modeling.project.ProjectReport]._start(s._backend,lambda owner:s._backend.project(s._token,request,owner),"project",lambda raw:_modeling_codec.read_ProjectReport(record(raw)["report"]))
+    def diagnose(self)->Job[modeling.project.ProjectReport]:
         'Submit SDK project diagnostics without publishing edited model content. Returns Job[ProjectReport] with owned diagnostics; wait releases the result slot.'
-        return self.run(modeling.ProjectRequestDiagnose())
-    def replace(self,path:Path,format:modeling.ImportFormat,*,textures:tuple[modeling.TextureSlot,...]=())->Job[modeling.ProjectReport]:
+        return self.run(modeling.project.ProjectRequestDiagnose())
+    def replace(self,path:Path,format:modeling.project.ImportFormat,*,textures:tuple[modeling.project.TextureSlot,...]=())->Job[modeling.project.ProjectReport]:
         'Submit explicit format import to replace this session. Textures are host-absolute slots. Wait for the real report; generation changes only after confirmed publication.'
-        return self.run(modeling.ProjectRequestImport(path=str(absolute(path)),format=format,textures=textures))
-    def open(self,path:Path)->Job[modeling.ProjectReport]:
+        return self.run(modeling.project.ProjectRequestImport(path=str(absolute(path)),format=format,textures=textures))
+    def open(self,path:Path)->Job[modeling.project.ProjectReport]:
         'Replace this session from an absolute host project path through an explicit Job. Successful replacement advances generation and invalidates old source-bound addresses/plans.'
-        return self.run(modeling.ProjectRequestOpen(path=str(absolute(path))))
-    def export(self,path:Path,format:modeling.ExportFormat,*,name:str="model",object_id:str|None=None,allow_loss:bool=False,bake_animation:bool=False,auto_frame_rate:bool=False)->Job[modeling.ProjectReport]:
+        return self.run(modeling.project.ProjectRequestOpen(path=str(absolute(path))))
+    def export(self,path:Path,format:modeling.project.ExportFormat,*,name:str="model",object_id:str|None=None,allow_loss:bool=False,bake_animation:bool=False,auto_frame_rate:bool=False)->Job[modeling.project.ProjectReport]:
         'Submit a selected export to a host-absolute path. allow_loss, animation baking and frame-rate choices are explicit. Read report losses/published and wait for the durable IO outcome.'
-        return self.run(modeling.ProjectRequestExport(path=str(absolute(path)),format=format,name=name,object_id=object_id,allow_loss=allow_loss,bake_animation=bake_animation,auto_frame_rate=auto_frame_rate))
+        return self.run(modeling.project.ProjectRequestExport(path=str(absolute(path)),format=format,name=name,object_id=object_id,allow_loss=allow_loss,bake_animation=bake_animation,auto_frame_rate=auto_frame_rate))
     def save(self, path: Path) -> Job[SaveReceipt]:
         'Submit saving to host-absolute project folder path and return Job[SaveReceipt]. Wait for the receipt, then inspect durable and its before/after versions before claiming persistence. A client-side Path.exists is not evidence of host persistence. Recover an unknown submission/wait through its original Call; do not submit another save to probe its outcome. The Job owns a bounded result slot released by wait/close. Example: saved = session.project.save(absolute_folder).wait(); assert saved.durable.'
         s = self._session
@@ -434,7 +434,7 @@ class Edit(RecoveryOwner):
             value = WriteResult._read(raw)
             self._state, self._unknown = EditState.editing, None
             return value
-        manual_preview = len(owned) == 1 and isinstance(owned[0], modeling.ModelingCommandManualMesh)
+        manual_preview = len(owned) == 1 and isinstance(owned[0], modeling.commands.ModelingCommandManualMesh)
         return self._run("apply", execute, applied, owned, manual_preview=manual_preview)
 
     def _finished(self, success: bool | None) -> None:

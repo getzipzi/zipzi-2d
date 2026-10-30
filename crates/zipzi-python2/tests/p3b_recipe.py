@@ -21,19 +21,19 @@ GEOMETRY = meshes.Geometry(
 )
 
 
-def axis(n: int, parameter: str) -> m.BindingAxis:
-    return m.BindingAxis(id=uid(n), parameter_id=parameter, samples=(
-        m.BindingSample(id=uid(n + 1), value=0.),
-        m.BindingSample(id=uid(n + 2), value=1.),
+def axis(n: int, parameter: str) -> m.bindings.BindingAxis:
+    return m.bindings.BindingAxis(id=uid(n), parameter_id=parameter, samples=(
+        m.bindings.BindingSample(id=uid(n + 1), value=0.),
+        m.bindings.BindingSample(id=uid(n + 2), value=1.),
     ))
 
 
-def binding(value: m.BindingAuthoringEdit) -> m.ModelingCommandBinding:
-    return m.ModelingCommandBinding(intent=value)
+def binding(value: m.bindings.BindingAuthoringEdit) -> m.commands.ModelingCommandBinding:
+    return m.commands.ModelingCommandBinding(intent=value)
 
 
-def grid(value: m.MeshGridEdit) -> m.ModelingCommandBinding:
-    return binding(m.BindingAuthoringEditMeshGrid(value=value))
+def grid(value: m.bindings.MeshGridEdit) -> m.commands.ModelingCommandBinding:
+    return binding(m.bindings.BindingAuthoringEditMeshGrid(value=value))
 
 
 def points(result: zipzi.Snapshot[sampling.Result], mesh: str) -> Frames:
@@ -68,10 +68,10 @@ def conversions(runtime: zipzi.Runtime, destination: Path) -> dict[str, object]:
         edit.apply(scene.CreatePart(scene.PartSpec("Folder", id=part)))
         edit.apply(scene.CreateRotation("Affine parent", scene.Placement(), id=parent))
         transform = edit.modeling.records(m.ModelingQuery(transforms=(parent,))).value.transforms[0]
-        assert isinstance(transform.data, m.TransformDataRotation)
-        edit.apply(m.ModelingCommandReplaceTransform(transform=replace(transform,
-            data=m.TransformDataRotation(value=replace(transform.data.value,
-                base_angle=12., pose=m.RotationPose(origin=m.PreciseVec2(x=5., y=-3.),
+        assert isinstance(transform.data, m.scene.TransformDataRotation)
+        edit.apply(m.commands.ModelingCommandReplaceTransform(transform=replace(transform,
+            data=m.scene.TransformDataRotation(value=replace(transform.data.value,
+                base_angle=12., pose=m.scene.RotationPose(origin=m.common.PreciseVec2(x=5., y=-3.),
                     angle=23., scale=1.75, reflect_x=True, reflect_y=False))))))
         edit.bindings.create(bindings.MeshBindingSpec(mesh, (bindings.Axis(parameter, (0., 1.)),), (
             bindings.Keyform((0.,), GEOMETRY.positions),
@@ -83,10 +83,10 @@ def conversions(runtime: zipzi.Runtime, destination: Path) -> dict[str, object]:
     original = points(session.modeling.sample(poses), mesh)
     close_points(original, expected)
     before = session.info()
-    operation = binding(m.BindingAuthoringEditReparent(value=m.ReparentEdit(
-        sources=(mesh,), parent_id=parent, strategy=m.ReparentStrategy.PRESERVE_PARAMETER_DOMAIN,
-        tolerance=.001, context=m.ReparentContext(parameter_values={parameter: .5},
-            parameter_domain=(m.ConversionDomain(parameter_id=parameter, minimum=0., maximum=1.),),
+    operation = binding(m.bindings.BindingAuthoringEditReparent(value=m.scene.ReparentEdit(
+        sources=(mesh,), parent_id=parent, strategy=m.scene.ReparentStrategy.PRESERVE_PARAMETER_DOMAIN,
+        tolerance=.001, context=m.scene.ReparentContext(parameter_values={parameter: .5},
+            parameter_domain=(m.commands.ConversionDomain(parameter_id=parameter, minimum=0., maximum=1.),),
             edit_time_seconds=0.),
     )))
     with session.reference("mesh", mesh) as reference, reference.label() as label:
@@ -103,27 +103,27 @@ def conversions(runtime: zipzi.Runtime, destination: Path) -> dict[str, object]:
         reference.resolve()  # A context change preserves object identity.
         refuses("STALE_FIELD_ADDRESS", lambda: label.plan("Stale"))
         with session.edit("Organization is independent of deformation") as edit:
-            edit.apply(m.ModelingCommandScene(intent=m.SceneEditMove(ids=(mesh,),
-                destination=m.SceneCollectionOrganization(part_id=part))))
+            edit.apply(m.commands.ModelingCommandScene(intent=m.scene.SceneEditMove(ids=(mesh,),
+                destination=m.scene.SceneCollectionOrganization(part_id=part))))
         assert session.scene.get(mesh).value.part_id == part
         assert session.scene.get(mesh).value.parent_id == parent
         with session.edit("Expand, reorder and remap grid") as edit:
-            with edit.plan(grid(m.MeshGridEditInsertSample(binding_id=owner,
+            with edit.plan(grid(m.bindings.MeshGridEditInsertSample(binding_id=owner,
                     parameter_id=parameter, value=.5))) as plan:
                 edit.apply(plan)
-            edit.apply(grid(m.MeshGridEditMoveSample(binding_id=owner, parameter_id=parameter,
+            edit.apply(grid(m.bindings.MeshGridEditMoveSample(binding_id=owner, parameter_id=parameter,
                 from_=.5, to=.4)))
-            edit.apply(grid(m.MeshGridEditDeleteSample(binding_id=owner, parameter_id=parameter, value=.4)))
+            edit.apply(grid(m.bindings.MeshGridEditDeleteSample(binding_id=owner, parameter_id=parameter, value=.4)))
             p_axis = edit.bindings.get(owner).value.axes[0].id
-            edit.apply(binding(m.BindingAuthoringEditGrid(value=m.BindingGridEditEdit(owner=owner,
-                operation=m.GridOperationInsertSample(axis_id=p_axis, id=uid(33), value=.5)))))
-            q_axis = m.BindingAxis(id=uid(30), parameter_id=other, samples=(
-                m.BindingSample(id=uid(31), value=-1.), m.BindingSample(id=uid(32), value=1.)))
-            edit.apply(grid(m.MeshGridEditAddAxis(binding_id=owner, axis=q_axis)))
-            edit.apply(grid(m.MeshGridEditReorderAxes(binding_id=owner, parameter_ids=(other, parameter))))
-            edit.apply(binding(m.BindingAuthoringEditParameterRange(value=m.ParameterRangeEdit(
+            edit.apply(binding(m.bindings.BindingAuthoringEditGrid(value=m.bindings.BindingGridEditEdit(owner=owner,
+                operation=m.bindings.GridOperationInsertSample(axis_id=p_axis, id=uid(33), value=.5)))))
+            q_axis = m.bindings.BindingAxis(id=uid(30), parameter_id=other, samples=(
+                m.bindings.BindingSample(id=uid(31), value=-1.), m.bindings.BindingSample(id=uid(32), value=1.)))
+            edit.apply(grid(m.bindings.MeshGridEditAddAxis(binding_id=owner, axis=q_axis)))
+            edit.apply(grid(m.bindings.MeshGridEditReorderAxes(binding_id=owner, parameter_ids=(other, parameter))))
+            edit.apply(binding(m.bindings.BindingAuthoringEditParameterRange(value=m.parameters.ParameterRangeEdit(
                 parameter_id=parameter, minimum=10., maximum=20., default_value=15.,
-                policy=m.ParameterRangePolicy.MAP_KEY_VALUES))))
+                policy=m.parameters.ParameterRangePolicy.MAP_KEY_VALUES))))
             record = edit.bindings.get(owner).value
             assert tuple(a.parameter_id for a in record.axes) == (other, parameter)
             assert tuple(s.value for s in record.axes[1].samples) == (10., 15., 20.)
@@ -133,12 +133,12 @@ def conversions(runtime: zipzi.Runtime, destination: Path) -> dict[str, object]:
             close_points(points(edit.modeling.sample(remapped), mesh), expected * 3)
         sample = session.bindings.get(owner).value.axes[1].samples[1].id
         with session.reference("binding_sample", sample) as sample_ref, session.address(
-                m.AddressSelectorBinding(id=sample)) as address:
+                m.addressing.AddressSelectorBinding(id=sample)) as address:
             with session.edit("Bake the selected slice") as edit:
-                edit.apply(grid(m.MeshGridEditRemoveAxis(binding_id=owner, parameter_id=other,
-                    reduction=m.AxisReductionResample(value=0.))))
-                edit.apply(grid(m.MeshGridEditRemoveAxis(binding_id=owner, parameter_id=parameter,
-                    reduction=m.AxisReductionResample(value=15.))))
+                edit.apply(grid(m.bindings.MeshGridEditRemoveAxis(binding_id=owner, parameter_id=other,
+                    reduction=m.bindings.AxisReductionResample(value=0.))))
+                edit.apply(grid(m.bindings.MeshGridEditRemoveAxis(binding_id=owner, parameter_id=parameter,
+                    reduction=m.bindings.AxisReductionResample(value=15.))))
                 baked = edit.bindings.get(owner).value
                 assert baked.axes == () and baked.keyforms == ()
             close_points(points(session.modeling.sample(({},)), mesh), (expected[2],))
@@ -148,7 +148,7 @@ def conversions(runtime: zipzi.Runtime, destination: Path) -> dict[str, object]:
             assert len(session.bindings.get(owner).value.axes) == 2
             refuses("STALE_HANDLE", sample_ref.resolve)
             refuses("STALE_HANDLE", lambda: address.plan(
-                m.AddressPatchBinding(patch=m.BindingFieldPatchSampleValue(value=16.))))
+                m.addressing.AddressPatchBinding(patch=m.bindings.BindingFieldPatchSampleValue(value=16.))))
             session.redo().wait()
         saved = session.project.save(destination).wait()
         session.project.open(saved.manifest).wait()
@@ -163,7 +163,7 @@ def conversions(runtime: zipzi.Runtime, destination: Path) -> dict[str, object]:
 def scene_bindings(runtime: zipzi.Runtime) -> dict[str, object]:
     session = runtime.sessions.create(uid(100))
     rotation_mesh, warp_mesh, parameter, rotation, warp, part, other_part, glue, offscreen = map(uid, range(101, 110))
-    appearance = m.Appearance(opacity=1., multiply=(1., 1., 1.), screen=(0., 0., 0.))
+    appearance = m.scene.Appearance(opacity=1., multiply=(1., 1., 1.), screen=(0., 0., 0.))
     with session.edit("All scene binding targets") as edit:
         edit.parameters.create(parameters.ParameterSpec("P", 0., 1., 0., id=parameter))
         edit.apply_many((scene.CreatePart(scene.PartSpec("Bound part", id=part)),
@@ -179,28 +179,28 @@ def scene_bindings(runtime: zipzi.Runtime) -> dict[str, object]:
             with edit.plan(scene.ReparentLocal((mesh,), parent_id=parent)) as plan:
                 edit.apply(plan)
         records = edit.modeling.records(m.ModelingQuery(transforms=(warp,), glues=(glue,), offscreens=(offscreen,))).value
-        assert isinstance(records.transforms[0].data, m.TransformDataWarp)
+        assert isinstance(records.transforms[0].data, m.scene.TransformDataWarp)
         control_points = records.transforms[0].data.value.points
         tracks = (
-            m.SceneTrackRotation(target_id=m.TransformId(value=rotation), keyforms=tuple(
-                m.RotationKeyform(samples=(uid(121 + i),), appearance=appearance,
-                    rotation=m.RotationPose(origin=m.PreciseVec2(x=0., y=0.), angle=90. * i,
+            m.bindings.SceneTrackRotation(target_id=m.scene.TransformId(value=rotation), keyforms=tuple(
+                m.bindings.RotationKeyform(samples=(uid(121 + i),), appearance=appearance,
+                    rotation=m.scene.RotationPose(origin=m.common.PreciseVec2(x=0., y=0.), angle=90. * i,
                         scale=1., reflect_x=False, reflect_y=False)) for i in range(2))),
-            m.SceneTrackWarp(target_id=m.TransformId(value=warp), keyforms=tuple(
-                m.WarpKeyform(samples=(uid(131 + i),), appearance=appearance,
-                    positions=tuple(m.Vec2(x=p.x + 4. * i, y=p.y) for p in control_points)) for i in range(2))),
-            m.SceneTrackPart(target_id=m.PartId(value=part), keyforms=tuple(
-                m.PartKeyform(samples=(uid(141 + i),), draw_order=10. * i) for i in range(2))),
+            m.bindings.SceneTrackWarp(target_id=m.scene.TransformId(value=warp), keyforms=tuple(
+                m.bindings.WarpKeyform(samples=(uid(131 + i),), appearance=appearance,
+                    positions=tuple(m.common.Vec2(x=p.x + 4. * i, y=p.y) for p in control_points)) for i in range(2))),
+            m.bindings.SceneTrackPart(target_id=m.scene.PartId(value=part), keyforms=tuple(
+                m.bindings.PartKeyform(samples=(uid(141 + i),), draw_order=10. * i) for i in range(2))),
         )
         for n, track in zip((120, 130, 140), tracks, strict=True):
-            edit.apply(m.ModelingCommandCreateSceneBinding(binding=m.SceneBinding(
+            edit.apply(m.commands.ModelingCommandCreateSceneBinding(binding=m.bindings.SceneBinding(
                 id=uid(n + 3), axes=(axis(n, parameter),), track=track)))
-        edit.apply(m.ModelingCommandReplaceGlue(glue=replace(records.glues[0], binding=m.GlueBinding(
+        edit.apply(m.commands.ModelingCommandReplaceGlue(glue=replace(records.glues[0], binding=m.bindings.GlueBinding(
             axes=(axis(150, parameter),), keyforms=(
-                m.GlueKeyform(samples=(uid(151),), intensity=.1),
-                m.GlueKeyform(samples=(uid(152),), intensity=.9))))))
-        form = m.OffscreenKeyform(opacity=1.)
-        edit.apply(m.ModelingCommandReplaceOffscreen(offscreen=replace(records.offscreens[0],
+                m.bindings.GlueKeyform(samples=(uid(151),), intensity=.1),
+                m.bindings.GlueKeyform(samples=(uid(152),), intensity=.9))))))
+        form = m.bindings.OffscreenKeyform(opacity=1.)
+        edit.apply(m.commands.ModelingCommandReplaceOffscreen(offscreen=replace(records.offscreens[0],
             keyforms=(replace(form, opacity=.2), replace(form, opacity=.8)), part_keyform_indices=(0, 1))))
     poses = ({parameter: 0.}, {parameter: .5}, {parameter: 1.})
     original = session.modeling.sample(poses)
@@ -213,9 +213,9 @@ def scene_bindings(runtime: zipzi.Runtime) -> dict[str, object]:
     for frame, opacity in zip(original.value.frames, (.2, .5, .8), strict=True):
         assert isclose(frame.offscreens[0].opacity, opacity, abs_tol=1e-6)
     info = session.info()
-    operation = binding(m.BindingAuthoringEditParameterRange(value=m.ParameterRangeEdit(
+    operation = binding(m.bindings.BindingAuthoringEditParameterRange(value=m.parameters.ParameterRangeEdit(
         parameter_id=parameter, minimum=10., maximum=20., default_value=15.,
-        policy=m.ParameterRangePolicy.MAP_KEY_VALUES)))
+        policy=m.parameters.ParameterRangePolicy.MAP_KEY_VALUES)))
     with session.plan(operation) as plan:
         assert session.info() == info
         assert {rotation, warp, part, offscreen} <= set(plan.report.affected_ids)
@@ -237,19 +237,19 @@ def scene_bindings(runtime: zipzi.Runtime) -> dict[str, object]:
     close_points(points(session.modeling.sample(poses), warp_mesh), warp_expected)
     session.redo().wait()
     with session.edit("Independent scene collections") as edit:
-        edit.apply(m.ModelingCommandScene(intent=m.SceneEditEnsureDrawingGroup(owner=part, parent="")))
-        edit.apply(m.ModelingCommandScene(intent=m.SceneEditMove(ids=(warp_mesh, rotation_mesh),
-            destination=m.SceneCollectionDrawing(owner=part))))
-        edit.apply(m.ModelingCommandScene(intent=m.SceneEditMove(ids=(warp_mesh,),
-            destination=m.SceneCollectionDrawing(owner=part), before=rotation_mesh)))
+        edit.apply(m.commands.ModelingCommandScene(intent=m.scene.SceneEditEnsureDrawingGroup(owner=part, parent="")))
+        edit.apply(m.commands.ModelingCommandScene(intent=m.scene.SceneEditMove(ids=(warp_mesh, rotation_mesh),
+            destination=m.scene.SceneCollectionDrawing(owner=part))))
+        edit.apply(m.commands.ModelingCommandScene(intent=m.scene.SceneEditMove(ids=(warp_mesh,),
+            destination=m.scene.SceneCollectionDrawing(owner=part), before=rotation_mesh)))
         drawing = edit.modeling.records(m.ModelingQuery()).value.draw_order_groups
-        edit.apply(m.ModelingCommandScene(intent=m.SceneEditMove(ids=(warp_mesh,),
-            destination=m.SceneCollectionOrganization(part_id=other_part))))
+        edit.apply(m.commands.ModelingCommandScene(intent=m.scene.SceneEditMove(ids=(warp_mesh,),
+            destination=m.scene.SceneCollectionOrganization(part_id=other_part))))
         assert edit.scene.get(warp_mesh).value.parent_id == warp
         with edit.plan(scene.ReparentLocal((warp_mesh,), parent_id=rotation)) as plan:
             edit.apply(plan)
-        edit.apply(m.ModelingCommandScene(intent=m.SceneEditMove(ids=(warp_mesh,),
-            destination=m.SceneCollectionDeformation(parent_id=rotation), before=rotation_mesh)))
+        edit.apply(m.commands.ModelingCommandScene(intent=m.scene.SceneEditMove(ids=(warp_mesh,),
+            destination=m.scene.SceneCollectionDeformation(parent_id=rotation), before=rotation_mesh)))
         assert edit.scene.get(warp_mesh).value.part_id == other_part
         assert edit.scene.get(warp_mesh).value.parent_id == rotation
         after_drawing = edit.modeling.records(m.ModelingQuery()).value.draw_order_groups
@@ -257,8 +257,8 @@ def scene_bindings(runtime: zipzi.Runtime) -> dict[str, object]:
         assert {g.owner: g.items for g in after_drawing} == {g.owner: g.items for g in drawing}
         assert next(g.items for g in drawing if g.owner == part) == (warp_mesh, rotation_mesh)
     info = session.info()
-    invalid_move = m.ModelingCommandScene(intent=m.SceneEditMove(ids=(warp_mesh,),
-        destination=m.SceneCollectionDeformation(parent_id=rotation), before=uid(999)))
+    invalid_move = m.commands.ModelingCommandScene(intent=m.scene.SceneEditMove(ids=(warp_mesh,),
+        destination=m.scene.SceneCollectionDeformation(parent_id=rotation), before=uid(999)))
     refuses("INVALID_PLACEMENT", lambda: session.plan(invalid_move))
     assert session.info() == info
     return dict(scene_tracks=tuple(type(t).__name__ for t in tracks),

@@ -33,7 +33,12 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
                                         'sequence: int, frames: tuple[PreviewFrame, ...])'},
  'zipzi.animation.Batch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.animation.Batch.summary': {'alias': 'zipzi.ApiDescription.summary'},
- 'zipzi.animation.Command': {'alias': 'zipzi.JobState'},
+ 'zipzi.animation.Command': {'children': (),
+                             'documentation': 'Typed public API entry.',
+                             'example': 'docs/recipes.py',
+                             'fields': [],
+                             'kind': 'value',
+                             'signature': ''},
  'zipzi.animation.Frame': {'children': ('zipzi.animation.Frame.__repr__', 'zipzi.animation.Frame.summary'),
                            'documentation': 'Immutable owned PreviewFrame value. Construction owns declared '
                                             'collections; reading fields, repr and summary performs no IO.',

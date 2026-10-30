@@ -1,4 +1,4 @@
-from .._generated import modeling
+from .._generated import values as modeling
 from .._generated.resource_backends import NativeResources
 from typing import Callable, Literal, Protocol
 from .. import _operations as ops, sampling, scene

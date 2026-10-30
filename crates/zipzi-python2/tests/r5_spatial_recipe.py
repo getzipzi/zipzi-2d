@@ -25,13 +25,13 @@ def fixture(runtime: zipzi.Runtime) -> zipzi.Session:
         edit.bindings.create(bindings.MeshBindingSpec(uid(2),(bindings.Axis(uid(9),(-1.,1.)),),(
             bindings.Keyform((-1.,),GEOMETRY.positions),
             bindings.Keyform((1.,),tuple((x+10.,y) for x,y in GEOMETRY.positions))),id=uid(15)))
-        edit.apply(m.ModelingCommandMotion(intent=m.MotionEditCreate(id=uid(10),name="Clip",
-            registration_id=uid(11),destination=m.MotionContainerRoot())))
+        edit.apply(m.commands.ModelingCommandMotion(intent=m.motion.MotionEditCreate(id=uid(10),name="Clip",
+            registration_id=uid(11),destination=m.motion.MotionContainerRoot())))
         clip=edit.modeling.records(m.ModelingQuery(motions=(uid(10),))).value.motions[0]
-        clip=replace(clip,duration=1.,fade_in=0.,fade_out=0.,tracks=(m.MotionTrack(id=uid(12),
-            target=m.MotionTrackTargetParameter(parameter_id=uid(9)),initial=m.MotionKey(id=uid(13),time=0.,value=-1.),
-            segments=(m.MotionSegmentLinear(end=m.MotionKey(id=uid(14),time=1.,value=1.)),),extensions={}),))
-        edit.apply(m.ModelingCommandReplaceMotion(clip=clip))
+        clip=replace(clip,duration=1.,fade_in=0.,fade_out=0.,tracks=(m.motion.MotionTrack(id=uid(12),
+            target=m.motion.MotionTrackTargetParameter(parameter_id=uid(9)),initial=m.motion.MotionKey(id=uid(13),time=0.,value=-1.),
+            segments=(m.motion.MotionSegmentLinear(end=m.motion.MotionKey(id=uid(14),time=1.,value=1.)),),extensions={}),))
+        edit.apply(m.commands.ModelingCommandReplaceMotion(clip=clip))
     return session
 
 def bounds(result: s.Result) -> s.ObjectBounds:

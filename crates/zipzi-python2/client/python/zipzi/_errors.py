@@ -4,7 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal
 from ._values import Version, record, sequence, string
-from ._generated.modeling import ProjectReport
+from ._generated.values.project import ProjectReport
 
 RecoveryAction = Literal["retry", "reduce_request", "release_resources", "recover_original",
                          "restart_edit", "refresh_source", "resync", "wait_job", "stop"]
@@ -112,7 +112,7 @@ def unwrap(value: object) -> object:
         return None if e.get(key) is None else Version._read(e[key])
     report=None
     if e.get("project_report") is not None:
-        from ._generated.modeling import read_ProjectReport
+        from ._generated.codecs.project import read_ProjectReport
         report=read_ProjectReport(e["project_report"])
     raise (Busy if code == "BUSY" else SdkFailure)(code, string(e["message"]),
         operation=string(e.get("operation", "")), object_ids=tuple(string(v) for v in sequence(e.get("object_ids", ()))),

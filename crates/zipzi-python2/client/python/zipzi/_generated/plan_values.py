@@ -3,7 +3,7 @@ from .._presentation import CompactValue
 from dataclasses import dataclass
 from .._values import Source, Version, integer, record, sequence, string
 
-from . import modeling
+from . import values as modeling, codecs as modeling_codec
 
 def _boolean(value: object) -> bool:
     if type(value) is not bool:
@@ -40,4 +40,4 @@ class PlanReport(CompactValue):
     @classmethod
     def _read(cls, source: object, value: object) -> "PlanReport":
         r = record(value)
-        return cls(Source._read(source), Version._read(r["version"]), tuple(string(item) for item in sequence(r["affected_ids"])), tuple((key, string(item)) for key, item in sorted(record(r["copied_ids"]).items())), None if r["cost"] is None else PlanCost._read(r["cost"]), tuple(string(item) for item in sequence(r["losses"])), None if r["no_op"] is None else _boolean(r["no_op"]), None if r["deletion"] is None else modeling.read_DeletionSummary(r["deletion"]))
+        return cls(Source._read(source), Version._read(r["version"]), tuple(string(item) for item in sequence(r["affected_ids"])), tuple((key, string(item)) for key, item in sorted(record(r["copied_ids"]).items())), None if r["cost"] is None else PlanCost._read(r["cost"]), tuple(string(item) for item in sequence(r["losses"])), None if r["no_op"] is None else _boolean(r["no_op"]), None if r["deletion"] is None else modeling_codec.read_DeletionSummary(r["deletion"]))

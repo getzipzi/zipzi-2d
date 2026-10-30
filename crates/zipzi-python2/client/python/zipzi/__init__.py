@@ -13,7 +13,7 @@ from ._values import ConnectionInfo, ConnectionLimits, Receipt, SaveReceipt, Ses
 from . import _values as _values
 
 # Resolve WriteResult's deferred annotation after modeling has finished importing.
-_values.ManualMeshTransferReport = modeling.ManualMeshTransferReport
+_values.ManualMeshTransferReport = modeling.mesh.ManualMeshTransferReport
 
 def local() -> Runtime:
     'Explicitly create an owned in-process Runtime with the paired optional native wheel. Importing zipzi alone does not start it. Use as a context manager; close releases its sessions without saving or connecting to another host.'

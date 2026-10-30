@@ -4,5 +4,15 @@ DATA: dict[str, Entry] = {'zipzi.ops': {'children': ('zipzi.ops.Operation', 'zip
                'documentation': 'Static operation unions; construct operations in their owning domain.',
                'kind': 'module',
                'signature': ''},
- 'zipzi.ops.Operation': {'alias': 'zipzi.JobState'},
- 'zipzi.ops.PlannableOperation': {'alias': 'zipzi.JobState'}}
+ 'zipzi.ops.Operation': {'children': (),
+                         'documentation': 'Typed public API entry.',
+                         'example': 'docs/recipes.py',
+                         'fields': [],
+                         'kind': 'value',
+                         'signature': ''},
+ 'zipzi.ops.PlannableOperation': {'children': (),
+                                  'documentation': 'Typed public API entry.',
+                                  'example': 'docs/recipes.py',
+                                  'fields': [],
+                                  'kind': 'value',
+                                  'signature': ''}}

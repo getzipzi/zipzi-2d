@@ -1,6 +1,6 @@
 """Typed spatial request/result projection; geometry is evaluated only by Rust."""
 from collections.abc import Sequence,Mapping
-from ._generated import modeling as m
+from ._generated import values as m, codecs as _modeling_codec
 from ._values import Source,record
 from ._results import Snapshot
 from ._jobs import Job
@@ -15,12 +15,12 @@ def inputs(queries:Sequence[m.SpatialQuery])->tuple[m.SpatialQuery,...]:
         if isinstance(query,m.SpatialQueryBounds):total+=len(query.targets)
         if isinstance(query,m.SpatialQueryHits) and query.max_candidates>4096:raise ValueError("At most 4096 candidates")
         if total>4096:raise ValueError("At most 4096 spatial target selectors")
-        m.validate_SpatialQuery(query)
+        _modeling_codec.validate_SpatialQuery(query)
     return owned
 
 def read(raw:object)->Snapshot[m.SpatialSamples]:
     value=record(raw)
-    return Snapshot(Source._read(value['source']),m.read_SpatialSamples(value['samples']))
+    return Snapshot(Source._read(value['source']),_modeling_codec.read_SpatialSamples(value['samples']))
 
 def sample(owner:_DomainOwner,poses:Sequence[Mapping[str,float]],queries:Sequence[m.SpatialQuery],expected:Source|None)->Job[Snapshot[m.SpatialSamples]]:
     parameters=sampling.inputs(poses);selected=inputs(queries)

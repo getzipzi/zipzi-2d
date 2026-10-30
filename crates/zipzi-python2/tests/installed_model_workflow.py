@@ -29,11 +29,11 @@ def main():
             with zipzi.connect(endpoint=endpoint, start=True, host=host) as runtime:
                 assert runtime.connection is not None and 'show_window' in runtime.connection.capabilities
                 pid = runtime.connection.host_pid
-                session = runtime.sessions.import_(model, m.ImportFormat.MODEL3).wait()
+                session = runtime.sessions.import_(model, m.project.ImportFormat.MODEL3).wait()
                 mesh = session.meshes.list(limit=1).items[0].id
                 ids = session.modeling.records(m.ModelingQuery()).value.ids
                 clip = session.modeling.records(m.ModelingQuery(motions=(ids['motions'][0],))).value.motions[0]
-                index = next((i for i, t in enumerate(clip.tracks) if isinstance(t.target, m.MotionTrackTargetParameter)))
+                index = next((i for i, t in enumerate(clip.tracks) if isinstance(t.target, m.motion.MotionTrackTargetParameter)))
                 track = clip.tracks[index]
                 parameter = session.parameters.get(track.target.parameter_id).value
                 value = parameter.minimum * 0.75 + parameter.maximum * 0.25
@@ -44,7 +44,7 @@ def main():
                 tracks[index] = replace(track, initial=replace(track.initial, value=value))
                 with session.edit('Installed desktop Mao authoring') as edit:
                     edit.meshes.rename(mesh, 'R7 installed Mao mesh')
-                    edit.apply(m.ModelingCommandReplaceMotion(clip=replace(clip, name='R7 installed Mao motion', tracks=tuple(tracks))))
+                    edit.apply(m.commands.ModelingCommandReplaceMotion(clip=replace(clip, name='R7 installed Mao motion', tracks=tuple(tracks))))
                 assert session.info().history == (1, 0)
                 with session.preview() as preview:
                     preview.apply(animation.ScheduleMotion(id=clip.id, time=0.0))
@@ -58,8 +58,8 @@ def main():
                 assert session.meshes.get(mesh).value.name == 'R7 installed Mao mesh'
                 assert session.modeling.records(m.ModelingQuery(motions=(clip.id,))).value.motions[0] == before
                 assert session.info().history == (0, 0) and (not session.info().modified)
-                motion = session.project.export(output / 'clip.motion3.json', m.ExportFormat.MOTION3, object_id=clip.id).wait()
-                package = session.project.export(output / 'runtime', m.ExportFormat.PACKAGE, allow_loss=True).wait()
+                motion = session.project.export(output / 'clip.motion3.json', m.project.ExportFormat.MOTION3, object_id=clip.id).wait()
+                package = session.project.export(output / 'runtime', m.project.ExportFormat.PACKAGE, allow_loss=True).wait()
                 assert motion.published and package.published
                 assert (output / 'runtime/model.model3.json').is_file()
                 curves = json.loads((output / 'clip.motion3.json').read_text())['Curves']

@@ -21,22 +21,22 @@ def fixture(runtime: zipzi.Runtime) -> zipzi.Session:
             bindings.Keyform((1.,),tuple((x+10.,y) for x,y in GEOMETRY.positions))),id=uid(4)))
         edit.apply(scene.CreatePart(scene.PartSpec("Part",id=uid(5))))
         edit.apply_many((
-            m.ModelingCommandMotion(intent=m.MotionEditCreate(id=uid(10),name="Clip",registration_id=uid(11),destination=m.MotionContainerRoot())),
-            m.ModelingCommandExpression(intent=m.ExpressionEditCreate(id=uid(20),name="Smile")),
-            m.ModelingCommandExpression(intent=m.ExpressionEditCreateEntry(owner=uid(20),id=uid(21))),
-            m.ModelingCommandPose(intent=m.PoseEditCreateGroup(pose_id=uid(30),id=uid(31),name="Pose")),
-            m.ModelingCommandPose(intent=m.PoseEditCreateEntry(group_id=uid(31),id=uid(32))),
+            m.commands.ModelingCommandMotion(intent=m.motion.MotionEditCreate(id=uid(10),name="Clip",registration_id=uid(11),destination=m.motion.MotionContainerRoot())),
+            m.commands.ModelingCommandExpression(intent=m.expression.ExpressionEditCreate(id=uid(20),name="Smile")),
+            m.commands.ModelingCommandExpression(intent=m.expression.ExpressionEditCreateEntry(owner=uid(20),id=uid(21))),
+            m.commands.ModelingCommandPose(intent=m.pose.PoseEditCreateGroup(pose_id=uid(30),id=uid(31),name="Pose")),
+            m.commands.ModelingCommandPose(intent=m.pose.PoseEditCreateEntry(group_id=uid(31),id=uid(32))),
         ))
         records=edit.modeling.records(m.ModelingQuery(motions=(uid(10),),expressions=(uid(20),),pose=True)).value
-        clip=replace(records.motions[0],duration=1.,fade_in=0.,fade_out=0.,tracks=(m.MotionTrack(id=uid(12),
-            target=m.MotionTrackTargetParameter(parameter_id=uid(2)),initial=m.MotionKey(id=uid(13),time=0.,value=-1.),
-            segments=(m.MotionSegmentLinear(end=m.MotionKey(id=uid(14),time=1.,value=1.)),),extensions={}),))
-        edit.apply(m.ModelingCommandReplaceMotion(clip=clip))
+        clip=replace(records.motions[0],duration=1.,fade_in=0.,fade_out=0.,tracks=(m.motion.MotionTrack(id=uid(12),
+            target=m.motion.MotionTrackTargetParameter(parameter_id=uid(2)),initial=m.motion.MotionKey(id=uid(13),time=0.,value=-1.),
+            segments=(m.motion.MotionSegmentLinear(end=m.motion.MotionKey(id=uid(14),time=1.,value=1.)),),extensions={}),))
+        edit.apply(m.commands.ModelingCommandReplaceMotion(clip=clip))
         expression=replace(records.expressions[0],fade_in=0.,fade_out=0.,entries=(replace(records.expressions[0].entries[0],
-            target=m.ExpressionTargetResolved(parameter_id=uid(2)),value=.75,blend=m.ExpressionBlend.OVERWRITE),))
-        edit.apply(m.ModelingCommandReplaceExpression(expression=expression))
-        edit.apply(m.ModelingCommandPose(intent=m.PoseEditPatch(id=uid(32),expected=m.PoseFieldsEntry(part=m.PosePartRefUnspecified()),
-            fields=m.PoseFieldsEntry(part=m.PosePartRefResolved(part_id=uid(5))))))
+            target=m.expression.ExpressionTargetResolved(parameter_id=uid(2)),value=.75,blend=m.expression.ExpressionBlend.OVERWRITE),))
+        edit.apply(m.commands.ModelingCommandReplaceExpression(expression=expression))
+        edit.apply(m.commands.ModelingCommandPose(intent=m.pose.PoseEditPatch(id=uid(32),expected=m.pose.PoseFieldsEntry(part=m.pose.PosePartRefUnspecified()),
+            fields=m.pose.PoseFieldsEntry(part=m.pose.PosePartRefResolved(part_id=uid(5))))))
     return session
 
 def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:

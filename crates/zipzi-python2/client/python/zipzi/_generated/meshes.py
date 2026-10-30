@@ -3,7 +3,6 @@ from .._presentation import CompactValue
 """Selected immutable mesh values, derived from Rust declarations."""
 from dataclasses import dataclass
 from collections.abc import Sequence
-from enum import Enum
 from .._values import integer, number, record, sequence, string
 
 Point = tuple[float, float]
@@ -24,10 +23,7 @@ def _array2(value: object) -> tuple[int, int]:
         raise ValueError("Invalid edge")
     return integer(raw[0]), integer(raw[1])
 
-class ConstraintKind(str, Enum):
-    __module__ = "zipzi.meshes"
-    USER = 'user'
-    EDGE_SUPPORT = 'edge_support'
+from .values.mesh import MeshConstraintKind as ConstraintKind
 
 @dataclass(frozen=True, init=False, repr=False)
 class Constraint(CompactValue):

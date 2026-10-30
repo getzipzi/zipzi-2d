@@ -52,7 +52,7 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                         'example': 'docs/recipes.py',
                                         'fields': [],
                                         'kind': 'callable',
-                                        'signature': '(patch: modeling.AddressPatch) -> Plan'},
+                                        'signature': '(patch: modeling.addressing.AddressPatch) -> Plan'},
  'zipzi.references.LabelAddress': {'children': ('zipzi.references.LabelAddress.__enter__',
                                                 'zipzi.references.LabelAddress.__exit__',
                                                 'zipzi.references.LabelAddress.close',
@@ -104,7 +104,12 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                         'fields': [],
                                         'kind': 'callable',
                                         'signature': '(name: str) -> Plan'},
- 'zipzi.references.ObjectKind': {'alias': 'zipzi.JobState'},
+ 'zipzi.references.ObjectKind': {'children': (),
+                                 'documentation': 'Typed public API entry.',
+                                 'example': 'docs/recipes.py',
+                                 'fields': [],
+                                 'kind': 'value',
+                                 'signature': ''},
  'zipzi.references.ObjectRef': {'children': ('zipzi.references.ObjectRef.__enter__',
                                              'zipzi.references.ObjectRef.__exit__',
                                              'zipzi.references.ObjectRef.capabilities',
@@ -137,8 +142,8 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                              'example': 'docs/recipes.py',
                                              'fields': [],
                                              'kind': 'callable',
-                                             'signature': '(domain: modeling.CapabilityDomain) -> '
-                                                          'Snapshot[modeling.Capabilities]'},
+                                             'signature': '(domain: modeling.addressing.CapabilityDomain) -> '
+                                                          'Snapshot[modeling.addressing.Capabilities]'},
  'zipzi.references.ObjectRef.close': {'alias': 'zipzi.Buffer.close'},
  'zipzi.references.ObjectRef.id': {'children': (),
                                    'documentation': 'Read the cached persistent UUID without IO. It is distinct from '

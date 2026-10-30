@@ -4,7 +4,7 @@ Host discovery/start ownership lives in _endpoint; request recovery never launch
 """
 from .._generated import binary as typed_binary
 from .._generated.metadata import CONTRACT
-from .._generated.modeling import ModelingCommandManualMesh
+from .._generated.values.commands import ModelingCommandManualMesh
 import hashlib
 import json
 from pathlib import Path

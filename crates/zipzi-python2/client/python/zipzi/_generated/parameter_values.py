@@ -2,17 +2,13 @@
 from .._presentation import CompactValue
 
 from dataclasses import dataclass
-from enum import Enum
 from typing import ClassVar, Literal, TypeAlias
 from .._dto_support import get as _get, text as _text, numeric as _numeric, whole as _whole, flag as _flag
 
 
 Point = tuple[float, float]
 
-class Kind(str, Enum):
-    __module__ = "zipzi.parameters"
-    NORMAL = 'normal'
-    BLEND_SHAPE = 'blend_shape'
+from .values.parameters import ParameterKind as Kind
 
 @dataclass(frozen=True, init=False, repr=False)
 class ParameterSpec(CompactValue):

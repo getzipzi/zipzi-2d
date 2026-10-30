@@ -4,8 +4,10 @@ from importlib import import_module
 from collections.abc import Iterator, Sequence
 from typing import Required, TypedDict, cast
 
-GROUPS = ('animation', 'bindings', 'events', 'inspection', 'meshes', 'modeling', 'observation', 'ops', 'parameters', 'references', 'resources', 'runtime', 'sampling', 'scene', 'spatial')
+GROUPS = ('animation', 'bindings', 'events', 'inspection', 'meshes', 'modeling', 'modeling_addressing', 'modeling_addressing_kinds', 'modeling_addressing_patches', 'modeling_addressing_selectors', 'modeling_bindings', 'modeling_bindings_edits', 'modeling_commands', 'modeling_common', 'modeling_deletion', 'modeling_deletion_decisions', 'modeling_expression', 'modeling_mesh', 'modeling_motion', 'modeling_observation', 'modeling_parameters', 'modeling_physics', 'modeling_pose', 'modeling_preview', 'modeling_project', 'modeling_queries', 'modeling_resources', 'modeling_runtime', 'modeling_sampling', 'modeling_scene', 'modeling_scene_edits', 'modeling_spatial', 'observation', 'ops', 'parameters', 'references', 'resources', 'runtime', 'runtime_edit', 'runtime_session', 'sampling', 'scene', 'spatial')
 DOMAINS = ('meshes', 'parameters', 'bindings', 'resources', 'scene', 'sampling', 'events', 'references', 'modeling', 'ops', 'animation', 'spatial', 'observation', 'inspection')
+MODELING_DOMAINS = ('addressing', 'bindings', 'commands', 'common', 'deletion', 'expression', 'mesh', 'motion', 'observation', 'parameters', 'physics', 'pose', 'preview', 'project', 'queries', 'resources', 'runtime', 'sampling', 'scene', 'spatial')
+SPLITS = {'scene': {'edits': ('SceneOperation', 'SceneEdit', 'SceneContentEdit', 'OrganizationEdit', 'ReparentEdit', 'AttachmentEdit')}, 'bindings': {'edits': ('BindingAuthoringEdit', 'BindingGridEdit', 'BlendAuthoringEdit', 'MeshGridEdit')}, 'addressing': {'kinds': ('ObjectKind',), 'patches': ('AddressPatch',), 'selectors': ('AddressSelector',)}, 'deletion': {'decisions': ('DeletionChoice', 'DeletionDecision', 'DeletionEffect', 'DeletionReason')}}
 
 class Entry(TypedDict, total=False):
     kind: str
@@ -27,7 +29,16 @@ class Resolved(TypedDict, total=False):
     common: str
 
 def _group(path: str) -> str:
-    segment = path.split('.')[1] if '.' in path else ''
+    parts = path.split('.')
+    segment = parts[1] if len(parts)>1 else ''
+    if segment == 'modeling' and len(parts)>2 and parts[2] in MODELING_DOMAINS:
+        if len(parts)>3:
+            for suffix, prefixes in SPLITS.get(parts[2], {}).items():
+                if parts[3].startswith(prefixes):
+                    return 'modeling_' + parts[2] + '_' + suffix
+        return 'modeling_' + parts[2]
+    if segment in {'Session', 'Edit'}:
+        return 'runtime_' + segment.lower()
     return segment if segment in DOMAINS else 'runtime'
 
 def _data(name: str) -> dict[str, Entry]:

@@ -1,6 +1,7 @@
 """Finite Python binding declarations; lifecycle/transport hooks remain handwritten."""
 import ast
 import json
+import re
 import importlib.util
 from pathlib import Path
 
@@ -126,14 +127,14 @@ PUBLIC_EXPORTS = {'meshes': ('Mesh values are generated; selected Plan intents a
 
 PUBLIC_EXPORTS['animation'] = ('Independent frozen animation controls and CPU playback results.',
     ['from ._preview import Preview as Preview',
-     'from ._generated.modeling import PreviewCommand as Command, PreviewCommandSetParameter as SetParameter, PreviewCommandScheduleMotion as ScheduleMotion, PreviewCommandScheduleRegistration as ScheduleRegistration, PreviewCommandScheduleExpression as ScheduleExpression, PreviewCommandScheduleParameter as ScheduleParameter, PreviewCommandSetPhysics as SetPhysics, PreviewCommandReset as Reset, PreviewState as State, PreviewFrame as Frame, PreviewBatch as Batch'],
+     'from ._generated.values import PreviewCommand as Command, PreviewCommandSetParameter as SetParameter, PreviewCommandScheduleMotion as ScheduleMotion, PreviewCommandScheduleRegistration as ScheduleRegistration, PreviewCommandScheduleExpression as ScheduleExpression, PreviewCommandScheduleParameter as ScheduleParameter, PreviewCommandSetPhysics as SetPhysics, PreviewCommandReset as Reset, PreviewState as State, PreviewFrame as Frame, PreviewBatch as Batch'],
     ['Preview','Command','SetParameter','ScheduleMotion','ScheduleRegistration','ScheduleExpression','ScheduleParameter','SetPhysics','Reset','State','Frame','Batch'])
 
 PUBLIC_EXPORTS['spatial'] = ('CPU model-space geometric bounds and hits; textures, masks and occlusion are not tested.',
-    ['from ._generated.modeling import SpatialQuery as Query, SpatialQueryBounds as Bounds, SpatialQueryHits as Hits, ObjectTargetMesh as MeshTarget, ObjectTargetPart as PartTarget, ObjectTarget as Target, SpatialResult as Result, SpatialResultBounds as BoundsResult, SpatialResultHits as HitsResult, ObjectBounds as ObjectBounds, GeometryQuery as GeometryQuery, GeometryHit as Hit, TriangleHit as Triangle, SpatialFrame as Frame, SpatialSamples as Batch'],
+    ['from ._generated.values import SpatialQuery as Query, SpatialQueryBounds as Bounds, SpatialQueryHits as Hits, ObjectTargetMesh as MeshTarget, ObjectTargetPart as PartTarget, ObjectTarget as Target, SpatialResult as Result, SpatialResultBounds as BoundsResult, SpatialResultHits as HitsResult, ObjectBounds as ObjectBounds, GeometryQuery as GeometryQuery, GeometryHit as Hit, TriangleHit as Triangle, SpatialFrame as Frame, SpatialSamples as Batch'],
     ['Query','Bounds','Hits','MeshTarget','PartTarget','Target','Result','BoundsResult','HitsResult','ObjectBounds','GeometryQuery','Hit','Triangle','Frame','Batch'])
 PUBLIC_EXPORTS['observation'] = ('GPU images and source metadata rendered by Rust from frozen authoring or Preview states.',
-    ['from ._generated.modeling import ObservationView as View, TopologyOverlay as Overlay, TopologyThresholds as Thresholds, ObjectTargetMesh as MeshTarget, ObjectTargetPart as PartTarget, ObservationImage as Image, ObservationBatch as Batch, ObservedTexture as Texture, ObservedBounds as Bounds, MeshQuality as MeshQuality, TriangleQuality as TriangleQuality, TextureCoverage as TextureCoverage'],
+    ['from ._generated.values import ObservationView as View, TopologyOverlay as Overlay, TopologyThresholds as Thresholds, ObjectTargetMesh as MeshTarget, ObjectTargetPart as PartTarget, ObservationImage as Image, ObservationBatch as Batch, ObservedTexture as Texture, ObservedBounds as Bounds, MeshQuality as MeshQuality, TriangleQuality as TriangleQuality, TextureCoverage as TextureCoverage'],
     ['View','Overlay','Thresholds','MeshTarget','PartTarget','Image','Batch','Texture','Bounds','MeshQuality','TriangleQuality','TextureCoverage'])
 TARGETS=frozenset('client/python/zipzi/'+n+'.py' for n in PUBLIC_EXPORTS) | frozenset({'client/python/zipzi/_generated/facades.py','client/python/zipzi/_generated/discovery.py','src/generated/discovery.rs','client/python/zipzi/_generated/request_directory.py','client/python/zipzi/_generated/backend_bindings.py'})
 
@@ -346,7 +347,7 @@ def render_api(contract,header,rust_header,resolve=lambda shape: shape):
             if hook:
                 if hook not in actual:raise ValueError('Missing unique transport hook '+hook)
                 hooks[cls+'.'+name]={'hook':hook,'reason':'Own transport/GIL, request identity, binary stages or cleanup; public projection stays in Call','contracts':['C01','C07','C08']}
-    backend=[header.rstrip(), 'from __future__ import annotations','from abc import ABC, abstractmethod','from pathlib import Path','from typing import TYPE_CHECKING, Literal','from .. import _operations as ops, sampling','from . import modeling, scene','from .plan_intents import Intent, wire as intent_wire','from .planning import ModelingPlanOperation, encode_modeling','from .._errors import unwrap','from .._values import Source, SessionId, record','from ..events import Cursor','from ..backends._transfers import Transfer, TransferBackend','from ..backends import JobKind','if TYPE_CHECKING:','    from ..backends._native_types import NativeRuntime','']
+    backend=[header.rstrip(), 'from __future__ import annotations','from abc import ABC, abstractmethod','from pathlib import Path','from typing import TYPE_CHECKING, Literal','from .. import _operations as ops, sampling','from . import values as modeling, codecs as codec, scene','from .plan_intents import Intent, wire as intent_wire','from .planning import ModelingPlanOperation, encode_modeling','from .._errors import unwrap','from .._values import Source, SessionId, record','from ..events import Cursor','from ..backends._transfers import Transfer, TransferBackend','from ..backends import JobKind','if TYPE_CHECKING:','    from ..backends._native_types import NativeRuntime','']
     for cls,methods in BINDINGS.items():
         backend+=['class '+cls+'Bindings('+('TransferBackend, ' if cls=='Connected' else '')+'ABC):']
         if cls=='Local':backend+=['    _native: NativeRuntime']
@@ -359,4 +360,4 @@ def render_api(contract,header,rust_header,resolve=lambda shape: shape):
         backend+=['']
     backend += ['TRANSPORT_HOOKS = '+repr(hooks), '']
     reexports={'client/python/zipzi/'+name+'.py':header+repr(doc)+'\n'+'\n'.join(imports)+'\n__all__ = '+repr(names)+'\n' for name,(doc,imports,names) in PUBLIC_EXPORTS.items()}
-    return {**reexports, 'client/python/zipzi/_generated/backend_bindings.py':'\n'.join(backend),'client/python/zipzi/_generated/facades.py':'\n'.join(facade), 'client/python/zipzi/_generated/discovery.py':'\n'.join(py), 'src/generated/discovery.rs':'\n'.join(rs), 'client/python/zipzi/_generated/request_directory.py':'\n'.join(directory)+'\n'}
+    return {**reexports, 'client/python/zipzi/_generated/backend_bindings.py':re.sub(r'\bmodeling\.(?=(?:read_|encode_|validate_))', 'codec.', '\n'.join(backend)),'client/python/zipzi/_generated/facades.py':'\n'.join(facade), 'client/python/zipzi/_generated/discovery.py':'\n'.join(py), 'src/generated/discovery.rs':'\n'.join(rs), 'client/python/zipzi/_generated/request_directory.py':'\n'.join(directory)+'\n'}

@@ -1,7 +1,7 @@
 """Direct finite binary adapters from compiled Rust field/layout declarations."""
 import keyword
 import re
-TARGETS=frozenset({'client/python/zipzi/_generated/binary.py'})
+TARGETS=frozenset()
 PRELUDE='''from __future__ import annotations
 from collections.abc import Mapping
 from typing import cast
@@ -9,7 +9,7 @@ from uuid import UUID
 import math
 import struct
 from .. import _operations as ops, meshes, resources
-from . import modeling as m, scene
+from . import values as m, scene
 from .._values import Source,Version
 from .._results import Snapshot
 from .._values import record, sequence, string, integer, number

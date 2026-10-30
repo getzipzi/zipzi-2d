@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from ._presentation import CompactValue
 from ._results import Snapshot
-from ._generated import modeling as m
+from ._generated import values as m, codecs as _modeling_codec
 
 @dataclass(frozen=True,repr=False)
 class Report(CompactValue):
@@ -50,7 +50,7 @@ def save(result:Snapshot[m.ObservationBatch]|Snapshot[m.PreviewBatch],directory:
             visible_roi=image.visible_roi,scale=image.scale,offset=image.offset,
             textures=[dict(asset_id=t.asset_id,sha256=t.sha256) for t in image.textures],
             quality=[asdict(q) for q in image.quality],playback=motion))
-    metadata=json.dumps(dict(schema=1,source=result.source._wire(),view=m.encode_ObservationView(view),frames=manifest_frames),
+    metadata=json.dumps(dict(schema=1,source=result.source._wire(),view=_modeling_codec.encode_ObservationView(view),frames=manifest_frames),
         ensure_ascii=False,allow_nan=False,sort_keys=True,indent=2)+"\n"
     directory=directory.absolute();directory.mkdir(parents=True,exist_ok=False)
     paths=tuple(directory/str(frame['file']) for frame in manifest_frames)

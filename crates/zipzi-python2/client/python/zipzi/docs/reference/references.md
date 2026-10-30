@@ -61,7 +61,7 @@ Return cached metadata for this owner's original pending request, or None. Readi
 
 ## zipzi.references.FieldAddress.plan
 
-`(patch: modeling.AddressPatch) -> Plan`
+`(patch: modeling.addressing.AddressPatch) -> Plan`
 
 Plan a typed address patch under captured SDK epochs and context. Stale fields or recreated objects fail explicitly. Returns the same owned Plan form used by Edit.apply.
 
@@ -162,7 +162,7 @@ Retain the handle for pending cleanup. No formal document write occurs.
 
 ## zipzi.references.ObjectRef.capabilities
 
-`(domain: modeling.CapabilityDomain) -> Snapshot[modeling.Capabilities]`
+`(domain: modeling.addressing.CapabilityDomain) -> Snapshot[modeling.addressing.Capabilities]`
 
 Query a declared capability domain for this live reference. Returns an owned source-bearing capability result, without reserving future execution.
 

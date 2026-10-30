@@ -1,5 +1,5 @@
 """Backend interfaces contain no domain algorithms."""
-from .._generated import modeling
+from .._generated import values as modeling
 from .._generated.resource_backends import ResourceBackend
 from pathlib import Path
 from typing import Literal, Protocol

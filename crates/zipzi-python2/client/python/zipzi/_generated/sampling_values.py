@@ -77,11 +77,7 @@ class Parameter(CompactValue):
         if isinstance(value, cls): return value
         return cls(id=_text(_get(value, 'id')), requested=_numeric(_get(value, 'requested'), 'f32'), value=_numeric(_get(value, 'value'), 'f32'), clamped=_flag(_get(value, 'clamped')))
 
-class BlendMode(str, Enum):
-    __module__ = "zipzi.sampling"
-    NORMAL = 'normal'
-    ADDITIVE = 'additive'
-    MULTIPLICATIVE = 'multiplicative'
+from .values.scene import BlendMode as BlendMode
 
 @dataclass(frozen=True, init=False, repr=False)
 class Drawable(CompactValue):
@@ -242,11 +238,7 @@ class Frame(CompactValue):
         if isinstance(value, cls): return value
         return cls(source_revision=_whole(_get(value, 'source_revision'), 'u64'), parameters=tuple(Parameter._read(item) for item in _items(_get(value, 'parameters'))), drawables=tuple(Drawable._read(item) for item in _items(_get(value, 'drawables'))), offscreens=tuple(Offscreen._read(item) for item in _items(_get(value, 'offscreens'))), render_plan=tuple(read_RenderCommand(item) for item in _items(_get(value, 'render_plan'))), deformers=tuple(Deformer._read(item) for item in _items(_get(value, 'deformers'))))
 
-class DiagnosticKind(str, Enum):
-    __module__ = "zipzi.sampling"
-    SMALL_TRIANGLE = 'SmallTriangle'
-    INCONSISTENT_WINDING = 'InconsistentWinding'
-    OUTSIDE_MODEL_BOUNDS = 'OutsideModelBounds'
+from .values.sampling import GeometryDiagnosticKind as DiagnosticKind
 
 @dataclass(frozen=True, init=False, repr=False)
 class Diagnostic(CompactValue):
@@ -266,11 +258,14 @@ class Diagnostic(CompactValue):
         if isinstance(value, cls): return value
         return cls(kind=DiagnosticKind(_text(_get(value, 'kind'))), mesh_id=_text(_get(value, 'mesh_id')), triangle_index=None if _get(value, 'triangle_index') is None else _whole(_get(value, 'triangle_index'), 'usize'))
 
-from .modeling import TriangleQuality as TriangleQuality, read_TriangleQuality as read_TriangleQuality
+from .values import TriangleQuality as TriangleQuality
+from .codecs import read_TriangleQuality as read_TriangleQuality
 
-from .modeling import TextureCoverage as TextureCoverage, read_TextureCoverage as read_TextureCoverage
+from .values import TextureCoverage as TextureCoverage
+from .codecs import read_TextureCoverage as read_TextureCoverage
 
-from .modeling import MeshQuality as MeshQuality, read_MeshQuality as read_MeshQuality
+from .values import MeshQuality as MeshQuality
+from .codecs import read_MeshQuality as read_MeshQuality
 
 @dataclass(frozen=True, init=False, repr=False)
 class Result(CompactValue):

@@ -122,8 +122,8 @@ def uniform_results(session: zipzi.Session, id: str) -> zipzi.Batch[meshes.Mesh]
 
 
 def canonical_conversion(session: zipzi.Session, owner: str, parameter: str) -> zipzi.PlanReport:
-    operation = modeling.ModelingCommandBinding(intent=modeling.BindingAuthoringEditMeshGrid(
-        value=modeling.MeshGridEditMoveSample(binding_id=owner, parameter_id=parameter, from_=.5, to=.4)))
+    operation = modeling.commands.ModelingCommandBinding(intent=modeling.bindings.BindingAuthoringEditMeshGrid(
+        value=modeling.bindings.MeshGridEditMoveSample(binding_id=owner, parameter_id=parameter, from_=.5, to=.4)))
     assert_type(session.modeling.records(modeling.ModelingQuery(bindings=(owner,))),
                 zipzi.Snapshot[modeling.OwnedModelingRecords])
     assert_type(zipzi.recover_call(session.plan_async, operation), zipzi.Job[zipzi.Plan])
@@ -135,10 +135,10 @@ def canonical_conversion(session: zipzi.Session, owner: str, parameter: str) -> 
 
 
 def canonical_address(session: zipzi.Session, sample: str) -> zipzi.PlanReport:
-    with session.address(modeling.AddressSelectorBinding(id=sample)) as address:
+    with session.address(modeling.addressing.AddressSelectorBinding(id=sample)) as address:
         assert_type(address, references.FieldAddress)
-        with address.plan(modeling.AddressPatchBinding(
-                patch=modeling.BindingFieldPatchSampleValue(value=.25))) as plan:
+        with address.plan(modeling.addressing.AddressPatchBinding(
+                patch=modeling.bindings.BindingFieldPatchSampleValue(value=.25))) as plan:
             assert_type(plan, zipzi.Plan)
             return plan.report
 
@@ -156,7 +156,7 @@ def unified_planning(session: zipzi.Session, edit: zipzi.Edit, id: str) -> zipzi
 
 
 def resource_project_jobs(runtime: zipzi.Runtime, session: zipzi.Session, path: Path,
-                          png: bytes) -> modeling.ProjectReport:
+                          png: bytes) -> modeling.project.ProjectReport:
     with runtime.resources.prepare_buffer(png) as buffer:
         assert_type(buffer, zipzi.Buffer)
         assert_type(buffer.read(0, 8), bytes)
@@ -165,24 +165,24 @@ def resource_project_jobs(runtime: zipzi.Runtime, session: zipzi.Session, path: 
             with job.wait() as image:
                 assert_type(image.pixels(), resources.ImagePixels)
     assert_type(session.project.save(path), zipzi.Job[zipzi.SaveReceipt])
-    assert_type(session.project.open(path), zipzi.Job[modeling.ProjectReport])
-    assert_type(session.project.replace(path, modeling.ImportFormat.MODEL3), zipzi.Job[modeling.ProjectReport])
-    assert_type(session.project.diagnose(), zipzi.Job[modeling.ProjectReport])
-    export = zipzi.recover_call(session.project.export, path, modeling.ExportFormat.PACKAGE)
-    assert_type(export, zipzi.Job[modeling.ProjectReport])
+    assert_type(session.project.open(path), zipzi.Job[modeling.project.ProjectReport])
+    assert_type(session.project.replace(path, modeling.project.ImportFormat.MODEL3), zipzi.Job[modeling.project.ProjectReport])
+    assert_type(session.project.diagnose(), zipzi.Job[modeling.project.ProjectReport])
+    export = zipzi.recover_call(session.project.export, path, modeling.project.ExportFormat.PACKAGE)
+    assert_type(export, zipzi.Job[modeling.project.ProjectReport])
     return zipzi.recover_call(export.wait)
 
 
 def animation_authoring(session: zipzi.Session, edit: zipzi.Edit, id: str) -> zipzi.Snapshot[modeling.OwnedModelingRecords]:
-    operation = modeling.ModelingCommandMotion(intent=modeling.MotionEditCreateGroup(id=id, name="Motion group"))
+    operation = modeling.commands.ModelingCommandMotion(intent=modeling.motion.MotionEditCreateGroup(id=id, name="Motion group"))
     assert_type(edit.apply(operation), zipzi.WriteResult)
     assert_type(session.plan(operation), zipzi.Plan)
     assert_type(zipzi.recover_call(edit.plan_async, operation), zipzi.Job[zipzi.Plan])
     query = modeling.ModelingQuery(motions=(id,), expressions=(id,), physics=True, pose=True)
     snapshot = session.modeling.records(query)
-    assert_type(snapshot.value.physics, modeling.PhysicsAsset | None)
-    with session.address(modeling.AddressSelectorPose(id=id)) as address:
-        assert_type(address.plan(modeling.AddressPatchPose(fields=modeling.PoseFieldsGroup(name="New"))), zipzi.Plan)
+    assert_type(snapshot.value.physics, modeling.physics.PhysicsAsset | None)
+    with session.address(modeling.addressing.AddressSelectorPose(id=id)) as address:
+        assert_type(address.plan(modeling.addressing.AddressPatchPose(fields=modeling.pose.PoseFieldsGroup(name="New"))), zipzi.Plan)
     return snapshot
 
 from zipzi import animation
@@ -231,21 +231,21 @@ def manual_mesh_transfer_report(result: zipzi.WriteResult) -> int:
     report=result.mesh_transfer
     if report is None:
         return 0
-    assert_type(report, modeling.ManualMeshTransferReport)
+    assert_type(report, modeling.mesh.ManualMeshTransferReport)
     assert_type(report.shape_count, int)
     assert_type(report.cost.temporary_bytes, int)
     return report.added+report.moved+report.removed
 
 
-def deletion_review(session: zipzi.Session, mesh_id: str) -> modeling.DeletionPage:
-    intent = modeling.ModelingCommandDeletion(intent=modeling.DeletionIntent(
-        request=modeling.DeletionRequest(roots=(modeling.DeletionTargetMesh(value=mesh_id),))))
+def deletion_review(session: zipzi.Session, mesh_id: str) -> modeling.deletion.DeletionPage:
+    intent = modeling.commands.ModelingCommandDeletion(intent=modeling.deletion.DeletionIntent(
+        request=modeling.deletion.DeletionRequest(roots=(modeling.deletion.DeletionTargetMesh(value=mesh_id),))))
     with session.plan_async(intent).wait() as plan:
         summary = plan.report.deletion
         if summary is not None:
-            assert_type(summary.state, modeling.DeletionReviewState)
-            assert_type(summary.sections, tuple[modeling.DeletionSectionCount, ...])
-        page = plan.deletion_page(modeling.DeletionSection.REWRITTEN, limit=64)
-        assert_type(page, modeling.DeletionPage)
-        assert_type(page.rows, tuple[modeling.DeletionRow, ...])
+            assert_type(summary.state, modeling.deletion.DeletionReviewState)
+            assert_type(summary.sections, tuple[modeling.deletion.DeletionSectionCount, ...])
+        page = plan.deletion_page(modeling.deletion.DeletionSection.REWRITTEN, limit=64)
+        assert_type(page, modeling.deletion.DeletionPage)
+        assert_type(page.rows, tuple[modeling.deletion.DeletionRow, ...])
         return page

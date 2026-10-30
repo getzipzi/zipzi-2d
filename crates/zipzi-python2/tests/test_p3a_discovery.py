@@ -1,6 +1,8 @@
 """P3A-3/4/5 focused regressions, staged for the later combined acceptance run."""
 from pathlib import Path
 import sys
+import subprocess
+import importlib.util
 import unittest
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parent))
@@ -56,21 +58,52 @@ class P3ADiscovery(unittest.TestCase):
         self.assertEqual(geometry.summary(),repr(geometry))
         self.assertEqual(len(geometry.positions),1000)
         self.assertIn('vertex_ids',geometry.__doc__)
+        self.assertIs(meshes.ConstraintKind,zipzi.modeling.mesh.MeshConstraintKind)
+        self.assertIs(zipzi.parameters.Kind,zipzi.modeling.parameters.ParameterKind)
+        self.assertIs(zipzi.sampling.DiagnosticKind,zipzi.modeling.sampling.GeometryDiagnosticKind)
+        self.assertIs(zipzi.sampling.BlendMode,zipzi.modeling.scene.BlendMode)
+        self.assertIs(zipzi.sampling.MeshQuality,zipzi.modeling.sampling.MeshQuality)
+        self.assertIs(zipzi.sampling.TriangleQuality,zipzi.modeling.sampling.TriangleQuality)
+        self.assertIs(zipzi.sampling.TextureCoverage,zipzi.modeling.observation.TextureCoverage)
+        self.assertFalse(hasattr(zipzi.modeling,'DeletionRequest'))
+        self.assertIsNone(importlib.util.find_spec('zipzi._generated.modeling'))
 
     def test_offline_catalog_aliases_fields_and_cycle_detection(self):
         from zipzi._generated.catalog import index
-        alias=zipzi.describe('modeling.PhysicsAssetProperty')
-        original=zipzi.describe('modeling.PhysicsAssetPropertyFps')
-        self.assertEqual(alias.path,'zipzi.modeling.PhysicsAssetProperty')
+        alias=zipzi.describe('modeling.physics.PhysicsAssetProperty')
+        original=zipzi.describe('modeling.physics.PhysicsAssetPropertyFps')
+        self.assertEqual(alias.path,'zipzi.modeling.physics.PhysicsAssetProperty')
         self.assertEqual(alias.fields,original.fields)
-        self.assertIn('zipzi.modeling.PhysicsAssetProperty.summary',alias.children)
+        self.assertIn('zipzi.modeling.physics.PhysicsAssetProperty.summary',alias.children)
         self.assertEqual(zipzi.describe(alias.path+'.summary').documentation,
                          zipzi.describe(original.path+'.summary').documentation)
         for name,text in alias.fields:
             self.assertEqual(alias.format().count(name+': '+text),1)
         with self.assertRaises(KeyError):zipzi.describe('modeling.missing')
+        distinct=index._data('modeling_addressing_patches')['zipzi.modeling.addressing.AddressPatch']
+        self.assertNotIn('alias',distinct)
         with patch.object(index,'_data',return_value={'zipzi.a':{'alias':'zipzi.b'},'zipzi.b':{'alias':'zipzi.a'}}):
             with self.assertRaisesRegex(ValueError,'alias cycle'):index.lookup('zipzi.a')
+
+    def test_modeling_domain_import_orders_and_default_factories(self):
+        package=str(Path(zipzi.__file__).parent.parent)
+        for order in (('zipzi.modeling.scene','zipzi._generated.codecs.physics'),
+                      ('zipzi._generated.codecs.physics','zipzi.modeling.scene')):
+            code='''import importlib, inspect, sys, typing
+sys.path.insert(0, {package!r})
+for name in {order!r}: importlib.import_module(name)
+from zipzi.modeling import deletion, mesh, parameters
+from zipzi import meshes
+request=deletion.DeletionRequest(roots=())
+assert request.tolerance.absolute == .001
+value=parameters.Parameter(id='a',runtime_id='a',name='a',minimum=0.,maximum=1.,default_value=.5)
+assert value.kind is parameters.ParameterKind.NORMAL
+assert meshes.ConstraintKind is mesh.MeshConstraintKind
+for value in (deletion.DeletionRequest, parameters.Parameter, mesh.MeshConstraint):
+    inspect.signature(value); typing.get_type_hints(value)
+'''.format(package=package,order=order)
+            result=subprocess.run([sys.executable,'-I','-c',code],capture_output=True,text=True)
+            self.assertEqual(result.returncode,0,result.stderr)
 
     def test_candidate_cursor_undo_and_wrong_collection_fail_without_aborting_reads(self):
         for mode in ('local','connected'):

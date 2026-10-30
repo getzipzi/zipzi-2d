@@ -18,16 +18,16 @@ def fixture(runtime:zipzi.Runtime)->zipzi.Session:
             edit.parameters.create(parameters.ParameterSpec("P",0.,1.,0.,id=uid(4),runtime_id="P"))
             edit.bindings.create(bindings.MeshBindingSpec(uid(3),(bindings.Axis(uid(4),(0.,1.)),),(
                 bindings.Keyform((0.,),GEOMETRY.positions),bindings.Keyform((1.,),tuple((x+1.,y) for x,y in GEOMETRY.positions))),id=uid(5)))
-            edit.apply(m.ModelingCommandMotion(intent=m.MotionEditCreate(id=uid(10),name="Move",registration_id=uid(11),destination=m.MotionContainerRoot())))
+            edit.apply(m.commands.ModelingCommandMotion(intent=m.motion.MotionEditCreate(id=uid(10),name="Move",registration_id=uid(11),destination=m.motion.MotionContainerRoot())))
             clip=edit.modeling.records(m.ModelingQuery(motions=(uid(10),))).value.motions[0]
-            clip=replace(clip,duration=1.,fade_in=0.,fade_out=0.,tracks=(m.MotionTrack(id=uid(12),target=m.MotionTrackTargetParameter(parameter_id=uid(4)),
-                initial=m.MotionKey(id=uid(13),time=0.,value=0.),segments=(m.MotionSegmentLinear(end=m.MotionKey(id=uid(14),time=1.,value=1.)),),extensions={}),))
-            edit.apply(m.ModelingCommandReplaceMotion(clip=clip))
-            edit.apply(m.ModelingCommandMotion(intent=m.MotionEditCreate(id=uid(20),name="Transparent",registration_id=uid(21),destination=m.MotionContainerRoot())))
+            clip=replace(clip,duration=1.,fade_in=0.,fade_out=0.,tracks=(m.motion.MotionTrack(id=uid(12),target=m.motion.MotionTrackTargetParameter(parameter_id=uid(4)),
+                initial=m.motion.MotionKey(id=uid(13),time=0.,value=0.),segments=(m.motion.MotionSegmentLinear(end=m.motion.MotionKey(id=uid(14),time=1.,value=1.)),),extensions={}),))
+            edit.apply(m.commands.ModelingCommandReplaceMotion(clip=clip))
+            edit.apply(m.commands.ModelingCommandMotion(intent=m.motion.MotionEditCreate(id=uid(20),name="Transparent",registration_id=uid(21),destination=m.motion.MotionContainerRoot())))
             opacity=edit.modeling.records(m.ModelingQuery(motions=(uid(20),))).value.motions[0]
-            opacity=replace(opacity,duration=1.,fade_in=0.,fade_out=0.,tracks=(m.MotionTrack(id=uid(22),target=m.MotionTrackTargetModel(runtime_id="Opacity"),
-                initial=m.MotionKey(id=uid(23),time=0.,value=0.),segments=(),extensions={}),))
-            edit.apply(m.ModelingCommandReplaceMotion(clip=opacity))
+            opacity=replace(opacity,duration=1.,fade_in=0.,fade_out=0.,tracks=(m.motion.MotionTrack(id=uid(22),target=m.motion.MotionTrackTargetModel(runtime_id="Opacity"),
+                initial=m.motion.MotionKey(id=uid(23),time=0.,value=0.),segments=(),extensions={}),))
+            edit.apply(m.commands.ModelingCommandReplaceMotion(clip=opacity))
     return session
 
 def replace_image(runtime:zipzi.Runtime,edit:zipzi.Edit,rgba:bytes)->None:

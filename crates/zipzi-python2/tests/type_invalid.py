@@ -26,7 +26,7 @@ from zipzi import scene
 from zipzi import modeling
 
 def bad_animation(session: zipzi.Session, edit: zipzi.Edit) -> None:
-    edit.apply(modeling.ModelingCommandMotion(intent=modeling.PoseEditCreate(id="id")))  # error: reportArgumentType
+    edit.apply(modeling.commands.ModelingCommandMotion(intent=modeling.pose.PoseEditCreate(id="id")))  # error: reportArgumentType
     session.modeling.records(modeling.ModelingQuery(motions=(7,)))  # error: reportArgumentType
 
 def bad_scene(session: zipzi.Session, edit: zipzi.Edit) -> None:

@@ -23,52 +23,52 @@ def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:
         edit.parameters.create(parameters.ParameterSpec("P", -1., 1., 0., id=parameter, runtime_id="P"))
         edit.apply(scene.CreatePart(scene.PartSpec("Part", id=part)))
         edit.apply_many((
-            m.ModelingCommandMotion(intent=m.MotionEditCreateGroup(id=uid(10), name="Idle")),
-            m.ModelingCommandMotion(intent=m.MotionEditCreate(id=uid(11), name="Clip",
-                registration_id=uid(12), destination=m.MotionContainerGroup(value=uid(10)))),
-            m.ModelingCommandExpression(intent=m.ExpressionEditCreate(id=uid(20), name="Smile")),
-            m.ModelingCommandExpression(intent=m.ExpressionEditCreateEntry(owner=uid(20), id=uid(21))),
-            m.ModelingCommandPhysics(intent=m.PhysicsEditCreateGroup(asset_id=uid(30), id=uid(31), name="Rig")),
-            m.ModelingCommandPose(intent=m.PoseEditCreateGroup(pose_id=uid(40), id=uid(41), name="Pose")),
-            m.ModelingCommandPose(intent=m.PoseEditCreateEntry(group_id=uid(41), id=uid(42))),
+            m.commands.ModelingCommandMotion(intent=m.motion.MotionEditCreateGroup(id=uid(10), name="Idle")),
+            m.commands.ModelingCommandMotion(intent=m.motion.MotionEditCreate(id=uid(11), name="Clip",
+                registration_id=uid(12), destination=m.motion.MotionContainerGroup(value=uid(10)))),
+            m.commands.ModelingCommandExpression(intent=m.expression.ExpressionEditCreate(id=uid(20), name="Smile")),
+            m.commands.ModelingCommandExpression(intent=m.expression.ExpressionEditCreateEntry(owner=uid(20), id=uid(21))),
+            m.commands.ModelingCommandPhysics(intent=m.physics.PhysicsEditCreateGroup(asset_id=uid(30), id=uid(31), name="Rig")),
+            m.commands.ModelingCommandPose(intent=m.pose.PoseEditCreateGroup(pose_id=uid(40), id=uid(41), name="Pose")),
+            m.commands.ModelingCommandPose(intent=m.pose.PoseEditCreateEntry(group_id=uid(41), id=uid(42))),
         ))
         selected = edit.modeling.records(query)
         assert selected.source.sequence == 3
         assert selected.value.motion_registrations[0].clip_id == uid(11)
         assert selected.value.motions[0].name == "Clip"
         assert selected.value.physics.id == uid(30) and selected.value.pose.id == uid(40)
-        clip = replace(selected.value.motions[0], duration=1., tracks=(m.MotionTrack(
-            id=uid(13), target=m.MotionTrackTargetParameter(parameter_id=parameter),
-            initial=m.MotionKey(id=uid(14), time=0., value=-1.),
-            segments=(m.MotionSegmentLinear(end=m.MotionKey(id=uid(15), time=1., value=1.)),),
+        clip = replace(selected.value.motions[0], duration=1., tracks=(m.motion.MotionTrack(
+            id=uid(13), target=m.motion.MotionTrackTargetParameter(parameter_id=parameter),
+            initial=m.motion.MotionKey(id=uid(14), time=0., value=-1.),
+            segments=(m.motion.MotionSegmentLinear(end=m.motion.MotionKey(id=uid(15), time=1., value=1.)),),
             extensions={}),))
-        edit.apply(m.ModelingCommandReplaceMotion(clip=clip))
-        event = m.MotionEvent(id=uid(16), time=.25, value="tick", extensions={})
-        with edit.plan(m.ModelingCommandMotion(intent=m.MotionEditSetEvent(clip=uid(11), event=event))) as plan:
+        edit.apply(m.commands.ModelingCommandReplaceMotion(clip=clip))
+        event = m.motion.MotionEvent(id=uid(16), time=.25, value="tick", extensions={})
+        with edit.plan(m.commands.ModelingCommandMotion(intent=m.motion.MotionEditSetEvent(clip=uid(11), event=event))) as plan:
             assert plan.report.source == edit.modeling.records(query).source
             assert uid(11) in plan.report.affected_ids
             edit.apply(plan)
         entry = selected.value.expressions[0].entries[0]
-        fields = m.ExpressionEntryFields(target=m.ExpressionTargetResolved(parameter_id=parameter),
-            value=.75, blend=m.ExpressionBlend.OVERWRITE)
-        edit.apply(m.ModelingCommandExpression(intent=m.ExpressionEditPatchEntry(id=entry.id,
-            expected=m.ExpressionEntryFields(target=entry.target, value=entry.value, blend=entry.blend), fields=fields)))
-        edit.apply(m.ModelingCommandPhysics(intent=m.PhysicsEditCreateInput(group_id=uid(31), id=uid(32))))
-        edit.apply(m.ModelingCommandPhysics(intent=m.PhysicsEditPatch(patch=m.PhysicsPatch(
-            asset_id=uid(30), asset_changes=(m.PhysicsAssetPropertyFps(value=30.),),
-            rig=m.PhysicsRigPatch(group_id=uid(31), changes=(
-                m.PhysicsPropertyInputParameter(id=uid(32), target=m.PhysicsTargetResolved(parameter_id=parameter)),
-                m.PhysicsPropertyInputWeight(id=uid(32), value=75.),
+        fields = m.expression.ExpressionEntryFields(target=m.expression.ExpressionTargetResolved(parameter_id=parameter),
+            value=.75, blend=m.expression.ExpressionBlend.OVERWRITE)
+        edit.apply(m.commands.ModelingCommandExpression(intent=m.expression.ExpressionEditPatchEntry(id=entry.id,
+            expected=m.expression.ExpressionEntryFields(target=entry.target, value=entry.value, blend=entry.blend), fields=fields)))
+        edit.apply(m.commands.ModelingCommandPhysics(intent=m.physics.PhysicsEditCreateInput(group_id=uid(31), id=uid(32))))
+        edit.apply(m.commands.ModelingCommandPhysics(intent=m.physics.PhysicsEditPatch(patch=m.physics.PhysicsPatch(
+            asset_id=uid(30), asset_changes=(m.physics.PhysicsAssetPropertyFps(value=30.),),
+            rig=m.physics.PhysicsRigPatch(group_id=uid(31), changes=(
+                m.physics.PhysicsPropertyInputParameter(id=uid(32), target=m.physics.PhysicsTargetResolved(parameter_id=parameter)),
+                m.physics.PhysicsPropertyInputWeight(id=uid(32), value=75.),
             ))))))
         old_part = selected.value.pose.groups[0].entries[0].part
-        edit.apply(m.ModelingCommandPose(intent=m.PoseEditPatch(id=uid(42),
-            expected=m.PoseFieldsEntry(part=old_part),
-            fields=m.PoseFieldsEntry(part=m.PosePartRefResolved(part_id=part)))))
+        edit.apply(m.commands.ModelingCommandPose(intent=m.pose.PoseEditPatch(id=uid(42),
+            expected=m.pose.PoseFieldsEntry(part=old_part),
+            fields=m.pose.PoseFieldsEntry(part=m.pose.PosePartRefResolved(part_id=part)))))
         candidate = edit.modeling.records(query)
         assert candidate.value.motions[0].events == (event,)
         assert candidate.value.physics.data.meta.Fps == 30.
         assert candidate.value.physics.data.settings[0].inputs[0].weight == 75.
-        assert candidate.value.pose.groups[0].entries[0].part == m.PosePartRefResolved(part_id=part)
+        assert candidate.value.pose.groups[0].entries[0].part == m.pose.PosePartRefResolved(part_id=part)
         assert session.info() == before
         assert session.modeling.records(query).value.motions == (None,)
         empty = edit.modeling.records(m.ModelingQuery())
@@ -82,27 +82,27 @@ def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:
 
     with ExitStack() as handles:
         for kind, id, domain, expected in (
-            ("motion", uid(11), m.CapabilityDomain.MOTION, m.CapabilitiesMotion),
-            ("expression", uid(20), m.CapabilityDomain.EXPRESSION, m.CapabilitiesExpression),
-            ("physics", uid(30), m.CapabilityDomain.PHYSICS, m.CapabilitiesPhysics),
-            ("pose", uid(40), m.CapabilityDomain.POSE, m.CapabilitiesPose),
+            ("motion", uid(11), m.addressing.CapabilityDomain.MOTION, m.addressing.CapabilitiesMotion),
+            ("expression", uid(20), m.addressing.CapabilityDomain.EXPRESSION, m.addressing.CapabilitiesExpression),
+            ("physics", uid(30), m.addressing.CapabilityDomain.PHYSICS, m.addressing.CapabilitiesPhysics),
+            ("pose", uid(40), m.addressing.CapabilityDomain.POSE, m.addressing.CapabilitiesPose),
         ):
             reference = handles.enter_context(session.reference(kind, id))
             assert isinstance(reference.capabilities(domain).value, expected)
-        for collection in (m.CollectionQueryMotion(collection=m.MotionContainerRoot()),
-                m.CollectionQueryMotionGroups(), m.CollectionQueryClips(), m.CollectionQueryExpressions(),
-                m.CollectionQueryExpressionEntries(expression_id=uid(20)),
-                m.CollectionQueryPhysics(collection=m.PhysicsCollectionGroups()),
-                m.CollectionQueryPose(collection=m.PoseCollectionGroups())):
-            assert isinstance(session.capabilities(collection).value, m.CapabilitiesCollection)
+        for collection in (m.queries.CollectionQueryMotion(collection=m.motion.MotionContainerRoot()),
+                m.queries.CollectionQueryMotionGroups(), m.queries.CollectionQueryClips(), m.queries.CollectionQueryExpressions(),
+                m.queries.CollectionQueryExpressionEntries(expression_id=uid(20)),
+                m.queries.CollectionQueryPhysics(collection=m.physics.PhysicsCollectionGroups()),
+                m.queries.CollectionQueryPose(collection=m.pose.PoseCollectionGroups())):
+            assert isinstance(session.capabilities(collection).value, m.addressing.CapabilitiesCollection)
         cases = (
-            (m.AddressSelectorMotionRegistration(id=uid(12)),
-             m.AddressPatchMotionRegistration(entry=replace(candidate.value.motion_registrations[0], fade_in=.5))),
-            (m.AddressSelectorExpressionEntry(id=uid(21)),
-             m.AddressPatchExpressionEntry(fields=replace(fields, value=.25))),
-            (m.AddressSelectorPhysics(id=uid(32)),
-             m.AddressPatchPhysics(changes=(m.PhysicsPropertyInputWeight(id=uid(32), value=50.),))),
-            (m.AddressSelectorPose(id=uid(41)), m.AddressPatchPose(fields=m.PoseFieldsGroup(name="Changed"))),
+            (m.addressing.AddressSelectorMotionRegistration(id=uid(12)),
+             m.addressing.AddressPatchMotionRegistration(entry=replace(candidate.value.motion_registrations[0], fade_in=.5))),
+            (m.addressing.AddressSelectorExpressionEntry(id=uid(21)),
+             m.addressing.AddressPatchExpressionEntry(fields=replace(fields, value=.25))),
+            (m.addressing.AddressSelectorPhysics(id=uid(32)),
+             m.addressing.AddressPatchPhysics(changes=(m.physics.PhysicsPropertyInputWeight(id=uid(32), value=50.),))),
+            (m.addressing.AddressSelectorPose(id=uid(41)), m.addressing.AddressPatchPose(fields=m.pose.PoseFieldsGroup(name="Changed"))),
         )
         for selector, patch in cases:
             with session.address(selector) as address, address.plan(patch) as plan:
@@ -120,11 +120,11 @@ def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:
                 assert session.info().history == (source.history[0], 1)
     # Child payload changes keep the root FadeIn address; changing FadeIn then
     # undoing it still retires that address. Exercise this on installed wheels too.
-    root_patch = m.AddressPatchPose(fields=m.PoseFieldsAsset(fade_in=.25))
-    with session.address(m.AddressSelectorPose(id=uid(40))) as root:
+    root_patch = m.addressing.AddressPatchPose(fields=m.pose.PoseFieldsAsset(fade_in=.25))
+    with session.address(m.addressing.AddressSelectorPose(id=uid(40))) as root:
         with session.edit("Pose child fields") as edit:
-            edit.apply(m.ModelingCommandPose(intent=m.PoseEditPatch(id=uid(41),
-                expected=m.PoseFieldsGroup(name="Pose"), fields=m.PoseFieldsGroup(name="Temporary"))))
+            edit.apply(m.commands.ModelingCommandPose(intent=m.pose.PoseEditPatch(id=uid(41),
+                expected=m.pose.PoseFieldsGroup(name="Pose"), fields=m.pose.PoseFieldsGroup(name="Temporary"))))
         with root.plan(root_patch):
             pass
         session.undo().wait()
@@ -140,7 +140,7 @@ def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:
             raise AssertionError("Undo revived the root Pose field address")
     assert session.modeling.records(query).value == candidate.value
     # Same generic Job path is used for asynchronous animation planning.
-    with session.plan_async(m.ModelingCommandMotion(intent=m.MotionEditRenameGroup(id=uid(10), name="Renamed"))) as job:
+    with session.plan_async(m.commands.ModelingCommandMotion(intent=m.motion.MotionEditRenameGroup(id=uid(10), name="Renamed"))) as job:
         with job.wait() as plan:
             with session.edit("Background animation plan") as edit:
                 edit.apply(plan)
@@ -149,7 +149,7 @@ def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:
     try:
         with session.edit("Atomic mixed-domain failure") as edit:
             edit.parameters.patch(parameter, parameters.ParameterPatch(name="Must roll back"))
-            edit.apply(m.ModelingCommandMotion(intent=m.MotionEditRenameGroup(id=uid(999), name="Missing")))
+            edit.apply(m.commands.ModelingCommandMotion(intent=m.motion.MotionEditRenameGroup(id=uid(999), name="Missing")))
     except zipzi.SdkFailure:
         pass
     else:
@@ -157,10 +157,10 @@ def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:
     assert session.info() == info and session.parameters.get(parameter).value.name == "P"
 
     # Existing sidecar exporters independently inspect the actual authored data.
-    for format, name, id in ((m.ExportFormat.MOTION3, "clip.motion3.json", uid(11)),
-            (m.ExportFormat.EXPRESSION3, "smile.exp3.json", uid(20)),
-            (m.ExportFormat.PHYSICS3, "rig.physics3.json", None),
-            (m.ExportFormat.POSE3, "pose.pose3.json", None)):
+    for format, name, id in ((m.project.ExportFormat.MOTION3, "clip.motion3.json", uid(11)),
+            (m.project.ExportFormat.EXPRESSION3, "smile.exp3.json", uid(20)),
+            (m.project.ExportFormat.PHYSICS3, "rig.physics3.json", None),
+            (m.project.ExportFormat.POSE3, "pose.pose3.json", None)):
         report = session.project.export(folder / name, format, object_id=id).wait()
         assert report.published
     motion = json.loads((folder / "clip.motion3.json").read_text())

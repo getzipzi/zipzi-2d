@@ -6,7 +6,7 @@ from ._owned import Owned
 from ._jobs import Job
 from ._results import Snapshot
 from ._values import Source, record, integer
-from ._generated import modeling as m
+from ._generated import values as m, codecs as _modeling_codec
 if TYPE_CHECKING:
     from .backends import Backend
 else:
@@ -57,12 +57,12 @@ class Preview(Owned):
     def _state(self, raw: object) -> Snapshot[m.PreviewState]:
         value=record(raw)
         state=value["value"]
-        return Snapshot(Source._read(value["source"]),state if isinstance(state,m.PreviewState) else m.read_PreviewState(state))
+        return Snapshot(Source._read(value["source"]),state if isinstance(state,m.PreviewState) else _modeling_codec.read_PreviewState(state))
 
     def apply(self, command: m.PreviewCommand) -> Snapshot[m.PreviewState]:
         """Apply one typed animation control in this Preview. SDK validation errors preserve its usable state; commands never publish model history."""
         self._check(self._backend)
-        m.validate_PreviewCommand(command)
+        _modeling_codec.validate_PreviewCommand(command)
         return self._request("apply",lambda:self._backend.apply_preview(self._token,command,self),self._state)
 
     def _sample(self, times: Sequence[float], geometry: bool, incremental: bool, queries: Sequence[m.SpatialQuery], view: m.ObservationView | None) -> Job[Snapshot[m.PreviewBatch]]:
@@ -80,7 +80,7 @@ class Preview(Owned):
         def decode(raw: object) -> Snapshot[m.PreviewBatch]:
             value=record(raw)
             samples=value["samples"]
-            batch=samples if isinstance(samples,m.PreviewBatch) else m.read_PreviewBatch(samples)
+            batch=samples if isinstance(samples,m.PreviewBatch) else _modeling_codec.read_PreviewBatch(samples)
             return Snapshot(Source._read(value["source"]),batch)
         return Job[Snapshot[m.PreviewBatch]]._start(self._backend,
             lambda owner:self._backend.sample_preview(self._token,targets,geometry,incremental,selected,view,owner),"preview",decode)

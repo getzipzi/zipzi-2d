@@ -25,7 +25,7 @@ DATA: dict[str, Entry] = {'zipzi.parameters': {'children': ('zipzi.parameters.Cr
                              'signature': '(spec: ParameterSpec) -> None'},
  'zipzi.parameters.Create.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.parameters.Create.summary': {'alias': 'zipzi.ApiDescription.summary'},
- 'zipzi.parameters.Kind': {'alias': 'zipzi.EditState'},
+ 'zipzi.parameters.Kind': {'alias': 'zipzi.modeling.parameters.ParameterKind'},
  'zipzi.parameters.Parameter': {'children': ('zipzi.parameters.Parameter.__repr__',
                                              'zipzi.parameters.Parameter.summary'),
                                 'documentation': 'Owned parameters Parameter value; reading fields, repr and summary '

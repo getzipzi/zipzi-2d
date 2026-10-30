@@ -9,7 +9,7 @@ else:
     Backend = object
 from ._generated.plan_values import PlanCost as PlanCost, PlanReport as PlanReport
 from . import ops, modeling
-from ._generated import modeling as _codec
+from ._generated import codecs as _codec
 
 class Plan(Owned):
     """Owned native plan returned by Session/Edit/address planning factories.
@@ -42,7 +42,7 @@ class Plan(Owned):
         assert self._report is not None
         return self._report
 
-    def deletion_page(self, section: modeling.DeletionSection, *, offset: int = 0, limit: int = 64) -> modeling.DeletionPage:
+    def deletion_page(self, section: modeling.deletion.DeletionSection, *, offset: int = 0, limit: int = 64) -> modeling.deletion.DeletionPage:
         """Read a bounded section of this immutable deletion report.
 
         Source changes do not change these rows. The live Plan lease and its

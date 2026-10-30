@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import cast, TYPE_CHECKING
 if TYPE_CHECKING:
-    from .modeling import ManualMeshTransferReport
+    from .modeling.mesh import ManualMeshTransferReport
 from uuid import UUID
 
 Record = Mapping[str, object]
@@ -195,8 +195,8 @@ class WriteResult(CompactValue):
     @classmethod
     def _read(cls, value: object) -> "WriteResult":
         r = record(value)
-        from ._generated.modeling import read_ManualMeshTransferReport
-        from ._generated.modeling import ManualMeshTransferReport
+        from ._generated.codecs.mesh import read_ManualMeshTransferReport
+        from ._generated.values.mesh import ManualMeshTransferReport
         transfer = r.get("mesh_transfer")
         report = transfer if isinstance(transfer, ManualMeshTransferReport) else None if transfer is None else read_ManualMeshTransferReport(transfer)
         return cls(Source._read(r["source"]), tuple(string(v) for v in sequence(r["ids"])), report)

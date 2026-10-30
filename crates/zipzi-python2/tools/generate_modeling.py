@@ -2,12 +2,13 @@
 import re
 import keyword
 import json
-TARGETS=frozenset({'client/python/zipzi/_generated/modeling.py','src/generated/modeling.rs'})
+from codegen.projections import NATIVE_ENTRYPOINTS
+TARGETS=frozenset()
 
 def public_name(rust_name):
     return ''.join(re.findall(r'(?:^|::)([A-Z][A-Za-z0-9_]*)',rust_name)) if '<' in rust_name else rust_name.rsplit('::',1)[-1]
 
-def render_modeling(contract, header, rust_header, resolve=lambda shape: shape):
+def render_modeling(contract, header, rust_header, resolve, domains):
     shapes={}
     def visit(s):
         s=resolve(s)
@@ -294,17 +295,26 @@ def render_modeling(contract, header, rust_header, resolve=lambda shape: shape):
             v='item'+str(d);return '{ let out=PyDict::new(py); for (key, '+v+') in '+e+' { out.set_item(key.to_string(), '+nw(s['value'],v,d+1)+')?; } out.into_any().unbind() }'
         if k=='json':return 'write_extension(py,'+e+')?'
         if k in {'string','bool','u8','u16','u32','u64','usize','i32','i64','f32','f64'}:return '('+e+').into_pyobject(py)?.into_bound().into_any().unbind()'
-        return wn(s)+('' if s['kind']=='opaque' else '_in')+'(py, '+e+('' if s['kind']=='opaque' else ', classes')+')?'
-    rust=[rust_header.rstrip(),'#![allow(dead_code, unused_variables, unused_parens)]','use pyo3::BoundObject;','use crate::*;','use crate::extension_bridge::{read_extension,write_extension};','']
+        if k!='opaque' and domains[s['name']]==current_domain:
+            return wn(s)+'_in(py, '+e+', classes)?'
+        return wn(s)+'(py, '+e+')?'
+    rust=[]
+    def marker(role,s):
+        domain='common' if s['kind']=='opaque' else domains[s['name']]
+        category='unions' if enum(s) else 'records'
+        if domain=='scene' and nm(s) in {'SceneOperation','SceneEdit','SceneContentEdit','OrganizationEdit','ReparentEdit','AttachmentEdit'}:category='edits'
+        return ['@@zipzi:'+domain+'/'+role+'_'+category+'.rs@@']
     for s in shapes.values():
         n=path(s);fs=fields(s);read_start=len(rust)
         if s['kind']=='opaque' and nm(s)=='SourceRef':
+            rust += marker('special',s)
             rust += ["pub fn read_sourceref(value: &Bound<'_, PyAny>) -> PyResult<SourceRef> { crate::modeling_bridge::read_source(value) }", "pub fn write_sourceref(py: Python<'_>, value: &SourceRef) -> PyResult<Py<PyAny>> { Ok(PyModule::import(py, \"zipzi._values\")?.getattr(\"Source\")?.call_method1(\"_read\", (source(py, *value)?,))?.unbind()) }"]
             continue
         if s['kind']=='opaque':
+            rust += marker('special',s)
             rust += ['pub fn read_version(value: &Bound<\'_ , PyAny>) -> PyResult<zipzi_sdk::Version> { Ok(zipzi_sdk::Version {session_id:value.getattr(\"session_id\")?.extract()?,generation:value.getattr(\"generation\")?.extract()?,revision:value.getattr(\"revision\")?.extract()?}) }', 'pub fn write_version(py:Python<\'_>, value:&zipzi_sdk::Version)->PyResult<Py<PyAny>> {Ok(PyModule::import(py,"zipzi._values")?.getattr("Version")?.call1((value.session_id,value.generation,value.revision))?.unbind())}']
             continue
-        rust+=['pub fn '+rn(s)+"(value: &Bound<'_, PyAny>) -> PyResult<"+n+'> {']
+        rust+=marker('read',s)+['pub fn '+rn(s)+"(value: &Bound<'_, PyAny>) -> PyResult<"+n+'> {']
         if unit(s):
             rust+=['    match value.getattr("value")?.extract::<String>()?.as_str() {']
             for v in variants(s):rust+=['        '+repr(v['name']).replace("'",'"')+' => Ok('+n+'::'+v['rust_name']+'),']
@@ -326,7 +336,9 @@ def render_modeling(contract, header, rust_header, resolve=lambda shape: shape):
         rust+=['}', '']
         if s['name'] not in input_names:del rust[read_start:]
         if nm(s)=='ModelingIntent' or s['name'] not in public_shapes:continue
-        rust+=['pub fn '+wn(s)+"(py: Python<'_>, value: &"+n+') -> PyResult<Py<PyAny>> {', '    let classes=PyModule::import(py, \"zipzi._generated.modeling\")?;', '    '+wn(s)+'_in(py,value,&classes)', '}', 'fn '+wn(s)+"_in(py: Python<'_>, value: &"+n+", classes:&Bound<'_,PyModule>) -> PyResult<Py<PyAny>> {"]
+        current_domain=domains[s['name']]
+        module='zipzi._generated.values.'+current_domain
+        rust+=marker('write',s)+['pub fn '+wn(s)+"(py: Python<'_>, value: &"+n+') -> PyResult<Py<PyAny>> {', '    let classes=PyModule::import(py, '+repr(module).replace("'",'"')+')?;', '    '+wn(s)+'_in(py,value,&classes)', '}', 'pub(crate) fn '+wn(s)+"_in(py: Python<'_>, value: &"+n+", classes:&Bound<'_,PyModule>) -> PyResult<Py<PyAny>> {"]
         if unit(s):
             rust+=['    let name=match value {']
             for v in variants(s):rust+=['        '+n+'::'+v['rust_name']+' => "'+v['name']+'",']
@@ -382,6 +394,7 @@ def render_modeling(contract, header, rust_header, resolve=lambda shape: shape):
         return 'measure_'+nm(s).lower()+'(&'+e+')?'
     for s in shapes.values():
         if s['name'] not in input_names:continue
+        rust += marker('measure',s)
         rust += ['pub fn measure_'+nm(s).lower()+"(value:&Bound<'_,PyAny>)->PyResult<usize> {"]
         if unit(s) or s['kind']=='opaque':rust += ['    Ok(128usize)']
         elif enum(s):
@@ -398,6 +411,7 @@ def render_modeling(contract, header, rust_header, resolve=lambda shape: shape):
         rust += ['}','']
     object_kind=next((s for s in shapes.values() if nm(s)=='ObjectKind'),None)
     if object_kind:
+        rust += marker('read',object_kind)
         rust += ['pub fn read_objectkind_name(value:&str)->PyResult<zipzi_sdk::ObjectKind> {match value {']
         rust += ['    "'+v['name']+'"=>Ok(zipzi_sdk::ObjectKind::'+v['rust_name']+'),' for v in variants(object_kind)]
         rust += ['    _=>Err(pyo3::exceptions::PyValueError::new_err("Unknown object kind")),','}}']
@@ -416,4 +430,39 @@ def render_modeling(contract, header, rust_header, resolve=lambda shape: shape):
             field,colon,annotation=line.partition(':')
             line=field+colon+re.sub(r'\bbytes\b','_Bytes',annotation)
             py[index]=line
-    return {'client/python/zipzi/_generated/modeling.py' :'\n'.join(py),'src/generated/modeling.rs':'\n'.join(rust)}
+    output={'client/python/zipzi/_generated/modeling.py':'\n'.join(py)}
+    groups={};current=None
+    for line in rust:
+        if line.startswith('@@zipzi:') and line.endswith('@@'):
+            current=line[len('@@zipzi:'):-2]
+            groups.setdefault(current,[])
+        elif current is None:
+            raise ValueError('Unassigned generated Rust modeling code')
+        else:groups[current].append(line)
+    root=[rust_header.rstrip(),'#![allow(dead_code, unused_variables, unused_parens)]']
+    exported=set();local_exports={};cross_references=set()
+    for items in groups.values():
+        exported.update(re.findall(r'\bpub(?:\(crate\))? fn\s+(\w+)', '\n'.join(items)))
+    for path,items in groups.items():
+        text='\n'.join(items)
+        local_exports[path]=set(re.findall(r'\bpub(?:\(crate\))? fn\s+(\w+)',text))
+        local=set(re.findall(r'\b(?:pub(?:\(crate\))?\s+)?fn\s+(\w+)',text))
+        cross_references.update(set(re.findall(r'\b(?:read|write|measure)_\w+\b',text))-local)
+    missing=NATIVE_ENTRYPOINTS-exported
+    if missing:raise ValueError('Missing native modeling entrypoints: '+', '.join(sorted(missing)))
+    for path,items in sorted(groups.items()):
+        module=path.replace('/','_').removesuffix('.rs')
+        root += ['#[path = '+repr(path).replace("'",'"')+']','mod '+module+';']
+        if local_exports[path] & (cross_references | NATIVE_ENTRYPOINTS):
+            root.append('pub(crate) use '+module+'::*;')
+        text='\n'.join(items)
+        local=set(re.findall(r'\b(?:pub(?:\(crate\))?\s+)?fn\s+(\w+)',text))
+        references=set(re.findall(r'\b(?:read|write|measure)_\w+\b',text))
+        imports=[rust_header.rstrip(),'#![allow(dead_code, unused_variables, unused_parens)]','use crate::*;']
+        if references & (exported-local):imports.append('use super::*;')
+        if '.into_bound()' in text:imports.append('use pyo3::BoundObject;')
+        extensions=[name for name in ('read_extension','write_extension') if name+'(' in text]
+        if extensions:imports.append('use crate::extension_bridge::{'+','.join(extensions)+'};')
+        output['src/generated/modeling/'+path]='\n'.join(imports+['']+items)
+    output['src/generated/modeling/mod.rs']='\n'.join(root)+'\n'
+    return output

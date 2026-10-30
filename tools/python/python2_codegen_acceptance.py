@@ -106,12 +106,9 @@ class Acceptance:
     def outputs(self):
         # Every generated file, including schema/reference, rather than schema alone.
         package = self.root / PACKAGE
-        if not hasattr(self, '_targets'):
-            spec = importlib.util.spec_from_file_location('acceptance_output_paths', package / 'tools/generate.py')
-            gen = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(gen)
-            self._targets = gen.TARGETS
-        return {name: (package / name).read_bytes() for name in self._targets}
+        manifest = json.loads((package / 'generated-manifest.json').read_text())
+        paths = [entry['path'] for entry in manifest['files']]
+        return {name: (package / name).read_bytes() for name in [*paths, 'generated-manifest.json']}
 
     def implementation_changes(self):
         baseline = self.outputs()

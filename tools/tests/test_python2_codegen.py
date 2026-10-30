@@ -121,6 +121,8 @@ class Python2Codegen(unittest.TestCase):
             (client / 'docs').mkdir(parents=True)
             (client / 'docs/guide.md').write_text('guide')
             (client / 'api.py').write_text('api')
+            (client / '_generated').mkdir()
+            (client / '_generated/old.py').write_text('stale output')
             (root / 'client/pyproject.toml').write_text('version')
             cache = root / 'cache.json'
             output = {path: 'generated' for path in gen.TARGETS}
@@ -128,6 +130,9 @@ class Python2Codegen(unittest.TestCase):
                 contract = {'version': 1}
                 self.assertEqual(gen.cached_render(contract, cache), output)
                 self.assertEqual(gen.cached_render(contract, cache), output)
+                self.assertEqual(render.call_count, 1)
+                (client / '_generated/old.py').write_text('changed stale output')
+                gen.cached_render(contract, cache)
                 self.assertEqual(render.call_count, 1)
                 (client / 'api.py').write_text('changed')
                 gen.cached_render(contract, cache)
@@ -179,24 +184,25 @@ class Python2Codegen(unittest.TestCase):
 
     def test_modeling_freezes_only_values_requiring_conversion(self):
         output=gen.render(self.contract())
-        tree=ast.parse(output['client/python/zipzi/_generated/modeling.py'])
-        for node in ast.walk(tree):
-            if not isinstance(node,ast.Call) or len(node.args)!=3:continue
-            func,obj,name,value=node.func,*node.args
-            if (isinstance(func,ast.Attribute) and isinstance(func.value,ast.Name)
-                    and func.value.id=='object' and func.attr=='__setattr__'
-                    and isinstance(obj,ast.Name) and obj.id=='self'
-                    and isinstance(name,ast.Constant) and isinstance(value,ast.Attribute)
-                    and isinstance(value.value,ast.Name) and value.value.id=='self'):
-                self.assertNotEqual(name.value,value.attr)
+        for path,source in output.items():
+            if not path.startswith('client/python/zipzi/_generated/values/') or not path.endswith('.py'):continue
+            for node in ast.walk(ast.parse(source)):
+                if not isinstance(node,ast.Call) or len(node.args)!=3:continue
+                func,obj,name,value=node.func,*node.args
+                if (isinstance(func,ast.Attribute) and isinstance(func.value,ast.Name)
+                        and func.value.id=='object' and func.attr=='__setattr__'
+                        and isinstance(obj,ast.Name) and obj.id=='self'
+                        and isinstance(name,ast.Constant) and isinstance(value,ast.Attribute)
+                        and isinstance(value.value,ast.Name) and value.value.id=='self'):
+                    self.assertNotEqual(name.value,value.attr)
 
     def test_flattened_physics_extensions_roundtrip_and_cannot_shadow_fields(self):
         import sys
         with patch.object(sys, 'path', [str(PACKAGE / 'client/python'), *sys.path]):
-            from zipzi._generated import modeling as codec
-            domain = codec.PhysicsRange(Minimum=-1., Default=0., Maximum=1.)
+            from zipzi._generated import values, codecs as codec
+            domain = values.PhysicsRange(Minimum=-1., Default=0., Maximum=1.)
             nested = {'enabled': True, 'levels': [1, 2]}
-            value = codec.PhysicsNormalization(Position=domain, Angle=domain,
+            value = values.PhysicsNormalization(Position=domain, Angle=domain,
                 extensions={'VendorNormalization': nested})
             nested['levels'].append(3)
             wire = codec.encode_PhysicsNormalization(value)
@@ -205,7 +211,7 @@ class Python2Codegen(unittest.TestCase):
                 'VendorNormalization': {'enabled': True, 'levels': [1, 2]}})
             self.assertEqual(codec.read_PhysicsNormalization(wire), value)
             codec.validate_PhysicsNormalization(value)
-            shadow = codec.PhysicsNormalization(Position=domain, Angle=domain,
+            shadow = values.PhysicsNormalization(Position=domain, Angle=domain,
                 extensions={'Position': 42})
             with self.assertRaisesRegex(ValueError, 'overlap declared fields'):
                 codec.validate_PhysicsNormalization(shadow)
@@ -213,8 +219,8 @@ class Python2Codegen(unittest.TestCase):
     def test_single_variant_type_alias_keeps_fields_and_public_methods_in_catalog(self):
         output=gen.render(self.contract())
         catalog=catalog_from_output(output)
-        alias='zipzi.modeling.PhysicsAssetProperty'
-        concrete='zipzi.modeling.PhysicsAssetPropertyFps'
+        alias='zipzi.modeling.physics.PhysicsAssetProperty'
+        concrete='zipzi.modeling.physics.PhysicsAssetPropertyFps'
         self.assertEqual(catalog[alias]['kind'],'type')
         self.assertEqual(catalog[alias]['fields'],catalog[concrete]['fields'])
         self.assertTrue(dict(catalog[alias]['fields'])['value'])
@@ -278,9 +284,9 @@ class Python2Codegen(unittest.TestCase):
             'zipzi.Source':('version','formal base version'),
             'zipzi.Snapshot':('source','captured atomically'),
             'zipzi.scene.VertexPatch':('position','BlendShape XY displacement'),
-            'zipzi.modeling.CdiNamespaceIds':('parameters','document-ID to runtime-ID map'),
-            'zipzi.modeling.BindingGridEditEdit':('operation','Typed axis/sample grid edit'),
-            'zipzi.modeling.DeltaOffscreenKeyform':('multiply','neutral (1, 1, 1)'),
+            'zipzi.modeling.project.CdiNamespaceIds':('parameters','document-ID to runtime-ID map'),
+            'zipzi.modeling.bindings.BindingGridEditEdit':('operation','Typed axis/sample grid edit'),
+            'zipzi.modeling.bindings.DeltaOffscreenKeyform':('multiply','neutral (1, 1, 1)'),
         }
         reference='\n'.join(value for path,value in output.items() if path.startswith('client/python/zipzi/docs/reference/'))
         import sys
@@ -359,7 +365,7 @@ class Python2Codegen(unittest.TestCase):
     def test_binary_contract_guards_compiled_source_layout_and_typed_array_outputs(self):
         contract=self.contract()
         output=gen.render(contract)
-        binary=output['client/python/zipzi/_generated/binary.py']
+        binary='\n'.join(value for path,value in output.items() if path.startswith('client/python/zipzi/_generated/binary/') and path.endswith('.py'))
         self.assertIn('def decode_meshes(',binary)
         self.assertIn('def decode_samples(',binary)
         self.assertIn('Snapshot(_read_sourceref(r), meshes.Mesh(',binary)
@@ -419,6 +425,21 @@ class Python2Codegen(unittest.TestCase):
         with patch.object(gen.TypeGraph,'legacy_contract',side_effect=AssertionError('legacy expansion')):
             output=gen.render(self.contract())
         self.assertEqual(gen.write_outputs(output,check=True),[])
+
+    def test_projection_model_records_canonical_alias_and_special_reasons(self):
+        original=gen._api_codegen.document_model
+        projected=[]
+        def capture(*args):
+            model=original(*args)
+            projected.extend(model[-1])
+            return model
+        with patch.object(gen._api_codegen,'document_model',side_effect=capture):
+            gen.render(self.contract())
+        canonical=next(item for item in projected if item.rust_type_id=='zipzi_contract::model::MeshConstraintKind' and item.projection_id=='canonical')
+        self.assertIn('zipzi.meshes.ConstraintKind',canonical.aliases)
+        special=[item for item in projected if item.projection_id!='canonical']
+        self.assertTrue(special)
+        self.assertTrue(all(item.reason for item in special))
 
     def test_handwritten_files_unowned_paths_and_symlinks_fail_before_any_write(self):
         output = gen.render(self.contract())

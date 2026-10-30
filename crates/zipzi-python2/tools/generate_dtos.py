@@ -1,6 +1,7 @@
 """Finite public DTO projections; every field/type comes from compiled Rust."""
 import re
 from copy import deepcopy
+from codegen.projections import CANONICAL_ENUM_ALIASES, OWNERS
 
 TARGETS = frozenset('client/python/zipzi/_generated/'+name+'_values.py' for name in
                     ('parameter', 'binding', 'sampling', 'reference', 'event')) | frozenset({'client/python/zipzi/_generated/planning.py'})
@@ -193,12 +194,16 @@ def render_dtos(contract, header, resolve=lambda shape: shape):
             n=name(s)
             if n in {'Point','Bounds'}:continue
             if domain=='sampling' and n in {'MeshQuality','TriangleQuality','TextureCoverage'}:
-                lines += ['from .modeling import '+n+' as '+n+', read_'+n+' as read_'+n, '']
+                lines += ['from .values import '+n+' as '+n, 'from .codecs import read_'+n+' as read_'+n, '']
                 continue
             if n=='ObjectKind':
                 tags=[v['name'] for v in variants(s)]
-                lines+=['from .modeling import ObjectKind as _ObjectKind','ObjectKind: TypeAlias = Literal['+', '.join(repr(tag) for tag in tags)+'] | _ObjectKind','OBJECT_KINDS = frozenset('+repr(tags)+')',''];continue
+                lines+=['from .values import ObjectKind as _ObjectKind','ObjectKind: TypeAlias = Literal['+', '.join(repr(tag) for tag in tags)+'] | _ObjectKind','OBJECT_KINDS = frozenset('+repr(tags)+')',''];continue
             if unit(s):
+                if s['name'] in CANONICAL_ENUM_ALIASES:
+                    canonical=s['name'].rsplit('::',1)[-1]
+                    lines += ['from .values.'+OWNERS[s['name']]+' import '+canonical+' as '+n,'']
+                    continue
                 lines+=['class '+n+'(str, Enum):','    __module__ = "zipzi.'+domain+'"']
                 for v in variants(s):lines+=['    '+re.sub(r'(?<!^)(?=[A-Z])','_',v['rust_name']).upper()+' = '+repr(v['name'])]
                 lines+=[''];continue
@@ -274,6 +279,6 @@ def render_dtos(contract, header, resolve=lambda shape: shape):
     # Public planning is a subset of the same Runtime commands, derived from the SDK intent registration.
     vs=resolve(contract['planning'])['variants'];classes=['m.ModelingCommand'+v['rust_name'] for v in vs]
     tag,content=resolve(contract['planning'])['tag'],resolve(contract['planning'])['content']
-    planning=[header.rstrip(),'from . import modeling as m','from .._values import record','', 'ModelingPlanOperation = '+' | '.join(classes),'MODELING_PLAN_TYPES = ('+', '.join(classes)+',)','', 'def encode_modeling(value: ModelingPlanOperation) -> dict[str, object]:','    raw = record(m.encode_ModelingCommand(value))','    return {'+repr(tag)+': raw["op"], '+repr(content)+': raw["intent"]}','']
+    planning=[header.rstrip(),'from . import values as m, codecs','from .._values import record','', 'ModelingPlanOperation = '+' | '.join(classes),'MODELING_PLAN_TYPES = ('+', '.join(classes)+',)','', 'def encode_modeling(value: ModelingPlanOperation) -> dict[str, object]:','    raw = record(codecs.encode_ModelingCommand(value))','    return {'+repr(tag)+': raw["op"], '+repr(content)+': raw["intent"]}','']
     output['client/python/zipzi/_generated/planning.py']='\n'.join(planning)
     return output

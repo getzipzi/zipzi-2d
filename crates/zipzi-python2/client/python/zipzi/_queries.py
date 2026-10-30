@@ -3,7 +3,7 @@ from collections.abc import Callable
 from typing import TypeVar, cast
 from ._results import Batch, Snapshot
 from ._values import Source, record, sequence
-from ._generated import modeling
+from ._generated import values as modeling, codecs as _modeling_codec
 
 T = TypeVar("T")
 
@@ -32,14 +32,14 @@ def single(value: Batch[T]) -> Snapshot[T]:
 
 def records(value: object) -> Snapshot[modeling.OwnedModelingRecords]:
     raw = record(value)
-    return Snapshot(Source._read(raw["source"]), modeling.read_OwnedModelingRecords(raw["records"]))
+    return Snapshot(Source._read(raw["source"]), _modeling_codec.read_OwnedModelingRecords(raw["records"]))
 
 
 def capabilities(value: object) -> Snapshot[modeling.Capabilities]:
     raw = record(value)
-    return Snapshot(Source._read(raw["source"]), modeling.read_Capabilities(raw["capabilities"]))
+    return Snapshot(Source._read(raw["source"]), _modeling_codec.read_Capabilities(raw["capabilities"]))
 
 
 def editor_context(value: object) -> Snapshot[modeling.EditorContext | None]:
     raw = record(value)
-    return Snapshot(Source._read(raw["source"]), None if raw["context"] is None else modeling.read_EditorContext(raw["context"]))
+    return Snapshot(Source._read(raw["source"]), None if raw["context"] is None else _modeling_codec.read_EditorContext(raw["context"]))

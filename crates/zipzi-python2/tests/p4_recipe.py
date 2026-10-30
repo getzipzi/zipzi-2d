@@ -15,8 +15,8 @@ def uid(n: int) -> str:
     return f"79700000-0000-4000-8000-{n:012x}"
 
 
-def attachment(edit: zipzi.Edit, intent: m.AttachmentEdit) -> zipzi.WriteResult:
-    return edit.apply(m.ModelingCommandAttachment(intent=intent))
+def attachment(edit: zipzi.Edit, intent: m.scene.AttachmentEdit) -> zipzi.WriteResult:
+    return edit.apply(m.commands.ModelingCommandAttachment(intent=intent))
 
 
 def rejected(call: Callable[[], object], code: str | None = None) -> zipzi.SdkFailure:
@@ -52,14 +52,14 @@ def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:
                 assert len(content) > 1 << 20
                 for id, path in ((data_id, "extras/data.userdata3.json"),
                                  (empty_id, "extras/empty.bin"), (absent_id, "extras/unavailable.bin")):
-                    attachment(edit, m.AttachmentEditCreate(id=id, path=path))
+                    attachment(edit, m.scene.AttachmentEditCreate(id=id, path=path))
                 selected = edit.modeling.records(m.ModelingQuery(attachments=(data_id, empty_id, absent_id)))
                 assert selected.value.attachments[1].bytes is None
-                attachment(edit, m.AttachmentEditReplace(expected=selected.value.attachments[0],
+                attachment(edit, m.scene.AttachmentEditReplace(expected=selected.value.attachments[0],
                     attachment=replace(selected.value.attachments[0], bytes=content)))
-                attachment(edit, m.AttachmentEditReplace(expected=selected.value.attachments[1],
+                attachment(edit, m.scene.AttachmentEditReplace(expected=selected.value.attachments[1],
                     attachment=replace(selected.value.attachments[1], bytes=b"")))
-                attachment(edit, m.AttachmentEditSetUserData(reference=m.AttachmentRefResolved(attachment_id=data_id)))
+                attachment(edit, m.scene.AttachmentEditSetUserData(reference=m.scene.AttachmentRefResolved(attachment_id=data_id)))
                 owned = edit.modeling.records(m.ModelingQuery(attachments=(data_id, empty_id, absent_id)))
                 assert tuple(a.bytes for a in owned.value.attachments) == (content, b"", None)
                 assert owned.source.edit is not None
@@ -80,12 +80,12 @@ def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:
     assert owned.value.attachments[0].bytes == content
     assert session.resources.get(asset).value.pixels.rgba == pixels_a
     before = session.info()
-    rejected(lambda: session.project.export(folder / "refused-package", m.ExportFormat.PACKAGE).wait(),
+    rejected(lambda: session.project.export(folder / "refused-package", m.project.ExportFormat.PACKAGE).wait(),
              "UNREFERENCED_ATTACHMENT")
     assert session.info() == before and not (folder / "refused-package").exists()
     with session.edit("Keep the registered attachment") as edit:
-        attachment(edit, m.AttachmentEditDelete(id=empty_id))
-        attachment(edit, m.AttachmentEditDelete(id=absent_id))
+        attachment(edit, m.scene.AttachmentEditDelete(id=empty_id))
+        attachment(edit, m.scene.AttachmentEditDelete(id=absent_id))
 
     # Save As copies current content and rebases old disk history to its old root.
     with ExitStack() as leases:
@@ -143,14 +143,14 @@ def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:
         # A failed import or write cannot publish a partial project/candidate.
         invalid = folder / "invalid.psd"
         invalid.write_bytes(b"invalid PSD")
-        job = session.project.replace(invalid, m.ImportFormat.PSD)
+        job = session.project.replace(invalid, m.project.ImportFormat.PSD)
         error = rejected(job.wait)
         assert rejected(job.wait) is error
         assert session.info() == before
         def invalid_edit() -> None:
             with session.edit("Atomic attachment path validation") as edit:
                 edit.meshes.rename(mesh, "Must roll back")
-                attachment(edit, m.AttachmentEditCreate(id=uid(7), path="../escape.bin"))
+                attachment(edit, m.scene.AttachmentEditCreate(id=uid(7), path="../escape.bin"))
         rejected(invalid_edit, "INVALID_ATTACHMENT_PATH")
         assert session.info() == before
         assert session.meshes.get(mesh).value.name == "Face"
@@ -171,7 +171,7 @@ def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:
         # The package's declared sidecar and pixels must match actual files.
         before = session.info()
         package = folder / "package"
-        exported = session.project.export(package, m.ExportFormat.PACKAGE).wait()
+        exported = session.project.export(package, m.project.ExportFormat.PACKAGE).wait()
         assert exported.published and exported.durable == (os.name != 'nt')
         assert session.info() == before
         model = json.loads((package / "model.model3.json").read_text())
@@ -181,7 +181,7 @@ def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:
         texture_path = model["FileReferences"]["Textures"][0]
         with runtime.resources.load_png(package / texture_path).wait() as texture:
             assert texture.pixels().rgba == pixels_b
-        imported = session.project.replace(package / "model.model3.json", m.ImportFormat.MODEL3).wait()
+        imported = session.project.replace(package / "model.model3.json", m.project.ImportFormat.MODEL3).wait()
         assert imported.after.generation > imported.before.generation
         ids = session.modeling.records(m.ModelingQuery()).value.ids
         restored = session.modeling.records(m.ModelingQuery(attachments=ids["attachments"]))
@@ -192,7 +192,7 @@ def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:
         # The exported page above remains byte-exact; after import the triangle's
         # painted interior is preserved and unused page pixels are transparent.
         restored_mesh = session.modeling.records(m.ModelingQuery(meshes=(ids["meshes"][0],))).value.meshes[0]
-        assert isinstance(restored_mesh.texture_asset_id, m.SceneReferenceResolved)
+        assert isinstance(restored_mesh.texture_asset_id, m.scene.SceneReferenceResolved)
         imported_asset = restored_mesh.texture_asset_id.object_id
         assert imported_asset in ids["assets"]
         artwork = session.resources.get(imported_asset).value.pixels

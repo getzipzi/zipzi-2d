@@ -47,7 +47,7 @@ def render_resources(contract, Model, header, rust_header, resolve=lambda shape:
         if k=='optional': return 'None if '+e+' is None else '+read(s['item'],e)
         if k=='sequence': return 'tuple('+read(s['item'],'item')+' for item in sequence('+e+'))'
         if k=='string_map': return 'tuple((key, string(item)) for key, item in sorted(record('+e+').items()))'
-        if m.binding(s)['form']=='external':return 'modeling.read_'+m.binding(s)['name']+'('+e+')'
+        if m.binding(s)['form']=='external':return 'modeling_codec.read_'+m.binding(s)['name']+'('+e+')'
         return m.binding(s)['name']+'.read('+e+')'
 
     output={}
@@ -57,7 +57,7 @@ def render_resources(contract, Model, header, rust_header, resolve=lambda shape:
         if module=='resources':
             lines += ['def _bytes(value: object) -> bytes:', '    return value if isinstance(value, bytes) else bytes(integer(v) for v in sequence(value))','']
         else:
-            lines += ['from . import modeling', '', 'def _boolean(value: object) -> bool:', '    if type(value) is not bool:', '        raise TypeError("Expected a boolean")','    return value','']
+            lines += ['from . import values as modeling, codecs as modeling_codec', '', 'def _boolean(value: object) -> bool:', '    if type(value) is not bool:', '        raise TypeError("Expected a boolean")','    return value','']
         for s in m.records:
             b=m.binding(s)
             if b['module']!=module: continue

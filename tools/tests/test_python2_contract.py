@@ -25,7 +25,7 @@ class Python2ContractTools(unittest.TestCase):
                      "zipzi.scene.Summary.id", "zipzi.parameters.Kind.NORMAL",
                      "zipzi.SdkFailure.code", "zipzi.OutcomeUnknown.pending",
                      "zipzi.Busy.cleanup", "zipzi.events.SessionSubscription.initial",
-                     "zipzi.Edit.__exit__", "zipzi.modeling.ModelingCommandCreateMesh"):
+                     "zipzi.Edit.__exit__", "zipzi.modeling.commands.ModelingCommandCreateMesh"):
             self.assertIn(path, paths)
         self.assertEqual(paths["zipzi.Edit.meshes.create"]["kind"], "method")
         self.assertIn("zipzi.Path", paths)  # incidental root export outside __all__

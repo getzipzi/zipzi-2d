@@ -145,7 +145,7 @@ services run in the GPL-3.0-only Editor; see the [licensing guide](https://githu
 ### Dependency-cleaning deletion
 
 `session.plan` / `plan_async` and their Edit equivalents accept
-`modeling.ModelingCommandDeletion`. The request uses typed Mesh, Part, Deformer,
+`modeling.commands.ModelingCommandDeletion`. The request uses typed Mesh, Part, Deformer,
 Glue, Offscreen, Parameter, ParameterFolder, Texture and Attachment roots, or
 `DeletionTargetRecord` for typed business and child identities. Part means its
 organization subtree; Deformer means its deformation subtree regardless of the
@@ -155,16 +155,16 @@ caller's tree view. `DissolvePart` and
 ```python
 from zipzi import modeling as m
 
-operation = m.ModelingCommandDeletion(intent=m.DeletionIntent(
-    request=m.DeletionRequest(roots=(m.DeletionTargetMesh(value=mesh_id),))))
+operation = m.commands.ModelingCommandDeletion(intent=m.deletion.DeletionIntent(
+    request=m.deletion.DeletionRequest(roots=(m.deletion.DeletionTargetMesh(value=mesh_id),))))
 with session.plan_async(operation).wait() as plan:
     summary = plan.report.deletion
-    page = plan.deletion_page(m.DeletionSection.REWRITTEN, limit=64)
+    page = plan.deletion_page(m.deletion.DeletionSection.REWRITTEN, limit=64)
     # Read further pages with offset=page.next_offset, and inspect effects,
     # decisions, locks and exports as needed. Owned axes/samples/keys have a
     # separate section; the summary does not copy the model's object inventory.
-    if summary.state in (m.DeletionReviewState.READY,
-                         m.DeletionReviewState.NEEDS_CONFIRMATION):
+    if summary.state in (m.deletion.DeletionReviewState.READY,
+                         m.deletion.DeletionReviewState.NEEDS_CONFIRMATION):
         with session.edit("Delete and clean dependencies") as edit:
             edit.apply(plan)
 ```

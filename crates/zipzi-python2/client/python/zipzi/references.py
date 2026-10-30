@@ -1,6 +1,6 @@
 """Runtime-scoped SDK handles and explicit scene label addresses."""
 from __future__ import annotations
-from ._generated import modeling as _modeling_codec
+from ._generated import codecs as _modeling_codec
 from typing import TYPE_CHECKING
 from ._owned import Owned
 from . import modeling
@@ -42,14 +42,14 @@ class ObjectRef(Owned):
         def load(raw: object) -> ObjectRef:
             ref._token = record(raw)["reference"]
             return ref
-        return ref._request("capture", lambda: backend.object_ref(session, kind.value if isinstance(kind, modeling.ObjectKind) else kind, id, ref), load)
+        return ref._request("capture", lambda: backend.object_ref(session, kind.value if isinstance(kind, modeling.addressing.ObjectKind) else kind, id, ref), load)
 
     def resolve(self) -> Source:
         'Validate the SDK reference against current incarnation/context and return exact formal Source. Deletion or recreation does not silently rebind the reference.'
         self._check(self._backend)
         return self._request("resolve", lambda: self._backend.resolve_ref(self._token, self), Source._read)
 
-    def capabilities(self, domain: modeling.CapabilityDomain) -> Snapshot[modeling.Capabilities]:
+    def capabilities(self, domain: modeling.addressing.CapabilityDomain) -> Snapshot[modeling.addressing.Capabilities]:
         'Query a declared capability domain for this live reference. Returns an owned source-bearing capability result, without reserving future execution.'
         self._check(self._backend)
         _modeling_codec.validate_CapabilityDomain(domain)
@@ -114,7 +114,7 @@ class LabelAddress(Owned):
 class FieldAddress(Owned):
     """An SDK address with incarnation and monotonic epoch validation."""
     @classmethod
-    def _create(cls, backend: Backend, session: object, selector: modeling.AddressSelector) -> FieldAddress:
+    def _create(cls, backend: Backend, session: object, selector: modeling.addressing.AddressSelector) -> FieldAddress:
         _modeling_codec.validate_AddressSelector(selector)
         address = cls(backend, "address")
         def load(raw: object) -> FieldAddress:
@@ -122,7 +122,7 @@ class FieldAddress(Owned):
             return address
         return address._request("capture", lambda: backend.capture_address(session, selector, address), load)
 
-    def plan(self, patch: modeling.AddressPatch) -> Plan:
+    def plan(self, patch: modeling.addressing.AddressPatch) -> Plan:
         'Plan a typed address patch under captured SDK epochs and context. Stale fields or recreated objects fail explicitly. Returns the same owned Plan form used by Edit.apply.'
         from ._plans import Plan
         self._check(self._backend)
