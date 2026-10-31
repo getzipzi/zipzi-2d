@@ -754,3 +754,69 @@ fn filling_authored_islands_preserves_holes_and_winding() {
     );
     assert!(filled.meshing.is_none());
 }
+
+#[test]
+fn corner_touching_holes_preserve_raster_centers_and_generate_all_fills() {
+    // A one-pixel hole kisses a concave shell corner. All 255/0 input is
+    // unchanged by alpha hardening; no wrap or hole removal should be needed.
+    let size = 40;
+    for rotation in 0..4 {
+        let alpha = mask(size, size, |x, y| {
+            let (x, y) = match rotation {
+                0 => (x, y),
+                1 => (y, size as f64 - x),
+                2 => (size as f64 - x, size as f64 - y),
+                _ => (size as f64 - y, x),
+            };
+            (4. ..36.).contains(&x)
+                && (4. ..36.).contains(&y)
+                && !(x >= 22. && y >= 22.)
+                && !((21. ..22.).contains(&x) && (21. ..22.).contains(&y))
+                && !((8. ..13.).contains(&x) && (8. ..13.).contains(&y))
+        });
+        let settings = MeshSettings::default();
+        let domains = contour::domains(size, size, &alpha, &settings).unwrap();
+        assert_eq!(domains.len(), 1);
+        assert_eq!(domains[0].len(), 3, "both transparent holes must survive");
+        for y in 0..size {
+            for x in 0..size {
+                assert_eq!(
+                    in_domain([x as f64 + 0.5, y as f64 + 0.5], &domains[0]),
+                    alpha[y * size + x] != 0,
+                    "pixel {x},{y}, rotation {rotation}"
+                );
+            }
+        }
+        for edge_mode in [
+            MeshEdgeMode::Single,
+            MeshEdgeMode::Double,
+            MeshEdgeMode::Triple,
+        ] {
+            for fill_algorithm in [
+                MeshFillAlgorithm::GradedPoisson,
+                MeshFillAlgorithm::SimpleTriangles,
+                MeshFillAlgorithm::AdaptiveQuadtree,
+                MeshFillAlgorithm::TriangleFractal,
+                MeshFillAlgorithm::ContourPaving,
+            ] {
+                let settings = MeshSettings {
+                    edge_mode,
+                    fill_algorithm,
+                    clip_to_image: true,
+                    ..settings
+                };
+                let generated = generate_mesh(
+                    size as u32,
+                    size as u32,
+                    &alpha,
+                    &settings,
+                    MeshGenerationStage::Full,
+                )
+                .unwrap_or_else(|e| {
+                    panic!("rotation {rotation}, {edge_mode:?}, {fill_algorithm:?}: {e}")
+                });
+                validate(&generated);
+            }
+        }
+    }
+}

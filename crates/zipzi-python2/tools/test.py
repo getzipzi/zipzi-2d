@@ -89,6 +89,8 @@ def main() -> None:
         subprocess.run([sys.executable, "-I", str(ROOT / "crates/zipzi-python2/tests" / module), "-v", *args.tests], cwd=tempfile.gettempdir(), env=env, check=True)
         if not args.tests and not args.recovery and not args.discovery and not args.observation:
             subprocess.run([sys.executable, "-I", str(ROOT / "crates/zipzi-python2/tests/test_p3a_recovery.py"), "-v"], cwd=tempfile.gettempdir(), env=env, check=True)
+        if not args.tests and not args.recovery and not args.discovery and not args.observation:
+            subprocess.run([sys.executable, "-I", str(ROOT / "crates/zipzi-python2/tests/test_mesh_generation.py"), "-v"], cwd=tempfile.gettempdir(), env=env, check=True)
         subprocess.run(["uv", "run", "--locked", "pyright", "--project", str(ROOT / "crates/zipzi-python2/pyrightconfig.json")], cwd=ROOT, check=True)
         invalid = subprocess.run(["uv", "run", "--locked", "--project", str(ROOT), "pyright",
             "--project", str(ROOT / "crates/zipzi-python2/pyrightconfig.json"), "--outputjson", "--pythonpath", sys.executable,

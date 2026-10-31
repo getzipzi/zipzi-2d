@@ -39,8 +39,17 @@ try:
                 assert mesh.triangles and mesh == generate(runtime, 64, 64, alpha, settings=s)
                 interior = generate(runtime, 64, 64, settings=s, stage='interior', geometry=edges)
                 assert set(edges.vertex_ids).issubset(interior.vertex_ids)
+            for field in ('edge_spacing', 'interior_spacing'):
+                for value in (0, 2):
+                    try:
+                        replace(settings, **{field: value})
+                    except ValueError as e:
+                        assert field in str(e), e
+                    else:
+                        raise AssertionError(f'Invalid {field} accepted')
+            # Retain host-side validation coverage for settings not checked locally.
             try:
-                generate(runtime, 64, 64, alpha, settings=replace(settings, edge_spacing=0))
+                generate(runtime, 64, 64, alpha, settings=replace(settings, wrap=-1))
             except zipzi.SdkFailure as e:
                 assert e.code == 'INVALID_ARGUMENT', e
             else:

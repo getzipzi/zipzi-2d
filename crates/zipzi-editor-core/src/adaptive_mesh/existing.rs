@@ -62,7 +62,7 @@ pub fn fill_existing_geometry(
     let mut result = source.clone();
     result.triangles.clear();
     let mut allocator = zipzi_sdk::ManualVertexIdAllocator::new(source);
-    let spacing = settings.interior_spacing.max(6.);
+    let spacing = settings.interior_spacing;
     let mut assigned = BTreeSet::new();
     for (outer, row) in loops.iter().enumerate().filter(|(_, r)| area(r) > 0.) {
         let mut domain = vec![row.clone()];

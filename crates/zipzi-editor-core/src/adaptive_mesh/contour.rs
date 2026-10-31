@@ -113,22 +113,88 @@ pub(super) fn domains(
         if p.unsigned_area() < minimum && p.unsigned_area() < largest {
             continue;
         }
-        let p = p.simplify(0.35);
-        let mut loops = vec![];
-        for (i, r) in std::iter::once(p.exterior())
-            .chain(p.interiors())
-            .enumerate()
-        {
-            let pts: Vec<_> = r.0.iter().take(r.0.len() - 1).map(|p| [p.x, p.y]).collect();
-            loops.push(orient(pts, i == 0));
-        }
-        if valid_domain(&loops) {
-            result.push(loops)
+        let mut raw = polygon_loops(p);
+        let normalized;
+        let p = if separate_touching_holes(&mut raw) {
+            normalized = Polygon::new(
+                raw[0]
+                    .iter()
+                    .copied()
+                    .chain(raw[0].first().copied())
+                    .collect::<Vec<_>>()
+                    .into(),
+                raw[1..]
+                    .iter()
+                    .map(|r| {
+                        r.iter()
+                            .copied()
+                            .chain(r.first().copied())
+                            .collect::<Vec<_>>()
+                            .into()
+                    })
+                    .collect(),
+            );
+            &normalized
+        } else {
+            p
+        };
+        let simplified = polygon_loops(&p.simplify(0.35));
+        if valid_domain(&simplified) {
+            result.push(simplified)
+        } else if valid_domain(&raw) {
+            // Simplification must not reintroduce a contact or lose a valid domain.
+            result.push(raw)
         } else {
             return Err(MeshError::Geometry("invalid raster contour"));
         }
     }
     Ok(result)
+}
+
+fn polygon_loops(p: &Polygon<f64>) -> Loops {
+    std::iter::once(p.exterior())
+        .chain(p.interiors())
+        .enumerate()
+        .map(|(i, r)| {
+            orient(
+                r.0.iter().take(r.0.len() - 1).map(|p| [p.x, p.y]).collect(),
+                i == 0,
+            )
+        })
+        .collect()
+}
+
+fn separate_touching_holes(loops: &mut Loops) -> bool {
+    // Diagonally adjacent background pixels can leave a hole kissing the shell
+    // (or another hole) at one grid corner. Pixel-square union permits that, but
+    // CDT needs disjoint constraint rings. Bevel only the convex hole corner,
+    // toward the hole interior, by at most 1/4 working pixel on each edge.
+    // This removes no pixel centers and leaves the shell and other corners intact.
+    let mut changed = false;
+    for i in 1..loops.len() {
+        let ring = &loops[i];
+        let mut separated = Vec::with_capacity(ring.len());
+        for (k, &p) in ring.iter().enumerate() {
+            let previous = ring[(k + ring.len() - 1) % ring.len()];
+            let next = ring[(k + 1) % ring.len()];
+            let contact = (0..loops.len()).filter(|&j| j != i).any(|j| {
+                (0..loops[j].len())
+                    .any(|n| on_segment(p, loops[j][n], loops[j][(n + 1) % loops[j].len()]))
+            });
+            if contact && cross(previous, p, next) < -EPS {
+                changed = true;
+                let trim = 0.25_f64
+                    .min(distance(p, previous) * 0.25)
+                    .min(distance(p, next) * 0.25);
+                separated.push(snap(lerp(p, previous, trim / distance(p, previous))));
+                separated.push(snap(lerp(p, next, trim / distance(p, next))));
+            } else {
+                separated.push(p);
+            }
+        }
+        loops[i] = separated;
+    }
+    changed
 }
 
 fn squared_distance(w: usize, h: usize, mask: &[bool]) -> Vec<f64> {

@@ -61,6 +61,11 @@ implicitly commits through the ordinary gesture lifecycle.
   instead of the Kotlin edge tracer and ear clipping/Lawson implementation.
   Vertex order, cocircular diagonal choices and some gap/refinement sites differ;
   this is a behavioral port, not bit-for-bit triangle reproduction.
+  A transparent hole touching another ring at a raster corner is separated by
+  beveling its convex corner inward, at most one quarter of a working pixel along
+  each edge. This retains the hole and pixel-center classification without
+  requiring wrapping or editing source alpha. Simplification falls back to the
+  unsimplified domain if it would reintroduce invalid topology.
 - Structured cores constrain their triangle edges directly in one CDT rather
   than separately triangulating each gap and stitching the results. Both protect
   the patterned triangles and shared boundaries.

@@ -2,6 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, asdict, field
 from typing import Literal
+import math
 from .meshes import Geometry
 from ._calls import known
 from ._errors import SdkFailure
@@ -45,17 +46,19 @@ class MeshSettings:
 
     Fields:
     edge_mode: Number of contour bands: single, double or triple.
-    edge_spacing: Positive spacing between contour vertices.
+    edge_spacing: Spacing between contour vertices, from 6 to 1000000 mesh units.
     edge_width: Nonnegative width of the contour bands.
     outer_margin: Nonnegative outward contour margin.
     fill_algorithm: Interior point placement strategy.
-    interior_spacing: Positive target spacing between interior vertices.
+    interior_spacing: Target interior spacing, from 6 to 1000000 mesh units. Large
+        images may increase this target to bound work; it is not an exact edge length.
     fill_parameters: Retained per-strategy interior fill controls.
     suppress_boundary_diagonals: Whether to suppress diagonals between boundary vertices.
     alpha_threshold: Alpha cutoff for contour tracing, from 0 to 255.
     wrap: Nonnegative contour wrapping radius, at most 64.
     unit_scale: Positive source pixels per mesh unit; 1 uses source pixel units.
-    detail: Positive working pixels per mesh unit, limited by source resolution and tracing budget.
+    detail: Working pixels per mesh unit; effectively clamped to 1..4, source
+        resolution and the tracing budget. It does not change output coordinates.
     clip_to_image: Whether to clip the generated contour to the image bounds.
     max_vertices: Output vertex limit, from 3 to 65534.
     """
@@ -74,6 +77,12 @@ class MeshSettings:
     clip_to_image: bool = True
     max_vertices: int = 65534
 
+    def __post_init__(self) -> None:
+        for name in ('edge_spacing', 'interior_spacing'):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not 6 <= value <= 1e6:
+                raise ValueError(f'{name} must be finite and between 6 and 1000000 mesh units')
+
 
 def generate(runtime: Runtime, width: int, height: int, alpha: bytes = b'', *,
              settings: MeshSettings | None = None,
@@ -86,6 +95,9 @@ def generate(runtime: Runtime, width: int, height: int, alpha: bytes = b'', *,
     Initial synchronous service limit: 4194304 pixels and 65534 output vertices.
     Use ordinary Edit operations to publish the result; generation creates no history.
     Socket timeouts use the standard same-request recovery contract.
+    Host errors distinguish INVALID_ARGUMENT, MESH_EMPTY_FOREGROUND,
+    MESH_GENERATION_LIMIT and MESH_GENERATION_FAILED. The latter means the
+    contour/triangulation pipeline failed, rather than invalid settings.
     """
     from .backends.connected import ConnectedBackend
     backend = runtime._backend
@@ -114,4 +126,6 @@ def generate(runtime: Runtime, width: int, height: int, alpha: bytes = b'', *,
     return known(lambda: Geometry._read(backend._request(request, runtime, 'mesh_generation.generate')),
                  lambda: Geometry._read(backend.recover(runtime)))
 
-__all__ = ['MeshSettings', 'FillSettings', 'FillParameters', 'generate']
+# Public workflow helpers share the same optional Editor service; inspection is CPU-only.
+from ._mesh_workflow import MeshDraft as MeshDraft, GeometryQuality as GeometryQuality, generate_for_mesh as generate_for_mesh, inspect_geometry as inspect_geometry
+__all__ = ['MeshSettings', 'FillSettings', 'FillParameters', 'generate', 'MeshDraft', 'GeometryQuality', 'generate_for_mesh', 'inspect_geometry']

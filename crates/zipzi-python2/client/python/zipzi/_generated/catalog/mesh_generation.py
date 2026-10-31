@@ -2,8 +2,12 @@
 from .index import Entry
 DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_generation.FillParameters',
                                         'zipzi.mesh_generation.FillSettings',
+                                        'zipzi.mesh_generation.GeometryQuality',
+                                        'zipzi.mesh_generation.MeshDraft',
                                         'zipzi.mesh_generation.MeshSettings',
-                                        'zipzi.mesh_generation.generate'),
+                                        'zipzi.mesh_generation.generate',
+                                        'zipzi.mesh_generation.generate_for_mesh',
+                                        'zipzi.mesh_generation.inspect_geometry'),
                            'documentation': 'Optional Editor-host mesh generation; no document writes or native '
                                             'dependency.',
                            'kind': 'module',
@@ -34,17 +38,109 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
                                         'signature': '(poisson: FillParameters = <factory>, quadtree: FillParameters = '
                                                      '<factory>, fractal: FillParameters = <factory>, paving: '
                                                      'FillParameters = <factory>)'},
+ 'zipzi.mesh_generation.GeometryQuality': {'children': (),
+                                           'documentation': 'CPU quality of one geometry, independent of any document '
+                                                            'or GPU.\n'
+                                                            '\n'
+                                                            'Angles use supplied positions; coverage samples source UV '
+                                                            'pixel centers with\n'
+                                                            'alpha >= alpha_threshold. Ignores texture filtering, '
+                                                            'masks and occlusion.\n'
+                                                            'pixel_step > 1 denotes approximate coverage. No animation '
+                                                            'is evaluated.',
+                                           'example': 'docs/recipes.py',
+                                           'fields': [('vertex_count', 'Number of supplied mesh vertices.'),
+                                                      ('triangle_count', 'Number of supplied triangles.'),
+                                                      ('min_angle_degrees',
+                                                       'Smallest triangle angle; zero for empty or degenerate '
+                                                       'geometry.'),
+                                                      ('skinny_triangles',
+                                                       'Count of triangles with a minimum angle below ten degrees.'),
+                                                      ('degenerate_triangles',
+                                                       'Count of triangles with zero edges or double area below '
+                                                       '1e-12.'),
+                                                      ('mixed_winding_triangles',
+                                                       'Smaller of the positive and negative winding counts; global '
+                                                       'reflection is allowed.'),
+                                                      ('nonmanifold_edges',
+                                                       'Edges incident to more than two triangles.'),
+                                                      ('pixel_step',
+                                                       'Source pixel sampling stride; greater than one denotes '
+                                                       'approximation.'),
+                                                      ('opaque_pixels',
+                                                       'Sampled source pixels whose alpha meets the threshold.'),
+                                                      ('uncovered_opaque_pixels',
+                                                       'Sampled painted pixels outside the UV triangle union.'),
+                                                      ('covered_pixels',
+                                                       'Sampled source pixels inside the UV triangle union.'),
+                                                      ('transparent_covered_pixels',
+                                                       'Covered samples below the alpha threshold.'),
+                                                      ('uncovered_opaque_fraction',
+                                                       'Uncovered opaque samples divided by opaque samples; None if '
+                                                       'none are painted.')],
+                                           'kind': 'type',
+                                           'signature': '(vertex_count: int, triangle_count: int, min_angle_degrees: '
+                                                        'float, skinny_triangles: int, degenerate_triangles: int, '
+                                                        'mixed_winding_triangles: int, nonmanifold_edges: int, '
+                                                        'pixel_step: int, opaque_pixels: int, uncovered_opaque_pixels: '
+                                                        'int, covered_pixels: int, transparent_covered_pixels: int, '
+                                                        'uncovered_opaque_fraction: float | None)'},
+ 'zipzi.mesh_generation.MeshDraft': {'children': ('zipzi.mesh_generation.MeshDraft.apply',),
+                                     'documentation': "Frozen generated geometry in the original mesh's authoring "
+                                                      'coordinates.\n'
+                                                      '\n'
+                                                      'Generation does not edit the document. apply() checks the '
+                                                      'captured Source and\n'
+                                                      'lets the host validate complete binding/BlendShape/Glue '
+                                                      'replacements. It never\n'
+                                                      'silently drops dependencies. Inspect the Edit candidate before '
+                                                      'committing.',
+                                     'example': 'docs/recipes.py',
+                                     'fields': [('source',
+                                                 'Exact document Source captured before generation; later edits '
+                                                 'invalidate the draft.'),
+                                                ('mesh',
+                                                 'Original canonical mesh, including texture, parent and drawing '
+                                                 'metadata.'),
+                                                ('geometry',
+                                                 'Generated geometry mapped into the original mesh authoring space.'),
+                                                ('space',
+                                                 'Model, rotation-local or Warp-parameter space for the original '
+                                                 'mesh.')],
+                                     'kind': 'type',
+                                     'signature': '(source: Source, mesh: m.mesh.Mesh, geometry: Geometry, space: '
+                                                  'm.sampling.GeometrySpace)'},
+ 'zipzi.mesh_generation.MeshDraft.apply': {'children': (),
+                                           'documentation': 'Apply replacement to an existing Edit; publication '
+                                                            'remains explicit.\n'
+                                                            '\n'
+                                                            'Supply the complete existing dependency records with '
+                                                            'resampled shapes.\n'
+                                                            'Omitted dependencies are rejected by the host. '
+                                                            'vertex_mapping explicitly\n'
+                                                            'maps every old ID to a new ID or None; new IDs do not '
+                                                            'imply correspondence.',
+                                           'example': 'docs/recipes.py',
+                                           'fields': [],
+                                           'kind': 'callable',
+                                           'signature': '(edit: Edit, *, vertex_mapping: dict[int, int | None], '
+                                                        'binding: m.bindings.MeshBinding | None=None, blend_bindings: '
+                                                        'tuple[m.bindings.BlendShapeBinding, ...]=(), glues: '
+                                                        'tuple[m.scene.Glue, ...]=()) -> WriteResult'},
  'zipzi.mesh_generation.MeshSettings': {'children': (),
                                         'documentation': 'Editor mesh generation controls; lengths use mesh units '
                                                          'unless stated.',
                                         'example': 'docs/recipes.py',
                                         'fields': [('edge_mode', 'Number of contour bands: single, double or triple.'),
-                                                   ('edge_spacing', 'Positive spacing between contour vertices.'),
+                                                   ('edge_spacing',
+                                                    'Spacing between contour vertices, from 6 to 1000000 mesh units.'),
                                                    ('edge_width', 'Nonnegative width of the contour bands.'),
                                                    ('outer_margin', 'Nonnegative outward contour margin.'),
                                                    ('fill_algorithm', 'Interior point placement strategy.'),
                                                    ('interior_spacing',
-                                                    'Positive target spacing between interior vertices.'),
+                                                    'Target interior spacing, from 6 to 1000000 mesh units. Large '
+                                                    'images may increase this target to bound work; it is not an exact '
+                                                    'edge length.'),
                                                    ('fill_parameters', 'Retained per-strategy interior fill controls.'),
                                                    ('suppress_boundary_diagonals',
                                                     'Whether to suppress diagonals between boundary vertices.'),
@@ -54,8 +150,9 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
                                                    ('unit_scale',
                                                     'Positive source pixels per mesh unit; 1 uses source pixel units.'),
                                                    ('detail',
-                                                    'Positive working pixels per mesh unit, limited by source '
-                                                    'resolution and tracing budget.'),
+                                                    'Working pixels per mesh unit; effectively clamped to 1..4, source '
+                                                    'resolution and the tracing budget. It does not change output '
+                                                    'coordinates.'),
                                                    ('clip_to_image',
                                                     'Whether to clip the generated contour to the image bounds.'),
                                                    ('max_vertices', 'Output vertex limit, from 3 to 65534.')],
@@ -82,10 +179,47 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
                                                      'output vertices.\n'
                                                      'Use ordinary Edit operations to publish the result; generation '
                                                      'creates no history.\n'
-                                                     'Socket timeouts use the standard same-request recovery contract.',
+                                                     'Socket timeouts use the standard same-request recovery '
+                                                     'contract.\n'
+                                                     'Host errors distinguish INVALID_ARGUMENT, '
+                                                     'MESH_EMPTY_FOREGROUND,\n'
+                                                     'MESH_GENERATION_LIMIT and MESH_GENERATION_FAILED. The latter '
+                                                     'means the\n'
+                                                     'contour/triangulation pipeline failed, rather than invalid '
+                                                     'settings.',
                                     'example': 'docs/recipes.py',
                                     'fields': [],
                                     'kind': 'callable',
                                     'signature': "(runtime: Runtime, width: int, height: int, alpha: bytes=b'', *, "
                                                  "settings: MeshSettings | None=None, stage: Literal['edges', 'full', "
-                                                 "'interior']='full', geometry: Geometry | None=None) -> Geometry"}}
+                                                 "'interior']='full', geometry: Geometry | None=None) -> Geometry"},
+ 'zipzi.mesh_generation.generate_for_mesh': {'children': (),
+                                             'documentation': 'Read the mesh/texture on one Source and generate an '
+                                                              'uncommitted draft.\n'
+                                                              '\n'
+                                                              'Requires a connected Editor and an affine '
+                                                              'UV-to-authoring map. Validates all\n'
+                                                              'source vertices, including deformed meshes; rejects '
+                                                              'non-affine mappings rather\n'
+                                                              'than guessing. The draft retains original metadata and '
+                                                              'authoring space.',
+                                             'example': 'docs/recipes.py',
+                                             'fields': [],
+                                             'kind': 'callable',
+                                             'signature': '(session: Session, mesh_id: str, *, settings: MeshSettings '
+                                                          '| None=None) -> MeshDraft'},
+ 'zipzi.mesh_generation.inspect_geometry': {'children': (),
+                                            'documentation': 'Inspect generated/mapped geometry without an Edit, '
+                                                             'Runtime or GPU.\n'
+                                                             '\n'
+                                                             'Coverage uses a grid with step '
+                                                             'ceil(max(width,height)/256), matching observation\n'
+                                                             'sampling. At most 4194304 source pixels, 131068 '
+                                                             'triangles and 8 million triangle\n'
+                                                             'scanlines are accepted. Malformed/nonfinite geometry '
+                                                             'raises ValueError.',
+                                            'example': 'docs/recipes.py',
+                                            'fields': [],
+                                            'kind': 'callable',
+                                            'signature': '(geometry: Geometry, width: int, height: int, alpha: bytes, '
+                                                         '*, alpha_threshold: int=8) -> GeometryQuality'}}

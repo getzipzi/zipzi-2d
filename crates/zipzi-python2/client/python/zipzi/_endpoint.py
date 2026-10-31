@@ -115,9 +115,12 @@ def connect_backend(endpoint: Path | None, *, start: bool, host: Path | None,
     while True:
         try:
             return attempt()
-        except (FileNotFoundError, ConnectionRefusedError):
+        except (FileNotFoundError, ConnectionRefusedError) as error:
             if not start:
-                raise
+                raise type(error)(error.errno,
+                    f'No Editor is listening at {path}. Select the running host with '
+                    'endpoint=Path(...), or ZIPZI_RUNTIME_DIR / ZIPZI_RUNTIME_PROFILE '
+                    '(the development Editor commonly uses profile dev).', str(path)) from error
         if child is not None and child.poll() is not None:
             raise SdkFailure("HOST_START_FAILED", f"Host exited with status {child.returncode} before handshake")
         if time.monotonic() >= deadline:

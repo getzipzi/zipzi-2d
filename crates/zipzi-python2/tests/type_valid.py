@@ -259,3 +259,15 @@ def observation_budget_estimate(session: zipzi.Session, edit: zipzi.Edit) -> obs
     with session.preview() as preview:
         assert_type(preview.estimate_observation((0.,),view=view,geometry=False),observation.Estimate)
     return estimate
+
+from zipzi import mesh_generation as mg
+
+def mesh_generation_workflow(session: zipzi.Session, edit: zipzi.Edit, mesh_id: str, alpha: bytes) -> mg.GeometryQuality:
+    draft=mg.generate_for_mesh(session,mesh_id,settings=mg.MeshSettings(wrap=4))
+    assert_type(draft,mg.MeshDraft)
+    assert_type(draft.source,zipzi.Source)
+    assert_type(draft.geometry,meshes.Geometry)
+    assert_type(draft.apply(edit,vertex_mapping={v:None for v in draft.mesh.vertex_ids}),zipzi.WriteResult)
+    quality=mg.inspect_geometry(draft.geometry,64,64,alpha)
+    assert_type(quality.uncovered_opaque_fraction,float|None)
+    return quality

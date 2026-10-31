@@ -122,3 +122,62 @@ Coverage is bounded to 8 million triangle scanlines per frame and overlay drawin
 to 64 million pixel visits; expensive requests fail explicitly. Reduce output
 resolution or overlay options, or use CPU-only quality for complex geometry.
 Inspection PNGs and JSON retain overlay options, quality and Source provenance.
+
+### Generate for an existing mesh
+
+`mesh_generation.generate_for_mesh(session, mesh_id, settings=...)` reads the
+mesh and its resolved texture on one Source and returns a `MeshDraft`. It maps
+source UVs into the original authoring coordinates, checks that the entire old
+mesh has an affine UV map, and retains the texture, parent, visibility and draw
+metadata. Non-affine mappings fail explicitly rather than approximating shapes.
+Generation itself creates no Edit or history entry.
+
+```python
+from zipzi import mesh_generation as mg
+
+draft = mg.generate_for_mesh(session, mesh_id, settings=mg.MeshSettings(wrap=4))
+# For this example the source mesh has no bindings, BlendShapes or Glue.
+with session.edit("Generate contour mesh") as edit:
+    draft.apply(edit, vertex_mapping={v: None for v in draft.mesh.vertex_ids})
+    quality = edit.modeling.sample(({},), checks=sampling.Checks(quality=True))
+    # Inspect quality/observation here. edit.cancel() discards the candidate.
+```
+
+`vertex_mapping` is mandatory: generated numeric IDs have no implicit relationship
+to old IDs. Existing ordinary bindings, BlendShape bindings and Glue must be
+supplied completely with resampled data through `draft.apply(...)`. The host
+rejects omissions; the helper does not promise automatic migration. Stale formal
+content or a mesh changed inside the candidate rejects application.
+
+### Inspect geometry before applying it
+
+`mg.inspect_geometry(geometry, width, height, alpha)` works without a Runtime,
+Edit or GPU, including on `generate()` results. Use the texture's top-down alpha
+bytes (`pixels.rgba[3::4]`). Angles use the supplied geometry positions; coverage
+uses its UVs, so mapped and source-pixel geometries can both be inspected.
+
+```python
+report = mg.inspect_geometry(geometry, pixels.width, pixels.height, pixels.rgba[3::4])
+print(report.min_angle_degrees, report.skinny_triangles,
+      report.uncovered_opaque_fraction, report.pixel_step)
+```
+
+Coverage samples source pixel centers on a grid with
+`pixel_step = max(1, ceil(max(width, height) / 256))`; fractions are approximate
+when the step exceeds one. Alpha >= 8 is painted by default. Filtering, masks,
+occlusion and animation are excluded. Use evaluated sampling/observation when
+parents or parameter poses change the geometry.
+
+### Generation settings and failures
+
+Edge and interior spacing must be finite and between 6 and 1000000 mesh units.
+Smaller values are rejected instead of silently increased. Interior spacing is a
+target; large images may increase it to bound work. `detail` is limited to 1..4,
+source resolution and the tracing budget; output remains in source pixels.
+
+Updated Editor hosts report `MESH_EMPTY_FOREGROUND` for empty preprocessed alpha,
+`MESH_GENERATION_LIMIT` for exhausted generation budgets, and
+`MESH_GENERATION_FAILED` for contour/triangulation failures. Invalid payloads or
+settings report `INVALID_ARGUMENT`. Earlier compatible hosts can still report
+`INVALID_ARGUMENT` for every failure. The error message retains the pipeline's
+specific reason. A failed request does not edit the document.

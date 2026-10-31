@@ -47,3 +47,18 @@ discovery settings and uses the selected host; rebuild/restart Editor separately
 This source environment is separate from test fixtures and does not validate
 wheel installation. Formal checks remain `./tools/test-sdk.sh python2` and
 `./tools/test-sdk.sh python2-connected`.
+
+### Connect to the development Editor
+
+The Python launcher preserves host selection; it does not choose among running
+Editors. If the development Editor was started with profile `dev`, select it
+explicitly rather than using the SDK's `default` profile:
+
+```sh
+ZIPZI_RUNTIME_PROFILE=dev ./tools/dev-python target/python2/scratch/probe.py
+```
+
+Or pass the absolute endpoint to `zipzi.connect(endpoint=...)`. On macOS the
+usual development endpoint is `/tmp/zipzi-runtime-<uid>/dev.sock`. An unavailable
+Unix endpoint error includes the attempted address and host-selection guidance;
+it never falls back to a different Editor or starts one implicitly.

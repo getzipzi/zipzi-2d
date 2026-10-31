@@ -143,6 +143,8 @@ impl MeshSettings {
         ]
         .iter()
         .any(|n| !n.is_finite() || *n <= 0. || *n > 1e6)
+            || self.edge_spacing < 6.
+            || self.interior_spacing < 6.
             || [self.edge_width, self.outer_margin, self.wrap]
                 .iter()
                 .any(|n| !n.is_finite() || *n < 0.)
@@ -386,10 +388,9 @@ pub fn generate_mesh(
     if raw.len() > 1024 || raw.iter().flatten().map(Vec::len).sum::<usize>() > 65_534 {
         return Err(MeshError::Limit);
     }
-    let edge_spacing = settings.edge_spacing.max(6.);
+    let edge_spacing = settings.edge_spacing;
     let spacing = settings
         .interior_spacing
-        .max(6.)
         .max((rw as f64 * rh as f64 / (1200. * H)).sqrt() / unit);
     let empty = stage == MeshGenerationStage::Edges;
     let mut guides: Vec<Loops> = raw

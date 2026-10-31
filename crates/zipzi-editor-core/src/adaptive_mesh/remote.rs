@@ -18,9 +18,23 @@ struct Request {
     geometry: Option<MeshGeometry>,
 }
 
+fn invalid(message: impl Into<String>) -> (&'static str, String) {
+    ("INVALID_ARGUMENT", message.into())
+}
+
+fn mesh_failure(error: MeshError) -> (&'static str, String) {
+    let code = match error {
+        MeshError::Input | MeshError::Options => "INVALID_ARGUMENT",
+        MeshError::Empty => "MESH_EMPTY_FOREGROUND",
+        MeshError::Limit => "MESH_GENERATION_LIMIT",
+        MeshError::Geometry(_) => "MESH_GENERATION_FAILED",
+    };
+    (code, error.to_string())
+}
+
 pub fn generate(input: Value) -> Value {
-    let result = (|| -> Result<MeshGeometry, String> {
-        let request: Request = serde_json::from_value(input).map_err(|e| e.to_string())?;
+    let result = (|| -> Result<MeshGeometry, (&'static str, String)> {
+        let request: Request = serde_json::from_value(input).map_err(|e| invalid(e.to_string()))?;
         let Request {
             width,
             height,
@@ -37,13 +51,15 @@ pub fn generate(input: Value) -> Value {
             || height > 16384
             || u64::from(width) * u64::from(height) > 4194304
         {
-            return Err("Editor mesh requests support at most 4194304 source pixels".into());
+            return Err(invalid(
+                "Editor mesh requests support at most 4194304 source pixels",
+            ));
         }
         if settings.max_vertices > 65534 {
-            return Err("At most 65534 vertices are supported".into());
+            return Err(invalid("At most 65534 vertices are supported"));
         }
         if alpha_hex.len() > 8388608 || alpha_hex.len() % 2 != 0 {
-            return Err("Invalid alpha bytes".into());
+            return Err(invalid("Invalid alpha bytes"));
         }
         let alpha = alpha_hex
             .as_bytes()
@@ -52,14 +68,15 @@ pub fn generate(input: Value) -> Value {
                 let digit = |c: u8| (c as char).to_digit(16).ok_or("Invalid alpha hex");
                 Ok(((digit(pair[0])? << 4) | digit(pair[1])?) as u8)
             })
-            .collect::<Result<Vec<u8>, &str>>()?;
+            .collect::<Result<Vec<u8>, &str>>()
+            .map_err(invalid)?;
         if stage == "interior" {
             if !alpha.is_empty() {
-                return Err("Interior requests take geometry, not alpha".into());
+                return Err(invalid("Interior requests take geometry, not alpha"));
             }
-            let geometry = geometry.ok_or("Interior requires geometry")?;
+            let geometry = geometry.ok_or_else(|| invalid("Interior requires geometry"))?;
             if geometry.vertex_ids.len() > 65534 || geometry.triangles.len() > 131068 {
-                return Err("Input geometry exceeds Editor request limits".into());
+                return Err(invalid("Input geometry exceeds Editor request limits"));
             }
             if geometry.positions.len() != geometry.vertex_ids.len()
                 || geometry.uvs.len() != geometry.vertex_ids.len()
@@ -69,26 +86,26 @@ pub fn generate(input: Value) -> Value {
                     .chain(&geometry.uvs)
                     .any(|p| !p.x.is_finite() || !p.y.is_finite())
             {
-                return Err("Invalid geometry arrays".into());
+                return Err(invalid("Invalid geometry arrays"));
             }
-            fill_existing_geometry(&geometry, width, height, &settings).map_err(|e| e.to_string())
+            fill_existing_geometry(&geometry, width, height, &settings).map_err(mesh_failure)
         } else {
             if geometry.is_some() {
-                return Err("Only interior accepts geometry".into());
+                return Err(invalid("Only interior accepts geometry"));
             }
             let stage = match stage.as_str() {
                 "edges" => MeshGenerationStage::Edges,
                 "full" => MeshGenerationStage::Full,
-                _ => return Err("Stage must be edges, interior or full".into()),
+                _ => return Err(invalid("Stage must be edges, interior or full")),
             };
             generate_mesh(width, height, &alpha, &settings, stage)
                 .map(|result| result.geometry)
-                .map_err(|e| e.to_string())
+                .map_err(mesh_failure)
         }
     })();
     match result {
         Ok(geometry) => success(serde_json::to_value(geometry).expect("finite generated mesh")),
-        Err(message) => failure("INVALID_ARGUMENT", &message),
+        Err((code, message)) => failure(code, &message),
     }
 }
 
@@ -148,5 +165,24 @@ mod tests {
                 .extend(patch.as_object().unwrap().clone());
             assert!(generate(request).get("error").is_some());
         }
+    }
+
+    #[test]
+    fn failure_categories_and_minimum_spacing_are_explicit() {
+        for field in ["edge_spacing", "interior_spacing"] {
+            let mut request = input("full");
+            request["settings"][field] = json!(2.);
+            assert_eq!(generate(request)["error"]["code"], "INVALID_ARGUMENT");
+        }
+        let mut empty = input("full");
+        empty["alpha_hex"] = json!("00".repeat(4096));
+        assert_eq!(generate(empty)["error"]["code"], "MESH_EMPTY_FOREGROUND");
+        let mut limited = input("full");
+        limited["settings"]["max_vertices"] = json!(3);
+        assert_eq!(generate(limited)["error"]["code"], "MESH_GENERATION_LIMIT");
+        assert_eq!(
+            mesh_failure(MeshError::Geometry("invalid raster contour")).0,
+            "MESH_GENERATION_FAILED"
+        );
     }
 }
