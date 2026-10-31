@@ -76,6 +76,7 @@ pub struct OverlaySnapshot {
     pub warp_transform_points: Option<usize>,
     pub warp_frame_adjusting: bool,
     pub warp_bezier_mode: Option<zipzi_core::WarpBezierEditMode>,
+    pub warp_keep_children: bool,
     pub active_handle_radians: f32,
     /// Context for a hovered control, separate from edit errors and parameter previews.
     pub point_unavailable: Option<String>,
@@ -239,6 +240,11 @@ impl ToolController {
             } else {
                 0
             });
+            out.warp_keep_children = self
+                .gesture
+                .as_ref()
+                .map_or(self.warp_keep_children, |g| g.press().keep_children)
+                && !out.warp_frame_adjusting;
             if local && !self.warp_fine {
                 out.warp_bezier_mode = active_target
                     .and_then(|hit| {

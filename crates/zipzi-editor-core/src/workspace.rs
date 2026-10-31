@@ -564,6 +564,10 @@ impl Editor {
         self.active_session()
             .is_some_and(|session| session.modeling.tools.warp_whole)
     }
+    pub fn warp_keep_children(&self) -> bool {
+        self.active_session()
+            .is_some_and(|s| s.modeling.tools.warp_keep_children)
+    }
     pub fn cancel_gesture(&mut self) {
         if self
             .viewport_interaction

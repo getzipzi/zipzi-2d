@@ -77,6 +77,14 @@ impl Document {
             cost,
         };
         match &edit {
+            SceneContentEdit::WarpKeepChildren { transform_id, warp } => {
+                let (delta, affected, error, samples) =
+                    self.warp_keep_children_delta(transform_id, warp, control)?;
+                plan.domain.delta = delta;
+                plan.domain.affected = affected;
+                plan.report.preservation_error = Some(error);
+                plan.report.preservation_samples = samples;
+            }
             SceneContentEdit::MeshVertices { .. }
             | SceneContentEdit::InsertMeshVertices { .. }
             | SceneContentEdit::DeleteMeshVertices { .. }
@@ -204,6 +212,14 @@ impl Document {
                     .sum::<usize>()
         };
         let (work, items, bytes) = match edit {
+            E::WarpKeepChildren { .. } => {
+                // Conversion fragments and native verification are bounded by the
+                // retained document; reject capacity before cloning any candidate.
+                return Ok((
+                    self.mesh_order().len() + self.transform_order().len(),
+                    self.estimated_content_bytes(),
+                ));
+            }
             E::WarpAuthoring {
                 transform_id,
                 settings,

@@ -58,6 +58,7 @@ pub enum EditorCommand {
     ToggleDeformerGrid,
     ToggleWarpFine,
     ToggleWarpWhole,
+    ToggleWarpKeepChildren,
     ToggleOriginalPoints,
     AdjustDeformer {
         object: crate::ObjectRef,
@@ -128,6 +129,7 @@ impl EditorCommand {
                 | Self::ToggleDeformerGrid
                 | Self::ToggleWarpFine
                 | Self::ToggleWarpWhole
+                | Self::ToggleWarpKeepChildren
                 | Self::ToggleOriginalPoints
                 | Self::FinishEdit
                 | Self::CancelEdit

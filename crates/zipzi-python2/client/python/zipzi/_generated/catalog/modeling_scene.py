@@ -79,6 +79,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                        'zipzi.modeling.scene.SceneContentEditWarpAuthoring',
                                        'zipzi.modeling.scene.SceneContentEditWarpBezier',
                                        'zipzi.modeling.scene.SceneContentEditWarpBezierControls',
+                                       'zipzi.modeling.scene.SceneContentEditWarpKeepChildren',
                                        'zipzi.modeling.scene.SceneContentEditWarpPoints',
                                        'zipzi.modeling.scene.SceneContentEditWarpShape',
                                        'zipzi.modeling.scene.SceneContentTarget',

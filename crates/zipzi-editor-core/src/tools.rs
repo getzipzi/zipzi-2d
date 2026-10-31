@@ -60,6 +60,7 @@ pub struct ToolController {
     pub deformer_grid: bool,
     pub warp_fine: bool,
     pub warp_whole: bool,
+    pub warp_keep_children: bool,
     pub original_points: bool,
     pub(crate) components: Vec<ComponentRef>,
     pub(crate) warp_frames: std::collections::HashMap<

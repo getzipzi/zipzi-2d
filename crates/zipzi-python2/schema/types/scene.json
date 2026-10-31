@@ -2866,6 +2866,32 @@
         {
           "fields": [
             {
+              "doc": "Stable ID of a static Warp. Driven Warp maps are explicitly unsupported.",
+              "name": "transform_id",
+              "rust_name": "transform_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Complete replacement map/controller at the existing conversion density.\nThe shared plan compensates all child shape channels atomically.",
+              "name": "warp",
+              "rust_name": "warp",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::WarpTransform"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "warp_keep_children",
+          "rust_name": "WarpKeepChildren"
+        },
+        {
+          "fields": [
+            {
               "doc": "Stable deformation-transform ID in this document.",
               "name": "transform_id",
               "rust_name": "transform_id",

@@ -90,7 +90,7 @@ impl Document {
         let mut mesh_positions = crate::mesh_edit::positions(targets, selected, change)
             .map_err(|e| crate::mesh_edit::PreviewConstraint(e.to_string()))?;
         let previous_revision = self.projection_revision;
-        self.invalidate_projection(false);
+        self.invalidate_projection(targets.iter().any(|target| target.keep_children));
         let pending = self.pending.as_mut().unwrap();
         pending.changed.take();
         for (index, target) in targets.iter().enumerate() {

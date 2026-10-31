@@ -894,6 +894,26 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                           'tuple[WarpBezierControlPatch, ...])'},
  'zipzi.modeling.scene.SceneContentEditWarpBezierControls.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditWarpBezierControls.summary': {'alias': 'zipzi.ApiDescription.summary'},
+ 'zipzi.modeling.scene.SceneContentEditWarpKeepChildren': {'children': ('zipzi.modeling.scene.SceneContentEditWarpKeepChildren.__repr__',
+                                                                        'zipzi.modeling.scene.SceneContentEditWarpKeepChildren.summary'),
+                                                           'documentation': 'Immutable owned '
+                                                                            'SceneContentEditWarpKeepChildren value. '
+                                                                            'Construction owns declared collections; '
+                                                                            'reading fields, repr and summary performs '
+                                                                            'no IO.',
+                                                           'example': 'docs/recipes.py',
+                                                           'fields': [('transform_id',
+                                                                       'Stable ID of a static Warp. Driven Warp maps '
+                                                                       'are explicitly unsupported.'),
+                                                                      ('warp',
+                                                                       'Complete replacement map/controller at the '
+                                                                       'existing conversion density.\n'
+                                                                       'The shared plan compensates all child shape '
+                                                                       'channels atomically.')],
+                                                           'kind': 'type',
+                                                           'signature': '(*, transform_id: str, warp: WarpTransform)'},
+ 'zipzi.modeling.scene.SceneContentEditWarpKeepChildren.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
+ 'zipzi.modeling.scene.SceneContentEditWarpKeepChildren.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentEditWarpPoints': {'children': ('zipzi.modeling.scene.SceneContentEditWarpPoints.__repr__',
                                                                   'zipzi.modeling.scene.SceneContentEditWarpPoints.summary'),
                                                      'documentation': 'Immutable owned SceneContentEditWarpPoints '

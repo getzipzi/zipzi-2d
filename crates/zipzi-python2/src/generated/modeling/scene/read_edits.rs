@@ -453,6 +453,10 @@ pub fn read_scenecontentedit(
             target: read_shapetarget(&value.getattr("target")?)?,
             action: read_warpshapeaction(&value.getattr("action")?)?,
         }),
+        "warp_keep_children" => Ok(zipzi_core::document::SceneContentEdit::WarpKeepChildren {
+            transform_id: value.getattr("transform_id")?.extract()?,
+            warp: read_warptransform(&value.getattr("warp")?)?,
+        }),
         "resize_warp" => Ok(zipzi_core::document::SceneContentEdit::ResizeWarp {
             transform_id: value.getattr("transform_id")?.extract()?,
             rows: value.getattr("rows")?.extract()?,

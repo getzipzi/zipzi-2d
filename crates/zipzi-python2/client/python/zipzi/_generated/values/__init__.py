@@ -727,6 +727,7 @@ from .scene import SceneContentEditTransferGluePairs as SceneContentEditTransfer
 from .scene import SceneContentEditWarpAuthoring as SceneContentEditWarpAuthoring
 from .scene import SceneContentEditWarpBezier as SceneContentEditWarpBezier
 from .scene import SceneContentEditWarpBezierControls as SceneContentEditWarpBezierControls
+from .scene import SceneContentEditWarpKeepChildren as SceneContentEditWarpKeepChildren
 from .scene import SceneContentEditWarpPoints as SceneContentEditWarpPoints
 from .scene import SceneContentEditWarpShape as SceneContentEditWarpShape
 from .scene import SceneContentTarget as SceneContentTarget

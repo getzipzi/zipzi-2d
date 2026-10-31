@@ -17,6 +17,7 @@ pub(super) struct Press {
     pub access: Arc<access::EditAccess>,
     pub warp_fine: bool,
     pub original_points: bool,
+    pub keep_children: bool,
     pub selection: Vec<ObjectRef>,
     pub current: ViewportPoint,
     pub dragged: bool,

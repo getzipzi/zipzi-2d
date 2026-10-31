@@ -467,6 +467,16 @@ Immutable owned SceneContentEditWarpBezierControls value. Construction owns decl
 - `target`: Explicit base or ordinary stored shape; BlendShapes have no independent controller.
 - `updates`: Explicit controller destinations; the stored editing mode supplies neighborhood influence.
 
+## zipzi.modeling.scene.SceneContentEditWarpKeepChildren
+
+`(*, transform_id: str, warp: WarpTransform)`
+
+Immutable owned SceneContentEditWarpKeepChildren value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `transform_id`: Stable ID of a static Warp. Driven Warp maps are explicitly unsupported.
+- `warp`: Complete replacement map/controller at the existing conversion density.
+The shared plan compensates all child shape channels atomically.
+
 ## zipzi.modeling.scene.SceneContentEditWarpPoints
 
 `(*, transform_id: str, target: ShapeTarget = <factory>, updates: tuple[WarpPointPatch, ...], clear_bezier: bool = False)`

@@ -114,6 +114,8 @@ transform dialog in English, Simplified Chinese and Japanese. Set
 It also captures independently rotated frames and the shared frame menu.
 The `warp-authoring` scene compares all four Bezier policies on a textured grid
 and captures controller-density previews in those three languages.
+The `warp-keep-children` scene exercises native Command dragging and the Properties
+mode while checking that every textured child vertex stays fixed.
 
 ## Deformer creation
 
@@ -207,6 +209,22 @@ cells), global Gaussian smoothing, and preservation of opposing tangent length
 ratios. These are Zipzi policies, without a claim of Cubism equivalence. Smoothing
 can affect controls outside the selection; the viewport status names the active
 policy. Whole-Warp transforms keep their affine behavior and grid detail.
+
+**Keep children fixed** in Properties enables Warp-only adjustment for pointer
+and numeric transforms. Holding Command on macOS or Ctrl on Windows at the start
+of a drag enables the same policy for that gesture. The shared plan changes the
+Warp and compensates child base shapes, ordinary keyforms and BlendShape deltas
+in one undo step, including nested nonlinear Warp subtrees and Rotation children.
+Cancel or dragging back to the start restores the captured data exactly.
+
+The edited Warp must have reversible affine old and new maps and static ancestor
+spaces. Current support admits rectangular Warp ancestors and Rotation chains;
+driven or nonlinear edited/ancestor maps, density changes, locked dependencies
+and conversions exceeding the 0.01 canvas-unit numerical budget reject atomically.
+Local control edits that make the map nonlinear are rejected. Independent
+interior/exterior samples and parameter endpoints/key midpoints supplement the
+constant affine channel conversion; their measured maximum is not a global
+error bound. There is no arbitrary nonlinear keep-children conversion yet.
 
 ## Object deletion
 

@@ -35,14 +35,17 @@ impl ToolController {
                 Ok(false)
             }
             CanvasInput::Down {
-                point, shift, alt, ..
+                point,
+                shift,
+                alt,
+                primary,
             } => {
                 ensure!(
                     point.x.is_finite() && point.y.is_finite(),
                     "Invalid pointer position"
                 );
                 self.cancel(document);
-                self.begin_selection(document, frame, point, shift, alt);
+                self.begin_selection(document, frame, point, shift, alt, primary);
                 Ok(false)
             }
             CanvasInput::Move { point, left_down } => {

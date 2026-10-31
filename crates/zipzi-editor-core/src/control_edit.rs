@@ -203,6 +203,21 @@ pub(crate) enum EditOriginal {
     Batch(Vec<EditOriginal>),
 }
 impl EditOriginal {
+    fn restore(&self, edit: &mut zipzi_sdk::EditSession<'_>) -> Result<()> {
+        match self {
+            Self::Mesh(v) => edit.replace_mesh(v.clone())?,
+            Self::Transform(v) => edit.replace_transform(v.clone())?,
+            Self::MeshBinding(v) => edit.replace_binding(v.clone())?,
+            Self::SceneBinding(v) => edit.replace_scene_binding(v.clone())?,
+            Self::BlendBinding(v) => edit.replace_blend_binding(v.clone())?,
+            Self::Batch(v) => {
+                for original in v {
+                    original.restore(edit)?;
+                }
+            }
+        }
+        Ok(())
+    }
     pub fn id(&self) -> &str {
         match self {
             Self::Mesh(m) => &m.id,
@@ -235,6 +250,7 @@ pub(crate) struct ControlEdit {
     pub space: ControlSpace,
     pub warp: Option<WarpEdit>,
     pub mesh: Option<crate::mesh_edit::MeshEdit>,
+    pub(crate) keep_children: bool,
 }
 #[derive(Clone)]
 pub(crate) struct WarpEdit {
@@ -748,7 +764,38 @@ impl ControlEdit {
             space: ControlSpace::new(document, scene, &parent_id)?,
             warp,
             mesh,
+            keep_children: false,
         })
+    }
+    pub(crate) fn keep_warp_children(&mut self, document: &Document) -> Result<()> {
+        let model = document.model();
+        let warp = self
+            .warp
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Keep children is available only for Warp controls"))?;
+        let plan = model
+            .plan_scene_content(zipzi_core::document::SceneContentEdit::WarpKeepChildren {
+                transform_id: self.object.id.clone(),
+                warp: warp.transform.warp().unwrap().clone(),
+            })
+            .map_err(crate::AuthoringPlanningError::from_status)?;
+        let mut originals = Vec::new();
+        for id in plan.affected_ids() {
+            if let Some(v) = model.get_transform(id) {
+                originals.push(EditOriginal::Transform(v.clone()));
+            } else if let Some(v) = model.get_mesh(id) {
+                originals.push(EditOriginal::Mesh(v.clone()));
+            } else if let Some(v) = model.get_binding(id) {
+                originals.push(EditOriginal::MeshBinding(v.clone()));
+            } else if let Some(v) = model.get_scene_binding(id) {
+                originals.push(EditOriginal::SceneBinding(v.clone()));
+            } else if let Some(v) = model.get_blend_binding(id) {
+                originals.push(EditOriginal::BlendBinding(v.clone()));
+            }
+        }
+        self.original = EditOriginal::Batch(originals);
+        self.keep_children = true;
+        Ok(())
     }
     pub fn to_model(&self, p: Vec2) -> ModelPoint {
         self.space.to_model(p)
@@ -1139,7 +1186,7 @@ impl ControlEdit {
         }
         // Returning to the press position restores absent metadata and grid size too.
         if (bezier || all) && controller == original.controller {
-            return Ok(edit.replace_warp_authoring(transform, binding)?);
+            return self.write_warp(edit, transform, binding);
         }
         // Controller edits never change the user's explicit runtime lattice density.
         let rows = old.rows;
@@ -1175,7 +1222,7 @@ impl ControlEdit {
             && !all
             && !bezier
         {
-            return Ok(edit.replace_warp_authoring(transform, binding)?);
+            return self.write_warp(edit, transform, binding);
         }
         let stored = if bezier || all {
             Some(controller)
@@ -1196,6 +1243,25 @@ impl ControlEdit {
             w.points = positions;
             w.bezier = stored;
         }
-        Ok(edit.replace_warp_authoring(transform, binding)?)
+        self.write_warp(edit, transform, binding)
+    }
+    fn write_warp(
+        &self,
+        edit: &mut zipzi_sdk::EditSession<'_>,
+        transform: Transform,
+        binding: Option<SceneBinding>,
+    ) -> Result<()> {
+        if self.keep_children {
+            // Every preview starts with the frozen channels; never accumulate
+            // inverse conversions from the previous pointer position.
+            self.original.restore(edit)?;
+            edit.edit_scene_content(zipzi_core::document::SceneContentEdit::WarpKeepChildren {
+                transform_id: transform.id.clone(),
+                warp: transform.warp().unwrap().clone(),
+            })?;
+        } else {
+            edit.replace_warp_authoring(transform, binding)?;
+        }
+        Ok(())
     }
 }

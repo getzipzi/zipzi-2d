@@ -2,6 +2,95 @@ use super::*;
 use zipzi_editor_core::{CanvasInput, EditorCommand, PropertyValue};
 
 #[gpui_kit::test]
+fn deformer_properties_keep_children_mode_applies_numeric_transform_without_model_history_for_the_toggle(
+    cx: &mut TestAppContext,
+) {
+    let (mut document, assets, object) = warp_grid_document();
+    // The general scene fixture deliberately stores canvas-sized mesh values
+    // below a normalized Warp. Use realistic child coordinates for this gate.
+    let saved = document.save(&assets.path().join("preservation")).unwrap();
+    let mut sdk = zipzi_sdk::AuthoringSession::new(
+        &uuid::Uuid::new_v4().to_string(),
+        zipzi_core::Canvas::new(256., 256., Default::default(), 1.),
+    )
+    .unwrap();
+    sdk.open_project(&saved.manifest, None).unwrap();
+    let meshes = sdk
+        .document()
+        .mesh_order()
+        .iter()
+        .filter_map(|id| sdk.document().get_mesh(id))
+        .filter(|m| m.deformer_id == object.id)
+        .cloned()
+        .collect::<Vec<_>>();
+    sdk.edit("Normalize child fixture", None, |edit| {
+        for mut mesh in meshes {
+            for p in &mut mesh.base_positions {
+                p.x /= 256.;
+                p.y /= 256.;
+            }
+            edit.replace_mesh(mesh)?;
+        }
+        Ok(())
+    })
+    .unwrap();
+    sdk.save_project(&saved.manifest, None).unwrap();
+    let mut document = zipzi_editor_core::Document::open(&saved.manifest).unwrap();
+    document.navigate(object.clone()).unwrap();
+    let h = setup_with_document(cx, document, assets);
+    let before = h.view.update(cx, |view, cx| {
+        view.editor
+            .execute(EditorCommand::SelectObject(object.clone()))
+            .unwrap();
+        let frame = document_fixture::present_canvas(&mut view.editor).unwrap();
+        view.redraw(cx);
+        frame
+            .geometry
+            .meshes
+            .iter()
+            .flat_map(|m| m.vertices.iter().map(|(_, p)| *p))
+            .collect::<Vec<_>>()
+    });
+    show(&h, "property-warp-keep-children", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("property-warp-keep-children", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    h.view.read_with(cx, |view, _| {
+        assert!(view.editor.warp_keep_children());
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+    });
+    show(&h, "property-warp-transform", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("property-warp-transform", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    warp_grid_input(&h, "warp-transform-x", "8", cx);
+    warp_grid_input(&h, "warp-transform-angle", "15", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("warp-transform-apply", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    h.view.update(cx, |view, _| {
+        assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+        let frame = document_fixture::present_canvas(&mut view.editor).unwrap();
+        let after = frame
+            .geometry
+            .meshes
+            .iter()
+            .flat_map(|m| m.vertices.iter().map(|(_, p)| *p))
+            .collect::<Vec<_>>();
+        for (a, b) in before.iter().zip(after) {
+            assert!((a.x - b.x).hypot(a.y - b.y) < 0.001);
+        }
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
+    });
+}
+
+#[gpui_kit::test]
 fn deformer_properties_bezier_density_preview_cancels_without_changing_baked_points(
     cx: &mut TestAppContext,
 ) {

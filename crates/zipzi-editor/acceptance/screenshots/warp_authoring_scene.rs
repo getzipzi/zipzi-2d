@@ -195,3 +195,120 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
     }
     Ok(())
 }
+
+pub(super) fn run_keep_children(directory: &std::path::Path) -> anyhow::Result<()> {
+    for locale in ["en", "zh-CN", "ja"] {
+        let mut h = Harness::new()?;
+        crate::i18n::activate(Some(locale));
+        let (document, _assets, object) = fixture(WarpBezierEditMode::Local)?;
+        h.cx.update_window(h.window, |_, window, cx| {
+            h.view.update(cx, |view, cx| {
+                view.replace_editor(Editor::from_document(document), cx);
+                view.editor
+                    .execute(EditorCommand::SelectObject(object.clone()))
+                    .unwrap();
+                view.editor
+                    .execute(EditorCommand::ToggleDeformerGrid)
+                    .unwrap();
+                view.editor.reset_view();
+                view.editor.pan_by(ViewportPoint { x: -128., y: 128. });
+                view.refresh_document(window, cx);
+            })
+        })?;
+        h.capture()?;
+        let before = h.view.read_with(&h.cx, |view, _| {
+            view.modeling_frame()
+                .unwrap()
+                .canvas
+                .geometry
+                .meshes
+                .iter()
+                .flat_map(|m| m.vertices.iter().map(|(_, p)| *p))
+                .collect::<Vec<_>>()
+        });
+        h.cx.update_window(h.window, |_, window, cx| {
+            window.activate_window();
+            show(window, "property-warp-keep-children", cx);
+            if locale != "en" {
+                window.click("property-warp-keep-children", cx);
+                window.render_frame(cx);
+            }
+            let start = h.view.read_with(cx, |view, _| {
+                let frame = &view.modeling_frame().unwrap().canvas;
+                let c = frame
+                    .geometry
+                    .controls
+                    .iter()
+                    .find(|c| c.object == object)
+                    .unwrap();
+                let g = frame.geometry.deformer_gizmo(c, frame.transform).unwrap();
+                let (a, b) = g.outline[0];
+                ViewportPoint {
+                    x: (a.x + b.x) * 0.5,
+                    y: (a.y + b.y) * 0.5,
+                }
+            });
+            let from = window.find("canvas-body").bounds().origin + point(px(start.x), px(start.y));
+            let end = from + point(px(12.), px(18.));
+            let modifiers = Modifiers {
+                platform: locale == "en",
+                ..Default::default()
+            };
+            window.dispatch_event(
+                MouseDownEvent {
+                    button: MouseButton::Left,
+                    position: from,
+                    modifiers,
+                    click_count: 1,
+                    first_mouse: false,
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.dispatch_event(
+                MouseMoveEvent {
+                    position: end,
+                    pressed_button: Some(MouseButton::Left),
+                    modifiers,
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.dispatch_event(
+                MouseUpEvent {
+                    button: MouseButton::Left,
+                    position: end,
+                    modifiers,
+                    click_count: 1,
+                }
+                .to_platform_input(),
+                cx,
+            );
+            if locale == "en" {
+                window.click("property-warp-keep-children", cx);
+                window.render_frame(cx);
+            }
+        })?;
+        let pixels = h.capture()?;
+        h.view.read_with(&h.cx, |view, _| {
+            assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
+            let frame = &view.modeling_frame().unwrap().canvas;
+            let after = frame
+                .geometry
+                .meshes
+                .iter()
+                .flat_map(|m| m.vertices.iter().map(|(_, p)| *p))
+                .collect::<Vec<_>>();
+            for (a, b) in before.iter().zip(after) {
+                assert!((a.x - b.x).hypot(a.y - b.y) < 0.001);
+            }
+        });
+        save(
+            &pixels,
+            directory,
+            &format!("warp-keep-children-{locale}.png"),
+        )?;
+    }
+    Ok(())
+}

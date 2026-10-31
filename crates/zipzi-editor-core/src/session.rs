@@ -409,6 +409,14 @@ impl DocumentSession {
                 self.modeling.tools.warp_whole = !self.modeling.tools.warp_whole;
                 return Ok(());
             }
+            EditorCommand::ToggleWarpKeepChildren => {
+                self.modeling.tools.cancel(&mut self.document);
+                self.modeling.tools.warp_keep_children = !self.modeling.tools.warp_keep_children;
+                for state in self.modeling.tools.warp_frames.values_mut() {
+                    state.target.keep_children = self.modeling.tools.warp_keep_children;
+                }
+                return Ok(());
+            }
             EditorCommand::ToggleDeformerGrid => {
                 self.modeling.tools.deformer_grid = !self.modeling.tools.deformer_grid;
                 return Ok(());

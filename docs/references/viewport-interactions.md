@@ -95,6 +95,22 @@ the transformed residual. Changing the auto-reform toggle alone and submitting
 an unchanged control never reform geometry. Reset controller preserves grid
 points; the separate Reform action deliberately replaces their detail.
 
+Keep children fixed is transient Modeling tool state, shared with Properties'
+numeric transforms. The primary modifier (Command on macOS, Ctrl on Windows)
+enables it for a pointer gesture. The press freezes this policy; Move events do
+not reinterpret modifiers. Frame-only adjustment continues to affect only the
+frame. Unsupported Warp maps reject the gesture and cancel its whole candidate,
+without falling back to an ordinary drag.
+
+Each keep-children preview restores captured child channels before applying the
+shared `WarpKeepChildren` plan. This avoids accumulated inverses and ensures a
+return to the starting pointer position restores absent metadata as well as
+geometry. It currently requires static, reversible affine old/new Warp maps and
+supported static ancestor spaces. All base/ordinary/BlendShape child channels are
+converted together; Rotation inheritance uses the shared reparent math. Nonlinear
+edited maps and animated ancestor spaces remain explicit refusals. Publication
+checks a 0.01 canvas-unit numerical budget, independent of zoom or device pixels.
+
 The viewport's Select All command (`Cmd+A` on macOS) shares these region selection
 rules: it selects editable vertices of selected meshes/warps, or visible unlocked
 meshes when there are no component targets. It respects viewport isolation and

@@ -208,11 +208,14 @@ impl DeformerGizmo {
 }
 
 impl DeformerGizmo {
-    pub(crate) fn scale_span(&self,index:u8,centered:bool) -> [f32;2] {
-        let factor=if centered {0.5} else {1.};
-        let x=[-1.,0.,1.,1.,1.,0.,-1.,-1.][index as usize];
-        let y=[-1.,-1.,-1.,0.,1.,1.,1.,0.][index as usize];
-        [(self.bounds[2]-self.bounds[0])*x*factor,(self.bounds[3]-self.bounds[1])*y*factor]
+    pub(crate) fn scale_span(&self, index: u8, centered: bool) -> [f32; 2] {
+        let factor = if centered { 0.5 } else { 1. };
+        let x = [-1., 0., 1., 1., 1., 0., -1., -1.][index as usize];
+        let y = [-1., -1., -1., 0., 1., 1., 1., 0.][index as usize];
+        [
+            (self.bounds[2] - self.bounds[0]) * x * factor,
+            (self.bounds[3] - self.bounds[1]) * y * factor,
+        ]
     }
     pub fn scale_anchor(&self, index: u8) -> (ViewportPoint, ViewportPoint) {
         let [x0, y0, x1, y1] = self.bounds;
@@ -302,6 +305,7 @@ pub struct WarpTransformTarget {
     pub object: crate::ObjectRef,
     pub components: Vec<crate::ComponentRef>,
     pub fine: bool,
+    pub(crate) keep_children: bool,
     revision: (u64, u64),
     pub(crate) viewport: Option<crate::ViewportId>,
     frame: Option<crate::WarpFrame>,
@@ -343,6 +347,7 @@ impl crate::tools::ToolController {
             object: object.clone(),
             components,
             fine: self.warp_fine,
+            keep_children: self.warp_keep_children,
             revision: (document.model_generation(), document.preview_revision()),
             viewport: None,
             frame: None,
@@ -448,10 +453,15 @@ impl crate::Document {
                 .any(|o| scene.ancestors(o).iter().any(|p| objects.contains(p))),
             "Select controls from one deformation level at a time"
         );
-        let edits = objects
+        let mut edits = objects
             .iter()
             .map(|o| ControlEdit::prepare(self, &scene, o))
             .collect::<anyhow::Result<Vec<_>>>()?;
+        if target.keep_children {
+            for edit in &mut edits {
+                edit.keep_warp_children(self)?;
+            }
+        }
         let b = bounds.ok_or_else(|| anyhow::anyhow!("Warp has no points"))?;
         self.begin_control_edit(&edits)?;
         let result = self

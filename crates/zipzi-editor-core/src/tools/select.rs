@@ -61,6 +61,7 @@ impl ToolController {
         point: ViewportPoint,
         shift: bool,
         alt: bool,
+        primary: bool,
     ) {
         let locks = document.object_state_index();
         let scene = &frame.geometry;
@@ -142,6 +143,7 @@ impl ToolController {
                 access,
                 warp_fine: self.warp_fine,
                 original_points: self.original_points,
+                keep_children: primary || self.warp_keep_children,
                 selection,
                 current: point,
                 dragged: false,

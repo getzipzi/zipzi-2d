@@ -140,6 +140,12 @@ impl ControlGesture {
                     .map(|r| ControlEdit::prepare(document, &press.scene, r))
                     .collect::<Result<Vec<_>>>()?;
                 ensure!(
+                    !press.keep_children
+                        || !edits.iter().any(|edit| edit.warp.is_some())
+                        || edits.iter().all(|edit| edit.warp.is_some()),
+                    "Keep children requires a selection of Warp controls"
+                );
+                ensure!(
                     !targets
                         .iter()
                         .any(|r| r.kind == crate::ObjectKind::Deformer)
@@ -150,6 +156,9 @@ impl ControlGesture {
                 for target in &mut edits {
                     if let Some(mesh) = &mut target.mesh {
                         mesh.original_points = press.original_points;
+                    }
+                    if press.keep_children && target.warp.is_some() {
+                        target.keep_warp_children(document)?;
                     }
                 }
                 document.begin_control_edit(&edits)?;
@@ -288,7 +297,7 @@ impl ControlGesture {
                         };
                         let (sin, cos) = gizmo.frame_angle.sin_cos();
                         let (dx, dy) = (point.x - press.point.x, point.y - press.point.y);
-                        let [span_x,span_y]=gizmo.scale_span(*index,press.alt);
+                        let [span_x, span_y] = gizmo.scale_span(*index, press.alt);
                         let sx = ratio(dx * cos + dy * sin, span_x);
                         let sy = ratio(-dx * sin + dy * cos, span_y);
                         let scale = if press.shift && index % 2 == 0 {

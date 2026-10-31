@@ -40,6 +40,7 @@ pub(super) enum Row {
     WarpGrid,
     WarpBezierGrid,
     WarpShapeActions,
+    WarpKeepChildren,
     WarpTransform,
     WarpFrame,
     AnimationActions(ObjectRef),
@@ -221,6 +222,7 @@ impl PropertiesPanel {
                 .contains_key(&zipzi_editor_core::property::deformer::COLUMNS.key)
         {
             rows.push(Row::WarpTransform);
+            rows.push(Row::WarpKeepChildren);
             rows.push(Row::WarpFrame);
         }
         if target.object.kind == zipzi_editor_core::ObjectKind::Deformer

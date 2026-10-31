@@ -933,6 +933,15 @@ class SceneContentEditWarpShape(CompactValue):
 SceneContentEditWarpShape.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
+class SceneContentEditWarpKeepChildren(CompactValue):
+    'Immutable owned SceneContentEditWarpKeepChildren value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntransform_id: Stable ID of a static Warp. Driven Warp maps are explicitly unsupported.\nwarp: Complete replacement map/controller at the existing conversion density.\nThe shared plan compensates all child shape channels atomically.'
+    _variant: _ClassVar[str] = 'warp_keep_children'
+    transform_id: str
+    warp: WarpTransform
+
+SceneContentEditWarpKeepChildren.__module__ = "zipzi.modeling.scene"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditResizeWarp(CompactValue):
     'Immutable owned SceneContentEditResizeWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntransform_id: Stable deformation-transform ID in this document.\nrows: Number of warp lattice cells vertically; a lattice has rows + 1 point rows.\ncolumns: Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.\nquad: Whether to use the quad warp interpolation mode for the lattice.'
     _variant: _ClassVar[str] = 'resize_warp'
@@ -1084,7 +1093,7 @@ class SceneContentEditSetOffscreenMapping(CompactValue):
 
 SceneContentEditSetOffscreenMapping.__module__ = "zipzi.modeling.scene"
 
-SceneContentEdit: TypeAlias = SceneContentEditMeshVertices | SceneContentEditInsertMeshVertices | SceneContentEditDeleteMeshVertices | SceneContentEditReorderMeshVertices | SceneContentEditInsertTriangle | SceneContentEditPatchTriangle | SceneContentEditDeleteTriangles | SceneContentEditReplaceTriangles | SceneContentEditWarpPoints | SceneContentEditWarpBezier | SceneContentEditWarpBezierControls | SceneContentEditWarpAuthoring | SceneContentEditWarpShape | SceneContentEditResizeWarp | SceneContentEditInsertGluePair | SceneContentEditPatchGluePair | SceneContentEditMoveGluePairs | SceneContentEditTransferGluePairs | SceneContentEditDuplicateGluePairs | SceneContentEditDeleteGluePairs | SceneContentEditInsertOffscreenKeyform | SceneContentEditPatchOffscreenKeyform | SceneContentEditDuplicateOffscreenKeyforms | SceneContentEditReorderOffscreenKeyforms | SceneContentEditDeleteOffscreenKeyforms | SceneContentEditSetOffscreenMapping
+SceneContentEdit: TypeAlias = SceneContentEditMeshVertices | SceneContentEditInsertMeshVertices | SceneContentEditDeleteMeshVertices | SceneContentEditReorderMeshVertices | SceneContentEditInsertTriangle | SceneContentEditPatchTriangle | SceneContentEditDeleteTriangles | SceneContentEditReplaceTriangles | SceneContentEditWarpPoints | SceneContentEditWarpBezier | SceneContentEditWarpBezierControls | SceneContentEditWarpAuthoring | SceneContentEditWarpShape | SceneContentEditWarpKeepChildren | SceneContentEditResizeWarp | SceneContentEditInsertGluePair | SceneContentEditPatchGluePair | SceneContentEditMoveGluePairs | SceneContentEditTransferGluePairs | SceneContentEditDuplicateGluePairs | SceneContentEditDeleteGluePairs | SceneContentEditInsertOffscreenKeyform | SceneContentEditPatchOffscreenKeyform | SceneContentEditDuplicateOffscreenKeyforms | SceneContentEditReorderOffscreenKeyforms | SceneContentEditDeleteOffscreenKeyforms | SceneContentEditSetOffscreenMapping
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ShapeTargetBase(CompactValue):

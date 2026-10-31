@@ -106,6 +106,17 @@ The local, cosine-neighborhood, Gaussian-global and opposing-tangent-ratio
 policies are Zipzi authoring algorithms. Native projects retain them; CMO3 export
 reports authoring metadata loss, including these settings and Bezier handles.
 
+`SceneContentEdit::WarpKeepChildren` replaces a static affine Warp at its existing
+density and converts all direct child shape channels together. Mesh and Warp
+positions/controllers use `G⁻¹F`, BlendShape displacements use its linear part,
+and Rotation children reuse inherited-frame compensation. Deeper subtree data
+retain their inputs. Static rectangular Warp/Rotation ancestor spaces are
+supported. Driven or nonlinear edited/ancestor maps, singular maps, locks and
+the fixed 0.01 canvas-unit numerical budget can reject the entire plan. Reports
+expose measured preservation deviation and sample count. Samples include native
+interior/exterior maps and default/per-driver endpoint, key and midpoint poses;
+they supplement affine representability, without asserting a global error bound.
+
 `AuthoringSession::plan_deformer_group` combines a Warp or Rotation `SceneEdit::Create`
 with selection parenting in one snapshot-bound, undoable plan. It normalizes
 selected ancestors and descendants, preserves organization ownership and drawing

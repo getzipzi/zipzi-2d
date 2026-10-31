@@ -557,6 +557,14 @@ pub fn measure_scenecontentedit(value: &Bound<'_, PyAny>) -> PyResult<usize> {
             )
             .saturating_add(measure_shapetarget(&(value.getattr("target")?))?)
             .saturating_add(measure_warpshapeaction(&(value.getattr("action")?))?)),
+        "warp_keep_children" => Ok(256usize
+            .saturating_add(
+                (value.getattr("transform_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_warptransform(&(value.getattr("warp")?))?)),
         "resize_warp" => Ok(256usize
             .saturating_add(
                 (value.getattr("transform_id")?)

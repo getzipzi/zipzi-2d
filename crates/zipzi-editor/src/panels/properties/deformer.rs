@@ -13,6 +13,41 @@ use zipzi_editor_core::{
 };
 
 impl PropertiesPanel {
+    pub(super) fn warp_keep_children_action(&self, cx: &Context<Self>) -> AnyElement {
+        let owner = self.owner.clone();
+        let target = self.target.clone().unwrap();
+        let panel = cx.weak_entity();
+        let epoch = self.epoch;
+        let active = owner
+            .upgrade()
+            .is_some_and(|o| o.read(cx).editor.warp_keep_children());
+        compact::toggle(Button::new("property-warp-keep-children"), active)
+            .label(t!("properties.warp_keep_children").into_owned())
+            .tooltip(t!("properties.warp_keep_children_hint"))
+            .disabled(self.disabled)
+            .on_click(move |_, window, cx| {
+                if window.has_active_dialog(cx)
+                    || !panel.upgrade().is_some_and(|p| {
+                        let p = p.read(cx);
+                        p.visible && p.epoch == epoch && p.target.as_ref() == Some(&target)
+                    })
+                {
+                    return;
+                }
+                let _ = owner.update(cx, |view, cx| {
+                    if view.editor.active_id() != Some(target.document)
+                        || !view.prepare_property_inputs(target.document, window, cx)
+                    {
+                        return;
+                    }
+                    let result = view
+                        .editor
+                        .execute(zipzi_editor_core::EditorCommand::ToggleWarpKeepChildren);
+                    view.complete_edit(result, cx);
+                });
+            })
+            .into_any_element()
+    }
     pub(super) fn warp_shape_actions(&self, cx: &Context<Self>) -> AnyElement {
         let target = self.target.clone().unwrap();
         let epoch = self.epoch;

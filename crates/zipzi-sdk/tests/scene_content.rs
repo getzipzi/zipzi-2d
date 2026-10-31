@@ -5,6 +5,8 @@ use zipzi_sdk::{
     AuthoringSession, ObjectKind, SceneContentEdit as E, SceneContentTarget as T,
     SceneContentValue as V,
 };
+#[path = "scene_content/warp_preservation.rs"]
+mod warp_preservation;
 fn id(n: u32) -> String {
     format!("20000000-0000-4000-8000-{n:012x}")
 }

@@ -261,6 +261,13 @@ pub enum SceneContentEdit {
         /// Reset preserves baked points; Reform samples the controller and replaces baked detail.
         action: crate::warp_bezier::WarpShapeAction,
     },
+    WarpKeepChildren {
+        /// Stable ID of a static Warp. Driven Warp maps are explicitly unsupported.
+        transform_id: String,
+        /// Complete replacement map/controller at the existing conversion density.
+        /// The shared plan compensates all child shape channels atomically.
+        warp: crate::model::WarpTransform,
+    },
     ResizeWarp {
         /// Stable deformation-transform ID in this document.
         transform_id: String,
@@ -398,4 +405,8 @@ pub struct SceneContentReport {
     pub resampled_shapes: usize,
     pub vertex_sources: Vec<NewMeshVertex>,
     pub losses: Vec<String>,
+    /// Maximum measured preservation deviation in canvas units; independent samples,
+    /// not a global error bound. None for edits without preservation verification.
+    pub preservation_error: Option<f64>,
+    pub preservation_samples: usize,
 }

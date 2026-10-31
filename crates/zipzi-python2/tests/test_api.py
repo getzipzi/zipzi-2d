@@ -33,6 +33,32 @@ GEOMETRY = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
     ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
 
 class PythonSdk(unittest.TestCase):
+    def test_warp_keep_children_on_both_backends(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode), self.runtime(mode) as runtime:
+                session = runtime.sessions.create(uid(1))
+                with session.edit("Warp and child") as edit:
+                    edit.apply(scene.CreateWarp("Warp", scene.Placement(), (0., 0., 4., 4.), id=uid(2)))
+                    child = edit.meshes.create(meshes.MeshSpec("Child", GEOMETRY, id=uid(3)))
+                    mesh = edit.modeling.records(m.ModelingQuery(meshes=(child,))).value.meshes[0]
+                    assert mesh is not None
+                    mesh = replace(mesh, deformer_id=uid(2))
+                    edit.apply(m.commands.ModelingCommandReplaceMesh(mesh=mesh))
+                old = session.modeling.records(m.ModelingQuery(transforms=(uid(2),))).value.transforms[0]
+                assert old is not None and isinstance(old.data, m.scene.TransformDataWarp)
+                desired = replace(old.data.value, points=tuple(m.common.Vec2(x=p.x * 1.2 + .2, y=p.y * .8 - .1)
+                    for p in old.data.value.points))
+                with session.edit("Keep children") as edit:
+                    edit.apply(m.commands.ModelingCommandContent(intent=m.scene.SceneContentEditWarpKeepChildren(
+                        transform_id=uid(2), warp=desired)))
+                after = session.modeling.records(m.ModelingQuery(meshes=(child,))).value.meshes[0]
+                assert after is not None
+                for p, q in zip(mesh.base_positions, after.base_positions):
+                    self.assertAlmostEqual(p.x * 4., q.x * 4.8 + .2, places=5)
+                    self.assertAlmostEqual(p.y * 4., q.y * 3.2 - .1, places=5)
+                session.undo().wait()
+                self.assertEqual(session.modeling.records(m.ModelingQuery(meshes=(child,))).value.meshes[0], mesh)
+
     def test_warp_authoring_policy_and_detail_on_both_backends(self):
         for mode in ("local", "connected"):
             with self.subTest(mode=mode), self.runtime(mode) as runtime:
