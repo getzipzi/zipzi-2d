@@ -517,7 +517,10 @@ impl MotionPreview {
     /// Equal-time inputs retain call order and apply before Motion on the first due update.
     /// Values must be finite and are clamped to the parameter range. Invalid time/value
     /// returns `InvalidTime`, past time `PastActivation`, and missing UUID `Evaluation`.
-    /// Success clears seek checkpoints/statistics; failure preserves state.
+    /// Success retains simulation history before the input time and resets seek
+    /// statistics. Future inputs preserve continuous playback progress. An input
+    /// at the current time is included when that sample is evaluated again.
+    /// Failure preserves state.
     pub fn schedule_parameter_input(
         &mut self,
         id: &str,
@@ -531,8 +534,10 @@ impl MotionPreview {
             time,
             value,
         )?;
-        self.cache.clear();
-        self.canonical_step = None;
+        self.cache.retain_before(time);
+        if time == self.snapshot.time {
+            self.canonical_step = None;
+        }
         self.commit_operation(MotionOperationKind::ScheduleParameterInput {
             parameter_id: id.into(),
             time,
@@ -669,6 +674,7 @@ impl MotionPreview {
         if let Some(state) = checkpoint {
             candidate.snapshot.clone_from(&state.snapshot);
             candidate.motion.clone_from(&state.motion);
+            candidate.motion.copy_schedule_from(&self.motion);
             candidate.expressions.clone_from(&state.expressions);
             // Retained checkpoints may predate an edit to future activations.
             candidate.expressions.copy_schedule_from(&self.expressions);
@@ -780,7 +786,10 @@ impl MotionPreview {
         }
     }
 
-    fn restore_checkpoint(&mut self, state: Checkpoint) {
+    fn restore_checkpoint(&mut self, mut state: Checkpoint) {
+        // A full-step checkpoint can predate inputs appended while displaying
+        // its fractional tail. Keep the live schedule and the saved cursors.
+        state.motion.copy_schedule_from(&self.motion);
         self.snapshot = state.snapshot;
         self.motion = state.motion;
         self.expressions = state.expressions;

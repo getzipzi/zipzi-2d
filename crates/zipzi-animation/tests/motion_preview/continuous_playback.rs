@@ -1,5 +1,118 @@
 use super::common::*;
 
+fn manual_previews() -> (MotionPreview, MotionPreview, Vec<String>) {
+    let mut doc = document();
+    let mut inputs = vec![PARAM.to_owned()];
+    for i in 0..4 {
+        let id = format!("00000000-0000-4000-8000-000000000f0{i}");
+        assert!(
+            doc.create_parameter(Parameter {
+                id: id.clone(),
+                runtime_id: if i == 0 {
+                    "ParamY".into()
+                } else {
+                    format!("Input{i}")
+                },
+                name: format!("Input{i}"),
+                minimum: -1.,
+                maximum: 1.,
+                ..Default::default()
+            })
+            .status
+            .is_ok()
+        );
+        if i > 0 {
+            inputs.push(id);
+        }
+    }
+    let mut physics: serde_json::Value = serde_json::from_str(THIRTY_PHYSICS3).unwrap();
+    physics["Meta"]["TotalInputCount"] = 4.into();
+    physics["PhysicsSettings"][0]["Input"] = ["ParamX", "Input1", "Input2", "Input3"]
+        .map(|id| {
+            serde_json::json!({"Source": {"Target": "Parameter", "Id": id},
+            "Weight": 25, "Type": "X", "Reflect": false})
+        })
+        .into();
+    let doc = import_physics3(
+        &doc,
+        "00000000-0000-4000-8000-000000000f10",
+        &physics.to_string(),
+    )
+    .unwrap()
+    .candidate;
+    (MotionPreview::new(&doc), MotionPreview::new(&doc), inputs)
+}
+
+#[test]
+fn live_manual_inputs_reuse_history_and_match_replay_with_four_parameters() {
+    let (mut live, mut cold, inputs) = manual_previews();
+    cold.set_seek_cache_budget(0);
+    live.advance_to_with_progress(20., |_, _| true).unwrap();
+    for frame in 0..16 {
+        let time = 20. + frame as f32 / 120.;
+        // Several values can change at the same display clock, including
+        // successive changes to one value before the next frame.
+        for (i, input) in inputs.iter().enumerate() {
+            let value = ((frame + i) % 7) as f32 / 7.;
+            live.schedule_parameter_input(input, time, value).unwrap();
+            cold.schedule_parameter_input(input, time, value).unwrap();
+        }
+        let target = 20. + (frame + 1) as f32 / 120.;
+        let mut work = 0;
+        let actual = live
+            .advance_to_with_progress(target, |_, total| {
+                work = total;
+                true
+            })
+            .unwrap()
+            .clone();
+        assert_eq!(actual, *cold.seek(target).unwrap(), "frame {frame}");
+        assert_eq!(
+            live.physics_snapshot(),
+            cold.physics_snapshot(),
+            "frame {frame}"
+        );
+        assert!(
+            work <= 61,
+            "frame {frame} replayed {work} steps of old history"
+        );
+    }
+}
+
+#[test]
+fn future_manual_inputs_survive_fractional_restore_cached_seek_and_cancellation() {
+    for start in [4., 4.007] {
+        let (mut live, mut cold, inputs) = manual_previews();
+        cold.set_seek_cache_budget(0);
+        live.advance_to_with_progress(start, |_, _| true).unwrap();
+        for input in &inputs {
+            live.schedule_parameter_input(input, 4.01, 0.7).unwrap();
+            cold.schedule_parameter_input(input, 4.01, 0.7).unwrap();
+        }
+        let mut work = 0;
+        let actual = live
+            .advance_to_with_progress(4.02, |_, total| {
+                work = total;
+                true
+            })
+            .unwrap()
+            .clone();
+        assert_eq!(actual, *cold.seek(4.02).unwrap(), "start {start}");
+        assert!(work <= 2, "future inputs replayed {work} old steps");
+        assert!(
+            live.advance_to_with_progress(4.1, |done, _| done < 2)
+                .is_err()
+        );
+        for time in [4.1, 4.02, 3., 4.1] {
+            assert_eq!(
+                live.advance_to_with_progress(time, |_, _| true).unwrap(),
+                cold.seek(time).unwrap()
+            );
+            assert_eq!(live.physics_snapshot(), cold.physics_snapshot());
+        }
+    }
+}
+
 #[test]
 fn canonical_continuous_playback_matches_cold_and_cached_seek_with_physics_pose_expressions() {
     let mut continuous = combined_cache_preview();
@@ -105,9 +218,10 @@ fn fractional_sampling_cancellation_and_schedule_changes_preserve_canonical_hist
     let before = live.snapshot().clone();
     assert!(live.advance_to_with_progress(1.01, |_, _| false).is_err());
     assert_eq!(live.snapshot(), &before);
-    assert!(live
-        .advance_to_with_progress(1.025, |done, total| done < total)
-        .is_err());
+    assert!(
+        live.advance_to_with_progress(1.025, |done, total| done < total)
+            .is_err()
+    );
     assert_eq!(live.snapshot(), cold.seek(61. / 60.).unwrap());
     assert_eq!(
         live.advance_to_with_progress(1.033, |_, _| true).unwrap(),

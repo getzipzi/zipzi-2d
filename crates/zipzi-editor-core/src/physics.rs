@@ -70,15 +70,26 @@ impl Editor {
             animation.physics_preview.manual,
             "Manual physics preview is inactive"
         );
-        let time = animation.time;
-        animation
+        let value = value.clamp(p.minimum, p.maximum);
+        let current = animation
             .physics_preview
             .inputs
-            .retain(|input| input.time != time || input.parameter != parameter);
+            .iter()
+            .rev()
+            .find(|input| input.parameter == parameter)
+            .map(|input| input.value)
+            .or_else(|| animation.physics_preview.baseline.get(parameter).copied())
+            .unwrap_or(p.default_value);
+        if current == value {
+            return Ok(());
+        }
+        let time = animation.time;
+        // Keep the schedule append-only, including successive values at the
+        // same display clock, so the evaluator can reuse its simulation history.
         animation.physics_preview.inputs.push(PhysicsPreviewInput {
             parameter: parameter.into(),
             time,
-            value: value.clamp(p.minimum, p.maximum),
+            value,
         });
         // Treat running input changes as a live stream: keep in-flight samples
         // alive so continuous dragging cannot repeatedly cancel evaluation.

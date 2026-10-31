@@ -354,6 +354,59 @@ fn manual_inputs_update_at_the_same_clock_without_cancelling_inflight_frames() -
 }
 
 #[test]
+fn manual_input_changes_at_one_clock_reuse_evaluation_and_ignore_unchanged_values()
+-> anyhow::Result<()> {
+    let (mut editor, _assets) = setup()?;
+    let id = editor.active_id().unwrap();
+    let parameter = editor
+        .document()
+        .unwrap()
+        .physics_definition()
+        .unwrap()
+        .data
+        .settings[0]
+        .inputs[0]
+        .source
+        .parameter_id()
+        .unwrap()
+        .to_owned();
+    editor.set_physics_manual(id, true)?;
+    let mut evaluator = AnimationEvaluator::default();
+    editor.advance_animation_clock(20.);
+    sample(&mut editor, &mut evaluator)?;
+    for value in [0.2, 0.5, 0.8, 0.4] {
+        editor.set_physics_input(id, &parameter, value)?;
+        let request = editor.animation_request().unwrap();
+        let mut work = 0;
+        let frame = evaluator.evaluate(&request, |_, total| {
+            work = total;
+            true
+        })?;
+        assert!(work <= 60, "same-clock input replayed {work} steps");
+        assert_eq!(
+            frame.snapshot,
+            AnimationEvaluator::default()
+                .evaluate(&request, |_, _| true)?
+                .snapshot
+        );
+        assert!((frame.snapshot.parameters[&parameter] - value).abs() < 0.0001);
+        assert!(editor.present_animation(frame.identity, frame.snapshot));
+        let inputs = editor.animation().unwrap().physics_preview.inputs.len();
+        editor.set_physics_input(id, &parameter, value)?;
+        assert_eq!(
+            editor.animation().unwrap().physics_preview.inputs.len(),
+            inputs
+        );
+        assert!(
+            editor.animation_request().is_none(),
+            "unchanged input requested another frame"
+        );
+    }
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
+
+#[test]
 fn global_transport_leaves_manual_trial_and_plays_the_selected_animation() -> anyhow::Result<()> {
     let (mut editor, _assets) = setup()?;
     let id = editor.active_id().unwrap();
