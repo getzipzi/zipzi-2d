@@ -112,7 +112,7 @@ impl PropertyForm {
                     .parse::<f64>()
                     .map_err(|error| error.to_string())
                     .and_then(|number| {
-                        spec.parse(&((number / field.scale) as f32).to_string())
+                        spec.parse(&(number / field.scale).to_string())
                             .map_err(|error| error.to_string())
                     })
             } else {

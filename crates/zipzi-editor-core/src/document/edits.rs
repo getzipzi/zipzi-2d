@@ -227,7 +227,9 @@ impl Document {
                 let receipt = match pending.edit.commit_to(&mut self.session) {
                     Ok(receipt) => receipt,
                     Err(error) => {
-                        if let Some(object) = &property {
+                        if let Some(object) =
+                            property.as_ref().filter(|_| !pending.topology_changed)
+                        {
                             self.refresh_property_index(
                                 previous_revision,
                                 object,
@@ -251,7 +253,9 @@ impl Document {
                 let receipt = match pending.edit.commit_to(&mut self.session) {
                     Ok(receipt) => receipt,
                     Err(error) => {
-                        if let Some(object) = &property {
+                        if let Some(object) =
+                            property.as_ref().filter(|_| !pending.topology_changed)
+                        {
                             self.refresh_property_index(
                                 previous_revision,
                                 object,
@@ -315,7 +319,12 @@ impl Document {
                 return;
             }
             let previous_revision = self.projection_revision;
-            let property = pending.property_index_target();
+            // A scalar refresh cannot restore structural fields such as a
+            // Warp's lattice dimensions or a Rotation pose. Keep the old cache
+            // revision so the next read rebuilds it from the restored model.
+            let property = pending
+                .property_index_target()
+                .filter(|_| !pending.topology_changed);
             self.invalidate_projection(
                 matches!(pending.kind, Gesture::Rename) || pending.topology_changed,
             );

@@ -62,6 +62,7 @@ pub enum PropertyType {
     Bool,
     Integer,
     Float,
+    Double,
     OptionalFloat,
     Color,
     References,
@@ -73,6 +74,7 @@ pub enum PropertyValue {
     Bool(bool),
     Integer(i64),
     Float(f32),
+    Double(f64),
     OptionalFloat(Option<f32>),
     Color([f32; 3]),
     References(Vec<String>),
@@ -84,6 +86,7 @@ impl PropertyValue {
             Self::Bool(v) => Value::from(*v),
             Self::Integer(v) => Value::from(*v),
             Self::Float(v) => serde_json::json!(v),
+            Self::Double(v) => serde_json::json!(v),
             Self::OptionalFloat(v) => serde_json::json!(v),
             Self::Color(v) => serde_json::json!(v),
             Self::References(v) => serde_json::json!(v),
@@ -95,6 +98,7 @@ impl PropertyValue {
             Self::Bool(v) => v.to_string(),
             Self::Integer(v) => v.to_string(),
             Self::Float(v) => v.to_string(),
+            Self::Double(v) => v.to_string(),
             Self::OptionalFloat(v) => v.map_or_else(String::new, |v| v.to_string()),
             Self::Color(v) => format!(
                 "#{:02X}{:02X}{:02X}",
@@ -109,6 +113,7 @@ impl PropertyValue {
         match self {
             Self::Integer(v) => Some(*v as f64),
             Self::Float(v) | Self::OptionalFloat(Some(v)) => Some(f64::from(*v)),
+            Self::Double(v) => Some(*v),
             _ => None,
         }
     }
@@ -275,6 +280,7 @@ impl PropertySpec {
             }
             PropertyType::References => PropertyValue::References(serde_json::from_str(raw)?),
             PropertyType::Integer => PropertyValue::Integer(raw.trim().parse()?),
+            PropertyType::Double => PropertyValue::Double(raw.trim().parse()?),
             PropertyType::Float | PropertyType::OptionalFloat => {
                 let number: f32 = raw.trim().parse()?;
                 ensure!(number.is_finite(), "Enter a finite number");
@@ -295,6 +301,10 @@ impl PropertySpec {
             (PropertyType::Integer, Value::Number(v)) if v.as_i64().is_some() => {
                 PropertyValue::Integer(v.as_i64().unwrap())
             }
+            (PropertyType::Double, Value::Number(v)) => PropertyValue::Double(
+                v.as_f64()
+                    .ok_or_else(|| anyhow::anyhow!("Invalid number"))?,
+            ),
             (PropertyType::Float | PropertyType::OptionalFloat, Value::Number(v)) => {
                 let number = v
                     .as_f64()
@@ -326,6 +336,7 @@ impl PropertySpec {
                     | (PropertyType::Bool, PropertyValue::Bool(_))
                     | (PropertyType::Integer, PropertyValue::Integer(_))
                     | (PropertyType::Float, PropertyValue::Float(_))
+                    | (PropertyType::Double, PropertyValue::Double(_))
                     | (PropertyType::OptionalFloat, PropertyValue::OptionalFloat(_))
                     | (PropertyType::Color, PropertyValue::Color(_))
                     | (PropertyType::References, PropertyValue::References(_))
@@ -358,6 +369,7 @@ impl PropertySpec {
             PropertyValue::Float(v) | PropertyValue::OptionalFloat(Some(v)) => {
                 ensure!(v.is_finite(), "Enter a finite number")
             }
+            PropertyValue::Double(v) => ensure!(v.is_finite(), "Enter a finite number"),
             _ => {}
         }
         if let Some(number) = value.number() {
@@ -436,10 +448,26 @@ pub enum PropertyScope {
         samples: Vec<String>,
     },
     InterpolatedMesh,
+    DeformerKeyform {
+        binding: String,
+        samples: Vec<String>,
+    },
+    InterpolatedDeformer,
+    /// Deformer BlendShapes currently require returning to their base shape.
+    DeformerBlendShape,
     /// Conservative address for repeated resource fields; revisions never rewind.
     Resource {
         revision: u64,
     },
+}
+
+impl PropertyScope {
+    pub fn shape_editable(&self) -> bool {
+        !matches!(
+            self,
+            Self::InterpolatedMesh | Self::InterpolatedDeformer | Self::DeformerBlendShape
+        )
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -451,6 +479,23 @@ pub struct PropertyPatch {
 }
 
 impl PropertyPatch {
+    /// Grid dimensions form one atomic authoring operation; ordinary controls
+    /// retain their single-field candidate ownership.
+    pub(crate) fn preview_key(&self) -> Option<PropertyKey> {
+        let first = *self.changes.keys().next()?;
+        if self.changes.keys().all(|key| {
+            [
+                deformer::COLUMNS.key,
+                deformer::ROWS.key,
+                deformer::QUAD.key,
+            ]
+            .contains(key)
+        }) {
+            Some(deformer::COLUMNS.key)
+        } else {
+            (self.changes.len() == 1).then_some(first)
+        }
+    }
     pub(crate) fn uses_scalar_patch(&self, kind: ObjectKind) -> bool {
         // An empty drag update restores the committed descriptor. Keep that
         // reset on the scalar path without serializing motion curves/geometry.
@@ -562,6 +607,9 @@ pub(crate) fn object_payload(model: &zipzi_core::Document, object: &ObjectRef) -
 pub(crate) fn inspector_payload(model: &zipzi_core::Document, object: &ObjectRef) -> Result<Value> {
     Ok(match object.kind {
         ObjectKind::Mesh => mesh::inspector_payload(model, &object.id, &PropertyScope::Object)?,
+        ObjectKind::Deformer => {
+            deformer::inspector_payload(model, &object.id, &PropertyScope::Object)?
+        }
         ObjectKind::Motion => {
             let c = model
                 .get_motion(&object.id)
@@ -584,6 +632,9 @@ pub(crate) fn values_from(
 ) -> Result<PropertyValues> {
     if object.kind == ObjectKind::PhysicsGroup {
         return physics::values(model, object);
+    }
+    if object.kind == ObjectKind::Deformer {
+        return deformer::values(model, &object.id, &PropertyScope::Object);
     }
     let payload = inspector_payload(model, object)?;
     property_specs(object.kind)
@@ -631,11 +682,9 @@ impl crate::Editor {
                 ),
             "Preview is unavailable for this object in Animation"
         );
-        ensure!(
-            patch.changes.len() == 1,
-            "Preview edits one property at a time"
-        );
-        let property = *patch.changes.keys().next().unwrap();
+        let property = patch
+            .preview_key()
+            .ok_or_else(|| anyhow::anyhow!("Preview edits one property or the Warp grid group"))?;
         // A rejected start must not commit the previous candidate as a side
         // effect of FinishEdit. Validate capabilities and baselines first.
         self.document()
@@ -677,7 +726,7 @@ impl crate::Editor {
     ) -> Result<()> {
         ensure!(self.property_edit_owned(token), "Property edit ended");
         ensure!(
-            patch.changes.keys().all(|id| *id == token.property),
+            patch.changes.is_empty() || patch.preview_key() == Some(token.property),
             "Property edit target changed"
         );
         let session = self.active_session_mut().unwrap();

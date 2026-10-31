@@ -80,6 +80,8 @@ pub(crate) trait FormDialogView: Render {
     fn submit(&mut self, window: &mut Window, cx: &mut Context<Self>) -> anyhow::Result<()>;
     fn error_message(error: &anyhow::Error) -> String;
     fn closing(&mut self) {}
+    /// Owned candidates must roll back while the closing dialog still has context.
+    fn cancel_preview(&mut self, _cx: &mut Context<Self>) {}
     fn focus_invalid(&mut self, _window: &mut Window, _cx: &mut Context<Self>) {}
 }
 
@@ -173,6 +175,7 @@ pub(crate) fn open<V: FormDialogView>(
             .on_cancel(move |_, _, cx| cancel.read(cx).dialog().phase == Phase::Editing)
             .on_close(move |_, _, cx| {
                 close.update(cx, |v, cx| {
+                    v.cancel_preview(cx);
                     v.closing();
                     v.dialog_mut().close();
                     cx.notify();

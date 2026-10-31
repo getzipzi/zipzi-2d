@@ -81,6 +81,9 @@ impl PropertyTarget {
     }
 
     pub(crate) fn definition(&self, editor: &Editor) -> FormDefinition {
+        if self.object.kind == ObjectKind::Deformer {
+            return deformer::definition(self, editor);
+        }
         if self.object.kind == ObjectKind::PhysicsGroup {
             return physics::definition(editor, &self.object);
         }
@@ -137,6 +140,13 @@ impl PropertyTarget {
         }
     }
     pub(crate) fn editable(&self, editor: &Editor) -> bool {
+        if self.object.kind == ObjectKind::Deformer
+            && editor
+                .document()
+                .is_some_and(|doc| deformer::requires_single_selection(doc, &self.object))
+        {
+            return false;
+        }
         (provider(self.object.kind).editable_in)(self.context)
             && editor.document().is_some_and(|doc| {
                 doc.authoring_capabilities(&self.object).is_ok_and(|c| {

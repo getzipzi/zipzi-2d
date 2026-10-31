@@ -484,6 +484,8 @@ impl PropertiesPanel {
         let value = value / field.scale;
         let raw = if field.binding.value_type == zipzi_editor_core::PropertyType::Integer {
             (value as i64).to_string()
+        } else if field.binding.value_type == zipzi_editor_core::PropertyType::Double {
+            value.to_string()
         } else {
             (value as f32).to_string()
         };
@@ -1140,15 +1142,22 @@ impl PropertiesPanel {
         let spec = self.field_spec(id);
         let epoch = self.epoch;
         let unavailable = spec.binding.keyframed
-            && self.target.as_ref().is_some_and(|target| {
-                target.scope == zipzi_editor_core::PropertyScope::InterpolatedMesh
-            });
+            && self
+                .target
+                .as_ref()
+                .is_some_and(|target| !target.scope.shape_editable());
         let disabled =
             self.disabled || spec.binding.readonly || unavailable || window.has_active_dialog(cx);
         let body = if unavailable {
             div()
                 .text_color(cx.theme().muted_foreground)
-                .child(t!("properties.select_keyform"))
+                .child(t!(if self.target.as_ref().is_some_and(|target| {
+                    target.scope == zipzi_editor_core::PropertyScope::DeformerBlendShape
+                }) {
+                    "properties.deformer_blend_base"
+                } else {
+                    "properties.select_keyform"
+                }))
                 .into_any_element()
         } else if spec.editor == FieldEditor::Color {
             self.render_color(id, disabled, window, cx)

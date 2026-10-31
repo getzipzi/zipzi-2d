@@ -2,6 +2,7 @@ mod animation;
 mod binding;
 mod business;
 mod controls;
+mod deformer;
 mod observe;
 pub(crate) mod physics;
 mod rich_controls;
@@ -338,6 +339,7 @@ impl PropertiesPanel {
                 Some(SharedString::from(format!("binding-inspect-{}", object.id)).into())
             }
             Row::Navigation => Some("property-navigation".into()),
+            Row::WarpGrid => Some("property-warp-grid".into()),
             Row::BusinessActions(object) => {
                 Some(SharedString::from(format!("business-action-new-{}", object.id)).into())
             }
@@ -440,6 +442,7 @@ impl PropertiesPanel {
                 cx,
             ),
             Row::Navigation => self.render_navigation(cx),
+            Row::WarpGrid => self.warp_grid_action(cx),
             Row::AnimationActions(object) => self.animation_actions(object, cx),
             Row::BusinessActions(object) => self.business_actions(object, cx),
             Row::Field(id) => self.render_field(*id, window, cx),

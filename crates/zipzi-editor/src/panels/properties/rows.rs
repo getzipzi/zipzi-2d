@@ -37,6 +37,7 @@ pub(super) enum Row {
     },
     Field(PropertyKey),
     Navigation,
+    WarpGrid,
     AnimationActions(ObjectRef),
     BusinessActions(ObjectRef),
     Detail(properties::DetailRow),
@@ -129,6 +130,18 @@ impl PropertiesPanel {
         let index = doc.object_index();
         let inspected = self.target.as_ref().unwrap().object.clone();
         let mut rows = Vec::new();
+        if target.object.kind == zipzi_editor_core::ObjectKind::Deformer {
+            rows.push(Row::Detail(properties::DetailRow::Heading(
+                t!(
+                    if properties::deformer::requires_single_selection(doc, &target.object) {
+                        "properties.deformer_single_selection"
+                    } else {
+                        properties::deformer::shape_label(&target.scope)
+                    }
+                )
+                .into(),
+            )));
+        }
         rows.extend(super::binding::rows(doc, target));
         rows.extend(super::texture::rows(
             doc,
@@ -196,6 +209,15 @@ impl PropertiesPanel {
                     .into_iter()
                     .map(Row::Detail),
             );
+        }
+        if target.object.kind == zipzi_editor_core::ObjectKind::Deformer
+            && !properties::deformer::requires_single_selection(doc, &target.object)
+            && self
+                .form
+                .fields
+                .contains_key(&zipzi_editor_core::property::deformer::COLUMNS.key)
+        {
+            rows.push(Row::WarpGrid);
         }
         if self.definition.navigation.is_some() {
             rows.push(Row::Navigation);

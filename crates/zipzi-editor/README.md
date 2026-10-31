@@ -142,6 +142,24 @@ change before publication. The explicit preservation review retains its
 full-domain option, which requires fixed ancestor frames over that domain.
 Reordering deformers under the same parent remains available.
 
+## Deformer properties
+
+Select one Warp or Rotation to edit its local appearance and organization in
+Properties. Parent choices use the same shape-preserving move plan as the
+Deformer tree; unsupported conversions explain their refusal. Rotation origin
+inputs use parent coordinates and retain f64 precision. Angles are in degrees,
+scale is a percentage, and the reference angle edits the definition separately
+from the current pose. Stored ordinary keyforms receive pose/appearance changes;
+interpolated poses and contributing Deformer BlendShapes require returning to an
+editable stored/base shape. Multiple selections currently request a single target.
+
+**Warp subdivisions…** previews grid density and interpolation for the base,
+ordinary keyforms and BlendShape displacements together. It reports sampled
+deviation in parent-space units, rather than a global error bound. Apply commits
+one undo step; Cancel, Escape, losing window focus and changing documents retire
+the preview. Bezier controllers are retained. Bezier density and shaping controls
+are planned separately in the [interaction plan](../../docs/plans/warp-deformer-interaction.md).
+
 ## Object deletion
 
 In Modeling, **Delete Object** is shared by the Edit menu, the Part and Deformer

@@ -34,6 +34,18 @@ fn definitions_cover_domain_fields_once_without_submission_overrides() {
             if kind == Mesh {
                 assert!(expected.remove(&schema::mesh::TEXTURE.key));
             }
+            // Concrete Deformer forms are selected by PropertyTarget; the
+            // kind-only fallback contains common fields. Type is in the title.
+            if kind == Deformer {
+                expected.retain(|key| {
+                    !schema::deformer::FIELDS.iter().any(|s| {
+                        s.key == *key
+                            && (s.path.starts_with("rotation.")
+                                || s.path.starts_with("warp.")
+                                || s == &schema::deformer::KIND)
+                    })
+                });
+            }
             assert_eq!(fields, expected);
         }
     }

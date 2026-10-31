@@ -1,5 +1,6 @@
 //! Window and dock ownership transitions for registered panel instances.
 use crate::*;
+use gpui_kit::component::WindowExt;
 
 impl EditorView {
     pub(crate) fn input_regions(
@@ -57,7 +58,18 @@ impl EditorView {
         } else {
             self.editor.editing_active()
         };
-        let end = reason != zipzi_editor_core::EditingLifecycle::BlockingUi || active;
+        // A modal inspector can own the candidate it is previewing. It still
+        // blocks every underlying input surface, while other lifecycle reasons
+        // (including OS focus loss) retain their normal cancellation policy.
+        let dialog_owns_candidate = reason == zipzi_editor_core::EditingLifecycle::BlockingUi
+            && !self.modal
+            && window.has_active_dialog(cx)
+            && self
+                .dialog_property_preview
+                .as_ref()
+                .is_some_and(|token| self.editor.property_edit_owned(token));
+        let end = !dialog_owns_candidate
+            && (reason != zipzi_editor_core::EditingLifecycle::BlockingUi || active);
         if reason == zipzi_editor_core::EditingLifecycle::WindowDeactivated {
             self.input_router.deactivate();
         }

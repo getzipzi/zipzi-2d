@@ -54,6 +54,7 @@ struct EditorView {
     input_router: input_routing::InputRouter,
     focus: FocusHandle,
     modal: bool,
+    dialog_property_preview: Option<zipzi_editor_core::PropertyEditToken>,
     exit_on_window_close: bool,
     focused_viewport: Option<zipzi_editor_core::ViewportId>,
     frozen_frames: std::collections::HashMap<
@@ -111,6 +112,7 @@ impl EditorView {
             input_router: Default::default(),
             focus,
             modal: false,
+            dialog_property_preview: None,
             exit_on_window_close: false,
             focused_viewport: None,
             frozen_frames: Default::default(),

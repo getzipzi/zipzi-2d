@@ -3,6 +3,262 @@ use gpui_kit::test::TestWindowExt;
 use gpui_kit::{AppContext as _, TestAppContext};
 use zipzi_editor_core::property as schema;
 
+fn warp_grid_document() -> (
+    zipzi_editor_core::Document,
+    tempfile::TempDir,
+    zipzi_editor_core::ObjectRef,
+) {
+    let (mut document, assets) = document_fixture::sample_document_with_scene_objects().unwrap();
+    let object = document_fixture::object(zipzi_editor_core::ObjectKind::Deformer, 502);
+    document.navigate(object.clone()).unwrap();
+    (document, assets, object)
+}
+
+fn warp_grid_input(h: &super::Harness, field: &str, value: &str, cx: &mut TestAppContext) {
+    cx.update_window(h.window, |_, window, cx| {
+        window.click(field.to_owned(), cx);
+        select_all(window, cx);
+        window.input(value, cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+}
+
+fn open_warp_grid(h: &super::Harness, cx: &mut TestAppContext) {
+    show(h, "property-warp-grid", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("property-warp-grid", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+}
+
+fn choose_deformer_reference(
+    h: &super::Harness,
+    field: &str,
+    query: &str,
+    cx: &mut TestAppContext,
+) {
+    show(h, field, cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click(field.to_owned(), cx);
+        window.render_frame(cx);
+        window.input(query, cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.executor()
+        .advance_clock(std::time::Duration::from_millis(150));
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        window.press("enter", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+}
+
+#[gpui_kit::test]
+fn deformer_properties_part_and_parent_choices_use_native_plans(cx: &mut TestAppContext) {
+    use zipzi_editor_core::{ObjectKind, PropertyValue};
+    let (document, assets, object) = warp_grid_document();
+    let h = setup_with_document(cx, document, assets);
+    choose_deformer_reference(&h, "property-select-part_id", "Face", cx);
+    h.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert_eq!(
+            doc.property_values(&object).unwrap()[&schema::deformer::PART.key],
+            PropertyValue::Text(document_fixture::object(ObjectKind::Part, 101).id)
+        );
+        assert_eq!(doc.history_lengths(), (1, 0));
+    });
+    choose_deformer_reference(&h, "property-select-parent_id", "No deformer", cx);
+    h.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert_eq!(
+            doc.property_values(&object).unwrap()[&schema::deformer::PARENT.key],
+            PropertyValue::Text(document_fixture::object(ObjectKind::Deformer, 501).id)
+        );
+        assert_eq!(doc.history_lengths(), (1, 0));
+        assert!(view.edit_error.is_some());
+    });
+}
+
+#[gpui_kit::test]
+fn deformer_properties_mixed_selection_requires_a_single_target(cx: &mut TestAppContext) {
+    use zipzi_editor_core::{EditorCommand, ObjectKind};
+    let (document, assets, warp) = warp_grid_document();
+    let h = setup_with_document(cx, document, assets);
+    h.view.update(cx, |view, cx| {
+        view.editor
+            .execute(EditorCommand::SelectObjects(vec![
+                document_fixture::object(ObjectKind::Deformer, 501),
+                warp,
+            ]))
+            .unwrap();
+        view.redraw(cx);
+    });
+    h.view.read_with(cx, |view, _| {
+        let target = crate::properties::target(&view.editor).unwrap();
+        assert!(target.definition(&view.editor).fields.is_empty());
+        assert!(!target.editable(&view.editor));
+    });
+}
+
+#[gpui_kit::test]
+fn deformer_properties_warp_grid_previews_group_and_cancel_restores_all_dimensions(
+    cx: &mut TestAppContext,
+) {
+    use zipzi_editor_core::PropertyValue;
+    let (document, assets, object) = warp_grid_document();
+    let h = setup_with_document(cx, document, assets);
+    open_warp_grid(&h, cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert_ne!(window.find("warp-grid-apply").disabled(), Some(false));
+    })
+    .unwrap();
+    warp_grid_input(&h, "warp-grid-columns", "3", cx);
+    warp_grid_input(&h, "warp-grid-rows", "2", cx);
+    h.view.read_with(cx, |view, _| {
+        assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+        let doc = view.editor.document().unwrap();
+        let index = doc.object_index();
+        let grid = &index.get(&object).unwrap().properties["warp"];
+        assert_eq!(grid["columns"], 3);
+        assert_eq!(grid["rows"], 2);
+        assert_eq!(
+            doc.property_values(&object).unwrap()[&schema::deformer::COLUMNS.key],
+            PropertyValue::Integer(1)
+        );
+        assert_eq!(doc.history_lengths(), (0, 0));
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert_ne!(window.find("warp-grid-apply").disabled(), Some(true));
+        assert!(window.try_find("warp-grid-metrics").is_some());
+    })
+    .unwrap();
+    warp_grid_input(&h, "warp-grid-columns", "0", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        assert_ne!(window.find("warp-grid-apply").disabled(), Some(false));
+        window.press("escape", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    h.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert_eq!(
+            doc.property_values(&object).unwrap()[&schema::deformer::COLUMNS.key],
+            PropertyValue::Integer(1)
+        );
+        assert_eq!(
+            doc.object_index().get(&object).unwrap().properties["warp"]["columns"],
+            1
+        );
+        assert_eq!(doc.history_lengths(), (0, 0));
+        assert!(!doc.has_pending_edit());
+    });
+}
+
+#[gpui_kit::test]
+fn deformer_properties_warp_grid_requires_apply_and_undo_restores_the_grid(
+    cx: &mut TestAppContext,
+) {
+    use zipzi_editor_core::{EditorCommand, PropertyValue};
+    let (document, assets, object) = warp_grid_document();
+    let h = setup_with_document(cx, document, assets);
+    open_warp_grid(&h, cx);
+    warp_grid_input(&h, "warp-grid-columns", "3", cx);
+    warp_grid_input(&h, "warp-grid-rows", "2", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("warp-grid-apply", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    h.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        let values = doc.property_values(&object).unwrap();
+        assert_eq!(
+            values[&schema::deformer::COLUMNS.key],
+            PropertyValue::Integer(3)
+        );
+        assert_eq!(
+            values[&schema::deformer::ROWS.key],
+            PropertyValue::Integer(2)
+        );
+        assert_eq!(doc.history_lengths(), (1, 0));
+        assert!(!doc.has_pending_edit());
+    });
+    cx.update_window(h.window, |_, _, cx| {
+        h.view.update(cx, |view, cx| {
+            view.editor.execute(EditorCommand::Undo).unwrap();
+            view.redraw(cx);
+        });
+    })
+    .unwrap();
+    h.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert_eq!(
+            doc.property_values(&object).unwrap()[&schema::deformer::ROWS.key],
+            PropertyValue::Integer(1)
+        );
+        assert_eq!(
+            doc.object_index().get(&object).unwrap().properties["warp"]["points"]
+                .as_array()
+                .unwrap()
+                .len(),
+            4
+        );
+    });
+}
+
+#[gpui_kit::test]
+fn deformer_properties_warp_grid_focus_loss_and_document_switch_retire_the_candidate(
+    cx: &mut TestAppContext,
+) {
+    use zipzi_editor_core::{EditingLifecycle, PropertyValue};
+    let (document, assets, object) = warp_grid_document();
+    let h = setup_with_document(cx, document, assets);
+    for change_document in [false, true] {
+        open_warp_grid(&h, cx);
+        warp_grid_input(&h, "warp-grid-columns", "3", cx);
+        h.view.update(cx, |view, cx| {
+            if change_document {
+                view.editor.new_document().unwrap();
+            } else {
+                view.editor
+                    .end_editing(
+                        view.editor.active_id().unwrap(),
+                        EditingLifecycle::WindowDeactivated,
+                    )
+                    .unwrap();
+            }
+            view.redraw(cx);
+        });
+        cx.update_window(h.window, |_, window, cx| {
+            window.render_frame(cx);
+            window.click("warp-grid-apply", cx);
+            window.press("escape", cx);
+            window.render_frame(cx);
+        })
+        .unwrap();
+        h.view.read_with(cx, |view, _| {
+            let doc = view.editor.document().unwrap();
+            assert!(!doc.has_pending_edit());
+            assert_eq!(doc.history_lengths(), (0, 0));
+            if !change_document {
+                assert_eq!(
+                    doc.property_values(&object).unwrap()[&schema::deformer::COLUMNS.key],
+                    PropertyValue::Integer(1)
+                );
+            }
+        });
+    }
+}
+
 fn part_properties_document() -> (zipzi_editor_core::Document, tempfile::TempDir) {
     let (mut document, assets) = document_fixture::sample_document_with_parts().unwrap();
     document
@@ -12,6 +268,146 @@ fn part_properties_document() -> (zipzi_editor_core::Document, tempfile::TempDir
         ))
         .unwrap();
     (document, assets)
+}
+
+#[gpui_kit::test]
+fn deformer_properties_rotation_inputs_keep_precision_and_switch_concrete_forms(
+    cx: &mut TestAppContext,
+) {
+    use zipzi_editor_core::{EditorCommand, ObjectKind, PropertyValue};
+    let (mut document, assets) = document_fixture::sample_document_with_scene_objects().unwrap();
+    let rotation = document_fixture::object(ObjectKind::Deformer, 501);
+    let warp = document_fixture::object(ObjectKind::Deformer, 502);
+    document.navigate(rotation.clone()).unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    for (field, value) in [
+        ("origin_x", "10000000.12345679"),
+        ("origin_y", "-23.987654321"),
+        ("angle", "1080"),
+        ("scale", "25"),
+        ("base_angle", "-30"),
+        ("opacity", "125.005"),
+    ] {
+        fill(&harness, &format!("property-input-{field}"), value, cx);
+        cx.update_window(harness.window, |_, window, cx| {
+            window.press("enter", cx);
+            window.render_frame(cx);
+        })
+        .unwrap();
+    }
+    show(&harness, "property-toggle-reflect_x", cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("property-toggle-reflect_x", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        use schema::deformer as fields;
+        assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+        let doc = view.editor.document().unwrap();
+        let values = doc.property_values(&rotation).unwrap();
+        assert_eq!(
+            values[&fields::ORIGIN_X.key],
+            PropertyValue::Double(10_000_000.123_456_79)
+        );
+        assert_eq!(
+            values[&fields::ORIGIN_Y.key],
+            PropertyValue::Double(-23.987_654_321)
+        );
+        assert_eq!(values[&fields::ANGLE.key], PropertyValue::Float(1080.));
+        assert_eq!(values[&fields::SCALE.key], PropertyValue::Float(0.25));
+        assert_eq!(values[&fields::BASE_ANGLE.key], PropertyValue::Float(-30.));
+        assert_eq!(values[&fields::OPACITY.key], PropertyValue::Float(1.25005));
+        assert_eq!(values[&fields::REFLECT_X.key], PropertyValue::Bool(true));
+        assert_eq!(doc.history_lengths(), (7, 0));
+    });
+    for object in [&warp, &rotation] {
+        cx.update_window(harness.window, |_, window, cx| {
+            harness.view.update(cx, |view, cx| {
+                view.editor
+                    .execute(EditorCommand::Navigate(object.clone()))
+                    .unwrap();
+                view.redraw(cx);
+            });
+            window.render_frame(cx);
+        })
+        .unwrap();
+        harness.view.read_with(cx, |view, _| {
+            let target = crate::properties::target(&view.editor).unwrap();
+            assert_eq!(&target.object, object);
+            let definition = target.definition(&view.editor);
+            assert_eq!(
+                definition.field(schema::deformer::ORIGIN_X.key).is_some(),
+                object == &rotation
+            );
+            assert!(definition.field(schema::deformer::MULTIPLY.key).is_some());
+        });
+    }
+}
+
+#[gpui_kit::test]
+fn deformer_properties_rotation_scrub_commits_once_and_escape_restores(cx: &mut TestAppContext) {
+    use super::slide_number_input::{press, release, slide};
+    use gpui_kit::{point, px};
+    use zipzi_editor_core::{ObjectKind, PropertyValue};
+    let (mut document, assets) = document_fixture::sample_document_with_scene_objects().unwrap();
+    let object = document_fixture::object(ObjectKind::Deformer, 501);
+    document.navigate(object.clone()).unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    show(&harness, "property-input-angle", cx);
+    let origin = cx
+        .update_window(harness.window, |_, window, cx| {
+            let origin = window
+                .within("property-input-angle")
+                .find("slide-number-input")
+                .bounds()
+                .center();
+            press(window, origin, cx);
+            origin
+        })
+        .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        slide(window, origin + point(px(80.), px(0.)), false, cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert_eq!(
+            doc.property_values(&object).unwrap()[&schema::deformer::ANGLE.key],
+            PropertyValue::Float(0.)
+        );
+        assert_eq!(doc.history_lengths(), (0, 0));
+        let candidate =
+            doc.object_index().get(&object).unwrap().properties["rotation"]["pose"]["angle"]
+                .as_f64()
+                .unwrap();
+        assert!(candidate > 0.);
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        release(window, origin + point(px(80.), px(0.)), cx);
+        window.render_frame(cx);
+        press(window, origin, cx);
+    })
+    .unwrap();
+    let committed = harness.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert_eq!(doc.history_lengths(), (1, 0));
+        doc.property_values(&object).unwrap()[&schema::deformer::ANGLE.key].clone()
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        slide(window, origin + point(px(80.), px(0.)), false, cx);
+        window.press("escape", cx);
+        release(window, origin + point(px(80.), px(0.)), cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert_eq!(
+            doc.property_values(&object).unwrap()[&schema::deformer::ANGLE.key],
+            committed
+        );
+        assert_eq!(doc.history_lengths(), (1, 0));
+    });
 }
 
 fn part_draw_order(document: &zipzi_editor_core::Document) -> f32 {

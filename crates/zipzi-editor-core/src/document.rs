@@ -24,6 +24,10 @@ pub use mesh_generation::{
 mod manual_mesh;
 pub use manual_mesh::ManualMeshTarget;
 
+#[path = "document/warp_grid.rs"]
+mod warp_grid;
+pub use warp_grid::WarpGridPreviewMetrics;
+
 #[path = "sorting.rs"]
 mod sorting;
 pub use sorting::{OrganizationDestination, ParameterDestination, ReorderPosition};

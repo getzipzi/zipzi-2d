@@ -51,6 +51,26 @@ pub(super) enum MovePlan {
     Steps(super::stepping::PaletteStepsPlan),
 }
 impl PaletteMovePlan {
+    pub(crate) fn apply_to(
+        &self,
+        edit: &mut zipzi_sdk::EditSession<'_>,
+        revision: u64,
+    ) -> Result<()> {
+        match &self.0 {
+            MovePlan::Scene(plan) => Ok(edit.apply_scene_plan(plan)?),
+            MovePlan::Reparent {
+                plan,
+                preview_revision,
+            } => {
+                ensure!(
+                    revision == *preview_revision,
+                    "Frozen parameter values changed; reselect the parent"
+                );
+                Ok(edit.apply_scene_plan(plan)?)
+            }
+            _ => anyhow::bail!("Expected a deformation parent plan"),
+        }
+    }
     pub fn is_noop(&self) -> bool {
         match &self.0 {
             MovePlan::Organization(plan) => plan.is_noop(),

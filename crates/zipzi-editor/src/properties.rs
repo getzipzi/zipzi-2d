@@ -2,6 +2,7 @@
 //! consume this interface without knowing parameter, scene or animation rules.
 pub(crate) mod animation;
 mod business;
+pub(crate) mod deformer;
 mod details;
 mod document;
 mod editing;
@@ -90,7 +91,7 @@ impl FieldSpec {
                 | (FieldEditor::Toggle, PropertyType::Bool)
                 | (
                     FieldEditor::Number,
-                    PropertyType::Integer | PropertyType::Float
+                    PropertyType::Integer | PropertyType::Float | PropertyType::Double
                 )
                 | (FieldEditor::OptionalNumber, PropertyType::OptionalFloat)
                 | (FieldEditor::Color, PropertyType::Color)
@@ -222,6 +223,7 @@ pub(crate) fn provider(kind: ObjectKind) -> &'static PropertyProvider {
         | ObjectKind::PoseEntry
         | ObjectKind::PoseLink => &business::PROVIDER,
         ObjectKind::Document => &document::PROVIDER,
+        ObjectKind::Deformer => &deformer::PROVIDER,
         _ => &scene::PROVIDER,
     }
 }

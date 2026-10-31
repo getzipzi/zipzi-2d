@@ -13,18 +13,13 @@ fn fields(kind: ObjectKind) -> FormDefinition {
         return super::mesh::fields();
     }
     use FieldEditor::*;
-    use zipzi_editor_core::property::{deformer, glue, offscreen, part, texture};
+    use zipzi_editor_core::property::{glue, offscreen, part, texture};
     let fields: &[_] = match kind {
         ObjectKind::Part => &[
             (part::NAME, "properties.name", Text),
             (part::RUNTIME_ID, "properties.runtime_id", Text),
             (part::ENABLED, "properties.enabled", Toggle),
             (part::DRAW_ORDER, "properties.draw_order", Number),
-        ],
-        ObjectKind::Deformer => &[
-            (deformer::NAME, "properties.name", Text),
-            (deformer::RUNTIME_ID, "properties.runtime_id", Text),
-            (deformer::ENABLED, "properties.enabled", Toggle),
         ],
         ObjectKind::Offscreen => &[
             (offscreen::NAME, "properties.name", Text),
@@ -42,7 +37,7 @@ fn fields(kind: ObjectKind) -> FormDefinition {
     FormDefinition::new(fields)
 }
 
-fn scene_type_name(document: &Document, object: &ObjectRef) -> SharedString {
+pub(super) fn scene_type_name(document: &Document, object: &ObjectRef) -> SharedString {
     match object.kind {
         ObjectKind::Mesh => "ArtMesh".into(),
         ObjectKind::Deformer => {

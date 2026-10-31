@@ -95,7 +95,7 @@ fn tree_choices(
     );
     choices
 }
-fn parts(document: &Document) -> Vec<Choice> {
+pub(super) fn parts(document: &Document) -> Vec<Choice> {
     tree_choices(
         document,
         false,

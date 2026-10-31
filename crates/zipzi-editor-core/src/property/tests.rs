@@ -1,6 +1,23 @@
 use super::*;
 
 #[test]
+fn precise_numbers_roundtrip_without_f32_conversion_and_reject_nonfinite_input() -> Result<()> {
+    let spec = deformer::ORIGIN_X;
+    let x = 10_000_000.123_456_79;
+    let value = PropertyValue::Double(x);
+    assert_eq!(spec.parse(&value.text())?, value);
+    assert_eq!(spec.decode(&value.json())?, value);
+    assert_eq!(
+        spec.read(&serde_json::json!({"rotation":{"pose":{"origin":{"x":x}}}}))?,
+        value
+    );
+    for invalid in ["NaN", "inf", "-inf"] {
+        assert!(spec.parse(invalid).is_err());
+    }
+    Ok(())
+}
+
+#[test]
 fn same_field_name_uses_object_local_paths_and_distinct_keys() -> Result<()> {
     const PART_ENABLED: PropertySpec =
         PropertySpec::new(ObjectKind::Part, "enabled", "enabled", PropertyType::Bool);

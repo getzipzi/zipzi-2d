@@ -1,10 +1,14 @@
 //! Atomic property edits and owned inspector candidates.
+#[cfg(test)]
+#[path = "properties/deformer_tests.rs"]
+mod deformer_tests;
 use super::*;
 use crate::{ObjectKind, ObjectRef, PropertyPatch, PropertyScope, PropertyValues};
 use anyhow::bail;
 
 enum PropertyPayload {
     Object(serde_json::Value),
+    DeformerParent(crate::PaletteMovePlan),
     Physics(zipzi_core::document::PhysicsPatch),
     Motion(zipzi_core::document::MotionEdit),
     Pose(zipzi_core::document::PoseEdit),
@@ -28,6 +32,75 @@ impl PropertyPayload {
 }
 
 impl Document {
+    fn deformer_property_scope(&self, model: &zipzi_core::Document, id: &str) -> PropertyScope {
+        use zipzi_core::SceneTrackEvaluation;
+        // Match Modeling's parameter normalization without evaluating geometry.
+        let values: std::collections::HashMap<_, _> = model
+            .parameter_order()
+            .iter()
+            .filter_map(|id| model.get_parameter(id))
+            .map(|p| {
+                let requested = self
+                    .session
+                    .preview_values()
+                    .get(&p.id)
+                    .copied()
+                    .unwrap_or(p.default_value);
+                let value = if p.repeat {
+                    let range = p.maximum - p.minimum;
+                    let normalized = (requested - p.minimum) / range;
+                    let wrapped = if normalized.is_finite() {
+                        normalized - normalized.floor()
+                    } else {
+                        (((requested as f64 - p.minimum as f64) % range as f64)
+                            .rem_euclid(range as f64)
+                            / range as f64) as f32
+                    };
+                    let value = wrapped * range + p.minimum;
+                    if value < p.minimum || value >= p.maximum {
+                        p.minimum
+                    } else {
+                        value
+                    }
+                } else {
+                    requested.clamp(p.minimum, p.maximum)
+                };
+                (p.id.clone(), value)
+            })
+            .collect();
+        if model
+            .iter_blend_bindings_for_target(id)
+            .any(|b| !zipzi_core::evaluation::evaluate_blend_binding(model, &values, b).is_empty())
+        {
+            return PropertyScope::DeformerBlendShape;
+        }
+        let Some(binding) = model
+            .binding_for_scene(id)
+            .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
+        else {
+            return PropertyScope::Object;
+        };
+        let active: Vec<_> = binding
+            .axes
+            .iter()
+            .filter(|a| !a.parameter_id.is_empty())
+            .collect();
+        let slot = binding.track.samples().position(|sample| {
+            sample.keys.len() == active.len()
+                && active.iter().zip(sample.keys).all(|(a, key)| {
+                    values
+                        .get(&a.parameter_id)
+                        .is_some_and(|value| (value - key).abs() < 1e-6)
+                })
+        });
+        slot.map_or(PropertyScope::InterpolatedDeformer, |slot| {
+            PropertyScope::DeformerKeyform {
+                binding: binding.id.clone(),
+                samples: binding.track.sample_ids(slot).to_vec(),
+            }
+        })
+    }
+
     /// Committed values remain stable while an inspector candidate is displayed.
     pub fn property_values(&self, object: &ObjectRef) -> Result<PropertyValues> {
         #[cfg(feature = "bench-instrumentation")]
@@ -56,10 +129,13 @@ impl Document {
                 revision: self.model_generation(),
             };
         }
-        if object.kind != ObjectKind::Mesh {
+        if !matches!(object.kind, ObjectKind::Mesh | ObjectKind::Deformer) {
             return PropertyScope::Object;
         }
         let model = self.session.document();
+        if object.kind == ObjectKind::Deformer {
+            return self.deformer_property_scope(&model, &object.id);
+        }
         let Some(binding) = model
             .binding_for_mesh(&object.id)
             .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
@@ -122,6 +198,9 @@ impl Document {
         object: &ObjectRef,
         scope: &PropertyScope,
     ) -> Result<PropertyValues> {
+        if object.kind == ObjectKind::Deformer {
+            return crate::property::deformer::values(model, &object.id, scope);
+        }
         if object.kind != ObjectKind::Mesh {
             let mut values = crate::property::values_from(model, object)?;
             // Driven Part draw order is edited through the explicit stored-form
@@ -217,12 +296,16 @@ impl Document {
                 .filter(|spec| spec.key.object_kind() == object.kind)
                 .ok_or_else(|| anyhow!("This property is read only"))?;
             ensure!(patch.expected.contains_key(id), "Missing property baseline");
+            ensure!(
+                current.contains_key(id),
+                "This field is unavailable for the current object type"
+            );
             spec.validate(value)?;
             ensure!(!spec.readonly, "This property is read only");
             if spec.keyframed {
                 ensure!(
-                    patch.scope != PropertyScope::InterpolatedMesh,
-                    "Select a stored keyform before editing this property"
+                    patch.scope.shape_editable(),
+                    "Select a stored keyform or return BlendShapes to their base shape before editing this property"
                 );
                 ensure!(
                     patch.scope == self.property_scope(object),
@@ -248,6 +331,26 @@ impl Document {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = zipzi_core::benchmark::span("editor.checked_payload");
         self.validate_property_baseline(object, patch)?;
+        if object.kind == ObjectKind::Deformer
+            && patch
+                .changes
+                .contains_key(&crate::property::deformer::PARENT.key)
+        {
+            ensure!(
+                patch.changes.len() == 1,
+                "Parent changes must be independent"
+            );
+            let parent = patch.changes[&crate::property::deformer::PARENT.key].text();
+            return self
+                .plan_palette_move(crate::PaletteMove {
+                    projection: crate::PaletteProjection::Deformation,
+                    sources: vec![object.clone()],
+                    target: (!parent.is_empty())
+                        .then(|| ObjectRef::new(ObjectKind::Deformer, parent)),
+                    position: crate::PalettePosition::Inside,
+                })
+                .map(PropertyPayload::DeformerParent);
+        }
         let specs = crate::property_specs(object.kind);
         if object.kind == ObjectKind::PhysicsGroup {
             return crate::property::physics::patch(
@@ -257,7 +360,13 @@ impl Document {
             )
             .map(PropertyPayload::Physics);
         }
-        let mut payload = if object.kind == ObjectKind::Mesh {
+        let mut payload = if object.kind == ObjectKind::Deformer {
+            crate::property::deformer::inspector_payload(
+                &self.session.document(),
+                &object.id,
+                &patch.scope,
+            )?
+        } else if object.kind == ObjectKind::Mesh {
             if patch.mesh_presentation_only(object.kind) || patch.uses_scalar_patch(object.kind) {
                 crate::property::mesh::inspector_payload(
                     &self.session.document(),
@@ -320,6 +429,9 @@ impl Document {
             return Ok(edit.patch_physics(&patch)?);
         }
         let payload = match payload {
+            PropertyPayload::DeformerParent(plan) => {
+                return plan.apply_to(edit, self.preview_revision());
+            }
             PropertyPayload::Motion(intent) => return Ok(edit.edit_motion(intent)?),
             PropertyPayload::Pose(intent) => return Ok(edit.edit_pose(intent)?),
             PropertyPayload::Expression(intent) => return Ok(edit.edit_expression(intent)?),
@@ -398,6 +510,22 @@ impl Document {
                 value: zipzi_sdk::SceneFieldValue::Label(payload["name"].as_str().unwrap().into()),
                 clear_glue_pairs: false,
             })?);
+        }
+        if object.kind == ObjectKind::Deformer {
+            if patch
+                .changes
+                .contains_key(&crate::property::deformer::PART.key)
+            {
+                ensure!(patch.changes.len() == 1, "Part changes must be independent");
+                let part = payload["part_id"].as_str().unwrap();
+                if let Some(plan) = self.prepare_organization_move(
+                    object,
+                    crate::OrganizationDestination::Part((!part.is_empty()).then(|| part.into())),
+                )? {
+                    plan.apply(edit, object)?;
+                }
+            }
+            return crate::property::deformer::apply(edit, &object.id, patch, &payload);
         }
         if object.kind != ObjectKind::Mesh {
             return replace(edit, object.kind, payload);
@@ -783,8 +911,8 @@ impl Document {
         patch: &PropertyPatch,
     ) -> Result<()> {
         ensure!(
-            patch.changes.len() == 1,
-            "Preview edits one property at a time"
+            patch.preview_key().is_some(),
+            "Preview edits one property or the Warp grid group"
         );
         ensure!(
             patch
