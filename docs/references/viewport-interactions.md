@@ -63,6 +63,22 @@ center and reset on reopening. Apply publishes one atomic undo step; changing th
 document, editing context or component target expires the dialog. Ancestor and
 descendant Warps cannot be transformed together.
 
+The Warp frame menu is shared by Properties and each Modeling viewport toolbar.
+Show frame affects painting and picking together; hidden frames leave control
+points available. Adjust frame only uses the frame's ordinary move, rotate and
+scale gestures without acquiring a model candidate. Points are unavailable in
+this mode. Escape and capture loss restore the starting frame. The frame's center
+cross and rotation arm show its pivot and orientation, and scale cursors follow
+its local axes. Side-handle spans use the local frame dimensions directly.
+
+Frame state belongs to the document, viewport, object and component target.
+Navigation preserves canvas-space frame coordinates; target changes and geometry
+or parameter publications retire prior overrides. Align to Warp direction sums
+the lattice's horizontal canvas vectors and fits the target along that direction;
+an ambiguous direction rejects without changing the frame. Reset fits a fresh
+axis-aligned frame. These commands add no model history. Numeric Warp transforms
+use the owning viewport's adjusted center.
+
 The viewport's Select All command (`Cmd+A` on macOS) shares these region selection
 rules: it selects editable vertices of selected meshes/warps, or visible unlocked
 meshes when there are no component targets. It respects viewport isolation and

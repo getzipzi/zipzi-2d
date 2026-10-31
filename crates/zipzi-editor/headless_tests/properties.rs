@@ -36,6 +36,55 @@ fn open_warp_grid(h: &super::Harness, cx: &mut TestAppContext) {
 }
 
 #[gpui_kit::test]
+fn deformer_properties_frame_controls_share_viewport_state_without_history(
+    cx: &mut TestAppContext,
+) {
+    let (document, assets, object) = warp_grid_document();
+    let h = setup_with_document(cx, document, assets);
+    h.view.update(cx, |view, cx| {
+        view.editor
+            .execute(zipzi_editor_core::EditorCommand::SelectObject(
+                object.clone(),
+            ))
+            .unwrap();
+        view.redraw(cx);
+    });
+    h.view.update(cx, |view, _| {
+        document_fixture::present_canvas(&mut view.editor).unwrap();
+    });
+    show(&h, "property-warp-frame", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("property-warp-frame", cx);
+        window.render_frame(cx);
+        window.click("warp-frame-adjust", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    h.view.read_with(cx, |view, _| {
+        let binding = view.editor.primary_viewport_binding().unwrap();
+        assert!(
+            view.editor
+                .warp_frame_info(binding, &object)
+                .unwrap()
+                .adjusting
+        );
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("property-warp-frame", cx);
+        window.render_frame(cx);
+        window.click("warp-frame-visible", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    h.view.read_with(cx, |view, _| {
+        assert!(view.editor.overlay().warp_frame_lines.is_empty());
+        assert!(!view.editor.overlay().vertices.is_empty());
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+    });
+}
+
+#[gpui_kit::test]
 fn deformer_properties_numeric_transform_uses_point_selection_and_resets_increments(
     cx: &mut TestAppContext,
 ) {

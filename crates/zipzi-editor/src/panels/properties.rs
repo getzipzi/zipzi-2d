@@ -342,6 +342,7 @@ impl PropertiesPanel {
             Row::Navigation => Some("property-navigation".into()),
             Row::WarpGrid => Some("property-warp-grid".into()),
             Row::WarpTransform => Some("property-warp-transform".into()),
+            Row::WarpFrame => Some("property-warp-frame".into()),
             Row::BusinessActions(object) => {
                 Some(SharedString::from(format!("business-action-new-{}", object.id)).into())
             }
@@ -446,6 +447,7 @@ impl PropertiesPanel {
             Row::Navigation => self.render_navigation(cx),
             Row::WarpGrid => self.warp_grid_action(cx),
             Row::WarpTransform => self.warp_transform_action(cx),
+            Row::WarpFrame => self.warp_frame_action(cx),
             Row::AnimationActions(object) => self.animation_actions(object, cx),
             Row::BusinessActions(object) => self.business_actions(object, cx),
             Row::Field(id) => self.render_field(*id, window, cx),

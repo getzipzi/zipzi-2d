@@ -8,6 +8,7 @@ pub(crate) mod mesh_generation;
 pub(crate) mod object_identity;
 pub(crate) mod property_details;
 pub(crate) mod slide_number_input;
+pub(crate) mod warp_frame;
 
 use super::*;
 use gpui_kit::component::{ActiveTheme, WindowExt};

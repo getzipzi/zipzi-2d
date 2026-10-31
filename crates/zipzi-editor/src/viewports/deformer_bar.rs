@@ -63,7 +63,41 @@ pub fn render_deformer_bar(
                 }
             })),
     ];
+    let mut frame_menu = None;
     if has_warp {
+        let object = state.editor.document().and_then(|doc| {
+            doc.context()
+                .selections
+                .iter()
+                .filter_map(|o| state.editor.warp_transform_target_for(binding, o))
+                .max_by_key(|t| t.components.len())
+                .map(|t| t.object)
+        });
+        if let Some(object) = object {
+            let adjusting = state
+                .editor
+                .warp_frame_info(binding, &object)
+                .is_some_and(|i| i.adjusting);
+            let button = super::toolbar::attached_button(
+                compact::toggle(Button::new("deformer-frame"), adjusting)
+                    .icon(IconName::Scan)
+                    .accessibility_label(t!("editor.warp_frame").into_owned())
+                    .tooltip(t!("editor.warp_frame_hint")),
+                SECONDARY,
+                cx,
+            )
+            .xsmall()
+            .h(compact::rem(SECONDARY.button_size))
+            .min_w(compact::rem(SECONDARY.button_size))
+            .px(compact::rem(3.));
+            frame_menu = Some(crate::ui::warp_frame::menu(
+                button,
+                canvas.owner.clone(),
+                binding,
+                object,
+                cx,
+            ));
+        }
         let point_count = state
             .editor
             .document()
@@ -71,7 +105,8 @@ pub fn render_deformer_bar(
                 doc.context()
                     .selections
                     .iter()
-                    .find_map(|object| state.editor.warp_transform_target(object))
+                    .filter_map(|object| state.editor.warp_transform_target_for(binding, object))
+                    .max_by_key(|t| t.components.len())
             })
             .map_or(0, |target| target.components.len());
         let target_label = if point_count == 0 {
@@ -165,6 +200,9 @@ pub fn render_deformer_bar(
                 .min_w(compact::rem(SECONDARY.button_size))
                 .px(compact::rem(3.)),
         );
+    }
+    if let Some(menu) = frame_menu {
+        tools = tools.content(menu);
     }
     super::toolbar::secondary_bar("deformer-actions", tools, cx)
 }

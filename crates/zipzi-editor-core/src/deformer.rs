@@ -20,6 +20,8 @@ pub enum DeformerHandle {
 #[derive(Clone, Debug)]
 pub struct DeformerGizmo {
     pub center: ViewportPoint,
+    /// Screen-space orientation; bounds describe the unrotated frame at this center.
+    pub frame_angle: f32,
     pub bounds: [f32; 4],
     pub outline: Vec<(ViewportPoint, ViewportPoint)>,
     pub handles: Vec<(DeformerHandle, ViewportPoint)>,
@@ -29,6 +31,12 @@ pub struct DeformerGizmo {
 pub(crate) struct WarpSelectionGizmo {
     pub object: crate::ObjectRef,
     pub gizmo: DeformerGizmo,
+}
+
+#[derive(Clone, Default)]
+pub(crate) struct WarpGizmos {
+    pub local: bool,
+    pub items: Vec<(crate::ObjectRef, DeformerGizmo)>,
 }
 
 impl CanvasScene {
@@ -68,6 +76,7 @@ impl CanvasScene {
             outline.push((*o, scale));
             return Some(DeformerGizmo {
                 center: *o,
+                frame_angle: 0.,
                 bounds: b,
                 outline,
                 handles: vec![(DeformerHandle::RotationScale, scale)],
@@ -121,11 +130,15 @@ impl CanvasScene {
         &self,
         c: &ControlGeometry,
         t: ViewportTransform,
-        selection: Option<&WarpSelectionGizmo>,
+        selection: Option<&WarpGizmos>,
     ) -> Option<DeformerGizmo> {
         if c.kind == ControlKind::Warp {
             if let Some(selection) = selection {
-                return (selection.object == c.object).then(|| selection.gizmo.clone());
+                return selection
+                    .items
+                    .iter()
+                    .find(|(object, _)| *object == c.object)
+                    .map(|(_, gizmo)| gizmo.clone());
             }
         }
         self.deformer_gizmo(c, t)
@@ -133,7 +146,11 @@ impl CanvasScene {
 }
 
 impl DeformerGizmo {
-    fn warp(b: [f32; 4]) -> Self {
+    pub(crate) fn warp(b: [f32; 4]) -> Self {
+        Self::warp_oriented(b, 0.)
+    }
+
+    pub(crate) fn warp_oriented(b: [f32; 4], frame_angle: f32) -> Self {
         let p = |x, y| ViewportPoint { x, y };
         let center = p((b[0] + b[2]) / 2., (b[1] + b[3]) / 2.);
         let padding = WARP_FRAME_PADDING;
@@ -163,30 +180,61 @@ impl DeformerGizmo {
             .collect();
         let rotate = p(center.x, y0 - WARP_ROTATE_OFFSET);
         outline.push((p(center.x, y0), rotate));
+        outline.push((p(center.x - 5., center.y), p(center.x + 5., center.y)));
+        outline.push((p(center.x, center.y - 5.), p(center.x, center.y + 5.)));
         handles.push((DeformerHandle::Rotate, rotate));
+        let rotate_point = |p: ViewportPoint| {
+            let (s, c) = frame_angle.sin_cos();
+            let (x, y) = (p.x - center.x, p.y - center.y);
+            ViewportPoint {
+                x: center.x + x * c - y * s,
+                y: center.y + x * s + y * c,
+            }
+        };
         Self {
             center,
+            frame_angle,
             bounds: b,
-            outline,
-            handles,
+            outline: outline
+                .into_iter()
+                .map(|(a, b)| (rotate_point(a), rotate_point(b)))
+                .collect(),
+            handles: handles
+                .into_iter()
+                .map(|(h, p)| (h, rotate_point(p)))
+                .collect(),
         }
     }
 }
 
 impl DeformerGizmo {
+    pub(crate) fn scale_span(&self,index:u8,centered:bool) -> [f32;2] {
+        let factor=if centered {0.5} else {1.};
+        let x=[-1.,0.,1.,1.,1.,0.,-1.,-1.][index as usize];
+        let y=[-1.,-1.,-1.,0.,1.,1.,1.,0.][index as usize];
+        [(self.bounds[2]-self.bounds[0])*x*factor,(self.bounds[3]-self.bounds[1])*y*factor]
+    }
     pub fn scale_anchor(&self, index: u8) -> (ViewportPoint, ViewportPoint) {
         let [x0, y0, x1, y1] = self.bounds;
         let x = [0., 0.5, 1., 1., 1., 0.5, 0., 0.][index as usize];
         let y = [0., 0., 0., 0.5, 1., 1., 1., 0.5][index as usize];
-        (
+        let rotate = |p: ViewportPoint| {
+            let (s, c) = self.frame_angle.sin_cos();
+            let (x, y) = (p.x - self.center.x, p.y - self.center.y);
             ViewportPoint {
+                x: self.center.x + x * c - y * s,
+                y: self.center.y + x * s + y * c,
+            }
+        };
+        (
+            rotate(ViewportPoint {
                 x: x0 + (x1 - x0) * x,
                 y: y0 + (y1 - y0) * y,
-            },
-            ViewportPoint {
+            }),
+            rotate(ViewportPoint {
                 x: x1 - (x1 - x0) * x,
                 y: y1 - (y1 - y0) * y,
-            },
+            }),
         )
     }
 }
@@ -249,12 +297,19 @@ pub struct DeformerAdjustment {
 }
 
 /// Frozen component destination shared by numeric and pointer transforms.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct WarpTransformTarget {
     pub object: crate::ObjectRef,
     pub components: Vec<crate::ComponentRef>,
     pub fine: bool,
     revision: (u64, u64),
+    pub(crate) viewport: Option<crate::ViewportId>,
+    frame: Option<crate::WarpFrame>,
+}
+impl WarpTransformTarget {
+    pub fn viewport(&self) -> Option<crate::ViewportId> {
+        self.viewport
+    }
 }
 
 impl crate::tools::ToolController {
@@ -289,17 +344,46 @@ impl crate::tools::ToolController {
             components,
             fine: self.warp_fine,
             revision: (document.model_generation(), document.preview_revision()),
+            viewport: None,
+            frame: None,
         })
+    }
+    pub(crate) fn warp_transform_destination(
+        &self,
+        document: &crate::Document,
+        object: &crate::ObjectRef,
+        viewport: Option<crate::ViewportId>,
+    ) -> Option<WarpTransformTarget> {
+        let mut target = self.warp_transform_target(document, object)?;
+        target.viewport = viewport;
+        target.frame = viewport
+            .and_then(|viewport| self.warp_frame_state(document, viewport, object))
+            .map(|state| state.info.frame);
+        Some(target)
     }
 }
 
 impl crate::Editor {
     pub fn warp_transform_target(&self, object: &crate::ObjectRef) -> Option<WarpTransformTarget> {
         let session = self.active_session()?;
-        session
-            .modeling
-            .tools
-            .warp_transform_target(&session.document, object)
+        session.modeling.tools.warp_transform_destination(
+            &session.document,
+            object,
+            self.primary_viewport_id(),
+        )
+    }
+    pub fn warp_transform_target_for(
+        &self,
+        binding: crate::ViewportBinding,
+        object: &crate::ObjectRef,
+    ) -> Option<WarpTransformTarget> {
+        self.viewport_binding_valid(binding).then_some(())?;
+        let session = self.active_session()?;
+        session.modeling.tools.warp_transform_destination(
+            &session.document,
+            object,
+            Some(binding.viewport),
+        )
     }
 }
 
@@ -375,11 +459,12 @@ impl crate::Document {
                 &edits,
                 &target.components,
                 ControlChange::Transform {
+                    axes: 0.,
                     scope,
-                    pivot: crate::ModelPoint {
+                    pivot: target.frame.map(|f| f.center).unwrap_or(crate::ModelPoint {
                         x: (b[0] + b[2]) / 2.,
                         y: (b[1] + b[3]) / 2.,
-                    },
+                    }),
                     scale: [adjustment.scale; 2],
                     radians: adjustment.angle.to_radians(),
                     translation: adjustment.translation,
@@ -434,6 +519,7 @@ impl crate::Document {
             }
         } else {
             ControlChange::Transform {
+                axes: 0.,
                 scope: crate::control_edit::ControlScope::Whole,
                 pivot: crate::ModelPoint {
                     x: (b[0] + b[2]) / 2.,

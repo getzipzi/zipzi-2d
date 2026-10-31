@@ -155,16 +155,22 @@ fn snapshot_state(view: &EditorView, cx: &App) -> StatusBarState {
                 && token.kind == zipzi_editor_core::ViewportInteractionKind::Modeling)
                 .then(|| {
                     let overlay = view.editor.overlay_for_viewport(token.binding);
-                    overlay
-                        .interaction_label
-                        .map(|label| match overlay.warp_transform_points {
-                            Some(0) => format!("{} · {label}", t!("properties.warp_target_whole")),
-                            Some(count) => format!(
-                                "{} · {label}",
-                                t!("properties.warp_target_selection", count = count)
-                            ),
-                            None => label,
-                        })
+                    overlay.interaction_label.map(|label| {
+                        if overlay.warp_frame_adjusting {
+                            format!("{} · {label}", t!("editor.warp_frame_adjust"))
+                        } else {
+                            match overlay.warp_transform_points {
+                                Some(0) => {
+                                    format!("{} · {label}", t!("properties.warp_target_whole"))
+                                }
+                                Some(count) => format!(
+                                    "{} · {label}",
+                                    t!("properties.warp_target_selection", count = count)
+                                ),
+                                None => label,
+                            }
+                        }
+                    })
                 })
                 .flatten()
         });

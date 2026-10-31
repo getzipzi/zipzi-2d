@@ -66,9 +66,18 @@ impl ToolController {
                 }
                 let gesture = self.gesture.as_mut().unwrap();
                 let model_changed = gesture.update(document, &self.components, point)?;
+                let frame_change = if let super::gesture::Gesture::Controls(g) = gesture {
+                    g.frame_preview().map(|(o, i)| (o.clone(), i))
+                } else {
+                    None
+                };
                 // Keep ownership until commit succeeds, so the error path can roll back.
                 gesture.finish(document, &mut self.components)?;
                 self.gesture = None;
+                if let Some((object, info)) = frame_change {
+                    self.set_warp_frame(document, frame.version.binding.viewport, object, info);
+                }
+                self.prune_warp_frames(document);
                 Ok(model_changed)
             }
         }

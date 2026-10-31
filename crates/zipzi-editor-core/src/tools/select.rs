@@ -73,6 +73,10 @@ impl ToolController {
             .cloned()
             .collect();
         let hit = self.canvas_hit(document, frame, point);
+        if matches!(&hit,Some(HitTarget::Component(c)) if self.warp_frame_info(document,frame,&c.object).is_some_and(|i|i.adjusting))
+        {
+            return;
+        }
         self.hovered = hit.clone();
         self.hovered_binding = Some(frame.version.binding);
         let mut component_surface = matches!(&hit, Some(HitTarget::Object(r)) if selection.iter().any(|selected|
@@ -132,6 +136,8 @@ impl ToolController {
                 deferred_toggle,
                 components: self.components.clone(),
                 warp_selection: self.warp_selection_gizmo(document, frame),
+                adjust_frame: matches!(&hit,Some(HitTarget::DeformerHandle(object,_))
+                    if self.warp_frame_info(document,frame,object).is_some_and(|i|i.adjusting)),
                 operation,
                 access,
                 warp_fine: self.warp_fine,
@@ -143,5 +149,6 @@ impl ToolController {
             hit,
             component_surface,
         );
+        self.prune_warp_frames(document);
     }
 }

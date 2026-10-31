@@ -111,6 +111,7 @@ output directory.
 The `warp` scene captures whole and selected-point frames and the numeric
 transform dialog in English, Simplified Chinese and Japanese. Set
 `ZIPZI_SCREENSHOT_SAVE=1` to save every image from that scene.
+It also captures independently rotated frames and the shared frame menu.
 
 ## Deformer creation
 
@@ -168,6 +169,14 @@ Shift-dragging a point locks the initial dominant canvas axis; Shift-click still
 toggles selection. Option/Alt on a scale handle scales around the frame center,
 and Shift makes corner scaling uniform. Bezier anchors carry their own handles;
 selecting only handles leaves anchors unchanged. Escape cancels a drag.
+
+**Warp frame** in Properties and the viewport toolbar controls visibility,
+independent frame adjustment, alignment to the Warp's horizontal grid trend and
+reset. In **Adjust frame only**, dragging edges or handles changes the frame's
+position, size or direction without changing geometry or history. Control points
+are unavailable until this mode is turned off. Scaling then follows the frame's
+local axes, and numeric transforms use its center. Each viewport keeps its own
+frame; switching targets or external geometry changes rebuild it.
 
 **Warp subdivisions…** previews grid density and interpolation for the base,
 ordinary keyforms and BlendShape displacements together. It reports sampled

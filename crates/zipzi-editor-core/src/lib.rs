@@ -22,6 +22,8 @@ pub use property::{
     PropertyValue, PropertyValues, property_spec, property_specs,
 };
 mod editor;
+mod warp_frame;
+pub use warp_frame::{WarpFrame, WarpFrameAction, WarpFrameInfo};
 mod objects;
 mod scene;
 mod session;

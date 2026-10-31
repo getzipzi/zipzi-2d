@@ -37,7 +37,7 @@ impl CanvasScene {
         visibility: DeformerVisibility,
         fine: bool,
         locks: &crate::ObjectStateIndex,
-        warp_selection: Option<&crate::deformer::WarpSelectionGizmo>,
+        warp_selection: Option<&crate::deformer::WarpGizmos>,
     ) -> Option<HitTarget> {
         if tool == ToolId::Hand {
             return None;

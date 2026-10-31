@@ -6,3 +6,4 @@ mod lasso;
 mod overlays_locks;
 mod selection;
 mod transforms;
+mod warp_frames;

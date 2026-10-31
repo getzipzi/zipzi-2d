@@ -74,6 +74,8 @@ pub struct OverlaySnapshot {
     pub target_label: Option<String>,
     /// Zero denotes the whole Warp; a positive count denotes the selected controls.
     pub warp_transform_points: Option<usize>,
+    pub warp_frame_adjusting: bool,
+    pub active_handle_radians: f32,
     /// Context for a hovered control, separate from edit errors and parameter previews.
     pub point_unavailable: Option<String>,
     pub gizmo_lines: Vec<(ViewportPoint, ViewportPoint)>,
@@ -190,6 +192,10 @@ impl ToolController {
             .clone()
             .filter(|_| self.hovered_binding == Some(frame.version.binding));
         let mut out = OverlaySnapshot::default();
+        out.warp_frame_adjusting = self
+            .gesture
+            .as_ref()
+            .is_some_and(|g| g.press().adjust_frame);
         if self.original_points {
             out.interaction_label =
                 Some("Editing original points · Glue preview remains active".into());
@@ -208,9 +214,12 @@ impl ToolController {
                 .is_some_and(|control| control.kind == ControlKind::Warp)
         }) {
             let local = matches!(active_target, Some(HitTarget::Component(_)))
-                || self.gesture.as_ref().map_or(warp_selection.is_some(), |g| {
-                    g.press().warp_selection.is_some()
-                });
+                || self
+                    .gesture
+                    .as_ref()
+                    .map_or(warp_selection.as_ref().is_some_and(|g| g.local), |g| {
+                        g.press().warp_selection.as_ref().is_some_and(|g| g.local)
+                    });
             let components = self
                 .gesture
                 .as_ref()
@@ -239,6 +248,10 @@ impl ToolController {
             HitTarget::RotationHandle(_) => Some(crate::DeformerHandle::Rotate),
             _ => None,
         });
+        out.active_handle_radians = active_target
+            .and_then(|hit| scene.control(&hit.object().id))
+            .and_then(|control| scene.gizmo_for_selection(control, t, warp_selection.as_ref()))
+            .map_or(0., |g| g.frame_angle);
         let access = self.edit_access(document, scene, selection);
         if let Some(component) = &out.active_component {
             if let Some(Err(reason)) = access.probe(component) {
@@ -414,6 +427,10 @@ impl ToolController {
                 selected,
                 hovered,
             };
+            let adjusting_frame = control.kind == ControlKind::Warp
+                && self
+                    .warp_frame_info(document, frame, &control.object)
+                    .is_some_and(|i| i.adjusting);
             if let Some(bezier) = (selected && !self.warp_fine)
                 .then(|| scene.bezier(&control.object.id))
                 .flatten()
@@ -436,7 +453,7 @@ impl ToolController {
                         selected: access.component_selected(&c),
                         hovered: hovered_target == Some(HitTarget::Component(c.clone())),
                         kind: OverlayVertexKind::Warp,
-                        editable: matches!(access.probe(&c), Some(Ok(()))),
+                        editable: !adjusting_frame && matches!(access.probe(&c), Some(Ok(()))),
                     });
                 }
                 for (id, a, b) in &bezier.handles {
@@ -448,7 +465,7 @@ impl ToolController {
                     out.handles.push(OverlayHandle {
                         position: t.to_viewport(*b),
                         round: true,
-                        editable: matches!(access.probe(&c), Some(Ok(()))),
+                        editable: !adjusting_frame && matches!(access.probe(&c), Some(Ok(()))),
                         selected: access.component_selected(&c),
                         hovered: hovered_target == Some(HitTarget::Component(c.clone())),
                     });
@@ -482,7 +499,7 @@ impl ToolController {
                                 (ControlKind::Rotation, _) => OverlayVertexKind::RotationTip,
                                 _ => OverlayVertexKind::Warp,
                             },
-                            editable: matches!(access.probe(&c), Some(Ok(()))),
+                            editable: !adjusting_frame && matches!(access.probe(&c), Some(Ok(()))),
                             position: *p,
                             selected: access.component_selected(&c)
                                 || (control.kind == ControlKind::Rotation

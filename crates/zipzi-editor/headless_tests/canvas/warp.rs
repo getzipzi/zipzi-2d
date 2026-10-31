@@ -37,6 +37,114 @@ fn points(h: &Harness, object: &ObjectRef, cx: &TestAppContext) -> serde_json::V
 }
 
 #[gpui_kit::test]
+fn warp_native_frame_menu_and_rotation_adjust_only_the_viewport(cx: &mut TestAppContext) {
+    let (h, object) = setup_warp(cx);
+    let before = points(&h, &object, cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.activate_window();
+        window.click("deformer-frame", cx);
+        window.render_frame(cx);
+        window.click("warp-frame-adjust", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    for cancel in [true, false] {
+        present_canvas(&h, cx);
+        cx.update_window(h.window, |_, window, cx| {
+            let (start, center) = h.view.read_with(cx, |view, _| {
+                let binding = view.editor.primary_viewport_binding().unwrap();
+                let center = view
+                    .modeling_frame_for(binding.viewport)
+                    .unwrap()
+                    .canvas
+                    .transform
+                    .to_viewport(
+                        view.editor
+                            .warp_frame_info(binding, &object)
+                            .unwrap()
+                            .frame
+                            .center,
+                    );
+                (
+                    view.editor.overlay().handles.last().unwrap().position,
+                    center,
+                )
+            });
+            let origin = window.find("canvas-body").bounds().origin;
+            let from = origin + point(px(start.x), px(start.y));
+            let end = origin
+                + point(
+                    px(center.x + start.y - center.y),
+                    px(center.y - start.x + center.x),
+                );
+            window.dispatch_event(
+                MouseDownEvent {
+                    button: MouseButton::Left,
+                    position: from,
+                    modifiers: Modifiers::default(),
+                    click_count: 1,
+                    first_mouse: false,
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.dispatch_event(
+                MouseMoveEvent {
+                    position: end,
+                    pressed_button: Some(MouseButton::Left),
+                    modifiers: Modifiers::default(),
+                }
+                .to_platform_input(),
+                cx,
+            );
+            h.view.read_with(cx, |view, _| {
+                assert!(!view.editor.document().unwrap().has_pending_edit());
+                assert!(view.editor.overlay().warp_frame_adjusting);
+            });
+            if cancel {
+                window.press("escape", cx);
+            }
+            window.dispatch_event(
+                MouseUpEvent {
+                    button: MouseButton::Left,
+                    position: end,
+                    modifiers: Modifiers::default(),
+                    click_count: 1,
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+        })
+        .unwrap();
+        h.view.read_with(cx, |view, _| {
+            let info = view
+                .editor
+                .warp_frame_info(view.editor.primary_viewport_binding().unwrap(), &object)
+                .unwrap();
+            let expected = if cancel {
+                0.
+            } else {
+                std::f32::consts::FRAC_PI_2
+            };
+            assert!((info.frame.radians - expected).abs() < 0.001);
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+        });
+        assert_eq!(points(&h, &object, cx), before);
+    }
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("deformer-frame", cx);
+        window.render_frame(cx);
+        window.click("warp-frame-visible", cx);
+        window.render_frame(cx);
+        h.view.read_with(cx, |view, _| {
+            assert!(view.editor.overlay().handles.is_empty())
+        });
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn warp_native_rotation_handle_cancel_commit_and_history(cx: &mut TestAppContext) {
     let (h, object) = setup_warp(cx);
     let before = points(&h, &object, cx);

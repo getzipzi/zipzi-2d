@@ -6,6 +6,23 @@ use gpui_kit::component::input::{Input, InputEvent, InputState};
 use zipzi_editor_core::{DeformerAdjustment, EditorCommand, ModelVector, WarpTransformTarget};
 
 impl PropertiesPanel {
+    pub(super) fn warp_frame_action(&self, cx: &Context<Self>) -> AnyElement {
+        let Some(owner) = self.owner.upgrade() else {
+            return Empty.into_any_element();
+        };
+        let Some(binding) = owner.read(cx).warp_property_viewport() else {
+            return Empty.into_any_element();
+        };
+        crate::ui::warp_frame::menu(
+            compact::button(Button::new("property-warp-frame"))
+                .label(t!("editor.warp_frame").into_owned()),
+            self.owner.clone(),
+            binding,
+            self.target.as_ref().unwrap().object.clone(),
+            cx,
+        )
+        .into_any_element()
+    }
     pub(super) fn warp_transform_action(&self, cx: &mut Context<Self>) -> AnyElement {
         let target = self.target.clone().unwrap();
         let owner = self.owner.clone();
@@ -80,9 +97,12 @@ impl WarpTransformDialog {
             view.editor
                 .end_editing(id, zipzi_editor_core::EditingLifecycle::BlockingUi)?;
             let context = AuthoringContext::capture(&view.editor).unwrap();
+            let binding = view
+                .warp_property_viewport()
+                .ok_or_else(|| anyhow::anyhow!("Warp viewport closed"))?;
             let target = view
                 .editor
-                .warp_transform_target(object)
+                .warp_transform_target_for(binding, object)
                 .ok_or_else(|| anyhow::anyhow!("Select a Warp deformer"))?;
             view.redraw(cx);
             Ok::<_, anyhow::Error>((context, target))
@@ -166,7 +186,13 @@ impl WarpTransformDialog {
     }
     fn current(&self, editor: &zipzi_editor_core::Editor) -> bool {
         AuthoringContext::capture(editor) == Some(self.context)
-            && editor.warp_transform_target(&self.target.object).as_ref() == Some(&self.target)
+            && self
+                .target
+                .viewport()
+                .and_then(|v| editor.viewport_binding(v))
+                .and_then(|b| editor.warp_transform_target_for(b, &self.target.object))
+                .as_ref()
+                == Some(&self.target)
     }
 }
 impl FormDialogView for WarpTransformDialog {

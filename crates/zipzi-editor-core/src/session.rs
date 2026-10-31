@@ -405,6 +405,7 @@ impl DocumentSession {
             }
             EditorCommand::ToggleWarpWhole => {
                 self.modeling.tools.cancel(&mut self.document);
+                self.modeling.tools.warp_frames.clear();
                 self.modeling.tools.warp_whole = !self.modeling.tools.warp_whole;
                 return Ok(());
             }
@@ -419,7 +420,7 @@ impl DocumentSession {
                 anyhow::ensure!(
                     self.modeling
                         .tools
-                        .warp_transform_target(&self.document, &target.object)
+                        .warp_transform_destination(&self.document, &target.object, target.viewport)
                         .as_ref()
                         == Some(&target),
                     "Warp transform target changed"

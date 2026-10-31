@@ -53,7 +53,33 @@ impl ControlGesture {
         }
     }
     pub fn editing(&self) -> bool {
-        self.edit.is_some()
+        self.edit.is_some() && !self.press.adjust_frame
+    }
+    pub(super) fn original_frame(&self) -> Option<(&crate::ObjectRef, crate::WarpFrameInfo)> {
+        let HitTarget::DeformerHandle(object, _) = &self.target else {
+            return None;
+        };
+        let (_, gizmo) = self
+            .press
+            .warp_selection
+            .as_ref()?
+            .items
+            .iter()
+            .find(|(o, _)| o == object)?;
+        Some((
+            object,
+            crate::WarpFrameInfo {
+                frame: crate::WarpFrame::from_gizmo(gizmo, self.press.transform),
+                visible: true,
+                adjusting: self.press.adjust_frame,
+            },
+        ))
+    }
+    pub(super) fn frame_preview(&self) -> Option<(&crate::ObjectRef, crate::WarpFrameInfo)> {
+        let (object, mut info) = self.original_frame()?;
+        let change = self.edit.as_ref()?.last?;
+        info.frame = info.frame.transformed(change);
+        Some((object, info))
     }
     pub fn accepts_frame(&self, version: FrameVersion) -> bool {
         let origin = self.press.version;
@@ -77,53 +103,58 @@ impl ControlGesture {
         let components = &press.components;
         let target = &self.target;
         let local_frame = matches!(target, HitTarget::DeformerHandle(object, _)
-            if press.warp_selection.as_ref().is_some_and(|s| &s.object == object));
+            if press.warp_selection.as_ref().is_some_and(|s| s.local && s.items.iter().any(|(o,_)|o==object)));
         if self.edit.is_none() && crate::picking::distance2(press.point, point) < 9. {
             return Ok(false);
         }
         if self.edit.is_none() {
-            document.ensure_editable(&document.context().selections)?;
-            let mut targets = vec![target.object().clone()];
-            if matches!(target, HitTarget::Component(_)) || local_frame {
-                for c in components {
-                    if (!local_frame
-                        || press
-                            .scene
-                            .control(&c.object.id)
-                            .is_some_and(|c| c.kind == crate::ControlKind::Warp))
-                        && press.scene.in_isolation_scope(&c.object)
-                        && !targets.contains(&c.object)
-                    {
-                        targets.push(c.object.clone());
+            let edits = if press.adjust_frame {
+                Vec::new()
+            } else {
+                document.ensure_editable(&document.context().selections)?;
+                let mut targets = vec![target.object().clone()];
+                if matches!(target, HitTarget::Component(_)) || local_frame {
+                    for c in components {
+                        if (!local_frame
+                            || press
+                                .scene
+                                .control(&c.object.id)
+                                .is_some_and(|c| c.kind == crate::ControlKind::Warp))
+                            && press.scene.in_isolation_scope(&c.object)
+                            && !targets.contains(&c.object)
+                        {
+                            targets.push(c.object.clone());
+                        }
                     }
                 }
-            }
-            ensure!(
-                !targets.iter().any(|r| press
-                    .scene
-                    .ancestors(r)
+                ensure!(
+                    !targets.iter().any(|r| press
+                        .scene
+                        .ancestors(r)
+                        .iter()
+                        .any(|parent| targets.contains(parent))),
+                    "Select controls from one deformation level at a time"
+                );
+                let mut edits = targets
                     .iter()
-                    .any(|parent| targets.contains(parent))),
-                "Select controls from one deformation level at a time"
-            );
-            let mut edits = targets
-                .iter()
-                .map(|r| ControlEdit::prepare(document, &press.scene, r))
-                .collect::<Result<Vec<_>>>()?;
-            ensure!(
-                !targets
-                    .iter()
-                    .any(|r| r.kind == crate::ObjectKind::Deformer)
-                    || !targets.iter().any(|r| r.kind == crate::ObjectKind::Mesh
-                        && !document.model().glues_for_mesh(&r.id).is_empty()),
-                "Edit Glue-connected meshes separately from deformer controls"
-            );
-            for target in &mut edits {
-                if let Some(mesh) = &mut target.mesh {
-                    mesh.original_points = press.original_points;
+                    .map(|r| ControlEdit::prepare(document, &press.scene, r))
+                    .collect::<Result<Vec<_>>>()?;
+                ensure!(
+                    !targets
+                        .iter()
+                        .any(|r| r.kind == crate::ObjectKind::Deformer)
+                        || !targets.iter().any(|r| r.kind == crate::ObjectKind::Mesh
+                            && !document.model().glues_for_mesh(&r.id).is_empty()),
+                    "Edit Glue-connected meshes separately from deformer controls"
+                );
+                for target in &mut edits {
+                    if let Some(mesh) = &mut target.mesh {
+                        mesh.original_points = press.original_points;
+                    }
                 }
-            }
-            document.begin_control_edit(&edits)?;
+                document.begin_control_edit(&edits)?;
+                edits
+            };
             self.edit = Some(ActiveEdit {
                 edits,
                 last: None,
@@ -211,6 +242,7 @@ impl ControlGesture {
                         pivot: press.transform.to_model(gizmo.center),
                         scale: [1.; 2],
                         radians: 0.,
+                        axes: -gizmo.frame_angle,
                         translation: delta,
                     },
                     H::Move => ControlChange::MoveAll(delta),
@@ -219,6 +251,7 @@ impl ControlGesture {
                             scope,
                             pivot: press.transform.to_model(gizmo.center),
                             scale: [1.; 2],
+                            axes: -gizmo.frame_angle,
                             radians: edit
                                 .rotation
                                 .as_mut()
@@ -244,7 +277,7 @@ impl ControlGesture {
                         }
                     }
                     H::Scale(index) => {
-                        let (corner, opposite) = gizmo.scale_anchor(*index);
+                        let (_, opposite) = gizmo.scale_anchor(*index);
                         let anchor = if press.alt { gizmo.center } else { opposite };
                         let ratio = |d: f32, span: f32| {
                             if span.abs() < 1e-5 {
@@ -253,8 +286,11 @@ impl ControlGesture {
                                 (1. + d / span).max(0.001)
                             }
                         };
-                        let sx = ratio(point.x - press.point.x, corner.x - anchor.x);
-                        let sy = ratio(point.y - press.point.y, corner.y - anchor.y);
+                        let (sin, cos) = gizmo.frame_angle.sin_cos();
+                        let (dx, dy) = (point.x - press.point.x, point.y - press.point.y);
+                        let [span_x,span_y]=gizmo.scale_span(*index,press.alt);
+                        let sx = ratio(dx * cos + dy * sin, span_x);
+                        let sy = ratio(-dx * sin + dy * cos, span_y);
                         let scale = if press.shift && index % 2 == 0 {
                             let s = if (sx - 1.).abs() > (sy - 1.).abs() {
                                 sx
@@ -271,6 +307,7 @@ impl ControlGesture {
                             pivot: press.transform.to_model(anchor),
                             scale,
                             radians: 0.,
+                            axes: -gizmo.frame_angle,
                         }
                     }
                 }
@@ -279,6 +316,22 @@ impl ControlGesture {
         };
         if edit.last == Some(change) {
             edit.constrained = None;
+            return Ok(false);
+        }
+        if press.adjust_frame {
+            let gizmo = press
+                .warp_selection
+                .as_ref()
+                .and_then(|g| g.items.iter().find(|(o, _)| o == self.target.object()))
+                .map(|(_, g)| g)
+                .unwrap();
+            ensure!(
+                crate::WarpFrame::from_gizmo(gizmo, press.transform)
+                    .transformed(change)
+                    .valid(),
+                "Warp frame exceeds the finite canvas range"
+            );
+            edit.last = Some(change);
             return Ok(false);
         }
         if let Err(error) = document.preview_control_edit(edits, components, change) {
@@ -299,7 +352,9 @@ impl ControlGesture {
     ) -> Result<()> {
         if self.editing() {
             document.finish_edit()?;
-        } else if let Some(component) = &self.press.deferred_toggle {
+        } else if self.edit.is_none()
+            && let Some(component) = &self.press.deferred_toggle
+        {
             components.retain(|c| c != component);
         }
         self.edit = None;

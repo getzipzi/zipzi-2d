@@ -74,10 +74,19 @@ impl ModelingViewport {
                         H::Move => CursorStyle::OpenHand,
                         H::Rotate => CursorStyle::Arrow,
                         H::RotationScale => CursorStyle::Crosshair,
-                        H::Scale(1 | 5) => CursorStyle::ResizeUpDown,
-                        H::Scale(3 | 7) => CursorStyle::ResizeLeftRight,
-                        H::Scale(0 | 4) => CursorStyle::ResizeUpLeftDownRight,
-                        H::Scale(_) => CursorStyle::ResizeUpRightDownLeft,
+                        H::Scale(index) => {
+                            let base = [1., 2., 3., 0.][index as usize % 4];
+                            let direction = (base
+                                + overlay.active_handle_radians / std::f32::consts::FRAC_PI_4)
+                                .round()
+                                .rem_euclid(4.) as u8;
+                            match direction {
+                                0 => CursorStyle::ResizeLeftRight,
+                                1 => CursorStyle::ResizeUpLeftDownRight,
+                                2 => CursorStyle::ResizeUpDown,
+                                _ => CursorStyle::ResizeUpRightDownLeft,
+                            }
+                        }
                     }
                 })
                 .or_else(|| {

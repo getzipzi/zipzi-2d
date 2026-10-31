@@ -62,6 +62,10 @@ pub struct ToolController {
     pub warp_whole: bool,
     pub original_points: bool,
     pub(crate) components: Vec<ComponentRef>,
+    pub(crate) warp_frames: std::collections::HashMap<
+        (crate::ViewportId, ObjectRef),
+        crate::warp_frame::WarpFrameState,
+    >,
     hovered: Option<HitTarget>,
     hovered_binding: Option<crate::ViewportBinding>,
     gesture: Option<Gesture>,
@@ -77,9 +81,17 @@ impl ToolController {
         &self,
         document: &Document,
         frame: &CanvasFrame,
-    ) -> Option<crate::deformer::WarpSelectionGizmo> {
-        if self.warp_whole {
-            return None;
+    ) -> Option<crate::deformer::WarpGizmos> {
+        if let Some(Gesture::Controls(gesture)) = &self.gesture {
+            if let Some((object, info)) = gesture.frame_preview() {
+                if gesture.press.version.binding.viewport == frame.version.binding.viewport {
+                    let mut gizmos = gesture.press.warp_selection.clone().unwrap_or_default();
+                    if let Some((_, gizmo)) = gizmos.items.iter_mut().find(|(o, _)| o == object) {
+                        *gizmo = info.frame.gizmo(frame.transform);
+                    }
+                    return Some(gizmos);
+                }
+            }
         }
         let components: Vec<_> = self
             .components
@@ -98,9 +110,57 @@ impl ToolController {
             })
             .cloned()
             .collect();
-        frame
-            .geometry
-            .warp_selection_gizmo(&components, self.warp_fine, frame.transform)
+        let selection = (!self.warp_whole)
+            .then(|| {
+                frame
+                    .geometry
+                    .warp_selection_gizmo(&components, self.warp_fine, frame.transform)
+            })
+            .flatten();
+        let local = selection.is_some();
+        let items = if let Some(selection) = selection {
+            vec![(selection.object, selection.gizmo)]
+        } else {
+            frame
+                .geometry
+                .controls
+                .iter()
+                .filter(|c| {
+                    c.kind == crate::ControlKind::Warp
+                        && document.context().selections.contains(&c.object)
+                        && frame.geometry.control_visible(
+                            c,
+                            &document.context().selections,
+                            self.active,
+                            self.deformer_visibility,
+                        )
+                })
+                .filter_map(|c| {
+                    frame
+                        .geometry
+                        .deformer_gizmo(c, frame.transform)
+                        .map(|g| (c.object.clone(), g))
+                })
+                .collect()
+        };
+        Some(crate::deformer::WarpGizmos {
+            local,
+            items: items
+                .into_iter()
+                .filter_map(|(object, gizmo)| {
+                    if let Some(state) =
+                        self.warp_frame_state(document, frame.version.binding.viewport, &object)
+                    {
+                        state
+                            .info
+                            .visible
+                            .then(|| (object, state.info.frame.gizmo(frame.transform)))
+                    } else {
+                        Some((object, gizmo))
+                    }
+                })
+                .collect(),
+        })
     }
     pub(crate) fn hovered_binding(&self) -> Option<crate::ViewportBinding> {
         self.hovered_binding
@@ -135,6 +195,7 @@ impl ToolController {
     /// Clear ordinary tool projections. Document modes have an explicit lifecycle.
     pub fn clear_selection(&mut self) {
         self.components.clear();
+        self.warp_frames.clear();
         self.hovered = None;
         self.hovered_binding = None;
     }
@@ -158,13 +219,26 @@ impl ToolController {
         });
         self.hovered = None;
         self.hovered_binding = None;
+        self.prune_warp_frames(document);
     }
     pub fn cancel(&mut self, document: &mut Document) -> bool {
-        let changed = self.gesture.take().is_some_and(|g| g.cancel(document))
+        let gesture = self.gesture.take();
+        let original = gesture.as_ref().and_then(|g| {
+            if let Gesture::Controls(g) = g {
+                g.original_frame()
+                    .map(|(o, i)| (g.press.version.binding.viewport, o.clone(), i))
+            } else {
+                None
+            }
+        });
+        let changed = gesture.is_some_and(|g| g.cancel(document))
             | self
                 .manual
                 .as_mut()
                 .is_some_and(|mode| mode.cancel(document));
+        if let Some((viewport, object, info)) = original {
+            self.set_warp_frame(document, viewport, object, info);
+        }
         self.hovered = None;
         self.hovered_binding = None;
         changed

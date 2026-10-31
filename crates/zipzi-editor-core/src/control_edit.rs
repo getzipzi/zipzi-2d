@@ -131,6 +131,7 @@ pub(crate) enum ControlChange {
         pivot: ModelPoint,
         scale: [f32; 2],
         radians: f32,
+        axes: f32,
         translation: crate::ModelVector,
     },
     Rotation {
@@ -154,6 +155,7 @@ impl ControlChange {
                 pivot,
                 scale,
                 radians,
+                axes,
                 translation,
                 ..
             } => {
@@ -166,9 +168,12 @@ impl ControlChange {
                 {
                     return p;
                 }
-                let (s, c) = radians.sin_cos();
-                let x = (p.x - pivot.x) * scale[0];
-                let y = (p.y - pivot.y) * scale[1];
+                let (a, b) = axes.sin_cos();
+                let dx = p.x - pivot.x;
+                let dy = p.y - pivot.y;
+                let x = (dx * b + dy * a) * scale[0];
+                let y = (-dx * a + dy * b) * scale[1];
+                let (s, c) = (axes + radians).sin_cos();
                 ModelPoint {
                     x: pivot.x + x * c - y * s + translation.x,
                     y: pivot.y + x * s + y * c + translation.y,
