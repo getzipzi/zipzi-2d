@@ -1068,6 +1068,72 @@ fn transfer_drag_freezes_source_and_recovers_after_invalid_increment() {
     drag.commit_to(&mut s).unwrap();
 }
 #[test]
+fn transfer_batch_freezes_each_mesh_and_rejects_without_partial_publication() {
+    let id = dependencies::id;
+    let mut session = mixed();
+    let before = session.document().clone();
+    let history = session.history_lengths();
+    let movement = |x, y| ManualMeshOperation::MoveVertices {
+        targets: vec![target(120, Vec2::new(x, y))],
+        motion_from: None,
+    };
+    let batch = |x, y| vec![(id(2), movement(x, y)), (id(4), movement(x, y))];
+    let mut direct = session.begin_owned_edit("direct", None).unwrap();
+    direct.edit_manual_mesh_batch(batch(0.7, 0.6)).unwrap();
+    let mut drag = session.begin_owned_edit("batch drag", None).unwrap();
+    for (x, y) in [(0.3, 0.4), (0.6, 0.3), (0.7, 0.6)] {
+        drag.edit_manual_mesh_batch(batch(x, y)).unwrap();
+    }
+    for n in [2, 4] {
+        assert_eq!(
+            drag.candidate_document().get_mesh(&id(n)),
+            direct.candidate_document().get_mesh(&id(n))
+        );
+    }
+    assert_eq!(
+        drag.candidate_document().get_binding(&id(6)),
+        direct.candidate_document().get_binding(&id(6))
+    );
+    for n in [12, 22] {
+        assert_eq!(
+            drag.candidate_document().get_blend_binding(&id(n)),
+            direct.candidate_document().get_blend_binding(&id(n))
+        );
+    }
+    let accepted = drag.candidate_document().clone();
+    assert!(drag
+        .edit_manual_mesh_batch(vec![(id(2), movement(0.5, 0.5)), (id(4), movement(2., 2.))])
+        .is_err());
+    assert!(!drag.is_aborted());
+    for n in [2, 4] {
+        assert_eq!(
+            drag.candidate_document().get_mesh(&id(n)),
+            accepted.get_mesh(&id(n))
+        );
+    }
+    assert!(drag
+        .edit_manual_mesh_batch(vec![
+            (id(2), movement(0.5, 0.5)),
+            (id(2), movement(0.6, 0.6))
+        ])
+        .is_err());
+    drag.edit_manual_mesh_batch(batch(0.7, 0.6)).unwrap();
+    drag.commit_to(&mut session).unwrap();
+    assert_eq!(session.history_lengths(), (history.0 + 1, 0));
+    session.undo().unwrap();
+    for n in [2, 4] {
+        assert_eq!(session.document().get_mesh(&id(n)), before.get_mesh(&id(n)));
+    }
+    session.redo().unwrap();
+    for n in [2, 4] {
+        assert_eq!(
+            session.document().get_mesh(&id(n)),
+            accepted.get_mesh(&id(n))
+        );
+    }
+}
+
+#[test]
 fn transfer_glue_deletion_and_outside_sampling_are_operation_rejections() {
     let id = dependencies::id;
     let s = mixed();

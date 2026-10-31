@@ -182,6 +182,7 @@ impl EditorView {
                         | CommandId::HandTool
                         | CommandId::ManualMesh
                         | CommandId::ManualSelect
+                        | CommandId::ManualLasso
                         | CommandId::ManualCreate
                         | CommandId::ManualDelete
                         | CommandId::CancelGesture

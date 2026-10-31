@@ -292,7 +292,7 @@ fn nonlinear_migration_requires_an_explicit_choice_and_local_migration_does_not_
                 Vec2::new(0., 0.),
                 Vec2::new(10., 0.),
                 Vec2::new(0., 10.),
-                Vec2::new(10., 10.),
+                Vec2::new(12., 9.),
             ],
         });
         e.replace_transform(t)

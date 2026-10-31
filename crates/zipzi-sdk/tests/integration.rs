@@ -30,6 +30,8 @@ mod hierarchy_order;
 mod history_budget;
 #[path = "manual_mesh.rs"]
 mod manual_mesh;
+#[path = "deformer_grouping.rs"]
+mod deformer_grouping;
 #[path = "mesh_binding_editing.rs"]
 mod mesh_binding_editing;
 #[path = "mesh_editing.rs"]

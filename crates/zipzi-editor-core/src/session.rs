@@ -359,8 +359,9 @@ impl DocumentSession {
                         && self
                             .modeling
                             .tools
-                            .manual_target()
-                            .is_some_and(|current| current.object == target.object),
+                            .manual_targets()
+                            .iter()
+                            .any(|current| current.object == target.object),
                     "Mesh Edit target changed"
                 );
                 self.document.apply_manual_mesh_once(

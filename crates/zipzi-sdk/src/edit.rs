@@ -15,7 +15,8 @@ use zipzi_core::{
 pub struct EditSession<'a> {
     pub(crate) identity: std::sync::Arc<()>,
     pub(crate) sequence: u64,
-    pub(crate) manual_baseline: Option<crate::manual_mesh_transfer::ManualMeshBaseline>,
+    pub(crate) manual_baselines:
+        std::collections::HashMap<String, crate::manual_mesh_transfer::ManualMeshBaseline>,
     pub(crate) session: Option<&'a mut AuthoringSession>,
     pub(crate) base_keys: std::sync::Arc<HashSet<ObjectKey>>,
     pub(crate) base_key_bytes: usize,
@@ -58,11 +59,12 @@ impl EditSession<'_> {
     /// more than once by hosts. Image backing allocations need separate accounting.
     pub fn estimated_bytes(&self) -> usize {
         self.estimated_content_bytes()
-            .saturating_add(
-                self.manual_baseline
-                    .as_ref()
-                    .map_or(0, |b| b.source.estimated_bytes()),
-            )
+            .saturating_add(self.manual_baselines.iter().fold(0usize, |bytes, (id, b)| {
+                bytes
+                    .saturating_add(b.source.estimated_bytes())
+                    .saturating_add(id.capacity())
+                    .saturating_add(std::mem::size_of_val(b) + 3 * std::mem::size_of::<usize>())
+            }))
             .saturating_add(std::mem::size_of::<Self>())
             .saturating_add(self.base_key_bytes)
             .saturating_add(object_key_bytes(&self.erased_keys))

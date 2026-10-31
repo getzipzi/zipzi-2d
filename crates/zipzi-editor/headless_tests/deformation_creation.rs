@@ -107,7 +107,7 @@ fn children(h: &Harness, id: &str, cx: &TestAppContext) -> Vec<String> {
 }
 
 #[gpui_kit::test]
-fn toolbar_exposes_only_supported_types_creates_inside_and_focuses_name(cx: &mut TestAppContext) {
+fn toolbar_exposes_only_supported_types_wraps_selection_and_focuses_name(cx: &mut TestAppContext) {
     let (h, parent, _, _) = fixture(cx, false);
     cx.update_window(h.window, |_, window, cx| {
         window.click("deformer-tree-create", cx)
@@ -128,7 +128,7 @@ fn toolbar_exposes_only_supported_types_creates_inside_and_focuses_name(cx: &mut
     .unwrap();
     choose(&h, "New Rotation", cx);
     let new = inspected(&h, cx);
-    assert!(children(&h, &parent.id, cx).contains(&new.id));
+    assert_eq!(children(&h, &new.id, cx), [parent.id.clone()]);
     cx.update_window(h.window, |_, window, cx| {
         assert!(
             window
@@ -197,7 +197,47 @@ fn row_context_creates_after_clicked_mesh_and_keeps_its_separate_part_owner(
 }
 
 #[gpui_kit::test]
-fn filtered_creation_uses_hidden_sibling_and_reveals_without_changing_query(
+fn row_menu_wraps_all_selected_meshes_instead_of_the_clicked_parent(cx: &mut TestAppContext) {
+    let (h, parent, part, meshes) = fixture(cx, false);
+    let history = h.view.read_with(cx, |view, _| {
+        view.editor.document().unwrap().history_lengths()
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        h.view.update(cx, |view, cx| {
+            let result = view.editor.execute(EditorCommand::SelectObjects(vec![
+                meshes[1].clone(),
+                meshes[0].clone(),
+            ]));
+            view.complete_edit(result, cx);
+        });
+        window.click_with_options(
+            format!("deformer-item-WarpDeformer:{}", parent.id),
+            ClickOptions::new().with_button(MouseButton::Right),
+            cx,
+        );
+    })
+    .unwrap();
+    choose(&h, "New Warp", cx);
+    let new = inspected(&h, cx);
+    assert_eq!(children(&h, &parent.id, cx), [new.id.clone()]);
+    assert_eq!(
+        children(&h, &new.id, cx),
+        [meshes[0].id.clone(), meshes[1].id.clone()]
+    );
+    h.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert_eq!(
+            doc.object_index().get(&new).unwrap().properties["part_id"],
+            part.id
+        );
+        assert_eq!(doc.context().selections, [new]);
+        assert_eq!(doc.history_lengths(), (history.0 + 1, 0));
+        assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+    });
+}
+
+#[gpui_kit::test]
+fn filtered_deformer_creation_prioritizes_selection_and_reveals_without_changing_query(
     cx: &mut TestAppContext,
 ) {
     let (h, parent, _, meshes) = fixture(cx, false);
@@ -224,8 +264,9 @@ fn filtered_creation_uses_hidden_sibling_and_reveals_without_changing_query(
     let new = inspected(&h, cx);
     assert_eq!(
         children(&h, &parent.id, cx),
-        [meshes[0].id.clone(), new.id.clone(), meshes[1].id.clone()]
+        [meshes[0].id.clone(), meshes[1].id.clone()]
     );
+    assert_eq!(children(&h, &new.id, cx), [parent.id.clone()]);
     cx.update_window(h.window, |_, window, _| {
         assert_eq!(window.find("deformer-tree-search").value(), Some("Visible"));
         assert!(
@@ -306,7 +347,11 @@ fn explicit_deformation_commands_keep_projection_for_each_source_and_root_menu_w
         .unwrap();
         cx.run_until_parked();
         let new = inspected(&h, cx);
-        assert!(children(&h, &parent.id, cx).contains(&new.id));
+        if command == C::CreateDeformationMesh {
+            assert!(children(&h, &parent.id, cx).contains(&new.id));
+        } else {
+            assert_eq!(children(&h, &new.id, cx), [parent.id.clone()]);
+        }
         assert_eq!(command.scene_creation_projection(), Some(P::Deformation));
     }
     cx.update_window(h.window, |_, window, cx| {

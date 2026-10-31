@@ -23,7 +23,7 @@ impl SelectionOperation {
             Self::Replace
         }
     }
-    fn apply<T: Eq + Hash + Clone>(self, selected: &mut Vec<T>, hits: Vec<T>) {
+    pub(super) fn apply<T: Eq + Hash + Clone>(self, selected: &mut Vec<T>, hits: Vec<T>) {
         match self {
             Self::Replace => *selected = hits,
             Self::Add => {

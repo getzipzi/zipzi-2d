@@ -476,6 +476,15 @@ pub(crate) struct HostedEdit {
     interactive: bool,
 }
 impl HostedEdit {
+    pub(crate) fn apply_manual_mesh_batch(
+        &mut self,
+        operations: Vec<(String, zipzi_sdk::ManualMeshOperation)>,
+    ) -> zipzi_runtime::Result<()> {
+        self.apply_sdk(true, |edit| {
+            edit.edit_manual_mesh_batch(operations).map(|_| ())
+        })
+    }
+
     pub(crate) fn apply_manual_mesh(
         &mut self,
         mesh_id: &str,

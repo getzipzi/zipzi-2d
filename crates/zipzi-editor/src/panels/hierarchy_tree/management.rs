@@ -126,6 +126,15 @@ pub(super) fn creation_menu<const DEFORMER: bool>(
         &COMMANDS[..]
     } {
         let kind = command.scene_creation_type().unwrap();
+        let selection = if matches!(
+            kind,
+            zipzi_editor_core::SceneObjectType::Warp | zipzi_editor_core::SceneObjectType::Rotation
+        ) && !doc.context().selections.is_empty()
+        {
+            doc.context().selections.clone()
+        } else {
+            selection.clone()
+        };
         let availability = doc.validate_scene_object_creation_in(
             command.scene_creation_projection().unwrap(),
             kind,

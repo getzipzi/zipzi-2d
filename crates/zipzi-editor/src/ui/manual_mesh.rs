@@ -29,6 +29,12 @@ pub(crate) fn diagnostic(message: &str) -> String {
         .unwrap_or(message);
     if reason.contains("outside the source image") || reason.contains("outside source image") {
         t!("manual_mesh.outside_image").into_owned()
+    } else if reason.contains("frozen source triangulation")
+        || reason.contains("outside the source mesh")
+    {
+        t!("manual_mesh.outside_transfer_domain").into_owned()
+    } else if reason.contains("Connections must stay within one mesh") {
+        t!("manual_mesh.cross_mesh_connection").into_owned()
     } else if reason.contains("outside the boundary") {
         t!("manual_mesh.outside_boundary").into_owned()
     } else if reason.contains("crosses") || reason.contains("collapses triangle") {

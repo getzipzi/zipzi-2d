@@ -12,6 +12,19 @@ pub struct ManualMeshTarget {
 }
 
 impl Document {
+    pub fn manual_mesh_targets(&self) -> Result<Vec<ManualMeshTarget>> {
+        let selection = &self.context().selections;
+        ensure!(
+            !selection.is_empty() && selection.iter().all(|o| o.kind == crate::ObjectKind::Mesh),
+            "Select one or more meshes"
+        );
+        self.ensure_editable(selection)?;
+        selection
+            .iter()
+            .map(|object| self.manual_mesh_target_for(object))
+            .collect()
+    }
+
     pub(crate) fn manual_vertex_allocator(
         &self,
         mesh_id: &str,
@@ -115,20 +128,35 @@ impl Document {
     }
 
     /// Mode ownership constrains transient navigation, never document history.
-    pub(crate) fn retain_manual_mesh_context(&mut self, object: &crate::ObjectRef) {
-        let exists = self.model().get_mesh(&object.id).is_some();
-        self.context.selections = if exists { vec![object.clone()] } else { vec![] };
-        self.context.selection = exists.then(|| object.clone());
+    pub(crate) fn retain_manual_mesh_context(
+        &mut self,
+        objects: &[crate::ObjectRef],
+        active: &crate::ObjectRef,
+    ) {
+        let selection = {
+            let model = self.model();
+            objects
+                .iter()
+                .filter(|o| model.get_mesh(&o.id).is_some())
+                .cloned()
+                .collect::<Vec<_>>()
+        };
+        self.context.selection = selection.contains(active).then(|| active.clone());
+        self.context.selections = selection;
         self.context.inspected = self.context.selection.clone();
         self.context.active_binding = None;
         self.context.parameter_focus = None;
-        self.selected = exists.then(|| object.id.clone());
+        self.selected = self
+            .context
+            .selection
+            .as_ref()
+            .map(|object| object.id.clone());
     }
 
     pub(crate) fn validate_manual_target(&self, target: &ManualMeshTarget) -> Result<()> {
         self.ensure_editable(std::slice::from_ref(&target.object))?;
         ensure!(
-            self.context().selections.as_slice() == [target.object.clone()],
+            self.context().selections.contains(&target.object),
             "Mesh Edit target changed"
         );
         ensure!(
@@ -146,6 +174,49 @@ impl Document {
             "Source image changed"
         );
         Ok(())
+    }
+
+    /// Add transparent room around a dedicated image without resampling any shape.
+    /// Image bytes and normalized UVs publish together as one history step.
+    pub fn pad_manual_mesh_source(
+        &mut self,
+        target: &ManualMeshTarget,
+        margin: u32,
+    ) -> Result<bool> {
+        self.validate_manual_target(target)?;
+        ensure!(!self.has_pending_edit(), "Finish the current edit first");
+        let source = zipzi_sdk::ManualMeshSource::new(&self.model(), &target.object.id)?;
+        let mut geometry = source.geometry().clone();
+        let Some(texture) =
+            super::mesh_generation::pad_texture_edges(&target.texture, &mut geometry, [margin; 4])?
+        else {
+            return Ok(false);
+        };
+        let version = self.session.version();
+        let plan = source.plan_geometry_with_texture_uvs(
+            source.document(),
+            version,
+            source.geometry().clone(),
+            geometry.uvs,
+            self.session.authoring_limits(),
+            &zipzi_core::document::ConversionControl::default(),
+        )?;
+        let image = self
+            .session
+            .prepare_rgba_image(texture.width, texture.height, texture.rgba)?;
+        let (_, receipt) =
+            self.session
+                .edit("Expand mesh source image", Some(version), |edit| {
+                    edit.apply_manual_mesh_plan(plan)?;
+                    edit.replace_prepared_image(&target.texture.asset_id, &image)?;
+                    Ok(())
+                })?;
+        if receipt.changed {
+            self.refresh_textures()?;
+            self.pristine_blank = None;
+            self.after_history(true);
+        }
+        Ok(receipt.changed)
     }
 
     pub fn preview_manual_mesh(
@@ -179,45 +250,98 @@ impl Document {
         }
         let pending = self.manual_pending.as_mut().unwrap();
         pending.changed = true;
+        self.publish_manual_mesh_projection(&[target.object.clone()]);
+        Ok(true)
+    }
+
+    pub(crate) fn preview_manual_mesh_batch(
+        &mut self,
+        operations: Vec<(ManualMeshTarget, ManualMeshOperation)>,
+    ) -> Result<bool> {
+        ensure!(!operations.is_empty(), "No mesh operations");
+        for (target, _) in &operations {
+            self.validate_manual_target(target)?;
+        }
+        if self.manual_pending.is_none() {
+            self.finish_edit()?;
+            self.manual_pending = Some(ManualPending {
+                edit: self
+                    .session
+                    .begin_owned_edit("Mesh Edit", Some(self.session.version()))?
+                    .interactive()?,
+                preview: PreviewState::default(),
+                changed: false,
+            });
+        }
+        let objects: Vec<_> = operations
+            .iter()
+            .map(|(target, _)| target.object.clone())
+            .collect();
+        let operations = operations
+            .into_iter()
+            .map(|(target, op)| (target.object.id, op))
+            .collect();
+        let result = self
+            .manual_pending
+            .as_mut()
+            .unwrap()
+            .edit
+            .apply_manual_mesh_batch(operations);
+        if let Err(error) = result {
+            if self.manual_pending.as_ref().is_some_and(|p| !p.changed) {
+                self.manual_pending.take();
+            }
+            return Err(error.into());
+        }
+        self.manual_pending.as_mut().unwrap().changed = true;
+        self.publish_manual_mesh_projection(&objects);
+        Ok(true)
+    }
+
+    fn publish_manual_mesh_projection(&mut self, objects: &[crate::ObjectRef]) {
         let previous_revision = self.projection_revision;
         self.invalidate_projection(false);
-        let topology_changed = {
+        let changed = {
             let model = self.model();
-            let mesh = model.get_mesh(&target.object.id).unwrap();
             let mut cache = self.object_index.lock().unwrap();
             if let Some((revision, index)) = cache.as_mut().filter(|(r, _)| *r == previous_revision)
             {
-                let unchanged = index.get(&target.object).is_some_and(|object| {
-                    object.properties["vertices"].as_u64() == Some(mesh.vertex_ids.len() as u64)
-                        && object.properties["triangles"].as_u64()
-                            == Some(mesh.triangles.len() as u64)
+                let refreshed = objects.iter().all(|object| {
+                    let mesh = model.get_mesh(&object.id).unwrap();
+                    let unchanged = index.get(object).is_some_and(|object| {
+                        object.properties["vertices"].as_u64() == Some(mesh.vertex_ids.len() as u64)
+                            && object.properties["triangles"].as_u64()
+                                == Some(mesh.triangles.len() as u64)
+                    });
+                    unchanged
+                        || std::sync::Arc::make_mut(index).refresh_mesh_geometry_counts(
+                            object,
+                            mesh.vertex_ids.len(),
+                            mesh.triangles.len(),
+                        )
                 });
-                let refreshed = unchanged
-                    || std::sync::Arc::make_mut(index).refresh_mesh_geometry_counts(
-                        &target.object,
-                        mesh.vertex_ids.len(),
-                        mesh.triangles.len(),
-                    );
                 if refreshed {
                     *revision = self.projection_revision;
                 }
             }
-            self.canvas_topology
-                .lock()
-                .unwrap()
-                .as_ref()
-                .and_then(|topology| topology.meshes.get(&target.object.id))
-                .is_none_or(|topology| !topology.matches(mesh))
+            let topology = self.canvas_topology.lock().unwrap();
+            objects
+                .iter()
+                .filter(|object| {
+                    let mesh = model.get_mesh(&object.id).unwrap();
+                    topology
+                        .as_ref()
+                        .and_then(|t| t.meshes.get(&object.id))
+                        .is_none_or(|t| !t.matches(mesh))
+                })
+                .map(|object| object.id.clone())
+                .collect::<std::collections::HashSet<_>>()
         };
         // Compare the displayed candidate, rather than repeatedly invalidating
         // against the drag's frozen source after its first reconnection.
-        if topology_changed {
-            self.invalidate_canvas_topology(Some(std::collections::HashSet::from([target
-                .object
-                .id
-                .clone()])));
+        if !changed.is_empty() {
+            self.invalidate_canvas_topology(Some(changed));
         }
-        Ok(true)
     }
 
     pub(crate) fn has_manual_mesh_gesture(&self) -> bool {

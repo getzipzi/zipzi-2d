@@ -108,6 +108,40 @@ in [`acceptance/screenshots.rs`](acceptance/screenshots.rs). Screenshots go to
 `target/headless-screenshots/` by default; `ZIPZI_SCREENSHOT_DIR` overrides the
 output directory.
 
+## Deformer creation
+
+New Warp and New Rotation wrap the current selection in one undo step. Toolbar,
+menu and shortcut creation share this behavior; row menus prioritize a nonempty
+selection over the clicked row. Selected Parts include their organization
+descendants. Selected parents retain their children, and organization ownership
+and drawing order stay unchanged. Base shapes, parameter keyforms and BlendShape
+deltas are converted together to preserve the evaluated result. Without a
+deformable selection, creation produces an empty deformer.
+
+Selected deformation roots must share a parent. Inserting a Rotation below a Warp
+requires a static axis-aligned affine Warp space; other Warp spaces reject the
+whole operation. New Warp supports animated, nonlinear parent Warp lattices.
+
+Mesh moves between parents in the Deformer tree preserve base positions,
+ordinary parameter keyforms and BlendShape displacements. Static rectangular
+Warp lattices and Rotation chains support this conversion, including nested
+Warp/Rotation parents. Unsupported nonlinear, driven or singular parent spaces
+reject the whole move instead of applying model coordinates as Warp coordinates.
+Sibling reordering does not convert geometry. Hover only checks support; release
+builds the numeric conversion and commits it with the hierarchy in one undo step.
+Whole Rotation subtrees can change parent while keeping child geometry in place.
+The Rotation's origin, reference angle and inherited scale are compensated,
+including ordinary keyforms and BlendShape translations/scales; child Mesh and
+nested deformer data remain intact. Angle channels stay unchanged, including
+BlendShape angle clamping. Mixed selections normalize selected descendants and
+commit in one undo step. Warp subtree roots, singular parents and conversions
+that would change BlendShape scale clamping remain unsupported. Ordinary Rotation subtree dragging
+captures the current modeling pose, including driven Rotation ancestors, then
+inherits the new parent's subsequent motion. A plan expires if preview inputs
+change before publication. The explicit preservation review retains its
+full-domain option, which requires fixed ancestor frames over that domain.
+Reordering deformers under the same parent remains available.
+
 ## Object deletion
 
 In Modeling, **Delete Object** is shared by the Edit menu, the Part and Deformer
@@ -137,6 +171,15 @@ Changing the document or workspace expires an open deletion menu or review.
 
 ## Mesh Edit
 
+Select one or more meshes before entering Mesh Edit. Box and lasso selection can
+span them; selected points move and delete together in one undo step, while each
+mesh keeps its own topology. A rejected operation retains the last valid result
+for the whole group. Separate Box and Lasso buttons in the secondary toolbar choose
+the selection shape; point picking, dragging, creation and deletion work in both
+states. Clicking a mesh makes it current for point creation,
+generation and source-image padding; the secondary toolbar names that mesh.
+Source-image view is available when editing a single mesh.
+
 Mesh Edit retains the complete model and its current camera. The selected mesh's
 handles follow the evaluated pose, including ordinary parameters, BlendShapes,
 parent deformers and Glue. Picking maps the displayed triangles back to UVs;
@@ -156,12 +199,19 @@ without closing the mode. Interior generation retains identities and Glue; edge
 and full rebuilds require that no old vertex is referenced. A generation preview
 is applied explicitly; saving only settles an active point drag.
 
+The secondary toolbar's **Expand source image** adds 32 transparent pixels on
+each side per click. It remaps UVs without moving the artwork or resampling
+stored shapes; image and UV changes share one undo step. The extra space allows
+an affine mesh's outline to extend beyond the original image. Existing
+deformation sampling domains still apply to meshes with dependencies.
+
 ## Mesh generation controls
 
-The editor's adaptive mesh controls use source pixels. Initial distances and
+The editor's adaptive mesh controls use source pixels. Initial spacing and
 scrub increments scale with the longer texture dimension. For a 2048 × 1024
 texture, edge spacing starts at 500 px, interior spacing at 130 px, outer margin
-at 2 px and edge width at 16 px. The defaults and scaling rules are defined in
+at 6 px and edge width at 16 px. The single-row outer margin starts at 6 px for
+every texture size. The defaults and scaling rules are defined in
 [`mesh_generation_controls.rs`](src/ui/mesh_generation_controls.rs); see the
 [adaptive mesh reference](../zipzi-editor-core/src/adaptive_mesh/README.md) for
 the generator and its limits.

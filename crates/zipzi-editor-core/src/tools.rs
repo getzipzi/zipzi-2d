@@ -64,7 +64,7 @@ pub struct ToolController {
     hovered: Option<HitTarget>,
     hovered_binding: Option<crate::ViewportBinding>,
     gesture: Option<Gesture>,
-    manual: Option<manual_mesh::ManualMeshMode>,
+    manual: Option<manual_mesh::ManualMeshSession>,
     access_cache: std::sync::Mutex<Option<access::AccessCache>>,
     #[cfg(test)]
     access_builds: std::sync::atomic::AtomicUsize,
@@ -152,15 +152,37 @@ impl ToolController {
         self.manual.is_some()
     }
     pub fn manual_editable(&self) -> bool {
-        self.manual
-            .as_ref()
-            .is_some_and(|mode| mode.blocked.is_none())
+        self.manual.as_ref().is_some_and(|mode| mode.editable())
     }
     pub fn manual_tool(&self) -> Option<ManualTool> {
         self.manual.as_ref().map(|mode| mode.tool)
     }
     pub fn manual_target(&self) -> Option<&crate::ManualMeshTarget> {
         self.manual.as_ref().map(|mode| &mode.target)
+    }
+    pub fn manual_targets(&self) -> Vec<crate::ManualMeshTarget> {
+        self.manual
+            .as_ref()
+            .map_or_else(Vec::new, |mode| mode.targets())
+    }
+    pub fn manual_target_at(
+        &self,
+        frame: &CanvasFrame,
+        point: ViewportPoint,
+    ) -> Option<&crate::ManualMeshTarget> {
+        self.manual
+            .as_ref()
+            .map(|mode| mode.target_at(frame, point))
+    }
+    pub fn activate_manual_target(
+        &mut self,
+        document: &mut Document,
+        frame: &CanvasFrame,
+        point: ViewportPoint,
+    ) -> bool {
+        self.manual
+            .as_mut()
+            .is_some_and(|mode| mode.activate_at(document, frame, point))
     }
     pub fn manual_edge_at(
         &self,
@@ -179,7 +201,7 @@ impl ToolController {
     }
     pub(crate) fn bind_manual_viewport(&mut self, viewport: crate::ViewportId) {
         if let Some(m) = &mut self.manual {
-            m.edit_viewport.get_or_insert(viewport);
+            m.bind_viewport(viewport);
         }
     }
     pub fn manual_source_view(&self) -> bool {
@@ -204,17 +226,17 @@ impl ToolController {
         }
         Ok(())
     }
-    pub fn enter_manual(&mut self, document: &mut Document, target: crate::ManualMeshTarget) {
+    pub fn enter_manual(&mut self, document: &mut Document, targets: Vec<crate::ManualMeshTarget>) {
         self.cancel(document);
         self.components.clear();
         self.active = ToolId::Select;
-        self.manual = Some(manual_mesh::ManualMeshMode::new(target, document));
+        self.manual = Some(manual_mesh::ManualMeshSession::new(targets, document));
     }
     pub fn set_manual_tool(&mut self, tool: ManualTool, document: &mut Document) {
         self.cancel(document);
         if let Some(mode) = &mut self.manual {
             self.active = ToolId::Select;
-            mode.tool = tool;
+            mode.set_tool(tool);
         }
     }
     pub fn exit_manual(&mut self, document: &mut Document) {

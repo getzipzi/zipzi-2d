@@ -458,8 +458,171 @@ fn deformation_root_drag_moves_immediately_and_supports_undo(cx: &mut TestAppCon
     });
 }
 #[gpui_kit::test]
-fn deformer_subtree_drag_into_warp_keeps_children_and_undo(cx: &mut TestAppContext) {
-    let (h, objects) = setup(cx, true);
+fn mesh_drag_into_warp_preserves_rendered_positions_and_undo(cx: &mut TestAppContext) {
+    let (h, objects) = setup(cx, false);
+    let (warp, before, organization, history) = h.view.update(cx, |v, cx| {
+        let document = v.editor.active_id().unwrap();
+        let plan = v
+            .editor
+            .document()
+            .unwrap()
+            .plan_scene_object_creation(
+                zipzi_editor_core::SceneObjectType::Warp,
+                "Warp destination".into(),
+                &[],
+            )
+            .unwrap();
+        let warp = v
+            .editor
+            .execute_scene_object_creation(document, &plan)
+            .unwrap()
+            .suggested_selection[0]
+            .clone();
+        let before = v.editor.preview().unwrap().scene.runtime_frame;
+        let d = v.editor.document().unwrap();
+        let result = (warp, before, d.part_tree(), d.history_lengths());
+        v.redraw(cx);
+        result
+    });
+    settle(cx);
+    cx.update_window(h.window, |_, window, cx| {
+        let from = window
+            .find(format!("deformer-item-Mesh:{}", objects[0].id))
+            .bounds()
+            .center();
+        let to = window
+            .find(format!("deformer-item-WarpDeformer:{}", warp.id))
+            .bounds()
+            .center();
+        window.drag(from, to, cx);
+    })
+    .unwrap();
+    settle(cx);
+    cx.update_window(h.window, |_, window, cx| {
+        assert!(!window.has_active_dialog(cx))
+    })
+    .unwrap();
+    h.view.update(cx, |v, _| {
+        assert!(v.edit_error.is_none(), "{:?}", v.edit_error);
+        let d = v.editor.document().unwrap();
+        assert_eq!(d.history_lengths(), (history.0 + 1, 0));
+        assert_eq!(d.part_tree(), organization);
+        assert_eq!(
+            d.object_index().get(&objects[0]).unwrap().properties["deformer_id"],
+            warp.id
+        );
+        let after = v.editor.preview().unwrap().scene.runtime_frame;
+        for before in &before.drawables {
+            let after = after.drawables.iter().find(|a| a.id == before.id).unwrap();
+            assert_eq!(before.visible, after.visible);
+            assert_eq!(before.uvs, after.uvs);
+            for (a, b) in before.positions.iter().zip(&after.positions) {
+                assert!((a.x - b.x).hypot(a.y - b.y) < 0.001, "{a:?} != {b:?}");
+            }
+        }
+        v.editor
+            .execute(zipzi_editor_core::EditorCommand::Undo)
+            .unwrap();
+        assert_eq!(
+            v.editor
+                .document()
+                .unwrap()
+                .object_index()
+                .get(&objects[0])
+                .unwrap()
+                .properties["deformer_id"],
+            object(501).id
+        );
+        v.editor
+            .execute(zipzi_editor_core::EditorCommand::Redo)
+            .unwrap();
+        assert_eq!(
+            v.editor
+                .document()
+                .unwrap()
+                .object_index()
+                .get(&objects[0])
+                .unwrap()
+                .properties["deformer_id"],
+            warp.id
+        );
+    });
+}
+
+#[gpui_kit::test]
+fn mesh_drag_into_rotation_preserves_rendered_positions_and_undo(cx: &mut TestAppContext) {
+    let (h, objects) = setup(cx, false);
+    let (before, organization, history) = h.view.update(cx, |v, _| {
+        (
+            v.editor.preview().unwrap().scene.runtime_frame,
+            v.editor.part_tree(),
+            v.editor.document().unwrap().history_lengths(),
+        )
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        let from = window
+            .find(format!("deformer-item-Mesh:{}", objects[0].id))
+            .bounds()
+            .center();
+        let to = window
+            .find(format!("deformer-item-RotationDeformer:{}", object(502).id))
+            .bounds()
+            .center();
+        window.drag(from, to, cx);
+    })
+    .unwrap();
+    settle(cx);
+    h.view.update(cx, |v, cx| {
+        assert!(v.edit_error.is_none(), "{:?}", v.edit_error);
+        let d = v.editor.document().unwrap();
+        assert_eq!(d.history_lengths(), (history.0 + 1, 0));
+        assert_eq!(d.part_tree(), organization);
+        assert_eq!(
+            d.object_index().get(&objects[0]).unwrap().properties["deformer_id"],
+            object(502).id
+        );
+        let after = v.editor.preview().unwrap().scene.runtime_frame;
+        for before in &before.drawables {
+            let after = after.drawables.iter().find(|a| a.id == before.id).unwrap();
+            assert_eq!(before.visible, after.visible);
+            assert_eq!(before.uvs, after.uvs);
+            for (a, b) in before.positions.iter().zip(&after.positions) {
+                assert!((a.x - b.x).hypot(a.y - b.y) < 0.001, "{a:?} != {b:?}");
+            }
+        }
+        v.editor
+            .execute(zipzi_editor_core::EditorCommand::Undo)
+            .unwrap();
+        assert_eq!(
+            v.editor
+                .document()
+                .unwrap()
+                .object_index()
+                .get(&objects[0])
+                .unwrap()
+                .properties["deformer_id"],
+            object(501).id
+        );
+        v.editor
+            .execute(zipzi_editor_core::EditorCommand::Redo)
+            .unwrap();
+        assert_eq!(
+            v.editor
+                .document()
+                .unwrap()
+                .object_index()
+                .get(&objects[0])
+                .unwrap()
+                .properties["deformer_id"],
+            object(502).id
+        );
+        v.redraw(cx);
+    });
+}
+
+#[gpui_kit::test]
+fn whole_rotation_parent_drag_preserves_rendered_mesh_and_undo(cx: &mut TestAppContext) {
+    let (h, _) = setup(cx, false);
     let warp = h.view.update(cx, |v, cx| {
         let document = v.editor.active_id().unwrap();
         let plan = v
@@ -482,45 +645,69 @@ fn deformer_subtree_drag_into_warp_keeps_children_and_undo(cx: &mut TestAppConte
         warp
     });
     settle(cx);
-    let (tree, history) = h.view.read_with(cx, |v, _| {
-        let d = v.editor.document().unwrap();
-        (d.deformer_tree(), d.history_lengths())
+    let (tree, original, history) = h.view.update(cx, |v, _| {
+        (
+            v.editor.deformer_tree(),
+            v.editor.preview().unwrap().scene.runtime_frame,
+            v.editor.document().unwrap().history_lengths(),
+        )
     });
-    cx.update_window(h.window, |_, window, cx| {
-        let from = window
-            .find(format!("deformer-item-RotationDeformer:{}", object(501).id))
-            .bounds()
-            .center();
-        let to = window
-            .find(format!("deformer-item-WarpDeformer:{}", warp.id))
-            .bounds()
-            .center();
-        window.drag(from, to, cx);
-    })
-    .unwrap();
-    settle(cx);
-    cx.update_window(h.window, |_, window, cx| {
-        assert!(!window.has_active_dialog(cx));
-        let v = h.view.read(cx);
-        let d = v.editor.document().unwrap();
-        assert_eq!(d.history_lengths(), (history.0 + 1, 0));
-        let tree = d.deformer_tree();
-        let parent = tree.iter().find(|n| n.id == warp.id).unwrap();
-        assert_eq!(parent.children[0].id, object(501).id);
-        assert_eq!(parent.children[0].children[0].id, objects[0].id);
-        assert!(v.edit_error.is_none());
-    })
-    .unwrap();
+    for (step, (kind, target)) in [("WarpDeformer", warp), ("RotationDeformer", object(502))]
+        .into_iter()
+        .enumerate()
+    {
+        cx.update_window(h.window, |_, window, cx| {
+            let from = window
+                .find(format!("deformer-item-RotationDeformer:{}", object(501).id))
+                .bounds()
+                .center();
+            let to = window
+                .find(format!("deformer-item-{kind}:{}", target.id))
+                .bounds()
+                .center();
+            window.drag(from, to, cx);
+        })
+        .unwrap();
+        settle(cx);
+        h.view.update(cx, |v, _| {
+            assert!(v.edit_error.is_none(), "{:?}", v.edit_error);
+            assert_eq!(
+                v.editor.document().unwrap().history_lengths(),
+                (history.0 + step + 1, 0)
+            );
+            assert_eq!(
+                v.editor
+                    .document()
+                    .unwrap()
+                    .object_index()
+                    .get(&object(501))
+                    .unwrap()
+                    .properties["parent_id"],
+                target.id
+            );
+            let after = v.editor.preview().unwrap().scene.runtime_frame;
+            for before in &original.drawables {
+                let after = after.drawables.iter().find(|a| a.id == before.id).unwrap();
+                assert_eq!(before.uvs, after.uvs);
+                assert_eq!(before.visible, after.visible);
+                for (a, b) in before.positions.iter().zip(&after.positions) {
+                    assert!((a.x - b.x).hypot(a.y - b.y) < 0.001, "{a:?} != {b:?}");
+                }
+            }
+        });
+    }
     h.view.update(cx, |v, cx| {
         v.editor
             .execute(zipzi_editor_core::EditorCommand::Undo)
             .unwrap();
+        v.editor
+            .execute(zipzi_editor_core::EditorCommand::Undo)
+            .unwrap();
+        assert_eq!(v.editor.deformer_tree(), tree);
+        v.editor
+            .execute(zipzi_editor_core::EditorCommand::Redo)
+            .unwrap();
         v.redraw(cx);
-    });
-    h.view.read_with(cx, |v, _| {
-        let d = v.editor.document().unwrap();
-        assert_eq!(d.deformer_tree(), tree);
-        assert_eq!(d.history_lengths(), (history.0, 1));
     });
 }
 

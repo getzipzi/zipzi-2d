@@ -2,6 +2,7 @@ use super::*;
 use crate::deformers::{rotation_parent_angle, rotation_points, PsmVec2};
 use crate::TransformId;
 use std::collections::HashSet;
+mod rotation;
 
 pub use zipzi_contract::document::{
     ReparentContext, ReparentEdit, ReparentPlacement, ReparentStrategy,
@@ -35,6 +36,7 @@ pub struct ReparentPlan {
     meshes: Vec<Mesh>,
     bindings: Vec<MeshBinding>,
     transforms: Vec<Transform>,
+    scene_bindings: Vec<crate::SceneBinding>,
     blend_bindings: Vec<crate::BlendShapeBinding>,
     affected: Vec<String>,
     guarantee: ReparentGuarantee,
@@ -55,19 +57,46 @@ impl ReparentPlan {
     }
 }
 
-// The same scalar rotation implementation used by evaluation. Ancestor poses
-// are resolved using the runtime's angle/scale inheritance, including reflection.
+// Rotations use the same scalar implementation as evaluation. Rectangular Warp
+// lattices supply an affine basis; scale still follows Rotation inheritance,
+// rather than the Warp lattice dimensions.
 #[derive(Clone, Copy)]
-struct RotationMap {
+struct ParentMap {
     base: f32,
     angle: f32,
     scale: f32,
     origin: PsmVec2,
     rx: bool,
     ry: bool,
+    warp_basis: Option<[Vec2; 2]>,
 }
-impl RotationMap {
+impl ParentMap {
+    fn direction(self) -> f32 {
+        let mut zero = PsmVec2::default();
+        rotation_parent_angle(
+            self.warp_basis.is_none(),
+            |p| {
+                let q = Self {
+                    origin: PsmVec2::default(),
+                    ..self
+                }
+                .point(Vec2::new(p.x, p.y));
+                PsmVec2::new(q.x, q.y)
+            },
+            &mut zero,
+        )
+    }
     fn point(self, p: Vec2) -> Vec2 {
+        if let Some([x, y]) = self.warp_basis {
+            return Vec2::new(
+                (f64::from(self.origin.x)
+                    + f64::from(x.x) * f64::from(p.x)
+                    + f64::from(y.x) * f64::from(p.y)) as f32,
+                (f64::from(self.origin.y)
+                    + f64::from(x.y) * f64::from(p.x)
+                    + f64::from(y.y) * f64::from(p.y)) as f32,
+            );
+        }
         let mut out = [0.0; 2];
         rotation_points(
             self.base,
@@ -231,32 +260,27 @@ impl Document {
         }
         Ok(Some(c))
     }
-    fn reparent_rotation_map(
+    fn reparent_parent_map(
         &self,
         id: &str,
         context: &ReparentContext,
         domain: bool,
         evaluate_driven: bool,
-    ) -> Result<RotationMap, Status> {
+    ) -> Result<ParentMap, Status> {
         if id.is_empty() {
-            return Ok(RotationMap {
+            return Ok(ParentMap {
                 base: 0.0,
                 angle: 0.0,
                 scale: 1.0,
                 origin: PsmVec2::default(),
                 rx: false,
                 ry: false,
+                warp_basis: None,
             });
         }
         let t = self
             .get_transform(id)
             .ok_or_else(|| Status::error("MISSING_TRANSFORM", id))?;
-        let r = t.rotation().ok_or_else(|| {
-            Status::error(
-                "NONLINEAR_PARENT_UNPROVEN",
-                format!("{id}: Warp inverse and error bound have not been proved"),
-            )
-        })?;
         if domain {
             for parameter in self.reparent_drivers(id) {
                 if context
@@ -273,6 +297,63 @@ impl Document {
                 }
             }
         }
+        if let Some(warp) = t.warp() {
+            // A warped grid cannot be inverted as one affine coordinate space.
+            // Admit exact, uniformly spaced rectangles only; do not fit a nearly
+            // affine lattice or silently bake an animated parent's current pose.
+            if self.binding_for_scene(id).is_some()
+                || !self.blend_bindings_for_target(id).is_empty()
+            {
+                return Err(Status::error("NONLINEAR_PARENT_UNPROVEN", id));
+            }
+            let origin = warp.points[0];
+            let width = warp.points[warp.columns as usize].x - origin.x;
+            let height = warp.points[(warp.rows * (warp.columns + 1)) as usize].y - origin.y;
+            if width == 0. || height == 0. {
+                return Err(Status::error("SINGULAR_PARENT", id));
+            }
+            for row in 0..=warp.rows {
+                for column in 0..=warp.columns {
+                    let expected = Vec2::new(
+                        if column == warp.columns {
+                            warp.points[warp.columns as usize].x
+                        } else {
+                            origin.x + width * (column as f32 / warp.columns as f32)
+                        },
+                        if row == warp.rows {
+                            warp.points[(warp.rows * (warp.columns + 1)) as usize].y
+                        } else {
+                            origin.y + height * (row as f32 / warp.rows as f32)
+                        },
+                    );
+                    if warp.points[(row * (warp.columns + 1) + column) as usize] != expected {
+                        return Err(Status::error("NONLINEAR_PARENT_UNPROVEN", id));
+                    }
+                }
+            }
+            let parent = self.reparent_parent_map(t.parent(), context, domain, evaluate_driven)?;
+            let linear = ParentMap {
+                origin: PsmVec2::default(),
+                ..parent
+            };
+            let origin = parent.point(origin);
+            let result = ParentMap {
+                base: 0.,
+                angle: 0.,
+                scale: parent.scale,
+                origin: PsmVec2::new(origin.x, origin.y),
+                rx: false,
+                ry: false,
+                warp_basis: Some([
+                    linear.point(Vec2::new(width, 0.)),
+                    linear.point(Vec2::new(0., height)),
+                ]),
+            };
+            // Check invertibility even for an empty source Mesh.
+            result.inverse(origin)?;
+            return Ok(result);
+        }
+        let r = t.rotation().unwrap();
         // Hover only checks structure/dependencies. Sampling a driven 16-axis
         // parent belongs to the heavy conversion plan, never capability lookup.
         let pose = if !evaluate_driven && !self.reparent_drivers(id).is_empty() {
@@ -280,30 +361,18 @@ impl Document {
         } else {
             crate::evaluation::authoring_rotation_pose(self, id, &context.parameter_values)
         };
-        let mut result = RotationMap {
+        let mut result = ParentMap {
             base: r.base_angle,
             angle: pose.angle,
             scale: pose.scale,
             origin: PsmVec2::new(pose.origin.x as f32, pose.origin.y as f32),
             rx: pose.reflect_x,
             ry: pose.reflect_y,
+            warp_basis: None,
         };
         if !t.parent().is_empty() {
-            let parent =
-                self.reparent_rotation_map(t.parent(), context, domain, evaluate_driven)?;
-            let mut zero = PsmVec2::default();
-            result.angle += rotation_parent_angle(
-                true,
-                |p| {
-                    let q = RotationMap {
-                        origin: PsmVec2::default(),
-                        ..parent
-                    }
-                    .point(Vec2::new(p.x, p.y));
-                    PsmVec2::new(q.x, q.y)
-                },
-                &mut zero,
-            );
+            let parent = self.reparent_parent_map(t.parent(), context, domain, evaluate_driven)?;
+            result.angle += parent.direction();
             let origin = parent.point(Vec2::new(result.origin.x, result.origin.y));
             result.origin = PsmVec2::new(origin.x, origin.y);
             result.scale *= parent.scale;
@@ -440,12 +509,10 @@ impl Document {
         if edit.strategy != ReparentStrategy::KeepLocalData {
             for id in &changing {
                 control.checkpoint()?;
-                if self.get_transform(id).is_some() {
+                if self.get_transform(id).is_some_and(|t| t.warp().is_some()) {
                     return Err(Status::error(
                         "SUBTREE_CONVERSION_UNPROVEN",
-                        format!(
-                            "{id}: use KeepLocalData; preservation of this subtree is not yet proved"
-                        ),
+                        format!("{id}: preservation of a Warp subtree is not yet supported"),
                     ));
                 }
             }
@@ -455,14 +522,14 @@ impl Document {
             let context = context.as_ref().unwrap();
             let domain = edit.strategy == ReparentStrategy::PreserveParameterDomain;
             for id in &changing {
-                self.reparent_rotation_map(
-                    &self.get_mesh(id).unwrap().deformer_id,
+                self.reparent_parent_map(
+                    self.scene_deformer_parent(id).unwrap(),
                     context,
                     domain,
                     false,
                 )?;
             }
-            self.reparent_rotation_map(&edit.parent_id, context, domain, false)?;
+            self.reparent_parent_map(&edit.parent_id, context, domain, false)?;
         }
         Ok((sources, changing, context))
     }
@@ -509,34 +576,60 @@ impl Document {
     ) -> Result<ReparentPlan, Status> {
         let (sources, changing, context) = self.prepare_reparent(&edit, control, check_locks)?;
         let hierarchy = self.reparent_placement(&sources, &edit)?;
-        let point_count = changing
-            .iter()
-            .filter_map(|id| self.get_mesh(id))
-            .try_fold(0usize, |count, m| {
-                if edit.strategy == ReparentStrategy::KeepLocalData {
-                    return count
-                        .checked_add(1)
-                        .ok_or_else(|| Status::error("AUTHORING_CAPACITY_OVERFLOW", &m.id));
-                }
-                let forms = self.binding_for_mesh(&m.id).map_or(0, |b| b.keyforms.len());
-                let forms =
-                    self.blend_bindings_for_target(&m.id)
-                        .iter()
-                        .try_fold(forms, |n, b| {
-                            n.checked_add(b.keyforms.len())
-                                .ok_or_else(|| Status::error("AUTHORING_CAPACITY_OVERFLOW", &m.id))
-                        })?;
-                m.base_positions
-                    .len()
-                    .checked_mul(forms + 1)
+        let point_count = changing.iter().try_fold(0usize, |count, id| {
+            let Some(m) = self.get_mesh(id) else {
+                let forms = self.binding_for_scene(id).map_or(0, |b| b.track.len());
+                let forms = self
+                    .blend_bindings_for_target(id)
+                    .iter()
+                    .try_fold(forms, |n, b| {
+                        n.checked_add(b.keyforms.len())
+                            .ok_or_else(|| Status::error("AUTHORING_CAPACITY_OVERFLOW", id))
+                    })?;
+                return (forms + 1)
+                    .checked_mul(8)
                     .and_then(|n| n.checked_add(count))
-                    .ok_or_else(|| Status::error("AUTHORING_CAPACITY_OVERFLOW", &m.id))
-            })?;
+                    .ok_or_else(|| Status::error("AUTHORING_CAPACITY_OVERFLOW", id));
+            };
+            if edit.strategy == ReparentStrategy::KeepLocalData {
+                return count
+                    .checked_add(1)
+                    .ok_or_else(|| Status::error("AUTHORING_CAPACITY_OVERFLOW", &m.id));
+            }
+            let forms = self.binding_for_mesh(&m.id).map_or(0, |b| b.keyforms.len());
+            let forms = self
+                .blend_bindings_for_target(&m.id)
+                .iter()
+                .try_fold(forms, |n, b| {
+                    n.checked_add(b.keyforms.len())
+                        .ok_or_else(|| Status::error("AUTHORING_CAPACITY_OVERFLOW", &m.id))
+                })?;
+            m.base_positions
+                .len()
+                .checked_mul(forms + 1)
+                .and_then(|n| n.checked_add(count))
+                .ok_or_else(|| Status::error("AUTHORING_CAPACITY_OVERFLOW", &m.id))
+        })?;
         let mut payload = point_count
             .checked_mul(std::mem::size_of::<Vec2>() * 2 + 64)
             .ok_or_else(|| {
                 Status::error("AUTHORING_CAPACITY_OVERFLOW", "Mesh conversion payload")
             })?;
+        let has_rotation = edit.strategy != ReparentStrategy::KeepLocalData
+            && changing.iter().any(|id| self.get_transform(id).is_some());
+        if has_rotation {
+            // Native before/after verification retains two complete geometry frames.
+            for id in self.mesh_order() {
+                payload = self
+                    .get_mesh(id)
+                    .unwrap()
+                    .base_positions
+                    .len()
+                    .checked_mul(8 * std::mem::size_of::<Vec2>())
+                    .and_then(|n| payload.checked_add(n))
+                    .ok_or_else(|| Status::error("AUTHORING_CAPACITY_OVERFLOW", id))?;
+            }
+        }
         if let Some(order) = &hierarchy {
             payload = order
                 .organization
@@ -560,8 +653,12 @@ impl Document {
         } else {
             changing
                 .iter()
-                .filter_map(|id| self.binding_for_mesh(id))
-                .map(|b| b.keyforms.len())
+                .map(|id| {
+                    self.binding_for_mesh(id).map_or_else(
+                        || self.binding_for_scene(id).map_or(1, |b| b.track.len()),
+                        |b| b.keyforms.len(),
+                    )
+                })
                 .max()
                 .unwrap_or(1)
                 .max(1)
@@ -572,7 +669,7 @@ impl Document {
             let mut visited = HashSet::new();
             for parent in changing
                 .iter()
-                .map(|id| self.get_mesh(id).unwrap().deformer_id.as_str())
+                .map(|id| self.scene_deformer_parent(id).unwrap())
                 .chain(std::iter::once(edit.parent_id.as_str()))
             {
                 let mut parent = parent;
@@ -639,7 +736,7 @@ impl Document {
         let cost = self.conversion_report_cost(&affected, cost, limits)?;
         control.checkpoint()?;
         let new_map = if edit.strategy != ReparentStrategy::KeepLocalData && !changing.is_empty() {
-            Some(self.reparent_rotation_map(
+            Some(self.reparent_parent_map(
                 &edit.parent_id,
                 context.as_ref().unwrap(),
                 edit.strategy == ReparentStrategy::PreserveParameterDomain,
@@ -651,6 +748,7 @@ impl Document {
         let mut meshes = Vec::new();
         let mut bindings = Vec::new();
         let mut transforms = Vec::new();
+        let mut scene_bindings = Vec::new();
         let mut blend_bindings = Vec::new();
         let mut bounds: Option<[f64; 4]> = None;
         let mut measured_error = 0.0f64;
@@ -661,7 +759,7 @@ impl Document {
             if let Some(m) = self.get_mesh(id) {
                 let mut mesh = m.clone();
                 if let Some(new_map) = new_map {
-                    let old_map = self.reparent_rotation_map(
+                    let old_map = self.reparent_parent_map(
                         &m.deformer_id,
                         context.as_ref().unwrap(),
                         edit.strategy == ReparentStrategy::PreserveParameterDomain,
@@ -672,7 +770,7 @@ impl Document {
                             control.checkpoint()?;
                             for point in chunk {
                                 let world = old_map.point(*point);
-                                let old_linear = RotationMap {
+                                let old_linear = ParentMap {
                                     origin: PsmVec2::default(),
                                     ..old_map
                                 }
@@ -693,7 +791,7 @@ impl Document {
                                     .max(f64::from(world.x).abs() + f64::from(world.y).abs());
                                 // Also bound intermediate products before translation,
                                 // so cancellation at a large origin cannot hide error.
-                                let linear = RotationMap {
+                                let linear = ParentMap {
                                     origin: PsmVec2::default(),
                                     ..new_map
                                 }
@@ -730,11 +828,11 @@ impl Document {
                     for b in self.blend_bindings_for_target(id) {
                         let mut next = b.clone();
                         if let crate::DeltaKeyforms::Mesh(forms) = &mut next.keyforms {
-                            let old_linear = RotationMap {
+                            let old_linear = ParentMap {
                                 origin: PsmVec2::default(),
                                 ..old_map
                             };
-                            let new_linear = RotationMap {
+                            let new_linear = ParentMap {
                                 origin: PsmVec2::default(),
                                 ..new_map
                             };
@@ -773,6 +871,28 @@ impl Document {
                 require_ok(self.validate_mesh_properties(&mesh))?;
                 meshes.push(mesh);
             } else {
+                if let Some(new_map) = new_map {
+                    let old_map = self.reparent_parent_map(
+                        self.get_transform(id).unwrap().parent(),
+                        context.as_ref().unwrap(),
+                        edit.strategy == ReparentStrategy::PreserveParameterDomain,
+                        true,
+                    )?;
+                    let converted = self.convert_rotation_parent(
+                        id,
+                        &edit.parent_id,
+                        old_map,
+                        new_map,
+                        control,
+                    )?;
+                    magnitude = magnitude.max(converted.magnitude);
+                    measured_error = measured_error.max(converted.error);
+                    max_axes = max_axes.max(converted.axes);
+                    transforms.push(converted.transform);
+                    scene_bindings.extend(converted.binding);
+                    blend_bindings.extend(converted.blends);
+                    continue;
+                }
                 let mut t = self.get_transform(id).unwrap().clone();
                 t.parent_id = TransformId::optional(edit.parent_id.clone());
                 require_ok(self.validate_transform(&t))?;
@@ -783,8 +903,11 @@ impl Document {
             let context = context.as_ref().unwrap();
             for id in &changing {
                 control.checkpoint()?;
-                let old_map = self.reparent_rotation_map(
-                    &self.get_mesh(id).unwrap().deformer_id,
+                let Some(mesh) = self.get_mesh(id) else {
+                    continue;
+                };
+                let old_map = self.reparent_parent_map(
+                    &mesh.deformer_id,
                     context,
                     edit.strategy == ReparentStrategy::PreserveParameterDomain,
                     true,
@@ -854,7 +977,7 @@ impl Document {
         let guarantee = ReparentGuarantee {
             strategy: edit.strategy,
             position_scope: if new_map.is_some() {
-                "Affine Mesh geometry before Glue; explicit native edit snapshot/domain"
+                "Affine Mesh and Rotation subtree geometry; explicit native edit snapshot/domain"
             } else {
                 "Local data only"
             }
@@ -869,7 +992,7 @@ impl Document {
         };
         report.reparent_guarantee = Some(guarantee.clone());
         control.check()?;
-        Ok(ReparentPlan {
+        let mut plan = ReparentPlan {
             control: control.clone(),
             report,
             snapshot: self.snapshot_identity.clone(),
@@ -877,11 +1000,16 @@ impl Document {
             meshes,
             bindings,
             transforms,
+            scene_bindings,
             blend_bindings,
             affected,
             cost,
             guarantee,
-        })
+        };
+        if has_rotation {
+            self.verify_rotation_reparent(&mut plan, control)?;
+        }
+        Ok(plan)
     }
     pub fn apply_reparent_plan(&mut self, plan: &ReparentPlan) -> EditResult {
         if let Err(status) = plan.control.check() {
@@ -910,6 +1038,9 @@ impl Document {
         }
         for b in &plan.blend_bindings {
             self.content.blend_bindings.insert(b.id.clone(), b.clone());
+        }
+        for b in &plan.scene_bindings {
+            self.content.scene_bindings.insert(b.id.clone(), b.clone());
         }
         for t in &plan.transforms {
             self.content.transforms.insert(t.id.clone(), t.clone());

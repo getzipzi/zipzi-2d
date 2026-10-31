@@ -1,7 +1,7 @@
 //! Stable business commands. Platform input, dialogs and focus do not enter core.
 use crate::scene::{MAX_ZOOM, MIN_ZOOM};
 use crate::{DocumentId, Editor, EditorCommand};
-use anyhow::{ensure, Result};
+use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 mod timeline;
 
@@ -153,6 +153,8 @@ pub enum CommandId {
     ManualMesh,
     #[serde(rename = "tool.manual-select")]
     ManualSelect,
+    #[serde(rename = "tool.manual-lasso")]
+    ManualLasso,
     #[serde(rename = "tool.manual-create")]
     ManualCreate,
     #[serde(rename = "tool.manual-delete")]
@@ -163,6 +165,8 @@ pub enum CommandId {
     ManualRemoveSelection,
     #[serde(rename = "tool.manual-source-view")]
     ManualSourceView,
+    #[serde(rename = "tool.manual-pad-source")]
+    ManualPadSource,
     #[serde(rename = "view.deformers")]
     ToggleDeformers,
     #[serde(rename = "view.ancestor-deformers")]
@@ -534,6 +538,14 @@ specs![
         ["shift-m"]
     ),
     (ManualMesh, "editor.tool_manual_mesh", Viewport, false, []),
+    (ManualLasso, "editor.tool_manual_lasso", Viewport, false, []),
+    (
+        ManualPadSource,
+        "editor.tool_manual_pad_source",
+        Viewport,
+        false,
+        []
+    ),
     (
         ManualSelect,
         "editor.tool_manual_select",
@@ -905,6 +917,7 @@ impl Editor {
             HandTool => animation_navigation || self.active_tool() == crate::ToolId::Hand,
             ManualMesh => self.manual_active(),
             ManualSelect => self.manual_tool() == Some(crate::ManualTool::Select),
+            ManualLasso => self.manual_tool() == Some(crate::ManualTool::Lasso),
             ManualCreate => self.manual_tool() == Some(crate::ManualTool::Create),
             ManualDelete => self.manual_tool() == Some(crate::ManualTool::Delete),
             ManualSourceView => self
@@ -1022,9 +1035,11 @@ impl Editor {
                     && !self.exiting()
                     && !self.gesture_active()
                     && if self.manual_active() {
-                        self.manual_editable() && matches!(command.target,CommandTarget::Viewport(b) if self.manual_for_viewport(b.viewport))
+                        self.manual_editable()
+                            && matches!(command.target,CommandTarget::Viewport(b) if self.manual_for_viewport(b.viewport))
                     } else {
-                        self.document().is_some_and(|d| d.mesh_generation_target().is_ok())
+                        self.document()
+                            .is_some_and(|d| d.mesh_generation_target().is_ok())
                     }
             }
             ManualMesh => {
@@ -1033,21 +1048,39 @@ impl Editor {
                     && !self.is_busy()
                     && !self.exiting()
                     && (self.manual_active()
-                        || self
-                            .document()
-                            .is_some_and(|d| matches!(d.context().selections.as_slice(), [object] if object.kind == crate::ObjectKind::Mesh)))
+                        || self.document().is_some_and(|d| {
+                            !d.context().selections.is_empty()
+                                && d.context()
+                                    .selections
+                                    .iter()
+                                    .all(|object| object.kind == crate::ObjectKind::Mesh)
+                        }))
             }
             ManualSelect
+            | ManualLasso
             | ManualCreate
             | ManualDelete
             | ManualReconnect
             | ManualRemoveSelection
-            | ManualSourceView => modeling && target && !self.is_busy() && self.manual_editable()
-                && matches!(command.target,CommandTarget::Viewport(b) if self.manual_for_viewport(b.viewport)),
+            | ManualPadSource
+            | ManualSourceView => {
+                modeling
+                    && target
+                    && !self.is_busy()
+                    && self.manual_editable()
+                    && matches!(command.target,CommandTarget::Viewport(b) if self.manual_for_viewport(b.viewport))
+                    && (command.id != ManualPadSource || !self.gesture_active())
+                    && (command.id != ManualSourceView || self.manual_targets().len() == 1)
+            }
             DeleteObject => {
-                (modeling || matches!(command.target, CommandTarget::Document(_))) && target && !self.is_busy() && !self.exiting() && !self.gesture_active()
+                (modeling || matches!(command.target, CommandTarget::Document(_)))
+                    && target
+                    && !self.is_busy()
+                    && !self.exiting()
+                    && !self.gesture_active()
                     && if self.manual_active() {
-                        self.manual_editable() && matches!(command.target, CommandTarget::Viewport(b) if self.manual_for_viewport(b.viewport))
+                        self.manual_editable()
+                            && matches!(command.target, CommandTarget::Viewport(b) if self.manual_for_viewport(b.viewport))
                     } else {
                         self.document().is_some()
                     }
@@ -1202,8 +1235,9 @@ impl Editor {
             }
             ManualMesh if self.manual_active() => self.exit_manual_mesh(),
             ManualMesh => return Ok(CommandEffect::Host(command)),
-            ManualSelect | ManualCreate | ManualDelete => {
+            ManualSelect | ManualLasso | ManualCreate | ManualDelete => {
                 let tool = match command.id {
+                    ManualLasso => crate::ManualTool::Lasso,
                     ManualCreate => crate::ManualTool::Create,
                     ManualDelete => crate::ManualTool::Delete,
                     _ => crate::ManualTool::Select,
@@ -1237,6 +1271,17 @@ impl Editor {
                     .tools
                     .refresh_manual_source(&session.document)?;
                 if changed {
+                    session.invalidate_scene();
+                }
+            }
+            ManualPadSource => {
+                let session = self.active_session_mut().unwrap();
+                let target = session.modeling.tools.manual_target().unwrap().clone();
+                if session.document.pad_manual_mesh_source(&target, 4)? {
+                    session
+                        .modeling
+                        .tools
+                        .refresh_manual_source(&session.document)?;
                     session.invalidate_scene();
                 }
             }

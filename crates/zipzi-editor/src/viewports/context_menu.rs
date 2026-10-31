@@ -30,6 +30,21 @@ impl ViewportSurface {
         {
             return menu;
         }
+        let point = canvas.read(cx).local(window.mouse_position());
+        let frame = owner
+            .read(cx)
+            .modeling_frame_for(canvas.read(cx).viewport)
+            .map(|f| f.canvas.clone());
+        if let Some(frame) = frame {
+            owner.update(cx, |view, cx| {
+                if !view.modal
+                    && !view.editor.is_busy()
+                    && view.editor.activate_manual_target(&frame, point)
+                {
+                    view.redraw(cx);
+                }
+            });
+        }
         let state = owner.read(cx);
         if state.modal
             || state.editor.is_busy()
@@ -37,7 +52,6 @@ impl ViewportSurface {
         {
             return menu;
         }
-        let point = canvas.read(cx).local(window.mouse_position());
         let candidates = state.editor.pick_candidates(
             point,
             state
@@ -52,7 +66,9 @@ impl ViewportSurface {
             let edge = state
                 .modeling_frame_for(canvas.read(cx).viewport)
                 .and_then(|frame| state.editor.manual_edge_at(&frame.canvas, point));
-            let target = state.editor.manual_target();
+            let target = state
+                .modeling_frame_for(canvas.read(cx).viewport)
+                .and_then(|frame| state.editor.manual_target_at(&frame.canvas, point));
             let deletion = state.editor.command_for_viewport(
                 CommandId::DeleteObject,
                 binding,

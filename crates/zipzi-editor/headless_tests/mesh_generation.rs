@@ -307,6 +307,7 @@ fn defaults_and_field_steps_support_shift_without_hidden_precision(cx: &mut Test
         .unwrap();
         settle(cx);
     };
+    check("mesh-generation-outer-margin", "6.0", cx);
     check("mesh-generation-edge-spacing", "24.0", cx);
     scrub("mesh-generation-edge-spacing", 8., false, cx);
     check("mesh-generation-edge-spacing", "25.0", cx);

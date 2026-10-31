@@ -722,9 +722,26 @@ impl EditSession<'_> {
         operation: ManualMeshOperation,
         limits: AuthoringLimits,
     ) -> Result<ManualMeshPlan, SdkError> {
+        self.plan_manual_mesh_at(
+            self.candidate_document(),
+            self.candidate_document(),
+            mesh_id,
+            operation,
+            limits,
+        )
+    }
+
+    fn plan_manual_mesh_at(
+        &self,
+        current: &Document,
+        baseline_publication: &Document,
+        mesh_id: &str,
+        operation: ManualMeshOperation,
+        limits: AuthoringLimits,
+    ) -> Result<ManualMeshPlan, SdkError> {
         self.ensure_active("plan_manual_mesh")?;
         limits
-            .check_conversion(1, 0, self.candidate_document().estimated_content_bytes())
+            .check_conversion(1, 0, current.estimated_content_bytes())
             .map_err(status)?;
         let mut operation = operation;
         if let ManualMeshOperation::MoveVertices {
@@ -732,23 +749,26 @@ impl EditSession<'_> {
             motion_from,
         } = &mut operation
         {
-            let mesh = self.candidate_document().get_mesh(mesh_id).ok_or_else(|| {
+            let mesh = current.get_mesh(mesh_id).ok_or_else(|| {
                 error(
                     "MISSING_MESH",
                     "Mesh no longer exists",
                     vec![mesh_id.into()],
                 )
             })?;
+            let slots: HashMap<_, _> = mesh
+                .vertex_ids
+                .iter()
+                .enumerate()
+                .map(|(slot, id)| (*id, slot))
+                .collect();
             let actual: Vec<_> = targets
                 .iter()
                 .filter_map(|t| {
-                    mesh.vertex_ids
-                        .iter()
-                        .position(|id| *id == t.id)
-                        .map(|slot| ManualVertexTarget {
-                            id: t.id,
-                            uv: mesh.uvs[slot],
-                        })
+                    slots.get(&t.id).map(|&slot| ManualVertexTarget {
+                        id: t.id,
+                        uv: mesh.uvs[slot],
+                    })
                 })
                 .collect();
             if let Some(from) = motion_from {
@@ -772,12 +792,12 @@ impl EditSession<'_> {
         moving_ids.sort_unstable();
         let is_move = matches!(operation, ManualMeshOperation::MoveVertices { .. });
         let source = if is_move {
-            self.manual_baseline
-                .as_ref()
+            self.manual_baselines
+                .get(mesh_id)
                 .filter(|b| {
                     b.source.mesh_id == mesh_id
                         && b.moving_ids == moving_ids
-                        && b.publication.is_same_snapshot(self.candidate_document())
+                        && b.publication.is_same_snapshot(baseline_publication)
                 })
                 .map(|b| b.source.clone())
         } else {
@@ -785,10 +805,10 @@ impl EditSession<'_> {
         };
         let source = match source {
             Some(s) => s,
-            None => Arc::new(ManualMeshSource::new(self.candidate_document(), mesh_id)?),
+            None => Arc::new(ManualMeshSource::new(current, mesh_id)?),
         };
         let mut plan = source.plan_candidate(
-            self.candidate_document(),
+            current,
             self.base_version(),
             operation,
             limits,
@@ -822,12 +842,85 @@ impl EditSession<'_> {
         self.candidate = Some(plan.validated);
         self.binding_cost = Some(plan.report.cost);
         self.record(plan.changes, "apply_manual_mesh_plan", &plan.mesh_id)?;
-        self.manual_baseline = plan.baseline.map(|source| ManualMeshBaseline {
-            source,
-            publication: self.candidate_document().clone(),
-            moving_ids: plan.moving_ids,
-        });
+        self.manual_baselines.clear();
+        if let Some(source) = plan.baseline {
+            self.manual_baselines.insert(
+                plan.mesh_id,
+                ManualMeshBaseline {
+                    source,
+                    publication: self.candidate_document().clone(),
+                    moving_ids: plan.moving_ids,
+                },
+            );
+        }
         Ok(plan.report)
+    }
+
+    /// Validate every mesh before publishing any candidate change. Rejected
+    /// geometry retains the last accepted batch and its frozen move sources.
+    pub fn edit_manual_mesh_batch(
+        &mut self,
+        operations: Vec<(String, ManualMeshOperation)>,
+    ) -> Result<Vec<ManualMeshTransferReport>, SdkError> {
+        self.ensure_active("edit_manual_mesh_batch")?;
+        let mut ids = HashSet::new();
+        if operations.is_empty() || operations.iter().any(|(id, _)| !ids.insert(id.clone())) {
+            return Err(error(
+                "INVALID_MANUAL_MESH",
+                "Supply one operation per mesh in a nonempty batch",
+                vec![],
+            ));
+        }
+        let publication = self.candidate_document().clone();
+        let mut candidate = publication.clone();
+        let mut plans = Vec::with_capacity(operations.len());
+        let mut bytes = 0usize;
+        for (id, operation) in operations {
+            bytes = bytes.saturating_add(candidate.estimated_content_bytes());
+            self.authoring_limits
+                .check_conversion(plans.len() + 1, bytes, self.estimated_bytes())
+                .map_err(status)?;
+            let plan = self.plan_manual_mesh_at(
+                &candidate,
+                &publication,
+                &id,
+                operation,
+                self.authoring_limits,
+            )?;
+            candidate = plan.validated.clone();
+            plans.push(plan);
+        }
+        let baselines: Vec<_> = plans
+            .iter()
+            .filter_map(|plan| {
+                plan.baseline.as_ref().map(|source| {
+                    (
+                        plan.mesh_id.clone(),
+                        source.clone(),
+                        plan.moving_ids.clone(),
+                    )
+                })
+            })
+            .collect();
+        let mut reports = Vec::with_capacity(plans.len());
+        for plan in plans {
+            reports.push(self.apply_manual_mesh_plan(plan)?);
+        }
+        let publication = self.candidate_document().clone();
+        self.manual_baselines = baselines
+            .into_iter()
+            .map(|(id, source, moving_ids)| {
+                (
+                    id,
+                    ManualMeshBaseline {
+                        source,
+                        moving_ids,
+                        publication: publication.clone(),
+                    },
+                )
+            })
+            .collect();
+        Ok(reports)
     }
     pub fn edit_manual_mesh(
         &mut self,

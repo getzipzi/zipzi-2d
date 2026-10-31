@@ -73,7 +73,7 @@ pub(crate) struct MeshTopology {
     pub support_edges: Arc<[(usize, usize)]>,
     pub automatic_edges: Arc<[(usize, usize)]>,
     meshing: Option<zipzi_core::MeshMeshing>,
-    slots: HashMap<u32, usize>,
+    pub(crate) slots: HashMap<u32, usize>,
 }
 impl MeshTopology {
     pub(crate) fn matches(&self, mesh: &zipzi_core::Mesh) -> bool {

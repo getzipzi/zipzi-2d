@@ -33,9 +33,14 @@ pub(crate) fn reason_message(code: &str) -> Option<String> {
         "NONLINEAR_PARENT_UNPROVEN" => "reparent.nonlinear_unproven",
         "PARAMETER_DOMAIN_UNPROVEN" => "reparent.domain_unproven",
         "SINGULAR_PARENT" => "reparent.singular",
+        "REPARENT_TOLERANCE_EXCEEDED" => "reparent.tolerance_exceeded",
         "STALE_PLAN" | "STALE_VERSION" => "authoring.move_stale",
         "AUTHORING_CANCELLED" => "reparent.cancelled",
         "EXPECTED_DEFORMATION_MEMBERS" => "authoring.deformation_context",
+        "DEFORMER_GROUP_DIFFERENT_PARENTS" => "authoring.deformer_group_parents",
+        "ROTATION_GROUP_UNDER_WARP_UNPROVEN" => "authoring.deformer_group_rotation_warp",
+        "ROTATION_GROUP_REFLECTION_UNPROVEN" => "authoring.deformer_group_reflection",
+        "ROTATION_SCALE_CLAMP_UNPROVEN" => "reparent.rotation_scale_clamp",
         _ => return None,
     };
     Some(t!(key).into_owned())

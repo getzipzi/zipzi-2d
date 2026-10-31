@@ -1,6 +1,7 @@
 //! One document-scoped mesh mode, shared by all Modeling viewports.
 use super::{
     CanvasFrame, CanvasInput, FrameVersion, OverlaySnapshot, OverlayVertex, OverlayVertexKind,
+    region::{SelectionOperation, SelectionRegion},
 };
 use crate::{Document, ManualMeshTarget, ViewportPoint, ViewportTransform};
 use anyhow::Result;
@@ -8,12 +9,15 @@ use std::{cell::RefCell, collections::HashMap, sync::Arc};
 use zipzi_core::{Vec2, VertexId};
 use zipzi_sdk::{ManualMeshOperation, ManualVertexIdAllocator, ManualVertexTarget, MeshGeometry};
 mod mapping;
+mod session;
 use mapping::{PoseMapping, PositionUvMap};
+pub(super) use session::ManualMeshSession;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum ManualTool {
     #[default]
     Select,
+    Lasso,
     Create,
     Delete,
 }
@@ -53,10 +57,46 @@ enum EdgeHitKind {
 
 enum GestureKind {
     Drag(Vec<ManualVertexTarget>),
-    Marquee { shift: bool, alt: bool, hit: Hit },
+    Region {
+        path: SelectionPath,
+        operation: SelectionOperation,
+        hit: Hit,
+    },
     Create(Hit),
     Connect(Hit),
     Delete(Hit),
+}
+
+enum SelectionPath {
+    Rectangle,
+    Lasso(Vec<ViewportPoint>),
+}
+impl SelectionPath {
+    fn update(&mut self, point: ViewportPoint, complete: bool) {
+        if let Self::Lasso(points) = self {
+            let last = *points.last().unwrap();
+            if last != point && (complete || crate::picking::distance2(last, point) >= 4.) {
+                points.push(point);
+            }
+        }
+    }
+    fn region(&self, start: ViewportPoint, end: ViewportPoint) -> Option<SelectionRegion<'_>> {
+        match self {
+            Self::Rectangle => Some(SelectionRegion::rectangle(start, end)),
+            Self::Lasso(points) => SelectionRegion::lasso(points),
+        }
+    }
+    fn overlay(&self, start: ViewportPoint, end: ViewportPoint, out: &mut OverlaySnapshot) {
+        match self {
+            Self::Rectangle => out.marquee = Some((start, end)),
+            Self::Lasso(points) => {
+                out.lasso.clone_from(points);
+                if out.lasso.last() != Some(&end) {
+                    out.lasso.push(end);
+                }
+            }
+        }
+    }
 }
 
 struct Gesture {
@@ -67,6 +107,22 @@ struct Gesture {
     kind: GestureKind,
     moved: bool,
     pose: Option<PoseMapping>,
+}
+impl Gesture {
+    fn update(&mut self, point: ViewportPoint, complete: bool) {
+        self.current = point;
+        self.moved |= crate::picking::distance2(self.start, point) >= 9.;
+        if let GestureKind::Region { path, .. } = &mut self.kind {
+            path.update(point, complete);
+        }
+    }
+    fn selection_overlay(&self, out: &mut OverlaySnapshot) {
+        if self.moved {
+            if let GestureKind::Region { path, .. } = &self.kind {
+                path.overlay(self.start, self.current, out);
+            }
+        }
+    }
 }
 
 type ScreenLine = (ViewportPoint, ViewportPoint);
@@ -100,7 +156,6 @@ impl ManualMeshMode {
     /// Publications update an operation source, not the lifetime of the mode.
     /// Invalid targets stay suspended so Undo can recover them and Exit stays available.
     pub fn reconcile(&mut self, document: &mut Document) {
-        document.retain_manual_mesh_context(&self.target.object);
         if self.blocked.is_none() && document.validate_manual_target(&self.target).is_ok() {
             return;
         }
@@ -340,7 +395,7 @@ impl ManualMeshMode {
                     GestureKind::Connect(self.hover)
                 } else {
                     match tool {
-                        ManualTool::Select => match self.hover {
+                        ManualTool::Select | ManualTool::Lasso => match self.hover {
                             Hit::Vertex(id) => {
                                 if alt {
                                     self.selected.retain(|selected| *selected != id);
@@ -354,20 +409,13 @@ impl ManualMeshMode {
                                 self.selected_edge = None;
                                 GestureKind::Drag(self.selected_starts(document))
                             }
-                            Hit::Edge(ids, _) => {
-                                if !alt {
-                                    self.selected.clear();
-                                }
-                                self.selected_edge = (shift && !alt).then_some(ids);
-                                GestureKind::Marquee {
-                                    shift,
-                                    alt,
-                                    hit: self.hover,
-                                }
-                            }
-                            _ => GestureKind::Marquee {
-                                shift,
-                                alt,
+                            _ => GestureKind::Region {
+                                path: if tool == ManualTool::Lasso {
+                                    SelectionPath::Lasso(vec![point])
+                                } else {
+                                    SelectionPath::Rectangle
+                                },
+                                operation: SelectionOperation::from_modifiers(shift, alt),
                                 hit: self.hover,
                             },
                         },
@@ -416,13 +464,17 @@ impl ManualMeshMode {
                 let Some(gesture) = self.gesture.as_ref() else {
                     return Ok(false);
                 };
-                let drag = matches!(gesture.kind, GestureKind::Drag(_));
+                let drag = matches!(
+                    gesture.kind,
+                    GestureKind::Drag(_) | GestureKind::Region { .. }
+                );
                 let mut changed = if drag {
                     self.update_drag(document, point)?
                 } else {
                     false
                 };
-                let gesture = self.gesture.take().unwrap();
+                let mut gesture = self.gesture.take().unwrap();
+                gesture.update(point, true);
                 let connecting = matches!(gesture.kind, GestureKind::Connect(_));
                 match gesture.kind {
                     GestureKind::Drag(_) => {
@@ -433,43 +485,44 @@ impl ManualMeshMode {
                             self.refresh_source(document)?;
                         }
                     }
-                    GestureKind::Marquee { shift, alt, hit } => {
-                        if gesture.moved || crate::picking::distance2(gesture.start, point) >= 9. {
-                            let Some(mesh) = frame.geometry.mesh(&self.target.object.id) else {
-                                return Ok(false);
-                            };
-                            let min = ViewportPoint {
-                                x: gesture.start.x.min(point.x),
-                                y: gesture.start.y.min(point.y),
-                            };
-                            let max = ViewportPoint {
-                                x: gesture.start.x.max(point.x),
-                                y: gesture.start.y.max(point.y),
-                            };
-                            let ids: Vec<_> = mesh
-                                .vertices
-                                .iter()
-                                .filter_map(|&(id, position)| {
-                                    let p = gesture.transform.to_viewport(position);
-                                    (p.x >= min.x && p.x <= max.x && p.y >= min.y && p.y <= max.y)
-                                        .then_some(id)
-                                })
-                                .collect();
-                            if alt {
-                                self.selected.retain(|id| !ids.contains(id));
-                            } else if shift {
-                                for id in ids {
-                                    if !self.selected.contains(&id) {
-                                        self.selected.push(id);
-                                    }
-                                }
-                            } else {
-                                self.selected = ids;
+                    GestureKind::Region {
+                        path,
+                        operation,
+                        hit,
+                    } => {
+                        if gesture.moved {
+                            if let Some(region) = path.region(gesture.start, point) {
+                                let ids = frame
+                                    .geometry
+                                    .mesh(&self.target.object.id)
+                                    .into_iter()
+                                    .flat_map(|mesh| &mesh.vertices)
+                                    .filter_map(|&(id, position)| {
+                                        region
+                                            .contains(gesture.transform.to_viewport(position))
+                                            .then_some(id)
+                                    })
+                                    .collect();
+                                operation.apply(&mut self.selected, ids);
+                                self.selected_edge = None;
                             }
-                            self.selected_edge = None;
-                        } else if !shift && !alt {
-                            changed =
-                                self.create_vertex_at(document, frame, gesture.start, hit, None)?;
+                        } else {
+                            self.selected_edge = match (operation, hit) {
+                                (SelectionOperation::Add, Hit::Edge(ids, _)) => {
+                                    self.selected.clear();
+                                    Some(ids)
+                                }
+                                _ => None,
+                            };
+                            if operation == SelectionOperation::Replace {
+                                changed = self.create_vertex_at(
+                                    document,
+                                    frame,
+                                    gesture.start,
+                                    hit,
+                                    None,
+                                )?;
+                            }
                         }
                     }
                     GestureKind::Create(hit) | GestureKind::Connect(hit) => {
@@ -646,8 +699,7 @@ impl ManualMeshMode {
         let Some(gesture) = self.gesture.as_mut() else {
             return Ok(false);
         };
-        gesture.current = point;
-        gesture.moved |= crate::picking::distance2(gesture.start, point) >= 9.;
+        gesture.update(point, false);
         let GestureKind::Drag(starts) = &gesture.kind else {
             return Ok(false);
         };
@@ -865,10 +917,8 @@ impl ManualMeshMode {
             Hit::Empty => ManualMeshFeedback::Empty,
         });
         if let Some(gesture) = &self.gesture {
+            gesture.selection_overlay(&mut out);
             match gesture.kind {
-                GestureKind::Marquee { .. } if gesture.moved => {
-                    out.marquee = Some((gesture.start, gesture.current));
-                }
                 GestureKind::Create(Hit::Vertex(id)) | GestureKind::Connect(Hit::Vertex(id)) => {
                     out.manual_mesh_feedback = Some(match self.hover {
                         Hit::Vertex(target) if target == id => ManualMeshFeedback::ConnectStart,

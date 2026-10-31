@@ -4,7 +4,7 @@ use super::*;
 use anyhow::{Result, anyhow, ensure};
 use zipzi_sdk::{
     OrganizationCollection as Collection, OrganizationEdit, ReparentEdit, ReparentPlacement,
-    SceneCollection, SceneEdit,
+    ReparentStrategy, SceneCollection, SceneEdit,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -44,6 +44,10 @@ pub struct PaletteMovePlan(pub(super) MovePlan);
 pub(super) enum MovePlan {
     Organization(zipzi_sdk::OrganizationEditPlan),
     Scene(zipzi_sdk::SceneEditPlan),
+    Reparent {
+        plan: zipzi_sdk::SceneEditPlan,
+        preview_revision: u64,
+    },
     Steps(super::stepping::PaletteStepsPlan),
 }
 impl PaletteMovePlan {
@@ -51,12 +55,68 @@ impl PaletteMovePlan {
         match &self.0 {
             MovePlan::Organization(plan) => plan.is_noop(),
             MovePlan::Scene(plan) => plan.is_noop(),
+            MovePlan::Reparent { plan, .. } => plan.is_noop(),
             MovePlan::Steps(plan) => plan.is_noop(),
         }
     }
 }
 
 impl Document {
+    fn palette_deformation_reparent(&self, request: &PaletteMove) -> Result<Option<ReparentEdit>> {
+        if request.projection != PaletteProjection::Deformation
+            || request.sources.is_empty()
+            || !request
+                .sources
+                .iter()
+                .all(|o| matches!(o.kind, ObjectKind::Mesh | ObjectKind::Deformer))
+        {
+            return Ok(None);
+        }
+        let (SceneCollection::Deformation { parent_id }, before) =
+            super::reparenting::deformation_destination(&self.model(), request)?
+        else {
+            unreachable!()
+        };
+        let rotation = request
+            .sources
+            .iter()
+            .any(|o| o.kind == ObjectKind::Deformer);
+        let mut context = self.preservation_context();
+        if rotation {
+            context.parameter_domain.clear();
+        }
+        Ok(Some(ReparentEdit {
+            sources: request.sources.iter().map(|o| o.id.clone()).collect(),
+            parent_id: parent_id.unwrap_or_default(),
+            strategy: if rotation {
+                ReparentStrategy::PreserveEditState
+            } else {
+                ReparentStrategy::PreserveParameterDomain
+            },
+            placement: Some(ReparentPlacement { before }),
+            tolerance: 0.01,
+            relative_tolerance: 1e-6,
+            context: Some(context),
+        }))
+    }
+
+    /// Tree hover checks structural support without converting every keyform.
+    /// The complete numeric conversion is planned once when the move is applied.
+    /// Deformer subtrees that cannot preserve their shape are rejected here too.
+    pub fn palette_deformation_move_support(
+        &self,
+        request: &PaletteMove,
+    ) -> Result<Option<zipzi_sdk::ReparentSupport>> {
+        let Some(edit) = self.palette_deformation_reparent(request)? else {
+            return Ok(None);
+        };
+        self.ensure_authoring_idle()?;
+        for object in request.sources.iter().chain(request.target.iter()) {
+            self.organization_authoring_capabilities(object)?;
+        }
+        Ok(Some(self.session.reparent_support(&edit)?))
+    }
+
     pub fn palette_move_destinations(
         &self,
         projection: PaletteProjection,
@@ -148,13 +208,23 @@ impl Document {
                 self.model().scene_deformer_parent(&object.id)
                     != Some(parent_id.as_deref().unwrap_or(""))
             }) {
-                // Ordinary tree moves retain local geometry and bindings. Shape
-                // preservation is a separate, explicitly requested conversion.
-                let mut edit = ReparentEdit::keep_local(ids, parent_id.clone().unwrap_or_default());
+                // Moving a Mesh or a whole Deformer changes its coordinate space.
+                // An unsupported subtree must not bypass conversion by falling
+                // back to unchanged local coordinates.
+                let mut edit = self
+                    .palette_deformation_reparent(&request)?
+                    .ok_or_else(|| anyhow!("Select meshes or deformers"))?;
                 edit.placement = Some(ReparentPlacement { before });
-                return Ok(PaletteMovePlan(MovePlan::Scene(
-                    self.plan_scene_authoring(SceneEdit::Reparent { edit })?,
-                )));
+                let frozen = edit.strategy == ReparentStrategy::PreserveEditState;
+                let plan = self.plan_scene_authoring(SceneEdit::Reparent { edit })?;
+                return Ok(PaletteMovePlan(if frozen {
+                    MovePlan::Reparent {
+                        plan,
+                        preview_revision: self.preview_revision(),
+                    }
+                } else {
+                    MovePlan::Scene(plan)
+                }));
             }
             return Ok(PaletteMovePlan(MovePlan::Scene(
                 self.plan_scene_authoring(SceneEdit::Move {
@@ -257,6 +327,16 @@ impl Document {
         match &plan.0 {
             MovePlan::Organization(plan) => self.execute_organization_authoring(plan),
             MovePlan::Scene(plan) => self.execute_scene_authoring(plan),
+            MovePlan::Reparent {
+                plan,
+                preview_revision,
+            } => {
+                ensure!(
+                    *preview_revision == self.preview_revision(),
+                    AuthoringPlanningError::new("STALE_PLAN")
+                );
+                self.execute_scene_authoring(plan)
+            }
             MovePlan::Steps(plan) => self.execute_palette_steps(plan),
         }
     }

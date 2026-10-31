@@ -151,6 +151,20 @@ rebinding and stale/window-local Timeline hint snapshots.
 
 ## Mesh Edit direct gestures
 
+Mesh Edit accepts one or more selected meshes, each with its own source image,
+vertex selection, allocator and topology. Region selection spans the group;
+vertex identities include their owning mesh. A shared drag freezes every source
+pose and solves selected Glue endpoints together. Move and delete batches validate
+every mesh before changing the candidate, retain the last valid batch on rejection,
+and commit one history step. Cancel, lost button, viewport changes and external
+publications discard the entire unfinished gesture.
+
+Point creation and connections belong to the mesh under the press; connections
+cannot join meshes. The toolbar shows only the current mesh's name for generation
+and padding; hovering reveals its full name.
+Right-clicking another mesh makes it current without changing point selection.
+Source-image view is limited to single-mesh mode.
+
 Generate Mesh lives in the top secondary toolbar while Mesh Edit is active.
 Switching to any primary tool exits Mesh Edit and retains
 completed edits and their undo history. The secondary toolbar has no exit or help
@@ -183,14 +197,33 @@ an active connection keeps its cursor after Command is released. Instructions
 appear only in the multiline Mesh Edit tooltip, without a persistent status-bar
 hint or viewport hint overlay. Target vertices highlight and the preview snaps to their positions. Each
 completed edit creates one undo step; Escape, lost button and focus loss cancel the current gesture. The secondary
-toolbar contains generation and result preview; Retriangulate Mesh is available
-in the Mesh Edit context menu. Right-clicking an automatic edge offers Constrain Edge without needing Command.
+toolbar contains generation, Retriangulate Mesh and result preview. Retriangulate
+Mesh operates on the current mesh and is also available in the Mesh Edit context
+menu. Right-clicking an automatic edge offers Constrain Edge without needing Command.
 Right-clicking a constrained edge instead offers
 Release Edge Constraint, which preserves both endpoints and the current triangles
 and creates one undo step. Automatic edges and outline edges cannot be released.
-There are no separate
-Select/Create/Delete tools. The Mesh Edit entry tooltip explains the default
-interaction in both locales.
+There are no separate Create/Delete tools. The Mesh Edit entry tooltip explains
+the default interaction in both locales.
+
+The secondary toolbar has separate Box and Lasso buttons with mutually exclusive
+selection states. Clicking the active button retains its mode. Only a drag
+beginning in empty space changes between a rectangle and a freehand polygon.
+Both shapes share point picking, vertex dragging, point
+creation, connections and deletion. Shift adds selection and Option subtracts it.
+Region selection is applied on release; Escape, lost button and switching the shape
+cancel an unfinished region without changing selection or history. Degenerate
+lasso paths leave selection unchanged. The same interaction works across meshes
+and in model and source-image views.
+
+Edit on source image is the final button in the Mesh Edit secondary toolbar.
+Expand source image adds 4 px of transparent padding on each side per click.
+The image and UV remap publish atomically in one undo step, keeping original
+texels, model-space positions, stored shapes and Glue unchanged. Repeated clicks
+add more room; the source-image camera refits to the expanded image. Padding
+is unavailable during an active gesture. The enlarged texture admits outline
+edits beyond the old image for affine meshes; existing deformation sampling
+domains remain enforced for dependent meshes.
 
 Moving and deleting vertices retriangulate free edges instead of treating the old
 triangles as motion barriers. Generated support constraints are released by those

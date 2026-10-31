@@ -100,6 +100,22 @@ fn users(d: &zipzi_core::Document, intent: &SceneEdit) -> Vec<String> {
     }
 }
 impl AuthoringSession {
+    pub fn plan_deformer_group(
+        &self,
+        create: SceneEdit,
+        sources: Vec<String>,
+    ) -> Result<SceneEditPlan, SdkError> {
+        let control = ConversionControl::default();
+        let domain = self
+            .document()
+            .plan_deformer_group(create, sources, self.authoring_limits(), &control)
+            .map_err(|s| error(s, "plan_deformer_group"))?;
+        Ok(SceneEditPlan {
+            version: self.version(),
+            domain,
+            control,
+        })
+    }
     pub fn plan_scene_edit(&self, intent: SceneEdit) -> Result<SceneEditPlan, SdkError> {
         self.plan_scene_edit_with_control(intent, &ConversionControl::default())
     }

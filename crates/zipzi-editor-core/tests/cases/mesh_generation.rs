@@ -903,6 +903,234 @@ fn manual_click(editor: &mut Editor, point: ViewportPoint) -> anyhow::Result<()>
     Ok(())
 }
 
+fn manual_lasso(
+    editor: &mut Editor,
+    path: &[(f32, f32)],
+    shift: bool,
+    alt: bool,
+) -> anyhow::Result<()> {
+    let frame = crate::support::present_canvas(editor)?;
+    let bounds = frame
+        .geometry
+        .mesh(&mesh().id)
+        .unwrap()
+        .vertices
+        .iter()
+        .fold(
+            [
+                f32::INFINITY,
+                f32::INFINITY,
+                f32::NEG_INFINITY,
+                f32::NEG_INFINITY,
+            ],
+            |[x0, y0, x1, y1], (_, p)| [x0.min(p.x), y0.min(p.y), x1.max(p.x), y1.max(p.y)],
+        );
+    // Express paths in the fixture's original model rectangle in both views.
+    let points: Vec<_> = path
+        .iter()
+        .map(|&(x, y)| {
+            frame.transform.to_viewport(ModelPoint {
+                x: bounds[0] + (x - 24.) / 208. * (bounds[2] - bounds[0]),
+                y: bounds[1] + (y - 24.) / 208. * (bounds[3] - bounds[1]),
+            })
+        })
+        .collect();
+    crate::support::pointer_input(
+        editor,
+        CanvasInput::Down {
+            point: points[0],
+            shift,
+            alt,
+            primary: false,
+        },
+    )?;
+    for &point in &points[1..] {
+        crate::support::pointer_input(
+            editor,
+            CanvasInput::Move {
+                point,
+                left_down: true,
+            },
+        )?;
+    }
+    crate::support::pointer_input(
+        editor,
+        CanvasInput::Up {
+            point: *points.last().unwrap(),
+        },
+    )?;
+    Ok(())
+}
+
+fn manual_selected(editor: &Editor) -> Vec<zipzi_core::VertexId> {
+    editor
+        .overlay_for_viewport(editor.primary_viewport_binding().unwrap())
+        .vertices
+        .into_iter()
+        .filter(|v| v.selected)
+        .map(|v| v.id)
+        .collect()
+}
+
+#[test]
+fn manual_mesh_lasso_selects_polygon_adds_subtracts_and_never_edits_geometry() -> anyhow::Result<()>
+{
+    for source_view in [false, true] {
+        let (mut editor, _dir) = manual_interaction_fixture()?;
+        let original = edited_mesh(&editor);
+        if source_view {
+            editor.dispatch(editor.command(CommandId::ManualSourceView))?;
+        }
+        editor.dispatch(editor.command(CommandId::ManualLasso))?;
+        assert!(editor.manual_active());
+        assert!(
+            editor
+                .command_state(editor.command(CommandId::ManualLasso))
+                .checked
+        );
+        // The fourth corner is inside the bounding box but outside the triangle.
+        // Both shapes drag existing vertices, so region selection starts in empty space.
+        manual_lasso(
+            &mut editor,
+            &[(12., 12.), (270., 0.), (0., 270.), (12., 12.)],
+            false,
+            false,
+        )?;
+        assert_eq!(
+            manual_selected(&editor).len(),
+            3,
+            "source_view={source_view}"
+        );
+        let frame = crate::support::present_canvas(&mut editor)?;
+        let bottom_right = frame
+            .geometry
+            .mesh(&mesh().id)
+            .unwrap()
+            .vertices
+            .iter()
+            .max_by(|(_, a), (_, b)| (a.x + a.y).total_cmp(&(b.x + b.y)))
+            .unwrap()
+            .0;
+        assert!(!manual_selected(&editor).contains(&bottom_right));
+        manual_lasso(
+            &mut editor,
+            &[(220., 220.), (244., 220.), (244., 244.), (220., 244.)],
+            true,
+            false,
+        )?;
+        assert_eq!(manual_selected(&editor).len(), 4);
+        manual_lasso(
+            &mut editor,
+            &[(12., 12.), (36., 12.), (36., 36.), (12., 36.)],
+            false,
+            true,
+        )?;
+        assert_eq!(manual_selected(&editor).len(), 3);
+        manual_lasso(
+            &mut editor,
+            &[(220., 220.), (244., 220.), (244., 244.), (220., 244.)],
+            true,
+            true,
+        )?;
+        assert_eq!(
+            manual_selected(&editor).len(),
+            2,
+            "Option takes precedence over Shift"
+        );
+        let selected = manual_selected(&editor);
+        manual_lasso(
+            &mut editor,
+            &[(70., 100.), (100., 100.), (130., 100.)],
+            false,
+            false,
+        )?;
+        assert_eq!(
+            manual_selected(&editor),
+            selected,
+            "A collinear path preserves selection"
+        );
+        manual_lasso(&mut editor, &[(232., 232.)], false, false)?;
+        assert_eq!(manual_selected(&editor), vec![bottom_right]);
+        manual_lasso(&mut editor, &[(232., 232.)], true, false)?;
+        assert_eq!(manual_selected(&editor), vec![bottom_right]);
+        manual_lasso(&mut editor, &[(232., 232.)], false, true)?;
+        assert!(manual_selected(&editor).is_empty());
+        assert_eq!(edited_mesh(&editor), original);
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+        assert!(!editor.document().unwrap().has_pending_edit());
+    }
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_lasso_cancel_lost_button_and_tool_switch_preserve_selection() -> anyhow::Result<()> {
+    for interruption in [0, 1, 2, 3] {
+        let (mut editor, _dir) = manual_interaction_fixture()?;
+        editor.dispatch(editor.command(CommandId::ManualLasso))?;
+        manual_lasso(&mut editor, &[(24., 24.)], false, false)?;
+        let selection = manual_selected(&editor);
+        assert_eq!(selection.len(), 1);
+        let original = edited_mesh(&editor);
+        let frame = crate::support::present_canvas(&mut editor)?;
+        let points = [(10., 10.), (246., 10.), (246., 246.), (10., 246.)]
+            .map(|(x, y)| frame.transform.to_viewport(ModelPoint { x, y }));
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Down {
+                point: points[0],
+                shift: false,
+                alt: false,
+                primary: false,
+            },
+        )?;
+        for &point in &points[1..] {
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point,
+                    left_down: true,
+                },
+            )?;
+        }
+        let binding = editor.primary_viewport_binding().unwrap();
+        assert_eq!(editor.overlay_for_viewport(binding).lasso, points);
+        assert_eq!(
+            manual_selected(&editor),
+            selection,
+            "Selection is deferred until release"
+        );
+        assert!(editor.current_viewport_interaction().is_some());
+        match interruption {
+            0 => {
+                editor.dispatch(editor.command(CommandId::CancelGesture))?;
+            }
+            1 => {
+                crate::support::pointer_input(
+                    &mut editor,
+                    CanvasInput::Move {
+                        point: points[3],
+                        left_down: false,
+                    },
+                )?;
+            }
+            2 => {
+                editor.dispatch(editor.command(CommandId::ManualSelect))?;
+            }
+            _ => {
+                editor.dispatch(editor.command(CommandId::ManualSourceView))?;
+            }
+        }
+        assert!(editor.current_viewport_interaction().is_none());
+        crate::support::present_canvas(&mut editor)?;
+        assert!(editor.overlay_for_viewport(binding).lasso.is_empty());
+        assert_eq!(manual_selected(&editor), selection);
+        assert!(editor.manual_active());
+        assert_eq!(edited_mesh(&editor), original);
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    }
+    Ok(())
+}
+
 #[test]
 fn manual_mesh_create_click_selects_an_existing_point() -> anyhow::Result<()> {
     let (mut editor, _dir) = manual_interaction_fixture()?;
@@ -1088,6 +1316,174 @@ fn edited_mesh(editor: &Editor) -> zipzi_core::Mesh {
 }
 
 #[test]
+fn manual_mesh_source_padding_preserves_texels_and_allows_outline_outside_original_image()
+-> anyhow::Result<()> {
+    let (mut editor, dir) = manual_interaction_fixture()?;
+    let original = edited_mesh(&editor);
+    let texture = editor.manual_target().unwrap().texture.clone();
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let before_pose = frame.geometry.mesh(&mesh().id).unwrap().vertices.clone();
+    editor.dispatch(editor.command(CommandId::ManualPadSource))?;
+    assert!(editor.manual_active());
+    let padded = edited_mesh(&editor);
+    let target = editor.manual_target().unwrap().clone();
+    let image = &target.texture;
+    assert_eq!(
+        (image.width, image.height),
+        (texture.width + 8, texture.height + 8)
+    );
+    assert_eq!(padded.vertex_ids, original.vertex_ids);
+    assert_eq!(padded.base_positions, original.base_positions);
+    assert_eq!(padded.triangles, original.triangles);
+    assert_eq!(padded.meshing, original.meshing);
+    for (before, after) in original.uvs.iter().zip(&padded.uvs) {
+        assert!((after.x * image.width as f32 - 4. - before.x * texture.width as f32).abs() < 1e-4);
+        assert!(
+            (after.y * image.height as f32 - 4. - before.y * texture.height as f32).abs() < 1e-4
+        );
+    }
+    for y in 0..image.height as usize {
+        for x in 0..image.width as usize {
+            let pixel = &image.rgba[(y * image.width as usize + x) * 4..][..4];
+            if (4..4 + texture.width as usize).contains(&x)
+                && (4..4 + texture.height as usize).contains(&y)
+            {
+                let source = ((y - 4) * texture.width as usize + x - 4) * 4;
+                assert_eq!(pixel, &texture.rgba[source..source + 4]);
+            } else {
+                assert_eq!(pixel, [0; 4]);
+            }
+        }
+    }
+    let frame = crate::support::present_canvas(&mut editor)?;
+    assert_eq!(
+        frame.geometry.mesh(&mesh().id).unwrap().vertices,
+        before_pose
+    );
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+
+    // The original lower-left image corner can now move into the new transparent area.
+    editor.dispatch(editor.command(CommandId::ManualSelect))?;
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let from = frame.transform.to_viewport(ModelPoint { x: 24., y: 24. });
+    let outside = ModelPoint {
+        x: 24. - 2. * 208. / texture.width as f32,
+        y: 24. - 2. * 208. / texture.height as f32,
+    };
+    let to = frame.transform.to_viewport(outside);
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: from,
+            shift: false,
+            alt: false,
+            primary: false,
+        },
+    )?;
+    assert!(!editor.command_available(editor.command(CommandId::ManualPadSource)));
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: to,
+            left_down: true,
+        },
+    )?;
+    crate::support::pointer_input(&mut editor, CanvasInput::Up { point: to })?;
+    let extended = edited_mesh(&editor);
+    assert!((extended.base_positions[0].x - outside.x).abs() < 1e-4);
+    assert!((extended.base_positions[0].y - outside.y).abs() < 1e-4);
+    assert!(extended.uvs[0].x * (image.width as f32) < 4.);
+    assert!(extended.uvs[0].y * (image.height as f32) < 4.);
+    assert!(
+        extended
+            .uvs
+            .iter()
+            .all(|uv| (0.0..=1.0).contains(&uv.x) && (0.0..=1.0).contains(&uv.y))
+    );
+    assert_eq!(editor.document().unwrap().history_lengths(), (2, 0));
+    editor.dispatch(editor.command(CommandId::Undo))?;
+    assert_eq!(edited_mesh(&editor), padded);
+    editor.dispatch(editor.command(CommandId::Undo))?;
+    assert_eq!(edited_mesh(&editor), original);
+    assert_eq!(editor.manual_target().unwrap().texture.rgba, texture.rgba);
+    assert_eq!(editor.manual_target().unwrap().texture.width, texture.width);
+    editor.dispatch(editor.command(CommandId::Redo))?;
+    editor.dispatch(editor.command(CommandId::Redo))?;
+    assert_eq!(edited_mesh(&editor), extended);
+    assert_eq!(editor.manual_target().unwrap().texture.rgba, image.rgba);
+    let task = editor.prepare_save(
+        editor.active_id().unwrap(),
+        &dir.path().join("padded-outline.zipzi"),
+        false,
+    )?;
+    let saved = editor.finish_save(&mut task.run())?;
+    let mut reopened = Document::open(&saved.manifest)?;
+    reopened.select(&mesh().id)?;
+    let reopened_target = reopened.manual_mesh_target()?;
+    assert_eq!(reopened_target.texture.rgba, image.rgba);
+    assert_eq!(
+        reopened
+            .runtime_host()
+            .read()
+            .document(reopened.runtime_session_id())?
+            .get_mesh(&mesh().id)
+            .unwrap()
+            .uvs,
+        extended.uvs
+    );
+    Ok(())
+}
+
+#[test]
+fn manual_mesh_source_padding_retains_bound_shapes_glue_and_rejects_stale_targets()
+-> anyhow::Result<()> {
+    let (mut document, _dir) = mixed_dependency_document()?;
+    let target = document.manual_mesh_target()?;
+    let host = document.runtime_host();
+    let before = host.read().document(document.runtime_session_id())?.clone();
+    let before_pose = document.snapshot()?.runtime_frame;
+    assert!(!document.pad_manual_mesh_source(&target, 0)?);
+    assert!(document.pad_manual_mesh_source(&target, u32::MAX).is_err());
+    assert_eq!(document.history_lengths(), (0, 0));
+    assert!(document.pad_manual_mesh_source(&target, 32)?);
+    let after = host.read().document(document.runtime_session_id())?.clone();
+    for id in before.binding_order() {
+        assert_eq!(after.get_binding(id), before.get_binding(id));
+    }
+    for id in before.blend_binding_order() {
+        assert_eq!(after.get_blend_binding(id), before.get_blend_binding(id));
+    }
+    for id in before.glue_order() {
+        assert_eq!(after.get_glue(id), before.get_glue(id));
+    }
+    let after_pose = document.snapshot()?.runtime_frame;
+    for (a, b) in before_pose.drawables.iter().zip(&after_pose.drawables) {
+        assert_eq!(a.positions, b.positions);
+    }
+    assert_eq!(document.history_lengths(), (1, 0));
+    assert!(document.pad_manual_mesh_source(&target, 32).is_err());
+    let next = document.manual_mesh_target()?;
+    assert!(document.pad_manual_mesh_source(&next, 32)?);
+    assert_eq!(
+        document.manual_mesh_target()?.texture.width,
+        target.texture.width + 128
+    );
+    document.undo()?;
+    document.undo()?;
+    assert_eq!(
+        host.read()
+            .document(document.runtime_session_id())?
+            .get_mesh(&target.object.id),
+        before.get_mesh(&target.object.id)
+    );
+    assert_eq!(
+        document.manual_mesh_target()?.texture.rgba,
+        target.texture.rgba
+    );
+    Ok(())
+}
+
+#[test]
 fn manual_mesh_isolation_keeps_reference_at_full_opacity_and_mode_active() -> anyhow::Result<()> {
     for isolate_first in [false, true] {
         let (doc, _dir) = support::alpha_document()?;
@@ -1212,57 +1608,67 @@ fn manual_mesh_all_primary_tools_exit_without_changing_geometry_or_history() -> 
 
 #[test]
 fn manual_mesh_primary_gestures_create_move_delete_without_switching_tools() -> anyhow::Result<()> {
-    let (mut editor, _dir) = manual_interaction_fixture()?;
-    editor.dispatch(editor.command(CommandId::ManualSelect))?;
-    let original = edited_mesh(&editor);
-    let frame = crate::support::present_canvas(&mut editor)?;
-    let point = frame.transform.to_viewport(ModelPoint { x: 128., y: 128. });
-    let binding = frame.version.binding;
-    let token = editor
-        .begin_canvas_gesture(binding, point, false, false, false)?
-        .capture
-        .unwrap();
-    editor.update_canvas_gesture(token, CanvasInput::Up { point })?;
-    let created = edited_mesh(&editor);
-    assert_eq!(created.vertex_ids.len(), 5);
-    assert_eq!(editor.manual_tool(), Some(ManualTool::Select));
-    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    for lasso in [false, true] {
+        let (mut editor, _dir) = manual_interaction_fixture()?;
+        editor.dispatch(editor.command(CommandId::ManualSelect))?;
+        if lasso {
+            editor.dispatch(editor.command(CommandId::ManualLasso))?;
+        }
+        let tool = Some(if lasso {
+            ManualTool::Lasso
+        } else {
+            ManualTool::Select
+        });
+        let original = edited_mesh(&editor);
+        let frame = crate::support::present_canvas(&mut editor)?;
+        let point = frame.transform.to_viewport(ModelPoint { x: 128., y: 128. });
+        let binding = frame.version.binding;
+        let token = editor
+            .begin_canvas_gesture(binding, point, false, false, false)?
+            .capture
+            .unwrap();
+        editor.update_canvas_gesture(token, CanvasInput::Up { point })?;
+        let created = edited_mesh(&editor);
+        assert_eq!(created.vertex_ids.len(), 5);
+        assert_eq!(editor.manual_tool(), tool);
+        assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
 
-    let frame = crate::support::present_canvas(&mut editor)?;
-    let to = frame.transform.to_viewport(ModelPoint { x: 140., y: 140. });
-    let token = editor
-        .begin_canvas_gesture(binding, point, false, false, false)?
-        .capture
-        .unwrap();
-    editor.update_canvas_gesture(
-        token,
-        CanvasInput::Move {
-            point: to,
-            left_down: true,
-        },
-    )?;
-    editor.update_canvas_gesture(token, CanvasInput::Up { point: to })?;
-    let moved = edited_mesh(&editor);
-    assert_ne!(moved, created);
-    assert_eq!(moved.vertex_ids.len(), 5);
-    assert_eq!(editor.document().unwrap().history_lengths(), (2, 0));
+        let frame = crate::support::present_canvas(&mut editor)?;
+        let to = frame.transform.to_viewport(ModelPoint { x: 140., y: 140. });
+        let token = editor
+            .begin_canvas_gesture(binding, point, false, false, false)?
+            .capture
+            .unwrap();
+        editor.update_canvas_gesture(
+            token,
+            CanvasInput::Move {
+                point: to,
+                left_down: true,
+            },
+        )?;
+        editor.update_canvas_gesture(token, CanvasInput::Up { point: to })?;
+        let moved = edited_mesh(&editor);
+        assert_ne!(moved, created);
+        assert_eq!(moved.vertex_ids.len(), 5);
+        assert_eq!(editor.document().unwrap().history_lengths(), (2, 0));
 
-    crate::support::present_canvas(&mut editor)?;
-    let token = editor
-        .begin_canvas_gesture(binding, to, true, false, true)?
-        .capture
-        .unwrap();
-    editor.update_canvas_gesture(token, CanvasInput::Up { point: to })?;
-    assert_eq!(edited_mesh(&editor).vertex_ids.len(), 4);
-    assert_eq!(editor.manual_tool(), Some(ManualTool::Select));
-    assert_eq!(editor.document().unwrap().history_lengths(), (3, 0));
-    for expected in [&moved, &created, &original] {
-        editor.dispatch(editor.command(CommandId::Undo))?;
-        assert_eq!(&edited_mesh(&editor), expected);
-    }
-    for expected in [&created, &moved] {
-        editor.dispatch(editor.command(CommandId::Redo))?;
-        assert_eq!(&edited_mesh(&editor), expected);
+        crate::support::present_canvas(&mut editor)?;
+        let token = editor
+            .begin_canvas_gesture(binding, to, true, false, true)?
+            .capture
+            .unwrap();
+        editor.update_canvas_gesture(token, CanvasInput::Up { point: to })?;
+        assert_eq!(edited_mesh(&editor).vertex_ids.len(), 4);
+        assert_eq!(editor.manual_tool(), tool);
+        assert_eq!(editor.document().unwrap().history_lengths(), (3, 0));
+        for expected in [&moved, &created, &original] {
+            editor.dispatch(editor.command(CommandId::Undo))?;
+            assert_eq!(&edited_mesh(&editor), expected);
+        }
+        for expected in [&created, &moved] {
+            editor.dispatch(editor.command(CommandId::Redo))?;
+            assert_eq!(&edited_mesh(&editor), expected);
+        }
     }
     Ok(())
 }

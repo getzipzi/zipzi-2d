@@ -20,7 +20,7 @@ pub(super) fn pad_texture(
     }
     let pad = |distance: f64| {
         if distance > 0.0 {
-            distance.ceil() as u32 + 1
+            (distance.ceil() as u32).saturating_add(1)
         } else {
             0
         }
@@ -31,7 +31,16 @@ pub(super) fn pad_texture(
         pad(bounds[2] - w),
         pad(bounds[3] - h),
     ];
-    if left + top + right + bottom == 0 {
+    pad_texture_edges(texture, geometry, [left, top, right, bottom])
+}
+
+/// Extend the image with transparent pixels and keep every UV on the same texel.
+pub(crate) fn pad_texture_edges(
+    texture: &crate::SceneTexture,
+    geometry: &mut MeshGeometry,
+    [left, top, right, bottom]: [u32; 4],
+) -> Result<Option<crate::SceneTexture>> {
+    if [left, top, right, bottom] == [0; 4] {
         return Ok(None);
     }
     let width = texture
@@ -57,8 +66,8 @@ pub(super) fn pad_texture(
             .copy_from_slice(&texture.rgba[src..src + texture.width as usize * 4]);
     }
     for uv in &mut geometry.uvs {
-        uv.x = ((uv.x as f64 * w + left as f64) / width as f64) as f32;
-        uv.y = ((uv.y as f64 * h + bottom as f64) / height as f64) as f32;
+        uv.x = ((uv.x as f64 * texture.width as f64 + left as f64) / width as f64) as f32;
+        uv.y = ((uv.y as f64 * texture.height as f64 + bottom as f64) / height as f64) as f32;
     }
     Ok(Some(crate::SceneTexture {
         asset_id: texture.asset_id.clone(),

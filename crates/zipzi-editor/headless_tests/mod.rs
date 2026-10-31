@@ -17,6 +17,7 @@ mod input_routing;
 mod manual_mesh;
 mod mesh_generation;
 mod mesh_properties;
+mod multi_mesh_edit;
 mod palette_commands;
 mod palette_move_to;
 mod palette_steps;

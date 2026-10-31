@@ -31,7 +31,7 @@ pub fn segment_distance2(p: ViewportPoint, a: ViewportPoint, b: ViewportPoint) -
         },
     )
 }
-pub(super) fn barycentric(p: ModelPoint, [a, b, c]: [ModelPoint; 3]) -> Option<[f32; 3]> {
+pub(crate) fn barycentric(p: ModelPoint, [a, b, c]: [ModelPoint; 3]) -> Option<[f32; 3]> {
     let cross = |x: ModelPoint, y: ModelPoint, z: ModelPoint| {
         (y.x - x.x) as f64 * (z.y - x.y) as f64 - (y.y - x.y) as f64 * (z.x - x.x) as f64
     };

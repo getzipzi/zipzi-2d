@@ -30,10 +30,7 @@ pub(in crate::viewports) const PRIMARY: Notch = Notch {
 
 pub(in crate::viewports) const SECONDARY: Notch = Notch {
     edge: Edge::Top,
-    button_size: 20.,
-    button_radius: 4.,
-    inset: 2.,
-    shoulder: 4.,
+    ..PRIMARY
 };
 
 impl Notch {

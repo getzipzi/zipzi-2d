@@ -1,7 +1,7 @@
 use super::{Harness, document_fixture, setup_with_document};
 use gpui_kit::{AppContext as _, TestAppContext, point, px, test::TestWindowExt};
 
-fn present(h: &Harness, cx: &mut TestAppContext) {
+pub(super) fn present(h: &Harness, cx: &mut TestAppContext) {
     cx.run_until_parked();
     cx.update_window(h.window, |_, window, cx| {
         h.view.update(cx, |view, cx| {
@@ -116,14 +116,26 @@ fn manual_mesh_toolbar_only_shows_relevant_tools(cx: &mut TestAppContext) {
         assert!(window.try_find("tool_glue").is_none());
         assert!(window.find("mesh-edit-actions").visible());
         let secondary = window.find("mesh-edit-actions").bounds();
-        for tool in [
-            "tool_manual_select",
-            "tool_manual_create",
-            "tool_manual_delete",
-        ] {
+        for tool in ["tool_manual_create", "tool_manual_delete"] {
             assert!(window.try_find(tool).is_none());
         }
         assert!(window.find("tool_manual_source").visible());
+        let primary = window.find("tool_manual_mesh").bounds().size;
+        let tools = [
+            "tool_manual_select",
+            "tool_manual_lasso",
+            "tool_generate_mesh",
+            "tool_manual_reconnect",
+            "tool_manual_pad_source",
+            "tool_manual_source",
+        ];
+        for tool in tools {
+            assert!(window.find(tool).visible());
+            assert_eq!(window.find(tool).bounds().size, primary);
+        }
+        for pair in tools.windows(2) {
+            assert!(window.find(pair[0]).bounds().right() <= window.find(pair[1]).bounds().left());
+        }
         assert!(window.try_find("tool_manual_exit").is_none());
         assert!(window.try_find("manual-mesh-help").is_none());
         assert!(secondary.contains(&window.find("tool_generate_mesh").bounds().center()));
@@ -137,6 +149,80 @@ fn manual_mesh_toolbar_only_shows_relevant_tools(cx: &mut TestAppContext) {
         assert!(window.try_find("tool_generate_mesh").is_none());
     })
     .unwrap();
+}
+
+#[gpui_kit::test]
+fn manual_mesh_box_and_lasso_buttons_choose_their_mode_without_toggling_off(
+    cx: &mut TestAppContext,
+) {
+    use zipzi_editor_core::ManualTool;
+    let h = enter(cx);
+    for (button, tool) in [
+        ("tool_manual_lasso", ManualTool::Lasso),
+        ("tool_manual_lasso", ManualTool::Lasso),
+        ("tool_manual_select", ManualTool::Select),
+        ("tool_manual_select", ManualTool::Select),
+    ] {
+        cx.update_window(h.window, |_, window, cx| {
+            window.click(button, cx);
+            assert!(h.view.read(cx).editor.manual_active());
+            assert_eq!(h.view.read(cx).editor.manual_tool(), Some(tool));
+            assert_eq!(
+                h.view.read(cx).editor.document().unwrap().history_lengths(),
+                (0, 0)
+            );
+        })
+        .unwrap();
+        present(&h, cx);
+    }
+}
+
+#[gpui_kit::test]
+fn manual_mesh_source_padding_button_updates_texture_and_undo_in_both_views(
+    cx: &mut TestAppContext,
+) {
+    for source_view in [false, true] {
+        let h = enter(cx);
+        let original = h.view.read_with(cx, |view, _| {
+            view.editor.manual_target().unwrap().texture.clone()
+        });
+        if source_view {
+            cx.update_window(h.window, |_, window, cx| {
+                window.click("tool_manual_source", cx)
+            })
+            .unwrap();
+            present(&h, cx);
+        }
+        cx.update_window(h.window, |_, window, cx| {
+            window.click("tool_manual_pad_source", cx)
+        })
+        .unwrap();
+        present(&h, cx);
+        h.view.read_with(cx, |view, _| {
+            assert!(view.editor.manual_active());
+            let texture = &view.editor.manual_target().unwrap().texture;
+            assert_eq!(
+                (texture.width, texture.height),
+                (original.width + 8, original.height + 8)
+            );
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
+            assert!(view.edit_error.is_none());
+        });
+        cx.update_window(h.window, |_, window, cx| window.press("cmd-z", cx))
+            .unwrap();
+        present(&h, cx);
+        h.view.read_with(cx, |view, _| {
+            assert!(view.editor.manual_active());
+            assert_eq!(
+                view.editor.manual_target().unwrap().texture.rgba,
+                original.rgba
+            );
+            assert_eq!(
+                view.editor.manual_target().unwrap().texture.width,
+                original.width
+            );
+        });
+    }
 }
 
 #[gpui_kit::test]
@@ -183,7 +269,7 @@ fn manual_mesh_tool_switch_retains_completed_edits_and_undo(cx: &mut TestAppCont
     .unwrap();
 }
 
-fn pointer_gesture(
+pub(super) fn pointer_gesture(
     h: &Harness,
     cx: &mut TestAppContext,
     from: zipzi_editor_core::ModelPoint,
@@ -242,45 +328,56 @@ fn pointer_gesture(
 fn manual_mesh_plain_mouse_and_delete_key_leave_select_active(cx: &mut TestAppContext) {
     use gpui_kit::Modifiers;
     use zipzi_editor_core::{ManualTool, ModelPoint};
-    let h = enter(cx);
-    let center = ModelPoint { x: 128., y: 128. };
-    let moved = ModelPoint { x: 140., y: 140. };
-    pointer_gesture(&h, cx, center, center, Modifiers::default());
-    h.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.layers()[0].vertices, 5);
-        assert_eq!(view.editor.manual_tool(), Some(ManualTool::Select));
-        assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
-    });
-    pointer_gesture(&h, cx, center, moved, Modifiers::default());
-    h.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.layers()[0].vertices, 5);
-        assert_eq!(view.editor.document().unwrap().history_lengths(), (2, 0));
-    });
-    cx.update_window(h.window, |_, window, cx| window.press("delete", cx))
+    for lasso in [false, true] {
+        let h = enter(cx);
+        if lasso {
+            cx.update_window(h.window, |_, window, cx| {
+                window.click("tool_manual_lasso", cx)
+            })
+            .unwrap();
+            present(&h, cx);
+        }
+        let tool = Some(if lasso {
+            ManualTool::Lasso
+        } else {
+            ManualTool::Select
+        });
+        let center = ModelPoint { x: 128., y: 128. };
+        let moved = ModelPoint { x: 140., y: 140. };
+        pointer_gesture(&h, cx, center, center, Modifiers::default());
+        h.view.read_with(cx, |view, _| {
+            assert_eq!(view.editor.layers()[0].vertices, 5);
+            assert_eq!(view.editor.manual_tool(), tool);
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
+        });
+        pointer_gesture(&h, cx, center, moved, Modifiers::default());
+        h.view.read_with(cx, |view, _| {
+            assert_eq!(view.editor.layers()[0].vertices, 5);
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (2, 0));
+        });
+        cx.update_window(h.window, |_, window, cx| window.press("delete", cx))
+            .unwrap();
+        h.view.read_with(cx, |view, _| {
+            assert_eq!(view.editor.layers()[0].vertices, 4);
+            assert_eq!(view.editor.manual_tool(), tool);
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (3, 0));
+        });
+        present(&h, cx);
+        cx.update_window(h.window, |_, window, cx| {
+            window.press("cmd-z", cx);
+            assert_eq!(h.view.read(cx).editor.layers()[0].vertices, 5);
+        })
         .unwrap();
-    h.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.layers()[0].vertices, 4);
-        assert_eq!(view.editor.manual_tool(), Some(ManualTool::Select));
-        assert_eq!(view.editor.document().unwrap().history_lengths(), (3, 0));
-    });
-    present(&h, cx);
-    cx.update_window(h.window, |_, window, cx| {
-        window.press("cmd-z", cx);
-        assert_eq!(h.view.read(cx).editor.layers()[0].vertices, 5);
-    })
-    .unwrap();
-    present(&h, cx);
-    // Plain click + Backspace uses the existing selection deletion shortcut.
-    pointer_gesture(&h, cx, moved, moved, Modifiers::default());
-    cx.update_window(h.window, |_, window, cx| {
-        window.press("backspace", cx);
-        assert_eq!(h.view.read(cx).editor.layers()[0].vertices, 4);
-        assert_eq!(
-            h.view.read(cx).editor.manual_tool(),
-            Some(ManualTool::Select)
-        );
-    })
-    .unwrap();
+        present(&h, cx);
+        // Plain click + Backspace uses the existing selection deletion shortcut.
+        pointer_gesture(&h, cx, moved, moved, Modifiers::default());
+        cx.update_window(h.window, |_, window, cx| {
+            window.press("backspace", cx);
+            assert_eq!(h.view.read(cx).editor.layers()[0].vertices, 4);
+            assert_eq!(h.view.read(cx).editor.manual_tool(), tool);
+        })
+        .unwrap();
+    }
 }
 
 #[gpui_kit::test]
@@ -579,17 +676,17 @@ fn manual_mesh_right_click_opens_menu_without_editing_geometry(cx: &mut TestAppC
     cx.update_window(h.window, |_, window, cx| {
         window.render_frame(cx);
         assert!(window.try_find("popup-menu").is_some());
-        assert!(window.try_find("tool_manual_reconnect").is_none());
+        assert!(window.find("tool_manual_reconnect").visible());
         assert!(h.view.read(cx).editor.manual_active());
         assert_eq!(h.view.read(cx).editor.layers()[0].vertices, 5);
         assert_eq!(
             h.view.read(cx).editor.document().unwrap().history_lengths(),
             (1, 0)
         );
-        let reconnect = window.within("popup-menu").find(0usize);
+        let reconnect = window.within("popup-menu").find(1usize);
         // Disabled menu rows do not expose a disabled snapshot flag; verify
         // that clicking the unavailable action cannot mutate the document.
-        window.within("popup-menu").click(1usize, cx);
+        window.within("popup-menu").click(2usize, cx);
         assert_eq!(
             h.view.read(cx).editor.document().unwrap().history_lengths(),
             (1, 0)
@@ -600,7 +697,7 @@ fn manual_mesh_right_click_opens_menu_without_editing_geometry(cx: &mut TestAppC
             Some(crate::t!("editor.tool_manual_reconnect").as_ref())
         );
         assert_ne!(reconnect.disabled(), Some(true));
-        window.within("popup-menu").click(0usize, cx);
+        window.within("popup-menu").click(1usize, cx);
     })
     .unwrap();
     cx.run_until_parked();
@@ -765,13 +862,13 @@ fn manual_mesh_context_menu_sets_and_releases_constraints_with_undo(cx: &mut Tes
     cx.run_until_parked();
     cx.update_window(h.window, |_, window, cx| {
         window.render_frame(cx);
-        let release = window.within("popup-menu").find(1usize);
+        let release = window.within("popup-menu").find(2usize);
         assert_eq!(
             release.label(),
             Some(crate::t!("editor.manual_release_constraint").as_ref())
         );
         assert_ne!(release.disabled(), Some(true));
-        window.within("popup-menu").click(1usize, cx);
+        window.within("popup-menu").click(2usize, cx);
     })
     .unwrap();
     cx.run_until_parked();
@@ -817,12 +914,12 @@ fn manual_mesh_context_menu_sets_and_releases_constraints_with_undo(cx: &mut Tes
     cx.run_until_parked();
     cx.update_window(h.window, |_, window, cx| {
         window.render_frame(cx);
-        let fix = window.within("popup-menu").find(1usize);
+        let fix = window.within("popup-menu").find(2usize);
         assert_eq!(
             fix.label(),
             Some(crate::t!("editor.manual_constrain_edge").as_ref())
         );
-        window.within("popup-menu").click(1usize, cx);
+        window.within("popup-menu").click(2usize, cx);
     })
     .unwrap();
     cx.run_until_parked();

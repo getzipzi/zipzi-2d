@@ -616,6 +616,17 @@ fn support_matrix_includes_rotation_warp_subtrees_and_same_parent_noop() {
         ] {
             edit.strategy = strategy;
             edit.context = Some(Default::default());
+            if id == R {
+                edit.tolerance = 0.001;
+                assert_eq!(
+                    s.reparent_support(&edit).unwrap(),
+                    zipzi_sdk::ReparentSupport::RequiresConversionPlan
+                );
+                let plan = s.plan_binding_authoring(E::Reparent(edit.clone())).unwrap();
+                s.execute_binding_plan(&plan).unwrap();
+                s.undo().unwrap();
+                continue;
+            }
             assert_eq!(
                 s.reparent_support(&edit).unwrap_err().code.as_ref(),
                 "SUBTREE_CONVERSION_UNPROVEN"

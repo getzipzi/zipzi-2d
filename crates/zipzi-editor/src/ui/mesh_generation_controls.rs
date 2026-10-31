@@ -38,7 +38,7 @@ impl Controls {
                 // Starting at L/4 avoids the old six-pixel default on large art.
                 rounded(length / 4., nice_step(length / 40.).max(1.)).clamp(6., 16384.),
                 rounded(length / 16., steps[1]).clamp(6., 16384.),
-                rounded(length / 1024., steps[2]).clamp(1., 256.),
+                6., // Single-row margin in source pixels, independent of texture size.
                 rounded(length / 128., steps[3]).clamp(2., 256.),
                 0., // Wrapping can join separate islands; keep it opt-in.
                 8.,
@@ -87,7 +87,7 @@ mod tests {
         let standard = Controls::for_texture(2048, 1024);
         assert_eq!(
             standard.defaults,
-            [500., 130., 2., 16., 0., 8., 1.5, 1., 0.3, 0., 8.]
+            [500., 130., 6., 16., 0., 8., 1.5, 1., 0.3, 0., 8.]
         );
         assert_eq!(
             standard.steps,
@@ -99,7 +99,7 @@ mod tests {
         assert_eq!(large.defaults, Controls::for_texture(2048, 4096).defaults);
         let tiny = Controls::for_texture(16, 32);
         assert_eq!(tiny.defaults[1], 6.);
-        assert_eq!(tiny.defaults[2], 1.);
+        assert_eq!(tiny.defaults[2], 6.);
         assert_eq!(tiny.defaults[3], 2.);
     }
 

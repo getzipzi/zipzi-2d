@@ -207,18 +207,34 @@ impl PoseMapping {
         starts: &[ManualVertexTarget],
         delta: ModelVector,
     ) -> Result<Vec<ManualVertexTarget>> {
+        let selection: Vec<_> = starts
+            .iter()
+            .map(|v| (self.mesh_id.clone(), v.id))
+            .collect();
+        self.move_targets_with_selection(starts, delta, &selection)
+    }
+
+    pub(super) fn move_targets_with_selection(
+        &self,
+        starts: &[ManualVertexTarget],
+        delta: ModelVector,
+        selection: &[(String, VertexId)],
+    ) -> Result<Vec<ManualVertexTarget>> {
         if delta.x == 0. && delta.y == 0. {
             return Ok(starts.to_vec());
         }
-        let requested: Vec<_> = starts
-            .iter()
-            .map(|v| ((self.mesh_id.clone(), v.id), delta))
-            .collect();
+        let requested: Vec<_> = selection.iter().map(|v| (v.clone(), delta)).collect();
         let solved = self.glue.solve(&requested)?;
+        let slots: HashMap<_, _> = selection
+            .iter()
+            .enumerate()
+            .map(|(index, (mesh, id))| ((mesh.as_str(), *id), index))
+            .collect();
         starts
             .iter()
-            .zip(solved)
-            .map(|(v, delta)| {
+            .map(|v| {
+                let index = slots[&(self.mesh_id.as_str(), v.id)];
+                let delta = solved[index];
                 let local = self.local[&v.id];
                 let before = self.space.to_model(local);
                 let after = ModelPoint {

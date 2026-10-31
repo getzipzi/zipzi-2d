@@ -452,6 +452,43 @@ impl Editor {
         self.active_session()
             .and_then(|s| s.modeling.tools.manual_target().cloned())
     }
+    pub fn manual_targets(&self) -> Vec<crate::ManualMeshTarget> {
+        self.active_session()
+            .map_or_else(Vec::new, |s| s.modeling.tools.manual_targets())
+    }
+    pub fn manual_target_at(
+        &self,
+        frame: &crate::CanvasFrame,
+        point: crate::ViewportPoint,
+    ) -> Option<crate::ManualMeshTarget> {
+        if !self.viewport_binding_valid(frame.version.binding) {
+            return None;
+        }
+        self.active_session()?
+            .modeling
+            .tools
+            .manual_target_at(frame, point)
+            .cloned()
+    }
+    pub fn activate_manual_target(
+        &mut self,
+        frame: &crate::CanvasFrame,
+        point: crate::ViewportPoint,
+    ) -> bool {
+        if !self.viewport_binding_valid(frame.version.binding) || self.gesture_active() {
+            return false;
+        }
+        let Some(session) = self.active_session_mut() else {
+            return false;
+        };
+        if session.scene_revision != frame.version.scene {
+            return false;
+        }
+        session
+            .modeling
+            .tools
+            .activate_manual_target(&mut session.document, frame, point)
+    }
     pub fn manual_edge_at(
         &self,
         frame: &crate::CanvasFrame,
@@ -478,11 +515,11 @@ impl Editor {
             .active_session_mut()
             .ok_or_else(|| anyhow!("No document"))?;
         session.document.finish_edit()?;
-        let target = session.document.manual_mesh_target()?;
+        let targets = session.document.manual_mesh_targets()?;
         session
             .modeling
             .tools
-            .enter_manual(&mut session.document, target);
+            .enter_manual(&mut session.document, targets);
         if let Some(viewport) = viewport {
             session.modeling.tools.bind_manual_viewport(viewport);
         }

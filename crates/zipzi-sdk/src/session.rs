@@ -752,7 +752,7 @@ impl AuthoringSession {
         Ok(EditSession {
             identity: std::sync::Arc::new(()),
             sequence: 0,
-            manual_baseline: None,
+            manual_baselines: Default::default(),
             session: None,
             base_keys,
             base_key_bytes,

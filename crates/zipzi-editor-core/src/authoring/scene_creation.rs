@@ -59,6 +59,9 @@ impl Document {
         kind: SceneObjectType,
         selection: &[ObjectRef],
     ) -> anyhow::Result<()> {
+        if matches!(kind, SceneObjectType::Warp | SceneObjectType::Rotation) {
+            self.ensure_editable(&self.deformer_creation_members(selection)?)?;
+        }
         let (part_id, parent_id) = match projection {
             PaletteProjection::Organization => (self.scene_creation_container(selection)?.0, None),
             PaletteProjection::Deformation => {
@@ -116,8 +119,8 @@ impl Document {
         Ok(())
     }
 
-    /// Capture a location in the organization projection. This deliberately does
-    /// not assign a deformation parent: the two tree projections are independent.
+    /// Capture organization placement. New deformers also wrap the selected
+    /// deformation roots while keeping existing organization ownership intact.
     pub fn plan_scene_object_creation(
         &self,
         kind: SceneObjectType,
@@ -135,6 +138,47 @@ impl Document {
         selection: &[ObjectRef],
     ) -> anyhow::Result<SceneObjectCreationPlan> {
         self.ensure_authoring_idle()?;
+        anyhow::ensure!(
+            projection != PaletteProjection::Parameters,
+            AuthoringPlanningError::new("NO_SCENE_COLLECTION")
+        );
+        if projection == PaletteProjection::Deformation {
+            anyhow::ensure!(
+                selection
+                    .iter()
+                    .all(|o| matches!(o.kind, ObjectKind::Mesh | ObjectKind::Deformer)),
+                AuthoringPlanningError::new("EXPECTED_DEFORMATION_MEMBERS")
+            );
+        }
+        if matches!(kind, SceneObjectType::Warp | SceneObjectType::Rotation) {
+            let members = self.deformer_creation_members(selection)?;
+            if !members.is_empty() {
+                self.ensure_editable(&members)?;
+                let (part_id, before) = self.scene_creation_location(kind, selection)?;
+                let name = self.scene_creation_name(name, part_id.as_deref())?;
+                let create = SceneEdit::Create {
+                    id: Uuid::new_v4().to_string(),
+                    name,
+                    object: if kind == SceneObjectType::Warp {
+                        SceneCreate::Warp { bounds: None }
+                    } else {
+                        SceneCreate::Rotation
+                    },
+                    part_id,
+                    parent_id: None,
+                    before,
+                    deformation_before: None,
+                };
+                let plan = self
+                    .session
+                    .read()
+                    .plan_deformer_group(create, members.into_iter().map(|o| o.id).collect())?;
+                return Ok(SceneObjectCreationPlan {
+                    projection,
+                    plan: CreationPlan::Scene(plan),
+                });
+            }
+        }
         let (part_id, parent_id, before, deformation_before) = match projection {
             PaletteProjection::Organization => {
                 let (part, before) = self.scene_creation_location(kind, selection)?;
@@ -259,6 +303,53 @@ impl Document {
             None
         };
         Ok((owner, parent, true))
+    }
+
+    fn deformer_creation_members(&self, selection: &[ObjectRef]) -> anyhow::Result<Vec<ObjectRef>> {
+        let mut members = Vec::new();
+        let mut seen = std::collections::HashSet::new();
+        let mut parts = std::collections::HashSet::new();
+        for object in selection {
+            self.session.handle(
+                object
+                    .kind
+                    .sdk_kind()
+                    .ok_or_else(|| anyhow::anyhow!("Expected a scene object"))?,
+                &object.id,
+            )?;
+            if matches!(object.kind, ObjectKind::Mesh | ObjectKind::Deformer)
+                && seen.insert(object.id.clone())
+            {
+                members.push(object.clone());
+            } else if object.kind == ObjectKind::Part {
+                parts.insert(object.id.as_str());
+            }
+        }
+        if !parts.is_empty() {
+            let model = self.model();
+            for id in model.transform_order().iter().chain(model.mesh_order()) {
+                let mut owner = model.organization_owner(id).unwrap_or("");
+                while !owner.is_empty() {
+                    if parts.contains(owner) {
+                        if seen.insert(id.clone()) {
+                            members.push(ObjectRef::new(
+                                if model.get_mesh(id).is_some() {
+                                    ObjectKind::Mesh
+                                } else {
+                                    ObjectKind::Deformer
+                                },
+                                id,
+                            ));
+                        }
+                        break;
+                    }
+                    owner = model
+                        .get_part(owner)
+                        .map_or("", |part| part.parent_id.as_str());
+                }
+            }
+        }
+        Ok(members)
     }
 
     fn scene_creation_name(&self, name: String, owner: Option<&str>) -> anyhow::Result<String> {

@@ -163,8 +163,8 @@ pub(super) struct SortState {
     active: Option<PaletteDrag>,
     context: Option<AuthoringContext>,
     sources: Vec<ObjectRef>,
-    // Keep one hovered plan, not a plan-sized document snapshot per visited row.
-    cached: Option<(SortItem, DropPosition, Result<SortPlan, String>)>,
+    // Cache one hover decision; numeric conversion runs only on release.
+    cached: Option<(SortItem, DropPosition, Result<bool, String>)>,
     preview: Option<WeakEntity<DragPreview>>,
     hover: Option<(SortItem, DropPosition)>,
     hover_serial: u64,
@@ -302,29 +302,33 @@ impl SortState {
                     ),
                     String::new(),
                 )
-                .map(SortPlan::Business)
+                .map(|plan| !plan.noop)
             } else if drag.source.resource() {
                 doc.plan_animation_resource_move(
                     &self.sources[0],
                     target.reference().as_ref(),
                     position,
                 )
-                .map(SortPlan::Resource)
+                .map(|plan| !plan.is_noop())
             } else {
-                doc.plan_palette_move(PaletteMove {
+                let request = PaletteMove {
                     projection: drag.source.projection(),
                     sources: self.sources.clone(),
                     target: target.reference(),
                     position,
-                })
-                .map(SortPlan::Palette)
+                };
+                match doc.palette_deformation_move_support(&request) {
+                    Ok(Some(support)) => Ok(support != zipzi_sdk::ReparentSupport::NoChange),
+                    Ok(None) => doc.plan_palette_move(request).map(|plan| !plan.is_noop()),
+                    Err(error) => Err(error),
+                }
             }
             .map_err(|error| move_error(&error));
             self.cached = Some((target.clone(), position, result));
         }
         self.cached
             .as_ref()
-            .is_some_and(|(_, _, result)| result.as_ref().is_ok_and(|plan| !plan.is_noop()))
+            .is_some_and(|(_, _, result)| result.as_ref().is_ok_and(|available| *available))
     }
     fn feedback(&self, reason: Option<String>, cx: &mut App) {
         if let Some(preview) = &self.preview {

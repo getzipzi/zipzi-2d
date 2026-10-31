@@ -10,6 +10,7 @@ pub use projection::*;
 mod drawing;
 mod fields;
 mod lifecycle;
+mod grouping;
 pub use zipzi_contract::document::{
     SceneCollection, SceneCopyScope, SceneCreate, SceneEdit, SceneField, SceneFieldValue,
 };

@@ -6,6 +6,7 @@ pub use crate::adaptive_mesh::MeshSettings;
 use crate::adaptive_mesh::{MeshGenerationStage, generate_mesh};
 use crate::{ObjectKind, ObjectRef};
 use alpha::TextureTransform;
+pub(crate) use alpha::pad_texture_edges;
 use anyhow::{Context, Result, ensure};
 use std::sync::{
     Arc,

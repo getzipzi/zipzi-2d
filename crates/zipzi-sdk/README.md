@@ -44,6 +44,11 @@ through a drag; unchanged vertex slots are copied once per stored channel and
 only changed samples are patched. Conversion budgets, lock checks and cancellation
 remain part of planning.
 
+`EditSession::edit_manual_mesh_batch` preflights one operation per mesh before
+publishing any candidate change. Moves retain separate frozen sources for each
+mesh across increments, and rejection preserves the entire last accepted batch.
+Committing the shared Edit creates one undo step for all meshes.
+
 Deleting a Glue endpoint (including an incomplete pair or an implicit orphan)
 returns `GLUE_VERTEX_REFERENCED`; a sample outside the old UV coverage returns
 `OUTSIDE_TRANSFER_DOMAIN`. Only a dependency-free mesh with a global affine map
@@ -84,6 +89,35 @@ incremental advance retains completed steps, while seek retains the prior state.
 Expression schedules can be replaced without modifying the authoring document.
 
 ## Images and modeling
+
+`AuthoringSession::plan_deformer_group` combines a Warp or Rotation `SceneEdit::Create`
+with selection parenting in one snapshot-bound, undoable plan. It normalizes
+selected ancestors and descendants, preserves organization ownership and drawing
+order, and converts base shapes, ordinary keyforms and BlendShape deltas together.
+Roots must share a deformation parent. A new Warp can pass through an existing
+animated Warp lattice; a new Rotation below a Warp requires a static axis-aligned
+affine space. Creating a Rotation group under a Rotation with reflection in its
+base pose or any ordinary keyform is rejected; a Warp group remains supported.
+Unsupported coordinate conversions reject the entire plan. Before publication,
+grouping also compares native evaluated positions (including hidden meshes) at
+default parameter values within 0.01 model units plus a relative 1e-6 tolerance.
+This numeric check supplements the structural checks; it does not prove the
+entire animated parameter domain.
+
+`ReparentEdit` preservation supports static rectangular Warp lattices as affine
+parent spaces, including nested Rotation/Warp chains. Mesh base shapes, ordinary
+keyforms and BlendShape deltas convert together. Animated or nonrectangular Warp
+lattices reject preservation; `KeepLocalData` remains an explicit low-level
+operation and performs no coordinate conversion. Numeric tolerances and native
+parameter-domain checks still apply.
+
+Rotation subtree roots also support preservation: reparenting compensates the
+root's base reference angle, origin and scale and its ordinary/BlendShape origin
+and scale channels. Descendant data stay unchanged, including nonlinear Warp
+descendants. Keeping angle channels intact preserves native BlendShape angle
+clamping. Plans check scale-clamp compatibility and verify the resulting native
+frame at the frozen edit inputs before publication. Hierarchy and all converted
+channels publish atomically; undo restores their original values and identities.
 
 The dependency-cleaning deletion API supports scene objects, parameters,
 parameter folders, textures, attachments and typed business records (including

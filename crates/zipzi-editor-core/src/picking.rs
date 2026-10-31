@@ -14,6 +14,7 @@ use std::{
     sync::Arc,
 };
 
+pub(crate) use geometry::barycentric;
 pub use geometry::{bounds, distance2, segment_distance2};
 
 pub const PICK_ALPHA: f32 = 1. / 255.;

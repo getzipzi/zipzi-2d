@@ -55,7 +55,7 @@ fn children(d: &Document, deform: bool, id: &str) -> Vec<String> {
 }
 
 #[test]
-fn creation_inside_deformer_and_after_mesh_keep_organization_and_deformation_independent() {
+fn deformer_creation_wraps_selection_and_keeps_organization_independent() {
     let mut d = Document::new_blank().unwrap();
     let p = create(&mut d, P::Organization, T::Part, &[]);
     let q = create(&mut d, P::Organization, T::Part, &[]);
@@ -71,11 +71,12 @@ fn creation_inside_deformer_and_after_mesh_keep_organization_and_deformation_ind
     let inserted = create(&mut d, P::Deformation, T::Warp, std::slice::from_ref(&a));
     assert_eq!(
         children(&d, true, &parent.id),
-        [a.id.clone(), inserted.id.clone(), b.id.clone()]
+        [inserted.id.clone(), b.id.clone()]
     );
+    assert_eq!(children(&d, true, &inserted.id), [a.id.clone()]);
     assert_eq!(
         children(&d, false, &q.id),
-        [a.id.clone(), b.id.clone(), inserted.id.clone()]
+        [a.id.clone(), inserted.id.clone(), b.id.clone()]
     );
     assert_eq!(d.history_lengths(), (history.0 + 1, 0));
     let inside = create(
@@ -84,16 +85,19 @@ fn creation_inside_deformer_and_after_mesh_keep_organization_and_deformation_ind
         T::Mesh,
         std::slice::from_ref(&inserted),
     );
-    assert_eq!(children(&d, true, &inserted.id), [inside.id.clone()]);
+    assert_eq!(
+        children(&d, true, &inserted.id),
+        [a.id.clone(), inside.id.clone()]
+    );
     assert!(children(&d, false, &q.id).contains(&inside.id));
     d.undo().unwrap();
     assert!(d.object_index().get(&inside).is_none());
     d.redo().unwrap();
-    assert_eq!(children(&d, true, &inserted.id), [inside.id]);
+    assert_eq!(children(&d, true, &inserted.id), [a.id, inside.id]);
 }
 
 #[test]
-fn multi_selection_uses_last_full_sibling_and_different_parents_fall_back_to_roots() {
+fn multi_selection_wraps_full_siblings_and_mesh_creation_uses_original_placement_policy() {
     let mut d = Document::new_blank().unwrap();
     let p = create(&mut d, P::Organization, T::Part, &[]);
     let parent = create(
@@ -106,10 +110,8 @@ fn multi_selection_uses_last_full_sibling_and_different_parents_fall_back_to_roo
     let b = mesh(&mut d, &p, &parent);
     let c = mesh(&mut d, &p, &parent);
     let inserted = create(&mut d, P::Deformation, T::Rotation, &[b.clone(), a.clone()]);
-    assert_eq!(
-        children(&d, true, &parent.id),
-        [a.id.clone(), b.id.clone(), inserted.id, c.id]
-    );
+    assert_eq!(children(&d, true, &parent.id), [inserted.id.clone(), c.id]);
+    assert_eq!(children(&d, true, &inserted.id), [a.id.clone(), b.id]);
     let root = create(&mut d, P::Deformation, T::Mesh, &[parent, a]);
     let tree = d.deformer_tree();
     assert!(
@@ -168,7 +170,8 @@ fn root_deformers_and_meshes_use_their_own_complete_display_buckets() {
         .filter(|n| n.reference().is_some())
         .map(|n| n.id.clone())
         .collect();
-    assert_eq!(ids, [a.id, b.id, deform.id]);
+    assert_eq!(ids, [deform.id.clone()]);
+    assert_eq!(children(&d, true, &deform.id), [a.id, b.id]);
     let group = roots.iter().find(|n| n.reference().is_none()).unwrap();
     assert_eq!(
         group
@@ -178,6 +181,93 @@ fn root_deformers_and_meshes_use_their_own_complete_display_buckets() {
             .collect::<Vec<_>>(),
         [mesh.id, next.id]
     );
+}
+
+#[test]
+fn selected_part_groups_its_members_without_changing_ownership_and_roundtrips() {
+    for kind in [T::Warp, T::Rotation] {
+        let mut d = Document::new_blank().unwrap();
+        let part = create(&mut d, P::Organization, T::Part, &[]);
+        let nested = create(
+            &mut d,
+            P::Organization,
+            T::Part,
+            std::slice::from_ref(&part),
+        );
+        let a = create(
+            &mut d,
+            P::Organization,
+            T::Mesh,
+            std::slice::from_ref(&part),
+        );
+        let b = create(
+            &mut d,
+            P::Organization,
+            T::Mesh,
+            std::slice::from_ref(&nested),
+        );
+        let outside = create(&mut d, P::Organization, T::Mesh, &[]);
+        let before = d.deformer_tree();
+        let history = d.history_lengths();
+        let group = create(&mut d, P::Organization, kind, &[part.clone(), a.clone()]);
+        assert_eq!(children(&d, true, &group.id), [a.id.clone(), b.id.clone()]);
+        assert_eq!(
+            d.object_index().get(&a).unwrap().properties["part_id"],
+            part.id
+        );
+        assert_eq!(
+            d.object_index().get(&b).unwrap().properties["part_id"],
+            nested.id
+        );
+        assert_eq!(
+            d.object_index().get(&outside).unwrap().properties["deformer_id"],
+            ""
+        );
+        assert_eq!(d.history_lengths(), (history.0 + 1, 0));
+        let after = d.deformer_tree();
+        d.undo().unwrap();
+        assert_eq!(d.deformer_tree(), before);
+        d.redo().unwrap();
+        assert_eq!(d.deformer_tree(), after);
+        let directory = tempfile::tempdir().unwrap();
+        let saved = d.save(&directory.path().join("group.zipzi")).unwrap();
+        let reopened = Document::open(&saved.manifest).unwrap();
+        assert_eq!(reopened.deformer_tree(), after);
+        assert_eq!(reopened.part_tree(), d.part_tree());
+    }
+}
+
+#[test]
+fn invalid_group_selection_never_leaves_an_empty_deformer_or_changes_history() {
+    let mut d = Document::new_blank().unwrap();
+    let part = create(&mut d, P::Organization, T::Part, &[]);
+    let parent = create(
+        &mut d,
+        P::Organization,
+        T::Warp,
+        std::slice::from_ref(&part),
+    );
+    let a = mesh(&mut d, &part, &parent);
+    let b = create(&mut d, P::Organization, T::Mesh, &[]);
+    for locked in [false, true] {
+        if locked {
+            d.set_objects_locked(std::slice::from_ref(&b), true)
+                .unwrap();
+        }
+        let before = d.deformer_tree();
+        let history = d.history_lengths();
+        assert!(
+            d.plan_scene_object_creation_in(
+                P::Organization,
+                T::Warp,
+                "Group".into(),
+                &[a.clone(), b.clone()]
+            )
+            .is_err()
+        );
+        assert_eq!(d.deformer_tree(), before);
+        assert_eq!(d.history_lengths(), history);
+    }
 }
 
 #[test]
