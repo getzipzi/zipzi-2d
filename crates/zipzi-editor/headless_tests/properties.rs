@@ -35,6 +35,140 @@ fn open_warp_grid(h: &super::Harness, cx: &mut TestAppContext) {
     cx.run_until_parked();
 }
 
+#[gpui_kit::test]
+fn deformer_properties_numeric_transform_uses_point_selection_and_resets_increments(
+    cx: &mut TestAppContext,
+) {
+    use zipzi_editor_core::{CanvasInput, EditorCommand, ModelPoint};
+    let (document, assets, object) = warp_grid_document();
+    let h = setup_with_document(cx, document, assets);
+    let before = h.view.update(cx, |view, cx| {
+        view.editor
+            .execute(EditorCommand::SelectObject(object.clone()))
+            .unwrap();
+        view.editor.execute(EditorCommand::ToggleWarpFine).unwrap();
+        let frame = document_fixture::present_canvas(&mut view.editor).unwrap();
+        let points = frame
+            .geometry
+            .controls
+            .iter()
+            .find(|c| c.object == object)
+            .unwrap()
+            .points
+            .clone();
+        for (slot, shift) in [(0, false), (1, true)] {
+            let point = frame.transform.to_viewport(points[slot]);
+            document_fixture::pointer_input(
+                &mut view.editor,
+                CanvasInput::Down {
+                    primary: false,
+                    point,
+                    shift,
+                    alt: false,
+                },
+            )
+            .unwrap();
+            document_fixture::pointer_input(&mut view.editor, CanvasInput::Up { point }).unwrap();
+        }
+        assert_eq!(
+            view.editor
+                .warp_transform_target(&object)
+                .unwrap()
+                .components
+                .len(),
+            2
+        );
+        view.redraw(cx);
+        points
+    });
+    show(&h, "property-warp-transform", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("property-warp-transform", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    for (field, value) in [
+        ("warp-transform-x", "10"),
+        ("warp-transform-angle", "90"),
+        ("warp-transform-scale", "50"),
+    ] {
+        warp_grid_input(&h, field, value, cx);
+    }
+    h.view.read_with(cx, |view, _| {
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0))
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("warp-transform-apply", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    h.view.update(cx, |view, _| {
+        assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+        let frame = view.editor.preview().unwrap().canvas.unwrap();
+        let points = &frame
+            .geometry
+            .controls
+            .iter()
+            .find(|c| c.object == object)
+            .unwrap()
+            .points;
+        let center = ModelPoint {
+            x: (before[0].x + before[1].x) / 2.,
+            y: (before[0].y + before[1].y) / 2.,
+        };
+        for (a, b) in before[..2].iter().zip(&points[..2]) {
+            assert!((b.x - (center.x - (a.y - center.y) * 0.5 + 10.)).abs() < 0.02);
+            assert!((b.y - (center.y + (a.x - center.x) * 0.5)).abs() < 0.02);
+        }
+        assert_eq!(&points[2..], &before[2..]);
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
+    });
+    show(&h, "property-warp-transform", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("property-warp-transform", cx);
+        window.render_frame(cx);
+        assert_eq!(window.find("warp-transform-x").value(), Some("0"));
+        assert_eq!(window.find("warp-transform-angle").value(), Some("0"));
+        assert_eq!(window.find("warp-transform-scale").value(), Some("100"));
+        window.press("escape", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    h.view.read_with(cx, |view, _| {
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0))
+    });
+}
+
+#[gpui_kit::test]
+fn deformer_properties_numeric_transform_rejects_a_changed_target(cx: &mut TestAppContext) {
+    let (document, assets, _) = warp_grid_document();
+    let h = setup_with_document(cx, document, assets);
+    show(&h, "property-warp-transform", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("property-warp-transform", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    warp_grid_input(&h, "warp-transform-x", "12", cx);
+    h.view.update(cx, |view, cx| {
+        view.editor.new_document().unwrap();
+        view.redraw(cx);
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        window.click("warp-transform-apply", cx);
+        window.press("escape", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    h.view.read_with(cx, |view, _| {
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+        assert!(!view.editor.document().unwrap().has_pending_edit());
+    });
+}
+
 fn choose_deformer_reference(
     h: &super::Harness,
     field: &str,

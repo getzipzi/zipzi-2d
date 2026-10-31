@@ -38,6 +38,7 @@ pub(super) enum Row {
     Field(PropertyKey),
     Navigation,
     WarpGrid,
+    WarpTransform,
     AnimationActions(ObjectRef),
     BusinessActions(ObjectRef),
     Detail(properties::DetailRow),
@@ -209,6 +210,14 @@ impl PropertiesPanel {
                     .into_iter()
                     .map(Row::Detail),
             );
+        }
+        if target.object.kind == zipzi_editor_core::ObjectKind::Deformer
+            && self
+                .form
+                .fields
+                .contains_key(&zipzi_editor_core::property::deformer::COLUMNS.key)
+        {
+            rows.push(Row::WarpTransform);
         }
         if target.object.kind == zipzi_editor_core::ObjectKind::Deformer
             && !properties::deformer::requires_single_selection(doc, &target.object)

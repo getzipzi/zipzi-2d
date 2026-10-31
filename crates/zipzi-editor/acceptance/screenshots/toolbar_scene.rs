@@ -9,7 +9,7 @@ use gpui_kit::{BorrowAppContext as _, test::TestWindowExt};
 use zipzi_core::{Canvas, Transform, TransformData, Vec2, WarpTransform};
 use zipzi_editor_core::{CommandId, Document, Editor, EditorCommand, ObjectKind, ObjectRef};
 
-fn toolbar_document() -> anyhow::Result<(Document, tempfile::TempDir)> {
+pub(super) fn toolbar_document() -> anyhow::Result<(Document, tempfile::TempDir)> {
     let assets = tempfile::tempdir()?;
     let mut session = zipzi_sdk::AuthoringSession::new(
         &uuid::Uuid::new_v4().to_string(),

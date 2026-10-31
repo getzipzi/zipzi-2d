@@ -403,12 +403,28 @@ impl DocumentSession {
                 self.modeling.tools.clear_selection();
                 return Ok(());
             }
+            EditorCommand::ToggleWarpWhole => {
+                self.modeling.tools.cancel(&mut self.document);
+                self.modeling.tools.warp_whole = !self.modeling.tools.warp_whole;
+                return Ok(());
+            }
             EditorCommand::ToggleDeformerGrid => {
                 self.modeling.tools.deformer_grid = !self.modeling.tools.deformer_grid;
                 return Ok(());
             }
             EditorCommand::AdjustDeformer { object, adjustment } => {
                 self.document.adjust_deformer(&object, adjustment)
+            }
+            EditorCommand::AdjustWarp { target, adjustment } => {
+                anyhow::ensure!(
+                    self.modeling
+                        .tools
+                        .warp_transform_target(&self.document, &target.object)
+                        .as_ref()
+                        == Some(&target),
+                    "Warp transform target changed"
+                );
+                self.document.adjust_warp(&target, adjustment)
             }
             EditorCommand::SetObjectProperty {
                 object,

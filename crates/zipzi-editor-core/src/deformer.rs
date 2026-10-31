@@ -7,6 +7,7 @@ const ROTATION_RING_RADIUS: f32 = 280.;
 const ROTATION_SCALE_DISTANCE: f32 = 400.;
 // Fixed logical-pixel gap between the Warp control grid and its outer frame.
 const WARP_FRAME_PADDING: f32 = 4.;
+const WARP_ROTATE_OFFSET: f32 = 24.;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DeformerHandle {
@@ -22,6 +23,12 @@ pub struct DeformerGizmo {
     pub bounds: [f32; 4],
     pub outline: Vec<(ViewportPoint, ViewportPoint)>,
     pub handles: Vec<(DeformerHandle, ViewportPoint)>,
+}
+
+#[derive(Clone)]
+pub(crate) struct WarpSelectionGizmo {
+    pub object: crate::ObjectRef,
+    pub gizmo: DeformerGizmo,
 }
 
 impl CanvasScene {
@@ -66,6 +73,68 @@ impl CanvasScene {
                 handles: vec![(DeformerHandle::RotationScale, scale)],
             });
         }
+        Some(DeformerGizmo::warp(b))
+    }
+
+    pub(crate) fn warp_selected_points(
+        &self,
+        components: &[crate::ComponentRef],
+        fine: bool,
+    ) -> Vec<(crate::ComponentRef, crate::ModelPoint)> {
+        components
+            .iter()
+            .filter_map(|component| {
+                let control = self
+                    .control(&component.object.id)
+                    .filter(|c| c.kind == ControlKind::Warp)?;
+                let point = if fine {
+                    *control.points.get(component.id as usize)?
+                } else if let Some(bezier) = self.bezier(&component.object.id) {
+                    bezier.points().find(|(id, _)| *id == component.id)?.1
+                } else {
+                    *control.points.get(component.id as usize)?
+                };
+                Some((component.clone(), point))
+            })
+            .collect()
+    }
+
+    pub(crate) fn warp_selection_gizmo(
+        &self,
+        components: &[crate::ComponentRef],
+        fine: bool,
+        t: ViewportTransform,
+    ) -> Option<WarpSelectionGizmo> {
+        let points = self.warp_selected_points(components, fine);
+        let object = points.first()?.0.object.clone();
+        let bounds = crate::picking::bounds(points.iter().map(|(_, p)| {
+            let p = t.to_viewport(*p);
+            crate::ModelPoint { x: p.x, y: p.y }
+        }))?;
+        Some(WarpSelectionGizmo {
+            object,
+            gizmo: DeformerGizmo::warp(bounds),
+        })
+    }
+
+    pub(crate) fn gizmo_for_selection(
+        &self,
+        c: &ControlGeometry,
+        t: ViewportTransform,
+        selection: Option<&WarpSelectionGizmo>,
+    ) -> Option<DeformerGizmo> {
+        if c.kind == ControlKind::Warp {
+            if let Some(selection) = selection {
+                return (selection.object == c.object).then(|| selection.gizmo.clone());
+            }
+        }
+        self.deformer_gizmo(c, t)
+    }
+}
+
+impl DeformerGizmo {
+    fn warp(b: [f32; 4]) -> Self {
+        let p = |x, y| ViewportPoint { x, y };
         let center = p((b[0] + b[2]) / 2., (b[1] + b[3]) / 2.);
         let padding = WARP_FRAME_PADDING;
         let [x0, y0, x1, y1] = [
@@ -84,20 +153,23 @@ impl CanvasScene {
             p(x0, y1),
             p(x0, center.y),
         ];
-        let outline: Vec<_> = (0..8)
+        let mut outline: Vec<_> = (0..8)
             .map(|i| (perimeter[i], perimeter[(i + 1) % 8]))
             .collect();
-        let handles: Vec<_> = perimeter
+        let mut handles: Vec<_> = perimeter
             .into_iter()
             .enumerate()
             .map(|(i, p)| (DeformerHandle::Scale(i as u8), p))
             .collect();
-        Some(DeformerGizmo {
+        let rotate = p(center.x, y0 - WARP_ROTATE_OFFSET);
+        outline.push((p(center.x, y0), rotate));
+        handles.push((DeformerHandle::Rotate, rotate));
+        Self {
             center,
             bounds: b,
             outline,
             handles,
-        })
+        }
     }
 }
 
@@ -168,7 +240,7 @@ pub(crate) fn sample_grid(
 }
 
 /// One atomic relative adjustment, expressed in canvas model coordinates.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DeformerAdjustment {
     pub translation: crate::ModelVector,
     /// Positive angles turn counterclockwise on the canvas.
@@ -176,7 +248,150 @@ pub struct DeformerAdjustment {
     pub scale: f32,
 }
 
+/// Frozen component destination shared by numeric and pointer transforms.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WarpTransformTarget {
+    pub object: crate::ObjectRef,
+    pub components: Vec<crate::ComponentRef>,
+    pub fine: bool,
+    revision: (u64, u64),
+}
+
+impl crate::tools::ToolController {
+    pub(crate) fn warp_transform_target(
+        &self,
+        document: &crate::Document,
+        object: &crate::ObjectRef,
+    ) -> Option<WarpTransformTarget> {
+        let model = document.model();
+        model.get_transform(&object.id)?.warp()?;
+        let components = if self.warp_whole {
+            vec![]
+        } else {
+            self.components
+                .iter()
+                .filter(|c| {
+                    document.context().selections.contains(&c.object)
+                        && model
+                            .get_transform(&c.object.id)
+                            .is_some_and(|t| t.warp().is_some())
+                })
+                .cloned()
+                .collect::<Vec<_>>()
+        };
+        let components = if components.iter().any(|c| c.object == *object) {
+            components
+        } else {
+            vec![]
+        };
+        Some(WarpTransformTarget {
+            object: object.clone(),
+            components,
+            fine: self.warp_fine,
+            revision: (document.model_generation(), document.preview_revision()),
+        })
+    }
+}
+
+impl crate::Editor {
+    pub fn warp_transform_target(&self, object: &crate::ObjectRef) -> Option<WarpTransformTarget> {
+        let session = self.active_session()?;
+        session
+            .modeling
+            .tools
+            .warp_transform_target(&session.document, object)
+    }
+}
+
 impl crate::Document {
+    pub(crate) fn adjust_warp(
+        &mut self,
+        target: &WarpTransformTarget,
+        adjustment: DeformerAdjustment,
+    ) -> anyhow::Result<()> {
+        use crate::control_edit::{ControlChange, ControlEdit, ControlScope};
+        use anyhow::ensure;
+        ensure!(
+            [
+                adjustment.translation.x,
+                adjustment.translation.y,
+                adjustment.angle,
+                adjustment.scale
+            ]
+            .iter()
+            .all(|v| v.is_finite())
+                && adjustment.scale > 0.,
+            "Enter finite values and a positive scale"
+        );
+        self.finish_edit()?;
+        let snapshot = self.snapshot()?;
+        let scene = self.geometry(&snapshot);
+        let control = scene
+            .control(&target.object.id)
+            .filter(|c| c.kind == ControlKind::Warp)
+            .ok_or_else(|| anyhow::anyhow!("Warp is unavailable"))?;
+        let points = scene.warp_selected_points(&target.components, target.fine);
+        ensure!(
+            points.len() == target.components.len(),
+            "Warp point selection changed"
+        );
+        let (objects, bounds, scope) = if points.is_empty() {
+            (
+                vec![target.object.clone()],
+                crate::picking::bounds(control.points.iter().copied()),
+                ControlScope::Whole,
+            )
+        } else {
+            let mut objects = Vec::new();
+            for (component, _) in &points {
+                if !objects.contains(&component.object) {
+                    objects.push(component.object.clone());
+                }
+            }
+            (
+                objects,
+                crate::picking::bounds(points.iter().map(|(_, p)| *p)),
+                ControlScope::Selected,
+            )
+        };
+        ensure!(
+            objects.iter().all(|o| scene.in_isolation_scope(o)),
+            "Warp selection is outside this editing scope"
+        );
+        ensure!(
+            !objects
+                .iter()
+                .any(|o| scene.ancestors(o).iter().any(|p| objects.contains(p))),
+            "Select controls from one deformation level at a time"
+        );
+        let edits = objects
+            .iter()
+            .map(|o| ControlEdit::prepare(self, &scene, o))
+            .collect::<anyhow::Result<Vec<_>>>()?;
+        let b = bounds.ok_or_else(|| anyhow::anyhow!("Warp has no points"))?;
+        self.begin_control_edit(&edits)?;
+        let result = self
+            .preview_control_edit(
+                &edits,
+                &target.components,
+                ControlChange::Transform {
+                    scope,
+                    pivot: crate::ModelPoint {
+                        x: (b[0] + b[2]) / 2.,
+                        y: (b[1] + b[3]) / 2.,
+                    },
+                    scale: [adjustment.scale; 2],
+                    radians: adjustment.angle.to_radians(),
+                    translation: adjustment.translation,
+                },
+            )
+            .and_then(|_| self.finish_edit());
+        if result.is_err() {
+            self.cancel_edit();
+        }
+        result
+    }
+
     pub fn adjust_deformer(
         &mut self,
         object: &crate::ObjectRef,
@@ -219,6 +434,7 @@ impl crate::Document {
             }
         } else {
             ControlChange::Transform {
+                scope: crate::control_edit::ControlScope::Whole,
                 pivot: crate::ModelPoint {
                     x: (b[0] + b[2]) / 2.,
                     y: (b[1] + b[3]) / 2.,

@@ -64,6 +64,43 @@ pub fn render_deformer_bar(
             })),
     ];
     if has_warp {
+        let point_count = state
+            .editor
+            .document()
+            .and_then(|doc| {
+                doc.context()
+                    .selections
+                    .iter()
+                    .find_map(|object| state.editor.warp_transform_target(object))
+            })
+            .map_or(0, |target| target.components.len());
+        let target_label = if point_count == 0 {
+            t!("properties.warp_target_whole").into_owned()
+        } else {
+            t!("properties.warp_target_selection", count = point_count).into_owned()
+        };
+        buttons.push(
+            compact::toggle(Button::new("deformer-whole"), state.editor.warp_whole())
+                .icon(IconName::SquareDashed)
+                .label(target_label.clone())
+                .accessibility_label(target_label)
+                .tooltip(t!("editor.warp_transform_whole_hint"))
+                .disabled(modal)
+                .on_click(cx.listener(move |this, _, window, cx| {
+                    if window.has_active_dialog(cx) {
+                        return;
+                    }
+                    if let Some(owner) = this.owner.upgrade() {
+                        owner.update(cx, |owner, cx| {
+                            if owner.modal || !owner.editor.viewport_binding_valid(binding) {
+                                return;
+                            }
+                            let result = owner.editor.execute(EditorCommand::ToggleWarpWhole);
+                            owner.complete_edit(result, cx);
+                        });
+                    }
+                })),
+        );
         buttons.push(
             compact::button(Button::new("deformer-warp-mode"))
                 .label(if fine {

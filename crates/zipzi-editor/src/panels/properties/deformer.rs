@@ -87,6 +87,7 @@ impl WarpGridDialog {
                 target.document,
                 zipzi_editor_core::EditingLifecycle::BlockingUi,
             )?;
+            view.redraw(cx);
             Ok::<_, anyhow::Error>(())
         })?;
         let editor = &view.read(cx).editor;

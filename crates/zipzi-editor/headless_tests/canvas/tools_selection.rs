@@ -353,6 +353,7 @@ fn viewport_transform_delta_updates_status_bar_and_clears_on_finish_or_cancel(
                     .interaction_label
                     .unwrap();
                 assert!(delta.contains('%'));
+                let delta = format!("Whole Warp · {delta}");
                 assert_ne!(previous.as_ref(), Some(&delta));
                 crate::workspace::status_bar::StatusBar::sync(&view.status_bar, view, cx);
                 assert_eq!(
@@ -1053,7 +1054,7 @@ fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &m
                     .iter()
                     .filter(|h| h.round)
                     .count(),
-                8
+                9
             );
         });
         let bar = window.find("deformer-actions").bounds();

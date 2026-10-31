@@ -8,6 +8,10 @@ pub(super) struct Press {
     pub transform: ViewportTransform,
     pub scene: Arc<CanvasScene>,
     pub shift: bool,
+    pub alt: bool,
+    pub deferred_toggle: Option<ComponentRef>,
+    pub components: Vec<ComponentRef>,
+    pub warp_selection: Option<crate::deformer::WarpSelectionGizmo>,
     pub operation: region::SelectionOperation,
     pub access: Arc<access::EditAccess>,
     pub warp_fine: bool,
@@ -77,7 +81,7 @@ impl Gesture {
         match self {
             Self::Select(g) => g.finish(document, components),
             Self::Lasso(g) => g.finish(document, components),
-            Self::Controls(g) => g.finish(document),
+            Self::Controls(g) => g.finish(document, components),
         }
     }
     pub fn cancel(&self, document: &mut Document) -> bool {

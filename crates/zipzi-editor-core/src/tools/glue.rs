@@ -35,6 +35,7 @@ impl super::ToolController {
             self.deformer_visibility,
             self.warp_fine,
             &locks,
+            self.warp_selection_gizmo(document, frame).as_ref(),
         );
         let Some(HitTarget::Component(component)) = &hit else {
             return hit;

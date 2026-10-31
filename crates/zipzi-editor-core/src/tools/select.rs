@@ -87,13 +87,26 @@ impl ToolController {
         };
         let operation = SelectionOperation::from_modifiers(shift, alt);
         let access = self.edit_access(document, scene, &selection);
+        let mut deferred_toggle = None;
         match &hit {
             Some(HitTarget::Component(c)) => {
-                if operation == SelectionOperation::Remove
-                    || (operation == SelectionOperation::Add && self.components.contains(c))
-                {
+                if operation == SelectionOperation::Remove {
                     self.components.retain(|v| v != c);
                     return;
+                }
+                if operation == SelectionOperation::Add && self.components.contains(c) {
+                    if scene
+                        .control(&c.object.id)
+                        .is_some_and(|control| control.kind == crate::ControlKind::Warp)
+                        && matches!(access.probe(c), Some(Ok(())))
+                    {
+                        // A Shift click toggles on release. Crossing the drag
+                        // threshold instead keeps the point and constrains motion.
+                        deferred_toggle = Some(c.clone());
+                    } else {
+                        self.components.retain(|v| v != c);
+                        return;
+                    }
                 }
                 if !matches!(access.probe(c), Some(Ok(()))) {
                     // Retain hover feedback, but a disabled point cannot capture an edit.
@@ -115,6 +128,10 @@ impl ToolController {
                 transform: t,
                 scene: scene.clone(),
                 shift,
+                alt,
+                deferred_toggle,
+                components: self.components.clone(),
+                warp_selection: self.warp_selection_gizmo(document, frame),
                 operation,
                 access,
                 warp_fine: self.warp_fine,

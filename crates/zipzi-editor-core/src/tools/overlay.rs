@@ -72,6 +72,8 @@ pub struct OverlaySnapshot {
     /// Surface this restriction only after an edit attempt, not during pose previews.
     pub unavailable_on_edit_only: bool,
     pub target_label: Option<String>,
+    /// Zero denotes the whole Warp; a positive count denotes the selected controls.
+    pub warp_transform_points: Option<usize>,
     /// Context for a hovered control, separate from edit errors and parameter previews.
     pub point_unavailable: Option<String>,
     pub gizmo_lines: Vec<(ViewportPoint, ViewportPoint)>,
@@ -180,6 +182,7 @@ impl ToolController {
         let _span = zipzi_core::benchmark::span("overlay.total");
         let scene = &frame.geometry;
         let t = frame.transform;
+        let warp_selection = self.warp_selection_gizmo(document, frame);
         let selection = self.overlay_selection(document, scene);
         let selection = selection.as_ref();
         let hovered_target = self
@@ -199,6 +202,34 @@ impl ToolController {
             .filter(|press| press.press().version.binding == frame.version.binding)
             .and_then(|p| p.target())
             .or(hovered_target.as_ref());
+        if active_target.is_some_and(|target| {
+            scene
+                .control(&target.object().id)
+                .is_some_and(|control| control.kind == ControlKind::Warp)
+        }) {
+            let local = matches!(active_target, Some(HitTarget::Component(_)))
+                || self.gesture.as_ref().map_or(warp_selection.is_some(), |g| {
+                    g.press().warp_selection.is_some()
+                });
+            let components = self
+                .gesture
+                .as_ref()
+                .map_or(self.components.as_slice(), |g| {
+                    g.press().components.as_slice()
+                });
+            out.warp_transform_points = Some(if local {
+                components
+                    .iter()
+                    .filter(|c| {
+                        scene
+                            .control(&c.object.id)
+                            .is_some_and(|control| control.kind == ControlKind::Warp)
+                    })
+                    .count()
+            } else {
+                0
+            });
+        }
         out.active_component = active_target.and_then(|hit| match hit {
             HitTarget::Component(component) => Some(component.clone()),
             _ => None,
@@ -486,7 +517,8 @@ impl ToolController {
                             .extend(crate::deformer::sample_grid(control, shape, t));
                     }
                 }
-                if let Some(gizmo) = scene.deformer_gizmo(control, t) {
+                if let Some(gizmo) = scene.gizmo_for_selection(control, t, warp_selection.as_ref())
+                {
                     if control.kind == ControlKind::Rotation {
                         out.rotation_lines.extend(gizmo.outline);
                     } else {

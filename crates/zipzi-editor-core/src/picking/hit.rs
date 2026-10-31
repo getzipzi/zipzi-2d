@@ -25,6 +25,7 @@ impl CanvasScene {
             visibility,
             false,
             &crate::ObjectStateIndex::default(),
+            None,
         )
     }
     pub(crate) fn hit_with_mode(
@@ -36,6 +37,7 @@ impl CanvasScene {
         visibility: DeformerVisibility,
         fine: bool,
         locks: &crate::ObjectStateIndex,
+        warp_selection: Option<&crate::deformer::WarpSelectionGizmo>,
     ) -> Option<HitTarget> {
         if tool == ToolId::Hand {
             return None;
@@ -91,13 +93,15 @@ impl CanvasScene {
                     .map(|(id, p)| (id, distance2(point, p)))
                     .filter(|(_, d)| *d <= CONTROL_RADIUS * CONTROL_RADIUS)
                     .min_by(|a, b| a.1.total_cmp(&b.1));
-                let handle = self.deformer_gizmo(c, t).and_then(|g| {
-                    g.handles
-                        .into_iter()
-                        .map(|(h, p)| (h, distance2(point, p)))
-                        .filter(|(_, d)| *d <= CONTROL_RADIUS * CONTROL_RADIUS)
-                        .min_by(|a, b| a.1.total_cmp(&b.1))
-                });
+                let handle = self
+                    .gizmo_for_selection(c, t, warp_selection)
+                    .and_then(|g| {
+                        g.handles
+                            .into_iter()
+                            .map(|(h, p)| (h, distance2(point, p)))
+                            .filter(|(_, d)| *d <= CONTROL_RADIUS * CONTROL_RADIUS)
+                            .min_by(|a, b| a.1.total_cmp(&b.1))
+                    });
                 if let Some((h, d)) = handle {
                     if nearest.is_none_or(|(_, n)| d < n) {
                         return Some(HitTarget::DeformerHandle(c.object.clone(), h));
@@ -148,7 +152,7 @@ impl CanvasScene {
                 .iter()
                 .filter(|c| selection.contains(&c.object) && !locks.is_locked(&c.object))
             {
-                let Some(gizmo) = self.deformer_gizmo(c, t) else {
+                let Some(gizmo) = self.gizmo_for_selection(c, t, warp_selection) else {
                     continue;
                 };
                 for (handle, p) in &gizmo.handles {
@@ -207,7 +211,9 @@ impl CanvasScene {
         locks: &crate::ObjectStateIndex,
     ) -> Vec<PickCandidate> {
         let mut objects = Vec::new();
-        if let Some(hit) = self.hit_with_mode(point, t, selection, tool, visibility, false, locks) {
+        if let Some(hit) =
+            self.hit_with_mode(point, t, selection, tool, visibility, false, locks, None)
+        {
             objects.push(hit.object().clone());
         }
         for id in self.mesh_hits(t.to_model(point)) {

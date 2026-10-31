@@ -1,7 +1,7 @@
 //! Control-point and gizmo gestures: candidate ownership, transforms and feedback.
 use super::{OverlaySnapshot, gesture::Press, hints::*};
 use crate::ComponentRef;
-use crate::control_edit::{ControlChange, ControlEdit};
+use crate::control_edit::{ControlChange, ControlEdit, ControlScope};
 use crate::{Document, FrameVersion, HitTarget};
 use anyhow::{Result, ensure};
 
@@ -14,6 +14,35 @@ struct ActiveEdit {
     edits: Vec<ControlEdit>,
     last: Option<ControlChange>,
     constrained: Option<String>,
+    axis: Option<Axis>,
+    rotation: Option<RotationDrag>,
+}
+struct RotationDrag {
+    previous: f64,
+    radians: f64,
+}
+impl RotationDrag {
+    fn new(center: crate::ModelPoint, point: crate::ModelPoint) -> Self {
+        Self {
+            previous: f64::from(point.y - center.y).atan2(f64::from(point.x - center.x)),
+            radians: 0.,
+        }
+    }
+    fn update(&mut self, center: crate::ModelPoint, point: crate::ModelPoint) -> f32 {
+        let (x, y) = (f64::from(point.x - center.x), f64::from(point.y - center.y));
+        if x.hypot(y) > 1e-6 {
+            let angle = y.atan2(x);
+            let delta = angle - self.previous;
+            self.radians += delta.sin().atan2(delta.cos());
+            self.previous = angle;
+        }
+        self.radians as f32
+    }
+}
+#[derive(Clone, Copy)]
+enum Axis {
+    Horizontal,
+    Vertical,
 }
 impl ControlGesture {
     pub fn new(press: Press, target: HitTarget) -> Self {
@@ -34,23 +63,37 @@ impl ControlGesture {
             && (version.binding.viewport != origin.binding.viewport
                 || (version.viewport == origin.viewport && version.request > origin.request))
     }
-    pub fn update(&mut self, document: &mut Document, components: &[ComponentRef]) -> Result<bool> {
+    pub fn update(
+        &mut self,
+        document: &mut Document,
+        _components: &[ComponentRef],
+    ) -> Result<bool> {
         let point = self.press.current;
         ensure!(
             point.x.is_finite() && point.y.is_finite(),
             "Invalid pointer position"
         );
         let press = &self.press;
+        let components = &press.components;
         let target = &self.target;
+        let local_frame = matches!(target, HitTarget::DeformerHandle(object, _)
+            if press.warp_selection.as_ref().is_some_and(|s| &s.object == object));
         if self.edit.is_none() && crate::picking::distance2(press.point, point) < 9. {
             return Ok(false);
         }
         if self.edit.is_none() {
             document.ensure_editable(&document.context().selections)?;
             let mut targets = vec![target.object().clone()];
-            if matches!(target, HitTarget::Component(_)) {
+            if matches!(target, HitTarget::Component(_)) || local_frame {
                 for c in components {
-                    if press.scene.in_isolation_scope(&c.object) && !targets.contains(&c.object) {
+                    if (!local_frame
+                        || press
+                            .scene
+                            .control(&c.object.id)
+                            .is_some_and(|c| c.kind == crate::ControlKind::Warp))
+                        && press.scene.in_isolation_scope(&c.object)
+                        && !targets.contains(&c.object)
+                    {
                         targets.push(c.object.clone());
                     }
                 }
@@ -85,12 +128,56 @@ impl ControlGesture {
                 edits,
                 last: None,
                 constrained: None,
+                rotation: match target {
+                    HitTarget::DeformerHandle(object, crate::DeformerHandle::Rotate)
+                        if press
+                            .scene
+                            .control(&object.id)
+                            .is_some_and(|c| c.kind == crate::ControlKind::Warp) =>
+                    {
+                        let control = press.scene.control(&object.id).unwrap();
+                        let gizmo = press
+                            .scene
+                            .gizmo_for_selection(
+                                control,
+                                press.transform,
+                                press.warp_selection.as_ref(),
+                            )
+                            .unwrap();
+                        Some(RotationDrag::new(
+                            press.transform.to_model(gizmo.center),
+                            press.transform.to_model(press.point),
+                        ))
+                    }
+                    _ => None,
+                },
+                axis: (press.shift
+                    && matches!(target, HitTarget::Component(c) if press.scene.control(&c.object.id)
+                    .is_some_and(|control| control.kind == crate::ControlKind::Warp)))
+                .then(|| {
+                    if (point.x - press.point.x).abs() >= (point.y - press.point.y).abs() {
+                        Axis::Horizontal
+                    } else {
+                        Axis::Vertical
+                    }
+                }),
             });
         }
         let edit = self.edit.as_mut().unwrap();
         let edits = &edit.edits;
         let start = press.transform.to_model(press.point);
-        let end = press.transform.to_model(point);
+        let constrained_point = match edit.axis {
+            Some(Axis::Horizontal) => crate::ViewportPoint {
+                x: point.x,
+                y: press.point.y,
+            },
+            Some(Axis::Vertical) => crate::ViewportPoint {
+                x: press.point.x,
+                y: point.y,
+            },
+            None => point,
+        };
+        let end = press.transform.to_model(constrained_point);
         let delta = crate::ModelVector {
             x: end.x - start.x,
             y: end.y - start.y,
@@ -111,10 +198,35 @@ impl ControlGesture {
                     .unwrap();
                 let gizmo = press
                     .scene
-                    .deformer_gizmo(control, press.transform)
+                    .gizmo_for_selection(control, press.transform, press.warp_selection.as_ref())
                     .unwrap();
+                let scope = if local_frame {
+                    ControlScope::Selected
+                } else {
+                    ControlScope::Whole
+                };
                 match handle {
+                    H::Move if local_frame => ControlChange::Transform {
+                        scope,
+                        pivot: press.transform.to_model(gizmo.center),
+                        scale: [1.; 2],
+                        radians: 0.,
+                        translation: delta,
+                    },
                     H::Move => ControlChange::MoveAll(delta),
+                    H::Rotate if control.kind == crate::ControlKind::Warp => {
+                        ControlChange::Transform {
+                            scope,
+                            pivot: press.transform.to_model(gizmo.center),
+                            scale: [1.; 2],
+                            radians: edit
+                                .rotation
+                                .as_mut()
+                                .unwrap()
+                                .update(press.transform.to_model(gizmo.center), end),
+                            translation: crate::ModelVector::default(),
+                        }
+                    }
                     H::Rotate => ControlChange::Rotation {
                         translation: crate::ModelVector::default(),
                         angle: edits[0].rotation_delta(start, end)?,
@@ -132,7 +244,8 @@ impl ControlGesture {
                         }
                     }
                     H::Scale(index) => {
-                        let (corner, anchor) = gizmo.scale_anchor(*index);
+                        let (corner, opposite) = gizmo.scale_anchor(*index);
+                        let anchor = if press.alt { gizmo.center } else { opposite };
                         let ratio = |d: f32, span: f32| {
                             if span.abs() < 1e-5 {
                                 1.
@@ -153,6 +266,7 @@ impl ControlGesture {
                             [sx, sy]
                         };
                         ControlChange::Transform {
+                            scope,
                             translation: crate::ModelVector::default(),
                             pivot: press.transform.to_model(anchor),
                             scale,
@@ -178,9 +292,15 @@ impl ControlGesture {
         edit.last = Some(change);
         Ok(true)
     }
-    pub fn finish(&mut self, document: &mut Document) -> Result<()> {
+    pub fn finish(
+        &mut self,
+        document: &mut Document,
+        components: &mut Vec<ComponentRef>,
+    ) -> Result<()> {
         if self.editing() {
             document.finish_edit()?;
+        } else if let Some(component) = &self.press.deferred_toggle {
+            components.retain(|c| c != component);
         }
         self.edit = None;
         Ok(())

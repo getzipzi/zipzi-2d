@@ -240,6 +240,184 @@ fn warp_gizmo_scales_all_points_and_cancels_as_one_edit() -> anyhow::Result<()> 
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 1));
     Ok(())
 }
+
+#[test]
+fn warp_alt_scale_uses_the_frozen_center_under_nested_parent_spaces() -> anyhow::Result<()> {
+    for reversed in [false, true] {
+        for (handle, uniform) in [(4, false), (4, true), (3, false)] {
+            let (mut editor, _dir, object, _) = bound_deformer_editor(false, reversed)?;
+            let before = control_points(&mut editor, &object)?;
+            let frame = shown(&mut editor)?;
+            let control = frame
+                .geometry
+                .controls
+                .iter()
+                .find(|c| c.object == object)
+                .unwrap();
+            let gizmo = frame
+                .geometry
+                .deformer_gizmo(control, frame.transform)
+                .unwrap();
+            let start = gizmo
+                .handles
+                .iter()
+                .find(|(h, _)| *h == DeformerHandle::Scale(handle))
+                .unwrap()
+                .1;
+            let (corner, _) = gizmo.scale_anchor(handle);
+            let end = ViewportPoint {
+                x: start.x + (corner.x - gizmo.center.x) * 0.5,
+                y: start.y
+                    + if handle == 3 {
+                        18.
+                    } else {
+                        (corner.y - gizmo.center.y) * 0.25
+                    },
+            };
+            let center = frame.transform.to_model(gizmo.center);
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Down {
+                    primary: false,
+                    point: start,
+                    shift: uniform,
+                    alt: true,
+                },
+            )?;
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: end,
+                    left_down: true,
+                },
+            )?;
+            let after = control_points(&mut editor, &object)?;
+            let sy = if uniform {
+                1.5
+            } else if handle == 3 {
+                1.
+            } else {
+                1.25
+            };
+            for (a, b) in before.iter().zip(&after) {
+                assert!((b.x - (center.x + (a.x - center.x) * 1.5)).abs() < 0.02);
+                assert!((b.y - (center.y + (a.y - center.y) * sy)).abs() < 0.02);
+            }
+            assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+            crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
+            assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+            editor.execute(EditorCommand::Undo)?;
+            assert_eq!(control_points(&mut editor, &object)?, before);
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Down {
+                    primary: false,
+                    point: start,
+                    shift: uniform,
+                    alt: true,
+                },
+            )?;
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: end,
+                    left_down: true,
+                },
+            )?;
+            crate::support::pointer_input(&mut editor, CanvasInput::Cancel)?;
+            assert_eq!(control_points(&mut editor, &object)?, before);
+            assert_eq!(editor.document().unwrap().history_lengths(), (0, 1));
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn warp_shift_click_defers_toggle_and_shift_drag_locks_the_first_canvas_axis() -> anyhow::Result<()>
+{
+    for fine in [false, true] {
+        for reversed in [false, true] {
+            for horizontal in [false, true] {
+                let (mut editor, _dir, object, _) = bound_deformer_editor(false, reversed)?;
+                if fine {
+                    editor.execute(EditorCommand::ToggleWarpFine)?;
+                }
+                let before = control_points(&mut editor, &object)?;
+                let frame = shown(&mut editor)?;
+                let start = editor.overlay().vertices[0].position;
+                click(&mut editor, start, false)?;
+                let selected = |editor: &Editor| {
+                    editor
+                        .overlay()
+                        .vertices
+                        .iter()
+                        .filter(|v| v.selected)
+                        .count()
+                };
+                assert_eq!(selected(&editor), 1);
+                crate::support::pointer_input(
+                    &mut editor,
+                    CanvasInput::Down {
+                        primary: false,
+                        point: start,
+                        shift: true,
+                        alt: false,
+                    },
+                )?;
+                assert_eq!(selected(&editor), 1);
+                crate::support::pointer_input(&mut editor, CanvasInput::Up { point: start })?;
+                assert_eq!(selected(&editor), 0);
+                assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+                click(&mut editor, start, false)?;
+                crate::support::pointer_input(
+                    &mut editor,
+                    CanvasInput::Down {
+                        primary: false,
+                        point: start,
+                        shift: true,
+                        alt: false,
+                    },
+                )?;
+                let first = ViewportPoint {
+                    x: start.x + if horizontal { 12. } else { 4. },
+                    y: start.y + if horizontal { 4. } else { 12. },
+                };
+                crate::support::pointer_input(
+                    &mut editor,
+                    CanvasInput::Move {
+                        point: first,
+                        left_down: true,
+                    },
+                )?;
+                let end = ViewportPoint {
+                    x: start.x + if horizontal { 20. } else { 45. },
+                    y: start.y + if horizontal { 45. } else { 20. },
+                };
+                crate::support::pointer_input(
+                    &mut editor,
+                    CanvasInput::Move {
+                        point: end,
+                        left_down: true,
+                    },
+                )?;
+                let constrained = ViewportPoint {
+                    x: if horizontal { end.x } else { start.x },
+                    y: if horizontal { start.y } else { end.y },
+                };
+                let expected = frame.transform.to_model(constrained);
+                let after = control_points(&mut editor, &object)?;
+                assert!((after[0].x - expected.x).abs() < 0.02);
+                assert!((after[0].y - expected.y).abs() < 0.02);
+                crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
+                assert_eq!(selected(&editor), 1);
+                assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+                editor.execute(EditorCommand::Undo)?;
+                assert_eq!(control_points(&mut editor, &object)?, before);
+            }
+        }
+    }
+    Ok(())
+}
 #[test]
 fn warp_outer_edge_moves_without_selecting_descendant_mesh() -> anyhow::Result<()> {
     let (mut editor, _dir, object) = deformer_editor(false)?;
@@ -581,6 +759,366 @@ fn nested_deformer_adjustments_write_only_the_exact_keyform_in_both_canvas_direc
     }
     Ok(())
 }
+#[test]
+fn warp_rotation_handle_crosses_angle_wraps_and_a_full_turn_is_no_history() -> anyhow::Result<()> {
+    for reversed in [false, true] {
+        let (mut editor, _dir, object, _) = bound_deformer_editor(false, reversed)?;
+        let before = control_points(&mut editor, &object)?;
+        let frame = shown(&mut editor)?;
+        let control = frame
+            .geometry
+            .controls
+            .iter()
+            .find(|c| c.object == object)
+            .unwrap();
+        let gizmo = frame
+            .geometry
+            .deformer_gizmo(control, frame.transform)
+            .unwrap();
+        let start = gizmo
+            .handles
+            .iter()
+            .find(|(h, _)| *h == DeformerHandle::Rotate)
+            .unwrap()
+            .1;
+        let center = frame.transform.to_model(gizmo.center);
+        let first = frame.transform.to_model(start);
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Down {
+                primary: false,
+                point: start,
+                shift: false,
+                alt: false,
+            },
+        )?;
+        let mut end = start;
+        for step in 1..=12 {
+            let angle = (step as f32 * 60.).to_radians();
+            let (s, c) = angle.sin_cos();
+            end = frame.transform.to_viewport(ModelPoint {
+                x: center.x + (first.x - center.x) * c - (first.y - center.y) * s,
+                y: center.y + (first.x - center.x) * s + (first.y - center.y) * c,
+            });
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: end,
+                    left_down: true,
+                },
+            )?;
+            let label = editor.overlay().interaction_label.unwrap();
+            assert_eq!(label, format!("{:.1}°", step as f32 * 60.));
+        }
+        crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
+        assert_eq!(control_points(&mut editor, &object)?, before);
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    }
+    Ok(())
+}
+
+#[test]
+fn warp_selected_frame_rotates_and_scales_only_selected_points() -> anyhow::Result<()> {
+    for fine in [false, true] {
+        for rotate in [false, true] {
+            let (mut editor, _dir, object) = deformer_editor(false)?;
+            if fine {
+                editor.execute(EditorCommand::ToggleWarpFine)?;
+            }
+            let before = control_points(&mut editor, &object)?;
+            let first = editor.overlay().vertices[0].position;
+            let second = editor.overlay().vertices[1].position;
+            click(&mut editor, first, false)?;
+            click(&mut editor, second, true)?;
+            let frame = shown(&mut editor)?;
+            let overlay = editor.overlay();
+            // The selection frame follows its two anchors, rather than the whole lattice.
+            let center = ModelPoint {
+                x: (before[0].x + before[1].x) / 2.,
+                y: (before[0].y + before[1].y) / 2.,
+            };
+            let viewport_center = frame.transform.to_viewport(center);
+            let start = if rotate {
+                overlay.handles.last().unwrap().position
+            } else {
+                overlay.handles[overlay.handles.len() - 1 - 5].position
+            };
+            let source = frame.transform.to_model(start);
+            let end = if rotate {
+                frame.transform.to_viewport(ModelPoint {
+                    x: center.x - (source.y - center.y),
+                    y: center.y + (source.x - center.x),
+                })
+            } else {
+                ViewportPoint {
+                    x: start.x + (frame.transform.to_viewport(before[1]).x - viewport_center.x),
+                    y: start.y,
+                }
+            };
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Down {
+                    primary: false,
+                    point: start,
+                    shift: false,
+                    alt: !rotate,
+                },
+            )?;
+            crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
+            let after = control_points(&mut editor, &object)?;
+            for (a, b) in before[..2].iter().zip(&after[..2]) {
+                let expected = if rotate {
+                    ModelPoint {
+                        x: center.x - (a.y - center.y),
+                        y: center.y + (a.x - center.x),
+                    }
+                } else {
+                    ModelPoint {
+                        x: center.x + (a.x - center.x) * 2.,
+                        y: a.y,
+                    }
+                };
+                assert!(
+                    (b.x - expected.x).abs() < 0.02,
+                    "{a:?} -> {b:?}, expected {expected:?}"
+                );
+                assert!((b.y - expected.y).abs() < 0.02);
+            }
+            assert_eq!(&after[2..], &before[2..]);
+            assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+            editor.execute(EditorCommand::Undo)?;
+            assert_eq!(control_points(&mut editor, &object)?, before);
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn warp_numeric_selection_spans_independent_objects_and_whole_mode_keeps_selection()
+-> anyhow::Result<()> {
+    let (mut document, dir, warp, _, _) = rich_document()?;
+    let saved = document.save(&dir.path().join("independent.zipzi"))?;
+    let mut sdk = zipzi_sdk::AuthoringSession::new(
+        &uuid::Uuid::new_v4().to_string(),
+        zipzi_core::ModelSetup::default(),
+    )?;
+    sdk.open_project(&saved.manifest, None)?;
+    let mut copy = sdk.transform(&warp).unwrap();
+    copy.id = uuid::Uuid::new_v4().to_string();
+    copy.runtime_id = "SecondWarp".into();
+    for point in &mut copy.warp_mut().unwrap().points {
+        point.x += 300.;
+    }
+    let second = ObjectRef::new(ObjectKind::Deformer, &copy.id);
+    sdk.edit("Second Warp", None, |edit| edit.create_transform(copy))?;
+    sdk.save_project(&saved.manifest, None)?;
+    let first = ObjectRef::new(ObjectKind::Deformer, &warp);
+    let mut editor = crate::support::editor_from_document(Document::open(&saved.manifest)?);
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 1024.,
+        height: 768.,
+        scale_factor: 1.,
+    });
+    editor.execute(EditorCommand::SelectObjects(vec![
+        first.clone(),
+        second.clone(),
+    ]))?;
+    editor.execute(EditorCommand::ToggleWarpFine)?;
+    let before_a = control_points(&mut editor, &first)?;
+    let before_b = control_points(&mut editor, &second)?;
+    let frame = shown(&mut editor)?;
+    click(&mut editor, frame.transform.to_viewport(before_a[0]), false)?;
+    click(&mut editor, frame.transform.to_viewport(before_b[0]), true)?;
+    let target = editor.warp_transform_target(&first).unwrap();
+    assert_eq!(target.components.len(), 2);
+    let center = ModelPoint {
+        x: (before_a[0].x + before_b[0].x) / 2.,
+        y: (before_a[0].y + before_b[0].y) / 2.,
+    };
+    editor.execute(EditorCommand::AdjustWarp {
+        target: target.clone(),
+        adjustment: DeformerAdjustment {
+            translation: ModelVector { x: 12., y: 8. },
+            angle: 90.,
+            scale: 0.5,
+        },
+    })?;
+    let after_a = control_points(&mut editor, &first)?;
+    let after_b = control_points(&mut editor, &second)?;
+    for (before, after) in [(&before_a, &after_a), (&before_b, &after_b)] {
+        assert!((after[0].x - (center.x - (before[0].y - center.y) * 0.5 + 12.)).abs() < 0.02);
+        assert!((after[0].y - (center.y + (before[0].x - center.x) * 0.5 + 8.)).abs() < 0.02);
+        assert_eq!(&before[1..], &after[1..]);
+    }
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    editor.execute(EditorCommand::Undo)?;
+    assert_eq!(control_points(&mut editor, &first)?, before_a);
+    assert_eq!(control_points(&mut editor, &second)?, before_b);
+    let frame = shown(&mut editor)?;
+    click(&mut editor, frame.transform.to_viewport(before_a[0]), false)?;
+    click(&mut editor, frame.transform.to_viewport(before_b[0]), true)?;
+    assert_eq!(
+        editor.warp_transform_target(&first).unwrap().components,
+        target.components
+    );
+    assert!(
+        editor
+            .execute(EditorCommand::AdjustWarp {
+                target: target.clone(),
+                adjustment: DeformerAdjustment {
+                    translation: ModelVector::default(),
+                    angle: 15.,
+                    scale: 1.
+                },
+            })
+            .is_err(),
+        "undo must not revive an old numeric destination"
+    );
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 1));
+    editor.execute(EditorCommand::ToggleWarpWhole)?;
+    assert!(
+        editor
+            .warp_transform_target(&first)
+            .unwrap()
+            .components
+            .is_empty()
+    );
+    editor.execute(EditorCommand::AdjustWarp {
+        target: editor.warp_transform_target(&first).unwrap(),
+        adjustment: DeformerAdjustment {
+            translation: ModelVector { x: 5., y: 2. },
+            angle: 0.,
+            scale: 1.,
+        },
+    })?;
+    let moved = control_points(&mut editor, &first)?;
+    for (a, b) in before_a.iter().zip(&moved) {
+        assert!((b.x - a.x - 5.).abs() < 0.02 && (b.y - a.y - 2.).abs() < 0.02);
+    }
+    assert_eq!(control_points(&mut editor, &second)?, before_b);
+    editor.execute(EditorCommand::ToggleWarpWhole)?;
+    assert_eq!(
+        editor.warp_transform_target(&first).unwrap().components,
+        target.components
+    );
+    let stale = editor.warp_transform_target(&first).unwrap();
+    editor.execute(EditorCommand::SetObjectsLocked {
+        objects: vec![second],
+        locked: true,
+    })?;
+    let history = editor.document().unwrap().history_lengths();
+    assert!(
+        editor
+            .execute(EditorCommand::AdjustWarp {
+                target: stale,
+                adjustment: DeformerAdjustment {
+                    translation: ModelVector { x: 3., y: 2. },
+                    angle: 45.,
+                    scale: 1.
+                }
+            })
+            .is_err()
+    );
+    assert_eq!(editor.document().unwrap().history_lengths(), history);
+    assert_eq!(control_points(&mut editor, &first)?, moved);
+    Ok(())
+}
+
+#[test]
+fn warp_numeric_destination_expires_when_preview_parameters_change() -> anyhow::Result<()> {
+    let (mut editor, _dir, object) = deformer_editor(false)?;
+    editor.execute(EditorCommand::CreateParameter(NewParameter::default()))?;
+    let parameter = editor.document().unwrap().parameters()[0].id.clone();
+    editor.execute(EditorCommand::SelectObject(object.clone()))?;
+    let target = editor.warp_transform_target(&object).unwrap();
+    let before = control_points(&mut editor, &object)?;
+    let history = editor.document().unwrap().history_lengths();
+    editor.execute(EditorCommand::SetPreviewParameter {
+        parameter_id: parameter,
+        value: 0.5,
+    })?;
+    assert!(
+        editor
+            .execute(EditorCommand::AdjustWarp {
+                target,
+                adjustment: DeformerAdjustment {
+                    translation: ModelVector { x: 10., y: 0. },
+                    angle: 0.,
+                    scale: 1.
+                },
+            })
+            .is_err()
+    );
+    assert_eq!(control_points(&mut editor, &object)?, before);
+    assert_eq!(editor.document().unwrap().history_lengths(), history);
+    Ok(())
+}
+
+#[test]
+fn warp_handle_only_selection_keeps_anchors_and_other_tangents_unchanged() -> anyhow::Result<()> {
+    use zipzi_core::WarpBezierEvaluation;
+    let (mut editor, _dir, object) = deformer_editor(false)?;
+    let initial = editor
+        .document()
+        .unwrap()
+        .object_index()
+        .get(&object)
+        .unwrap()
+        .properties["warp"]
+        .clone();
+    let warp: zipzi_core::WarpTransform = serde_json::from_value(initial)?;
+    let original = warp.bezier.unwrap_or_else(|| {
+        zipzi_core::WarpBezier::from_lattice(warp.rows, warp.columns, warp.quad, &warp.points)
+    });
+    let first = editor.overlay().handles[0].position;
+    let second = editor.overlay().handles[1].position;
+    click(&mut editor, first, false)?;
+    click(&mut editor, second, true)?;
+    let target = editor.warp_transform_target(&object).unwrap();
+    assert_eq!(target.components.len(), 2);
+    assert!(
+        target
+            .components
+            .iter()
+            .all(|c| (c.id - (1 << 31)) % 5 != 0)
+    );
+    editor.execute(EditorCommand::AdjustWarp {
+        target: target.clone(),
+        adjustment: DeformerAdjustment {
+            translation: ModelVector { x: 6., y: 3. },
+            angle: 90.,
+            scale: 1.,
+        },
+    })?;
+    let changed: zipzi_core::WarpTransform = serde_json::from_value(
+        editor
+            .document()
+            .unwrap()
+            .object_index()
+            .get(&object)
+            .unwrap()
+            .properties["warp"]
+            .clone(),
+    )?;
+    let controller = changed.bezier.unwrap();
+    for (i, (old, new)) in original.nodes.iter().zip(&controller.nodes).enumerate() {
+        assert_eq!(new.position, old.position);
+        for h in 0..4 {
+            let selected = target
+                .components
+                .iter()
+                .any(|c| c.id == (1 << 31) + (i * 5 + h + 1) as u32);
+            if selected {
+                assert_ne!(new.handles[h], old.handles[h]);
+            } else {
+                assert_eq!(new.handles[h], old.handles[h]);
+            }
+        }
+    }
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    Ok(())
+}
+
 #[test]
 fn numeric_warp_rotation_and_scale_use_displayed_center_under_parent() -> anyhow::Result<()> {
     let (mut editor, _dir, object, _) = bound_deformer_editor(false, true)?;

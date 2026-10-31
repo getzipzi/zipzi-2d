@@ -108,6 +108,10 @@ in [`acceptance/screenshots.rs`](acceptance/screenshots.rs). Screenshots go to
 `target/headless-screenshots/` by default; `ZIPZI_SCREENSHOT_DIR` overrides the
 output directory.
 
+The `warp` scene captures whole and selected-point frames and the numeric
+transform dialog in English, Simplified Chinese and Japanese. Set
+`ZIPZI_SCREENSHOT_SAVE=1` to save every image from that scene.
+
 ## Deformer creation
 
 New Warp and New Rotation wrap the current selection in one undo step. Toolbar,
@@ -152,6 +156,18 @@ scale is a percentage, and the reference angle edits the definition separately
 from the current pose. Stored ordinary keyforms receive pose/appearance changes;
 interpolated poses and contributing Deformer BlendShapes require returning to an
 editable stored/base shape. Multiple selections currently request a single target.
+
+**Transform Warp…** applies relative canvas-space displacement, rotation in
+degrees and percentage scale in one undo step. With selected Warp points, it
+transforms that selection, including groups across independent Warps; other
+property fields still require a single object. The toolbar shows the active
+target. Its Whole Warp toggle retains point selection for later local edits.
+
+Warp frames include a separate rotation handle and eight scale handles.
+Shift-dragging a point locks the initial dominant canvas axis; Shift-click still
+toggles selection. Option/Alt on a scale handle scales around the frame center,
+and Shift makes corner scaling uniform. Bezier anchors carry their own handles;
+selecting only handles leaves anchors unchanged. Escape cancels a drag.
 
 **Warp subdivisions…** previews grid density and interpolation for the base,
 ordinary keyforms and BlendShape displacements together. It reports sampled

@@ -41,6 +41,28 @@ vertices use the same edit-access checks as their overlay styling and are exclud
 from click and region selection. They remain hoverable to explain the restriction,
 and Option can remove a previously selected point that has since become disabled.
 
+For editable Warp points, Shift-click toggling is deferred until release. A
+Shift drag keeps the pressed point selected and locks the dominant canvas axis
+when it first crosses the drag threshold; later motion cannot change that axis.
+This applies in both Bezier and lattice-point modes. Option on a Warp scale
+handle instead scales around the frozen frame center, including uniform corner
+scaling with Shift. Option point/region subtraction remains unchanged.
+
+Warp frames have a separate rotation handle. Rotation accumulates successive
+angle deltas across the ±180° boundary; returning through full turns leaves no
+history entry. A point selection shares one frame across independent Warps.
+Selected anchors carry their own Bezier handles; a handle-only selection changes
+only those handles, and lattice selection changes only the selected grid points.
+The Whole Warp toggle retains component selection while using the owning Warp's
+whole frame. Picking and drawing use the same frame geometry. Pointer presses
+freeze the component target and frame for the entire gesture.
+
+Properties' Transform Warp dialog uses this same target and canvas-space math.
+Translation, angle and percentage scale are relative increments around the frame
+center and reset on reopening. Apply publishes one atomic undo step; changing the
+document, editing context or component target expires the dialog. Ancestor and
+descendant Warps cannot be transformed together.
+
 The viewport's Select All command (`Cmd+A` on macOS) shares these region selection
 rules: it selects editable vertices of selected meshes/warps, or visible unlocked
 meshes when there are no component targets. It respects viewport isolation and

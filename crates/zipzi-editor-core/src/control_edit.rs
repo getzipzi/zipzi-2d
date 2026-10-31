@@ -118,9 +118,16 @@ mod hint_tests {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum ControlScope {
+    Whole,
+    Selected,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum ControlChange {
     Translate(crate::ModelVector),
     Transform {
+        scope: ControlScope,
         pivot: ModelPoint,
         scale: [f32; 2],
         radians: f32,
@@ -148,7 +155,17 @@ impl ControlChange {
                 scale,
                 radians,
                 translation,
+                ..
             } => {
+                let radians = (radians + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU)
+                    - std::f32::consts::PI;
+                let radians = if radians.abs() < 1e-6 { 0. } else { radians };
+                if radians == 0.
+                    && scale == [1., 1.]
+                    && translation == crate::ModelVector::default()
+                {
+                    return p;
+                }
                 let (s, c) = radians.sin_cos();
                 let x = (p.x - pivot.x) * scale[0];
                 let y = (p.y - pivot.y) * scale[1];
@@ -160,7 +177,14 @@ impl ControlChange {
         }
     }
     pub(crate) fn moves_all(self) -> bool {
-        !matches!(self, Self::Translate(_))
+        !matches!(
+            self,
+            Self::Translate(_)
+                | Self::Transform {
+                    scope: ControlScope::Selected,
+                    ..
+                }
+        )
     }
 }
 
@@ -767,39 +791,9 @@ impl ControlEdit {
         }
         let mut positions = self.positions.clone();
         for (id, p) in self.ids.iter().zip(&mut positions) {
-            if selected.contains(id)
-                || matches!(
-                    change,
-                    ControlChange::Transform { .. }
-                        | ControlChange::Rotation { .. }
-                        | ControlChange::MoveAll(_)
-                )
-            {
+            if selected.contains(id) || change.moves_all() {
                 let before = self.to_model(*p);
-                let desired = match change {
-                    ControlChange::Translate(delta) | ControlChange::MoveAll(delta) => ModelPoint {
-                        x: before.x + delta.x,
-                        y: before.y + delta.y,
-                    },
-                    ControlChange::Transform {
-                        pivot,
-                        scale,
-                        radians,
-                        translation,
-                    } => {
-                        let (sin, cos) = radians.sin_cos();
-                        let x = (before.x - pivot.x) * scale[0];
-                        let y = (before.y - pivot.y) * scale[1];
-                        ModelPoint {
-                            x: pivot.x + x * cos - y * sin + translation.x,
-                            y: pivot.y + x * sin + y * cos + translation.y,
-                        }
-                    }
-                    ControlChange::Rotation { translation, .. } => ModelPoint {
-                        x: before.x + translation.x,
-                        y: before.y + translation.y,
-                    },
-                };
+                let desired = change.apply_to(before);
                 // Preserve f64 origins and no-op history when no translation is requested.
                 if desired != before {
                     *p = self.from_model(desired, *p)?;
@@ -1050,27 +1044,7 @@ impl ControlSpace {
 impl ControlEdit {
     fn changed_point(&self, p: Vec2, change: ControlChange) -> Result<Vec2> {
         let before = self.to_model(p);
-        let desired = match change {
-            ControlChange::Translate(d) | ControlChange::MoveAll(d) => ModelPoint {
-                x: before.x + d.x,
-                y: before.y + d.y,
-            },
-            ControlChange::Transform {
-                pivot,
-                scale,
-                radians,
-                translation,
-            } => {
-                let (s, c) = radians.sin_cos();
-                let x = (before.x - pivot.x) * scale[0];
-                let y = (before.y - pivot.y) * scale[1];
-                ModelPoint {
-                    x: pivot.x + x * c - y * s + translation.x,
-                    y: pivot.y + x * s + y * c + translation.y,
-                }
-            }
-            _ => bail!("Invalid Warp operation"),
-        };
+        let desired = change.apply_to(before);
         if desired == before {
             Ok(p)
         } else {
@@ -1085,10 +1059,7 @@ impl ControlEdit {
         original: &WarpEdit,
     ) -> Result<()> {
         let mut controller = original.controller.clone();
-        let all = matches!(
-            change,
-            ControlChange::MoveAll(_) | ControlChange::Transform { .. }
-        );
+        let all = change.moves_all();
         let bezier = selected
             .iter()
             .any(|id| crate::warp_bezier::component(*id).is_some());

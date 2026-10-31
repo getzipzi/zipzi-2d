@@ -77,7 +77,7 @@ fn bezier_tangent_bends_lattice_persists_and_undo_restores_legacy_shape() -> any
     assert_eq!(editor.overlay().vertices.len(), 25);
     assert_eq!(
         editor.overlay().handles.iter().filter(|h| h.round).count(),
-        0
+        1 // The independent Warp rotation handle remains in lattice mode.
     );
     let point = editor.overlay().vertices[12].position;
     crate::support::pointer_input(

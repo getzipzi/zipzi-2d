@@ -59,8 +59,9 @@ pub struct ToolController {
     pub deformer_visibility: DeformerVisibility,
     pub deformer_grid: bool,
     pub warp_fine: bool,
+    pub warp_whole: bool,
     pub original_points: bool,
-    components: Vec<ComponentRef>,
+    pub(crate) components: Vec<ComponentRef>,
     hovered: Option<HitTarget>,
     hovered_binding: Option<crate::ViewportBinding>,
     gesture: Option<Gesture>,
@@ -72,6 +73,35 @@ pub struct ToolController {
     overlay_builds: std::sync::atomic::AtomicUsize,
 }
 impl ToolController {
+    pub(crate) fn warp_selection_gizmo(
+        &self,
+        document: &Document,
+        frame: &CanvasFrame,
+    ) -> Option<crate::deformer::WarpSelectionGizmo> {
+        if self.warp_whole {
+            return None;
+        }
+        let components: Vec<_> = self
+            .components
+            .iter()
+            .filter(|c| {
+                document.context().selections.contains(&c.object)
+                    && frame.geometry.in_isolation_scope(&c.object)
+                    && frame.geometry.control(&c.object.id).is_some_and(|control| {
+                        frame.geometry.control_visible(
+                            control,
+                            &document.context().selections,
+                            self.active,
+                            self.deformer_visibility,
+                        )
+                    })
+            })
+            .cloned()
+            .collect();
+        frame
+            .geometry
+            .warp_selection_gizmo(&components, self.warp_fine, frame.transform)
+    }
     pub(crate) fn hovered_binding(&self) -> Option<crate::ViewportBinding> {
         self.hovered_binding
     }

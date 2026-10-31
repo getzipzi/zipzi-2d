@@ -192,7 +192,7 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn show(window: &mut gpui_kit::Window, field: &str, cx: &mut gpui_kit::App) {
+pub(super) fn show(window: &mut gpui_kit::Window, field: &str, cx: &mut gpui_kit::App) {
     let mut searched_from_top = false;
     for _ in 0..60 {
         let viewport = window.find("object-properties").bounds();
