@@ -343,3 +343,55 @@ pub(super) fn bound_deformer_editor(
     shown(&mut editor)?;
     Ok((editor, dir, object, id(24)))
 }
+
+/// Curve tests opt into a baked lattice that can express intermediate curvature.
+pub(super) fn explicit_warp_grid(
+    editor: &mut Editor,
+    dir: &tempfile::TempDir,
+    object: &ObjectRef,
+) -> anyhow::Result<()> {
+    let view = editor.view();
+    let id = editor.active_id().unwrap();
+    let task = editor.prepare_save(id, &dir.path().join("explicit-grid"), false)?;
+    let saved = editor.finish_save(&mut task.run())?;
+    let mut sdk = zipzi_sdk::AuthoringSession::new(
+        &uuid::Uuid::new_v4().to_string(),
+        zipzi_core::ModelSetup::default(),
+    )?;
+    sdk.open_project(&saved.manifest, None)?;
+    sdk.edit("Explicit conversion density", None, |edit| {
+        edit.edit_scene_content(zipzi_sdk::SceneContentEdit::ResizeWarp {
+            transform_id: object.id.clone(),
+            rows: 4,
+            columns: 4,
+            quad: true,
+        })
+        .map(|_| ())
+    })?;
+    sdk.edit("Explicit controller density", None, |edit| {
+        edit.edit_scene_content(zipzi_sdk::SceneContentEdit::WarpAuthoring {
+            transform_id: object.id.clone(),
+            settings: zipzi_core::WarpAuthoringSettings {
+                bezier_grid: Some(zipzi_core::WarpBezierGrid {
+                    rows: 2,
+                    columns: 2,
+                }),
+                ..Default::default()
+            },
+        })
+        .map(|_| ())
+    })?;
+    sdk.save_project(&saved.manifest, None)?;
+    *editor = crate::support::editor_from_document(Document::open(&saved.manifest)?);
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 2.,
+    });
+    editor.reset_view();
+    editor.set_zoom_at(view.zoom, None);
+    editor.pan_by(view.pan);
+    editor.execute(EditorCommand::SelectObject(object.clone()))?;
+    shown(editor)?;
+    Ok(())
+}

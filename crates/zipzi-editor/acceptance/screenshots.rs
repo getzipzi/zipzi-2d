@@ -23,6 +23,7 @@ mod timeline_scene;
 mod toolbar_scene;
 mod transfer_scene;
 mod viewports_scene;
+mod warp_authoring_scene;
 mod warp_scene;
 
 pub(super) fn run() -> anyhow::Result<()> {
@@ -36,6 +37,11 @@ pub(super) fn run() -> anyhow::Result<()> {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
+    if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("warp-authoring") {
+        warp_authoring_scene::run(&directory)?;
+        println!("Warp authoring screenshots passed.");
+        return Ok(());
+    }
     if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("warp") {
         warp_scene::run(&directory)?;
         println!("Warp interaction screenshots passed.");

@@ -1,9 +1,10 @@
 use super::{
-    graph::{attr, Graph, Node},
-    invalid, ImportedModel, Result,
+    ImportedModel, Result,
+    graph::{Graph, Node, attr},
+    invalid,
 };
 use std::collections::HashMap;
-use zipzi_core::{types::*, Document};
+use zipzi_core::{Document, types::*};
 pub(super) fn edit(result: EditResult) -> Result<()> {
     status(result.status)
 }
@@ -208,6 +209,7 @@ pub(super) fn read(
                 tag => return Err(invalid(format!("Unsupported deformer {tag}"))),
             };
             edit(document.create_transform(Transform {
+                warp_authoring: None,
                 id: target,
                 runtime_id: g.runtime(n)?,
                 name: g.text(n, "localName")?,

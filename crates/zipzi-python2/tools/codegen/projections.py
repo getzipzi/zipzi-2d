@@ -151,7 +151,7 @@ DOMAIN_MEMBERS = {
     },
     'zipzi_contract::scene_reference': {'scene': 'SceneReference'},
     'zipzi_contract::spatial': {'spatial': 'GeometryHit GeometryQuery ObjectBounds ObjectTarget SpatialFrame SpatialQuery SpatialResult SpatialSamples TriangleHit'},
-    'zipzi_contract::warp_bezier': {'scene': 'WarpBezier WarpBezierNode'},
+    'zipzi_contract::warp_bezier': {'scene': 'WarpBezier WarpBezierNode WarpAuthoringSettings WarpBezierControlPatch WarpBezierEditMode WarpBezierGrid WarpShapeAction'},
 }
 
 

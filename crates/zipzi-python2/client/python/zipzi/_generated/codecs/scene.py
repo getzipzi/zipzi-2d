@@ -17,7 +17,7 @@ from .._modeling_support import _check_usize
 from collections.abc import Mapping
 from collections.abc import Mapping as _Mapping
 from typing import cast
-from ..values import Appearance, AttachmentRef, AttachmentRefResolved, AttachmentRefUnresolved, BlendMode, Canvas, DrawOrderGroup, Glue, GlueVertexPair, HierarchyOrder, ModelSetup, Offscreen, OffscreenDeletePolicy, OffscreenDeletePolicyNeutral, OffscreenDeletePolicyRejectReferences, OffscreenDeletePolicyRemap, OffscreenMappingPatch, OrganizationCollection, OrganizationCollectionParameterGroups, OrganizationCollectionParameters, OrganizationCollectionPartMembers, OrganizationDeletePolicy, Part, PartId, ReparentContext, ReparentPlacement, ReparentStrategy, RotationPose, RotationTransform, SceneCollection, SceneCollectionDeformation, SceneCollectionDrawing, SceneCollectionDrawingGroups, SceneCollectionGlues, SceneCollectionOrganization, SceneContentTarget, SceneContentTargetGluePair, SceneContentTargetOffscreenKeyform, SceneContentTargetOffscreenMapping, SceneContentTargetTriangle, SceneContentTargetVertexPosition, SceneContentTargetVertexUv, SceneContentTargetWarpBezierControl, SceneContentTargetWarpPoint, SceneContentValue, SceneContentValueGluePair, SceneContentValueMapping, SceneContentValueOffscreenKeyform, SceneContentValuePoint, SceneContentValueTriangle, SceneCopyScope, SceneCreate, SceneCreateGlue, SceneCreateMesh, SceneCreateOffscreen, SceneCreateRotation, SceneCreateWarp, SceneField, SceneFieldValue, SceneFieldValueAppearance, SceneFieldValueContext, SceneFieldValueEnabled, SceneFieldValueGlueEndpoints, SceneFieldValueGlueIntensity, SceneFieldValueLabel, SceneFieldValueMasks, SceneFieldValueMeshDrawing, SceneFieldValueOffscreen, SceneFieldValueRotation, SceneFieldValueRuntimeId, SceneFieldValueTexture, SceneFieldValueWarp, SceneReference, SceneReferenceResolved, SceneReferenceUnresolved, SceneReferenceUnspecified, ShapeTarget, ShapeTargetBase, ShapeTargetBlend, ShapeTargetOrdinary, Transform, TransformData, TransformDataRotation, TransformDataWarp, TransformId, Vec2, WarpBezier, WarpBezierNode, WarpPointPatch, WarpTransform
+from ..values import Appearance, AttachmentRef, AttachmentRefResolved, AttachmentRefUnresolved, BlendMode, Canvas, DrawOrderGroup, Glue, GlueVertexPair, HierarchyOrder, ModelSetup, Offscreen, OffscreenDeletePolicy, OffscreenDeletePolicyNeutral, OffscreenDeletePolicyRejectReferences, OffscreenDeletePolicyRemap, OffscreenMappingPatch, OrganizationCollection, OrganizationCollectionParameterGroups, OrganizationCollectionParameters, OrganizationCollectionPartMembers, OrganizationDeletePolicy, Part, PartId, ReparentContext, ReparentPlacement, ReparentStrategy, RotationPose, RotationTransform, SceneCollection, SceneCollectionDeformation, SceneCollectionDrawing, SceneCollectionDrawingGroups, SceneCollectionGlues, SceneCollectionOrganization, SceneContentTarget, SceneContentTargetGluePair, SceneContentTargetOffscreenKeyform, SceneContentTargetOffscreenMapping, SceneContentTargetTriangle, SceneContentTargetVertexPosition, SceneContentTargetVertexUv, SceneContentTargetWarpBezierControl, SceneContentTargetWarpPoint, SceneContentValue, SceneContentValueGluePair, SceneContentValueMapping, SceneContentValueOffscreenKeyform, SceneContentValuePoint, SceneContentValueTriangle, SceneCopyScope, SceneCreate, SceneCreateGlue, SceneCreateMesh, SceneCreateOffscreen, SceneCreateRotation, SceneCreateWarp, SceneField, SceneFieldValue, SceneFieldValueAppearance, SceneFieldValueContext, SceneFieldValueEnabled, SceneFieldValueGlueEndpoints, SceneFieldValueGlueIntensity, SceneFieldValueLabel, SceneFieldValueMasks, SceneFieldValueMeshDrawing, SceneFieldValueOffscreen, SceneFieldValueRotation, SceneFieldValueRuntimeId, SceneFieldValueTexture, SceneFieldValueWarp, SceneReference, SceneReferenceResolved, SceneReferenceUnresolved, SceneReferenceUnspecified, ShapeTarget, ShapeTargetBase, ShapeTargetBlend, ShapeTargetOrdinary, Transform, TransformData, TransformDataRotation, TransformDataWarp, TransformId, Vec2, WarpAuthoringSettings, WarpBezier, WarpBezierControlPatch, WarpBezierEditMode, WarpBezierGrid, WarpBezierNode, WarpPointPatch, WarpShapeAction, WarpTransform
 
 def validate_SceneReference(value: SceneReference) -> None:
     if isinstance(value, SceneReferenceUnspecified):
@@ -119,14 +119,16 @@ def validate_Transform(value: Transform) -> None:
     validate_TransformData(value.data)
     _check_bool(value.enabled)
     validate_Appearance(value.appearance)
+    if value.warp_authoring is not None:
+        validate_WarpAuthoringSettings(value.warp_authoring)
 
 def encode_Transform(value: Transform) -> object:
-    return {'id': value.id, 'runtime_id': value.runtime_id, 'name': value.name, 'part_id': None if value.part_id is None else encode_PartId(value.part_id), 'parent_id': None if value.parent_id is None else encode_TransformId(value.parent_id), 'data': encode_TransformData(value.data), 'enabled': value.enabled, 'appearance': encode_Appearance(value.appearance)}
+    return {'id': value.id, 'runtime_id': value.runtime_id, 'name': value.name, 'part_id': None if value.part_id is None else encode_PartId(value.part_id), 'parent_id': None if value.parent_id is None else encode_TransformId(value.parent_id), 'data': encode_TransformData(value.data), 'enabled': value.enabled, 'appearance': encode_Appearance(value.appearance), 'warp_authoring': None if value.warp_authoring is None else encode_WarpAuthoringSettings(value.warp_authoring)}
 
 def read_Transform(value: object) -> Transform:
     if isinstance(value, Transform): return value
     r = record(value)
-    return Transform(id=string(r['id']), runtime_id=string(r['runtime_id']), name=string(r['name']), part_id=None if r.get('part_id', None) is None else read_PartId(r.get('part_id', None)), parent_id=None if r.get('parent_id', None) is None else read_TransformId(r.get('parent_id', None)), data=read_TransformData(r['data']), enabled=_boolean(r['enabled']), appearance=read_Appearance(r['appearance']))
+    return Transform(id=string(r['id']), runtime_id=string(r['runtime_id']), name=string(r['name']), part_id=None if r.get('part_id', None) is None else read_PartId(r.get('part_id', None)), parent_id=None if r.get('parent_id', None) is None else read_TransformId(r.get('parent_id', None)), data=read_TransformData(r['data']), enabled=_boolean(r['enabled']), appearance=read_Appearance(r['appearance']), warp_authoring=None if r.get('warp_authoring', None) is None else read_WarpAuthoringSettings(r.get('warp_authoring', None)))
 
 def validate_PartId(value: PartId) -> None:
     if not isinstance(value, PartId):
@@ -274,6 +276,47 @@ def read_RotationPose(value: object) -> RotationPose:
     if isinstance(value, RotationPose): return value
     r = record(value)
     return RotationPose(origin=read_PreciseVec2(r['origin']), angle=number(r['angle']), scale=number(r['scale']), reflect_x=_boolean(r['reflect_x']), reflect_y=_boolean(r['reflect_y']))
+
+def validate_WarpAuthoringSettings(value: WarpAuthoringSettings) -> None:
+    if not isinstance(value, WarpAuthoringSettings):
+        raise TypeError("Expected WarpAuthoringSettings")
+    _check_bool(value.auto_reform)
+    validate_WarpBezierEditMode(value.edit_mode)
+    if value.bezier_grid is not None:
+        validate_WarpBezierGrid(value.bezier_grid)
+
+def encode_WarpAuthoringSettings(value: WarpAuthoringSettings) -> object:
+    return {'auto_reform': value.auto_reform, 'edit_mode': encode_WarpBezierEditMode(value.edit_mode), 'bezier_grid': None if value.bezier_grid is None else encode_WarpBezierGrid(value.bezier_grid)}
+
+def read_WarpAuthoringSettings(value: object) -> WarpAuthoringSettings:
+    if isinstance(value, WarpAuthoringSettings): return value
+    r = record(value)
+    return WarpAuthoringSettings(auto_reform=_boolean(r.get('auto_reform', False)), edit_mode=read_WarpBezierEditMode(r.get('edit_mode', 'local')), bezier_grid=None if r.get('bezier_grid', None) is None else read_WarpBezierGrid(r.get('bezier_grid', None)))
+
+def validate_WarpBezierEditMode(value: WarpBezierEditMode) -> None:
+    if not isinstance(value, WarpBezierEditMode):
+        raise TypeError("Expected WarpBezierEditMode")
+
+def encode_WarpBezierEditMode(value: WarpBezierEditMode) -> object:
+    return value.value
+
+def read_WarpBezierEditMode(value: object) -> WarpBezierEditMode:
+    if isinstance(value, WarpBezierEditMode): return value
+    return WarpBezierEditMode(string(value))
+
+def validate_WarpBezierGrid(value: WarpBezierGrid) -> None:
+    if not isinstance(value, WarpBezierGrid):
+        raise TypeError("Expected WarpBezierGrid")
+    _check_u32(value.rows)
+    _check_u32(value.columns)
+
+def encode_WarpBezierGrid(value: WarpBezierGrid) -> object:
+    return {'rows': value.rows, 'columns': value.columns}
+
+def read_WarpBezierGrid(value: object) -> WarpBezierGrid:
+    if isinstance(value, WarpBezierGrid): return value
+    r = record(value)
+    return WarpBezierGrid(rows=integer(r['rows']), columns=integer(r['columns']))
 
 def validate_Glue(value: Glue) -> None:
     from .bindings import validate_GlueBinding
@@ -738,6 +781,35 @@ def read_WarpPointPatch(value: object) -> WarpPointPatch:
     if isinstance(value, WarpPointPatch): return value
     r = record(value)
     return WarpPointPatch(row=integer(r['row']), column=integer(r['column']), point=read_Vec2(r['point']))
+
+def validate_WarpBezierControlPatch(value: WarpBezierControlPatch) -> None:
+    from .common import validate_Vec2
+    if not isinstance(value, WarpBezierControlPatch):
+        raise TypeError("Expected WarpBezierControlPatch")
+    _check_u32(value.node)
+    _check_u8(value.component)
+    validate_Vec2(value.point)
+
+def encode_WarpBezierControlPatch(value: WarpBezierControlPatch) -> object:
+    from .common import encode_Vec2
+    return {'node': value.node, 'component': value.component, 'point': encode_Vec2(value.point)}
+
+def read_WarpBezierControlPatch(value: object) -> WarpBezierControlPatch:
+    from .common import read_Vec2
+    if isinstance(value, WarpBezierControlPatch): return value
+    r = record(value)
+    return WarpBezierControlPatch(node=integer(r['node']), component=integer(r['component']), point=read_Vec2(r['point']))
+
+def validate_WarpShapeAction(value: WarpShapeAction) -> None:
+    if not isinstance(value, WarpShapeAction):
+        raise TypeError("Expected WarpShapeAction")
+
+def encode_WarpShapeAction(value: WarpShapeAction) -> object:
+    return value.value
+
+def read_WarpShapeAction(value: object) -> WarpShapeAction:
+    if isinstance(value, WarpShapeAction): return value
+    return WarpShapeAction(string(value))
 
 def validate_OffscreenDeletePolicy(value: OffscreenDeletePolicy) -> None:
     if isinstance(value, OffscreenDeletePolicyRejectReferences):

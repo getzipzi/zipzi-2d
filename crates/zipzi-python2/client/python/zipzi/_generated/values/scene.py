@@ -41,6 +41,10 @@ def read_ShapeTarget(value: object) -> ShapeTarget:
     from ..codecs.scene import read_ShapeTarget as decode
     return decode(value)
 
+def read_WarpBezierEditMode(value: object) -> WarpBezierEditMode:
+    from ..codecs.scene import read_WarpBezierEditMode as decode
+    return decode(value)
+
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneReferenceUnspecified(CompactValue):
     'Immutable owned SceneReferenceUnspecified value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
@@ -99,7 +103,7 @@ Part.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class Transform(CompactValue):
-    'Immutable owned Transform value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects the\nroot/unassigned container.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.\ndata: Typed Warp or Rotation deformation definition; its variant determines lattice versus\nrotation-pose interpretation.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\nappearance: Opacity and multiply/screen color factors for this object or shape.'
+    'Immutable owned Transform value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects the\nroot/unassigned container.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.\ndata: Typed Warp or Rotation deformation definition; its variant determines lattice versus\nrotation-pose interpretation.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\nappearance: Opacity and multiply/screen color factors for this object or shape.\nwarp_authoring: Persistent Warp editing policy; never used for runtime deformation evaluation.'
     id: str
     runtime_id: str
     name: str
@@ -108,6 +112,7 @@ class Transform(CompactValue):
     data: TransformData
     enabled: bool
     appearance: Appearance
+    warp_authoring: (WarpAuthoringSettings | None) = None
 
 Transform.__module__ = "zipzi.modeling.scene"
 
@@ -198,6 +203,30 @@ class RotationPose(CompactValue):
     reflect_y: bool
 
 RotationPose.__module__ = "zipzi.modeling.scene"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class WarpAuthoringSettings(CompactValue):
+    "Immutable owned WarpAuthoringSettings value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nauto_reform: Rebuild the edited shape's baked grid on subsequent Bezier edits.\nedit_mode: Neighborhood or tangent-coupling rule for subsequent control edits.\nbezier_grid: Explicit controller density shared by stored shapes; None retains imported or derived density."
+    auto_reform: bool = field(default_factory=lambda: _boolean(False))
+    edit_mode: WarpBezierEditMode = field(default_factory=lambda: read_WarpBezierEditMode('local'))
+    bezier_grid: (WarpBezierGrid | None) = None
+
+WarpAuthoringSettings.__module__ = "zipzi.modeling.scene"
+
+class WarpBezierEditMode(str, Enum):
+    __module__ = "zipzi.modeling.scene"
+    LOCAL = 'local'
+    SMOOTH_LOCAL = 'smooth_local'
+    SMOOTH_GLOBAL = 'smooth_global'
+    PRESERVE_STRUCTURE = 'preserve_structure'
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class WarpBezierGrid(CompactValue):
+    'Immutable owned WarpBezierGrid value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nrows: Vertical controller cell count, from 1 to 32.\ncolumns: Horizontal controller cell count, from 1 to 32.'
+    rows: int
+    columns: int
+
+WarpBezierGrid.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class Glue(CompactValue):
@@ -849,7 +878,7 @@ SceneContentEditReplaceTriangles.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditWarpPoints(CompactValue):
-    'Immutable owned SceneContentEditWarpPoints value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntransform_id: Stable deformation-transform ID in this document.\ntarget: Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.\nupdates: Ordered content patches applied together by the native edit.\nclear_bezier: Explicitly remove the authoring Bezier controller when editing baked lattice points.'
+    'Immutable owned SceneContentEditWarpPoints value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntransform_id: Stable deformation-transform ID in this document.\ntarget: Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.\nupdates: Ordered content patches applied together by the native edit.\nclear_bezier: Explicitly remove the authoring Bezier controller when editing baked lattice points.\nFalse preserves the controller and retains lattice detail for subsequent delta edits.'
     _variant: _ClassVar[str] = 'warp_points'
     transform_id: str
     target: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'}))
@@ -870,6 +899,38 @@ class SceneContentEditWarpBezier(CompactValue):
     controller: (WarpBezier | None) = None
 
 SceneContentEditWarpBezier.__module__ = "zipzi.modeling.scene"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class SceneContentEditWarpBezierControls(CompactValue):
+    'Immutable owned SceneContentEditWarpBezierControls value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntransform_id: Stable Warp transform ID.\ntarget: Explicit base or ordinary stored shape; BlendShapes have no independent controller.\nupdates: Explicit controller destinations; the stored editing mode supplies neighborhood influence.'
+    _variant: _ClassVar[str] = 'warp_bezier_controls'
+    transform_id: str
+    target: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'}))
+    updates: tuple[WarpBezierControlPatch, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'updates', tuple(self.updates))
+
+SceneContentEditWarpBezierControls.__module__ = "zipzi.modeling.scene"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class SceneContentEditWarpAuthoring(CompactValue):
+    'Immutable owned SceneContentEditWarpAuthoring value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntransform_id: Stable Warp transform ID.\nsettings: Object editing settings. An explicit grid refits all stored controllers without changing baked points.'
+    _variant: _ClassVar[str] = 'warp_authoring'
+    transform_id: str
+    settings: WarpAuthoringSettings
+
+SceneContentEditWarpAuthoring.__module__ = "zipzi.modeling.scene"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class SceneContentEditWarpShape(CompactValue):
+    'Immutable owned SceneContentEditWarpShape value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntransform_id: Stable Warp transform ID.\ntarget: Explicit base or ordinary stored shape; other stored shapes remain unchanged.\naction: Reset preserves baked points; Reform samples the controller and replaces baked detail.'
+    _variant: _ClassVar[str] = 'warp_shape'
+    transform_id: str
+    target: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'}))
+    action: WarpShapeAction
+
+SceneContentEditWarpShape.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditResizeWarp(CompactValue):
@@ -1023,7 +1084,7 @@ class SceneContentEditSetOffscreenMapping(CompactValue):
 
 SceneContentEditSetOffscreenMapping.__module__ = "zipzi.modeling.scene"
 
-SceneContentEdit: TypeAlias = SceneContentEditMeshVertices | SceneContentEditInsertMeshVertices | SceneContentEditDeleteMeshVertices | SceneContentEditReorderMeshVertices | SceneContentEditInsertTriangle | SceneContentEditPatchTriangle | SceneContentEditDeleteTriangles | SceneContentEditReplaceTriangles | SceneContentEditWarpPoints | SceneContentEditWarpBezier | SceneContentEditResizeWarp | SceneContentEditInsertGluePair | SceneContentEditPatchGluePair | SceneContentEditMoveGluePairs | SceneContentEditTransferGluePairs | SceneContentEditDuplicateGluePairs | SceneContentEditDeleteGluePairs | SceneContentEditInsertOffscreenKeyform | SceneContentEditPatchOffscreenKeyform | SceneContentEditDuplicateOffscreenKeyforms | SceneContentEditReorderOffscreenKeyforms | SceneContentEditDeleteOffscreenKeyforms | SceneContentEditSetOffscreenMapping
+SceneContentEdit: TypeAlias = SceneContentEditMeshVertices | SceneContentEditInsertMeshVertices | SceneContentEditDeleteMeshVertices | SceneContentEditReorderMeshVertices | SceneContentEditInsertTriangle | SceneContentEditPatchTriangle | SceneContentEditDeleteTriangles | SceneContentEditReplaceTriangles | SceneContentEditWarpPoints | SceneContentEditWarpBezier | SceneContentEditWarpBezierControls | SceneContentEditWarpAuthoring | SceneContentEditWarpShape | SceneContentEditResizeWarp | SceneContentEditInsertGluePair | SceneContentEditPatchGluePair | SceneContentEditMoveGluePairs | SceneContentEditTransferGluePairs | SceneContentEditDuplicateGluePairs | SceneContentEditDeleteGluePairs | SceneContentEditInsertOffscreenKeyform | SceneContentEditPatchOffscreenKeyform | SceneContentEditDuplicateOffscreenKeyforms | SceneContentEditReorderOffscreenKeyforms | SceneContentEditDeleteOffscreenKeyforms | SceneContentEditSetOffscreenMapping
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ShapeTargetBase(CompactValue):
@@ -1063,6 +1124,20 @@ class WarpPointPatch(CompactValue):
     point: Vec2
 
 WarpPointPatch.__module__ = "zipzi.modeling.scene"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class WarpBezierControlPatch(CompactValue):
+    "Immutable owned WarpBezierControlPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nnode: Zero-based controller node in row-major order.\ncomponent: 0 is the anchor; 1..4 are left, right, up and down handles.\npoint: Absolute destination in the Warp's parent authoring space."
+    node: int
+    component: int
+    point: Vec2
+
+WarpBezierControlPatch.__module__ = "zipzi.modeling.scene"
+
+class WarpShapeAction(str, Enum):
+    __module__ = "zipzi.modeling.scene"
+    RESET_CONTROLLER = 'reset_controller'
+    REFORM = 'reform'
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OffscreenDeletePolicyRejectReferences(CompactValue):

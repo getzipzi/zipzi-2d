@@ -241,6 +241,7 @@ pub(crate) struct WarpEdit {
     transform: Transform,
     binding: Option<SceneBinding>,
     controller: zipzi_core::WarpBezier,
+    stored_controller: Option<zipzi_core::WarpBezier>,
 }
 #[derive(Clone, Debug)]
 pub(crate) struct ControlSpace {
@@ -671,12 +672,36 @@ impl ControlEdit {
                     &keyforms[slot].bezier
                 });
             let controller = stored.clone().unwrap_or_else(|| {
-                zipzi_core::WarpBezier::from_lattice(warp.rows, warp.columns, warp.quad, &positions)
+                transform
+                    .warp_authoring
+                    .as_ref()
+                    .and_then(|s| s.bezier_grid)
+                    .map_or_else(
+                        || {
+                            zipzi_core::WarpBezier::from_lattice(
+                                warp.rows,
+                                warp.columns,
+                                warp.quad,
+                                &positions,
+                            )
+                        },
+                        |grid| {
+                            zipzi_core::WarpBezier::from_lattice_grid(
+                                warp.rows,
+                                warp.columns,
+                                warp.quad,
+                                &positions,
+                                grid,
+                            )
+                        },
+                    )
             });
+            let stored_controller = stored.clone();
             Some(WarpEdit {
                 transform,
                 binding,
                 controller,
+                stored_controller,
             })
         } else {
             None
@@ -1068,9 +1093,6 @@ impl ControlEdit {
         let bezier = selected
             .iter()
             .any(|id| crate::warp_bezier::component(*id).is_some());
-        let handles = selected
-            .iter()
-            .any(|id| crate::warp_bezier::component(*id).is_some_and(|(_, part)| part > 0));
         let mut transform = original.transform.clone();
         let mut binding = original.binding.clone();
         let old = original.transform.warp().unwrap();
@@ -1085,52 +1107,55 @@ impl ControlEdit {
                 }
             }
         }
+        let settings = original
+            .transform
+            .warp_authoring
+            .clone()
+            .unwrap_or_default();
+        if bezier && !all {
+            let patches = selected
+                .iter()
+                .filter_map(|id| crate::warp_bezier::component(*id))
+                .map(|(node, part)| zipzi_core::WarpBezierControlPatch {
+                    node: node as u32,
+                    component: part as u8,
+                    point: if part == 0 {
+                        controller.nodes[node].position
+                    } else {
+                        controller.nodes[node].handles[part - 1]
+                    },
+                })
+                .collect::<Vec<_>>();
+            let mut influenced = original
+                .controller
+                .edit_controls(&patches, settings.edit_mode)
+                .map_err(|s| anyhow::anyhow!(s.message))?;
+            for (i, node) in controller.nodes.iter().enumerate() {
+                if selected.contains(&crate::warp_bezier::component_id(i, 0)) {
+                    influenced.nodes[i] = node.clone();
+                }
+            }
+            controller = influenced;
+        }
         // Returning to the press position restores absent metadata and grid size too.
         if (bezier || all) && controller == original.controller {
             return Ok(edit.replace_warp_authoring(transform, binding)?);
         }
-        // Uniform integer refinement preserves existing bilinear cells and
-        // triangle diagonals, including untouched keyforms.
-        let factor = if handles {
-            4u32.div_ceil(old.rows)
-                .max(4u32.div_ceil(old.columns))
-                .max(1)
-        } else {
-            1
-        };
-        let rows = old.rows * factor;
-        let columns = old.columns * factor;
-        let resample = |points: &[Vec2]| -> Vec<Vec2> {
-            if rows == old.rows && columns == old.columns {
-                return points.to_vec();
-            }
-            let source: Vec<_> = points.iter().flat_map(|p| [p.x, p.y]).collect();
-            let input: Vec<_> = (0..=rows)
-                .flat_map(|y| {
-                    (0..=columns)
-                        .flat_map(move |x| [x as f32 / columns as f32, y as f32 / rows as f32])
-                })
-                .collect();
-            let mut out = vec![0.; input.len()];
-            zipzi_core::deformers::warp_points(
-                old.rows as i32,
-                old.columns as i32,
-                old.quad,
-                &source,
-                &input,
-                &mut out,
-                input.len() / 2,
-            );
-            out.chunks_exact(2).map(|p| Vec2::new(p[0], p[1])).collect()
-        };
-        let baseline = resample(&self.positions);
+        // Controller edits never change the user's explicit runtime lattice density.
+        let rows = old.rows;
+        let columns = old.columns;
+        let baseline = self.positions.clone();
         let positions = if all {
             baseline
                 .into_iter()
                 .map(|p| self.changed_point(p, change))
                 .collect::<Result<Vec<_>>>()?
         } else if bezier {
-            controller.apply_delta(&original.controller, rows, columns, &baseline)
+            if settings.auto_reform {
+                controller.lattice(rows, columns)
+            } else {
+                controller.apply_delta(&original.controller, rows, columns, &baseline)
+            }
         } else {
             baseline
                 .into_iter()
@@ -1155,21 +1180,15 @@ impl ControlEdit {
         let stored = if bezier || all {
             Some(controller)
         } else {
-            None
+            original.stored_controller.clone()
         };
         let zipzi_core::TransformData::Warp(w) = &mut transform.data else {
             unreachable!()
         };
-        w.rows = rows;
-        w.columns = columns;
-        w.points = resample(&old.points);
         if let Some((b, slot)) = binding.as_mut().zip(self.slot) {
             let SceneTrack::Warp { keyforms, .. } = &mut b.track else {
                 unreachable!()
             };
-            for f in keyforms.iter_mut() {
-                f.positions = resample(&f.positions);
-            }
             let f = &mut keyforms[slot];
             f.positions = positions;
             f.bezier = stored;

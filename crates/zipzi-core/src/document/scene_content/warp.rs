@@ -12,6 +12,9 @@ impl Document {
         let owned_id = match &edit {
             E::WarpPoints { transform_id, .. }
             | E::WarpBezier { transform_id, .. }
+            | E::WarpBezierControls { transform_id, .. }
+            | E::WarpAuthoring { transform_id, .. }
+            | E::WarpShape { transform_id, .. }
             | E::ResizeWarp { transform_id, .. } => transform_id.clone(),
             _ => unreachable!(),
         };
@@ -21,6 +24,48 @@ impl Document {
             .get_transform(id)
             .ok_or_else(|| Status::error("MISSING_TRANSFORM", id))?
             .clone();
+        let settings = transform.warp_authoring.clone().unwrap_or_default();
+        if let E::WarpAuthoring { settings: next, .. } = &edit {
+            if let Some(grid) = next
+                .bezier_grid
+                .filter(|grid| Some(*grid) != settings.bezier_grid)
+            {
+                check(grid.validate())?;
+                let warp = transform
+                    .warp_mut()
+                    .ok_or_else(|| Status::error("NOT_WARP", id))?;
+                if let Some(controller) = &mut warp.bezier {
+                    *controller = controller.resized(grid);
+                    plan.report.resampled_shapes += 1;
+                }
+                if let Some(binding) = self.binding_for_scene(id) {
+                    let mut changed = binding.clone();
+                    let SceneTrack::Warp { keyforms, .. } = &mut changed.track else {
+                        return Err(Status::error("WRONG_SHAPE_TARGET", id));
+                    };
+                    for form in keyforms {
+                        control.check()?;
+                        if let Some(controller) = &mut form.bezier {
+                            *controller = controller.resized(grid);
+                            plan.report.resampled_shapes += 1;
+                        }
+                    }
+                    if &changed != binding {
+                        self.content_unlocked(&binding.id)?;
+                        plan.domain.affected.push(binding.id.clone());
+                        plan.domain.delta.scene_bindings.push(changed);
+                    }
+                }
+            }
+            if transform.warp().is_none() {
+                return Err(Status::error("NOT_WARP", id));
+            }
+            transform.warp_authoring =
+                (*next != crate::WarpAuthoringSettings::default()).then(|| next.clone());
+            plan.domain.affected.push(id.clone());
+            plan.domain.delta.transforms.push(transform);
+            return Ok(());
+        }
         let warp = transform
             .warp_mut()
             .ok_or_else(|| Status::error("NOT_WARP", id))?;
@@ -72,7 +117,10 @@ impl Document {
                 }
                 plan.report.losses.push("Warp resize samples each existing lattice at the new nodes; interpolation between nodes may change".into());
             }
-            E::WarpPoints { target, .. } | E::WarpBezier { target, .. } => match target {
+            E::WarpPoints { target, .. }
+            | E::WarpBezier { target, .. }
+            | E::WarpBezierControls { target, .. }
+            | E::WarpShape { target, .. } => match target {
                 ShapeTarget::Base => edit_shape(
                     &mut warp.points,
                     &mut warp.bezier,
@@ -80,6 +128,7 @@ impl Document {
                     warp.columns,
                     warp.quad,
                     &edit,
+                    &settings,
                 )?,
                 ShapeTarget::Ordinary {
                     binding_id,
@@ -105,6 +154,7 @@ impl Document {
                         warp.columns,
                         warp.quad,
                         &edit,
+                        &settings,
                     )?;
                     plan.domain.affected.push(b.id.clone());
                     plan.domain.delta.scene_bindings.push(b);
@@ -113,7 +163,7 @@ impl Document {
                     binding_id,
                     sample_id,
                 } => {
-                    if matches!(edit, E::WarpBezier { .. }) {
+                    if !matches!(edit, E::WarpPoints { .. }) {
                         return Err(Status::error("BLEND_HAS_NO_BEZIER_CONTROLLER", binding_id));
                     }
                     self.content_unlocked(binding_id)?;
@@ -138,6 +188,7 @@ impl Document {
                         warp.columns,
                         warp.quad,
                         &edit,
+                        &settings,
                     )?;
                     plan.domain.affected.push(b.id.clone());
                     plan.domain.delta.blends.push(b);
@@ -156,6 +207,7 @@ fn edit_shape(
     columns: u32,
     quad: bool,
     edit: &SceneContentEdit,
+    settings: &crate::WarpAuthoringSettings,
 ) -> Result<(), Status> {
     match edit {
         SceneContentEdit::WarpPoints {
@@ -177,12 +229,6 @@ fn edit_shape(
                     return Err(Status::error("INVALID_POSITION", "Non-finite Warp point"));
                 }
                 let slot = (p.row * (columns + 1) + p.column) as usize;
-                if bezier.is_some() && !*clear_bezier && points[slot] != p.point {
-                    return Err(Status::error(
-                        "BEZIER_CONTROLLER_PRESENT",
-                        "Use the controller or explicitly clear it",
-                    ));
-                }
                 points[slot] = p.point;
             }
             if *clear_bezier {
@@ -192,18 +238,81 @@ fn edit_shape(
         SceneContentEdit::WarpBezier { controller, .. } => {
             if let Some(next) = controller {
                 check(next.validate())?;
+                if settings
+                    .bezier_grid
+                    .is_some_and(|g| (g.rows, g.columns) != (next.rows, next.columns))
+                {
+                    return Err(Status::error(
+                        "INVALID_WARP_BEZIER",
+                        "Use the Warp controller density setting to change all stored shapes",
+                    ));
+                }
                 let old = bezier
                     .clone()
-                    .unwrap_or_else(|| WarpBezier::from_lattice(rows, columns, quad, points));
+                    .unwrap_or_else(|| derived_controller(rows, columns, quad, points, settings));
                 // apply_delta preserves imported lattice residuals, including
                 // controllers whose resolution differs from the runtime grid.
-                *points = next.apply_delta(&old, rows, columns, points);
+                if next != &old {
+                    *points = if settings.auto_reform {
+                        next.lattice(rows, columns)
+                    } else {
+                        next.apply_delta(&old, rows, columns, points)
+                    };
+                }
             }
             *bezier = controller.clone();
         }
+        SceneContentEdit::WarpBezierControls { updates, .. } => {
+            let before = bezier
+                .clone()
+                .unwrap_or_else(|| derived_controller(rows, columns, quad, points, settings));
+            let next = before.edit_controls(updates, settings.edit_mode)?;
+            if next == before {
+                return Ok(());
+            }
+            *points = if settings.auto_reform {
+                next.lattice(rows, columns)
+            } else {
+                next.apply_delta(&before, rows, columns, points)
+            };
+            *bezier = Some(next);
+        }
+        SceneContentEdit::WarpShape { action, .. } => match action {
+            crate::WarpShapeAction::ResetController => {
+                let grid = settings.bezier_grid.or_else(|| {
+                    bezier.as_ref().map(|b| crate::WarpBezierGrid {
+                        rows: b.rows,
+                        columns: b.columns,
+                    })
+                });
+                *bezier = Some(grid.map_or_else(
+                    || WarpBezier::from_lattice(rows, columns, quad, points),
+                    |grid| WarpBezier::from_lattice_grid(rows, columns, quad, points, grid),
+                ));
+            }
+            crate::WarpShapeAction::Reform => {
+                let controller = bezier
+                    .clone()
+                    .unwrap_or_else(|| derived_controller(rows, columns, quad, points, settings));
+                *points = controller.lattice(rows, columns);
+                *bezier = Some(controller);
+            }
+        },
         _ => unreachable!(),
     }
     Ok(())
+}
+fn derived_controller(
+    rows: u32,
+    columns: u32,
+    quad: bool,
+    points: &[Vec2],
+    settings: &crate::WarpAuthoringSettings,
+) -> WarpBezier {
+    settings.bezier_grid.map_or_else(
+        || WarpBezier::from_lattice(rows, columns, quad, points),
+        |grid| WarpBezier::from_lattice_grid(rows, columns, quad, points, grid),
+    )
 }
 fn resample(
     points: &[Vec2],

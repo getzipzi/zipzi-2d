@@ -523,8 +523,9 @@ fn rotation_scale_handle_and_numeric_adjustment_preserve_pivot_and_history() -> 
     Ok(())
 }
 #[test]
-fn delayed_bezier_frames_keep_their_own_subdivision_grid() -> anyhow::Result<()> {
-    let (mut editor, _dir, object) = deformer_editor(false)?;
+fn delayed_bezier_frames_keep_the_explicit_subdivision_grid() -> anyhow::Result<()> {
+    let (mut editor, dir, object) = deformer_editor(false)?;
+    explicit_warp_grid(&mut editor, &dir, &object)?;
     editor.execute(EditorCommand::ToggleDeformerGrid)?;
     shown(&mut editor)?;
     let original_grid = editor.overlay().guide_lines;
@@ -569,9 +570,10 @@ fn delayed_bezier_frames_keep_their_own_subdivision_grid() -> anyhow::Result<()>
         25
     );
     let refined_grid = editor.overlay().guide_lines;
-    assert!(refined_grid.len() > original_grid.len());
+    assert_eq!(refined_grid.len(), original_grid.len());
+    assert_ne!(refined_grid, original_grid);
 
-    // Queue another refined pose, then restore the legacy lattice before it arrives.
+    // Queue another bent pose, then restore the original points before it arrives.
     let delayed = editor.preview()?.canvas.unwrap();
     crate::support::pointer_input(
         &mut editor,
@@ -590,7 +592,7 @@ fn delayed_bezier_frames_keep_their_own_subdivision_grid() -> anyhow::Result<()>
             .unwrap()
             .points
             .len(),
-        4
+        25
     );
     assert!(editor.overlay().guide_lines == refined_grid);
     assert!(editor.present_frame(delayed));

@@ -58,6 +58,13 @@ pub fn read_transform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::Transfor
         data: read_transformdata(&value.getattr("data")?)?,
         enabled: value.getattr("enabled")?.extract()?,
         appearance: read_appearance(&value.getattr("appearance")?)?,
+        warp_authoring: if value.getattr("warp_authoring")?.is_none() {
+            None
+        } else {
+            Some(read_warpauthoringsettings(
+                &value.getattr("warp_authoring")?,
+            )?)
+        },
     })
 }
 
@@ -137,6 +144,27 @@ pub fn read_rotationpose(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::Rotat
         scale: value.getattr("scale")?.extract()?,
         reflect_x: value.getattr("reflect_x")?.extract()?,
         reflect_y: value.getattr("reflect_y")?.extract()?,
+    })
+}
+
+pub fn read_warpauthoringsettings(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::WarpAuthoringSettings> {
+    Ok(zipzi_core::WarpAuthoringSettings {
+        auto_reform: value.getattr("auto_reform")?.extract()?,
+        edit_mode: read_warpbeziereditmode(&value.getattr("edit_mode")?)?,
+        bezier_grid: if value.getattr("bezier_grid")?.is_none() {
+            None
+        } else {
+            Some(read_warpbeziergrid(&value.getattr("bezier_grid")?)?)
+        },
+    })
+}
+
+pub fn read_warpbeziergrid(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::WarpBezierGrid> {
+    Ok(zipzi_core::WarpBezierGrid {
+        rows: value.getattr("rows")?.extract()?,
+        columns: value.getattr("columns")?.extract()?,
     })
 }
 
@@ -266,6 +294,16 @@ pub fn read_warppointpatch(
     Ok(zipzi_core::document::WarpPointPatch {
         row: value.getattr("row")?.extract()?,
         column: value.getattr("column")?.extract()?,
+        point: read_vec2(&value.getattr("point")?)?,
+    })
+}
+
+pub fn read_warpbeziercontrolpatch(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::WarpBezierControlPatch> {
+    Ok(zipzi_core::WarpBezierControlPatch {
+        node: value.getattr("node")?.extract()?,
+        component: value.getattr("component")?.extract()?,
         point: read_vec2(&value.getattr("point")?)?,
     })
 }

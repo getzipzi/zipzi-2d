@@ -38,6 +38,8 @@ pub(super) enum Row {
     Field(PropertyKey),
     Navigation,
     WarpGrid,
+    WarpBezierGrid,
+    WarpShapeActions,
     WarpTransform,
     WarpFrame,
     AnimationActions(ObjectRef),
@@ -229,6 +231,8 @@ impl PropertiesPanel {
                 .contains_key(&zipzi_editor_core::property::deformer::COLUMNS.key)
         {
             rows.push(Row::WarpGrid);
+            rows.push(Row::WarpBezierGrid);
+            rows.push(Row::WarpShapeActions);
         }
         if self.definition.navigation.is_some() {
             rows.push(Row::Navigation);

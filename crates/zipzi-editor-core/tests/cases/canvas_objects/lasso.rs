@@ -477,8 +477,9 @@ fn lasso_object_selection_requires_all_vertices_and_filters_hidden_and_locked_me
 
 #[test]
 fn lasso_warp_anchors_and_fine_controls_are_selected_from_outside_handles() -> anyhow::Result<()> {
-    let (mut editor, _dir, object) = deformer_editor(false)?;
-    // Produce a refined lattice so ordinary and fine selection have different domains.
+    let (mut editor, dir, object) = deformer_editor(false)?;
+    // Explicitly choose a dense grid; tangent editing cannot change its density.
+    explicit_warp_grid(&mut editor, &dir, &object)?;
     let handle = editor
         .overlay()
         .handles
@@ -493,7 +494,7 @@ fn lasso_warp_anchors_and_fine_controls_are_selected_from_outside_handles() -> a
         }
         shown(&mut editor)?;
         let expected = editor.overlay().vertices.len();
-        assert_eq!(expected, if fine { 25 } else { 4 });
+        assert_eq!(expected, if fine { 25 } else { 9 });
         let positions = control_points(&mut editor, &object)?;
         let history = editor.document().unwrap().history_lengths();
         editor.execute(EditorCommand::SetTool(ToolId::Lasso))?;

@@ -1,6 +1,6 @@
-use zipzi_core::types::{BlendMode, DeltaKeyforms, Status, TransformKind};
 use zipzi_core::Document;
 use zipzi_core::SceneTrackEvaluation;
+use zipzi_core::types::{BlendMode, DeltaKeyforms, Status, TransformKind};
 
 use super::types::*;
 
@@ -71,6 +71,7 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
         let t = document.get_transform(id).unwrap();
         transforms_wire.push(TransformWire {
             bezier: t.warp().and_then(|w| w.bezier.clone()),
+            warp_authoring: t.warp_authoring.clone(),
             id: t.id.clone(),
             runtime_id: t.runtime_id.clone(),
             name: t.name.clone(),

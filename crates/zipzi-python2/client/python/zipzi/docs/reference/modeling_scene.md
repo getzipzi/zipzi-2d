@@ -724,7 +724,7 @@ Immutable owned ShapeTargetOrdinary value. Construction owns declared collection
 
 ## zipzi.modeling.scene.Transform
 
-`(*, id: str, runtime_id: str, name: str, part_id: PartId | None = None, parent_id: TransformId | None = None, data: TransformData, enabled: bool, appearance: Appearance)`
+`(*, id: str, runtime_id: str, name: str, part_id: PartId | None = None, parent_id: TransformId | None = None, data: TransformData, enabled: bool, appearance: Appearance, warp_authoring: WarpAuthoringSettings | None = None)`
 
 Immutable owned Transform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -739,6 +739,7 @@ selects the root/unassigned container.
 rotation-pose interpretation.
 - `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
 - `appearance`: Opacity and multiply/screen color factors for this object or shape.
+- `warp_authoring`: Persistent Warp editing policy; never used for runtime deformation evaluation.
 
 ## zipzi.modeling.scene.TransformData
 
@@ -771,6 +772,16 @@ Immutable owned TransformId value. Construction owns declared collections; readi
 
 - `value`: Persistent scene object identifier.
 
+## zipzi.modeling.scene.WarpAuthoringSettings
+
+`(*, auto_reform: bool = False, edit_mode: WarpBezierEditMode = WarpBezierEditMode.LOCAL, bezier_grid: WarpBezierGrid | None = None)`
+
+Immutable owned WarpAuthoringSettings value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `auto_reform`: Rebuild the edited shape's baked grid on subsequent Bezier edits.
+- `edit_mode`: Neighborhood or tangent-coupling rule for subsequent control edits.
+- `bezier_grid`: Explicit controller density shared by stored shapes; None retains imported or derived density.
+
 ## zipzi.modeling.scene.WarpBezier
 
 `(*, rows: int, columns: int, nodes: tuple[WarpBezierNode, ...])`
@@ -780,6 +791,32 @@ Immutable owned WarpBezier value. Construction owns declared collections; readin
 - `rows`: Number of warp lattice cells vertically; a lattice has rows + 1 point rows.
 - `columns`: Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.
 - `nodes`: Bezier nodes in row-major order; exactly (rows + 1) * (columns + 1) nodes.
+
+## zipzi.modeling.scene.WarpBezierControlPatch
+
+`(*, node: int, component: int, point: Vec2)`
+
+Immutable owned WarpBezierControlPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `node`: Zero-based controller node in row-major order.
+- `component`: 0 is the anchor; 1..4 are left, right, up and down handles.
+- `point`: Absolute destination in the Warp's parent authoring space.
+
+## zipzi.modeling.scene.WarpBezierEditMode
+
+`()`
+
+Immutable typed value. See field semantics and the linked workflow.
+
+
+## zipzi.modeling.scene.WarpBezierGrid
+
+`(*, rows: int, columns: int)`
+
+Immutable owned WarpBezierGrid value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `rows`: Vertical controller cell count, from 1 to 32.
+- `columns`: Horizontal controller cell count, from 1 to 32.
 
 ## zipzi.modeling.scene.WarpBezierNode
 
@@ -799,6 +836,13 @@ Immutable owned WarpPointPatch value. Construction owns declared collections; re
 - `row`: Zero-based lattice point row, in the inclusive range 0..rows.
 - `column`: Zero-based lattice point column, in the inclusive range 0..columns.
 - `point`: Replacement lattice XY value: absolute for Base/Ordinary, displacement for BlendShape.
+
+## zipzi.modeling.scene.WarpShapeAction
+
+`()`
+
+Immutable typed value. See field semantics and the linked workflow.
+
 
 ## zipzi.modeling.scene.WarpTransform
 

@@ -67,6 +67,10 @@ pub enum EditorCommand {
         target: crate::WarpTransformTarget,
         adjustment: crate::DeformerAdjustment,
     },
+    WarpShape {
+        target: crate::WarpTransformTarget,
+        action: zipzi_core::WarpShapeAction,
+    },
     SetObjectProperty {
         object: crate::ObjectRef,
         field: String,

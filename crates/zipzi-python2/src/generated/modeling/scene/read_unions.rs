@@ -43,6 +43,20 @@ pub fn read_transformdata(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::Tran
     }
 }
 
+pub fn read_warpbeziereditmode(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::WarpBezierEditMode> {
+    match value.getattr("value")?.extract::<String>()?.as_str() {
+        "local" => Ok(zipzi_core::WarpBezierEditMode::Local),
+        "smooth_local" => Ok(zipzi_core::WarpBezierEditMode::SmoothLocal),
+        "smooth_global" => Ok(zipzi_core::WarpBezierEditMode::SmoothGlobal),
+        "preserve_structure" => Ok(zipzi_core::WarpBezierEditMode::PreserveStructure),
+        _ => Err(pyo3::exceptions::PyValueError::new_err(
+            "Unknown enum value",
+        )),
+    }
+}
+
 pub fn read_reparentstrategy(
     value: &Bound<'_, PyAny>,
 ) -> PyResult<zipzi_core::document::ReparentStrategy> {
@@ -300,6 +314,16 @@ pub fn read_shapetarget(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::docume
         }),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn read_warpshapeaction(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::WarpShapeAction> {
+    match value.getattr("value")?.extract::<String>()?.as_str() {
+        "reset_controller" => Ok(zipzi_core::WarpShapeAction::ResetController),
+        "reform" => Ok(zipzi_core::WarpShapeAction::Reform),
+        _ => Err(pyo3::exceptions::PyValueError::new_err(
+            "Unknown enum value",
         )),
     }
 }

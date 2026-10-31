@@ -1,3 +1,4 @@
+use zipzi_core::Document;
 use zipzi_core::types::{
     Appearance, BindingAxis, BlendMode, BlendShapeBinding, BlendShapeConstraint,
     BlendShapeKeyTable, DeltaGlueKeyform, DeltaKeyforms, DeltaMeshKeyform, DeltaOffscreenKeyform,
@@ -5,7 +6,6 @@ use zipzi_core::types::{
     MeshBinding, MeshKeyform, Offscreen, OffscreenKeyform, RotationPose, SceneBinding, Status,
     Transform, TransformKind, Vec2,
 };
-use zipzi_core::Document;
 use zipzi_core::{PartKeyform, RotationKeyform, SceneTrack, WarpKeyform};
 use zipzi_core::{RotationTransform, TransformData, WarpTransform};
 
@@ -55,6 +55,7 @@ fn transform_from_wire(
     };
 
     Ok(Transform {
+        warp_authoring: transform.warp_authoring.clone(),
         id: transform.id.clone(),
         runtime_id: transform.runtime_id.clone(),
         name: transform.name.clone(),

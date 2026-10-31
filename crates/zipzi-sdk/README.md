@@ -90,6 +90,22 @@ Expression schedules can be replaced without modifying the authoring document.
 
 ## Images and modeling
 
+Warp authoring uses typed `SceneContentEdit::WarpAuthoring`, `WarpBezierControls`
+and `WarpShape` operations. Authoring settings persist with the Transform and
+copy with it. Bezier density is independent of conversion density; changing it
+refits every existing controller while retaining missing controllers and every
+baked lattice. The finite-difference controller refit is approximate.
+`update_warp_points` preserves stored controls. Later Bezier edits add their
+controller delta to the lattice unless auto reform is enabled. Reset rebuilds
+controls without moving the lattice; explicit Reform samples the current
+controller and discards lattice detail. Unchanged controls are no-ops even with
+auto reform enabled. BlendShape lattice edits remain available, but independent
+BlendShape controllers and controller shape actions are unsupported.
+
+The local, cosine-neighborhood, Gaussian-global and opposing-tangent-ratio
+policies are Zipzi authoring algorithms. Native projects retain them; CMO3 export
+reports authoring metadata loss, including these settings and Bezier handles.
+
 `AuthoringSession::plan_deformer_group` combines a Warp or Rotation `SceneEdit::Create`
 with selection parenting in one snapshot-bound, undoable plan. It normalizes
 selected ancestors and descendants, preserves organization ownership and drawing

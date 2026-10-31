@@ -437,6 +437,15 @@ are independent.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
+## zipzi.modeling.scene.SceneContentEditWarpAuthoring
+
+`(*, transform_id: str, settings: WarpAuthoringSettings)`
+
+Immutable owned SceneContentEditWarpAuthoring value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `transform_id`: Stable Warp transform ID.
+- `settings`: Object editing settings. An explicit grid refits all stored controllers without changing baked points.
+
 ## zipzi.modeling.scene.SceneContentEditWarpBezier
 
 `(*, transform_id: str, target: ShapeTarget = <factory>, controller: WarpBezier | None = None)`
@@ -447,6 +456,16 @@ Immutable owned SceneContentEditWarpBezier value. Construction owns declared col
 - `target`: Explicit base/ordinary/BlendShape content selector; default Base edits the
 undeformed base shape.
 - `controller`: Complete authoring Bezier controller; its baked lattice is updated by the native edit.
+
+## zipzi.modeling.scene.SceneContentEditWarpBezierControls
+
+`(*, transform_id: str, target: ShapeTarget = <factory>, updates: tuple[WarpBezierControlPatch, ...])`
+
+Immutable owned SceneContentEditWarpBezierControls value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `transform_id`: Stable Warp transform ID.
+- `target`: Explicit base or ordinary stored shape; BlendShapes have no independent controller.
+- `updates`: Explicit controller destinations; the stored editing mode supplies neighborhood influence.
 
 ## zipzi.modeling.scene.SceneContentEditWarpPoints
 
@@ -459,6 +478,17 @@ Immutable owned SceneContentEditWarpPoints value. Construction owns declared col
 undeformed base shape.
 - `updates`: Ordered content patches applied together by the native edit.
 - `clear_bezier`: Explicitly remove the authoring Bezier controller when editing baked lattice points.
+False preserves the controller and retains lattice detail for subsequent delta edits.
+
+## zipzi.modeling.scene.SceneContentEditWarpShape
+
+`(*, transform_id: str, target: ShapeTarget = <factory>, action: WarpShapeAction)`
+
+Immutable owned SceneContentEditWarpShape value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `transform_id`: Stable Warp transform ID.
+- `target`: Explicit base or ordinary stored shape; other stored shapes remain unchanged.
+- `action`: Reset preserves baked points; Reform samples the controller and replaces baked detail.
 
 ## zipzi.modeling.scene.SceneEdit
 

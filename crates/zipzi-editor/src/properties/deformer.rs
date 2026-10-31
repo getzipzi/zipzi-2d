@@ -50,8 +50,34 @@ fn fields(rotation: bool) -> FormDefinition {
                 }
                 field
             }));
+    } else {
+        definition.fields.extend(
+            [
+                FieldSpec::new(AUTO_REFORM, "properties.warp_auto_reform", Toggle),
+                FieldSpec::new(EDIT_MODE, "properties.warp_edit_mode", Select)
+                    .choices(false, edit_modes),
+            ]
+            .map(|mut field| {
+                field.section = Some("properties.deformer_warp_authoring");
+                field
+            }),
+        );
     }
     definition
+}
+fn edit_modes(_: &Document) -> Vec<Choice> {
+    [
+        ("local", "properties.warp_mode_local"),
+        ("smooth_local", "properties.warp_mode_smooth_local"),
+        ("smooth_global", "properties.warp_mode_smooth_global"),
+        ("preserve_structure", "properties.warp_mode_structure"),
+    ]
+    .into_iter()
+    .map(|(value, label)| Choice {
+        label: t!(label).into_owned().into(),
+        value: value.into(),
+    })
+    .collect()
 }
 
 fn parent_choices(

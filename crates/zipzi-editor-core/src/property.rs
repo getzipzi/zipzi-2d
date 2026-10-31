@@ -492,6 +492,12 @@ impl PropertyPatch {
             .contains(key)
         }) {
             Some(deformer::COLUMNS.key)
+        } else if self
+            .changes
+            .keys()
+            .all(|key| [deformer::BEZIER_COLUMNS.key, deformer::BEZIER_ROWS.key].contains(key))
+        {
+            Some(deformer::BEZIER_COLUMNS.key)
         } else {
             (self.changes.len() == 1).then_some(first)
         }

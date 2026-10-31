@@ -2700,7 +2700,7 @@
             },
             {
               "default": false,
-              "doc": "Explicitly remove the authoring Bezier controller when editing baked lattice points.",
+              "doc": "Explicitly remove the authoring Bezier controller when editing baked lattice points.\nFalse preserves the controller and retains lattice detail for subsequent delta edits.",
               "name": "clear_bezier",
               "rust_name": "clear_bezier",
               "shape": {
@@ -2755,6 +2755,113 @@
           "form": "record",
           "name": "warp_bezier",
           "rust_name": "WarpBezier"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Warp transform ID.",
+              "name": "transform_id",
+              "rust_name": "transform_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": {
+                "kind": "base"
+              },
+              "doc": "Explicit base or ordinary stored shape; BlendShapes have no independent controller.",
+              "name": "target",
+              "rust_name": "target",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ShapeTarget"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit controller destinations; the stored editing mode supplies neighborhood influence.",
+              "name": "updates",
+              "rust_name": "updates",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::warp_bezier::WarpBezierControlPatch"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "warp_bezier_controls",
+          "rust_name": "WarpBezierControls"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Warp transform ID.",
+              "name": "transform_id",
+              "rust_name": "transform_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Object editing settings. An explicit grid refits all stored controllers without changing baked points.",
+              "name": "settings",
+              "rust_name": "settings",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::warp_bezier::WarpAuthoringSettings"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "warp_authoring",
+          "rust_name": "WarpAuthoring"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Stable Warp transform ID.",
+              "name": "transform_id",
+              "rust_name": "transform_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": {
+                "kind": "base"
+              },
+              "doc": "Explicit base or ordinary stored shape; other stored shapes remain unchanged.",
+              "name": "target",
+              "rust_name": "target",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ShapeTarget"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Reset preserves baked points; Reform samples the controller and replaces baked detail.",
+              "name": "action",
+              "rust_name": "action",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::warp_bezier::WarpShapeAction"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "warp_shape",
+          "rust_name": "WarpShape"
         },
         {
           "fields": [
@@ -5269,6 +5376,20 @@
             "name": "zipzi_contract::model::Appearance"
           },
           "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Persistent Warp editing policy; never used for runtime deformation evaluation.",
+          "name": "warp_authoring",
+          "rust_name": "warp_authoring",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::warp_bezier::WarpAuthoringSettings"
+            },
+            "kind": "optional"
+          },
+          "skip": false
         }
       ],
       "kind": "serde_record",
@@ -5443,6 +5564,49 @@
         }
       ]
     },
+    "zipzi_contract::warp_bezier::WarpAuthoringSettings": {
+      "fields": [
+        {
+          "default": false,
+          "doc": "Rebuild the edited shape's baked grid on subsequent Bezier edits.",
+          "name": "auto_reform",
+          "rust_name": "auto_reform",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": "local",
+          "doc": "Neighborhood or tangent-coupling rule for subsequent control edits.",
+          "name": "edit_mode",
+          "rust_name": "edit_mode",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::warp_bezier::WarpBezierEditMode"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Explicit controller density shared by stored shapes; None retains imported or derived density.",
+          "name": "bezier_grid",
+          "rust_name": "bezier_grid",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::warp_bezier::WarpBezierGrid"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::warp_bezier::WarpAuthoringSettings",
+      "transparent": false,
+      "tuple": false
+    },
     "zipzi_contract::warp_bezier::WarpBezier": {
       "fields": [
         {
@@ -5482,6 +5646,100 @@
       "transparent": false,
       "tuple": false
     },
+    "zipzi_contract::warp_bezier::WarpBezierControlPatch": {
+      "fields": [
+        {
+          "doc": "Zero-based controller node in row-major order.",
+          "name": "node",
+          "rust_name": "node",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "0 is the anchor; 1..4 are left, right, up and down handles.",
+          "name": "component",
+          "rust_name": "component",
+          "shape": {
+            "kind": "u8"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Absolute destination in the Warp's parent authoring space.",
+          "name": "point",
+          "rust_name": "point",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::Vec2"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::warp_bezier::WarpBezierControlPatch",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::warp_bezier::WarpBezierEditMode": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::warp_bezier::WarpBezierEditMode",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "local",
+          "rust_name": "Local"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "smooth_local",
+          "rust_name": "SmoothLocal"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "smooth_global",
+          "rust_name": "SmoothGlobal"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "preserve_structure",
+          "rust_name": "PreserveStructure"
+        }
+      ]
+    },
+    "zipzi_contract::warp_bezier::WarpBezierGrid": {
+      "fields": [
+        {
+          "doc": "Vertical controller cell count, from 1 to 32.",
+          "name": "rows",
+          "rust_name": "rows",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Horizontal controller cell count, from 1 to 32.",
+          "name": "columns",
+          "rust_name": "columns",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::warp_bezier::WarpBezierGrid",
+      "transparent": false,
+      "tuple": false
+    },
     "zipzi_contract::warp_bezier::WarpBezierNode": {
       "fields": [
         {
@@ -5513,6 +5771,26 @@
       "name": "zipzi_contract::warp_bezier::WarpBezierNode",
       "transparent": false,
       "tuple": false
+    },
+    "zipzi_contract::warp_bezier::WarpShapeAction": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::warp_bezier::WarpShapeAction",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "reset_controller",
+          "rust_name": "ResetController"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "reform",
+          "rust_name": "Reform"
+        }
+      ]
     }
   }
 }

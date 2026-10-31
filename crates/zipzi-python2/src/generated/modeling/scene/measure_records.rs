@@ -86,7 +86,12 @@ pub fn measure_transform(value: &Bound<'_, PyAny>) -> PyResult<usize> {
         })
         .saturating_add(measure_transformdata(&(value.getattr("data")?))?)
         .saturating_add(16usize)
-        .saturating_add(measure_appearance(&(value.getattr("appearance")?))?))
+        .saturating_add(measure_appearance(&(value.getattr("appearance")?))?)
+        .saturating_add(if (value.getattr("warp_authoring")?).is_none() {
+            0usize
+        } else {
+            measure_warpauthoringsettings(&(value.getattr("warp_authoring")?))?
+        }))
 }
 
 pub fn measure_partid(value: &Bound<'_, PyAny>) -> PyResult<usize> {
@@ -167,6 +172,21 @@ pub fn measure_rotationpose(value: &Bound<'_, PyAny>) -> PyResult<usize> {
         .saturating_add(16usize)
         .saturating_add(16usize)
         .saturating_add(16usize))
+}
+
+pub fn measure_warpauthoringsettings(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(16usize)
+        .saturating_add(measure_warpbeziereditmode(&(value.getattr("edit_mode")?))?)
+        .saturating_add(if (value.getattr("bezier_grid")?).is_none() {
+            0usize
+        } else {
+            measure_warpbeziergrid(&(value.getattr("bezier_grid")?))?
+        }))
+}
+
+pub fn measure_warpbeziergrid(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize.saturating_add(16usize).saturating_add(16usize))
 }
 
 pub fn measure_glue(value: &Bound<'_, PyAny>) -> PyResult<usize> {
@@ -330,6 +350,13 @@ pub fn measure_reparentplacement(value: &Bound<'_, PyAny>) -> PyResult<usize> {
 }
 
 pub fn measure_warppointpatch(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(measure_vec2(&(value.getattr("point")?))?))
+}
+
+pub fn measure_warpbeziercontrolpatch(value: &Bound<'_, PyAny>) -> PyResult<usize> {
     Ok(256usize
         .saturating_add(16usize)
         .saturating_add(16usize)

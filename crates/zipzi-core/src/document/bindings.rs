@@ -46,7 +46,7 @@ impl Document {
         let mesh = match self.get_mesh(&b.mesh_id) {
             Some(m) => m,
             None => {
-                return Status::error("MISSING_MESH", format!("{}.mesh_id: {}", b.id, b.mesh_id))
+                return Status::error("MISSING_MESH", format!("{}.mesh_id: {}", b.id, b.mesh_id));
             }
         };
         if let Some(old) = self.binding_for_mesh(&b.mesh_id) {
@@ -80,7 +80,7 @@ impl Document {
                     return Status::error(
                         "MISSING_PARAMETER",
                         format!("{}.axes: {}", b.id, axis.parameter_id),
-                    )
+                    );
                 }
             };
             if !seen.insert(p.id.clone()) {
@@ -167,7 +167,7 @@ impl Document {
                         return Status::error(
                             "INVALID_KEY_COMBINATION",
                             format!("{}.keyforms: unknown key value", b.id),
-                        )
+                        );
                     }
                 };
                 index += key_pos * stride;
@@ -416,6 +416,17 @@ impl Document {
                         return Status::error("INVALID_LENGTH", &b.id);
                     }
                     if let Some(b) = &f.bezier {
+                        if t.unwrap()
+                            .warp_authoring
+                            .as_ref()
+                            .and_then(|s| s.bezier_grid)
+                            .is_some_and(|g| (g.rows, g.columns) != (b.rows, b.columns))
+                        {
+                            return Status::error(
+                                "INVALID_WARP_BEZIER",
+                                "Keyform controller density differs from the Warp editing configuration",
+                            );
+                        }
                         let status = b.validate();
                         if !status.is_ok() {
                             return status;

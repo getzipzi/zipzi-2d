@@ -247,12 +247,15 @@ def _dependencies__write_scenecontentedit():
     from .scene import _write_shapetarget
     from .mesh import _write_vertexcontentpatch
     from .mesh import _write_vertexdeletepolicy
+    from .scene import _write_warpauthoringsettings
     from .scene import _write_warpbezier
+    from .scene import _write_warpbeziercontrolpatch
     from .scene import _write_warppointpatch
-    return _write_gluevertexpair, _write_newmeshvertex, _write_offscreendeletepolicy, _write_offscreenkeyform, _write_offscreenmappingpatch, _write_shapetarget, _write_vertexcontentpatch, _write_vertexdeletepolicy, _write_warpbezier, _write_warppointpatch,
+    from .scene import _write_warpshapeaction
+    return _write_gluevertexpair, _write_newmeshvertex, _write_offscreendeletepolicy, _write_offscreenkeyform, _write_offscreenmappingpatch, _write_shapetarget, _write_vertexcontentpatch, _write_vertexdeletepolicy, _write_warpauthoringsettings, _write_warpbezier, _write_warpbeziercontrolpatch, _write_warppointpatch, _write_warpshapeaction,
 
 def _write_scenecontentedit(value: object, w: Writer) -> None:
-    _write_gluevertexpair, _write_newmeshvertex, _write_offscreendeletepolicy, _write_offscreenkeyform, _write_offscreenmappingpatch, _write_shapetarget, _write_vertexcontentpatch, _write_vertexdeletepolicy, _write_warpbezier, _write_warppointpatch, = _dependencies__write_scenecontentedit()
+    _write_gluevertexpair, _write_newmeshvertex, _write_offscreendeletepolicy, _write_offscreenkeyform, _write_offscreenmappingpatch, _write_shapetarget, _write_vertexcontentpatch, _write_vertexdeletepolicy, _write_warpauthoringsettings, _write_warpbezier, _write_warpbeziercontrolpatch, _write_warppointpatch, _write_warpshapeaction, = _dependencies__write_scenecontentedit()
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
     if tag=='mesh_vertices':
         w.u32(0)
@@ -335,14 +338,31 @@ def _write_scenecontentedit(value: object, w: Writer) -> None:
         else:
             w.raw(b"\1")
             _write_warpbezier(_field(value, 'controller'), w)
-    elif tag=='resize_warp':
+    elif tag=='warp_bezier_controls':
         w.u32(10)
+        w.text(_field(value, 'transform_id'))
+        _write_shapetarget(_field(value, 'target'), w)
+        items0=sequence(_field(value, 'updates'))
+        w.u32(len(items0))
+        for item0 in items0:
+            _write_warpbeziercontrolpatch(item0, w)
+    elif tag=='warp_authoring':
+        w.u32(11)
+        w.text(_field(value, 'transform_id'))
+        _write_warpauthoringsettings(_field(value, 'settings'), w)
+    elif tag=='warp_shape':
+        w.u32(12)
+        w.text(_field(value, 'transform_id'))
+        _write_shapetarget(_field(value, 'target'), w)
+        _write_warpshapeaction(_field(value, 'action'), w)
+    elif tag=='resize_warp':
+        w.u32(13)
         w.text(_field(value, 'transform_id'))
         w.scalar('I', _field(value, 'rows'))
         w.scalar('I', _field(value, 'columns'))
         w.boolean(_field(value, 'quad'))
     elif tag=='insert_glue_pair':
-        w.u32(11)
+        w.u32(14)
         w.text(_field(value, 'glue_id'))
         _write_gluevertexpair(_field(value, 'pair'), w)
         if _field(value, 'before') is None:
@@ -351,11 +371,11 @@ def _write_scenecontentedit(value: object, w: Writer) -> None:
             w.raw(b"\1")
             w.text(_field(value, 'before'))
     elif tag=='patch_glue_pair':
-        w.u32(12)
+        w.u32(15)
         w.text(_field(value, 'glue_id'))
         _write_gluevertexpair(_field(value, 'pair'), w)
     elif tag=='move_glue_pairs':
-        w.u32(13)
+        w.u32(16)
         w.text(_field(value, 'glue_id'))
         items0=sequence(_field(value, 'ids'))
         w.u32(len(items0))
@@ -367,7 +387,7 @@ def _write_scenecontentedit(value: object, w: Writer) -> None:
             w.raw(b"\1")
             w.text(_field(value, 'before'))
     elif tag=='transfer_glue_pairs':
-        w.u32(14)
+        w.u32(17)
         w.text(_field(value, 'glue_id'))
         w.text(_field(value, 'destination'))
         items0=sequence(_field(value, 'pairs'))
@@ -380,7 +400,7 @@ def _write_scenecontentedit(value: object, w: Writer) -> None:
             w.raw(b"\1")
             w.text(_field(value, 'before'))
     elif tag=='duplicate_glue_pairs':
-        w.u32(15)
+        w.u32(18)
         w.text(_field(value, 'glue_id'))
         items0=sequence(_field(value, 'ids'))
         w.u32(len(items0))
@@ -392,14 +412,14 @@ def _write_scenecontentedit(value: object, w: Writer) -> None:
             w.raw(b"\1")
             w.text(_field(value, 'before'))
     elif tag=='delete_glue_pairs':
-        w.u32(16)
+        w.u32(19)
         w.text(_field(value, 'glue_id'))
         items0=sequence(_field(value, 'ids'))
         w.u32(len(items0))
         for item0 in items0:
             w.text(item0)
     elif tag=='insert_offscreen_keyform':
-        w.u32(17)
+        w.u32(20)
         w.text(_field(value, 'offscreen_id'))
         _write_offscreenkeyform(_field(value, 'value'), w)
         if _field(value, 'before') is None:
@@ -408,12 +428,12 @@ def _write_scenecontentedit(value: object, w: Writer) -> None:
             w.raw(b"\1")
             w.scalar('Q', _field(value, 'before'))
     elif tag=='patch_offscreen_keyform':
-        w.u32(18)
+        w.u32(21)
         w.text(_field(value, 'offscreen_id'))
         w.scalar('Q', _field(value, 'slot'))
         _write_offscreenkeyform(_field(value, 'value'), w)
     elif tag=='duplicate_offscreen_keyforms':
-        w.u32(19)
+        w.u32(22)
         w.text(_field(value, 'offscreen_id'))
         items0=sequence(_field(value, 'slots'))
         w.u32(len(items0))
@@ -424,20 +444,20 @@ def _write_scenecontentedit(value: object, w: Writer) -> None:
             w.raw(b"\1")
             w.scalar('Q', _field(value, 'before'))
     elif tag=='reorder_offscreen_keyforms':
-        w.u32(20)
+        w.u32(23)
         w.text(_field(value, 'offscreen_id'))
         items0=sequence(_field(value, 'order'))
         w.u32(len(items0))
         w.numeric('Q', tuple(items0))
     elif tag=='delete_offscreen_keyforms':
-        w.u32(21)
+        w.u32(24)
         w.text(_field(value, 'offscreen_id'))
         items0=sequence(_field(value, 'slots'))
         w.u32(len(items0))
         w.numeric('Q', tuple(items0))
         _write_offscreendeletepolicy(_field(value, 'policy'), w)
     elif tag=='set_offscreen_mapping':
-        w.u32(22)
+        w.u32(25)
         w.text(_field(value, 'offscreen_id'))
         items0=sequence(_field(value, 'updates'))
         w.u32(len(items0))

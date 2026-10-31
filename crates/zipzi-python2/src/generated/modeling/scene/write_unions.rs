@@ -95,6 +95,30 @@ pub(crate) fn write_transformdata_in(
     }
 }
 
+pub fn write_warpbeziereditmode(
+    py: Python<'_>,
+    value: &zipzi_core::WarpBezierEditMode,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.values.scene")?;
+    write_warpbeziereditmode_in(py, value, &classes)
+}
+pub(crate) fn write_warpbeziereditmode_in(
+    py: Python<'_>,
+    value: &zipzi_core::WarpBezierEditMode,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let name = match value {
+        zipzi_core::WarpBezierEditMode::Local => "local",
+        zipzi_core::WarpBezierEditMode::SmoothLocal => "smooth_local",
+        zipzi_core::WarpBezierEditMode::SmoothGlobal => "smooth_global",
+        zipzi_core::WarpBezierEditMode::PreserveStructure => "preserve_structure",
+    };
+    Ok(classes
+        .getattr("WarpBezierEditMode")?
+        .call1((name,))?
+        .unbind())
+}
+
 pub fn write_reparentstrategy(
     py: Python<'_>,
     value: &zipzi_core::document::ReparentStrategy,
@@ -603,6 +627,25 @@ pub(crate) fn write_shapetarget_in(
                 .unbind())
         }
     }
+}
+
+pub fn write_warpshapeaction(
+    py: Python<'_>,
+    value: &zipzi_core::WarpShapeAction,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.values.scene")?;
+    write_warpshapeaction_in(py, value, &classes)
+}
+pub(crate) fn write_warpshapeaction_in(
+    py: Python<'_>,
+    value: &zipzi_core::WarpShapeAction,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let name = match value {
+        zipzi_core::WarpShapeAction::ResetController => "reset_controller",
+        zipzi_core::WarpShapeAction::Reform => "reform",
+    };
+    Ok(classes.getattr("WarpShapeAction")?.call1((name,))?.unbind())
 }
 
 pub fn write_offscreendeletepolicy(

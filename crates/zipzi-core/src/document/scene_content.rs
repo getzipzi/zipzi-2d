@@ -89,6 +89,9 @@ impl Document {
             }
             SceneContentEdit::WarpPoints { .. }
             | SceneContentEdit::WarpBezier { .. }
+            | SceneContentEdit::WarpBezierControls { .. }
+            | SceneContentEdit::WarpAuthoring { .. }
+            | SceneContentEdit::WarpShape { .. }
             | SceneContentEdit::ResizeWarp { .. } => {
                 self.plan_warp_content(&mut plan, edit, control)?
             }
@@ -163,11 +166,7 @@ impl Document {
     }
 }
 fn check(status: Status) -> Result<(), Status> {
-    if status.is_ok() {
-        Ok(())
-    } else {
-        Err(status)
-    }
+    if status.is_ok() { Ok(()) } else { Err(status) }
 }
 fn permutation(order: &[usize], len: usize) -> Result<(), Status> {
     if order.len() != len
@@ -205,6 +204,37 @@ impl Document {
                     .sum::<usize>()
         };
         let (work, items, bytes) = match edit {
+            E::WarpAuthoring {
+                transform_id,
+                settings,
+            } => {
+                if let Some(grid) = settings.bezier_grid.filter(|grid| {
+                    self.get_transform(transform_id)
+                        .and_then(|t| t.warp_authoring.as_ref())
+                        .and_then(|s| s.bezier_grid)
+                        != Some(*grid)
+                }) {
+                    check(grid.validate())?;
+                    (
+                        shapes(transform_id),
+                        (grid.rows as usize + 1) * (grid.columns as usize + 1),
+                        std::mem::size_of::<crate::WarpBezierNode>(),
+                    )
+                } else {
+                    (1, 1, std::mem::size_of::<crate::WarpAuthoringSettings>())
+                }
+            }
+            E::WarpShape { transform_id, .. } | E::WarpBezierControls { transform_id, .. } => {
+                let warp = self
+                    .get_transform(transform_id)
+                    .and_then(|t| t.warp())
+                    .ok_or_else(|| Status::error("NOT_WARP", transform_id))?;
+                (
+                    1,
+                    ((warp.rows as usize + 1) * (warp.columns as usize + 1)).max(33 * 33),
+                    std::mem::size_of::<crate::WarpBezierNode>(),
+                )
+            }
             E::InsertMeshVertices {
                 mesh_id, vertices, ..
             } => (shapes(mesh_id), vertices.len(), std::mem::size_of::<Vec2>()),

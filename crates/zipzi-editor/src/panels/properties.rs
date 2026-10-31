@@ -341,6 +341,8 @@ impl PropertiesPanel {
             }
             Row::Navigation => Some("property-navigation".into()),
             Row::WarpGrid => Some("property-warp-grid".into()),
+            Row::WarpBezierGrid => Some("property-warp-bezier-grid".into()),
+            Row::WarpShapeActions => Some("property-warp-shape".into()),
             Row::WarpTransform => Some("property-warp-transform".into()),
             Row::WarpFrame => Some("property-warp-frame".into()),
             Row::BusinessActions(object) => {
@@ -446,6 +448,8 @@ impl PropertiesPanel {
             ),
             Row::Navigation => self.render_navigation(cx),
             Row::WarpGrid => self.warp_grid_action(cx),
+            Row::WarpBezierGrid => self.warp_bezier_grid_action(cx),
+            Row::WarpShapeActions => self.warp_shape_actions(cx),
             Row::WarpTransform => self.warp_transform_action(cx),
             Row::WarpFrame => self.warp_frame_action(cx),
             Row::AnimationActions(object) => self.animation_actions(object, cx),

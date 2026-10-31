@@ -7,10 +7,11 @@ use zipzi_editor_core::*;
 #[test]
 fn bezier_tangent_bends_lattice_persists_and_undo_restores_legacy_shape() -> anyhow::Result<()> {
     let (mut editor, dir, object) = deformer_editor(false)?;
+    explicit_warp_grid(&mut editor, &dir, &object)?;
     let original = control_points(&mut editor, &object)?;
     let original_mesh = shown(&mut editor)?.geometry.meshes[0].vertices.clone();
     let overlay = editor.overlay();
-    assert_eq!(overlay.vertices.len(), 4);
+    assert_eq!(overlay.vertices.len(), 9);
     let handle = overlay.handles.iter().find(|h| h.round).unwrap().position;
     drag(
         &mut editor,
@@ -25,11 +26,11 @@ fn bezier_tangent_bends_lattice_persists_and_undo_restores_legacy_shape() -> any
     assert_eq!(
         bent.len(),
         25,
-        "a four-corner grid must be refined to express curvature"
+        "handle editing must preserve the explicit conversion density"
     );
-    for (i, j) in [0, 4, 20, 24].into_iter().enumerate() {
+    for j in [0, 4, 20, 24] {
         assert!(
-            (bent[j].x - original[i].x).hypot(bent[j].y - original[i].y) < 0.001,
+            (bent[j].x - original[j].x).hypot(bent[j].y - original[j].y) < 0.001,
             "tangent drag must keep anchors fixed"
         );
     }
@@ -115,9 +116,142 @@ fn bezier_tangent_bends_lattice_persists_and_undo_restores_legacy_shape() -> any
 }
 
 #[test]
-fn bezier_keyform_edit_preserves_other_shapes_and_cancels_refinement() -> anyhow::Result<()> {
+fn fine_point_edits_keep_base_and_keyform_controllers_and_later_delta_retains_detail()
+-> anyhow::Result<()> {
+    use zipzi_core::WarpBezierEvaluation;
+    let shape = |editor: &Editor, object: &ObjectRef| {
+        let document = editor.document().unwrap();
+        let host = document.runtime_host();
+        let runtime = host.read();
+        let model = runtime.document(document.runtime_session_id()).unwrap();
+        let transform = model.get_transform(&object.id).unwrap();
+        if let Some(binding) = model.binding_for_scene(&object.id) {
+            let zipzi_core::SceneTrack::Warp { keyforms, .. } = &binding.track else {
+                unreachable!()
+            };
+            (keyforms[0].positions.clone(), keyforms[0].bezier.clone())
+        } else {
+            (
+                transform.warp().unwrap().points.clone(),
+                transform.warp().unwrap().bezier.clone(),
+            )
+        }
+    };
+    for bound in [false, true] {
+        let (mut editor, dir, object) = if bound {
+            let (editor, dir, object, _) = bound_deformer_editor(false, false)?;
+            (editor, dir, object)
+        } else {
+            deformer_editor(false)?
+        };
+        explicit_warp_grid(&mut editor, &dir, &object)?;
+        let handle = editor
+            .overlay()
+            .handles
+            .iter()
+            .find(|h| h.round)
+            .unwrap()
+            .position;
+        drag(
+            &mut editor,
+            handle,
+            ViewportPoint {
+                x: handle.x,
+                y: handle.y - 20.,
+            },
+            false,
+        )?;
+        let (before, controller) = shape(&editor, &object);
+        let controller = controller.unwrap();
+        let history = editor.document().unwrap().history_lengths();
+        editor.execute(EditorCommand::ToggleWarpFine)?;
+        shown(&mut editor)?;
+        assert_eq!(shape(&editor, &object).0, before);
+        assert_eq!(editor.document().unwrap().history_lengths(), history);
+        let point = editor.overlay().vertices[12].position;
+        drag(
+            &mut editor,
+            point,
+            ViewportPoint {
+                x: point.x + 10.,
+                y: point.y - 5.,
+            },
+            false,
+        )?;
+        let (detail, stored) = shape(&editor, &object);
+        assert_eq!(stored.as_ref(), Some(&controller));
+        assert_ne!(detail[12], before[12]);
+        for i in 0..detail.len() {
+            if i != 12 {
+                assert_eq!(detail[i], before[i]);
+            }
+        }
+        editor.execute(EditorCommand::ToggleWarpFine)?;
+        assert_eq!(shape(&editor, &object).0, detail);
+        shown(&mut editor)?;
+        let handle = editor
+            .overlay()
+            .handles
+            .iter()
+            .find(|h| h.round)
+            .unwrap()
+            .position;
+        drag(
+            &mut editor,
+            handle,
+            ViewportPoint {
+                x: handle.x + 8.,
+                y: handle.y - 5.,
+            },
+            false,
+        )?;
+        let (after, next) = shape(&editor, &object);
+        let expected = next.unwrap().apply_delta(&controller, 4, 4, &detail);
+        for (a, b) in after.iter().zip(expected) {
+            assert!((a.x - b.x).hypot(a.y - b.y) < 1e-5);
+        }
+        assert_eq!(after.len(), 25);
+        editor.execute(EditorCommand::Undo)?;
+        assert_eq!(shape(&editor, &object), (detail.clone(), Some(controller)));
+        editor.execute(EditorCommand::SetObjectProperty {
+            object: object.clone(),
+            field: "warp_authoring.auto_reform".into(),
+            value: serde_json::json!(true),
+        })?;
+        assert_eq!(shape(&editor, &object).0, detail);
+        shown(&mut editor)?;
+        let handle = editor
+            .overlay()
+            .handles
+            .iter()
+            .find(|h| h.round)
+            .unwrap()
+            .position;
+        drag(
+            &mut editor,
+            handle,
+            ViewportPoint {
+                x: handle.x + 8.,
+                y: handle.y - 5.,
+            },
+            false,
+        )?;
+        let (automatic, controller) = shape(&editor, &object);
+        assert_eq!(automatic, controller.unwrap().lattice(4, 4));
+        editor.execute(EditorCommand::WarpShape {
+            target: editor.warp_transform_target(&object).unwrap(),
+            action: zipzi_core::WarpShapeAction::ResetController,
+        })?;
+        assert_eq!(shape(&editor, &object).0, automatic);
+    }
+    Ok(())
+}
+
+#[test]
+fn bezier_keyform_edit_preserves_other_shapes_and_explicit_density() -> anyhow::Result<()> {
     for reversed in [false, true] {
         let (mut editor, dir, object, param) = bound_deformer_editor(false, reversed)?;
+        explicit_warp_grid(&mut editor, &dir, &object)?;
         let original = control_points(&mut editor, &object)?;
         let handle = editor
             .overlay()
@@ -150,7 +284,7 @@ fn bezier_keyform_edit_preserves_other_shapes_and_cancels_refinement() -> anyhow
         crate::support::pointer_input(&mut editor, CanvasInput::Cancel)?;
         assert_eq!(control_points(&mut editor, &object)?, original);
         assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
-        // Dragging back restores both grid topology and absent controller metadata.
+        // Dragging back restores absent controller metadata without changing density.
         crate::support::pointer_input(
             &mut editor,
             CanvasInput::Down {
@@ -188,9 +322,7 @@ fn bezier_keyform_edit_preserves_other_shapes_and_cancels_refinement() -> anyhow
             value: 1.,
         })?;
         let other = control_points(&mut editor, &object)?;
-        for (i, j) in [0, 4, 20, 24].into_iter().enumerate() {
-            assert!((other[j].x - original[i].x).hypot(other[j].y - original[i].y) < 0.001);
-        }
+        assert_eq!(other, original);
         editor.execute(EditorCommand::SetPreviewParameter {
             parameter_id: param.clone(),
             value: 0.,

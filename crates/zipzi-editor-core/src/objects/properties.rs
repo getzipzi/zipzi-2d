@@ -295,5 +295,5 @@ pub fn editable_property(kind: ObjectKind, field: &str) -> bool {
 }
 
 pub(super) fn deformer_properties(x: &zipzi_core::Transform) -> Value {
-    json!({"name":x.name,"runtime_id":x.runtime_id,"kind":x.kind(),"part_id":x.part(),"parent_id":x.parent(),"appearance":x.appearance,"enabled":x.enabled,"warp":x.warp(),"rotation":x.rotation()})
+    json!({"name":x.name,"runtime_id":x.runtime_id,"kind":x.kind(),"part_id":x.part(),"parent_id":x.parent(),"appearance":x.appearance,"enabled":x.enabled,"warp":x.warp(),"rotation":x.rotation(),"warp_authoring":x.warp_authoring})
 }

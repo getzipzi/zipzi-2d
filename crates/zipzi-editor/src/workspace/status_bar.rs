@@ -155,7 +155,24 @@ fn snapshot_state(view: &EditorView, cx: &App) -> StatusBarState {
                 && token.kind == zipzi_editor_core::ViewportInteractionKind::Modeling)
                 .then(|| {
                     let overlay = view.editor.overlay_for_viewport(token.binding);
-                    overlay.interaction_label.map(|label| {
+                    overlay.interaction_label.map(|mut label| {
+                        if let Some(mode) = overlay.warp_bezier_mode {
+                            let key = match mode {
+                                zipzi_core::WarpBezierEditMode::Local => {
+                                    "properties.warp_mode_local"
+                                }
+                                zipzi_core::WarpBezierEditMode::SmoothLocal => {
+                                    "properties.warp_mode_smooth_local"
+                                }
+                                zipzi_core::WarpBezierEditMode::SmoothGlobal => {
+                                    "properties.warp_mode_smooth_global"
+                                }
+                                zipzi_core::WarpBezierEditMode::PreserveStructure => {
+                                    "properties.warp_mode_structure"
+                                }
+                            };
+                            label = format!("{} · {label}", t!(key));
+                        }
                         if overlay.warp_frame_adjusting {
                             format!("{} · {label}", t!("editor.warp_frame_adjust"))
                         } else {

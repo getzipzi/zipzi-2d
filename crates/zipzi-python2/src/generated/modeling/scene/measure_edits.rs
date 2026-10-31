@@ -522,6 +522,41 @@ pub fn measure_scenecontentedit(value: &Bound<'_, PyAny>) -> PyResult<usize> {
             } else {
                 measure_warpbezier(&(value.getattr("controller")?))?
             })),
+        "warp_bezier_controls" => Ok(256usize
+            .saturating_add(
+                (value.getattr("transform_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_shapetarget(&(value.getattr("target")?))?)
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("updates")?).try_iter()? {
+                    let v0 = value?;
+                    bytes = bytes.saturating_add(measure_warpbeziercontrolpatch(&(v0))?);
+                }
+                bytes
+            })),
+        "warp_authoring" => Ok(256usize
+            .saturating_add(
+                (value.getattr("transform_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_warpauthoringsettings(
+                &(value.getattr("settings")?),
+            )?)),
+        "warp_shape" => Ok(256usize
+            .saturating_add(
+                (value.getattr("transform_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_shapetarget(&(value.getattr("target")?))?)
+            .saturating_add(measure_warpshapeaction(&(value.getattr("action")?))?)),
         "resize_warp" => Ok(256usize
             .saturating_add(
                 (value.getattr("transform_id")?)

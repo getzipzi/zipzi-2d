@@ -33,6 +33,43 @@ GEOMETRY = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
     ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
 
 class PythonSdk(unittest.TestCase):
+    def test_warp_authoring_policy_and_detail_on_both_backends(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode), self.runtime(mode) as runtime:
+                session = runtime.sessions.create(uid(1))
+                settings = m.scene.WarpAuthoringSettings(
+                    edit_mode=m.scene.WarpBezierEditMode.SMOOTH_LOCAL,
+                    bezier_grid=m.scene.WarpBezierGrid(rows=2, columns=2))
+                with session.edit("Warp setup") as edit:
+                    edit.apply(scene.CreateWarp("Warp", scene.Placement(), (0., 0., 4., 4.), id=uid(2)))
+                    edit.apply(m.commands.ModelingCommandContent(intent=m.scene.SceneContentEditResizeWarp(
+                        transform_id=uid(2), rows=4, columns=4, quad=False)))
+                    edit.apply(m.commands.ModelingCommandContent(intent=m.scene.SceneContentEditWarpAuthoring(
+                        transform_id=uid(2), settings=settings)))
+                    edit.apply(m.commands.ModelingCommandContent(intent=m.scene.SceneContentEditWarpShape(
+                        transform_id=uid(2), action=m.scene.WarpShapeAction.RESET_CONTROLLER)))
+                record = session.modeling.records(m.ModelingQuery(transforms=(uid(2),))).value.transforms[0]
+                assert record is not None and isinstance(record.data, m.scene.TransformDataWarp)
+                self.assertEqual(record.warp_authoring, settings)
+                controller = record.data.value.bezier
+                self.assertIsNotNone(controller)
+                with session.edit("Grid detail") as edit:
+                    edit.apply(m.commands.ModelingCommandContent(intent=m.scene.SceneContentEditWarpPoints(
+                        transform_id=uid(2), updates=(m.scene.WarpPointPatch(row=2, column=2,
+                            point=m.common.Vec2(x=2., y=2.5)),))))
+                detailed = session.modeling.records(m.ModelingQuery(transforms=(uid(2),))).value.transforms[0]
+                assert detailed is not None and isinstance(detailed.data, m.scene.TransformDataWarp)
+                self.assertEqual(detailed.data.value.bezier, controller)
+                self.assertAlmostEqual(detailed.data.value.points[12].y, 2.5)
+                with session.edit("Reform") as edit:
+                    edit.apply(m.commands.ModelingCommandContent(intent=m.scene.SceneContentEditWarpShape(
+                        transform_id=uid(2), action=m.scene.WarpShapeAction.REFORM)))
+                reformed = session.modeling.records(m.ModelingQuery(transforms=(uid(2),))).value.transforms[0]
+                assert reformed is not None and isinstance(reformed.data, m.scene.TransformDataWarp)
+                self.assertAlmostEqual(reformed.data.value.points[12].y, 2.)
+                session.undo().wait()
+                self.assertEqual(session.modeling.records(m.ModelingQuery(transforms=(uid(2),))).value.transforms[0], detailed)
+
     def test_deletion_review_pages_cleanup_history_and_source_on_both_backends(self):
         for mode in ("local", "connected"):
             with self.subTest(mode=mode), self.runtime(mode) as runtime:

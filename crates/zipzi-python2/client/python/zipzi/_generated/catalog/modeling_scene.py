@@ -76,8 +76,11 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                        'zipzi.modeling.scene.SceneContentEditResizeWarp',
                                        'zipzi.modeling.scene.SceneContentEditSetOffscreenMapping',
                                        'zipzi.modeling.scene.SceneContentEditTransferGluePairs',
+                                       'zipzi.modeling.scene.SceneContentEditWarpAuthoring',
                                        'zipzi.modeling.scene.SceneContentEditWarpBezier',
+                                       'zipzi.modeling.scene.SceneContentEditWarpBezierControls',
                                        'zipzi.modeling.scene.SceneContentEditWarpPoints',
+                                       'zipzi.modeling.scene.SceneContentEditWarpShape',
                                        'zipzi.modeling.scene.SceneContentTarget',
                                        'zipzi.modeling.scene.SceneContentTargetGluePair',
                                        'zipzi.modeling.scene.SceneContentTargetOffscreenKeyform',
@@ -140,9 +143,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                        'zipzi.modeling.scene.TransformDataRotation',
                                        'zipzi.modeling.scene.TransformDataWarp',
                                        'zipzi.modeling.scene.TransformId',
+                                       'zipzi.modeling.scene.WarpAuthoringSettings',
                                        'zipzi.modeling.scene.WarpBezier',
+                                       'zipzi.modeling.scene.WarpBezierControlPatch',
+                                       'zipzi.modeling.scene.WarpBezierEditMode',
+                                       'zipzi.modeling.scene.WarpBezierGrid',
                                        'zipzi.modeling.scene.WarpBezierNode',
                                        'zipzi.modeling.scene.WarpPointPatch',
+                                       'zipzi.modeling.scene.WarpShapeAction',
                                        'zipzi.modeling.scene.WarpTransform'),
                           'documentation': 'Canonical scene modeling values.',
                           'kind': 'module',
@@ -1324,11 +1332,15 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                 'Whether this object participates in evaluation; editor hiding is a '
                                                 'separate state.'),
                                                ('appearance',
-                                                'Opacity and multiply/screen color factors for this object or shape.')],
+                                                'Opacity and multiply/screen color factors for this object or shape.'),
+                                               ('warp_authoring',
+                                                'Persistent Warp editing policy; never used for runtime deformation '
+                                                'evaluation.')],
                                     'kind': 'type',
                                     'signature': '(*, id: str, runtime_id: str, name: str, part_id: PartId | None = '
                                                  'None, parent_id: TransformId | None = None, data: TransformData, '
-                                                 'enabled: bool, appearance: Appearance)'},
+                                                 'enabled: bool, appearance: Appearance, warp_authoring: '
+                                                 'WarpAuthoringSettings | None = None)'},
  'zipzi.modeling.scene.Transform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.Transform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.TransformData': {'children': (),
@@ -1373,6 +1385,27 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                       'signature': '(*, value: str)'},
  'zipzi.modeling.scene.TransformId.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.TransformId.summary': {'alias': 'zipzi.ApiDescription.summary'},
+ 'zipzi.modeling.scene.WarpAuthoringSettings': {'children': ('zipzi.modeling.scene.WarpAuthoringSettings.__repr__',
+                                                             'zipzi.modeling.scene.WarpAuthoringSettings.summary'),
+                                                'documentation': 'Immutable owned WarpAuthoringSettings value. '
+                                                                 'Construction owns declared collections; reading '
+                                                                 'fields, repr and summary performs no IO.',
+                                                'example': 'docs/recipes.py',
+                                                'fields': [('auto_reform',
+                                                            "Rebuild the edited shape's baked grid on subsequent "
+                                                            'Bezier edits.'),
+                                                           ('edit_mode',
+                                                            'Neighborhood or tangent-coupling rule for subsequent '
+                                                            'control edits.'),
+                                                           ('bezier_grid',
+                                                            'Explicit controller density shared by stored shapes; None '
+                                                            'retains imported or derived density.')],
+                                                'kind': 'type',
+                                                'signature': '(*, auto_reform: bool = False, edit_mode: '
+                                                             'WarpBezierEditMode = WarpBezierEditMode.LOCAL, '
+                                                             'bezier_grid: WarpBezierGrid | None = None)'},
+ 'zipzi.modeling.scene.WarpAuthoringSettings.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
+ 'zipzi.modeling.scene.WarpAuthoringSettings.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.WarpBezier': {'children': ('zipzi.modeling.scene.WarpBezier.__repr__',
                                                   'zipzi.modeling.scene.WarpBezier.summary'),
                                      'documentation': 'Immutable owned WarpBezier value. Construction owns declared '
@@ -1391,6 +1424,42 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                      'signature': '(*, rows: int, columns: int, nodes: tuple[WarpBezierNode, ...])'},
  'zipzi.modeling.scene.WarpBezier.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.WarpBezier.summary': {'alias': 'zipzi.ApiDescription.summary'},
+ 'zipzi.modeling.scene.WarpBezierControlPatch': {'children': ('zipzi.modeling.scene.WarpBezierControlPatch.__repr__',
+                                                              'zipzi.modeling.scene.WarpBezierControlPatch.summary'),
+                                                 'documentation': 'Immutable owned WarpBezierControlPatch value. '
+                                                                  'Construction owns declared collections; reading '
+                                                                  'fields, repr and summary performs no IO.',
+                                                 'example': 'docs/recipes.py',
+                                                 'fields': [('node', 'Zero-based controller node in row-major order.'),
+                                                            ('component',
+                                                             '0 is the anchor; 1..4 are left, right, up and down '
+                                                             'handles.'),
+                                                            ('point',
+                                                             "Absolute destination in the Warp's parent authoring "
+                                                             'space.')],
+                                                 'kind': 'type',
+                                                 'signature': '(*, node: int, component: int, point: Vec2)'},
+ 'zipzi.modeling.scene.WarpBezierControlPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
+ 'zipzi.modeling.scene.WarpBezierControlPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
+ 'zipzi.modeling.scene.WarpBezierEditMode': {'children': (),
+                                             'documentation': 'Immutable typed value. See field semantics and the '
+                                                              'linked workflow.',
+                                             'example': 'docs/recipes.py',
+                                             'fields': [],
+                                             'kind': 'type',
+                                             'signature': '()'},
+ 'zipzi.modeling.scene.WarpBezierGrid': {'children': ('zipzi.modeling.scene.WarpBezierGrid.__repr__',
+                                                      'zipzi.modeling.scene.WarpBezierGrid.summary'),
+                                         'documentation': 'Immutable owned WarpBezierGrid value. Construction owns '
+                                                          'declared collections; reading fields, repr and summary '
+                                                          'performs no IO.',
+                                         'example': 'docs/recipes.py',
+                                         'fields': [('rows', 'Vertical controller cell count, from 1 to 32.'),
+                                                    ('columns', 'Horizontal controller cell count, from 1 to 32.')],
+                                         'kind': 'type',
+                                         'signature': '(*, rows: int, columns: int)'},
+ 'zipzi.modeling.scene.WarpBezierGrid.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
+ 'zipzi.modeling.scene.WarpBezierGrid.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.WarpBezierNode': {'children': ('zipzi.modeling.scene.WarpBezierNode.__repr__',
                                                       'zipzi.modeling.scene.WarpBezierNode.summary'),
                                          'documentation': 'Immutable owned WarpBezierNode value. Construction owns '
@@ -1425,6 +1494,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                          'signature': '(*, row: int, column: int, point: Vec2)'},
  'zipzi.modeling.scene.WarpPointPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.WarpPointPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
+ 'zipzi.modeling.scene.WarpShapeAction': {'children': (),
+                                          'documentation': 'Immutable typed value. See field semantics and the linked '
+                                                           'workflow.',
+                                          'example': 'docs/recipes.py',
+                                          'fields': [],
+                                          'kind': 'type',
+                                          'signature': '()'},
  'zipzi.modeling.scene.WarpTransform': {'children': ('zipzi.modeling.scene.WarpTransform.__repr__',
                                                      'zipzi.modeling.scene.WarpTransform.summary'),
                                         'documentation': 'Immutable owned WarpTransform value. Construction owns '

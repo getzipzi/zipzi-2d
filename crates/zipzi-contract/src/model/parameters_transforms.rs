@@ -80,11 +80,7 @@ macro_rules! scene_id {
             }
             pub fn optional(id: impl Into<String>) -> Option<Self> {
                 let id = id.into();
-                if id.is_empty() {
-                    None
-                } else {
-                    Some(Self(id))
-                }
+                if id.is_empty() { None } else { Some(Self(id)) }
             }
         }
         impl From<String> for $name {
@@ -131,6 +127,9 @@ pub struct Transform {
     pub enabled: bool,
     /// Opacity and multiply/screen color factors for this object or shape.
     pub appearance: Appearance,
+    /// Persistent Warp editing policy; never used for runtime deformation evaluation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub warp_authoring: Option<crate::warp_bezier::WarpAuthoringSettings>,
 }
 
 impl Default for Transform {
@@ -144,6 +143,7 @@ impl Default for Transform {
             data: TransformData::default(),
             enabled: true,
             appearance: Appearance::default(),
+            warp_authoring: None,
         }
     }
 }

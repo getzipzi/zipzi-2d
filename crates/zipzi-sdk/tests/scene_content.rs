@@ -54,13 +54,15 @@ fn warp_content_addresses_expire_after_organization_context_roundtrip() {
         })
         .unwrap();
     s.execute_organization_plan(&plan).unwrap();
-    assert!(s
-        .plan_scene_content_patch(&address, address.expected().clone())
-        .is_err());
+    assert!(
+        s.plan_scene_content_patch(&address, address.expected().clone())
+            .is_err()
+    );
     s.undo().unwrap();
-    assert!(s
-        .plan_scene_content_patch(&address, address.expected().clone())
-        .is_err());
+    assert!(
+        s.plan_scene_content_patch(&address, address.expected().clone())
+            .is_err()
+    );
 }
 
 #[test]
@@ -99,27 +101,29 @@ fn unchanged_synthetic_bezier_control_does_not_materialize_controller() {
     assert!(!s.execute_scene_content_plan(&plan).unwrap().changed);
     assert_eq!(s.version(), version);
     assert_eq!(s.history_state(), history);
-    assert!(s
-        .document()
-        .get_transform(&id(2))
-        .unwrap()
-        .warp()
-        .unwrap()
-        .bezier
-        .is_none());
+    assert!(
+        s.document()
+            .get_transform(&id(2))
+            .unwrap()
+            .warp()
+            .unwrap()
+            .bezier
+            .is_none()
+    );
     let plan = s
         .plan_scene_content_patch(&address, V::Point(Vec2::new(2., 3.)))
         .unwrap();
     assert!(!plan.is_noop());
     s.execute_scene_content_plan(&plan).unwrap();
-    assert!(s
-        .document()
-        .get_transform(&id(2))
-        .unwrap()
-        .warp()
-        .unwrap()
-        .bezier
-        .is_some());
+    assert!(
+        s.document()
+            .get_transform(&id(2))
+            .unwrap()
+            .warp()
+            .unwrap()
+            .bezier
+            .is_some()
+    );
 }
 
 #[test]
@@ -145,12 +149,13 @@ fn unchanged_implicit_offscreen_mapping_preserves_redo() {
     assert!(!s.execute_scene_content_plan(&plan).unwrap().changed);
     assert_eq!(s.version(), version);
     assert_eq!(s.history_state(), history);
-    assert!(s
-        .document()
-        .get_offscreen(&id(23))
-        .unwrap()
-        .part_keyform_indices
-        .is_empty());
+    assert!(
+        s.document()
+            .get_offscreen(&id(23))
+            .unwrap()
+            .part_keyform_indices
+            .is_empty()
+    );
     s.redo().unwrap();
     assert!(s.document().get_mesh(&id(30)).is_some());
 }
@@ -246,9 +251,10 @@ fn shape_address_rejects_recreated_binding_with_identical_content() {
     })
     .unwrap();
     assert!(s.resolve_handle(&handle).is_err());
-    assert!(s
-        .plan_scene_content_patch(&address, V::Point(Vec2::new(8., 9.)))
-        .is_err());
+    assert!(
+        s.plan_scene_content_patch(&address, V::Point(Vec2::new(8., 9.)))
+            .is_err()
+    );
 }
 fn run(s: &mut AuthoringSession, e: E) -> zipzi_sdk::EditReceipt {
     let p = s.plan_scene_content(e).unwrap();
@@ -348,6 +354,395 @@ fn offscreen(s: &mut AuthoringSession, bound: bool) {
         })
     })
     .unwrap();
+}
+
+#[test]
+fn warp_point_edits_preserve_controller_and_later_bezier_delta_keeps_the_residual() {
+    let mut s = session();
+    let points: Vec<_> = (0..=2)
+        .flat_map(|y| (0..=2).map(move |x| Vec2::new(x as f32 / 2., y as f32 / 2.)))
+        .collect();
+    let controller = WarpBezier::from_lattice(2, 2, false, &points);
+    s.edit("Warp", None, |edit| {
+        edit.create_transform(Transform {
+            id: id(2),
+            data: TransformData::Warp(WarpTransform {
+                rows: 2,
+                columns: 2,
+                quad: false,
+                points: points.clone(),
+                bezier: Some(controller.clone()),
+            }),
+            ..Default::default()
+        })
+    })
+    .unwrap();
+    let mut detail = points.clone();
+    detail[4].y += 0.25;
+    s.edit("Lattice detail", None, |edit| {
+        edit.update_warp_points(&id(2), detail.clone())
+    })
+    .unwrap();
+    let warp = s.document().get_transform(&id(2)).unwrap().warp().unwrap();
+    assert_eq!(warp.bezier.as_ref(), Some(&controller));
+    assert_eq!(warp.points, detail);
+    let mut changed = controller.clone();
+    changed.nodes[0].handles[1].y += 0.2;
+    let expected = changed.apply_delta(&controller, 2, 2, &detail);
+    run(
+        &mut s,
+        E::WarpBezier {
+            transform_id: id(2),
+            target: ShapeTarget::Base,
+            controller: Some(changed.clone()),
+        },
+    );
+    assert_eq!(
+        s.document()
+            .get_transform(&id(2))
+            .unwrap()
+            .warp()
+            .unwrap()
+            .points,
+        expected
+    );
+    s.undo().unwrap();
+    assert_eq!(
+        s.document()
+            .get_transform(&id(2))
+            .unwrap()
+            .warp()
+            .unwrap()
+            .points,
+        detail
+    );
+    assert_eq!(
+        s.document()
+            .get_transform(&id(2))
+            .unwrap()
+            .warp()
+            .unwrap()
+            .bezier
+            .as_ref(),
+        Some(&controller)
+    );
+    s.redo().unwrap();
+    assert_eq!(
+        s.document()
+            .get_transform(&id(2))
+            .unwrap()
+            .warp()
+            .unwrap()
+            .bezier
+            .as_ref(),
+        Some(&changed)
+    );
+}
+
+#[test]
+fn warp_authoring_density_refits_all_stored_controllers_and_roundtrips_without_changing_lattices() {
+    let mut s = session();
+    let points = (0..=4)
+        .flat_map(|y| (0..=4).map(move |x| Vec2::new(x as f32, y as f32)))
+        .collect::<Vec<_>>();
+    let controller = WarpBezier::from_lattice(4, 4, false, &points);
+    s.edit("Warp and shapes", None, |edit| {
+        edit.create_transform(Transform {
+            id: id(2),
+            data: TransformData::Warp(WarpTransform {
+                rows: 4,
+                columns: 4,
+                quad: false,
+                points: points.clone(),
+                bezier: Some(controller.clone()),
+            }),
+            ..Default::default()
+        })?;
+        edit.create_parameter(Parameter {
+            id: id(3),
+            minimum: 0.,
+            maximum: 1.,
+            default_value: 0.,
+            ..Default::default()
+        })?;
+        edit.create_scene_binding(SceneBinding {
+            id: id(4),
+            axes: vec![BindingAxis::new(id(3), vec![0., 1.])],
+            track: SceneTrack::Warp {
+                target_id: id(2).into(),
+                keyforms: vec![
+                    WarpKeyform {
+                        keys: vec![0.],
+                        positions: points.clone(),
+                        ..Default::default()
+                    },
+                    WarpKeyform {
+                        keys: vec![1.],
+                        positions: points.clone(),
+                        bezier: Some(controller.clone()),
+                        ..Default::default()
+                    },
+                ],
+            },
+        })
+    })
+    .unwrap();
+    let original = s.transform(&id(2)).unwrap();
+    let binding = s.scene_binding(&id(4)).unwrap();
+    let settings = WarpAuthoringSettings {
+        auto_reform: true,
+        edit_mode: WarpBezierEditMode::SmoothLocal,
+        bezier_grid: Some(WarpBezierGrid {
+            rows: 3,
+            columns: 2,
+        }),
+    };
+    run(
+        &mut s,
+        E::WarpAuthoring {
+            transform_id: id(2),
+            settings: settings.clone(),
+        },
+    );
+    let changed = s.transform(&id(2)).unwrap();
+    assert_eq!(changed.warp().unwrap().points, points);
+    assert_eq!(changed.warp_authoring.as_ref(), Some(&settings));
+    assert_eq!(
+        changed.warp().unwrap().bezier.as_ref().unwrap().nodes.len(),
+        12
+    );
+    let changed_binding = s.scene_binding(&id(4)).unwrap();
+    let SceneTrack::Warp { keyforms, .. } = &changed_binding.track else {
+        unreachable!()
+    };
+    assert!(keyforms[0].bezier.is_none());
+    assert_eq!(keyforms[1].bezier.as_ref().unwrap().nodes.len(), 12);
+    for form in keyforms {
+        assert_eq!(form.positions, points);
+    }
+    let version = s.version();
+    assert!(
+        !s.execute_scene_content_plan(
+            &s.plan_scene_content(E::WarpAuthoring {
+                transform_id: id(2),
+                settings: settings.clone()
+            })
+            .unwrap()
+        )
+        .unwrap()
+        .changed
+    );
+    assert_eq!(s.version(), version);
+    s.undo().unwrap();
+    assert_eq!(s.transform(&id(2)), Some(original));
+    assert_eq!(s.scene_binding(&id(4)), Some(binding));
+    s.redo().unwrap();
+    assert_eq!(s.transform(&id(2)), Some(changed.clone()));
+    let directory =
+        std::env::temp_dir().join(format!("zipzi-warp-authoring-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&directory).unwrap();
+    let saved = s
+        .save_project(&directory.join("warp-authoring"), None)
+        .unwrap();
+    let mut reopened = session();
+    reopened.open_project(&saved.manifest, None).unwrap();
+    assert_eq!(reopened.transform(&id(2)), Some(changed));
+    assert_eq!(reopened.scene_binding(&id(4)), Some(changed_binding));
+    let copy = reopened
+        .plan_scene_edit(SceneEdit::Duplicate {
+            ids: vec![id(2)],
+            scope: SceneCopyScope::Selected,
+            destination: None,
+            before: None,
+        })
+        .unwrap();
+    let copied = copy.copied_ids()[&id(2)].clone();
+    reopened.execute_scene_plan(&copy).unwrap();
+    assert_eq!(
+        reopened.transform(&copied).unwrap().warp_authoring.as_ref(),
+        Some(&settings)
+    );
+    let before = reopened.transform(&id(2)).unwrap();
+    let old_binding = reopened.scene_binding(&id(4)).unwrap();
+    let mut locks = reopened.document().editor_state().clone();
+    locks.objects.insert(
+        id(4),
+        ObjectEditorState {
+            locked: true,
+            ..Default::default()
+        },
+    );
+    reopened
+        .edit("Lock controller owner", None, |edit| {
+            edit.replace_editor_state(locks)
+        })
+        .unwrap();
+    let version = reopened.version();
+    assert!(
+        reopened
+            .plan_scene_content(E::WarpAuthoring {
+                transform_id: id(2),
+                settings: WarpAuthoringSettings {
+                    bezier_grid: Some(WarpBezierGrid {
+                        rows: 2,
+                        columns: 2
+                    }),
+                    ..settings.clone()
+                }
+            })
+            .is_err()
+    );
+    assert!(
+        reopened
+            .plan_scene_content(E::WarpAuthoring {
+                transform_id: id(2),
+                settings: WarpAuthoringSettings {
+                    bezier_grid: Some(WarpBezierGrid {
+                        rows: 0,
+                        columns: 2
+                    }),
+                    ..settings.clone()
+                }
+            })
+            .is_err()
+    );
+    assert_eq!(reopened.transform(&id(2)), Some(before));
+    assert_eq!(reopened.scene_binding(&id(4)), Some(old_binding));
+    assert_eq!(reopened.version(), version);
+    assert!(
+        reopened
+            .plan_scene_content(E::WarpShape {
+                transform_id: id(2),
+                target: ShapeTarget::Blend {
+                    binding_id: id(4),
+                    sample_id: id(5)
+                },
+                action: WarpShapeAction::Reform
+            })
+            .is_err()
+    );
+    std::fs::remove_dir_all(directory).unwrap();
+}
+
+#[test]
+fn warp_reset_reform_and_auto_reform_have_distinct_geometry_effects() {
+    let mut s = session();
+    let points = (0..=4)
+        .flat_map(|y| (0..=4).map(move |x| Vec2::new(x as f32, y as f32)))
+        .collect::<Vec<_>>();
+    let controller = WarpBezier::from_lattice(4, 4, false, &points);
+    s.edit("Warp", None, |edit| {
+        edit.create_transform(Transform {
+            id: id(2),
+            data: TransformData::Warp(WarpTransform {
+                rows: 4,
+                columns: 4,
+                quad: false,
+                points: points.clone(),
+                bezier: Some(controller),
+            }),
+            ..Default::default()
+        })
+    })
+    .unwrap();
+    let mut detail = points;
+    detail[12].y += 0.5;
+    s.edit("Detail", None, |edit| {
+        edit.update_warp_points(&id(2), detail.clone())
+    })
+    .unwrap();
+    run(
+        &mut s,
+        E::WarpShape {
+            transform_id: id(2),
+            target: ShapeTarget::Base,
+            action: WarpShapeAction::ResetController,
+        },
+    );
+    let reset = s.transform(&id(2)).unwrap();
+    assert_eq!(reset.warp().unwrap().points, detail);
+    let before = reset.warp().unwrap().bezier.as_ref().unwrap();
+    let address = s
+        .scene_content_address(
+            &id(2),
+            T::WarpBezierControl {
+                node: 0,
+                component: 2,
+                shape: ShapeTarget::Base,
+            },
+        )
+        .unwrap();
+    let point = Vec2::new(
+        before.nodes[0].handles[1].x,
+        before.nodes[0].handles[1].y + 0.3,
+    );
+    let plan = s
+        .plan_scene_content_patch(&address, V::Point(point))
+        .unwrap();
+    s.execute_scene_content_plan(&plan).unwrap();
+    let edited = s.transform(&id(2)).unwrap();
+    let next = edited.warp().unwrap().bezier.as_ref().unwrap();
+    assert_eq!(
+        edited.warp().unwrap().points,
+        next.apply_delta(before, 4, 4, &detail)
+    );
+    run(
+        &mut s,
+        E::WarpShape {
+            transform_id: id(2),
+            target: ShapeTarget::Base,
+            action: WarpShapeAction::Reform,
+        },
+    );
+    assert_eq!(
+        s.transform(&id(2)).unwrap().warp().unwrap().points,
+        next.lattice(4, 4)
+    );
+    s.undo().unwrap();
+    assert_eq!(s.transform(&id(2)), Some(edited.clone()));
+    run(
+        &mut s,
+        E::WarpAuthoring {
+            transform_id: id(2),
+            settings: WarpAuthoringSettings {
+                auto_reform: true,
+                ..Default::default()
+            },
+        },
+    );
+    assert_eq!(
+        s.transform(&id(2)).unwrap().warp().unwrap().points,
+        edited.warp().unwrap().points
+    );
+    let address = s
+        .scene_content_address(
+            &id(2),
+            T::WarpBezierControl {
+                node: 0,
+                component: 2,
+                shape: ShapeTarget::Base,
+            },
+        )
+        .unwrap();
+    let version = s.version();
+    let unchanged = s
+        .plan_scene_content_patch(&address, address.expected().clone())
+        .unwrap();
+    assert!(unchanged.is_noop());
+    assert!(!s.execute_scene_content_plan(&unchanged).unwrap().changed);
+    assert_eq!(s.version(), version);
+    assert_eq!(
+        s.transform(&id(2)).unwrap().warp().unwrap().points,
+        edited.warp().unwrap().points
+    );
+    let plan = s
+        .plan_scene_content_patch(&address, V::Point(Vec2::new(point.x, point.y + 0.2)))
+        .unwrap();
+    s.execute_scene_content_plan(&plan).unwrap();
+    let automatic = s.transform(&id(2)).unwrap();
+    let warp = automatic.warp().unwrap();
+    assert_eq!(warp.points, warp.bezier.as_ref().unwrap().lattice(4, 4));
+    assert_eq!((warp.rows, warp.columns), (4, 4));
 }
 
 #[test]
@@ -533,16 +928,18 @@ fn pair_pending_configuration_and_reordering_keep_ids_and_runtime_slots() {
     let h = s.handle(ObjectKind::GlueVertexPair, &id(5)).unwrap();
     assert_eq!(s.scene_projection().pair_slots[&id(6)].source_slot, 1);
     assert!(!s.scene_projection().pair_slots.contains_key(&id(5)));
-    assert!(s
-        .scene_projection()
-        .disabled
-        .iter()
-        .any(|d| d.id == id(5) && d.usage == SceneUse::GluePair));
-    assert!(s
-        .document()
-        .scene_export_omissions()
-        .iter()
-        .any(|d| d.id == id(5)));
+    assert!(
+        s.scene_projection()
+            .disabled
+            .iter()
+            .any(|d| d.id == id(5) && d.usage == SceneUse::GluePair)
+    );
+    assert!(
+        s.document()
+            .scene_export_omissions()
+            .iter()
+            .any(|d| d.id == id(5))
+    );
     let address = s
         .scene_content_address(&id(4), T::GluePair { pair_id: id(5) })
         .unwrap();
@@ -555,9 +952,10 @@ fn pair_pending_configuration_and_reordering_keep_ids_and_runtime_slots() {
         },
     );
     s.resolve_handle(&h).unwrap();
-    assert!(s
-        .plan_scene_content_patch(&address, V::GluePair(pair(5, Some(2), Some(2))))
-        .is_err());
+    assert!(
+        s.plan_scene_content_patch(&address, V::GluePair(pair(5, Some(2), Some(2))))
+            .is_err()
+    );
     let a = s
         .scene_content_address(&id(4), T::GluePair { pair_id: id(5) })
         .unwrap();
@@ -607,9 +1005,10 @@ fn pair_transfer_keeps_handle_but_expires_owner_address() {
     s.resolve_handle(&h).unwrap();
     assert_eq!(s.document().glue_pair_owner(&id(5)), Some(id(6).as_str()));
     s.undo().unwrap();
-    assert!(s
-        .plan_scene_content_patch(&a, a.expected().clone())
-        .is_err());
+    assert!(
+        s.plan_scene_content_patch(&a, a.expected().clone())
+            .is_err()
+    );
 }
 #[test]
 fn uv_and_triangle_addresses_expire_after_topology_and_undo() {
@@ -637,15 +1036,17 @@ fn uv_and_triangle_addresses_expire_after_topology_and_undo() {
         },
     );
     s.undo().unwrap();
-    assert!(s
-        .plan_scene_content_patch(&a, V::Triangle([1, 3, 2]))
-        .is_err());
-    assert!(s
-        .plan_scene_content(E::ReplaceTriangles {
+    assert!(
+        s.plan_scene_content_patch(&a, V::Triangle([1, 3, 2]))
+            .is_err()
+    );
+    assert!(
+        s.plan_scene_content(E::ReplaceTriangles {
             mesh_id: id(2),
             triangles: vec![[1, 2, 99]]
         })
-        .is_err());
+        .is_err()
+    );
     let a = s
         .scene_content_address(
             &id(2),
@@ -657,9 +1058,10 @@ fn uv_and_triangle_addresses_expire_after_topology_and_undo() {
         .unwrap();
     s.edit("Label", None, |e| e.rename_mesh(&id(2), "Face"))
         .unwrap();
-    assert!(s
-        .plan_scene_content_patch(&a, V::Point(Vec2::new(2., 3.)))
-        .is_ok());
+    assert!(
+        s.plan_scene_content_patch(&a, V::Point(Vec2::new(2., 3.)))
+            .is_ok()
+    );
 }
 #[test]
 fn offscreen_reorders_insertions_and_deletion_remap_part_sampling() {
@@ -682,9 +1084,10 @@ fn offscreen_reorders_insertions_and_deletion_remap_part_sampling() {
             .part_keyform_indices,
         [1, 0]
     );
-    assert!(s
-        .plan_scene_content_patch(&a, a.expected().clone())
-        .is_err());
+    assert!(
+        s.plan_scene_content_patch(&a, a.expected().clone())
+            .is_err()
+    );
     run(
         &mut s,
         E::InsertOffscreenKeyform {
@@ -703,13 +1106,14 @@ fn offscreen_reorders_insertions_and_deletion_remap_part_sampling() {
             .part_keyform_indices,
         [2, 1]
     );
-    assert!(s
-        .plan_scene_content(E::DeleteOffscreenKeyforms {
+    assert!(
+        s.plan_scene_content(E::DeleteOffscreenKeyforms {
             offscreen_id: id(23),
             slots: vec![2],
             policy: OffscreenDeletePolicy::RejectReferences
         })
-        .is_err());
+        .is_err()
+    );
     run(
         &mut s,
         E::DeleteOffscreenKeyforms {
@@ -794,6 +1198,7 @@ fn warp_control_resize_updates_grid_shapes_and_expires_old_controls() {
     let mut s = session();
     s.edit("Warp", None, |e| {
         e.create_transform(Transform {
+            warp_authoring: None,
             id: id(2),
             runtime_id: "Warp".into(),
             name: "Warp".into(),
@@ -830,14 +1235,15 @@ fn warp_control_resize_updates_grid_shapes_and_expires_old_controls() {
         .plan_scene_content_patch(&a, V::Point(Vec2::new(6., 2.)))
         .unwrap();
     s.execute_scene_content_plan(&p).unwrap();
-    assert!(s
-        .document()
-        .get_transform(&id(2))
-        .unwrap()
-        .warp()
-        .unwrap()
-        .bezier
-        .is_some());
+    assert!(
+        s.document()
+            .get_transform(&id(2))
+            .unwrap()
+            .warp()
+            .unwrap()
+            .bezier
+            .is_some()
+    );
     let a = s
         .scene_content_address(
             &id(2),
@@ -848,9 +1254,27 @@ fn warp_control_resize_updates_grid_shapes_and_expires_old_controls() {
             },
         )
         .unwrap();
-    assert!(s
+    let controller = s
+        .document()
+        .get_transform(&id(2))
+        .unwrap()
+        .warp()
+        .unwrap()
+        .bezier
+        .clone();
+    let point_plan = s
         .plan_scene_content_patch(&a, V::Point(Vec2::new(12., 12.)))
-        .is_err());
+        .unwrap();
+    s.execute_scene_content_plan(&point_plan).unwrap();
+    assert_eq!(
+        s.document()
+            .get_transform(&id(2))
+            .unwrap()
+            .warp()
+            .unwrap()
+            .bezier,
+        controller
+    );
     let p = s
         .plan_scene_content(E::ResizeWarp {
             transform_id: id(2),
@@ -872,9 +1296,10 @@ fn warp_control_resize_updates_grid_shapes_and_expires_old_controls() {
         12
     );
     s.undo().unwrap();
-    assert!(s
-        .plan_scene_content_patch(&a, a.expected().clone())
-        .is_err());
+    assert!(
+        s.plan_scene_content_patch(&a, a.expected().clone())
+            .is_err()
+    );
 }
 #[test]
 fn content_failures_locks_noops_budget_and_cancellation_are_atomic() {
@@ -920,12 +1345,13 @@ fn content_failures_locks_noops_budget_and_cancellation_are_atomic() {
     assert_eq!(s.version(), v);
     s.set_authoring_limits(Default::default()).unwrap();
     lock(&mut s, &id(2));
-    assert!(s
-        .plan_scene_content(E::DeleteTriangles {
+    assert!(
+        s.plan_scene_content(E::DeleteTriangles {
             mesh_id: id(2),
             slots: vec![0]
         })
-        .is_err());
+        .is_err()
+    );
 }
 
 #[test]
@@ -1099,10 +1525,12 @@ fn ordinary_and_blend_shapes_follow_topology_without_recreating_shared_tables() 
         unreachable!()
     };
     assert_eq!(forms[1].points.len(), 12);
-    assert!(forms[1]
-        .points
-        .iter()
-        .all(|p| (p.x - 2.).abs() < 1e-5 && (p.y - 3.).abs() < 1e-5));
+    assert!(
+        forms[1]
+            .points
+            .iter()
+            .all(|p| (p.x - 2.).abs() < 1e-5 && (p.y - 3.).abs() < 1e-5)
+    );
     assert_eq!(s.document().get_blend_key_table(&id(6)), Some(&table));
     run(
         &mut s,
@@ -1142,13 +1570,14 @@ fn content_reference_receipts_invert_and_locked_pair_flags_are_not_dropped() {
     assert_eq!(undo.changes.content_references[0].after, edge.before);
     lock(&mut s, &id(5));
     let v = s.version();
-    assert!(s
-        .plan_scene_content(E::DeleteMeshVertices {
+    assert!(
+        s.plan_scene_content(E::DeleteMeshVertices {
             mesh_id: id(2),
             vertices: vec![1],
             policy: VertexDeletePolicy::RemoveDependentContent
         })
-        .is_err());
+        .is_err()
+    );
     assert_eq!(s.version(), v);
     let mut g = s.document().get_glue(&id(4)).unwrap().clone();
     g.pairs.clear();
@@ -1159,13 +1588,14 @@ fn content_reference_receipts_invert_and_locked_pair_flags_are_not_dropped() {
             .as_ref(),
         "OBJECT_LOCKED"
     );
-    assert!(s
-        .plan_scene_content(E::InsertGluePair {
+    assert!(
+        s.plan_scene_content(E::InsertGluePair {
             glue_id: id(4),
             pair: pair(2, None, None),
             before: None
         })
-        .is_err());
+        .is_err()
+    );
 }
 #[test]
 fn bezier_controller_topology_can_change_without_resetting_the_runtime_lattice() {
@@ -1205,7 +1635,16 @@ fn bezier_controller_topology_can_change_without_resetting_the_runtime_lattice()
     let grid: Vec<_> = (0..=4)
         .flat_map(|y| (0..=4).map(move |x| Vec2::new(x as f32 * 2.5, y as f32 * 2.5)))
         .collect();
-    let controller = WarpBezier::from_lattice(4, 4, false, &grid);
+    let controller = WarpBezier::from_lattice_grid(
+        4,
+        4,
+        false,
+        &grid,
+        WarpBezierGrid {
+            rows: 2,
+            columns: 2,
+        },
+    );
     assert_eq!(controller.rows, 2);
     run(
         &mut s,
@@ -1230,7 +1669,8 @@ fn bezier_controller_topology_can_change_without_resetting_the_runtime_lattice()
         .unwrap();
     assert!(matches!(value.expected(), V::Point(_)));
     s.undo().unwrap();
-    assert!(s
-        .plan_scene_content_patch(&address, address.expected().clone())
-        .is_err());
+    assert!(
+        s.plan_scene_content_patch(&address, address.expected().clone())
+            .is_err()
+    );
 }

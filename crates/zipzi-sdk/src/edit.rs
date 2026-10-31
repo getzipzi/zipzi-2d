@@ -2,7 +2,7 @@
 use crate::changes::ChangeSetExt;
 use std::collections::HashSet;
 
-use crate::session::{keys_in, object_exists_in, AuthoringSession};
+use crate::session::{AuthoringSession, keys_in, object_exists_in};
 use crate::types::*;
 use zipzi_core::draw_order::DrawOrderGroup;
 use zipzi_core::{
@@ -584,7 +584,6 @@ impl EditSession<'_> {
             )));
         }
         let columns = warp.columns;
-        let clear_bezier = warp.points != points;
         self.edit_scene_content(crate::SceneContentEdit::WarpPoints {
             transform_id: transform_id.into(),
             target: crate::ShapeTarget::Base,
@@ -597,7 +596,7 @@ impl EditSession<'_> {
                     point,
                 })
                 .collect(),
-            clear_bezier,
+            clear_bezier: false,
         })
     }
     pub fn create_mesh(&mut self, mesh: Mesh) -> Result<(), SdkError> {

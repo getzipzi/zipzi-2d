@@ -724,8 +724,11 @@ from .scene import SceneContentEditReplaceTriangles as SceneContentEditReplaceTr
 from .scene import SceneContentEditResizeWarp as SceneContentEditResizeWarp
 from .scene import SceneContentEditSetOffscreenMapping as SceneContentEditSetOffscreenMapping
 from .scene import SceneContentEditTransferGluePairs as SceneContentEditTransferGluePairs
+from .scene import SceneContentEditWarpAuthoring as SceneContentEditWarpAuthoring
 from .scene import SceneContentEditWarpBezier as SceneContentEditWarpBezier
+from .scene import SceneContentEditWarpBezierControls as SceneContentEditWarpBezierControls
 from .scene import SceneContentEditWarpPoints as SceneContentEditWarpPoints
+from .scene import SceneContentEditWarpShape as SceneContentEditWarpShape
 from .scene import SceneContentTarget as SceneContentTarget
 from .scene import SceneContentTargetGluePair as SceneContentTargetGluePair
 from .scene import SceneContentTargetOffscreenKeyform as SceneContentTargetOffscreenKeyform
@@ -818,10 +821,15 @@ from .mesh import VertexSeed as VertexSeed
 from .mesh import VertexSeedBase as VertexSeedBase
 from .mesh import VertexSeedInterpolate as VertexSeedInterpolate
 from .mesh import VertexWeight as VertexWeight
+from .scene import WarpAuthoringSettings as WarpAuthoringSettings
 from .scene import WarpBezier as WarpBezier
+from .scene import WarpBezierControlPatch as WarpBezierControlPatch
+from .scene import WarpBezierEditMode as WarpBezierEditMode
+from .scene import WarpBezierGrid as WarpBezierGrid
 from .scene import WarpBezierNode as WarpBezierNode
 from .bindings import WarpKeyform as WarpKeyform
 from .scene import WarpPointPatch as WarpPointPatch
+from .scene import WarpShapeAction as WarpShapeAction
 from .scene import WarpTransform as WarpTransform
 from ..._extensions import ExtensionValue as ExtensionValue
 from .commands import OPERATION_TYPES as OPERATION_TYPES

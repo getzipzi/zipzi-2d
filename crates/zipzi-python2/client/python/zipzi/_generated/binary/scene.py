@@ -93,9 +93,14 @@ def _write_transform(value: object, w: Writer) -> None:
     _write_transformdata(_field(value, 'data'), w)
     w.boolean(_field(value, 'enabled'))
     _write_appearance(_field(value, 'appearance'), w)
+    if _field(value, 'warp_authoring') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        _write_warpauthoringsettings(_field(value, 'warp_authoring'), w)
 
 def _read_transform(r: Reader) -> m.Transform:
-    return m.Transform(id=r.text(), runtime_id=r.text(), name=r.text(), part_id=(_read_partid(r) if r.optional() else None), parent_id=(_read_transformid(r) if r.optional() else None), data=_read_transformdata(r), enabled=r.boolean(), appearance=_read_appearance(r))
+    return m.Transform(id=r.text(), runtime_id=r.text(), name=r.text(), part_id=(_read_partid(r) if r.optional() else None), parent_id=(_read_transformid(r) if r.optional() else None), data=_read_transformdata(r), enabled=r.boolean(), appearance=_read_appearance(r), warp_authoring=(_read_warpauthoringsettings(r) if r.optional() else None))
 
 def _write_partid(value: object, w: Writer) -> None:
     w.text(_field(value, 'value'))
@@ -204,6 +209,50 @@ def _dependencies__read_rotationpose():
 def _read_rotationpose(r: Reader) -> m.RotationPose:
     _read_precisevec2, = _dependencies__read_rotationpose()
     return m.RotationPose(origin=_read_precisevec2(r), angle=number(r.scalar('f')), scale=number(r.scalar('f')), reflect_x=r.boolean(), reflect_y=r.boolean())
+
+def _write_warpauthoringsettings(value: object, w: Writer) -> None:
+    w.boolean(_field(value, 'auto_reform'))
+    _write_warpbeziereditmode(_field(value, 'edit_mode'), w)
+    if _field(value, 'bezier_grid') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        _write_warpbeziergrid(_field(value, 'bezier_grid'), w)
+
+def _read_warpauthoringsettings(r: Reader) -> m.WarpAuthoringSettings:
+    return m.WarpAuthoringSettings(auto_reform=r.boolean(), edit_mode=_read_warpbeziereditmode(r), bezier_grid=(_read_warpbeziergrid(r) if r.optional() else None))
+
+def _write_warpbeziereditmode(value: object, w: Writer) -> None:
+    tag=string(_field(value,"value"))
+    if tag=='local':
+        w.u32(0)
+    elif tag=='smooth_local':
+        w.u32(1)
+    elif tag=='smooth_global':
+        w.u32(2)
+    elif tag=='preserve_structure':
+        w.u32(3)
+    else:
+        raise TypeError("Unexpected WarpBezierEditMode variant")
+
+def _read_warpbeziereditmode(r: Reader) -> m.WarpBezierEditMode:
+    tag=r.u32()
+    if tag==0:
+        return m.WarpBezierEditMode('local')
+    elif tag==1:
+        return m.WarpBezierEditMode('smooth_local')
+    elif tag==2:
+        return m.WarpBezierEditMode('smooth_global')
+    elif tag==3:
+        return m.WarpBezierEditMode('preserve_structure')
+    raise ValueError("Unknown binary WarpBezierEditMode variant")
+
+def _write_warpbeziergrid(value: object, w: Writer) -> None:
+    w.scalar('I', _field(value, 'rows'))
+    w.scalar('I', _field(value, 'columns'))
+
+def _read_warpbeziergrid(r: Reader) -> m.WarpBezierGrid:
+    return m.WarpBezierGrid(rows=integer(r.scalar('I')), columns=integer(r.scalar('I')))
 
 @cache
 def _dependencies__write_glue():
@@ -533,6 +582,26 @@ def _write_warppointpatch(value: object, w: Writer) -> None:
     w.scalar('I', _field(value, 'column'))
     _write_vec2(_field(value, 'point'), w)
 
+@cache
+def _dependencies__write_warpbeziercontrolpatch():
+    from .common import _write_vec2
+    return _write_vec2,
+
+def _write_warpbeziercontrolpatch(value: object, w: Writer) -> None:
+    _write_vec2, = _dependencies__write_warpbeziercontrolpatch()
+    w.scalar('I', _field(value, 'node'))
+    w.scalar('B', _field(value, 'component'))
+    _write_vec2(_field(value, 'point'), w)
+
+def _write_warpshapeaction(value: object, w: Writer) -> None:
+    tag=string(_field(value,"value"))
+    if tag=='reset_controller':
+        w.u32(0)
+    elif tag=='reform':
+        w.u32(1)
+    else:
+        raise TypeError("Unexpected WarpShapeAction variant")
+
 def _write_offscreendeletepolicy(value: object, w: Writer) -> None:
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
     if tag=='reject_references':
@@ -732,4 +801,4 @@ def _write_offscreenformspec(value: object, w: Writer) -> None:
         if len(items0)!=3: raise ValueError("Invalid binary array length")
         w.numeric('f', tuple(items0))
 
-__all__ = ['_read_appearance', '_read_attachmentref', '_read_blendmode', '_read_canvas', '_read_drawordergroup', '_read_glue', '_read_gluevertexpair', '_read_hierarchyorder', '_read_modelsetup', '_read_offscreen', '_read_part', '_read_partid', '_read_rotationpose', '_read_rotationtransform', '_read_scenereference', '_read_transform', '_read_transformdata', '_read_transformid', '_read_warpbezier', '_read_warpbeziernode', '_read_warptransform', '_write_appearance', '_write_attachmentref', '_write_blendmode', '_write_canvas', '_write_drawordergroup', '_write_glue', '_write_gluepairspec', '_write_gluevertexpair', '_write_hierarchyorder', '_write_modelsetup', '_write_offscreen', '_write_offscreendeletepolicy', '_write_offscreenformspec', '_write_offscreenmappingpatch', '_write_organizationcollection', '_write_organizationdeletepolicy', '_write_part', '_write_partcreatespec', '_write_partid', '_write_reparentcontext', '_write_reparentplacement', '_write_reparentstrategy', '_write_rotationpose', '_write_rotationtransform', '_write_scenecollection', '_write_scenecopyscope', '_write_scenecreate', '_write_scenefieldvalue', '_write_sceneplacement', '_write_scenereference', '_write_shapetarget', '_write_transform', '_write_transformdata', '_write_transformid', '_write_warpbezier', '_write_warpbeziernode', '_write_warppointpatch', '_write_warptransform']
+__all__ = ['_read_appearance', '_read_attachmentref', '_read_blendmode', '_read_canvas', '_read_drawordergroup', '_read_glue', '_read_gluevertexpair', '_read_hierarchyorder', '_read_modelsetup', '_read_offscreen', '_read_part', '_read_partid', '_read_rotationpose', '_read_rotationtransform', '_read_scenereference', '_read_transform', '_read_transformdata', '_read_transformid', '_read_warpauthoringsettings', '_read_warpbezier', '_read_warpbeziereditmode', '_read_warpbeziergrid', '_read_warpbeziernode', '_read_warptransform', '_write_appearance', '_write_attachmentref', '_write_blendmode', '_write_canvas', '_write_drawordergroup', '_write_glue', '_write_gluepairspec', '_write_gluevertexpair', '_write_hierarchyorder', '_write_modelsetup', '_write_offscreen', '_write_offscreendeletepolicy', '_write_offscreenformspec', '_write_offscreenmappingpatch', '_write_organizationcollection', '_write_organizationdeletepolicy', '_write_part', '_write_partcreatespec', '_write_partid', '_write_reparentcontext', '_write_reparentplacement', '_write_reparentstrategy', '_write_rotationpose', '_write_rotationtransform', '_write_scenecollection', '_write_scenecopyscope', '_write_scenecreate', '_write_scenefieldvalue', '_write_sceneplacement', '_write_scenereference', '_write_shapetarget', '_write_transform', '_write_transformdata', '_write_transformid', '_write_warpauthoringsettings', '_write_warpbezier', '_write_warpbeziercontrolpatch', '_write_warpbeziereditmode', '_write_warpbeziergrid', '_write_warpbeziernode', '_write_warppointpatch', '_write_warpshapeaction', '_write_warptransform']

@@ -79,6 +79,22 @@ an ambiguous direction rejects without changing the frame. Reset fits a fresh
 axis-aligned frame. These commands add no model history. Numeric Warp transforms
 use the owning viewport's adjusted center.
 
+Switching Bezier/grid display never changes geometry or history. Fine-point
+edits retain any stored controller; absent controllers stay derived until an
+actual controller edit. Handle drags preserve the explicit conversion and
+controller densities. Derived controllers default to 1×1 independently of the
+conversion lattice.
+
+Bezier edits freeze the object's influence policy with the edit snapshot.
+Selected controls stay explicit; local cosine or global Gaussian smoothing can
+move neighboring controls, and tangent-ratio mode couples opposing handles.
+The status label identifies these extra influences. With auto reform off, the
+controller delta is added to the grid, retaining its residual detail. With it
+on, actual controller edits resample the grid. Whole affine transforms retain
+the transformed residual. Changing the auto-reform toggle alone and submitting
+an unchanged control never reform geometry. Reset controller preserves grid
+points; the separate Reform action deliberately replaces their detail.
+
 The viewport's Select All command (`Cmd+A` on macOS) shares these region selection
 rules: it selects editable vertices of selected meshes/warps, or visible unlocked
 meshes when there are no component targets. It respects viewport isolation and

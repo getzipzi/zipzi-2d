@@ -224,6 +224,7 @@ pub enum SceneContentEdit {
         updates: Vec<WarpPointPatch>,
         #[serde(default)]
         /// Explicitly remove the authoring Bezier controller when editing baked lattice points.
+        /// False preserves the controller and retains lattice detail for subsequent delta edits.
         clear_bezier: bool,
     },
     WarpBezier {
@@ -235,6 +236,30 @@ pub enum SceneContentEdit {
         target: ShapeTarget,
         /// Complete authoring Bezier controller; its baked lattice is updated by the native edit.
         controller: Option<WarpBezier>,
+    },
+    WarpBezierControls {
+        /// Stable Warp transform ID.
+        transform_id: String,
+        #[serde(default)]
+        /// Explicit base or ordinary stored shape; BlendShapes have no independent controller.
+        target: ShapeTarget,
+        /// Explicit controller destinations; the stored editing mode supplies neighborhood influence.
+        updates: Vec<crate::warp_bezier::WarpBezierControlPatch>,
+    },
+    WarpAuthoring {
+        /// Stable Warp transform ID.
+        transform_id: String,
+        /// Object editing settings. An explicit grid refits all stored controllers without changing baked points.
+        settings: crate::warp_bezier::WarpAuthoringSettings,
+    },
+    WarpShape {
+        /// Stable Warp transform ID.
+        transform_id: String,
+        #[serde(default)]
+        /// Explicit base or ordinary stored shape; other stored shapes remain unchanged.
+        target: ShapeTarget,
+        /// Reset preserves baked points; Reform samples the controller and replaces baked detail.
+        action: crate::warp_bezier::WarpShapeAction,
     },
     ResizeWarp {
         /// Stable deformation-transform ID in this document.

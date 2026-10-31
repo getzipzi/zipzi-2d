@@ -796,6 +796,64 @@ pub(crate) fn write_scenecontentedit_in(
                 .call((), Some(&content))?
                 .unbind())
         }
+        zipzi_core::document::SceneContentEdit::WarpBezierControls {
+            transform_id: field0,
+            target: field1,
+            updates: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "transform_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("target", write_shapetarget_in(py, (field1), classes)?)?;
+            content.set_item("updates", {
+                let out = PyList::empty(py);
+                for item0 in (field2) {
+                    out.append(write_warpbeziercontrolpatch_in(py, (item0), classes)?)?;
+                }
+                out.into_any().unbind()
+            })?;
+            Ok(classes
+                .getattr("SceneContentEditWarpBezierControls")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::SceneContentEdit::WarpAuthoring {
+            transform_id: field0,
+            settings: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "transform_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "settings",
+                write_warpauthoringsettings_in(py, (field1), classes)?,
+            )?;
+            Ok(classes
+                .getattr("SceneContentEditWarpAuthoring")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::document::SceneContentEdit::WarpShape {
+            transform_id: field0,
+            target: field1,
+            action: field2,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "transform_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("target", write_shapetarget_in(py, (field1), classes)?)?;
+            content.set_item("action", write_warpshapeaction_in(py, (field2), classes)?)?;
+            Ok(classes
+                .getattr("SceneContentEditWarpShape")?
+                .call((), Some(&content))?
+                .unbind())
+        }
         zipzi_core::document::SceneContentEdit::ResizeWarp {
             transform_id: field0,
             rows: field1,

@@ -75,6 +75,7 @@ pub struct OverlaySnapshot {
     /// Zero denotes the whole Warp; a positive count denotes the selected controls.
     pub warp_transform_points: Option<usize>,
     pub warp_frame_adjusting: bool,
+    pub warp_bezier_mode: Option<zipzi_core::WarpBezierEditMode>,
     pub active_handle_radians: f32,
     /// Context for a hovered control, separate from edit errors and parameter previews.
     pub point_unavailable: Option<String>,
@@ -238,6 +239,16 @@ impl ToolController {
             } else {
                 0
             });
+            if local && !self.warp_fine {
+                out.warp_bezier_mode = active_target
+                    .and_then(|hit| {
+                        document
+                            .model()
+                            .get_transform(&hit.object().id)
+                            .and_then(|t| t.warp_authoring.as_ref().map(|s| s.edit_mode))
+                    })
+                    .filter(|mode| *mode != zipzi_core::WarpBezierEditMode::Local);
+            }
         }
         out.active_component = active_target.and_then(|hit| match hit {
             HitTarget::Component(component) => Some(component.clone()),

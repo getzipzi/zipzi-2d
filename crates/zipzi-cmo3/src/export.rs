@@ -12,7 +12,7 @@ use crate::{
     *,
 };
 use std::collections::{BTreeSet, HashMap};
-use zipzi_core::{types::*, Document};
+use zipzi_core::{Document, types::*};
 
 const ROOT_DEFORMER: &str = "71fae776-e218-4aee-873e-78e8ac0cb48a";
 const ROOT_PARAMETER_GROUP: &str = "e9fe6eff-953b-4ce2-be7c-4a7c3913686b";
@@ -700,13 +700,12 @@ pub(crate) fn encode_with_animation(
     if !doc.editor_state().is_empty()
         || !doc.hierarchy_order().is_empty()
         || doc.transform_order().iter().any(|id| {
-            doc.get_transform(id)
-                .unwrap()
-                .warp()
-                .is_some_and(|w| w.bezier.is_some())
+            let transform = doc.get_transform(id).unwrap();
+            transform.warp_authoring.is_some()
+                || transform.warp().is_some_and(|w| w.bezier.is_some())
         })
     {
-        report.diagnostics.push(Cmo3Diagnostic {severity:DiagnosticSeverity::Info,code:"AUTHORING_METADATA".into(),object_id:doc.id().into(),message:"Zipzi palette preferences and Bezier handles are not stored; mesh and sampled warp geometry remain editable".into()});
+        report.diagnostics.push(Cmo3Diagnostic {severity:DiagnosticSeverity::Info,code:"AUTHORING_METADATA".into(),object_id:doc.id().into(),message:"Zipzi palette preferences, Warp editing settings and Bezier handles are not stored; mesh and sampled warp geometry remain editable".into()});
     }
     let bytes = crate::caff::encode(exporter.images, &xml, options.obfuscation_key)?;
     report.diagnostics.push(Cmo3Diagnostic { severity:DiagnosticSeverity::Info,code:"ATLAS_ARTWORK".into(),object_id:doc.id().into(),message:"Artwork is embedded as texture atlases; original PSD layer history is unavailable in a Zipzi document".into() });

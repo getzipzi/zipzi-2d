@@ -427,6 +427,17 @@ impl DocumentSession {
                 );
                 self.document.adjust_warp(&target, adjustment)
             }
+            EditorCommand::WarpShape { target, action } => {
+                anyhow::ensure!(
+                    self.modeling
+                        .tools
+                        .warp_transform_destination(&self.document, &target.object, target.viewport)
+                        .as_ref()
+                        == Some(&target),
+                    "Warp shaping target changed"
+                );
+                self.document.shape_warp(&target.object, action)
+            }
             EditorCommand::SetObjectProperty {
                 object,
                 field,

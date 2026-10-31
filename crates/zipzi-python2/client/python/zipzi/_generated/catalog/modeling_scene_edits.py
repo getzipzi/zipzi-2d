@@ -833,6 +833,24 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                          'None = None)'},
  'zipzi.modeling.scene.SceneContentEditTransferGluePairs.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditTransferGluePairs.summary': {'alias': 'zipzi.ApiDescription.summary'},
+ 'zipzi.modeling.scene.SceneContentEditWarpAuthoring': {'children': ('zipzi.modeling.scene.SceneContentEditWarpAuthoring.__repr__',
+                                                                     'zipzi.modeling.scene.SceneContentEditWarpAuthoring.summary'),
+                                                        'documentation': 'Immutable owned '
+                                                                         'SceneContentEditWarpAuthoring value. '
+                                                                         'Construction owns declared collections; '
+                                                                         'reading fields, repr and summary performs no '
+                                                                         'IO.',
+                                                        'example': 'docs/recipes.py',
+                                                        'fields': [('transform_id', 'Stable Warp transform ID.'),
+                                                                   ('settings',
+                                                                    'Object editing settings. An explicit grid refits '
+                                                                    'all stored controllers without changing baked '
+                                                                    'points.')],
+                                                        'kind': 'type',
+                                                        'signature': '(*, transform_id: str, settings: '
+                                                                     'WarpAuthoringSettings)'},
+ 'zipzi.modeling.scene.SceneContentEditWarpAuthoring.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
+ 'zipzi.modeling.scene.SceneContentEditWarpAuthoring.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentEditWarpBezier': {'children': ('zipzi.modeling.scene.SceneContentEditWarpBezier.__repr__',
                                                                   'zipzi.modeling.scene.SceneContentEditWarpBezier.summary'),
                                                      'documentation': 'Immutable owned SceneContentEditWarpBezier '
@@ -854,6 +872,28 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                   '<factory>, controller: WarpBezier | None = None)'},
  'zipzi.modeling.scene.SceneContentEditWarpBezier.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditWarpBezier.summary': {'alias': 'zipzi.ApiDescription.summary'},
+ 'zipzi.modeling.scene.SceneContentEditWarpBezierControls': {'children': ('zipzi.modeling.scene.SceneContentEditWarpBezierControls.__repr__',
+                                                                          'zipzi.modeling.scene.SceneContentEditWarpBezierControls.summary'),
+                                                             'documentation': 'Immutable owned '
+                                                                              'SceneContentEditWarpBezierControls '
+                                                                              'value. Construction owns declared '
+                                                                              'collections; reading fields, repr and '
+                                                                              'summary performs no IO.',
+                                                             'example': 'docs/recipes.py',
+                                                             'fields': [('transform_id', 'Stable Warp transform ID.'),
+                                                                        ('target',
+                                                                         'Explicit base or ordinary stored shape; '
+                                                                         'BlendShapes have no independent controller.'),
+                                                                        ('updates',
+                                                                         'Explicit controller destinations; the stored '
+                                                                         'editing mode supplies neighborhood '
+                                                                         'influence.')],
+                                                             'kind': 'type',
+                                                             'signature': '(*, transform_id: str, target: ShapeTarget '
+                                                                          '= <factory>, updates: '
+                                                                          'tuple[WarpBezierControlPatch, ...])'},
+ 'zipzi.modeling.scene.SceneContentEditWarpBezierControls.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
+ 'zipzi.modeling.scene.SceneContentEditWarpBezierControls.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentEditWarpPoints': {'children': ('zipzi.modeling.scene.SceneContentEditWarpPoints.__repr__',
                                                                   'zipzi.modeling.scene.SceneContentEditWarpPoints.summary'),
                                                      'documentation': 'Immutable owned SceneContentEditWarpPoints '
@@ -872,13 +912,33 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                  'native edit.'),
                                                                 ('clear_bezier',
                                                                  'Explicitly remove the authoring Bezier controller '
-                                                                 'when editing baked lattice points.')],
+                                                                 'when editing baked lattice points.\n'
+                                                                 'False preserves the controller and retains lattice '
+                                                                 'detail for subsequent delta edits.')],
                                                      'kind': 'type',
                                                      'signature': '(*, transform_id: str, target: ShapeTarget = '
                                                                   '<factory>, updates: tuple[WarpPointPatch, ...], '
                                                                   'clear_bezier: bool = False)'},
  'zipzi.modeling.scene.SceneContentEditWarpPoints.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditWarpPoints.summary': {'alias': 'zipzi.ApiDescription.summary'},
+ 'zipzi.modeling.scene.SceneContentEditWarpShape': {'children': ('zipzi.modeling.scene.SceneContentEditWarpShape.__repr__',
+                                                                 'zipzi.modeling.scene.SceneContentEditWarpShape.summary'),
+                                                    'documentation': 'Immutable owned SceneContentEditWarpShape value. '
+                                                                     'Construction owns declared collections; reading '
+                                                                     'fields, repr and summary performs no IO.',
+                                                    'example': 'docs/recipes.py',
+                                                    'fields': [('transform_id', 'Stable Warp transform ID.'),
+                                                               ('target',
+                                                                'Explicit base or ordinary stored shape; other stored '
+                                                                'shapes remain unchanged.'),
+                                                               ('action',
+                                                                'Reset preserves baked points; Reform samples the '
+                                                                'controller and replaces baked detail.')],
+                                                    'kind': 'type',
+                                                    'signature': '(*, transform_id: str, target: ShapeTarget = '
+                                                                 '<factory>, action: WarpShapeAction)'},
+ 'zipzi.modeling.scene.SceneContentEditWarpShape.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
+ 'zipzi.modeling.scene.SceneContentEditWarpShape.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneEdit': {'children': (),
                                     'documentation': 'Typed public API entry.',
                                     'example': 'docs/recipes.py',

@@ -40,6 +40,10 @@ pub fn measure_transformdata(value: &Bound<'_, PyAny>) -> PyResult<usize> {
     }
 }
 
+pub fn measure_warpbeziereditmode(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(128usize)
+}
+
 pub fn measure_reparentstrategy(value: &Bound<'_, PyAny>) -> PyResult<usize> {
     Ok(128usize)
 }
@@ -284,6 +288,10 @@ pub fn measure_shapetarget(value: &Bound<'_, PyAny>) -> PyResult<usize> {
             "Unexpected modeling variant",
         )),
     }
+}
+
+pub fn measure_warpshapeaction(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(128usize)
 }
 
 pub fn measure_offscreendeletepolicy(value: &Bound<'_, PyAny>) -> PyResult<usize> {

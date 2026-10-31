@@ -431,6 +431,28 @@ pub fn read_scenecontentedit(
                 Some(read_warpbezier(&value.getattr("controller")?)?)
             },
         }),
+        "warp_bezier_controls" => Ok(zipzi_core::document::SceneContentEdit::WarpBezierControls {
+            transform_id: value.getattr("transform_id")?.extract()?,
+            target: read_shapetarget(&value.getattr("target")?)?,
+            updates: value
+                .getattr("updates")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok(read_warpbeziercontrolpatch(&item0)?)
+                })
+                .collect::<PyResult<Vec<_>>>()?
+                .into(),
+        }),
+        "warp_authoring" => Ok(zipzi_core::document::SceneContentEdit::WarpAuthoring {
+            transform_id: value.getattr("transform_id")?.extract()?,
+            settings: read_warpauthoringsettings(&value.getattr("settings")?)?,
+        }),
+        "warp_shape" => Ok(zipzi_core::document::SceneContentEdit::WarpShape {
+            transform_id: value.getattr("transform_id")?.extract()?,
+            target: read_shapetarget(&value.getattr("target")?)?,
+            action: read_warpshapeaction(&value.getattr("action")?)?,
+        }),
         "resize_warp" => Ok(zipzi_core::document::SceneContentEdit::ResizeWarp {
             transform_id: value.getattr("transform_id")?.extract()?,
             rows: value.getattr("rows")?.extract()?,

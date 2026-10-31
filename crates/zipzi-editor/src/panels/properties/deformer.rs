@@ -13,39 +13,132 @@ use zipzi_editor_core::{
 };
 
 impl PropertiesPanel {
+    pub(super) fn warp_shape_actions(&self, cx: &Context<Self>) -> AnyElement {
+        let target = self.target.clone().unwrap();
+        let epoch = self.epoch;
+        let panel = cx.weak_entity();
+        let context = self
+            .owner
+            .upgrade()
+            .and_then(|o| crate::authoring::AuthoringContext::capture(&o.read(cx).editor));
+        let mut body = div()
+            .id("property-warp-shape")
+            .test_support()
+            .flex()
+            .gap_2();
+        for (id, label, hint, action) in [
+            (
+                "property-warp-reset",
+                "properties.warp_reset_controller",
+                "properties.warp_reset_controller_hint",
+                zipzi_core::WarpShapeAction::ResetController,
+            ),
+            (
+                "property-warp-reform",
+                "properties.warp_reform",
+                "properties.warp_reform_hint",
+                zipzi_core::WarpShapeAction::Reform,
+            ),
+        ] {
+            let owner = self.owner.clone();
+            let target = target.clone();
+            let panel = panel.clone();
+            body = body.child(
+                compact::button(Button::new(id))
+                    .label(t!(label).into_owned())
+                    .tooltip(t!(hint))
+                    .disabled(self.disabled || !target.scope.shape_editable())
+                    .on_click(move |_, window, cx| {
+                        if window.has_active_dialog(cx)
+                            || !panel.upgrade().is_some_and(|p| {
+                                let p = p.read(cx);
+                                p.visible && p.epoch == epoch && p.target.as_ref() == Some(&target)
+                            })
+                        {
+                            return;
+                        }
+                        let _ = owner.update(cx, |view, cx| {
+                            if view.modal
+                                || crate::authoring::AuthoringContext::capture(&view.editor)
+                                    != context
+                            {
+                                return;
+                            }
+                            if !view.prepare_property_inputs(target.document, window, cx) {
+                                return;
+                            }
+                            let result = (|| {
+                                let binding = view
+                                    .warp_property_viewport()
+                                    .ok_or_else(|| anyhow::anyhow!("Warp viewport closed"))?;
+                                let target = view
+                                    .editor
+                                    .warp_transform_target_for(binding, &target.object)
+                                    .ok_or_else(|| anyhow::anyhow!("Warp changed"))?;
+                                view.editor
+                                    .execute(zipzi_editor_core::EditorCommand::WarpShape {
+                                        target,
+                                        action,
+                                    })
+                            })();
+                            view.complete_edit(result, cx);
+                        });
+                    }),
+            );
+        }
+        body.into_any_element()
+    }
     pub(super) fn warp_grid_action(&self, cx: &mut Context<Self>) -> AnyElement {
+        self.warp_density_action(false, cx)
+    }
+    pub(super) fn warp_bezier_grid_action(&self, cx: &mut Context<Self>) -> AnyElement {
+        self.warp_density_action(true, cx)
+    }
+    fn warp_density_action(&self, bezier: bool, cx: &mut Context<Self>) -> AnyElement {
         let target = self.target.clone().unwrap();
         let owner = self.owner.clone();
         let panel = cx.weak_entity();
         let epoch = self.epoch;
         let context = self.context;
-        compact::button(Button::new("property-warp-grid"))
-            .label(t!("properties.warp_grid").into_owned())
-            .disabled(self.disabled)
-            .on_click(move |_, window, cx| {
-                if !panel.upgrade().is_some_and(|panel| {
-                    let panel = panel.read(cx);
-                    panel.visible && panel.epoch == epoch && panel.target.as_ref() == Some(&target)
-                }) || window.has_active_dialog(cx)
-                {
-                    return;
-                }
-                if !owner
-                    .upgrade()
-                    .is_some_and(|owner| owner.read(cx).editor.editing_context_token() == context)
-                {
-                    return;
-                }
-                let result = WarpGridDialog::open(owner.clone(), target.clone(), window, cx);
-                if let Err(error) = result {
-                    let _ = owner.update(cx, |view, cx| view.set_edit_error(error.to_string(), cx));
-                }
+        compact::button(Button::new(if bezier {
+            "property-warp-bezier-grid"
+        } else {
+            "property-warp-grid"
+        }))
+        .label(
+            t!(if bezier {
+                "properties.warp_bezier_grid"
+            } else {
+                "properties.warp_grid"
             })
-            .into_any_element()
+            .into_owned(),
+        )
+        .disabled(self.disabled)
+        .on_click(move |_, window, cx| {
+            if !panel.upgrade().is_some_and(|panel| {
+                let panel = panel.read(cx);
+                panel.visible && panel.epoch == epoch && panel.target.as_ref() == Some(&target)
+            }) || window.has_active_dialog(cx)
+            {
+                return;
+            }
+            if !owner
+                .upgrade()
+                .is_some_and(|owner| owner.read(cx).editor.editing_context_token() == context)
+            {
+                return;
+            }
+            let result = WarpGridDialog::open(owner.clone(), target.clone(), bezier, window, cx);
+            if let Err(error) = result {
+                let _ = owner.update(cx, |view, cx| view.set_edit_error(error.to_string(), cx));
+            }
+        })
+        .into_any_element()
     }
 }
 
 struct WarpGridDialog {
+    bezier: bool,
     owner: WeakEntity<EditorView>,
     target: PropertyTarget,
     context: zipzi_editor_core::EditingContextToken,
@@ -61,6 +154,7 @@ impl WarpGridDialog {
     fn open(
         owner: WeakEntity<EditorView>,
         target: PropertyTarget,
+        bezier: bool,
         window: &mut Window,
         cx: &mut App,
     ) -> anyhow::Result<()> {
@@ -95,7 +189,12 @@ impl WarpGridDialog {
             .editing_context_token()
             .ok_or_else(|| anyhow::anyhow!("Document closed"))?;
         let values = target.values(editor)?;
-        let baseline: PropertyValues = [fields::COLUMNS, fields::ROWS, fields::QUAD]
+        let specs = if bezier {
+            vec![fields::BEZIER_COLUMNS, fields::BEZIER_ROWS]
+        } else {
+            vec![fields::COLUMNS, fields::ROWS, fields::QUAD]
+        };
+        let baseline: PropertyValues = specs
             .into_iter()
             .map(|s| {
                 values
@@ -106,10 +205,15 @@ impl WarpGridDialog {
             })
             .collect::<anyhow::Result<_>>()?;
         let form = cx.new(|cx| {
-            let inputs = [fields::COLUMNS, fields::ROWS].map(|s| {
+            let dimensions = if bezier {
+                [fields::BEZIER_COLUMNS, fields::BEZIER_ROWS]
+            } else {
+                [fields::COLUMNS, fields::ROWS]
+            };
+            let inputs = dimensions.map(|s| {
                 cx.new(|cx| InputState::new(window, cx).default_value(baseline[&s.key].text()))
             });
-            let quad = baseline[&fields::QUAD.key] == PropertyValue::Bool(true);
+            let quad = baseline.get(&fields::QUAD.key) == Some(&PropertyValue::Bool(true));
             let interpolation = cx.new(|cx| {
                 SelectState::new(
                     SearchableVec::new(vec![
@@ -162,6 +266,7 @@ impl WarpGridDialog {
             })
             .detach();
             Self {
+                bezier,
                 owner,
                 target,
                 context,
@@ -178,7 +283,12 @@ impl WarpGridDialog {
         form_dialog::open(
             form,
             FormDialogOptions {
-                title: t!("properties.warp_grid").into_owned(),
+                title: t!(if bezier {
+                    "properties.warp_bezier_grid"
+                } else {
+                    "properties.warp_grid"
+                })
+                .into_owned(),
                 submit_label: t!("properties.warp_apply").into(),
                 footer_id: "warp-grid-footer",
                 cancel_id: "warp-grid-cancel",
@@ -191,26 +301,37 @@ impl WarpGridDialog {
         Ok(())
     }
     fn patch(&self, cx: &App) -> anyhow::Result<PropertyPatch> {
-        let mut values: PropertyValues = [fields::COLUMNS, fields::ROWS]
-            .into_iter()
-            .zip(&self.inputs)
-            .map(|(s, input)| {
-                Ok((
-                    s.key,
-                    s.parse(input.read(cx).value().as_ref())
-                        .map_err(|_| anyhow::anyhow!(t!("properties.warp_dimensions_invalid")))?,
-                ))
-            })
-            .collect::<anyhow::Result<_>>()?;
-        values.insert(
-            fields::QUAD.key,
-            PropertyValue::Bool(
-                self.interpolation
-                    .read(cx)
-                    .selected_value()
-                    .is_some_and(|v| v == "quad"),
-            ),
-        );
+        let mut values: PropertyValues = (if self.bezier {
+            [fields::BEZIER_COLUMNS, fields::BEZIER_ROWS]
+        } else {
+            [fields::COLUMNS, fields::ROWS]
+        })
+        .into_iter()
+        .zip(&self.inputs)
+        .map(|(s, input)| {
+            Ok((
+                s.key,
+                s.parse(input.read(cx).value().as_ref()).map_err(|_| {
+                    anyhow::anyhow!(t!(if self.bezier {
+                        "properties.warp_bezier_dimensions_invalid"
+                    } else {
+                        "properties.warp_dimensions_invalid"
+                    }))
+                })?,
+            ))
+        })
+        .collect::<anyhow::Result<_>>()?;
+        if !self.bezier {
+            values.insert(
+                fields::QUAD.key,
+                PropertyValue::Bool(
+                    self.interpolation
+                        .read(cx)
+                        .selected_value()
+                        .is_some_and(|v| v == "quad"),
+                ),
+            );
+        }
         values.retain(|key, value| self.baseline.get(key) != Some(value));
         Ok(PropertyPatch {
             scope: PropertyScope::Object,
@@ -260,7 +381,7 @@ impl WarpGridDialog {
                         view.editor
                             .document()
                             .unwrap()
-                            .warp_grid_preview_metrics(&self.target.object)?,
+                            .warp_density_preview_metrics(&self.target.object, self.bezier)?,
                     );
                     view.redraw(cx);
                 }
@@ -350,10 +471,24 @@ impl Render for WarpGridDialog {
             .flex_col()
             .gap_3()
             .text_sm()
-            .child(t!("properties.warp_grid_hint").into_owned());
-        for (i, label) in ["properties.warp_columns", "properties.warp_rows"]
-            .into_iter()
-            .enumerate()
+            .child(
+                t!(if self.bezier {
+                    "properties.warp_bezier_grid_hint"
+                } else {
+                    "properties.warp_grid_hint"
+                })
+                .into_owned(),
+            );
+        for (i, label) in (if self.bezier {
+            [
+                "properties.warp_bezier_columns",
+                "properties.warp_bezier_rows",
+            ]
+        } else {
+            ["properties.warp_columns", "properties.warp_rows"]
+        })
+        .into_iter()
+        .enumerate()
         {
             body = body.child(
                 div()
@@ -374,13 +509,16 @@ impl Render for WarpGridDialog {
                     ),
             );
         }
-        body = body.child(
-            div()
-                .child(t!("properties.warp_interpolation").into_owned())
-                .child(
-                    compact::select(Select::new(&self.interpolation)).id("warp-grid-interpolation"),
-                ),
-        );
+        if !self.bezier {
+            body = body.child(
+                div()
+                    .child(t!("properties.warp_interpolation").into_owned())
+                    .child(
+                        compact::select(Select::new(&self.interpolation))
+                            .id("warp-grid-interpolation"),
+                    ),
+            );
+        }
         if let Some(metrics) = self.metrics {
             body = body.child(
                 div().id("warp-grid-metrics").test_support().child(
@@ -393,6 +531,18 @@ impl Render for WarpGridDialog {
                     .into_owned(),
                 ),
             );
+            if let Some(error) = metrics.maximum_controller_error {
+                body = body.child(
+                    div().id("warp-bezier-metrics").test_support().child(
+                        t!(
+                            "properties.warp_bezier_grid_metrics",
+                            shapes = metrics.controller_shapes,
+                            error = format!("{error:.6}")
+                        )
+                        .into_owned(),
+                    ),
+                );
+            }
         }
         if let Some(error) = &self.dialog.error {
             body = body.child(div().text_color(cx.theme().danger).child(error.clone()));

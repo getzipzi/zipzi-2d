@@ -1,7 +1,7 @@
 extern crate self as zipzi_core;
 pub use zipzi_contract::model::OFFSCREEN_BUDGET_BYTES;
+pub use zipzi_contract::{SharedVec, api_shape, binary_wire, serde_maps};
 pub use zipzi_contract::{api_field, api_record, api_record_attributes, api_union};
-pub use zipzi_contract::{api_shape, binary_wire, serde_maps, SharedVec};
 #[cfg(feature = "bench-instrumentation")]
 pub mod benchmark;
 pub mod deformers;
@@ -19,11 +19,14 @@ pub mod types;
 
 pub use document::Document;
 pub use evaluation::{
-    evaluate_frame, parent_positions, Drawable, DrawableFrame, DrawableFrameBounds,
-    EvaluatedParameter, FrameEvaluator, PreviewValues,
+    Drawable, DrawableFrame, DrawableFrameBounds, EvaluatedParameter, FrameEvaluator,
+    PreviewValues, evaluate_frame, parent_positions,
 };
 pub use geometry::{is_renderable_mesh, validate_positions, validate_render_mesh};
 pub use types::*;
 
 pub mod warp_bezier;
-pub use warp_bezier::{WarpBezier, WarpBezierEvaluation, WarpBezierNode};
+pub use warp_bezier::{
+    WarpAuthoringSettings, WarpBezier, WarpBezierControlPatch, WarpBezierEditMode,
+    WarpBezierEvaluation, WarpBezierGrid, WarpBezierNode, WarpShapeAction,
+};

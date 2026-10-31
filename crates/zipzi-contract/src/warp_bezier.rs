@@ -2,6 +2,120 @@
 use crate::model::{Status, Vec2};
 use serde::{Deserialize, Serialize};
 
+/// Editor influence semantics, independent of runtime Warp interpolation.
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Default,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum WarpBezierEditMode {
+    #[default]
+    /// Edit explicit controls; anchors carry their own handles.
+    Local,
+    /// Cosine influence on nearby nodes within two controller cells.
+    SmoothLocal,
+    /// Gaussian influence across normalized controller coordinates.
+    SmoothGlobal,
+    /// Couple opposite handles while preserving their length ratio; anchors stay fixed.
+    PreserveStructure,
+}
+
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
+pub struct WarpBezierGrid {
+    /// Vertical controller cell count, from 1 to 32.
+    pub rows: u32,
+    /// Horizontal controller cell count, from 1 to 32.
+    pub columns: u32,
+}
+impl WarpBezierGrid {
+    pub fn validate(self) -> Status {
+        if self.rows == 0 || self.columns == 0 || self.rows > 32 || self.columns > 32 {
+            Status::error(
+                "INVALID_WARP_BEZIER",
+                "Controller subdivisions must be from 1 to 32",
+            )
+        } else {
+            Status::ok()
+        }
+    }
+}
+
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Default,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
+pub struct WarpAuthoringSettings {
+    /// Rebuild the edited shape's baked grid on subsequent Bezier edits.
+    #[serde(default)]
+    pub auto_reform: bool,
+    /// Neighborhood or tangent-coupling rule for subsequent control edits.
+    #[serde(default)]
+    pub edit_mode: WarpBezierEditMode,
+    /// Explicit controller density shared by stored shapes; None retains imported or derived density.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bezier_grid: Option<WarpBezierGrid>,
+}
+
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
+pub struct WarpBezierControlPatch {
+    /// Zero-based controller node in row-major order.
+    pub node: u32,
+    /// 0 is the anchor; 1..4 are left, right, up and down handles.
+    pub component: u8,
+    /// Absolute destination in the Warp's parent authoring space.
+    pub point: Vec2,
+}
+
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    zipzi_api_derive::ApiShape,
+    zipzi_api_derive::BinaryWire,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum WarpShapeAction {
+    ResetController,
+    Reform,
+}
+
 #[derive(
     Debug,
     Clone,

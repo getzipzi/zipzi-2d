@@ -63,6 +63,38 @@ pub const QUAD: PropertySpec = PropertySpec::new(
 )
 .grouped("warp_grid")
 .preview();
+pub const BEZIER_COLUMNS: PropertySpec = PropertySpec::new(
+    ObjectKind::Deformer,
+    "bezier_columns",
+    "warp.bezier_columns",
+    PropertyType::Integer,
+)
+.range(1., 32., 1.)
+.grouped("warp_bezier_grid")
+.preview();
+pub const BEZIER_ROWS: PropertySpec = PropertySpec::new(
+    ObjectKind::Deformer,
+    "bezier_rows",
+    "warp.bezier_rows",
+    PropertyType::Integer,
+)
+.range(1., 32., 1.)
+.grouped("warp_bezier_grid")
+.preview();
+pub const AUTO_REFORM: PropertySpec = PropertySpec::new(
+    ObjectKind::Deformer,
+    "auto_reform",
+    "warp_authoring.auto_reform",
+    PropertyType::Bool,
+)
+.grouped("warp_authoring");
+pub const EDIT_MODE: PropertySpec = PropertySpec::new(
+    ObjectKind::Deformer,
+    "bezier_edit_mode",
+    "warp_authoring.edit_mode",
+    PropertyType::Text,
+)
+.grouped("warp_authoring");
 pub const OPACITY: PropertySpec = PropertySpec::new(
     ObjectKind::Deformer,
     "opacity",
@@ -150,8 +182,29 @@ pub const BASE_ANGLE: PropertySpec = PropertySpec::new(
 .preview();
 
 pub const FIELDS: &[PropertySpec] = &[
-    NAME, RUNTIME_ID, ENABLED, KIND, OPACITY, MULTIPLY, SCREEN, ORIGIN_X, ORIGIN_Y, ANGLE, SCALE,
-    REFLECT_X, REFLECT_Y, BASE_ANGLE, PART, PARENT, COLUMNS, ROWS, QUAD,
+    NAME,
+    RUNTIME_ID,
+    ENABLED,
+    KIND,
+    OPACITY,
+    MULTIPLY,
+    SCREEN,
+    ORIGIN_X,
+    ORIGIN_Y,
+    ANGLE,
+    SCALE,
+    REFLECT_X,
+    REFLECT_Y,
+    BASE_ANGLE,
+    PART,
+    PARENT,
+    COLUMNS,
+    ROWS,
+    QUAD,
+    BEZIER_COLUMNS,
+    BEZIER_ROWS,
+    AUTO_REFORM,
+    EDIT_MODE,
 ];
 
 pub(crate) fn keyform<'a>(
@@ -192,6 +245,22 @@ pub(crate) fn inspector_payload(
     });
     if let Some(warp) = transform.warp() {
         payload["warp"] = json!({"columns": warp.columns, "rows": warp.rows, "quad": warp.quad});
+        let settings = transform.warp_authoring.clone().unwrap_or_default();
+        let grid = settings
+            .bezier_grid
+            .or_else(|| {
+                warp.bezier.as_ref().map(|b| zipzi_core::WarpBezierGrid {
+                    rows: b.rows,
+                    columns: b.columns,
+                })
+            })
+            .unwrap_or(zipzi_core::WarpBezierGrid {
+                rows: 1,
+                columns: 1,
+            });
+        payload["warp"]["bezier_columns"] = json!(grid.columns);
+        payload["warp"]["bezier_rows"] = json!(grid.rows);
+        payload["warp_authoring"] = json!(settings);
     }
     if let Some(rotation) = transform.rotation() {
         payload["rotation"] = json!(rotation);
@@ -217,6 +286,7 @@ pub(crate) fn values(
         .filter(|spec| {
             (!spec.path.starts_with("rotation.") || payload.get("rotation").is_some())
                 && (!spec.path.starts_with("warp.") || payload.get("warp").is_some())
+                && (!spec.path.starts_with("warp_authoring.") || payload.get("warp").is_some())
         })
         .map(|spec| Ok((spec.key, spec.read(&payload)?)))
         .collect()
@@ -230,6 +300,36 @@ pub(crate) fn apply(
     patch: &super::PropertyPatch,
     payload: &Value,
 ) -> Result<()> {
+    let authoring = [
+        BEZIER_COLUMNS.key,
+        BEZIER_ROWS.key,
+        AUTO_REFORM.key,
+        EDIT_MODE.key,
+    ];
+    if patch.changes.keys().any(|key| authoring.contains(key)) {
+        ensure!(
+            patch.changes.keys().all(|key| authoring.contains(key)),
+            "Warp editing settings must be independent"
+        );
+        let mut settings: zipzi_core::WarpAuthoringSettings =
+            serde_json::from_value(payload["warp_authoring"].clone())?;
+        if patch
+            .changes
+            .keys()
+            .any(|key| [BEZIER_COLUMNS.key, BEZIER_ROWS.key].contains(key))
+        {
+            settings.bezier_grid = Some(zipzi_core::WarpBezierGrid {
+                rows: payload["warp"]["bezier_rows"].as_u64().unwrap() as u32,
+                columns: payload["warp"]["bezier_columns"].as_u64().unwrap() as u32,
+            });
+        }
+        return Ok(
+            edit.edit_scene_content(zipzi_sdk::SceneContentEdit::WarpAuthoring {
+                transform_id: id.into(),
+                settings,
+            })?,
+        );
+    }
     if patch
         .changes
         .keys()

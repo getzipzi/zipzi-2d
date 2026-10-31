@@ -162,6 +162,12 @@ pub(crate) fn write_transform_in(
         "appearance",
         write_appearance_in(py, (&value.appearance), classes)?,
     )?;
+    out.set_item("warp_authoring", {
+        match (&value.warp_authoring).as_ref() {
+            Some(item) => write_warpauthoringsettings_in(py, (item), classes)?,
+            None => py.None(),
+        }
+    })?;
     Ok(classes.getattr("Transform")?.call((), Some(&out))?.unbind())
 }
 
@@ -404,6 +410,78 @@ pub(crate) fn write_rotationpose_in(
     )?;
     Ok(classes
         .getattr("RotationPose")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_warpauthoringsettings(
+    py: Python<'_>,
+    value: &zipzi_core::WarpAuthoringSettings,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.values.scene")?;
+    write_warpauthoringsettings_in(py, value, &classes)
+}
+pub(crate) fn write_warpauthoringsettings_in(
+    py: Python<'_>,
+    value: &zipzi_core::WarpAuthoringSettings,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "auto_reform",
+        (&value.auto_reform)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "edit_mode",
+        write_warpbeziereditmode_in(py, (&value.edit_mode), classes)?,
+    )?;
+    out.set_item("bezier_grid", {
+        match (&value.bezier_grid).as_ref() {
+            Some(item) => write_warpbeziergrid_in(py, (item), classes)?,
+            None => py.None(),
+        }
+    })?;
+    Ok(classes
+        .getattr("WarpAuthoringSettings")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_warpbeziergrid(
+    py: Python<'_>,
+    value: &zipzi_core::WarpBezierGrid,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.values.scene")?;
+    write_warpbeziergrid_in(py, value, &classes)
+}
+pub(crate) fn write_warpbeziergrid_in(
+    py: Python<'_>,
+    value: &zipzi_core::WarpBezierGrid,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "rows",
+        (&value.rows)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "columns",
+        (&value.columns)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    Ok(classes
+        .getattr("WarpBezierGrid")?
         .call((), Some(&out))?
         .unbind())
 }
@@ -720,6 +798,42 @@ pub(crate) fn write_warppointpatch_in(
     out.set_item("point", write_vec2(py, (&value.point))?)?;
     Ok(classes
         .getattr("WarpPointPatch")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_warpbeziercontrolpatch(
+    py: Python<'_>,
+    value: &zipzi_core::WarpBezierControlPatch,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.values.scene")?;
+    write_warpbeziercontrolpatch_in(py, value, &classes)
+}
+pub(crate) fn write_warpbeziercontrolpatch_in(
+    py: Python<'_>,
+    value: &zipzi_core::WarpBezierControlPatch,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "node",
+        (&value.node)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "component",
+        (&value.component)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("point", write_vec2(py, (&value.point))?)?;
+    Ok(classes
+        .getattr("WarpBezierControlPatch")?
         .call((), Some(&out))?
         .unbind())
 }

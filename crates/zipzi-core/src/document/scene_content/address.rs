@@ -152,22 +152,14 @@ impl Document {
                         controller: self.warp_content_shape(owner, shape)?.1.cloned(),
                     });
                 }
-                let mut controller = self.content_bezier(owner, shape)?;
-                let n = &mut controller.nodes[*node];
-                if *component == 0 {
-                    let delta = Vec2::new(point.x - n.position.x, point.y - n.position.y);
-                    n.position = point;
-                    for h in &mut n.handles {
-                        h.x += delta.x;
-                        h.y += delta.y;
-                    }
-                } else {
-                    n.handles[component - 1] = point;
-                }
-                E::WarpBezier {
+                E::WarpBezierControls {
                     transform_id: owner.into(),
                     target: shape.clone(),
-                    controller: Some(controller),
+                    updates: vec![crate::WarpBezierControlPatch {
+                        node: *node as u32,
+                        component: *component as u8,
+                        point,
+                    }],
                 }
             }
             (T::GluePair { pair_id }, V::GluePair(pair)) if *pair_id == pair.id => {
@@ -281,8 +273,16 @@ impl Document {
             .and_then(|t| t.warp())
             .ok_or_else(|| Status::error("NOT_WARP", owner))?;
         let (points, controller) = self.warp_content_shape(owner, target)?;
-        Ok(controller
-            .cloned()
-            .unwrap_or_else(|| WarpBezier::from_lattice(w.rows, w.columns, w.quad, points)))
+        Ok(controller.cloned().unwrap_or_else(|| {
+            self.get_transform(owner)
+                .unwrap()
+                .warp_authoring
+                .as_ref()
+                .and_then(|s| s.bezier_grid)
+                .map_or_else(
+                    || WarpBezier::from_lattice(w.rows, w.columns, w.quad, points),
+                    |grid| WarpBezier::from_lattice_grid(w.rows, w.columns, w.quad, points, grid),
+                )
+        }))
     }
 }

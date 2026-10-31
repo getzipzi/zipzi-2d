@@ -26,6 +26,7 @@ pub(crate) struct BezierGeometry {
 enum WarpAuthoring {
     Controller(WarpBezier),
     Lattice {
+        grid: Option<zipzi_core::WarpBezierGrid>,
         rows: u32,
         columns: u32,
         quad: bool,
@@ -53,12 +54,18 @@ impl LazyBezierGeometry {
                 let controller = match &self.authoring {
                     WarpAuthoring::Controller(stored) => stored,
                     WarpAuthoring::Lattice {
+                        grid,
                         rows,
                         columns,
                         quad,
                         points,
                     } => {
-                        controller = WarpBezier::from_lattice(*rows, *columns, *quad, points);
+                        controller = grid.map_or_else(
+                            || WarpBezier::from_lattice(*rows, *columns, *quad, points),
+                            |grid| {
+                                WarpBezier::from_lattice_grid(*rows, *columns, *quad, points, grid)
+                            },
+                        );
                         &controller
                     }
                 };
@@ -102,6 +109,10 @@ pub(crate) fn authored(
         WarpAuthoring::Controller(controller.clone())
     } else {
         WarpAuthoring::Lattice {
+            grid: transform
+                .warp_authoring
+                .as_ref()
+                .and_then(|s| s.bezier_grid),
             rows: warp.rows,
             columns: warp.columns,
             quad: warp.quad,
@@ -206,6 +217,7 @@ mod tests {
         let expected = BezierGeometry::new(&controller, &space);
         let lattice = LazyBezierGeometry {
             authoring: WarpAuthoring::Lattice {
+                grid: None,
                 rows: 1,
                 columns: 1,
                 quad: true,

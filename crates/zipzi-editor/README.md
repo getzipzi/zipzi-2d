@@ -112,6 +112,8 @@ The `warp` scene captures whole and selected-point frames and the numeric
 transform dialog in English, Simplified Chinese and Japanese. Set
 `ZIPZI_SCREENSHOT_SAVE=1` to save every image from that scene.
 It also captures independently rotated frames and the shared frame menu.
+The `warp-authoring` scene compares all four Bezier policies on a textured grid
+and captures controller-density previews in those three languages.
 
 ## Deformer creation
 
@@ -182,8 +184,29 @@ frame; switching targets or external geometry changes rebuild it.
 ordinary keyforms and BlendShape displacements together. It reports sampled
 deviation in parent-space units, rather than a global error bound. Apply commits
 one undo step; Cancel, Escape, losing window focus and changing documents retire
-the preview. Bezier controllers are retained. Bezier density and shaping controls
-are planned separately in the [interaction plan](../../docs/plans/warp-deformer-interaction.md).
+the preview. Bezier controllers are retained.
+
+**Bezier subdivisions…** refits every stored base/ordinary controller, leaves
+missing controllers derived, and keeps all baked grid points unchanged. Its
+separate controller-deviation report uses 289 independent samples per shape;
+neither sampled report is a global error bound. New derived controllers default
+to 1×1, independent of conversion density. Handle drags never increase either
+density. Curved handles need a sufficiently dense conversion grid to affect the
+rendered result.
+
+Fine-point edits retain the controller. By default, later Bezier edits add the
+controller's change to the grid, retaining hand-edited detail. **Reset controller**
+rebuilds controls without moving grid points; **Reform from handles** replaces
+the current editable shape's grid with controller samples. **Auto reform on
+edits** does that on subsequent Bezier edits; changing the toggle alone leaves
+geometry unchanged. These settings and actions use ordinary undo/redo and native
+project persistence.
+
+Bezier influence offers selected controls, local cosine smoothing (two controller
+cells), global Gaussian smoothing, and preservation of opposing tangent length
+ratios. These are Zipzi policies, without a claim of Cubism equivalence. Smoothing
+can affect controls outside the selection; the viewport status names the active
+policy. Whole-Warp transforms keep their affine behavior and grid detail.
 
 ## Object deletion
 
