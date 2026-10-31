@@ -10,6 +10,9 @@ fn match_supported(code: &str) -> Option<&'static str> {
     if language.eq_ignore_ascii_case("en") {
         return Some("en");
     }
+    if language.eq_ignore_ascii_case("ja") {
+        return Some("ja");
+    }
     if !language.eq_ignore_ascii_case("zh") {
         return None;
     }
@@ -64,6 +67,8 @@ mod tests {
     #[test]
     fn locale_variants() {
         assert_eq!(match_supported("en-US"), Some("en"));
+        assert_eq!(match_supported("ja-JP"), Some("ja"));
+        assert_eq!(match_supported("ja_JP.UTF-8"), Some("ja"));
         assert_eq!(match_supported("zh_CN.UTF-8"), Some("zh-CN"));
         assert_eq!(match_supported("zh-Hans-SG"), Some("zh-CN"));
         assert_eq!(match_supported("zh-Hans-HK"), Some("zh-CN"));
@@ -79,6 +84,7 @@ mod tests {
         let zh: toml::Value = include_str!("../assets/locales/zh-CN.toml")
             .parse()
             .unwrap();
+        let ja: toml::Value = include_str!("../assets/locales/ja.toml").parse().unwrap();
         fn entries(value: &toml::Value) -> BTreeMap<String, Vec<String>> {
             let mut result = BTreeMap::new();
             for (domain, messages) in value.as_table().unwrap() {
@@ -101,5 +107,32 @@ mod tests {
         let english = entries(&en);
         assert!(!english.is_empty());
         assert_eq!(entries(&zh), english);
+        assert_eq!(entries(&ja), english);
+    }
+
+    #[test]
+    fn shared_component_japanese_catalog_is_complete() {
+        let catalog = include_str!("../../../vendor/gpui-kit/crates/component/locales/ui.yml");
+        let lines: Vec<_> = catalog.lines().collect();
+        let mut count = 0;
+        for (index, line) in lines.iter().enumerate() {
+            if let Some(english) = line.strip_prefix("    en: ") {
+                let japanese = lines[index + 1]
+                    .strip_prefix("    ja: ")
+                    .expect("shared component message needs a Japanese translation");
+                let placeholders = |text: &str| {
+                    let mut result: Vec<String> = text
+                        .split("%{")
+                        .skip(1)
+                        .map(|part| part.split('}').next().unwrap().to_owned())
+                        .collect();
+                    result.sort();
+                    result
+                };
+                assert_eq!(placeholders(english), placeholders(japanese), "{english}");
+                count += 1;
+            }
+        }
+        assert!(count > 0);
     }
 }

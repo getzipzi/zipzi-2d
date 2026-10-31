@@ -347,6 +347,13 @@ impl EditorView {
                             },
                         )
                         .checked(settings.language.as_deref() == Some("zh-CN")),
+                        MenuItem::action(
+                            t!("menu.japanese"),
+                            SetLanguage {
+                                language: Some("ja".into()),
+                            },
+                        )
+                        .checked(settings.language.as_deref() == Some("ja")),
                     ]),
                 ),
                 MenuItem::separator(),

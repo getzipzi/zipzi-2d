@@ -429,6 +429,11 @@ mod i18n_tests {
     fn editor_catalog_is_wired_up() {
         assert_eq!(t!("editor.layers", locale = "en"), "Layers");
         assert_eq!(t!("editor.layers", locale = "zh-CN"), "图层");
+        assert_eq!(t!("editor.layers", locale = "ja"), "レイヤー");
+        assert_eq!(
+            t!("project.saved", locale = "ja", path = "test.zipzi"),
+            "test.zipzi を保存しました"
+        );
         assert_eq!(
             t!("project.saved", locale = "zh-CN", path = "test.zipzi"),
             "已保存 test.zipzi"
