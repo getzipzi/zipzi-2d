@@ -63,6 +63,20 @@ script displays help. Select `full` explicitly for the expensive full gate.
 Editor entrypoints resolve checkout paths themselves, including absolute calls
 from another directory. The Python tooling runner also resolves its own checkout.
 
+### Editor development watcher
+
+`uv run --locked python tools/dev.py editor watch` builds and starts the Editor,
+then uses `watchexec` native file notifications on macOS and Windows. Install
+the watcher with `cargo install --locked watchexec-cli`, or
+`brew install watchexec` on macOS. `editor run` and `editor reload` do not
+require it.
+
+The watcher covers source and assets under `crates/`, `vendor/`, and `tools/`,
+plus root build configuration. Changes received during a build queue another
+reload. Failed builds keep the current Editor running, and closing the Editor
+stops the watcher. The Python launcher retains process ownership and reload
+locking; it no longer scans the source tree periodically.
+
 ## Test coverage
 
 Run commands from the repository root. `tools/workspace/package-domains.json` assigns every

@@ -18,6 +18,13 @@ The complete tooling suite needs a POSIX environment, Git, Cargo (metadata only)
 and a C compiler for development-process fixtures. It does not compile the SDK
 or Editor. Individual platform-independent modules can run on Windows; CI selects
 those explicitly.
+
+`test_dev.py` exercises watcher lifecycle controls without requiring `watchexec`.
+When it is installed, additional tests use a real event stream with watchexec's
+polling backend so they can run on hosts without native filesystem notifications.
+Set `ZIPZI_TEST_WATCHEXEC_NATIVE=1` to run those integration cases with the
+production native backend instead.
+
 ## Test ownership
 
 | Location | Responsibility |

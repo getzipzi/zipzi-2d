@@ -28,11 +28,16 @@ For a development build and process management, use the cross-platform launcher:
 
 ```sh
 uv run --locked python tools/dev.py editor run
+uv run --locked python tools/dev.py editor watch
 uv run --locked python tools/dev.py editor reload
 uv run --locked python tools/dev.py editor stop
 ```
 
-`editor watch` rebuilds on source changes; `./tools/dev-editor.sh` is also
+`editor watch` uses `watchexec` native file notifications on macOS and Windows
+to rebuild and relaunch on source changes. Install it with
+`cargo install --locked watchexec-cli` (or `brew install watchexec` on macOS).
+Edits during a build queue another reload; a failed build preserves the running
+Editor. Closing the Editor also stops the watcher. `./tools/dev-editor.sh` is
 available as a shell wrapper. The launcher keeps build and process files under
 the checkout's `target/` directory by default. On Windows, reload and stop
 request a safe exit and preserve the running editor if it has unsaved documents

@@ -35,7 +35,7 @@ uv run --locked python tools/dev.py editor run
 uv run --locked python tools/dev.py editor reload
 uv run --locked python tools/dev.py editor stop
 
-# Rebuild on source changes
+# Rebuild on source changes (requires watchexec on macOS and Windows)
 uv run --locked python tools/dev.py editor watch
 
 # Direct native Editor launch

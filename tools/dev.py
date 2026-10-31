@@ -16,7 +16,7 @@ HELP = '''Usage: python tools/dev.py COMMAND [arguments...]
   test editor MODE    fast, ui, regression, acceptance, tools, full
   test tools ARGS     unittest discovery arguments (-p, -k, -v)
   python ARGS         source SDK Python
-  editor MODE         watch (default), reload, run, stop; Windows development prototype
+  editor MODE         watch (default; requires watchexec), reload, run, stop
 
 Cargo filters and arguments after -- are passed through unchanged.
 Windows UI logic tests are available; Metal native acceptance targets require macOS.

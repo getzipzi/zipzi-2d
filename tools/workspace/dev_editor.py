@@ -1,5 +1,6 @@
 """Editor development build, publication and watcher; platform lifecycle is shared."""
 import argparse
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
@@ -7,6 +8,7 @@ import plistlib
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import uuid
 
@@ -108,38 +110,64 @@ class Editor:
         print(f"Resident host {result['reused']} reused" if 'reused' in result else f"Editor ready: {result['owned'].pid}")
         return result
 
-    def snapshot(self):
-        paths = [self.root / 'Cargo.toml', self.root / 'Cargo.lock']
+    @contextmanager
+    def watch_events(self):
+        watcher_path = shutil.which('watchexec')
+        if watcher_path is None:
+            raise RuntimeError('watchexec is required for editor watch; install it with: cargo install --locked watchexec-cli')
+        command = [watcher_path, '--only-emit-events', '--project-origin', str(self.root),
+                   '--exts', 'rs,toml,lock,metal,wgsl,svg,icns,ico,rc,manifest,py',
+                   '--watch-non-recursive', str(self.root)]
         for directory in ('crates', 'vendor', 'tools'):
-            paths.extend(path for path in (self.root / directory).rglob('*')
-                         if path.suffix in {'.rs', '.toml', '.lock', '.metal', '.wgsl', '.svg', '.icns', '.ico', '.rc', '.manifest', '.py'})
-        result = {}
-        for path in paths:
+            command += ['--watch', str(self.root / directory)]
+        options = {'creationflags': subprocess.CREATE_NO_WINDOW} if os.name == 'nt' else {'start_new_session': True}
+        watcher = subprocess.Popen(command, cwd=self.root, stdin=subprocess.DEVNULL,
+                                   stdout=subprocess.PIPE, text=True, encoding='utf-8', **options)
+        changed = threading.Event()
+        def receive():
             try:
-                stat = path.stat()
-                result[str(path)] = (stat.st_mtime_ns, stat.st_size)
-            except FileNotFoundError:
-                pass
-        return result
+                for line in watcher.stdout:
+                    if any(tag['kind'] == 'path' for tag in json.loads(line).get('tags', [])):
+                        changed.set()
+            finally:
+                changed.set()  # Wake the monitor if the watcher exits.
+        reader = threading.Thread(target=receive, daemon=True, name='dev-file-events')
+        reader.start()
+        try:
+            yield watcher, changed
+        finally:
+            if watcher.poll() is None:
+                watcher.terminate()
+            try:
+                watcher.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                watcher.kill()
+                watcher.wait()
+            reader.join()
+            watcher.stdout.close()
 
     def watch(self):
-        with file_lock(self.state / 'watch.lock', blocking=False):
-            previous = self.snapshot()
+        with file_lock(self.state / 'watch.lock', blocking=False), self.watch_events() as (watcher, changed):
+            print('Watching source changes with watchexec')
             result = self.reload()
             if 'reused' in result:
                 return 0
             while self.lifecycle.active():
-                time.sleep(.5)
-                current = self.snapshot()
-                if current != previous:
-                    previous = current
+                pending = changed.wait(.5)
+                if watcher.poll() is not None:
+                    raise RuntimeError(f'watchexec exited with status {watcher.returncode}; file watching stopped')
+                if pending:
+                    # Clear before building: edits received during the build
+                    # remain queued for one more reload.
+                    changed.clear()
                     try:
                         result = self.reload()
                         if 'reused' in result:
                             return 0
                     except BlockingIOError:
                         # Another reload is in progress; retry this change next tick.
-                        previous = {}
+                        time.sleep(.5)
+                        changed.set()
                     except (subprocess.CalledProcessError, RuntimeError, TimeoutError) as error:
                         print(error, file=sys.stderr)
             print('Editor closed; stopping watcher')
