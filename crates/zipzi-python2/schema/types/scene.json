@@ -2374,6 +2374,58 @@
         {
           "fields": [
             {
+              "doc": "Stable Warp or Rotation transform ID.",
+              "name": "transform_id",
+              "rust_name": "transform_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "default": {
+                "kind": "base"
+              },
+              "doc": "Current editable Base or stored Ordinary shape; BlendShape restore/update is unsupported.",
+              "name": "target",
+              "rust_name": "target",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::document::ShapeTarget"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Explicit capture, restore, or first-key update policy.",
+              "name": "action",
+              "rust_name": "action",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::DeformerOriginalAction"
+              },
+              "skip": false
+            },
+            {
+              "default": {},
+              "doc": "Frozen parameter inputs used to evaluate current parent spaces in canvas coordinates.",
+              "name": "context",
+              "rust_name": "context",
+              "shape": {
+                "kind": "string_map",
+                "value": {
+                  "kind": "f32"
+                }
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "deformer_original",
+          "rust_name": "DeformerOriginal"
+        },
+        {
+          "fields": [
+            {
               "doc": "Stable ID of the target mesh in this document.",
               "name": "mesh_id",
               "rust_name": "mesh_id",
@@ -4864,6 +4916,210 @@
       "transparent": false,
       "tuple": false
     },
+    "zipzi_contract::model::DeformerOriginal": {
+      "fields": [
+        {
+          "doc": "Update once when the first ordinary keyform is created. Manual update disables this.",
+          "name": "auto_update",
+          "rust_name": "auto_update",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Persistent transition marker; deleting/recreating a binding does not replace the baseline again.",
+          "name": "first_key_seen",
+          "rust_name": "first_key_seen",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "None means no original has been recorded, for example an imported object.",
+          "name": "snapshot",
+          "rust_name": "snapshot",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::DeformerOriginalSnapshot"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Native error code if automatic capture was unavailable; None after successful capture.",
+          "name": "capture_error",
+          "rust_name": "capture_error",
+          "shape": {
+            "item": {
+              "kind": "string"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::DeformerOriginal",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::DeformerOriginalAction": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::model::DeformerOriginalAction",
+      "tag": "action",
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "update",
+          "rust_name": "Update"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Explicit permission to resample every stored Warp shape when the saved conversion density differs.",
+              "name": "allow_resize",
+              "rust_name": "allow_resize",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "restore",
+          "rust_name": "Restore"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Changes the future first-key policy without changing geometry or immediately replacing the snapshot.",
+              "name": "enabled",
+              "rust_name": "enabled",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "auto_update",
+          "rust_name": "AutoUpdate"
+        }
+      ]
+    },
+    "zipzi_contract::model::DeformerOriginalShape": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::model::DeformerOriginalShape",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "Baked Warp lattice and optional controller in canvas coordinates, X right/Y up.",
+              "name": "warp",
+              "rust_name": "warp",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::WarpTransform"
+              },
+              "skip": false
+            },
+            {
+              "doc": "False when a nonlinear captured parent cannot preserve a cubic controller as cubics.",
+              "name": "controller_canvas_exact",
+              "rust_name": "controller_canvas_exact",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "warp",
+          "rust_name": "Warp"
+        },
+        {
+          "fields": [
+            {
+              "doc": "Canvas origin, absolute direction (including reference angle), inherited scale and reflections.",
+              "name": "pose",
+              "rust_name": "pose",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::RotationPose"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "rotation",
+          "rust_name": "Rotation"
+        }
+      ]
+    },
+    "zipzi_contract::model::DeformerOriginalSnapshot": {
+      "fields": [
+        {
+          "doc": "Creation, first ordinary keyform transition, or explicit manual update.",
+          "name": "source",
+          "rust_name": "source",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::DeformerOriginalSource"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Independent canvas-space shape; does not reference undo history or binding samples.",
+          "name": "shape",
+          "rust_name": "shape",
+          "shape": {
+            "kind": "ref",
+            "name": "zipzi_contract::model::DeformerOriginalShape"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::model::DeformerOriginalSnapshot",
+      "transparent": false,
+      "tuple": false
+    },
+    "zipzi_contract::model::DeformerOriginalSource": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::model::DeformerOriginalSource",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "created",
+          "rust_name": "Created"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "first_key",
+          "rust_name": "FirstKey"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "manual",
+          "rust_name": "Manual"
+        }
+      ]
+    },
     "zipzi_contract::model::Glue": {
       "fields": [
         {
@@ -5412,6 +5668,20 @@
             "item": {
               "kind": "ref",
               "name": "zipzi_contract::warp_bezier::WarpAuthoringSettings"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Independent original shape and its first-key update policy, retained only by native projects.",
+          "name": "original_shape",
+          "rust_name": "original_shape",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "zipzi_contract::model::DeformerOriginal"
             },
             "kind": "optional"
           },

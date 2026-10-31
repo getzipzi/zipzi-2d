@@ -358,6 +358,32 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                            'fields': [],
                                            'kind': 'value',
                                            'signature': ''},
+ 'zipzi.modeling.scene.SceneContentEditDeformerOriginal': {'children': ('zipzi.modeling.scene.SceneContentEditDeformerOriginal.__repr__',
+                                                                        'zipzi.modeling.scene.SceneContentEditDeformerOriginal.summary'),
+                                                           'documentation': 'Immutable owned '
+                                                                            'SceneContentEditDeformerOriginal value. '
+                                                                            'Construction owns declared collections; '
+                                                                            'reading fields, repr and summary performs '
+                                                                            'no IO.',
+                                                           'example': 'docs/recipes.py',
+                                                           'fields': [('transform_id',
+                                                                       'Stable Warp or Rotation transform ID.'),
+                                                                      ('target',
+                                                                       'Current editable Base or stored Ordinary '
+                                                                       'shape; BlendShape restore/update is '
+                                                                       'unsupported.'),
+                                                                      ('action',
+                                                                       'Explicit capture, restore, or first-key update '
+                                                                       'policy.'),
+                                                                      ('context',
+                                                                       'Frozen parameter inputs used to evaluate '
+                                                                       'current parent spaces in canvas coordinates.')],
+                                                           'kind': 'type',
+                                                           'signature': '(*, transform_id: str, target: ShapeTarget = '
+                                                                        '<factory>, action: DeformerOriginalAction, '
+                                                                        'context: _Mapping[str, float] = <factory>)'},
+ 'zipzi.modeling.scene.SceneContentEditDeformerOriginal.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
+ 'zipzi.modeling.scene.SceneContentEditDeformerOriginal.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentEditDeleteGluePairs': {'children': ('zipzi.modeling.scene.SceneContentEditDeleteGluePairs.__repr__',
                                                                        'zipzi.modeling.scene.SceneContentEditDeleteGluePairs.summary'),
                                                           'documentation': 'Immutable owned '

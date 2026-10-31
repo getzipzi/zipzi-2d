@@ -117,6 +117,31 @@ expose measured preservation deviation and sample count. Samples include native
 interior/exterior maps and default/per-driver endpoint, key and midpoint poses;
 they supplement affine representability, without asserting a global error bound.
 
+`SceneContentEdit::DeformerOriginal` records or restores an independent canvas
+shape for an explicit base/ordinary target, or changes its automatic first-key
+policy. New deformers record their final creation shape. Automatic capture occurs
+at most once when ordinary keyforms first appear; manual Update disables it.
+Imported or older objects without a record remain unrecorded until an explicit
+update. Native persistence, copies and history retain the snapshot, source and
+first-key marker; CMO3 reports their loss.
+
+Supply frozen parameter values in the edit's `context` to evaluate parent spaces;
+an empty context uses parameter defaults. Session creation and grouping plans
+capture the session's preview values, as do owned edit candidates. Direct Core
+creation uses defaults unless its capture context is set explicitly. Restore
+writes only the requested shape through its current parent inverse and retains
+the current Rotation reference angle. `Restore { allow_resize: true }` explicitly
+allows shared conversion-grid/interpolation resampling and stored-controller
+density refits; callers should review these effects before publication. Missing
+controllers remain absent and derive from the current authoring configuration.
+
+Nonlinear/singular current parent spaces, incompatible types, active deformer
+BlendShapes, locks and tolerance failures reject atomically. A stored controller
+captured under a nonlinear parent cannot be restored as equivalent canvas cubics;
+a baked lattice without such a controller can be restored below an affine parent.
+Stored-controller restoration checks 289 independent canvas samples against
+0.01 units, without treating their maximum as a global error bound.
+
 `AuthoringSession::plan_deformer_group` combines a Warp or Rotation `SceneEdit::Create`
 with selection parenting in one snapshot-bound, undoable plan. It normalizes
 selected ancestors and descendants, preserves organization ownership and drawing

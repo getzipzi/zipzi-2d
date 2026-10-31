@@ -547,6 +547,37 @@ pub(crate) fn write_scenecontentedit_in(
     classes: &Bound<'_, PyModule>,
 ) -> PyResult<Py<PyAny>> {
     match value {
+        zipzi_core::document::SceneContentEdit::DeformerOriginal {
+            transform_id: field0,
+            target: field1,
+            action: field2,
+            context: field3,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "transform_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item("target", write_shapetarget_in(py, (field1), classes)?)?;
+            content.set_item(
+                "action",
+                write_deformeroriginalaction_in(py, (field2), classes)?,
+            )?;
+            content.set_item("context", {
+                let out = PyDict::new(py);
+                for (key, item0) in (field3) {
+                    out.set_item(
+                        key.to_string(),
+                        (item0).into_pyobject(py)?.into_bound().into_any().unbind(),
+                    )?;
+                }
+                out.into_any().unbind()
+            })?;
+            Ok(classes
+                .getattr("SceneContentEditDeformerOriginal")?
+                .call((), Some(&content))?
+                .unbind())
+        }
         zipzi_core::document::SceneContentEdit::MeshVertices {
             mesh_id: field0,
             target: field1,

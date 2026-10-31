@@ -95,6 +95,12 @@ pub const EDIT_MODE: PropertySpec = PropertySpec::new(
     PropertyType::Text,
 )
 .grouped("warp_authoring");
+pub const ORIGINAL_AUTO: PropertySpec = PropertySpec::new(
+    ObjectKind::Deformer,
+    "original_auto_update",
+    "original_shape.auto_update",
+    PropertyType::Bool,
+);
 pub const OPACITY: PropertySpec = PropertySpec::new(
     ObjectKind::Deformer,
     "opacity",
@@ -205,6 +211,7 @@ pub const FIELDS: &[PropertySpec] = &[
     BEZIER_ROWS,
     AUTO_REFORM,
     EDIT_MODE,
+    ORIGINAL_AUTO,
 ];
 
 pub(crate) fn keyform<'a>(
@@ -243,6 +250,8 @@ pub(crate) fn inspector_payload(
         "appearance": transform.appearance,
         "part_id": transform.part(), "parent_id": transform.parent(),
     });
+    payload["original_shape"] =
+        json!({"auto_update":transform.original_shape.as_ref().is_none_or(|r|r.auto_update)});
     if let Some(warp) = transform.warp() {
         payload["warp"] = json!({"columns": warp.columns, "rows": warp.rows, "quad": warp.quad});
         let settings = transform.warp_authoring.clone().unwrap_or_default();
@@ -300,6 +309,21 @@ pub(crate) fn apply(
     patch: &super::PropertyPatch,
     payload: &Value,
 ) -> Result<()> {
+    if patch.changes.contains_key(&ORIGINAL_AUTO.key) {
+        ensure!(
+            patch.changes.len() == 1,
+            "Original shape policy must be edited independently"
+        );
+        edit.edit_scene_content(zipzi_sdk::SceneContentEdit::DeformerOriginal {
+            transform_id: id.into(),
+            target: zipzi_sdk::ShapeTarget::Base,
+            action: zipzi_core::DeformerOriginalAction::AutoUpdate {
+                enabled: payload["original_shape"]["auto_update"].as_bool().unwrap(),
+            },
+            context: Default::default(),
+        })?;
+        return Ok(());
+    }
     let authoring = [
         BEZIER_COLUMNS.key,
         BEZIER_ROWS.key,

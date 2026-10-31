@@ -59,6 +59,10 @@ pub enum EditorCommand {
     ToggleWarpFine,
     ToggleWarpWhole,
     ToggleWarpKeepChildren,
+    DeformerOriginal {
+        target: crate::DeformerOriginalTarget,
+        action: zipzi_core::DeformerOriginalAction,
+    },
     ToggleOriginalPoints,
     AdjustDeformer {
         object: crate::ObjectRef,

@@ -5,6 +5,7 @@ use super::*;
 use crate::{GlueVertexPair, OffscreenKeyform, Vec2, VertexId, WarpBezier};
 use std::collections::{BTreeMap, HashSet};
 mod address;
+mod deformer_original;
 mod effects;
 mod mesh;
 mod warp;
@@ -77,6 +78,22 @@ impl Document {
             cost,
         };
         match &edit {
+            SceneContentEdit::DeformerOriginal {
+                transform_id,
+                target,
+                action,
+                context,
+            } => {
+                self.plan_deformer_original(
+                    &mut plan,
+                    transform_id,
+                    target,
+                    *action,
+                    context,
+                    limits,
+                    control,
+                )?;
+            }
             SceneContentEdit::WarpKeepChildren { transform_id, warp } => {
                 let (delta, affected, error, samples) =
                     self.warp_keep_children_delta(transform_id, warp, control)?;
@@ -212,6 +229,7 @@ impl Document {
                     .sum::<usize>()
         };
         let (work, items, bytes) = match edit {
+            E::DeformerOriginal { .. } => return Ok((1, self.estimated_content_bytes())),
             E::WarpKeepChildren { .. } => {
                 // Conversion fragments and native verification are bounded by the
                 // retained document; reject capacity before cloning any candidate.

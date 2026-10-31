@@ -57,6 +57,36 @@ pub fn read_warpbeziereditmode(
     }
 }
 
+pub fn read_deformeroriginalsource(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::DeformerOriginalSource> {
+    match value.getattr("value")?.extract::<String>()?.as_str() {
+        "created" => Ok(zipzi_core::DeformerOriginalSource::Created),
+        "first_key" => Ok(zipzi_core::DeformerOriginalSource::FirstKey),
+        "manual" => Ok(zipzi_core::DeformerOriginalSource::Manual),
+        _ => Err(pyo3::exceptions::PyValueError::new_err(
+            "Unknown enum value",
+        )),
+    }
+}
+
+pub fn read_deformeroriginalshape(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::DeformerOriginalShape> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "warp" => Ok(zipzi_core::DeformerOriginalShape::Warp {
+            warp: read_warptransform(&value.getattr("warp")?)?,
+            controller_canvas_exact: value.getattr("controller_canvas_exact")?.extract()?,
+        }),
+        "rotation" => Ok(zipzi_core::DeformerOriginalShape::Rotation {
+            pose: read_rotationpose(&value.getattr("pose")?)?,
+        }),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
 pub fn read_reparentstrategy(
     value: &Bound<'_, PyAny>,
 ) -> PyResult<zipzi_core::document::ReparentStrategy> {
@@ -311,6 +341,23 @@ pub fn read_shapetarget(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::docume
         "blend" => Ok(zipzi_core::document::ShapeTarget::Blend {
             binding_id: value.getattr("binding_id")?.extract()?,
             sample_id: value.getattr("sample_id")?.extract()?,
+        }),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn read_deformeroriginalaction(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::DeformerOriginalAction> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "update" => Ok(zipzi_core::DeformerOriginalAction::Update),
+        "restore" => Ok(zipzi_core::DeformerOriginalAction::Restore {
+            allow_resize: value.getattr("allow_resize")?.extract()?,
+        }),
+        "auto_update" => Ok(zipzi_core::DeformerOriginalAction::AutoUpdate {
+            enabled: value.getattr("enabled")?.extract()?,
         }),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",

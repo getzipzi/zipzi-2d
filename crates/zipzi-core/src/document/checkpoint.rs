@@ -74,6 +74,7 @@ impl Document {
         candidate.snapshot_identity = self.snapshot_identity.clone();
         candidate.revision = self.revision;
         candidate.evaluation_revision = self.evaluation_revision;
+        candidate.original_capture_context = self.original_capture_context.clone();
         candidate
     }
 
@@ -152,7 +153,32 @@ impl Document {
                 })
             && original.part_order == content.part_order
             && original.transform_order == content.transform_order
-            && original.transforms == content.transforms
+            && original.transforms.len() == content.transforms.len()
+            && original.transforms.iter().all(|(id, a)| {
+                content.transforms.get(id).is_some_and(|b| {
+                    (
+                        &a.id,
+                        &a.runtime_id,
+                        &a.name,
+                        &a.part_id,
+                        &a.parent_id,
+                        &a.data,
+                        a.enabled,
+                        a.appearance,
+                        &a.warp_authoring,
+                    ) == (
+                        &b.id,
+                        &b.runtime_id,
+                        &b.name,
+                        &b.part_id,
+                        &b.parent_id,
+                        &b.data,
+                        b.enabled,
+                        b.appearance,
+                        &b.warp_authoring,
+                    )
+                })
+            })
             && original.mesh_order == content.mesh_order
             && original.parameter_order == content.parameter_order
             && original.bindings == content.bindings

@@ -177,6 +177,12 @@ impl Delta {
                 .is_some_and(|v| Some(v.as_slice()) != d.draw_order_groups())
     }
     pub(in crate::document) fn install(&self, d: &mut Document) {
+        let created_transforms: Vec<_> = self
+            .transforms
+            .iter()
+            .filter(|t| !d.content.transforms.contains_key(&t.id))
+            .map(|t| t.id.clone())
+            .collect();
         d.tracking = Default::default();
         d.reference_index.take();
         d.reference_projection.take();
@@ -297,6 +303,13 @@ impl Delta {
         {
             d.binding_lookup.take();
             d.pair_lookup.take();
+        }
+        if !created_transforms.is_empty() {
+            d.lookup.take();
+            d.prepared.take();
+            for id in created_transforms {
+                d.initialize_deformer_original(&id);
+            }
         }
     }
 }

@@ -310,6 +310,21 @@ impl ExtraBytes for Transform {
             + self.name.capacity()
             + self.part_id.as_ref().map_or(0, |id| id.capacity())
             + self.parent_id.as_ref().map_or(0, |id| id.capacity())
+            + self.original_shape.as_ref().map_or(0, |record| {
+                record.capture_error.extra_bytes()
+                    + record
+                        .snapshot
+                        .as_ref()
+                        .map_or(0, |snapshot| match &snapshot.shape {
+                            crate::DeformerOriginalShape::Warp { warp, .. } => {
+                                warp.points.extra_bytes()
+                                    + warp.bezier.as_ref().map_or(0, |b| {
+                                        b.nodes.capacity() * size_of::<crate::WarpBezierNode>()
+                                    })
+                            }
+                            crate::DeformerOriginalShape::Rotation { .. } => 0,
+                        })
+            })
             + match &self.data {
                 TransformData::Warp(w) => {
                     w.points.extra_bytes()

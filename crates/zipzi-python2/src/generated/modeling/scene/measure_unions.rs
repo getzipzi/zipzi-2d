@@ -44,6 +44,22 @@ pub fn measure_warpbeziereditmode(value: &Bound<'_, PyAny>) -> PyResult<usize> {
     Ok(128usize)
 }
 
+pub fn measure_deformeroriginalsource(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(128usize)
+}
+
+pub fn measure_deformeroriginalshape(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "warp" => Ok(256usize
+            .saturating_add(measure_warptransform(&(value.getattr("warp")?))?)
+            .saturating_add(16usize)),
+        "rotation" => Ok(256usize.saturating_add(measure_rotationpose(&(value.getattr("pose")?))?)),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
 pub fn measure_reparentstrategy(value: &Bound<'_, PyAny>) -> PyResult<usize> {
     Ok(128usize)
 }
@@ -284,6 +300,17 @@ pub fn measure_shapetarget(value: &Bound<'_, PyAny>) -> PyResult<usize> {
                     .saturating_mul(4)
                     .saturating_add(32),
             )),
+        _ => Err(pyo3::exceptions::PyTypeError::new_err(
+            "Unexpected modeling variant",
+        )),
+    }
+}
+
+pub fn measure_deformeroriginalaction(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "update" => Ok(256usize),
+        "restore" => Ok(256usize.saturating_add(16usize)),
+        "auto_update" => Ok(256usize.saturating_add(16usize)),
         _ => Err(pyo3::exceptions::PyTypeError::new_err(
             "Unexpected modeling variant",
         )),

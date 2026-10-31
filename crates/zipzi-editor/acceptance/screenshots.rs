@@ -7,6 +7,7 @@ use super::harness::Harness;
 
 mod animation_scene;
 mod common;
+mod deformer_original_scene;
 mod deletion_scene;
 mod dock_and_layout;
 mod external_status_scene;
@@ -37,6 +38,11 @@ pub(super) fn run() -> anyhow::Result<()> {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
+    if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("deformer-original") {
+        deformer_original_scene::run(&directory)?;
+        println!("Deformer original screenshots passed.");
+        return Ok(());
+    }
     if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("warp-keep-children") {
         warp_authoring_scene::run_keep_children(&directory)?;
         println!("Warp keep-children screenshots passed.");

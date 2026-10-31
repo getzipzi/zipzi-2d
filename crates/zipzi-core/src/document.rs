@@ -19,7 +19,7 @@ mod offscreen;
 mod organization;
 mod parameters;
 pub use organization::*;
-pub use parameters::{validate_parameter_range, ParameterRangeError};
+pub use parameters::{ParameterRangeError, validate_parameter_range};
 mod scene;
 pub use scene::*;
 mod scene_content;
@@ -38,13 +38,14 @@ pub use reference_entry::{ReferenceEntry, ReferenceEntryAllocation};
 mod structure;
 mod tracking;
 pub use tracking::TrackedRecord;
+mod deformer_original;
 mod transactions;
 mod transforms;
 mod validation;
 mod vertices;
 
 pub use attachments::{
-    valid_attachment_path, AttachmentEdit, AttachmentPlan, AttachmentRef, PackageAttachment,
+    AttachmentEdit, AttachmentPlan, AttachmentRef, PackageAttachment, valid_attachment_path,
 };
 pub use binding_authoring::*;
 pub use checkpoint::DocumentCheckpoint;
@@ -100,6 +101,9 @@ pub struct Document {
     revision: u64,
     evaluation_revision: u64,
     batch_build_active: bool,
+    // Frozen authoring inputs for automatic original capture. Never checkpointed
+    // or used by runtime evaluation; SDK candidates/snapshots supply this context.
+    original_capture_context: crate::evaluation::PreviewValues,
     transaction_active: bool,
     staged_edits: Vec<DocumentEdit>,
 
@@ -513,6 +517,12 @@ impl Document {
         mesh_ids: Vec<String>,
         mut object_ids: Vec<String>,
     ) -> EditResult {
+        if kind == ChangeKind::Structure {
+            self.lookup.take();
+            self.binding_lookup.take();
+            self.prepared.take();
+            self.update_first_key_originals(&object_ids);
+        }
         self.tracking = Default::default();
         self.reference_index.take();
         self.reference_projection.take();

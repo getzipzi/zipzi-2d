@@ -208,6 +208,17 @@ Motion/Physics must first be resolved to parameters by the caller.
 Typed public API entry.
 
 
+## zipzi.modeling.scene.SceneContentEditDeformerOriginal
+
+`(*, transform_id: str, target: ShapeTarget = <factory>, action: DeformerOriginalAction, context: _Mapping[str, float] = <factory>)`
+
+Immutable owned SceneContentEditDeformerOriginal value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `transform_id`: Stable Warp or Rotation transform ID.
+- `target`: Current editable Base or stored Ordinary shape; BlendShape restore/update is unsupported.
+- `action`: Explicit capture, restore, or first-key update policy.
+- `context`: Frozen parameter inputs used to evaluate current parent spaces in canvas coordinates.
+
 ## zipzi.modeling.scene.SceneContentEditDeleteGluePairs
 
 `(*, glue_id: str, ids: tuple[str, ...])`

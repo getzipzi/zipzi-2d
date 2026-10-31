@@ -43,6 +43,11 @@ format identifier and format version 21. Older names and experimental schemas
 are unsupported; reimport the original source assets. The experimental CBOR
 codec shares these wire rules and uses `project.zipzi.cbor`.
 
+Both native codecs retain optional Warp/Rotation original-shape snapshots,
+their canvas coordinates, capture source, automatic-update policy and first-key
+marker. Missing records remain missing when older projects are opened. Copies
+and undo retain these records; exchange formats such as CMO3 report their loss.
+
 Motion initial keys and segment endpoints carry persistent UUIDs; Bezier
 controls remain anonymous points. Key IDs are excluded from motion3 arrays and
 opaque-content fingerprints; reimporting a motion allocates fresh key identities.

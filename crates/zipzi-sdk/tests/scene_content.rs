@@ -5,6 +5,8 @@ use zipzi_sdk::{
     AuthoringSession, ObjectKind, SceneContentEdit as E, SceneContentTarget as T,
     SceneContentValue as V,
 };
+#[path = "scene_content/deformer_original.rs"]
+mod deformer_original;
 #[path = "scene_content/warp_preservation.rs"]
 mod warp_preservation;
 fn id(n: u32) -> String {
@@ -1201,6 +1203,7 @@ fn warp_control_resize_updates_grid_shapes_and_expires_old_controls() {
     s.edit("Warp", None, |e| {
         e.create_transform(Transform {
             warp_authoring: None,
+            original_shape: None,
             id: id(2),
             runtime_id: "Warp".into(),
             name: "Warp".into(),

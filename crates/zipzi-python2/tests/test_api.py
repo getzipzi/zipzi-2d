@@ -33,6 +33,36 @@ GEOMETRY = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
     ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
 
 class PythonSdk(unittest.TestCase):
+    def test_deformer_original_history_on_both_backends(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode), self.runtime(mode) as runtime:
+                session = runtime.sessions.create(uid(1))
+                with session.edit("Original fixture") as edit:
+                    edit.apply(scene.CreateWarp("Warp", scene.Placement(), (0., 0., 4., 4.), id=uid(2)))
+                created = session.modeling.records(m.ModelingQuery(transforms=(uid(2),))).value.transforms[0]
+                assert created is not None and created.original_shape is not None
+                assert created.original_shape.snapshot is not None
+                self.assertEqual(created.original_shape.snapshot.source, m.scene.DeformerOriginalSource.CREATED)
+                with session.edit("Detail and record") as edit:
+                    edit.apply(m.commands.ModelingCommandContent(intent=m.scene.SceneContentEditWarpPoints(
+                        transform_id=uid(2), updates=(m.scene.WarpPointPatch(row=0, column=0, point=m.common.Vec2(x=.3, y=.2)),))))
+                    edit.apply(m.commands.ModelingCommandContent(intent=m.scene.SceneContentEditDeformerOriginal(
+                        transform_id=uid(2), action=m.scene.DeformerOriginalActionUpdate())))
+                saved = session.modeling.records(m.ModelingQuery(transforms=(uid(2),))).value.transforms[0]
+                assert saved is not None and saved.original_shape is not None and saved.original_shape.snapshot is not None
+                self.assertFalse(saved.original_shape.auto_update)
+                self.assertEqual(saved.original_shape.snapshot.source, m.scene.DeformerOriginalSource.MANUAL)
+                with session.edit("Later shape") as edit:
+                    edit.apply(m.commands.ModelingCommandContent(intent=m.scene.SceneContentEditWarpPoints(
+                        transform_id=uid(2), updates=(m.scene.WarpPointPatch(row=0, column=0, point=m.common.Vec2(x=1., y=2.)),))))
+                later = session.modeling.records(m.ModelingQuery(transforms=(uid(2),))).value.transforms[0]
+                with session.edit("Restore original") as edit:
+                    edit.apply(m.commands.ModelingCommandContent(intent=m.scene.SceneContentEditDeformerOriginal(
+                        transform_id=uid(2), action=m.scene.DeformerOriginalActionRestore(allow_resize=False))))
+                self.assertEqual(session.modeling.records(m.ModelingQuery(transforms=(uid(2),))).value.transforms[0], saved)
+                session.undo().wait()
+                self.assertEqual(session.modeling.records(m.ModelingQuery(transforms=(uid(2),))).value.transforms[0], later)
+
     def test_warp_keep_children_on_both_backends(self):
         for mode in ("local", "connected"):
             with self.subTest(mode=mode), self.runtime(mode) as runtime:

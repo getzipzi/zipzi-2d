@@ -66,6 +66,87 @@ redefine model space.
 this metadata does not rescale model geometry or change evaluation.
 - `flag`: Preserved imported source-canvas flag; no implicit interpretation is applied by this DTO.
 
+## zipzi.modeling.scene.DeformerOriginal
+
+`(*, auto_update: bool, first_key_seen: bool, snapshot: DeformerOriginalSnapshot | None = None, capture_error: str | None = None)`
+
+Immutable owned DeformerOriginal value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `auto_update`: Update once when the first ordinary keyform is created. Manual update disables this.
+- `first_key_seen`: Persistent transition marker; deleting/recreating a binding does not replace the baseline again.
+- `snapshot`: None means no original has been recorded, for example an imported object.
+- `capture_error`: Native error code if automatic capture was unavailable; None after successful capture.
+
+## zipzi.modeling.scene.DeformerOriginalAction
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.scene.DeformerOriginalActionAutoUpdate
+
+`(*, enabled: bool)`
+
+Immutable owned DeformerOriginalActionAutoUpdate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `enabled`: Changes the future first-key policy without changing geometry or immediately replacing the snapshot.
+
+## zipzi.modeling.scene.DeformerOriginalActionRestore
+
+`(*, allow_resize: bool)`
+
+Immutable owned DeformerOriginalActionRestore value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `allow_resize`: Explicit permission to resample every stored Warp shape when the saved conversion density differs.
+
+## zipzi.modeling.scene.DeformerOriginalActionUpdate
+
+`()`
+
+Immutable owned DeformerOriginalActionUpdate value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+
+## zipzi.modeling.scene.DeformerOriginalShape
+
+``
+
+Typed public API entry.
+
+
+## zipzi.modeling.scene.DeformerOriginalShapeRotation
+
+`(*, pose: RotationPose)`
+
+Immutable owned DeformerOriginalShapeRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `pose`: Canvas origin, absolute direction (including reference angle), inherited scale and reflections.
+
+## zipzi.modeling.scene.DeformerOriginalShapeWarp
+
+`(*, warp: WarpTransform, controller_canvas_exact: bool)`
+
+Immutable owned DeformerOriginalShapeWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `warp`: Baked Warp lattice and optional controller in canvas coordinates, X right/Y up.
+- `controller_canvas_exact`: False when a nonlinear captured parent cannot preserve a cubic controller as cubics.
+
+## zipzi.modeling.scene.DeformerOriginalSnapshot
+
+`(*, source: DeformerOriginalSource, shape: DeformerOriginalShape)`
+
+Immutable owned DeformerOriginalSnapshot value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `source`: Creation, first ordinary keyform transition, or explicit manual update.
+- `shape`: Independent canvas-space shape; does not reference undo history or binding samples.
+
+## zipzi.modeling.scene.DeformerOriginalSource
+
+`()`
+
+Immutable typed value. See field semantics and the linked workflow.
+
+
 ## zipzi.modeling.scene.DrawOrderGroup
 
 `(*, owner: str, items: tuple[str, ...], min_order: int, max_order: int)`
@@ -724,7 +805,7 @@ Immutable owned ShapeTargetOrdinary value. Construction owns declared collection
 
 ## zipzi.modeling.scene.Transform
 
-`(*, id: str, runtime_id: str, name: str, part_id: PartId | None = None, parent_id: TransformId | None = None, data: TransformData, enabled: bool, appearance: Appearance, warp_authoring: WarpAuthoringSettings | None = None)`
+`(*, id: str, runtime_id: str, name: str, part_id: PartId | None = None, parent_id: TransformId | None = None, data: TransformData, enabled: bool, appearance: Appearance, warp_authoring: WarpAuthoringSettings | None = None, original_shape: DeformerOriginal | None = None)`
 
 Immutable owned Transform value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
@@ -740,6 +821,7 @@ rotation-pose interpretation.
 - `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
 - `appearance`: Opacity and multiply/screen color factors for this object or shape.
 - `warp_authoring`: Persistent Warp editing policy; never used for runtime deformation evaluation.
+- `original_shape`: Independent original shape and its first-key update policy, retained only by native projects.
 
 ## zipzi.modeling.scene.TransformData
 

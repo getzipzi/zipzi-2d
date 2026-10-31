@@ -91,6 +91,11 @@ pub fn measure_transform(value: &Bound<'_, PyAny>) -> PyResult<usize> {
             0usize
         } else {
             measure_warpauthoringsettings(&(value.getattr("warp_authoring")?))?
+        })
+        .saturating_add(if (value.getattr("original_shape")?).is_none() {
+            0usize
+        } else {
+            measure_deformeroriginal(&(value.getattr("original_shape")?))?
         }))
 }
 
@@ -187,6 +192,31 @@ pub fn measure_warpauthoringsettings(value: &Bound<'_, PyAny>) -> PyResult<usize
 
 pub fn measure_warpbeziergrid(value: &Bound<'_, PyAny>) -> PyResult<usize> {
     Ok(256usize.saturating_add(16usize).saturating_add(16usize))
+}
+
+pub fn measure_deformeroriginal(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(16usize)
+        .saturating_add(16usize)
+        .saturating_add(if (value.getattr("snapshot")?).is_none() {
+            0usize
+        } else {
+            measure_deformeroriginalsnapshot(&(value.getattr("snapshot")?))?
+        })
+        .saturating_add(if (value.getattr("capture_error")?).is_none() {
+            0usize
+        } else {
+            (value.getattr("capture_error")?)
+                .len()?
+                .saturating_mul(4)
+                .saturating_add(32)
+        }))
+}
+
+pub fn measure_deformeroriginalsnapshot(value: &Bound<'_, PyAny>) -> PyResult<usize> {
+    Ok(256usize
+        .saturating_add(measure_deformeroriginalsource(&(value.getattr("source")?))?)
+        .saturating_add(measure_deformeroriginalshape(&(value.getattr("shape")?))?))
 }
 
 pub fn measure_glue(value: &Bound<'_, PyAny>) -> PyResult<usize> {

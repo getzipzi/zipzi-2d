@@ -3,8 +3,8 @@ use crate::changes::ChangeSetExt;
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::edit::EditSession;
 use crate::types::*;
@@ -16,14 +16,14 @@ use zipzi_core::document::{
 use zipzi_core::draw_order::DrawOrderGroup;
 use zipzi_core::preview::PreviewState;
 use zipzi_core::{
-    evaluate_frame, BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, Canvas,
-    ChangeKind, Document, DrawableFrame, Glue, ImageAsset, Mesh, MeshBinding, Offscreen, Parameter,
-    Part, PreviewValues, SceneBinding, Transform,
+    BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, Canvas, ChangeKind, Document,
+    DrawableFrame, Glue, ImageAsset, Mesh, MeshBinding, Offscreen, Parameter, Part, PreviewValues,
+    SceneBinding, Transform, evaluate_frame,
 };
 use zipzi_project::{
-    export_cdi3, export_expression3, export_motion3, export_physics3, export_pose3,
     CdiProjectError, ExpressionProjectError, MotionProjectError, PhysicsProjectError,
-    PoseProjectError,
+    PoseProjectError, export_cdi3, export_expression3, export_motion3, export_physics3,
+    export_pose3,
 };
 use zipzi_project::{DocumentSession, FileSystem, NativeFileSystem};
 
@@ -190,10 +190,11 @@ impl AuthoringSession {
 
     fn snapshot_document(
         &self,
-        document: Document,
+        mut document: Document,
         version: Version,
         started: std::time::Instant,
     ) -> AuthoringSnapshot {
+        document.set_original_capture_context(self.preview_values().clone());
         let memory_images = document
             .asset_order()
             .iter()
@@ -739,7 +740,8 @@ impl AuthoringSession {
         let _benchmark_span = zipzi_core::benchmark::span("sdk.begin_owned_edit");
         self.check_version(expected, "begin_edit")?;
         let version = self.version();
-        let candidate = self.project.document().fork_tracked_candidate();
+        let mut candidate = self.project.document().fork_tracked_candidate();
+        candidate.set_original_capture_context(self.preview_values().clone());
         let candidate_bytes = candidate.estimated_content_bytes();
         if candidate_bytes > self.history_limits.max_bytes {
             return Err(SdkError::new(

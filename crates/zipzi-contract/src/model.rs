@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 include!("model/basics.rs");
 include!("model/appearance.rs");
 include!("model/parameters_transforms.rs");
+include!("model/deformer_original.rs");
 include!("model/scene_keyforms_meshes.rs");
 include!("model/blendshapes.rs");
 include!("model/glue_bindings.rs");

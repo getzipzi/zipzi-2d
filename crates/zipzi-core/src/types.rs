@@ -6,8 +6,9 @@ pub use zipzi_contract::model::{
 };
 
 pub use zipzi_contract::model::{
-    Part, PartKeyform, RotationKeyform, RotationTransform, SceneKeyform, Transform, TransformData,
-    WarpKeyform, WarpTransform,
+    DeformerOriginal, DeformerOriginalAction, DeformerOriginalShape, DeformerOriginalSnapshot,
+    DeformerOriginalSource, Part, PartKeyform, RotationKeyform, RotationTransform, SceneKeyform,
+    Transform, TransformData, WarpKeyform, WarpTransform,
 };
 
 /// Borrowed projection for interpolation and external formats. Neutral values

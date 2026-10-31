@@ -255,6 +255,16 @@ impl Document {
         if !result.status.is_ok() {
             return Err(result.status);
         }
+        // The final pass-through lattice can differ from the provisional
+        // creation bounds. Capture the actual inserted deformer at the frozen
+        // authoring inputs, after that normalization.
+        candidate
+            .content
+            .transforms
+            .get_mut(&id)
+            .unwrap()
+            .original_shape = None;
+        candidate.initialize_deformer_original(&id);
         let mut plan = self.empty_scene_plan();
         plan.domain
             .affected

@@ -65,6 +65,11 @@ pub fn read_transform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::Transfor
                 &value.getattr("warp_authoring")?,
             )?)
         },
+        original_shape: if value.getattr("original_shape")?.is_none() {
+            None
+        } else {
+            Some(read_deformeroriginal(&value.getattr("original_shape")?)?)
+        },
     })
 }
 
@@ -165,6 +170,32 @@ pub fn read_warpbeziergrid(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::War
     Ok(zipzi_core::WarpBezierGrid {
         rows: value.getattr("rows")?.extract()?,
         columns: value.getattr("columns")?.extract()?,
+    })
+}
+
+pub fn read_deformeroriginal(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::DeformerOriginal> {
+    Ok(zipzi_core::DeformerOriginal {
+        auto_update: value.getattr("auto_update")?.extract()?,
+        first_key_seen: value.getattr("first_key_seen")?.extract()?,
+        snapshot: if value.getattr("snapshot")?.is_none() {
+            None
+        } else {
+            Some(read_deformeroriginalsnapshot(&value.getattr("snapshot")?)?)
+        },
+        capture_error: if value.getattr("capture_error")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("capture_error")?.extract()?)
+        },
+    })
+}
+
+pub fn read_deformeroriginalsnapshot(
+    value: &Bound<'_, PyAny>,
+) -> PyResult<zipzi_core::DeformerOriginalSnapshot> {
+    Ok(zipzi_core::DeformerOriginalSnapshot {
+        source: read_deformeroriginalsource(&value.getattr("source")?)?,
+        shape: read_deformeroriginalshape(&value.getattr("shape")?)?,
     })
 }
 

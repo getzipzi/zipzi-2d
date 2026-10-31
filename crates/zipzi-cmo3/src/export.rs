@@ -702,10 +702,11 @@ pub(crate) fn encode_with_animation(
         || doc.transform_order().iter().any(|id| {
             let transform = doc.get_transform(id).unwrap();
             transform.warp_authoring.is_some()
+                || transform.original_shape.is_some()
                 || transform.warp().is_some_and(|w| w.bezier.is_some())
         })
     {
-        report.diagnostics.push(Cmo3Diagnostic {severity:DiagnosticSeverity::Info,code:"AUTHORING_METADATA".into(),object_id:doc.id().into(),message:"Zipzi palette preferences, Warp editing settings and Bezier handles are not stored; mesh and sampled warp geometry remain editable".into()});
+        report.diagnostics.push(Cmo3Diagnostic {severity:DiagnosticSeverity::Info,code:"AUTHORING_METADATA".into(),object_id:doc.id().into(),message:"Zipzi palette preferences, deformer originals, Warp editing settings and Bezier handles are not stored; mesh and sampled warp geometry remain editable".into()});
     }
     let bytes = crate::caff::encode(exporter.images, &xml, options.obfuscation_key)?;
     report.diagnostics.push(Cmo3Diagnostic { severity:DiagnosticSeverity::Info,code:"ATLAS_ARTWORK".into(),object_id:doc.id().into(),message:"Artwork is embedded as texture atlases; original PSD layer history is unavailable in a Zipzi document".into() });

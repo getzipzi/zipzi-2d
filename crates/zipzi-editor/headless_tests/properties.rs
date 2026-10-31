@@ -2,6 +2,7 @@ use super::{document_fixture, setup, setup_with_document};
 use gpui_kit::test::TestWindowExt;
 use gpui_kit::{AppContext as _, TestAppContext};
 use zipzi_editor_core::property as schema;
+mod deformer_original;
 mod warp_authoring;
 
 fn warp_grid_document() -> (

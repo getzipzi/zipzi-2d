@@ -446,6 +446,14 @@ impl DocumentSession {
                 );
                 self.document.shape_warp(&target.object, action)
             }
+            EditorCommand::DeformerOriginal { target, action } => {
+                self.document.apply_deformer_original(&target, action)?;
+                if matches!(action, zipzi_core::DeformerOriginalAction::Restore { .. }) {
+                    self.modeling.tools.clear_selection();
+                    self.modeling.tools.warp_frames.clear();
+                }
+                Ok(())
+            }
             EditorCommand::SetObjectProperty {
                 object,
                 field,

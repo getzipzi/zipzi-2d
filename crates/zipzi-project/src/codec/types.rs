@@ -130,6 +130,8 @@ impl From<RotationPoseWire> for RotationPose {
 #[derive(Serialize, Deserialize)]
 pub(super) struct TransformWire {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) original_shape: Option<zipzi_core::DeformerOriginal>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) warp_authoring: Option<zipzi_core::WarpAuthoringSettings>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) bezier: Option<zipzi_core::WarpBezier>,

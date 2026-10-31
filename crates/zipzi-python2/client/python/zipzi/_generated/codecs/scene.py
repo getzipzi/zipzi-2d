@@ -17,7 +17,7 @@ from .._modeling_support import _check_usize
 from collections.abc import Mapping
 from collections.abc import Mapping as _Mapping
 from typing import cast
-from ..values import Appearance, AttachmentRef, AttachmentRefResolved, AttachmentRefUnresolved, BlendMode, Canvas, DrawOrderGroup, Glue, GlueVertexPair, HierarchyOrder, ModelSetup, Offscreen, OffscreenDeletePolicy, OffscreenDeletePolicyNeutral, OffscreenDeletePolicyRejectReferences, OffscreenDeletePolicyRemap, OffscreenMappingPatch, OrganizationCollection, OrganizationCollectionParameterGroups, OrganizationCollectionParameters, OrganizationCollectionPartMembers, OrganizationDeletePolicy, Part, PartId, ReparentContext, ReparentPlacement, ReparentStrategy, RotationPose, RotationTransform, SceneCollection, SceneCollectionDeformation, SceneCollectionDrawing, SceneCollectionDrawingGroups, SceneCollectionGlues, SceneCollectionOrganization, SceneContentTarget, SceneContentTargetGluePair, SceneContentTargetOffscreenKeyform, SceneContentTargetOffscreenMapping, SceneContentTargetTriangle, SceneContentTargetVertexPosition, SceneContentTargetVertexUv, SceneContentTargetWarpBezierControl, SceneContentTargetWarpPoint, SceneContentValue, SceneContentValueGluePair, SceneContentValueMapping, SceneContentValueOffscreenKeyform, SceneContentValuePoint, SceneContentValueTriangle, SceneCopyScope, SceneCreate, SceneCreateGlue, SceneCreateMesh, SceneCreateOffscreen, SceneCreateRotation, SceneCreateWarp, SceneField, SceneFieldValue, SceneFieldValueAppearance, SceneFieldValueContext, SceneFieldValueEnabled, SceneFieldValueGlueEndpoints, SceneFieldValueGlueIntensity, SceneFieldValueLabel, SceneFieldValueMasks, SceneFieldValueMeshDrawing, SceneFieldValueOffscreen, SceneFieldValueRotation, SceneFieldValueRuntimeId, SceneFieldValueTexture, SceneFieldValueWarp, SceneReference, SceneReferenceResolved, SceneReferenceUnresolved, SceneReferenceUnspecified, ShapeTarget, ShapeTargetBase, ShapeTargetBlend, ShapeTargetOrdinary, Transform, TransformData, TransformDataRotation, TransformDataWarp, TransformId, Vec2, WarpAuthoringSettings, WarpBezier, WarpBezierControlPatch, WarpBezierEditMode, WarpBezierGrid, WarpBezierNode, WarpPointPatch, WarpShapeAction, WarpTransform
+from ..values import Appearance, AttachmentRef, AttachmentRefResolved, AttachmentRefUnresolved, BlendMode, Canvas, DeformerOriginal, DeformerOriginalAction, DeformerOriginalActionAutoUpdate, DeformerOriginalActionRestore, DeformerOriginalActionUpdate, DeformerOriginalShape, DeformerOriginalShapeRotation, DeformerOriginalShapeWarp, DeformerOriginalSnapshot, DeformerOriginalSource, DrawOrderGroup, Glue, GlueVertexPair, HierarchyOrder, ModelSetup, Offscreen, OffscreenDeletePolicy, OffscreenDeletePolicyNeutral, OffscreenDeletePolicyRejectReferences, OffscreenDeletePolicyRemap, OffscreenMappingPatch, OrganizationCollection, OrganizationCollectionParameterGroups, OrganizationCollectionParameters, OrganizationCollectionPartMembers, OrganizationDeletePolicy, Part, PartId, ReparentContext, ReparentPlacement, ReparentStrategy, RotationPose, RotationTransform, SceneCollection, SceneCollectionDeformation, SceneCollectionDrawing, SceneCollectionDrawingGroups, SceneCollectionGlues, SceneCollectionOrganization, SceneContentTarget, SceneContentTargetGluePair, SceneContentTargetOffscreenKeyform, SceneContentTargetOffscreenMapping, SceneContentTargetTriangle, SceneContentTargetVertexPosition, SceneContentTargetVertexUv, SceneContentTargetWarpBezierControl, SceneContentTargetWarpPoint, SceneContentValue, SceneContentValueGluePair, SceneContentValueMapping, SceneContentValueOffscreenKeyform, SceneContentValuePoint, SceneContentValueTriangle, SceneCopyScope, SceneCreate, SceneCreateGlue, SceneCreateMesh, SceneCreateOffscreen, SceneCreateRotation, SceneCreateWarp, SceneField, SceneFieldValue, SceneFieldValueAppearance, SceneFieldValueContext, SceneFieldValueEnabled, SceneFieldValueGlueEndpoints, SceneFieldValueGlueIntensity, SceneFieldValueLabel, SceneFieldValueMasks, SceneFieldValueMeshDrawing, SceneFieldValueOffscreen, SceneFieldValueRotation, SceneFieldValueRuntimeId, SceneFieldValueTexture, SceneFieldValueWarp, SceneReference, SceneReferenceResolved, SceneReferenceUnresolved, SceneReferenceUnspecified, ShapeTarget, ShapeTargetBase, ShapeTargetBlend, ShapeTargetOrdinary, Transform, TransformData, TransformDataRotation, TransformDataWarp, TransformId, Vec2, WarpAuthoringSettings, WarpBezier, WarpBezierControlPatch, WarpBezierEditMode, WarpBezierGrid, WarpBezierNode, WarpPointPatch, WarpShapeAction, WarpTransform
 
 def validate_SceneReference(value: SceneReference) -> None:
     if isinstance(value, SceneReferenceUnspecified):
@@ -121,14 +121,16 @@ def validate_Transform(value: Transform) -> None:
     validate_Appearance(value.appearance)
     if value.warp_authoring is not None:
         validate_WarpAuthoringSettings(value.warp_authoring)
+    if value.original_shape is not None:
+        validate_DeformerOriginal(value.original_shape)
 
 def encode_Transform(value: Transform) -> object:
-    return {'id': value.id, 'runtime_id': value.runtime_id, 'name': value.name, 'part_id': None if value.part_id is None else encode_PartId(value.part_id), 'parent_id': None if value.parent_id is None else encode_TransformId(value.parent_id), 'data': encode_TransformData(value.data), 'enabled': value.enabled, 'appearance': encode_Appearance(value.appearance), 'warp_authoring': None if value.warp_authoring is None else encode_WarpAuthoringSettings(value.warp_authoring)}
+    return {'id': value.id, 'runtime_id': value.runtime_id, 'name': value.name, 'part_id': None if value.part_id is None else encode_PartId(value.part_id), 'parent_id': None if value.parent_id is None else encode_TransformId(value.parent_id), 'data': encode_TransformData(value.data), 'enabled': value.enabled, 'appearance': encode_Appearance(value.appearance), 'warp_authoring': None if value.warp_authoring is None else encode_WarpAuthoringSettings(value.warp_authoring), 'original_shape': None if value.original_shape is None else encode_DeformerOriginal(value.original_shape)}
 
 def read_Transform(value: object) -> Transform:
     if isinstance(value, Transform): return value
     r = record(value)
-    return Transform(id=string(r['id']), runtime_id=string(r['runtime_id']), name=string(r['name']), part_id=None if r.get('part_id', None) is None else read_PartId(r.get('part_id', None)), parent_id=None if r.get('parent_id', None) is None else read_TransformId(r.get('parent_id', None)), data=read_TransformData(r['data']), enabled=_boolean(r['enabled']), appearance=read_Appearance(r['appearance']), warp_authoring=None if r.get('warp_authoring', None) is None else read_WarpAuthoringSettings(r.get('warp_authoring', None)))
+    return Transform(id=string(r['id']), runtime_id=string(r['runtime_id']), name=string(r['name']), part_id=None if r.get('part_id', None) is None else read_PartId(r.get('part_id', None)), parent_id=None if r.get('parent_id', None) is None else read_TransformId(r.get('parent_id', None)), data=read_TransformData(r['data']), enabled=_boolean(r['enabled']), appearance=read_Appearance(r['appearance']), warp_authoring=None if r.get('warp_authoring', None) is None else read_WarpAuthoringSettings(r.get('warp_authoring', None)), original_shape=None if r.get('original_shape', None) is None else read_DeformerOriginal(r.get('original_shape', None)))
 
 def validate_PartId(value: PartId) -> None:
     if not isinstance(value, PartId):
@@ -317,6 +319,77 @@ def read_WarpBezierGrid(value: object) -> WarpBezierGrid:
     if isinstance(value, WarpBezierGrid): return value
     r = record(value)
     return WarpBezierGrid(rows=integer(r['rows']), columns=integer(r['columns']))
+
+def validate_DeformerOriginal(value: DeformerOriginal) -> None:
+    if not isinstance(value, DeformerOriginal):
+        raise TypeError("Expected DeformerOriginal")
+    _check_bool(value.auto_update)
+    _check_bool(value.first_key_seen)
+    if value.snapshot is not None:
+        validate_DeformerOriginalSnapshot(value.snapshot)
+    if value.capture_error is not None:
+        _check_string(value.capture_error)
+
+def encode_DeformerOriginal(value: DeformerOriginal) -> object:
+    return {'auto_update': value.auto_update, 'first_key_seen': value.first_key_seen, 'snapshot': None if value.snapshot is None else encode_DeformerOriginalSnapshot(value.snapshot), 'capture_error': None if value.capture_error is None else value.capture_error}
+
+def read_DeformerOriginal(value: object) -> DeformerOriginal:
+    if isinstance(value, DeformerOriginal): return value
+    r = record(value)
+    return DeformerOriginal(auto_update=_boolean(r['auto_update']), first_key_seen=_boolean(r['first_key_seen']), snapshot=None if r.get('snapshot', None) is None else read_DeformerOriginalSnapshot(r.get('snapshot', None)), capture_error=None if r.get('capture_error', None) is None else string(r.get('capture_error', None)))
+
+def validate_DeformerOriginalSnapshot(value: DeformerOriginalSnapshot) -> None:
+    if not isinstance(value, DeformerOriginalSnapshot):
+        raise TypeError("Expected DeformerOriginalSnapshot")
+    validate_DeformerOriginalSource(value.source)
+    validate_DeformerOriginalShape(value.shape)
+
+def encode_DeformerOriginalSnapshot(value: DeformerOriginalSnapshot) -> object:
+    return {'source': encode_DeformerOriginalSource(value.source), 'shape': encode_DeformerOriginalShape(value.shape)}
+
+def read_DeformerOriginalSnapshot(value: object) -> DeformerOriginalSnapshot:
+    if isinstance(value, DeformerOriginalSnapshot): return value
+    r = record(value)
+    return DeformerOriginalSnapshot(source=read_DeformerOriginalSource(r['source']), shape=read_DeformerOriginalShape(r['shape']))
+
+def validate_DeformerOriginalSource(value: DeformerOriginalSource) -> None:
+    if not isinstance(value, DeformerOriginalSource):
+        raise TypeError("Expected DeformerOriginalSource")
+
+def encode_DeformerOriginalSource(value: DeformerOriginalSource) -> object:
+    return value.value
+
+def read_DeformerOriginalSource(value: object) -> DeformerOriginalSource:
+    if isinstance(value, DeformerOriginalSource): return value
+    return DeformerOriginalSource(string(value))
+
+def validate_DeformerOriginalShape(value: DeformerOriginalShape) -> None:
+    if isinstance(value, DeformerOriginalShapeWarp):
+        validate_WarpTransform(value.warp)
+        _check_bool(value.controller_canvas_exact)
+    elif isinstance(value, DeformerOriginalShapeRotation):
+        validate_RotationPose(value.pose)
+    else:
+        raise TypeError("Expected DeformerOriginalShape")
+
+def encode_DeformerOriginalShape(value: DeformerOriginalShape) -> object:
+    if isinstance(value, DeformerOriginalShapeWarp):
+        return {'kind': 'warp', **cast(Mapping[str, object], {'warp': encode_WarpTransform(value.warp), 'controller_canvas_exact': value.controller_canvas_exact})}
+    elif isinstance(value, DeformerOriginalShapeRotation):
+        return {'kind': 'rotation', **cast(Mapping[str, object], {'pose': encode_RotationPose(value.pose)})}
+    raise TypeError("Expected DeformerOriginalShape")
+
+def read_DeformerOriginalShape(value: object) -> DeformerOriginalShape:
+    if isinstance(value, (DeformerOriginalShapeWarp, DeformerOriginalShapeRotation,)): return value
+    r = record(value)
+    tag = string(r['kind'])
+    if tag == 'warp':
+        f = record(r)
+        return DeformerOriginalShapeWarp(warp=read_WarpTransform(f['warp']), controller_canvas_exact=_boolean(f['controller_canvas_exact']))
+    elif tag == 'rotation':
+        f = record(r)
+        return DeformerOriginalShapeRotation(pose=read_RotationPose(f['pose']))
+    raise ValueError("Unknown DeformerOriginalShape variant")
 
 def validate_Glue(value: Glue) -> None:
     from .bindings import validate_GlueBinding
@@ -763,6 +836,39 @@ def read_ShapeTarget(value: object) -> ShapeTarget:
         f = record(r)
         return ShapeTargetBlend(binding_id=string(f['binding_id']), sample_id=string(f['sample_id']))
     raise ValueError("Unknown ShapeTarget variant")
+
+def validate_DeformerOriginalAction(value: DeformerOriginalAction) -> None:
+    if isinstance(value, DeformerOriginalActionUpdate):
+        pass
+    elif isinstance(value, DeformerOriginalActionRestore):
+        _check_bool(value.allow_resize)
+    elif isinstance(value, DeformerOriginalActionAutoUpdate):
+        _check_bool(value.enabled)
+    else:
+        raise TypeError("Expected DeformerOriginalAction")
+
+def encode_DeformerOriginalAction(value: DeformerOriginalAction) -> object:
+    if isinstance(value, DeformerOriginalActionUpdate):
+        return {'action': 'update', **cast(Mapping[str, object], {})}
+    elif isinstance(value, DeformerOriginalActionRestore):
+        return {'action': 'restore', **cast(Mapping[str, object], {'allow_resize': value.allow_resize})}
+    elif isinstance(value, DeformerOriginalActionAutoUpdate):
+        return {'action': 'auto_update', **cast(Mapping[str, object], {'enabled': value.enabled})}
+    raise TypeError("Expected DeformerOriginalAction")
+
+def read_DeformerOriginalAction(value: object) -> DeformerOriginalAction:
+    if isinstance(value, (DeformerOriginalActionUpdate, DeformerOriginalActionRestore, DeformerOriginalActionAutoUpdate,)): return value
+    r = record(value)
+    tag = string(r['action'])
+    if tag == 'update':
+        return DeformerOriginalActionUpdate()
+    elif tag == 'restore':
+        f = record(r)
+        return DeformerOriginalActionRestore(allow_resize=_boolean(f['allow_resize']))
+    elif tag == 'auto_update':
+        f = record(r)
+        return DeformerOriginalActionAutoUpdate(enabled=_boolean(f['enabled']))
+    raise ValueError("Unknown DeformerOriginalAction variant")
 
 def validate_WarpPointPatch(value: WarpPointPatch) -> None:
     from .common import validate_Vec2

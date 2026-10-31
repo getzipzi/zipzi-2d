@@ -14,6 +14,11 @@ impl Document {
     }
 
     pub(super) fn validate_transform(&self, t: &Transform) -> Status {
+        if let Some(record) = &t.original_shape {
+            if let Err(status) = self.validate_deformer_original(record) {
+                return status;
+            }
+        }
         if !valid_uuid(&t.id) || t.runtime_id.is_empty() {
             return Status::error("INVALID_ID", &t.id);
         }
@@ -124,6 +129,9 @@ impl Document {
         let id = t.id.clone();
         self.content.transforms.insert(id.clone(), t);
         self.content.transform_order.push(id.clone());
+        self.lookup.take();
+        self.prepared.take();
+        self.initialize_deformer_original(&id);
         let meshes = self.content.mesh_order.clone();
         self.changed(ChangeKind::Structure, meshes, vec![id])
     }

@@ -41,6 +41,7 @@ pub(super) enum Row {
     WarpBezierGrid,
     WarpShapeActions,
     WarpKeepChildren,
+    DeformerOriginal,
     WarpTransform,
     WarpFrame,
     AnimationActions(ObjectRef),
@@ -202,6 +203,9 @@ impl PropertiesPanel {
                 entity = next_entity;
             }
             rows.push(Row::Field(spec.binding.key));
+            if spec.binding.key == zipzi_editor_core::property::deformer::ORIGINAL_AUTO.key {
+                rows.push(Row::DeformerOriginal);
+            }
             if let Some(status) =
                 properties::animation::registration_status(doc, target, spec.binding.key)
             {

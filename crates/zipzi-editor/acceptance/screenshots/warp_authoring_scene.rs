@@ -13,7 +13,9 @@ use zipzi_editor_core::{
     Document, Editor, EditorCommand, ModelPoint, ObjectKind, ObjectRef, ViewportPoint,
 };
 
-fn fixture(mode: WarpBezierEditMode) -> anyhow::Result<(Document, tempfile::TempDir, ObjectRef)> {
+pub(super) fn fixture(
+    mode: WarpBezierEditMode,
+) -> anyhow::Result<(Document, tempfile::TempDir, ObjectRef)> {
     let assets = tempfile::tempdir()?;
     let path = assets.path().join("checker.png");
     image::RgbaImage::from_fn(256, 256, |x, y| {

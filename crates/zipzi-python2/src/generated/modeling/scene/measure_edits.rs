@@ -352,6 +352,34 @@ pub fn measure_organizationedit(value: &Bound<'_, PyAny>) -> PyResult<usize> {
 
 pub fn measure_scenecontentedit(value: &Bound<'_, PyAny>) -> PyResult<usize> {
     match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "deformer_original" => Ok(256usize
+            .saturating_add(
+                (value.getattr("transform_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_shapetarget(&(value.getattr("target")?))?)
+            .saturating_add(measure_deformeroriginalaction(&(value.getattr("action")?))?)
+            .saturating_add({
+                let mut bytes = 64usize;
+                for value in (value.getattr("context")?)
+                    .call_method0("items")?
+                    .try_iter()?
+                {
+                    let v0 = value?;
+                    bytes = bytes
+                        .saturating_add(128)
+                        .saturating_add(
+                            (v0.get_item(0)?)
+                                .len()?
+                                .saturating_mul(4)
+                                .saturating_add(32),
+                        )
+                        .saturating_add(16usize);
+                }
+                bytes
+            })),
         "mesh_vertices" => Ok(256usize
             .saturating_add(
                 (value.getattr("mesh_id")?)

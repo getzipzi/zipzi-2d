@@ -1,5 +1,6 @@
 //! Canvas object interactions, selection, deformation, and picking suites.
 mod common;
+mod deformer_original;
 mod deformers;
 mod hierarchy_picking;
 mod lasso;

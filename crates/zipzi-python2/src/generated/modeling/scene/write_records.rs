@@ -168,6 +168,12 @@ pub(crate) fn write_transform_in(
             None => py.None(),
         }
     })?;
+    out.set_item("original_shape", {
+        match (&value.original_shape).as_ref() {
+            Some(item) => write_deformeroriginal_in(py, (item), classes)?,
+            None => py.None(),
+        }
+    })?;
     Ok(classes.getattr("Transform")?.call((), Some(&out))?.unbind())
 }
 
@@ -482,6 +488,80 @@ pub(crate) fn write_warpbeziergrid_in(
     )?;
     Ok(classes
         .getattr("WarpBezierGrid")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_deformeroriginal(
+    py: Python<'_>,
+    value: &zipzi_core::DeformerOriginal,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.values.scene")?;
+    write_deformeroriginal_in(py, value, &classes)
+}
+pub(crate) fn write_deformeroriginal_in(
+    py: Python<'_>,
+    value: &zipzi_core::DeformerOriginal,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "auto_update",
+        (&value.auto_update)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item(
+        "first_key_seen",
+        (&value.first_key_seen)
+            .into_pyobject(py)?
+            .into_bound()
+            .into_any()
+            .unbind(),
+    )?;
+    out.set_item("snapshot", {
+        match (&value.snapshot).as_ref() {
+            Some(item) => write_deformeroriginalsnapshot_in(py, (item), classes)?,
+            None => py.None(),
+        }
+    })?;
+    out.set_item("capture_error", {
+        match (&value.capture_error).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
+    Ok(classes
+        .getattr("DeformerOriginal")?
+        .call((), Some(&out))?
+        .unbind())
+}
+
+pub fn write_deformeroriginalsnapshot(
+    py: Python<'_>,
+    value: &zipzi_core::DeformerOriginalSnapshot,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.values.scene")?;
+    write_deformeroriginalsnapshot_in(py, value, &classes)
+}
+pub(crate) fn write_deformeroriginalsnapshot_in(
+    py: Python<'_>,
+    value: &zipzi_core::DeformerOriginalSnapshot,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let out = PyDict::new(py);
+    out.set_item(
+        "source",
+        write_deformeroriginalsource_in(py, (&value.source), classes)?,
+    )?;
+    out.set_item(
+        "shape",
+        write_deformeroriginalshape_in(py, (&value.shape), classes)?,
+    )?;
+    Ok(classes
+        .getattr("DeformerOriginalSnapshot")?
         .call((), Some(&out))?
         .unbind())
 }

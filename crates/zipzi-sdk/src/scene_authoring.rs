@@ -4,12 +4,12 @@ use crate::{
     SdkError, Version,
 };
 use std::collections::BTreeMap;
+pub use zipzi_core::SceneReference;
 use zipzi_core::document::{ConversionControl, ConversionReport, OrganizationEffects, ScenePlan};
 pub use zipzi_core::document::{
     DisabledSceneItem, SceneCollection, SceneCopyScope, SceneCreate, SceneDisabledReason,
     SceneEdit, SceneField, SceneFieldValue, ScenePairSlot, SceneProjection, SceneUse,
 };
-pub use zipzi_core::SceneReference;
 #[derive(Debug, Clone)]
 pub struct SceneEditPlan {
     version: Version,
@@ -106,8 +106,17 @@ impl AuthoringSession {
         sources: Vec<String>,
     ) -> Result<SceneEditPlan, SdkError> {
         let control = ConversionControl::default();
-        let domain = self
-            .document()
+        if !self.preview_values().is_empty() {
+            let retained = self.document().estimated_content_bytes();
+            self.authoring_limits()
+                .check_conversion(1, retained, retained)
+                .map_err(|s| error(s, "plan_deformer_group"))?;
+        }
+        let snapshot = (!self.preview_values().is_empty()).then(|| self.read_snapshot());
+        let document = snapshot
+            .as_ref()
+            .map_or_else(|| self.document(), |s| s.document());
+        let domain = document
             .plan_deformer_group(create, sources, self.authoring_limits(), &control)
             .map_err(|s| error(s, "plan_deformer_group"))?;
         Ok(SceneEditPlan {
@@ -125,8 +134,25 @@ impl AuthoringSession {
         control: &ConversionControl,
     ) -> Result<SceneEditPlan, SdkError> {
         let refs = users(self.document(), &intent);
-        let domain = self
-            .document()
+        let contextual_creation = !self.preview_values().is_empty()
+            && matches!(
+                &intent,
+                SceneEdit::Create {
+                    object: SceneCreate::Warp { .. } | SceneCreate::Rotation,
+                    ..
+                }
+            );
+        if contextual_creation {
+            let retained = self.document().estimated_content_bytes();
+            self.authoring_limits()
+                .check_conversion(1, retained, retained)
+                .map_err(|s| error(s, "plan_scene_edit"))?;
+        }
+        let snapshot = contextual_creation.then(|| self.read_snapshot());
+        let document = snapshot
+            .as_ref()
+            .map_or_else(|| self.document(), |s| s.document());
+        let domain = document
             .plan_scene_edit_with_control(intent, self.authoring_limits(), control)
             .map_err(|s| {
                 let mut e = error(s, "plan_scene_edit");

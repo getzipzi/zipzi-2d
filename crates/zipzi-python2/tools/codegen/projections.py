@@ -121,7 +121,7 @@ DOMAIN_MEMBERS = {
         'sampling': 'Drawable DrawableFrame EvaluatedDeformer EvaluatedParameter OffscreenFrame RenderCommand',
     },
     'zipzi_contract::model': {
-        'scene': 'Appearance BlendMode Canvas Glue GlueVertexPair ModelSetup Offscreen Part PartId RotationPose RotationTransform Transform TransformData TransformId WarpTransform',
+        'scene': 'Appearance BlendMode Canvas DeformerOriginal DeformerOriginalAction DeformerOriginalShape DeformerOriginalSnapshot DeformerOriginalSource Glue GlueVertexPair ModelSetup Offscreen Part PartId RotationPose RotationTransform Transform TransformData TransformId WarpTransform',
         'bindings': 'BindingAxis BindingSample BlendShapeBinding BlendShapeConstraint BlendShapeKeyTable BlendShapeTargetKind ConstraintSample DeltaGlueKeyform DeltaKeyforms DeltaMeshKeyform DeltaOffscreenKeyform DeltaPartKeyform DeltaRotationKeyform DeltaWarpKeyform GlueBinding GlueKeyform MeshBinding MeshKeyform OffscreenKeyform PartKeyform RotationKeyform SceneBinding SceneKeyform SceneTrack WarpKeyform',
         'project': 'ExportSettings',
         'resources': 'ImageAsset ImageContent',

@@ -159,6 +159,7 @@ impl<'a> Moc3DecoderContext<'a> {
                     self.doc
                         .create_transform(Transform {
                             warp_authoring: None,
+                            original_shape: None,
                             id: id.clone(),
                             runtime_id: if runtime_id.is_empty() {
                                 format!("Warp{local_idx}")
@@ -298,6 +299,7 @@ impl<'a> Moc3DecoderContext<'a> {
                     self.doc
                         .create_transform(Transform {
                             warp_authoring: None,
+                            original_shape: None,
                             id: id.clone(),
                             runtime_id: if runtime_id.is_empty() {
                                 format!("Rotation{local_idx}")

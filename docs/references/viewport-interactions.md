@@ -111,6 +111,17 @@ converted together; Rotation inheritance uses the shared reparent math. Nonlinea
 edited maps and animated ancestor spaces remain explicit refusals. Publication
 checks a 0.01 canvas-unit numerical budget, independent of zoom or device pixels.
 
+Original-shape Update and Restore settle the current edit before freezing their
+target. A target includes the Runtime session, full version, preview revision,
+property scope and object selection; pending candidates cannot supply one.
+Changes to any of those retire the target, including undo/redo. Parent mapping
+uses the frozen preview inputs. Restore changes the current base/ordinary shape
+through the current parent inverse and retains other parameter shapes and the
+parent pose. Shared grid/interpolation changes or controller-density refits need
+an explicit review dialog. Cancel makes no edit; Apply is one atomic history
+step. A successful Restore clears component indices and frame overrides so a
+changed shared topology cannot leave stale control selections.
+
 The viewport's Select All command (`Cmd+A` on macOS) shares these region selection
 rules: it selects editable vertices of selected meshes/warps, or visible unlocked
 meshes when there are no component targets. It respects viewport isolation and

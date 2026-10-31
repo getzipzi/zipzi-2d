@@ -138,6 +138,16 @@ from .queries import CollectionQueryScene as CollectionQueryScene
 from .bindings import ConstraintSample as ConstraintSample
 from .commands import ConversionCost as ConversionCost
 from .commands import ConversionDomain as ConversionDomain
+from .scene import DeformerOriginal as DeformerOriginal
+from .scene import DeformerOriginalAction as DeformerOriginalAction
+from .scene import DeformerOriginalActionAutoUpdate as DeformerOriginalActionAutoUpdate
+from .scene import DeformerOriginalActionRestore as DeformerOriginalActionRestore
+from .scene import DeformerOriginalActionUpdate as DeformerOriginalActionUpdate
+from .scene import DeformerOriginalShape as DeformerOriginalShape
+from .scene import DeformerOriginalShapeRotation as DeformerOriginalShapeRotation
+from .scene import DeformerOriginalShapeWarp as DeformerOriginalShapeWarp
+from .scene import DeformerOriginalSnapshot as DeformerOriginalSnapshot
+from .scene import DeformerOriginalSource as DeformerOriginalSource
 from .deletion import DeletionChannel as DeletionChannel
 from .deletion import DeletionChoice as DeletionChoice
 from .deletion import DeletionDecision as DeletionDecision
@@ -703,6 +713,7 @@ from .scene import SceneCollectionGlues as SceneCollectionGlues
 from .scene import SceneCollectionOrganization as SceneCollectionOrganization
 from .addressing import SceneContentCapabilities as SceneContentCapabilities
 from .scene import SceneContentEdit as SceneContentEdit
+from .scene import SceneContentEditDeformerOriginal as SceneContentEditDeformerOriginal
 from .scene import SceneContentEditDeleteGluePairs as SceneContentEditDeleteGluePairs
 from .scene import SceneContentEditDeleteMeshVertices as SceneContentEditDeleteMeshVertices
 from .scene import SceneContentEditDeleteOffscreenKeyforms as SceneContentEditDeleteOffscreenKeyforms

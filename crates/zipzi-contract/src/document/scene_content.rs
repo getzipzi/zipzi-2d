@@ -147,6 +147,18 @@ pub struct OffscreenMappingPatch {
 #[serde(tag = "operation", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum SceneContentEdit {
+    DeformerOriginal {
+        /// Stable Warp or Rotation transform ID.
+        transform_id: String,
+        #[serde(default)]
+        /// Current editable Base or stored Ordinary shape; BlendShape restore/update is unsupported.
+        target: ShapeTarget,
+        /// Explicit capture, restore, or first-key update policy.
+        action: DeformerOriginalAction,
+        #[serde(default)]
+        /// Frozen parameter inputs used to evaluate current parent spaces in canvas coordinates.
+        context: crate::evaluation::PreviewValues,
+    },
     MeshVertices {
         /// Stable ID of the target mesh in this document.
         mesh_id: String,

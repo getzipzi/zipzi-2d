@@ -3,6 +3,7 @@ from __future__ import annotations
 from ..._presentation import CompactValue
 from ..._values import integer
 from ..._values import number
+from ..._values import record
 from ..._values import sequence
 from ..._values import string
 from .._modeling_support import _boolean
@@ -103,7 +104,7 @@ Part.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class Transform(CompactValue):
-    'Immutable owned Transform value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects the\nroot/unassigned container.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.\ndata: Typed Warp or Rotation deformation definition; its variant determines lattice versus\nrotation-pose interpretation.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\nappearance: Opacity and multiply/screen color factors for this object or shape.\nwarp_authoring: Persistent Warp editing policy; never used for runtime deformation evaluation.'
+    'Immutable owned Transform value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects the\nroot/unassigned container.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.\ndata: Typed Warp or Rotation deformation definition; its variant determines lattice versus\nrotation-pose interpretation.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\nappearance: Opacity and multiply/screen color factors for this object or shape.\nwarp_authoring: Persistent Warp editing policy; never used for runtime deformation evaluation.\noriginal_shape: Independent original shape and its first-key update policy, retained only by native projects.'
     id: str
     runtime_id: str
     name: str
@@ -113,6 +114,7 @@ class Transform(CompactValue):
     enabled: bool
     appearance: Appearance
     warp_authoring: (WarpAuthoringSettings | None) = None
+    original_shape: (DeformerOriginal | None) = None
 
 Transform.__module__ = "zipzi.modeling.scene"
 
@@ -227,6 +229,49 @@ class WarpBezierGrid(CompactValue):
     columns: int
 
 WarpBezierGrid.__module__ = "zipzi.modeling.scene"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeformerOriginal(CompactValue):
+    'Immutable owned DeformerOriginal value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nauto_update: Update once when the first ordinary keyform is created. Manual update disables this.\nfirst_key_seen: Persistent transition marker; deleting/recreating a binding does not replace the baseline again.\nsnapshot: None means no original has been recorded, for example an imported object.\ncapture_error: Native error code if automatic capture was unavailable; None after successful capture.'
+    auto_update: bool
+    first_key_seen: bool
+    snapshot: (DeformerOriginalSnapshot | None) = None
+    capture_error: (str | None) = None
+
+DeformerOriginal.__module__ = "zipzi.modeling.scene"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeformerOriginalSnapshot(CompactValue):
+    'Immutable owned DeformerOriginalSnapshot value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsource: Creation, first ordinary keyform transition, or explicit manual update.\nshape: Independent canvas-space shape; does not reference undo history or binding samples.'
+    source: DeformerOriginalSource
+    shape: DeformerOriginalShape
+
+DeformerOriginalSnapshot.__module__ = "zipzi.modeling.scene"
+
+class DeformerOriginalSource(str, Enum):
+    __module__ = "zipzi.modeling.scene"
+    CREATED = 'created'
+    FIRST_KEY = 'first_key'
+    MANUAL = 'manual'
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeformerOriginalShapeWarp(CompactValue):
+    'Immutable owned DeformerOriginalShapeWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nwarp: Baked Warp lattice and optional controller in canvas coordinates, X right/Y up.\ncontroller_canvas_exact: False when a nonlinear captured parent cannot preserve a cubic controller as cubics.'
+    _variant: _ClassVar[str] = 'warp'
+    warp: WarpTransform
+    controller_canvas_exact: bool
+
+DeformerOriginalShapeWarp.__module__ = "zipzi.modeling.scene"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeformerOriginalShapeRotation(CompactValue):
+    'Immutable owned DeformerOriginalShapeRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npose: Canvas origin, absolute direction (including reference angle), inherited scale and reflections.'
+    _variant: _ClassVar[str] = 'rotation'
+    pose: RotationPose
+
+DeformerOriginalShapeRotation.__module__ = "zipzi.modeling.scene"
+
+DeformerOriginalShape: TypeAlias = DeformerOriginalShapeWarp | DeformerOriginalShapeRotation
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class Glue(CompactValue):
@@ -776,6 +821,20 @@ class OrganizationDeletePolicy(str, Enum):
     DISSOLVE = 'dissolve'
 
 @dataclass(frozen=True, kw_only=True, repr=False)
+class SceneContentEditDeformerOriginal(CompactValue):
+    'Immutable owned SceneContentEditDeformerOriginal value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntransform_id: Stable Warp or Rotation transform ID.\ntarget: Current editable Base or stored Ordinary shape; BlendShape restore/update is unsupported.\naction: Explicit capture, restore, or first-key update policy.\ncontext: Frozen parameter inputs used to evaluate current parent spaces in canvas coordinates.'
+    _variant: _ClassVar[str] = 'deformer_original'
+    transform_id: str
+    target: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'}))
+    action: DeformerOriginalAction
+    context: _Mapping[str, float] = field(default_factory=lambda: {key0: number(v0) for key0, v0 in record({}).items()})
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'context', MappingProxyType({key0: v0 for key0, v0 in self.context.items()}))
+
+SceneContentEditDeformerOriginal.__module__ = "zipzi.modeling.scene"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditMeshVertices(CompactValue):
     'Immutable owned SceneContentEditMeshVertices value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\ntarget: Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.\nupdates: Ordered content patches applied together by the native edit.'
     _variant: _ClassVar[str] = 'mesh_vertices'
@@ -1093,7 +1152,7 @@ class SceneContentEditSetOffscreenMapping(CompactValue):
 
 SceneContentEditSetOffscreenMapping.__module__ = "zipzi.modeling.scene"
 
-SceneContentEdit: TypeAlias = SceneContentEditMeshVertices | SceneContentEditInsertMeshVertices | SceneContentEditDeleteMeshVertices | SceneContentEditReorderMeshVertices | SceneContentEditInsertTriangle | SceneContentEditPatchTriangle | SceneContentEditDeleteTriangles | SceneContentEditReplaceTriangles | SceneContentEditWarpPoints | SceneContentEditWarpBezier | SceneContentEditWarpBezierControls | SceneContentEditWarpAuthoring | SceneContentEditWarpShape | SceneContentEditWarpKeepChildren | SceneContentEditResizeWarp | SceneContentEditInsertGluePair | SceneContentEditPatchGluePair | SceneContentEditMoveGluePairs | SceneContentEditTransferGluePairs | SceneContentEditDuplicateGluePairs | SceneContentEditDeleteGluePairs | SceneContentEditInsertOffscreenKeyform | SceneContentEditPatchOffscreenKeyform | SceneContentEditDuplicateOffscreenKeyforms | SceneContentEditReorderOffscreenKeyforms | SceneContentEditDeleteOffscreenKeyforms | SceneContentEditSetOffscreenMapping
+SceneContentEdit: TypeAlias = SceneContentEditDeformerOriginal | SceneContentEditMeshVertices | SceneContentEditInsertMeshVertices | SceneContentEditDeleteMeshVertices | SceneContentEditReorderMeshVertices | SceneContentEditInsertTriangle | SceneContentEditPatchTriangle | SceneContentEditDeleteTriangles | SceneContentEditReplaceTriangles | SceneContentEditWarpPoints | SceneContentEditWarpBezier | SceneContentEditWarpBezierControls | SceneContentEditWarpAuthoring | SceneContentEditWarpShape | SceneContentEditWarpKeepChildren | SceneContentEditResizeWarp | SceneContentEditInsertGluePair | SceneContentEditPatchGluePair | SceneContentEditMoveGluePairs | SceneContentEditTransferGluePairs | SceneContentEditDuplicateGluePairs | SceneContentEditDeleteGluePairs | SceneContentEditInsertOffscreenKeyform | SceneContentEditPatchOffscreenKeyform | SceneContentEditDuplicateOffscreenKeyforms | SceneContentEditReorderOffscreenKeyforms | SceneContentEditDeleteOffscreenKeyforms | SceneContentEditSetOffscreenMapping
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ShapeTargetBase(CompactValue):
@@ -1124,6 +1183,31 @@ class ShapeTargetBlend(CompactValue):
 ShapeTargetBlend.__module__ = "zipzi.modeling.scene"
 
 ShapeTarget: TypeAlias = ShapeTargetBase | ShapeTargetOrdinary | ShapeTargetBlend
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeformerOriginalActionUpdate(CompactValue):
+    'Immutable owned DeformerOriginalActionUpdate value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    _variant: _ClassVar[str] = 'update'
+
+DeformerOriginalActionUpdate.__module__ = "zipzi.modeling.scene"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeformerOriginalActionRestore(CompactValue):
+    'Immutable owned DeformerOriginalActionRestore value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nallow_resize: Explicit permission to resample every stored Warp shape when the saved conversion density differs.'
+    _variant: _ClassVar[str] = 'restore'
+    allow_resize: bool
+
+DeformerOriginalActionRestore.__module__ = "zipzi.modeling.scene"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class DeformerOriginalActionAutoUpdate(CompactValue):
+    'Immutable owned DeformerOriginalActionAutoUpdate value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nenabled: Changes the future first-key policy without changing geometry or immediately replacing the snapshot.'
+    _variant: _ClassVar[str] = 'auto_update'
+    enabled: bool
+
+DeformerOriginalActionAutoUpdate.__module__ = "zipzi.modeling.scene"
+
+DeformerOriginalAction: TypeAlias = DeformerOriginalActionUpdate | DeformerOriginalActionRestore | DeformerOriginalActionAutoUpdate
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class WarpPointPatch(CompactValue):

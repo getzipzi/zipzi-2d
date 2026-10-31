@@ -210,6 +210,7 @@ pub(super) fn read(
             };
             edit(document.create_transform(Transform {
                 warp_authoring: None,
+                original_shape: None,
                 id: target,
                 runtime_id: g.runtime(n)?,
                 name: g.text(n, "localName")?,

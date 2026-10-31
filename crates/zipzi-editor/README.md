@@ -116,6 +116,9 @@ The `warp-authoring` scene compares all four Bezier policies on a textured grid
 and captures controller-density previews in those three languages.
 The `warp-keep-children` scene exercises native Command dragging and the Properties
 mode while checking that every textured child vertex stays fixed.
+The `deformer-original` scene exercises recording, density changes, restore review,
+Cancel and Apply, checks the restored Warp lattice and captures Warp/Rotation
+record states in all three languages.
 
 ## Deformer creation
 
@@ -225,6 +228,28 @@ Local control edits that make the map nonlinear are rejected. Independent
 interior/exterior samples and parameter endpoints/key midpoints supplement the
 constant affine channel conversion; their measured maximum is not a global
 error bound. There is no arbitrary nonlinear keep-children conversion yet.
+
+**Original shape** shows the recorded source and provides **Update original**,
+**Restore original** and automatic first-key updating for Warp and Rotation.
+New deformers record their canvas shape at creation. The first ordinary keyform
+can replace it once; deleting and recreating a binding does not repeat this.
+Manual update disables automatic updating. Imported objects and older projects
+without a record show that state and require an explicit update.
+
+Update and Restore use the current editable base or ordinary keyform and the
+frozen preview parent pose. Restore maps the saved canvas shape through the
+current parent, retaining that parent's pose and the current Rotation reference
+angle. A review dialog precedes shared conversion-grid/interpolation changes or
+stored-controller density refits. Cancel changes nothing; Apply publishes one
+undo step. Missing controllers remain derived using the current authoring settings.
+
+Restore requires an invertible affine current parent space. Missing records,
+type mismatches, active deformer BlendShapes, nonlinear/singular current parents,
+locked dependencies and tolerance failures reject the operation atomically.
+A controller captured under a nonlinear parent cannot be restored as equivalent
+cubic curves; a baked Warp lattice without a stored controller can be restored.
+Original records survive native save/reopen, copying and undo; CMO3 reports their
+loss. These actions restore a shape rather than rolling back the document.
 
 ## Object deletion
 

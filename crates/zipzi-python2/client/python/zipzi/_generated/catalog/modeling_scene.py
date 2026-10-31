@@ -15,6 +15,16 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                        'zipzi.modeling.scene.AttachmentRefUnresolved',
                                        'zipzi.modeling.scene.BlendMode',
                                        'zipzi.modeling.scene.Canvas',
+                                       'zipzi.modeling.scene.DeformerOriginal',
+                                       'zipzi.modeling.scene.DeformerOriginalAction',
+                                       'zipzi.modeling.scene.DeformerOriginalActionAutoUpdate',
+                                       'zipzi.modeling.scene.DeformerOriginalActionRestore',
+                                       'zipzi.modeling.scene.DeformerOriginalActionUpdate',
+                                       'zipzi.modeling.scene.DeformerOriginalShape',
+                                       'zipzi.modeling.scene.DeformerOriginalShapeRotation',
+                                       'zipzi.modeling.scene.DeformerOriginalShapeWarp',
+                                       'zipzi.modeling.scene.DeformerOriginalSnapshot',
+                                       'zipzi.modeling.scene.DeformerOriginalSource',
                                        'zipzi.modeling.scene.DrawOrderGroup',
                                        'zipzi.modeling.scene.Glue',
                                        'zipzi.modeling.scene.GlueVertexPair',
@@ -55,6 +65,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                        'zipzi.modeling.scene.SceneCollectionGlues',
                                        'zipzi.modeling.scene.SceneCollectionOrganization',
                                        'zipzi.modeling.scene.SceneContentEdit',
+                                       'zipzi.modeling.scene.SceneContentEditDeformerOriginal',
                                        'zipzi.modeling.scene.SceneContentEditDeleteGluePairs',
                                        'zipzi.modeling.scene.SceneContentEditDeleteMeshVertices',
                                        'zipzi.modeling.scene.SceneContentEditDeleteOffscreenKeyforms',
@@ -238,6 +249,143 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                               'flag: int = 1)'},
  'zipzi.modeling.scene.Canvas.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.Canvas.summary': {'alias': 'zipzi.ApiDescription.summary'},
+ 'zipzi.modeling.scene.DeformerOriginal': {'children': ('zipzi.modeling.scene.DeformerOriginal.__repr__',
+                                                        'zipzi.modeling.scene.DeformerOriginal.summary'),
+                                           'documentation': 'Immutable owned DeformerOriginal value. Construction owns '
+                                                            'declared collections; reading fields, repr and summary '
+                                                            'performs no IO.',
+                                           'example': 'docs/recipes.py',
+                                           'fields': [('auto_update',
+                                                       'Update once when the first ordinary keyform is created. Manual '
+                                                       'update disables this.'),
+                                                      ('first_key_seen',
+                                                       'Persistent transition marker; deleting/recreating a binding '
+                                                       'does not replace the baseline again.'),
+                                                      ('snapshot',
+                                                       'None means no original has been recorded, for example an '
+                                                       'imported object.'),
+                                                      ('capture_error',
+                                                       'Native error code if automatic capture was unavailable; None '
+                                                       'after successful capture.')],
+                                           'kind': 'type',
+                                           'signature': '(*, auto_update: bool, first_key_seen: bool, snapshot: '
+                                                        'DeformerOriginalSnapshot | None = None, capture_error: str | '
+                                                        'None = None)'},
+ 'zipzi.modeling.scene.DeformerOriginal.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
+ 'zipzi.modeling.scene.DeformerOriginal.summary': {'alias': 'zipzi.ApiDescription.summary'},
+ 'zipzi.modeling.scene.DeformerOriginalAction': {'children': (),
+                                                 'documentation': 'Typed public API entry.',
+                                                 'example': 'docs/recipes.py',
+                                                 'fields': [],
+                                                 'kind': 'value',
+                                                 'signature': ''},
+ 'zipzi.modeling.scene.DeformerOriginalActionAutoUpdate': {'children': ('zipzi.modeling.scene.DeformerOriginalActionAutoUpdate.__repr__',
+                                                                        'zipzi.modeling.scene.DeformerOriginalActionAutoUpdate.summary'),
+                                                           'documentation': 'Immutable owned '
+                                                                            'DeformerOriginalActionAutoUpdate value. '
+                                                                            'Construction owns declared collections; '
+                                                                            'reading fields, repr and summary performs '
+                                                                            'no IO.',
+                                                           'example': 'docs/recipes.py',
+                                                           'fields': [('enabled',
+                                                                       'Changes the future first-key policy without '
+                                                                       'changing geometry or immediately replacing the '
+                                                                       'snapshot.')],
+                                                           'kind': 'type',
+                                                           'signature': '(*, enabled: bool)'},
+ 'zipzi.modeling.scene.DeformerOriginalActionAutoUpdate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
+ 'zipzi.modeling.scene.DeformerOriginalActionAutoUpdate.summary': {'alias': 'zipzi.ApiDescription.summary'},
+ 'zipzi.modeling.scene.DeformerOriginalActionRestore': {'children': ('zipzi.modeling.scene.DeformerOriginalActionRestore.__repr__',
+                                                                     'zipzi.modeling.scene.DeformerOriginalActionRestore.summary'),
+                                                        'documentation': 'Immutable owned '
+                                                                         'DeformerOriginalActionRestore value. '
+                                                                         'Construction owns declared collections; '
+                                                                         'reading fields, repr and summary performs no '
+                                                                         'IO.',
+                                                        'example': 'docs/recipes.py',
+                                                        'fields': [('allow_resize',
+                                                                    'Explicit permission to resample every stored Warp '
+                                                                    'shape when the saved conversion density '
+                                                                    'differs.')],
+                                                        'kind': 'type',
+                                                        'signature': '(*, allow_resize: bool)'},
+ 'zipzi.modeling.scene.DeformerOriginalActionRestore.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
+ 'zipzi.modeling.scene.DeformerOriginalActionRestore.summary': {'alias': 'zipzi.ApiDescription.summary'},
+ 'zipzi.modeling.scene.DeformerOriginalActionUpdate': {'children': ('zipzi.modeling.scene.DeformerOriginalActionUpdate.__repr__',
+                                                                    'zipzi.modeling.scene.DeformerOriginalActionUpdate.summary'),
+                                                       'documentation': 'Immutable owned DeformerOriginalActionUpdate '
+                                                                        'value. Construction owns declared '
+                                                                        'collections; reading fields, repr and summary '
+                                                                        'performs no IO.',
+                                                       'example': 'docs/recipes.py',
+                                                       'fields': [],
+                                                       'kind': 'type',
+                                                       'signature': '()'},
+ 'zipzi.modeling.scene.DeformerOriginalActionUpdate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
+ 'zipzi.modeling.scene.DeformerOriginalActionUpdate.summary': {'alias': 'zipzi.ApiDescription.summary'},
+ 'zipzi.modeling.scene.DeformerOriginalShape': {'children': (),
+                                                'documentation': 'Typed public API entry.',
+                                                'example': 'docs/recipes.py',
+                                                'fields': [],
+                                                'kind': 'value',
+                                                'signature': ''},
+ 'zipzi.modeling.scene.DeformerOriginalShapeRotation': {'children': ('zipzi.modeling.scene.DeformerOriginalShapeRotation.__repr__',
+                                                                     'zipzi.modeling.scene.DeformerOriginalShapeRotation.summary'),
+                                                        'documentation': 'Immutable owned '
+                                                                         'DeformerOriginalShapeRotation value. '
+                                                                         'Construction owns declared collections; '
+                                                                         'reading fields, repr and summary performs no '
+                                                                         'IO.',
+                                                        'example': 'docs/recipes.py',
+                                                        'fields': [('pose',
+                                                                    'Canvas origin, absolute direction (including '
+                                                                    'reference angle), inherited scale and '
+                                                                    'reflections.')],
+                                                        'kind': 'type',
+                                                        'signature': '(*, pose: RotationPose)'},
+ 'zipzi.modeling.scene.DeformerOriginalShapeRotation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
+ 'zipzi.modeling.scene.DeformerOriginalShapeRotation.summary': {'alias': 'zipzi.ApiDescription.summary'},
+ 'zipzi.modeling.scene.DeformerOriginalShapeWarp': {'children': ('zipzi.modeling.scene.DeformerOriginalShapeWarp.__repr__',
+                                                                 'zipzi.modeling.scene.DeformerOriginalShapeWarp.summary'),
+                                                    'documentation': 'Immutable owned DeformerOriginalShapeWarp value. '
+                                                                     'Construction owns declared collections; reading '
+                                                                     'fields, repr and summary performs no IO.',
+                                                    'example': 'docs/recipes.py',
+                                                    'fields': [('warp',
+                                                                'Baked Warp lattice and optional controller in canvas '
+                                                                'coordinates, X right/Y up.'),
+                                                               ('controller_canvas_exact',
+                                                                'False when a nonlinear captured parent cannot '
+                                                                'preserve a cubic controller as cubics.')],
+                                                    'kind': 'type',
+                                                    'signature': '(*, warp: WarpTransform, controller_canvas_exact: '
+                                                                 'bool)'},
+ 'zipzi.modeling.scene.DeformerOriginalShapeWarp.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
+ 'zipzi.modeling.scene.DeformerOriginalShapeWarp.summary': {'alias': 'zipzi.ApiDescription.summary'},
+ 'zipzi.modeling.scene.DeformerOriginalSnapshot': {'children': ('zipzi.modeling.scene.DeformerOriginalSnapshot.__repr__',
+                                                                'zipzi.modeling.scene.DeformerOriginalSnapshot.summary'),
+                                                   'documentation': 'Immutable owned DeformerOriginalSnapshot value. '
+                                                                    'Construction owns declared collections; reading '
+                                                                    'fields, repr and summary performs no IO.',
+                                                   'example': 'docs/recipes.py',
+                                                   'fields': [('source',
+                                                               'Creation, first ordinary keyform transition, or '
+                                                               'explicit manual update.'),
+                                                              ('shape',
+                                                               'Independent canvas-space shape; does not reference '
+                                                               'undo history or binding samples.')],
+                                                   'kind': 'type',
+                                                   'signature': '(*, source: DeformerOriginalSource, shape: '
+                                                                'DeformerOriginalShape)'},
+ 'zipzi.modeling.scene.DeformerOriginalSnapshot.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
+ 'zipzi.modeling.scene.DeformerOriginalSnapshot.summary': {'alias': 'zipzi.ApiDescription.summary'},
+ 'zipzi.modeling.scene.DeformerOriginalSource': {'children': (),
+                                                 'documentation': 'Immutable typed value. See field semantics and the '
+                                                                  'linked workflow.',
+                                                 'example': 'docs/recipes.py',
+                                                 'fields': [],
+                                                 'kind': 'type',
+                                                 'signature': '()'},
  'zipzi.modeling.scene.DrawOrderGroup': {'children': ('zipzi.modeling.scene.DrawOrderGroup.__repr__',
                                                       'zipzi.modeling.scene.DrawOrderGroup.summary'),
                                          'documentation': 'Immutable owned DrawOrderGroup value. Construction owns '
@@ -1336,12 +1484,16 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                 'Opacity and multiply/screen color factors for this object or shape.'),
                                                ('warp_authoring',
                                                 'Persistent Warp editing policy; never used for runtime deformation '
-                                                'evaluation.')],
+                                                'evaluation.'),
+                                               ('original_shape',
+                                                'Independent original shape and its first-key update policy, retained '
+                                                'only by native projects.')],
                                     'kind': 'type',
                                     'signature': '(*, id: str, runtime_id: str, name: str, part_id: PartId | None = '
                                                  'None, parent_id: TransformId | None = None, data: TransformData, '
                                                  'enabled: bool, appearance: Appearance, warp_authoring: '
-                                                 'WarpAuthoringSettings | None = None)'},
+                                                 'WarpAuthoringSettings | None = None, original_shape: '
+                                                 'DeformerOriginal | None = None)'},
  'zipzi.modeling.scene.Transform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.Transform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.TransformData': {'children': (),

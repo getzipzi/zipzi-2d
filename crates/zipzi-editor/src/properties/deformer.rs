@@ -31,6 +31,9 @@ fn fields(rotation: bool) -> FormDefinition {
             field
         }),
     );
+    let mut automatic = FieldSpec::new(ORIGINAL_AUTO, "properties.deformer_original_auto", Toggle);
+    automatic.section = Some("properties.deformer_original");
+    definition.fields.push(automatic);
     if rotation {
         let rotation = FormDefinition::new(&[
             (ORIGIN_X, "properties.rotation_origin_x", Number),

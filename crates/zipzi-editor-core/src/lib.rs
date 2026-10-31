@@ -21,8 +21,10 @@ pub use property::{
     PropertyEditToken, PropertyKey, PropertyPatch, PropertyScope, PropertySpec, PropertyType,
     PropertyValue, PropertyValues, property_spec, property_specs,
 };
+mod deformer_original;
 mod editor;
 mod warp_frame;
+pub use deformer_original::{DeformerOriginalInfo, DeformerOriginalTarget};
 pub use warp_frame::{WarpFrame, WarpFrameAction, WarpFrameInfo};
 mod objects;
 mod scene;

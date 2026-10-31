@@ -119,6 +119,68 @@ pub(crate) fn write_warpbeziereditmode_in(
         .unbind())
 }
 
+pub fn write_deformeroriginalsource(
+    py: Python<'_>,
+    value: &zipzi_core::DeformerOriginalSource,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.values.scene")?;
+    write_deformeroriginalsource_in(py, value, &classes)
+}
+pub(crate) fn write_deformeroriginalsource_in(
+    py: Python<'_>,
+    value: &zipzi_core::DeformerOriginalSource,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    let name = match value {
+        zipzi_core::DeformerOriginalSource::Created => "created",
+        zipzi_core::DeformerOriginalSource::FirstKey => "first_key",
+        zipzi_core::DeformerOriginalSource::Manual => "manual",
+    };
+    Ok(classes
+        .getattr("DeformerOriginalSource")?
+        .call1((name,))?
+        .unbind())
+}
+
+pub fn write_deformeroriginalshape(
+    py: Python<'_>,
+    value: &zipzi_core::DeformerOriginalShape,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.values.scene")?;
+    write_deformeroriginalshape_in(py, value, &classes)
+}
+pub(crate) fn write_deformeroriginalshape_in(
+    py: Python<'_>,
+    value: &zipzi_core::DeformerOriginalShape,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::DeformerOriginalShape::Warp {
+            warp: field0,
+            controller_canvas_exact: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item("warp", write_warptransform_in(py, (field0), classes)?)?;
+            content.set_item(
+                "controller_canvas_exact",
+                (field1).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("DeformerOriginalShapeWarp")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::DeformerOriginalShape::Rotation { pose: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("pose", write_rotationpose_in(py, (field0), classes)?)?;
+            Ok(classes
+                .getattr("DeformerOriginalShapeRotation")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+    }
+}
+
 pub fn write_reparentstrategy(
     py: Python<'_>,
     value: &zipzi_core::document::ReparentStrategy,
@@ -623,6 +685,50 @@ pub(crate) fn write_shapetarget_in(
             )?;
             Ok(classes
                 .getattr("ShapeTargetBlend")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+    }
+}
+
+pub fn write_deformeroriginalaction(
+    py: Python<'_>,
+    value: &zipzi_core::DeformerOriginalAction,
+) -> PyResult<Py<PyAny>> {
+    let classes = PyModule::import(py, "zipzi._generated.values.scene")?;
+    write_deformeroriginalaction_in(py, value, &classes)
+}
+pub(crate) fn write_deformeroriginalaction_in(
+    py: Python<'_>,
+    value: &zipzi_core::DeformerOriginalAction,
+    classes: &Bound<'_, PyModule>,
+) -> PyResult<Py<PyAny>> {
+    match value {
+        zipzi_core::DeformerOriginalAction::Update => Ok(classes
+            .getattr("DeformerOriginalActionUpdate")?
+            .call0()?
+            .unbind()),
+        zipzi_core::DeformerOriginalAction::Restore {
+            allow_resize: field0,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "allow_resize",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("DeformerOriginalActionRestore")?
+                .call((), Some(&content))?
+                .unbind())
+        }
+        zipzi_core::DeformerOriginalAction::AutoUpdate { enabled: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "enabled",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            Ok(classes
+                .getattr("DeformerOriginalActionAutoUpdate")?
                 .call((), Some(&content))?
                 .unbind())
         }

@@ -130,6 +130,9 @@ pub struct Transform {
     /// Persistent Warp editing policy; never used for runtime deformation evaluation.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub warp_authoring: Option<crate::warp_bezier::WarpAuthoringSettings>,
+    /// Independent original shape and its first-key update policy, retained only by native projects.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub original_shape: Option<DeformerOriginal>,
 }
 
 impl Default for Transform {
@@ -144,6 +147,7 @@ impl Default for Transform {
             enabled: true,
             appearance: Appearance::default(),
             warp_authoring: None,
+            original_shape: None,
         }
     }
 }

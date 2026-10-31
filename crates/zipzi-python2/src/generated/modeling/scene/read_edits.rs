@@ -281,6 +281,20 @@ pub fn read_scenecontentedit(
     value: &Bound<'_, PyAny>,
 ) -> PyResult<zipzi_core::document::SceneContentEdit> {
     match value.getattr("_variant")?.extract::<String>()?.as_str() {
+        "deformer_original" => Ok(zipzi_core::document::SceneContentEdit::DeformerOriginal {
+            transform_id: value.getattr("transform_id")?.extract()?,
+            target: read_shapetarget(&value.getattr("target")?)?,
+            action: read_deformeroriginalaction(&value.getattr("action")?)?,
+            context: value
+                .getattr("context")?
+                .call_method0("items")?
+                .try_iter()?
+                .map(|item| -> PyResult<_> {
+                    let item0 = item?;
+                    Ok((item0.get_item(0)?.extract()?, item0.get_item(1)?.extract()?))
+                })
+                .collect::<PyResult<_>>()?,
+        }),
         "mesh_vertices" => Ok(zipzi_core::document::SceneContentEdit::MeshVertices {
             mesh_id: value.getattr("mesh_id")?.extract()?,
             target: read_shapetarget(&value.getattr("target")?)?,
