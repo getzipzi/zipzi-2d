@@ -177,6 +177,11 @@ toggles selection. Option/Alt on a scale handle scales around the frame center,
 and Shift makes corner scaling uniform. Bezier anchors carry their own handles;
 selecting only handles leaves anchors unchanged. Escape cancels a drag.
 
+The viewport has separate **Bezier** and **Division points** buttons, with the
+current mode highlighted. Bezier shows tangent handles; Division points hides
+them and edits the baked lattice. Clicking the current mode preserves point
+selection. A 1×1 lattice has only four corner points, which can overlap the frame.
+
 **Warp frame** in Properties and the viewport toolbar controls visibility,
 independent frame adjustment, alignment to the Warp's horizontal grid trend and
 reset. In **Adjust frame only**, dragging edges or handles changes the frame's

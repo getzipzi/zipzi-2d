@@ -37,6 +37,59 @@ fn points(h: &Harness, object: &ObjectRef, cx: &TestAppContext) -> serde_json::V
 }
 
 #[gpui_kit::test]
+fn warp_modes_show_the_active_choice_and_restore_tangent_handles_without_editing(
+    cx: &mut TestAppContext,
+) {
+    let (h, object) = setup_warp(cx);
+    let before = points(&h, &object, cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.activate_window();
+        assert_eq!(window.find("deformer-warp-bezier").label(), Some("Bezier"));
+        assert_eq!(
+            window.find("deformer-warp-fine").label(),
+            Some("Division points")
+        );
+        assert_eq!(window.find("deformer-warp-fine").checked(), Some(true));
+        assert_eq!(window.find("deformer-warp-bezier").checked(), Some(false));
+        assert!(h.view.read(cx).editor.overlay().gizmo_lines.is_empty());
+
+        window.click("deformer-warp-bezier", cx);
+        window.render_frame(cx);
+        assert_eq!(window.find("deformer-warp-bezier").checked(), Some(true));
+        assert_eq!(window.find("deformer-warp-fine").checked(), Some(false));
+        let overlay = h.view.read(cx).editor.overlay();
+        assert_eq!(overlay.vertices.len(), 4);
+        assert_eq!(overlay.gizmo_lines.len(), 8);
+        assert_eq!(overlay.handles.iter().filter(|h| h.round).count(), 9);
+
+        let anchor = overlay.vertices[0].position;
+        window.click_at("canvas-body", point(px(anchor.x), px(anchor.y)), cx);
+        window.render_frame(cx);
+        assert!(h.view.read(cx).editor.overlay().vertices[0].selected);
+        window.click("deformer-warp-bezier", cx);
+        window.render_frame(cx);
+        assert!(h.view.read(cx).editor.overlay().vertices[0].selected);
+
+        for id in ["deformer-warp-fine", "deformer-warp-fine"] {
+            window.click(id, cx);
+            window.render_frame(cx);
+            assert_eq!(window.find("deformer-warp-fine").checked(), Some(true));
+            assert!(h.view.read(cx).editor.overlay().gizmo_lines.is_empty());
+        }
+        window.click("deformer-warp-bezier", cx);
+        window.render_frame(cx);
+        assert_eq!(h.view.read(cx).editor.overlay().gizmo_lines.len(), 8);
+    })
+    .unwrap();
+    assert_eq!(points(&h, &object, cx), before);
+    h.view.read_with(cx, |view, _| {
+        assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+        assert!(!view.editor.document().unwrap().has_pending_edit());
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+    });
+}
+
+#[gpui_kit::test]
 fn warp_native_frame_menu_and_rotation_adjust_only_the_viewport(cx: &mut TestAppContext) {
     let (h, object) = setup_warp(cx);
     let before = points(&h, &object, cx);

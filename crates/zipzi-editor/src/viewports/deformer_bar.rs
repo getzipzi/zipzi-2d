@@ -136,31 +136,45 @@ pub fn render_deformer_bar(
                     }
                 })),
         );
-        buttons.push(
-            compact::button(Button::new("deformer-warp-mode"))
-                .label(if fine {
-                    t!("editor.warp_fine")
-                } else {
-                    t!("editor.warp_bezier")
-                })
-                .accessibility_label(t!("editor.warp_mode_hint").into_owned())
-                .tooltip(t!("editor.warp_mode_hint"))
-                .disabled(modal)
-                .on_click(cx.listener(move |this, _, window, cx| {
-                    if window.has_active_dialog(cx) {
-                        return;
-                    }
-                    if let Some(owner) = this.owner.upgrade() {
-                        owner.update(cx, |owner, cx| {
-                            if owner.modal || !owner.editor.viewport_binding_valid(binding) {
-                                return;
-                            }
-                            let result = owner.editor.execute(EditorCommand::ToggleWarpFine);
-                            owner.complete_edit(result, cx);
-                        });
-                    }
-                })),
-        );
+        for (id, label, hint, mode_fine) in [
+            (
+                "deformer-warp-bezier",
+                "editor.warp_bezier",
+                "editor.warp_bezier_hint",
+                false,
+            ),
+            (
+                "deformer-warp-fine",
+                "editor.warp_fine",
+                "editor.warp_fine_hint",
+                true,
+            ),
+        ] {
+            buttons.push(
+                compact::toggle(Button::new(id), fine == mode_fine)
+                    .label(t!(label).into_owned())
+                    .accessibility_label(t!(label).into_owned())
+                    .tooltip(t!(hint))
+                    .disabled(modal)
+                    .on_click(cx.listener(move |this, _, window, cx| {
+                        if window.has_active_dialog(cx) {
+                            return;
+                        }
+                        if let Some(owner) = this.owner.upgrade() {
+                            owner.update(cx, |owner, cx| {
+                                if owner.modal || !owner.editor.viewport_binding_valid(binding) {
+                                    return;
+                                }
+                                if owner.editor.warp_fine() == mode_fine {
+                                    return;
+                                }
+                                let result = owner.editor.execute(EditorCommand::ToggleWarpFine);
+                                owner.complete_edit(result, cx);
+                            });
+                        }
+                    })),
+            );
+        }
     }
     buttons.push(
         compact::toggle(Button::new("deformer-grid"), grid)

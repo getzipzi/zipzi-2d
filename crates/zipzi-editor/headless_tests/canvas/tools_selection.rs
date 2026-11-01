@@ -1064,19 +1064,20 @@ fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &m
         assert!((bar.top() - viewport.top()).abs() <= px(0.5));
         for id in [
             "deformer-ancestors",
-            "deformer-warp-mode",
+            "deformer-warp-bezier",
+            "deformer-warp-fine",
             "deformer-grid",
             "deformer-help",
         ] {
             let button = window.find(id).bounds();
             assert!((button.size.height.as_f32() - 20. * scale).abs() <= 0.5);
         }
-        window.click("deformer-warp-mode", cx);
+        window.click("deformer-warp-fine", cx);
         harness.view.read_with(cx, |view, _| {
             assert!(view.editor.warp_fine());
-            assert!(view.editor.overlay().handles.iter().all(|h| !h.round));
+            assert!(view.editor.overlay().gizmo_lines.is_empty());
         });
-        window.click("deformer-warp-mode", cx);
+        window.click("deformer-warp-bezier", cx);
         window.click("deformer-grid", cx);
         assert!(
             harness

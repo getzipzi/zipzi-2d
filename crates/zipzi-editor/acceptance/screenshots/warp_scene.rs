@@ -37,9 +37,34 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
             directory,
             &format!("warp-whole-{locale}.png"),
         )?;
+        h.view.read_with(&h.cx, |view, _| {
+            assert!(!view.editor.warp_fine());
+            assert_eq!(view.editor.overlay().gizmo_lines.len(), 8);
+        });
         h.cx.update_window(h.window, |_, window, cx| {
             window.activate_window();
-            window.click("deformer-warp-mode", cx);
+            window.click("deformer-warp-fine", cx);
+        })?;
+        save(
+            &h.capture()?,
+            directory,
+            &format!("warp-division-points-{locale}.png"),
+        )?;
+        h.view.read_with(&h.cx, |view, _| {
+            assert!(view.editor.warp_fine());
+            assert!(view.editor.overlay().gizmo_lines.is_empty());
+        });
+        h.cx.update_window(h.window, |_, window, cx| {
+            window.click("deformer-warp-bezier", cx);
+        })?;
+        h.capture()?;
+        h.view.read_with(&h.cx, |view, _| {
+            assert!(!view.editor.warp_fine());
+            assert_eq!(view.editor.overlay().gizmo_lines.len(), 8);
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+        });
+        h.cx.update_window(h.window, |_, window, cx| {
+            window.click("deformer-warp-fine", cx);
         })?;
         h.capture()?;
         h.cx.update_window(h.window, |_, window, cx| {
