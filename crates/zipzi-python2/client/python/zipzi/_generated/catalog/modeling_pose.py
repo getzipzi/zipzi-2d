@@ -37,8 +37,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                'Stable identity in the owning authoring domain; exported metadata IDs '
                                                'retain their source text.'),
                                               ('file_type',
-                                               'Optional format type label retained from the imported expression or '
-                                               'Pose asset.'),
+                                               'Optional format type label retained from the imported Pose asset.'),
                                               ('fade_in',
                                                'Optional fade-in duration in seconds; None retains the format/runtime '
                                                'default.'),
@@ -74,8 +73,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                             'zipzi.modeling.pose.PoseCollectionEntries.summary'),
                                                'documentation': 'Select entries in one group.',
                                                'fields': [('group_id',
-                                                           'Stable ID of the group owning the affected rows or node '
-                                                           'chain.')],
+                                                           'Stable ID of the Pose group whose entries are selected.')],
                                                'kind': 'type',
                                                'signature': '(*, group_id: str)'},
  'zipzi.modeling.pose.PoseCollectionEntries.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -128,8 +126,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                           'zipzi.modeling.pose.PoseEditCreateEntry.summary'),
                                              'documentation': 'Create an entry in a group.',
                                              'fields': [('group_id',
-                                                         'Stable ID of the group owning the affected rows or node '
-                                                         'chain.'),
+                                                         'Stable ID of the Pose group that will own the new entry.'),
                                                         ('id',
                                                          'Stable identity in the owning authoring domain; exported '
                                                          'metadata IDs retain their source text.'),
@@ -195,8 +192,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                            'Stable identity in the owning authoring domain; exported '
                                                            'metadata IDs retain their source text.'),
                                                           ('destination',
-                                                           'Explicit destination owner/container; order is controlled '
-                                                           'separately by before.'),
+                                                           'Stable ID of the different Pose group receiving the '
+                                                           'entries.'),
                                                           ('before',
                                                            'Optional stable sibling ID before which to insert; None '
                                                            'appends.')],
@@ -341,9 +338,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                               ('name',
                                                'Human-readable display or registration name; distinct from persistent '
                                                'object identity.'),
-                                              ('entries',
-                                               'Ordered owned registrations or expression/Pose entries, with stable '
-                                               'identities.')],
+                                              ('entries', 'Ordered Pose entries owned by this group.')],
                                    'kind': 'type',
                                    'signature': '(*, id: str, name: str, entries: tuple[PoseEntry, ...])',
                                    'type_refs': ('zipzi.modeling.pose.PoseEntry',)},

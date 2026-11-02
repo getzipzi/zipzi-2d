@@ -95,7 +95,7 @@ pub struct ExpressionEntry {
     pub id: String,
     /// Typed target reference; unresolved imported runtime labels remain explicit.
     pub target: ExpressionTarget,
-    /// Channel value or replacement payload in the domain declared by this field type.
+    /// Parameter contribution applied according to the selected blend mode.
     pub value: f32,
     /// Missing means Framework's default Add blend.
     pub blend: Option<ExpressionBlend>,
@@ -156,7 +156,7 @@ pub struct PoseGroup {
     pub id: String,
     /// Human-readable display or registration name; distinct from persistent object identity.
     pub name: String,
-    /// Ordered owned registrations or expression/Pose entries, with stable identities.
+    /// Ordered Pose entries owned by this group.
     pub entries: crate::SharedVec<PoseEntry>,
 }
 
@@ -167,7 +167,7 @@ pub struct PoseGroup {
 pub struct PoseAsset {
     /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,
-    /// Optional format type label retained from the imported expression or Pose asset.
+    /// Optional format type label retained from the imported Pose asset.
     pub file_type: Option<String>,
     /// Optional fade-in duration in seconds; None retains the format/runtime default.
     pub fade_in: Option<f32>,

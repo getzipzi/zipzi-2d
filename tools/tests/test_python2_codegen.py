@@ -1181,6 +1181,10 @@ class PythonReference(unittest.TestCase):
             'zipzi.modeling.motion.MotionEditDuplicateGroup': ('source', 'motion group'),
             'zipzi.modeling.motion.MotionEditDuplicateClip': ('source', 'motion clip'),
             'zipzi.modeling.motion.MotionEditMoveEvents': ('destination', 'clip receiving'),
+            'zipzi.modeling.motion.MotionEditMoveTracks': ('destination', 'clip receiving'),
+            'zipzi.modeling.motion.MotionEvent': ('value', 'string payload'),
+            'zipzi.modeling.expression.ExpressionEntry': ('value', 'Parameter contribution'),
+            'zipzi.modeling.pose.PoseEditDissolveGroup': ('destination', 'Pose group'),
             'zipzi.modeling.physics.PhysicsNode': ('position', 'node position'),
         }
         for path, (field, fact) in cases.items():

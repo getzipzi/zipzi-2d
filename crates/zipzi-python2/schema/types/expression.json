@@ -24,7 +24,7 @@
         },
         {
           "default": null,
-          "doc": "Optional format type label retained from the imported expression or Pose asset.",
+          "doc": "Optional format type label retained from the imported expression asset.",
           "name": "file_type",
           "rust_name": "file_type",
           "shape": {
@@ -62,7 +62,7 @@
           "skip": false
         },
         {
-          "doc": "Ordered owned registrations or expression/Pose entries, with stable identities.",
+          "doc": "Ordered parameter contribution entries owned by this expression.",
           "name": "entries",
           "rust_name": "entries",
           "shape": {
@@ -276,7 +276,7 @@
               "skip": false
             },
             {
-              "doc": "Explicit destination owner/container; order is controlled separately by before.",
+              "doc": "Stable ID of the expression receiving the entries.",
               "name": "destination",
               "rust_name": "destination",
               "shape": {
@@ -330,7 +330,7 @@
               "skip": false
             },
             {
-              "doc": "Explicit destination owner/container; order is controlled separately by before.",
+              "doc": "Stable ID of the expression receiving the copied entries.",
               "name": "destination",
               "rust_name": "destination",
               "shape": {
@@ -485,7 +485,7 @@
           "skip": false
         },
         {
-          "doc": "Channel value or replacement payload in the domain declared by this field type.",
+          "doc": "Parameter contribution applied according to the selected blend mode.",
           "name": "value",
           "rust_name": "value",
           "shape": {
@@ -539,7 +539,7 @@
           "skip": false
         },
         {
-          "doc": "Channel value or replacement payload in the domain declared by this field type.",
+          "doc": "Parameter contribution applied according to the selected blend mode.",
           "name": "value",
           "rust_name": "value",
           "shape": {

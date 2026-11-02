@@ -292,7 +292,7 @@ Move or copy tracks to another clip.
 **Fields**
 
 - `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
-- `destination`: Explicit destination owner/container; order is controlled separately by before.
+- `destination`: Stable ID of the clip receiving the tracks.
 - `before`: Optional stable sibling ID before which to insert; None appends.
 - `copy`: True allocates copied identities; false transfers the existing identities.
 
@@ -425,7 +425,7 @@ Types: [ExtensionValue].
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
 - `time`: Absolute time in seconds within the owning motion clip.
-- `value`: Channel value or replacement payload in the domain declared by this field type.
+- `value`: Event's string payload, delivered at its clip-local time.
 - `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
 
 ## zipzi.modeling.motion.MotionEventFired
@@ -456,7 +456,7 @@ Types: [MotionRegistration](#zipzimodelingmotionmotionregistration).
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
 - `name`: Human-readable display or registration name; distinct from persistent object identity.
-- `entries`: Ordered owned registrations or expression/Pose entries, with stable identities.
+- `entries`: Ordered motion registrations owned by this group.
 
 ## zipzi.modeling.motion.MotionKey
 
@@ -470,7 +470,7 @@ Persistent identity belongs to keys, never to Bezier control points.
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
 - `time`: Absolute time in seconds within the owning motion clip.
-- `value`: Channel value or replacement payload in the domain declared by this field type.
+- `value`: Key value in the owning track's channel units.
 
 ## zipzi.modeling.motion.MotionPlaybackPosition
 
@@ -499,7 +499,7 @@ Motion curve control point in clip-local seconds and channel-value units; it has
 **Fields**
 
 - `time`: Absolute time in seconds within the owning motion clip.
-- `value`: Channel value or replacement payload in the domain declared by this field type.
+- `value`: Curve control-point value in the owning track's channel units.
 
 ## zipzi.modeling.motion.MotionRegistration
 
@@ -545,7 +545,7 @@ Types: [MotionKey](#zipzimodelingmotionmotionkey), [MotionPoint](#zipzimodelingm
 
 - `control1`: First Bezier control point in seconds/channel-value coordinates; it has no key identity.
 - `control2`: Second Bezier control point in seconds/channel-value coordinates; it has no key identity.
-- `end`: Segment endpoint key or source-range end time, as declared by the enclosing type.
+- `end`: Persistent endpoint key of this segment.
 
 ## zipzi.modeling.motion.MotionSegmentInverseStepped
 
@@ -559,7 +559,7 @@ Types: [MotionKey](#zipzimodelingmotionmotionkey).
 
 **Fields**
 
-- `end`: Segment endpoint key or source-range end time, as declared by the enclosing type.
+- `end`: Persistent endpoint key of this segment.
 
 ## zipzi.modeling.motion.MotionSegmentLinear
 
@@ -573,7 +573,7 @@ Types: [MotionKey](#zipzimodelingmotionmotionkey).
 
 **Fields**
 
-- `end`: Segment endpoint key or source-range end time, as declared by the enclosing type.
+- `end`: Persistent endpoint key of this segment.
 
 ## zipzi.modeling.motion.MotionSegmentStepped
 
@@ -587,7 +587,7 @@ Types: [MotionKey](#zipzimodelingmotionmotionkey).
 
 **Fields**
 
-- `end`: Segment endpoint key or source-range end time, as declared by the enclosing type.
+- `end`: Persistent endpoint key of this segment.
 
 ## zipzi.modeling.motion.MotionSnapshot
 

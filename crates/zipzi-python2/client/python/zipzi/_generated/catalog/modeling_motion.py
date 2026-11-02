@@ -389,8 +389,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                             'Ordered stable IDs selected by this operation; names and '
                                                             'row numbers are not identities.'),
                                                            ('destination',
-                                                            'Explicit destination owner/container; order is controlled '
-                                                            'separately by before.'),
+                                                            'Stable ID of the clip receiving the tracks.'),
                                                            ('before',
                                                             'Optional stable sibling ID before which to insert; None '
                                                             'appends.'),
@@ -532,8 +531,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                    'IDs retain their source text.'),
                                                   ('time', 'Absolute time in seconds within the owning motion clip.'),
                                                   ('value',
-                                                   'Channel value or replacement payload in the domain declared by '
-                                                   'this field type.'),
+                                                   "Event's string payload, delivered at its clip-local time."),
                                                   ('extensions',
                                                    'Owned opaque imported fields preserved for format roundtrips; '
                                                    'declared fields cannot be shadowed.')],
@@ -564,9 +562,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                   ('name',
                                                    'Human-readable display or registration name; distinct from '
                                                    'persistent object identity.'),
-                                                  ('entries',
-                                                   'Ordered owned registrations or expression/Pose entries, with '
-                                                   'stable identities.')],
+                                                  ('entries', 'Ordered motion registrations owned by this group.')],
                                        'kind': 'type',
                                        'signature': '(*, id: str, name: str, entries: tuple[MotionRegistration, ...])',
                                        'type_refs': ('zipzi.modeling.motion.MotionRegistration',)},
@@ -580,9 +576,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                  'Stable identity in the owning authoring domain; exported metadata '
                                                  'IDs retain their source text.'),
                                                 ('time', 'Absolute time in seconds within the owning motion clip.'),
-                                                ('value',
-                                                 'Channel value or replacement payload in the domain declared by this '
-                                                 'field type.')],
+                                                ('value', "Key value in the owning track's channel units.")],
                                      'kind': 'type',
                                      'signature': '(*, id: str, time: float, value: float)'},
  'zipzi.modeling.motion.MotionKey.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -616,8 +610,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                         'channel-value units; it has no stable key identity.',
                                        'fields': [('time', 'Absolute time in seconds within the owning motion clip.'),
                                                   ('value',
-                                                   'Channel value or replacement payload in the domain declared by '
-                                                   'this field type.')],
+                                                   "Curve control-point value in the owning track's channel units.")],
                                        'kind': 'type',
                                        'signature': '(*, time: float, value: float)'},
  'zipzi.modeling.motion.MotionPoint.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -672,9 +665,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                           ('control2',
                                                            'Second Bezier control point in seconds/channel-value '
                                                            'coordinates; it has no key identity.'),
-                                                          ('end',
-                                                           'Segment endpoint key or source-range end time, as declared '
-                                                           'by the enclosing type.')],
+                                                          ('end', 'Persistent endpoint key of this segment.')],
                                                'kind': 'type',
                                                'signature': '(*, control1: MotionPoint, control2: MotionPoint, end: '
                                                             'MotionKey)',
@@ -686,9 +677,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                     'zipzi.modeling.motion.MotionSegmentInverseStepped.summary'),
                                                        'documentation': 'Use the endpoint value over the segment '
                                                                         'before its endpoint.',
-                                                       'fields': [('end',
-                                                                   'Segment endpoint key or source-range end time, as '
-                                                                   'declared by the enclosing type.')],
+                                                       'fields': [('end', 'Persistent endpoint key of this segment.')],
                                                        'kind': 'type',
                                                        'signature': '(*, end: MotionKey)',
                                                        'type_refs': ('zipzi.modeling.motion.MotionKey',)},
@@ -698,9 +687,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                             'zipzi.modeling.motion.MotionSegmentLinear.summary'),
                                                'documentation': 'Interpolate linearly between the preceding and '
                                                                 'endpoint key.',
-                                               'fields': [('end',
-                                                           'Segment endpoint key or source-range end time, as declared '
-                                                           'by the enclosing type.')],
+                                               'fields': [('end', 'Persistent endpoint key of this segment.')],
                                                'kind': 'type',
                                                'signature': '(*, end: MotionKey)',
                                                'type_refs': ('zipzi.modeling.motion.MotionKey',)},
@@ -710,9 +697,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                              'zipzi.modeling.motion.MotionSegmentStepped.summary'),
                                                 'documentation': 'Hold the preceding value through the segment before '
                                                                  'its endpoint.',
-                                                'fields': [('end',
-                                                            'Segment endpoint key or source-range end time, as '
-                                                            'declared by the enclosing type.')],
+                                                'fields': [('end', 'Persistent endpoint key of this segment.')],
                                                 'kind': 'type',
                                                 'signature': '(*, end: MotionKey)',
                                                 'type_refs': ('zipzi.modeling.motion.MotionKey',)},

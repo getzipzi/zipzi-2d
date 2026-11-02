@@ -196,7 +196,7 @@ MotionEditSetTrackTarget.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditMoveTracks(CompactValue):
-    'Move or copy tracks to another clip.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.\ncopy: True allocates copied identities; false transfers the existing identities.'
+    'Move or copy tracks to another clip.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Stable ID of the clip receiving the tracks.\nbefore: Optional stable sibling ID before which to insert; None appends.\ncopy: True allocates copied identities; false transfers the existing identities.'
     _variant: _ClassVar[str] = 'move_tracks'
     ids: tuple[str, ...]
     destination: str
@@ -345,7 +345,7 @@ MotionTrackTarget: TypeAlias = MotionTrackTargetUnspecified | MotionTrackTargetM
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEvent(CompactValue):
-    'Timed string event owned by a motion clip.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntime: Absolute time in seconds within the owning motion clip.\nvalue: Channel value or replacement payload in the domain declared by this field type.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    "Timed string event owned by a motion clip.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntime: Absolute time in seconds within the owning motion clip.\nvalue: Event's string payload, delivered at its clip-local time.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed."
     id: str
     time: float
     value: str
@@ -404,7 +404,7 @@ MotionTrack.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionKey(CompactValue):
-    'Persistent identity belongs to keys, never to Bezier control points.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntime: Absolute time in seconds within the owning motion clip.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    "Persistent identity belongs to keys, never to Bezier control points.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntime: Absolute time in seconds within the owning motion clip.\nvalue: Key value in the owning track's channel units."
     id: str
     time: float
     value: float
@@ -413,7 +413,7 @@ MotionKey.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionSegmentLinear(CompactValue):
-    'Interpolate linearly between the preceding and endpoint key.\n\nFields:\nend: Segment endpoint key or source-range end time, as declared by the enclosing type.'
+    'Interpolate linearly between the preceding and endpoint key.\n\nFields:\nend: Persistent endpoint key of this segment.'
     _variant: _ClassVar[str] = 'linear'
     end: MotionKey
 
@@ -421,7 +421,7 @@ MotionSegmentLinear.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionSegmentBezier(CompactValue):
-    'Interpolate using two time/value control points and the endpoint key.\n\nFields:\ncontrol1: First Bezier control point in seconds/channel-value coordinates; it has no key identity.\ncontrol2: Second Bezier control point in seconds/channel-value coordinates; it has no key identity.\nend: Segment endpoint key or source-range end time, as declared by the enclosing type.'
+    'Interpolate using two time/value control points and the endpoint key.\n\nFields:\ncontrol1: First Bezier control point in seconds/channel-value coordinates; it has no key identity.\ncontrol2: Second Bezier control point in seconds/channel-value coordinates; it has no key identity.\nend: Persistent endpoint key of this segment.'
     _variant: _ClassVar[str] = 'bezier'
     control1: MotionPoint
     control2: MotionPoint
@@ -431,7 +431,7 @@ MotionSegmentBezier.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionSegmentStepped(CompactValue):
-    'Hold the preceding value through the segment before its endpoint.\n\nFields:\nend: Segment endpoint key or source-range end time, as declared by the enclosing type.'
+    'Hold the preceding value through the segment before its endpoint.\n\nFields:\nend: Persistent endpoint key of this segment.'
     _variant: _ClassVar[str] = 'stepped'
     end: MotionKey
 
@@ -439,7 +439,7 @@ MotionSegmentStepped.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionSegmentInverseStepped(CompactValue):
-    'Use the endpoint value over the segment before its endpoint.\n\nFields:\nend: Segment endpoint key or source-range end time, as declared by the enclosing type.'
+    'Use the endpoint value over the segment before its endpoint.\n\nFields:\nend: Persistent endpoint key of this segment.'
     _variant: _ClassVar[str] = 'inverse_stepped'
     end: MotionKey
 
@@ -449,7 +449,7 @@ MotionSegment: TypeAlias = MotionSegmentLinear | MotionSegmentBezier | MotionSeg
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionPoint(CompactValue):
-    'Motion curve control point in clip-local seconds and channel-value units; it has no stable key identity.\n\nFields:\ntime: Absolute time in seconds within the owning motion clip.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    "Motion curve control point in clip-local seconds and channel-value units; it has no stable key identity.\n\nFields:\ntime: Absolute time in seconds within the owning motion clip.\nvalue: Curve control-point value in the owning track's channel units."
     time: float
     value: float
 
@@ -457,7 +457,7 @@ MotionPoint.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionGroup(CompactValue):
-    'Named container of motion registrations, distinct from the referenced clips.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nentries: Ordered owned registrations or expression/Pose entries, with stable identities.'
+    'Named container of motion registrations, distinct from the referenced clips.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nentries: Ordered motion registrations owned by this group.'
     id: str
     name: str
     entries: tuple[MotionRegistration, ...]

@@ -27,7 +27,7 @@ Types: [ExtensionValue], [PoseGroup](#zipzimodelingposeposegroup).
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-- `file_type`: Optional format type label retained from the imported expression or Pose asset.
+- `file_type`: Optional format type label retained from the imported Pose asset.
 - `fade_in`: Optional fade-in duration in seconds; None retains the format/runtime default.
 - `groups`: Ordered owned Pose groups; each owns its entries and link rows.
 - `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
@@ -55,7 +55,7 @@ Select entries in one group.
 
 **Fields**
 
-- `group_id`: Stable ID of the group owning the affected rows or node chain.
+- `group_id`: Stable ID of the Pose group whose entries are selected.
 
 ## zipzi.modeling.pose.PoseCollectionGroups
 
@@ -111,7 +111,7 @@ Create an entry in a group.
 
 **Fields**
 
-- `group_id`: Stable ID of the group owning the affected rows or node chain.
+- `group_id`: Stable ID of the Pose group that will own the new entry.
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
 - `before`: Optional stable sibling ID before which to insert; None appends.
 
@@ -167,7 +167,7 @@ A Pose group has no root member container; a receiving group is required.
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-- `destination`: Explicit destination owner/container; order is controlled separately by before.
+- `destination`: Stable ID of the different Pose group receiving the entries.
 - `before`: Optional stable sibling ID before which to insert; None appends.
 
 ## zipzi.modeling.pose.PoseEditDuplicate
@@ -312,7 +312,7 @@ Types: [PoseEntry](#zipzimodelingposeposeentry).
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
 - `name`: Human-readable display or registration name; distinct from persistent object identity.
-- `entries`: Ordered owned registrations or expression/Pose entries, with stable identities.
+- `entries`: Ordered Pose entries owned by this group.
 
 ## zipzi.modeling.pose.PoseLink
 

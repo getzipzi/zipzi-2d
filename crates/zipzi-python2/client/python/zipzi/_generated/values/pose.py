@@ -30,7 +30,7 @@ PoseEditCreateGroup.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseEditCreateEntry(CompactValue):
-    'Create an entry in a group.\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    'Create an entry in a group.\n\nFields:\ngroup_id: Stable ID of the Pose group that will own the new entry.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'create_entry'
     group_id: str
     id: str
@@ -97,7 +97,7 @@ PoseEditDelete.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseEditDissolveGroup(CompactValue):
-    'A Pose group has no root member container; a receiving group is required.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    'A Pose group has no root member container; a receiving group is required.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ndestination: Stable ID of the different Pose group receiving the entries.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'dissolve_group'
     id: str
     destination: str
@@ -175,7 +175,7 @@ PoseCollectionGroups.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseCollectionEntries(CompactValue):
-    'Select entries in one group.\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.'
+    'Select entries in one group.\n\nFields:\ngroup_id: Stable ID of the Pose group whose entries are selected.'
     _variant: _ClassVar[str] = 'entries'
     group_id: str
 
@@ -193,7 +193,7 @@ PoseCollection: TypeAlias = PoseCollectionGroups | PoseCollectionEntries | PoseC
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseAsset(CompactValue):
-    'Authored Pose singleton with groups and optional fade settings.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nfile_type: Optional format type label retained from the imported expression or Pose asset.\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.\ngroups: Ordered owned Pose groups; each owns its entries and link rows.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.\nopaque_source_ids: Original runtime-ID namespace used to validate preservation of opaque imported fields.\nopaque_source_content_hash: Original imported-content hash used to detect unsupported changes to opaque fields.'
+    'Authored Pose singleton with groups and optional fade settings.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nfile_type: Optional format type label retained from the imported Pose asset.\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.\ngroups: Ordered owned Pose groups; each owns its entries and link rows.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.\nopaque_source_ids: Original runtime-ID namespace used to validate preservation of opaque imported fields.\nopaque_source_content_hash: Original imported-content hash used to detect unsupported changes to opaque fields.'
     id: str
     file_type: (str | None) = None
     fade_in: (float | None) = None
@@ -211,7 +211,7 @@ PoseAsset.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseGroup(CompactValue):
-    'Ordered Pose entries sharing a named group.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nentries: Ordered owned registrations or expression/Pose entries, with stable identities.'
+    'Ordered Pose entries sharing a named group.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nentries: Ordered Pose entries owned by this group.'
     id: str
     name: str
     entries: tuple[PoseEntry, ...]

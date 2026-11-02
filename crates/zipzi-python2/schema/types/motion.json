@@ -1007,7 +1007,7 @@
               "skip": false
             },
             {
-              "doc": "Explicit destination owner/container; order is controlled separately by before.",
+              "doc": "Stable ID of the clip receiving the tracks.",
               "name": "destination",
               "rust_name": "destination",
               "shape": {
@@ -1227,7 +1227,7 @@
           "skip": false
         },
         {
-          "doc": "Channel value or replacement payload in the domain declared by this field type.",
+          "doc": "Event's string payload, delivered at its clip-local time.",
           "name": "value",
           "rust_name": "value",
           "shape": {
@@ -1275,7 +1275,7 @@
           "skip": false
         },
         {
-          "doc": "Ordered owned registrations or expression/Pose entries, with stable identities.",
+          "doc": "Ordered motion registrations owned by this group.",
           "name": "entries",
           "rust_name": "entries",
           "shape": {
@@ -1315,7 +1315,7 @@
           "skip": false
         },
         {
-          "doc": "Channel value or replacement payload in the domain declared by this field type.",
+          "doc": "Key value in the owning track's channel units.",
           "name": "value",
           "rust_name": "value",
           "shape": {
@@ -1342,7 +1342,7 @@
           "skip": false
         },
         {
-          "doc": "Channel value or replacement payload in the domain declared by this field type.",
+          "doc": "Curve control-point value in the owning track's channel units.",
           "name": "value",
           "rust_name": "value",
           "shape": {
@@ -1446,7 +1446,7 @@
           "doc": "Interpolate linearly between the preceding and endpoint key.",
           "fields": [
             {
-              "doc": "Segment endpoint key or source-range end time, as declared by the enclosing type.",
+              "doc": "Persistent endpoint key of this segment.",
               "name": "end",
               "rust_name": "end",
               "shape": {
@@ -1484,7 +1484,7 @@
               "skip": false
             },
             {
-              "doc": "Segment endpoint key or source-range end time, as declared by the enclosing type.",
+              "doc": "Persistent endpoint key of this segment.",
               "name": "end",
               "rust_name": "end",
               "shape": {
@@ -1502,7 +1502,7 @@
           "doc": "Hold the preceding value through the segment before its endpoint.",
           "fields": [
             {
-              "doc": "Segment endpoint key or source-range end time, as declared by the enclosing type.",
+              "doc": "Persistent endpoint key of this segment.",
               "name": "end",
               "rust_name": "end",
               "shape": {
@@ -1520,7 +1520,7 @@
           "doc": "Use the endpoint value over the segment before its endpoint.",
           "fields": [
             {
-              "doc": "Segment endpoint key or source-range end time, as declared by the enclosing type.",
+              "doc": "Persistent endpoint key of this segment.",
               "name": "end",
               "rust_name": "end",
               "shape": {

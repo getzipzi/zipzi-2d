@@ -1,6 +1,6 @@
 {
   "_generated_by": "zipzi-python2/tools/generate.py",
-  "contract_sha256": "a45167bdddc1e6b0a41b40b85123deffff98ca2a8eb0cb9f170217aa6bfb2782",
+  "contract_sha256": "865f75605e8f5f6515832d8b8c1c0de1485bfb4666dac366be7e66be1bbb06ec",
   "format_version": 2,
   "root": {
     "binary": {
@@ -757,7 +757,7 @@
     },
     {
       "path": "types/expression.json",
-      "sha256": "036d94eb6cc5fe63f61bfc651b8100355fadba0a6c45b19f73366f36c30dff6b"
+      "sha256": "ae5fa9d4bac088644db0f6a111803621d9422e68aeed66a090190c21aca9260d"
     },
     {
       "path": "types/external.json",
@@ -769,7 +769,7 @@
     },
     {
       "path": "types/motion.json",
-      "sha256": "0ca30267fce713fc77757717566d04d6493d46b7a33907c2e7d486d55b5e4e9a"
+      "sha256": "ccf566e9de8f9c1a3d1694b0c1004b8ae08bbbc801976baf1486f9ee6462bf73"
     },
     {
       "path": "types/observation.json",
@@ -785,7 +785,7 @@
     },
     {
       "path": "types/pose.json",
-      "sha256": "d352ed1a569e50d92eadf8dc8607f9584f8583dca5078448c2ce40ddf4507bc7"
+      "sha256": "ac2704c280fe02d4cd204a83e4decb5fbc1de0411f249e74727d7abd2fa0921c"
     },
     {
       "path": "types/preview.json",

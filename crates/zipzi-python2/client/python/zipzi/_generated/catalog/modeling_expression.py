@@ -33,7 +33,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                            'display names.'),
                                                           ('file_type',
                                                            'Optional format type label retained from the imported '
-                                                           'expression or Pose asset.'),
+                                                           'expression asset.'),
                                                           ('fade_in',
                                                            'Optional fade-in duration in seconds; None retains the '
                                                            'format/runtime default.'),
@@ -41,8 +41,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                            'Optional fade-out duration in seconds; None retains the '
                                                            'format/runtime default.'),
                                                           ('entries',
-                                                           'Ordered owned registrations or expression/Pose entries, '
-                                                           'with stable identities.'),
+                                                           'Ordered parameter contribution entries owned by this '
+                                                           'expression.'),
                                                           ('extensions',
                                                            'Owned opaque imported fields preserved for format '
                                                            'roundtrips; declared fields cannot be shadowed.'),
@@ -177,8 +177,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                                           'New stable identities paired with the '
                                                                           'selected source objects.'),
                                                                          ('destination',
-                                                                          'Explicit destination owner/container; order '
-                                                                          'is controlled separately by before.'),
+                                                                          'Stable ID of the expression receiving the '
+                                                                          'copied entries.'),
                                                                          ('before',
                                                                           'Optional stable sibling ID before which to '
                                                                           'insert; None appends.')],
@@ -195,8 +195,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                                      'Ordered stable IDs selected by this operation; '
                                                                      'names and row numbers are not identities.'),
                                                                     ('destination',
-                                                                     'Explicit destination owner/container; order is '
-                                                                     'controlled separately by before.'),
+                                                                     'Stable ID of the expression receiving the '
+                                                                     'entries.'),
                                                                     ('before',
                                                                      'Optional stable sibling ID before which to '
                                                                      'insert; None appends.')],
@@ -245,8 +245,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                            'Typed target reference; unresolved imported runtime labels '
                                                            'remain explicit.'),
                                                           ('value',
-                                                           'Channel value or replacement payload in the domain '
-                                                           'declared by this field type.'),
+                                                           'Parameter contribution applied according to the selected '
+                                                           'blend mode.'),
                                                           ('blend', "Missing means Framework's default Add blend."),
                                                           ('extensions',
                                                            'Owned opaque imported fields preserved for format '
@@ -268,8 +268,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                                  'Typed target reference; unresolved imported runtime '
                                                                  'labels remain explicit.'),
                                                                 ('value',
-                                                                 'Channel value or replacement payload in the domain '
-                                                                 'declared by this field type.'),
+                                                                 'Parameter contribution applied according to the '
+                                                                 'selected blend mode.'),
                                                                 ('blend',
                                                                  'Optional expression blend mode; None uses the native '
                                                                  'Add default.')],

@@ -7,7 +7,7 @@ pub enum PoseCollection {
     Groups,
     /// Select entries in one group.
     Entries {
-        /// Stable ID of the group owning the affected rows or node chain.
+        /// Stable ID of the Pose group whose entries are selected.
         group_id: String,
     },
     /// Select links in one entry.
@@ -65,7 +65,7 @@ pub enum PoseEdit {
     },
     /// Create an entry in a group.
     CreateEntry {
-        /// Stable ID of the group owning the affected rows or node chain.
+        /// Stable ID of the Pose group that will own the new entry.
         group_id: String,
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
@@ -117,7 +117,7 @@ pub enum PoseEdit {
     DissolveGroup {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
-        /// Explicit destination owner/container; order is controlled separately by before.
+        /// Stable ID of the different Pose group receiving the entries.
         destination: String,
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
@@ -279,7 +279,7 @@ pub enum MotionEdit {
     MoveTracks {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
-        /// Explicit destination owner/container; order is controlled separately by before.
+        /// Stable ID of the clip receiving the tracks.
         destination: String,
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
@@ -340,7 +340,7 @@ pub enum MotionEdit {
 pub struct ExpressionEntryFields {
     /// Typed target reference; unresolved imported runtime labels remain explicit.
     pub target: ExpressionTarget,
-    /// Channel value or replacement payload in the domain declared by this field type.
+    /// Parameter contribution applied according to the selected blend mode.
     pub value: f32,
     /// Optional expression blend mode; None uses the native Add default.
     pub blend: Option<ExpressionBlend>,
@@ -389,7 +389,7 @@ pub enum ExpressionEdit {
     MoveEntries {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
-        /// Explicit destination owner/container; order is controlled separately by before.
+        /// Stable ID of the expression receiving the entries.
         destination: String,
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
@@ -400,7 +400,7 @@ pub enum ExpressionEdit {
         ids: Vec<String>,
         /// New stable identities paired with the selected source objects.
         new_ids: Vec<String>,
-        /// Explicit destination owner/container; order is controlled separately by before.
+        /// Stable ID of the expression receiving the copied entries.
         destination: String,
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,

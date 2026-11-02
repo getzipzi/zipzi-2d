@@ -41,7 +41,7 @@ ExpressionEditPatchEntry.__module__ = "zipzi.modeling.expression"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionEditMoveEntries(CompactValue):
-    'Move entries to another expression.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    'Move entries to another expression.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Stable ID of the expression receiving the entries.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'move_entries'
     ids: tuple[str, ...]
     destination: str
@@ -54,7 +54,7 @@ ExpressionEditMoveEntries.__module__ = "zipzi.modeling.expression"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionEditDuplicateEntries(CompactValue):
-    'Copy entries using explicitly paired new identities.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\nnew_ids: New stable identities paired with the selected source objects.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    'Copy entries using explicitly paired new identities.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\nnew_ids: New stable identities paired with the selected source objects.\ndestination: Stable ID of the expression receiving the copied entries.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'duplicate_entries'
     ids: tuple[str, ...]
     new_ids: tuple[str, ...]
@@ -115,7 +115,7 @@ ExpressionEdit: TypeAlias = ExpressionEditCreate | ExpressionEditCreateEntry | E
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionEntryFields(CompactValue):
-    'Typed target, value and blend replacement for an expression entry.\n\nFields:\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.\nvalue: Channel value or replacement payload in the domain declared by this field type.\nblend: Optional expression blend mode; None uses the native Add default.'
+    'Typed target, value and blend replacement for an expression entry.\n\nFields:\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.\nvalue: Parameter contribution applied according to the selected blend mode.\nblend: Optional expression blend mode; None uses the native Add default.'
     target: ExpressionTarget
     value: float
     blend: (ExpressionBlend | None) = None
@@ -156,7 +156,7 @@ class ExpressionBlend(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionAsset(CompactValue):
-    'Authored expression asset with ordered parameter entries and optional fades.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Registration name in model3; independent of parameter display names.\nfile_type: Optional format type label retained from the imported expression or Pose asset.\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.\nfade_out: Optional fade-out duration in seconds; None retains the format/runtime default.\nentries: Ordered owned registrations or expression/Pose entries, with stable identities.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.\nopaque_source_ids: Full Parameter UUID-to-runtime-ID namespace when opaque fields exist.\nopaque_source_content_hash: Hash of imported content when opaque fields exist; known-field edits\ncannot silently change the meaning of those fields.'
+    'Authored expression asset with ordered parameter entries and optional fades.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Registration name in model3; independent of parameter display names.\nfile_type: Optional format type label retained from the imported expression asset.\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.\nfade_out: Optional fade-out duration in seconds; None retains the format/runtime default.\nentries: Ordered parameter contribution entries owned by this expression.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.\nopaque_source_ids: Full Parameter UUID-to-runtime-ID namespace when opaque fields exist.\nopaque_source_content_hash: Hash of imported content when opaque fields exist; known-field edits\ncannot silently change the meaning of those fields.'
     id: str
     name: str
     file_type: (str | None) = None
@@ -176,7 +176,7 @@ ExpressionAsset.__module__ = "zipzi.modeling.expression"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionEntry(CompactValue):
-    "One stable expression parameter contribution with an optional blend mode.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.\nvalue: Channel value or replacement payload in the domain declared by this field type.\nblend: Missing means Framework's default Add blend.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed."
+    "One stable expression parameter contribution with an optional blend mode.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.\nvalue: Parameter contribution applied according to the selected blend mode.\nblend: Missing means Framework's default Add blend.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed."
     id: str
     target: ExpressionTarget
     value: float

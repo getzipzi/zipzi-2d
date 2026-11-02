@@ -12,7 +12,7 @@
 pub struct MotionPoint {
     /// Absolute time in seconds within the owning motion clip.
     pub time: f32,
-    /// Channel value or replacement payload in the domain declared by this field type.
+    /// Curve control-point value in the owning track's channel units.
     pub value: f32,
 }
 
@@ -25,7 +25,7 @@ pub struct MotionKey {
     pub id: String,
     /// Absolute time in seconds within the owning motion clip.
     pub time: f32,
-    /// Channel value or replacement payload in the domain declared by this field type.
+    /// Key value in the owning track's channel units.
     pub value: f32,
 }
 
@@ -45,7 +45,7 @@ impl MotionKey {
 pub enum MotionSegment {
     /// Interpolate linearly between the preceding and endpoint key.
     Linear {
-        /// Segment endpoint key or source-range end time, as declared by the enclosing type.
+        /// Persistent endpoint key of this segment.
         end: MotionKey,
     },
     /// Interpolate using two time/value control points and the endpoint key.
@@ -54,17 +54,17 @@ pub enum MotionSegment {
         control1: MotionPoint,
         /// Second Bezier control point in seconds/channel-value coordinates; it has no key identity.
         control2: MotionPoint,
-        /// Segment endpoint key or source-range end time, as declared by the enclosing type.
+        /// Persistent endpoint key of this segment.
         end: MotionKey,
     },
     /// Hold the preceding value through the segment before its endpoint.
     Stepped {
-        /// Segment endpoint key or source-range end time, as declared by the enclosing type.
+        /// Persistent endpoint key of this segment.
         end: MotionKey,
     },
     /// Use the endpoint value over the segment before its endpoint.
     InverseStepped {
-        /// Segment endpoint key or source-range end time, as declared by the enclosing type.
+        /// Persistent endpoint key of this segment.
         end: MotionKey,
     },
 }
@@ -157,7 +157,7 @@ pub struct MotionEvent {
     pub id: String,
     /// Absolute time in seconds within the owning motion clip.
     pub time: f32,
-    /// Channel value or replacement payload in the domain declared by this field type.
+    /// Event's string payload, delivered at its clip-local time.
     pub value: String,
     /// Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
     pub extensions: BTreeMap<String, Value>,
@@ -229,7 +229,7 @@ pub struct MotionGroup {
     pub id: String,
     /// Human-readable display or registration name; distinct from persistent object identity.
     pub name: String,
-    /// Ordered owned registrations or expression/Pose entries, with stable identities.
+    /// Ordered motion registrations owned by this group.
     pub entries: Vec<MotionRegistration>,
 }
 
@@ -242,7 +242,7 @@ pub struct MotionGroup {
 pub struct MotionSourceRange {
     /// Start time in seconds of the retained source-authoring range.
     pub start: f32,
-    /// Segment endpoint key or source-range end time, as declared by the enclosing type.
+    /// End time in seconds of the retained source-authoring range.
     pub end: f32,
 }
 
@@ -277,13 +277,13 @@ pub struct ExpressionAsset {
     pub id: String,
     /// Registration name in model3; independent of parameter display names.
     pub name: String,
-    /// Optional format type label retained from the imported expression or Pose asset.
+    /// Optional format type label retained from the imported expression asset.
     pub file_type: Option<String>,
     /// Optional fade-in duration in seconds; None retains the format/runtime default.
     pub fade_in: Option<f32>,
     /// Optional fade-out duration in seconds; None retains the format/runtime default.
     pub fade_out: Option<f32>,
-    /// Ordered owned registrations or expression/Pose entries, with stable identities.
+    /// Ordered parameter contribution entries owned by this expression.
     pub entries: Vec<ExpressionEntry>,
     /// Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
     pub extensions: BTreeMap<String, Value>,
