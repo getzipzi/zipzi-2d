@@ -359,7 +359,7 @@ fn open_creation_menu_cannot_execute_after_document_version_changes(cx: &mut Tes
 }
 
 #[gpui_kit::test]
-fn menu_feedback_explains_offscreen_owner_and_toolbar_dispatches_each_scene_type(
+fn offscreen_is_absent_from_creation_menu_and_toolbar_dispatches_scene_types(
     cx: &mut TestAppContext,
 ) {
     let h = setup_with_document(
@@ -377,28 +377,15 @@ fn menu_feedback_explains_offscreen_owner_and_toolbar_dispatches_each_scene_type
     .unwrap();
     cx.run_until_parked();
     cx.update_window(h.window, |_, window, cx| {
-        let index = (0..8usize)
-            .find(|index| {
-                window
-                    .within("popup-menu")
-                    .try_find(*index)
-                    .is_some_and(|item| item.label().is_some_and(|label| label == "New Offscreen"))
-            })
-            .expect("owner reason");
-        window.within("popup-menu").click(index, cx);
+        assert!(!(0..8usize).any(|index| {
+            window
+                .within("popup-menu")
+                .try_find(index)
+                .is_some_and(|item| item.label().is_some_and(|label| label == "New Offscreen"))
+        }));
         assert_eq!(
             h.view.read(cx).editor.document().unwrap().history_lengths(),
             (0, 0)
-        );
-    })
-    .unwrap();
-    cx.update_window(h.window, |_, window, cx| {
-        assert!(h.view.read(cx).message.starts_with("Select a Part"));
-        assert!(h.view.read(cx).edit_error.is_none());
-        window.click_with_options(
-            "parts-tree-root-drop",
-            ClickOptions::new().with_button(MouseButton::Right),
-            cx,
         );
     })
     .unwrap();
@@ -409,7 +396,6 @@ fn menu_feedback_explains_offscreen_owner_and_toolbar_dispatches_each_scene_type
         ("New Mesh", K::Mesh),
         ("New Warp", K::WarpDeformer),
         ("New Rotation", K::RotationDeformer),
-        ("New Offscreen", K::Offscreen),
     ]
     .into_iter()
     .enumerate()

@@ -455,6 +455,12 @@ pub enum PropertyScope {
     InterpolatedDeformer,
     /// Deformer BlendShapes currently require returning to their base shape.
     DeformerBlendShape,
+    OffscreenKeyform {
+        binding: String,
+        samples: Vec<String>,
+    },
+    InterpolatedOffscreen,
+    OffscreenBlendShape,
     /// Conservative address for repeated resource fields; revisions never rewind.
     Resource {
         revision: u64,
@@ -465,7 +471,11 @@ impl PropertyScope {
     pub fn shape_editable(&self) -> bool {
         !matches!(
             self,
-            Self::InterpolatedMesh | Self::InterpolatedDeformer | Self::DeformerBlendShape
+            Self::InterpolatedMesh
+                | Self::InterpolatedDeformer
+                | Self::DeformerBlendShape
+                | Self::InterpolatedOffscreen
+                | Self::OffscreenBlendShape
         )
     }
 }
@@ -641,6 +651,9 @@ pub(crate) fn values_from(
     }
     if object.kind == ObjectKind::Deformer {
         return deformer::values(model, &object.id, &PropertyScope::Object);
+    }
+    if object.kind == ObjectKind::Part {
+        return part::values(model, &object.id, &PropertyScope::Object);
     }
     let payload = inspector_payload(model, object)?;
     property_specs(object.kind)

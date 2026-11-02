@@ -81,6 +81,9 @@ impl PropertyTarget {
     }
 
     pub(crate) fn definition(&self, editor: &Editor) -> FormDefinition {
+        if self.object.kind == ObjectKind::Part && self.timeline.is_none() {
+            return scene::part_definition(self, editor);
+        }
         if self.object.kind == ObjectKind::Deformer {
             return deformer::definition(self, editor);
         }

@@ -34,6 +34,16 @@ fn definitions_cover_domain_fields_once_without_submission_overrides() {
             if kind == Mesh {
                 assert!(expected.remove(&schema::mesh::TEXTURE.key));
             }
+            if kind == Part {
+                assert!(expected.remove(&schema::part::OFFSCREEN_ID.key));
+                assert!(expected.remove(&schema::part::COMPOSITE_VISIBLE.key));
+                for (key, color) in [
+                    (schema::part::MULTIPLY.key, 0xffffff),
+                    (schema::part::SCREEN.key, 0x000000),
+                ] {
+                    assert_eq!(definition.field(key).unwrap().reset_color, Some(color));
+                }
+            }
             // Concrete Deformer forms are selected by PropertyTarget; the
             // kind-only fallback uses Warp fields. Interpolation is internal;
             // concrete Rotation fields are selected by PropertyTarget.

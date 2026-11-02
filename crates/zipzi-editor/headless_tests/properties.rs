@@ -4,6 +4,7 @@ use gpui_kit::{AppContext as _, TestAppContext};
 use zipzi_editor_core::property as schema;
 mod deformer_basic;
 mod deformer_original;
+mod part_offscreen;
 mod warp_authoring;
 
 fn warp_grid_document() -> (

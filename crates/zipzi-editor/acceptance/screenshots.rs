@@ -44,6 +44,11 @@ pub(super) fn run() -> anyhow::Result<()> {
         println!("Rotation interaction screenshots passed.");
         return Ok(());
     }
+    if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("part-offscreen") {
+        properties_scene::part_offscreen(&directory)?;
+        println!("Part offscreen screenshots passed.");
+        return Ok(());
+    }
     if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("deformer-original") {
         deformer_original_scene::run(&directory)?;
         println!("Deformer original screenshots passed.");

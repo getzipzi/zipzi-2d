@@ -349,10 +349,11 @@ impl Document {
                     Some(zipzi_core::TransformKind::Rotation) => TreeNodeKind::RotationDeformer,
                     _ => TreeNodeKind::WarpDeformer,
                 },
-                K::Offscreen if !deformer => TreeNodeKind::Offscreen,
                 _ => continue,
             };
             let mut node = TreeNode::new(x.reference.id.clone(), x.name.clone(), kind);
+            node.offscreen =
+                kind == TreeNodeKind::Part && self.model().offscreen_for_part(&node.id).is_some();
             node.diagnostic = x.diagnostic.clone();
             node.visible = Some(
                 !self

@@ -2,6 +2,9 @@
 #[cfg(test)]
 #[path = "properties/deformer_tests.rs"]
 mod deformer_tests;
+#[cfg(test)]
+#[path = "properties/part_tests.rs"]
+mod part_tests;
 use super::*;
 use crate::{ObjectKind, ObjectRef, PropertyPatch, PropertyScope, PropertyValues};
 use anyhow::bail;
@@ -32,7 +35,12 @@ impl PropertyPayload {
 }
 
 impl Document {
-    fn deformer_property_scope(&self, model: &zipzi_core::Document, id: &str) -> PropertyScope {
+    fn scene_property_scope(
+        &self,
+        model: &zipzi_core::Document,
+        id: &str,
+        blend_id: &str,
+    ) -> PropertyScope {
         use zipzi_core::SceneTrackEvaluation;
         // Match Modeling's parameter normalization without evaluating geometry.
         let values: std::collections::HashMap<_, _> = model
@@ -69,7 +77,7 @@ impl Document {
             })
             .collect();
         if model
-            .iter_blend_bindings_for_target(id)
+            .iter_blend_bindings_for_target(blend_id)
             .any(|b| !zipzi_core::evaluation::evaluate_blend_binding(model, &values, b).is_empty())
         {
             return PropertyScope::DeformerBlendShape;
@@ -129,12 +137,25 @@ impl Document {
                 revision: self.model_generation(),
             };
         }
+        if object.kind == ObjectKind::Part {
+            let model = self.session.document();
+            if let Some(os) = model.offscreen_for_part(&object.id) {
+                return match self.scene_property_scope(&model, &object.id, &os.id) {
+                    PropertyScope::DeformerKeyform { binding, samples } => {
+                        PropertyScope::OffscreenKeyform { binding, samples }
+                    }
+                    PropertyScope::InterpolatedDeformer => PropertyScope::InterpolatedOffscreen,
+                    PropertyScope::DeformerBlendShape => PropertyScope::OffscreenBlendShape,
+                    scope => scope,
+                };
+            }
+        }
         if !matches!(object.kind, ObjectKind::Mesh | ObjectKind::Deformer) {
             return PropertyScope::Object;
         }
         let model = self.session.document();
         if object.kind == ObjectKind::Deformer {
-            return self.deformer_property_scope(&model, &object.id);
+            return self.scene_property_scope(&model, &object.id, &object.id);
         }
         let Some(binding) = model
             .binding_for_mesh(&object.id)
@@ -201,18 +222,11 @@ impl Document {
         if object.kind == ObjectKind::Deformer {
             return crate::property::deformer::values(model, &object.id, scope);
         }
+        if object.kind == ObjectKind::Part {
+            return crate::property::part::values(model, &object.id, scope);
+        }
         if object.kind != ObjectKind::Mesh {
-            let mut values = crate::property::values_from(model, object)?;
-            // Driven Part draw order is edited through the explicit stored-form
-            // action, never by an inspector field that writes the static base.
-            if object.kind == ObjectKind::Part
-                && model
-                    .binding_for_scene(&object.id)
-                    .is_some_and(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
-            {
-                values.remove(&crate::property::part::DRAW_ORDER.key);
-            }
-            return Ok(values);
+            return crate::property::values_from(model, object);
         }
         let payload = crate::property::mesh::inspector_payload(model, &object.id, scope)?;
         crate::property_specs(object.kind)
@@ -360,7 +374,9 @@ impl Document {
             )
             .map(PropertyPayload::Physics);
         }
-        let mut payload = if object.kind == ObjectKind::Deformer {
+        let mut payload = if object.kind == ObjectKind::Part {
+            crate::property::part::payload(&self.session.document(), &object.id, &patch.scope)?
+        } else if object.kind == ObjectKind::Deformer {
             crate::property::deformer::inspector_payload(
                 &self.session.document(),
                 &object.id,
@@ -448,6 +464,14 @@ impl Document {
                 name: payload["name"].as_str().unwrap().into(),
             })?);
         }
+        if object.kind == ObjectKind::Part
+            && patch
+                .changes
+                .keys()
+                .any(|key| crate::property::part::is_offscreen(*key))
+        {
+            return crate::property::part::apply_offscreen(edit, &object.id, patch, &payload);
+        }
         if object.kind == ObjectKind::Mesh
             && patch
                 .changes
@@ -526,6 +550,13 @@ impl Document {
                 }
             }
             return crate::property::deformer::apply(edit, &object.id, patch, &payload);
+        }
+        if object.kind == ObjectKind::Part
+            && patch
+                .changes
+                .contains_key(&crate::property::part::ENABLED.key)
+        {
+            return crate::property::part::apply_enabled(edit, &object.id, &payload);
         }
         if object.kind != ObjectKind::Mesh {
             return replace(edit, object.kind, payload);

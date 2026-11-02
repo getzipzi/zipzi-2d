@@ -3,6 +3,69 @@ use super::common::save;
 use gpui_kit::{point, px, test::TestWindowExt};
 use zipzi_editor_core::{Editor, ObjectKind, ObjectRef};
 
+pub(crate) fn part_offscreen(directory: &std::path::Path) -> anyhow::Result<()> {
+    use zipzi_editor_core::{PropertyValue, property::part};
+    let mut harness = Harness::with_size(1280., 1000.)?;
+    crate::i18n::activate(Some("zh-CN"));
+    let (mut document, _assets) = fixture::sample_document_with_parts()?;
+    let object = fixture::object(ObjectKind::Part, 101);
+    document.set_object_property(&object, part::NAME.path, serde_json::json!("面部合成"))?;
+    document.navigate(object.clone())?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.replace_editor(Editor::from_document(document), cx);
+            view.refresh_document(window, cx);
+        });
+        window.render_frame(cx);
+        show(window, "property-toggle-offscreen", cx);
+    })?;
+    save(
+        &harness.capture()?,
+        directory,
+        "part-offscreen-disabled-zh-CN.png",
+    )?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        assert!(
+            window
+                .try_find("property-input-offscreen_opacity")
+                .is_none()
+        );
+        window.click("property-toggle-offscreen", cx);
+        window.render_frame(cx);
+    })?;
+    harness.capture()?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        assert!(
+            window
+                .try_find("property-toggle-composite_visible")
+                .is_none()
+        );
+        show(window, "property-input-offscreen_opacity", cx);
+        window.click("property-input-offscreen_opacity", cx);
+        window.press("cmd-a", cx);
+        window.input("60", cx);
+        window.press("enter", cx);
+        window.render_frame(cx);
+    })?;
+    harness.capture()?;
+    harness.view.read_with(&harness.cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        let values = doc.property_values(&object).unwrap();
+        assert_eq!(values[&part::OFFSCREEN.key], PropertyValue::Bool(true));
+        assert_eq!(values[&part::OPACITY.key], PropertyValue::Float(0.6));
+        assert!(
+            doc.part_tree()
+                .iter()
+                .find(|node| node.id == object.id)
+                .unwrap()
+                .offscreen
+        );
+    });
+    save(&harness.capture()?, directory, "part-offscreen-zh-CN.png")?;
+    crate::i18n::activate(Some("en"));
+    Ok(())
+}
+
 pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
     for locale in ["en", "zh-CN"] {
         let mut harness = Harness::new()?;

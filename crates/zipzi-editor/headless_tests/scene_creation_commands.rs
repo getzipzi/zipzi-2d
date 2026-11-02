@@ -109,7 +109,7 @@ fn creation_menu_cache_reuses_pose_previews_and_tracks_structural_changes(cx: &m
     let h = setup_with_document(cx, document, assets);
     invoke(&h, C::CreatePart, CommandSource::Direct, cx);
     let part = inspected(&h, cx);
-    assert!(!native_action(&h, C::CreateOffscreen, cx).2);
+    assert!(!native_action(&h, C::CreateMesh, cx).2);
     let builds = |cx: &TestAppContext| {
         h.view
             .read_with(cx, |view, _| view.scene_creation_menus.builds)
@@ -124,7 +124,7 @@ fn creation_menu_cache_reuses_pose_previews_and_tracks_structural_changes(cx: &m
                 })
                 .unwrap()
         });
-        assert!(!native_action(&h, C::CreateOffscreen, cx).2);
+        assert!(!native_action(&h, C::CreateMesh, cx).2);
         assert_eq!(
             builds(cx),
             initial,
@@ -169,11 +169,11 @@ fn creation_menu_cache_reuses_pose_previews_and_tracks_structural_changes(cx: &m
             .execute(EditorCommand::SelectObjects(vec![]))
             .unwrap()
     });
-    assert!(native_action(&h, C::CreateOffscreen, cx).2);
+    assert!(!native_action(&h, C::CreateMesh, cx).2);
     assert_eq!(builds(cx), initial + 6);
     h.view
         .update(cx, |view, _| view.editor.new_document().unwrap());
-    assert!(native_action(&h, C::CreateOffscreen, cx).2);
+    assert!(!native_action(&h, C::CreateMesh, cx).2);
     assert_eq!(
         builds(cx),
         initial + 7,
@@ -186,9 +186,7 @@ fn native_create_menu_exposes_scene_and_parameter_commands_and_dispatches_target
     cx: &mut TestAppContext,
 ) {
     let h = blank(cx);
-    let (_, reason, disabled) = native_action(&h, C::CreateOffscreen, cx);
-    assert!(disabled);
-    assert!(reason.contains("Select a Part"));
+    assert!(!crate::authoring::scene_creation::COMMANDS.contains(&C::CreateOffscreen));
     let (action, label, disabled) = native_action(&h, C::CreatePart, cx);
     assert_eq!(label, "New Part");
     assert!(!disabled);
@@ -202,7 +200,7 @@ fn native_create_menu_exposes_scene_and_parameter_commands_and_dispatches_target
     for id in [C::CreateParameter, C::CreateParameterGroup] {
         assert!(!native_action(&h, id, cx).2);
     }
-    assert!(!native_action(&h, C::CreateOffscreen, cx).2);
+    assert!(!native_action(&h, C::CreateMesh, cx).2);
     h.view.read_with(cx, |view, _| {
         assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0))
     });
@@ -246,32 +244,6 @@ fn every_scene_command_source_uses_the_same_owner_defaults_and_single_history(
             });
         }
     }
-    select(&h, part, cx);
-    invoke(&h, C::CreateOffscreen, CommandSource::NativeMenu, cx);
-    let offscreen = inspected(&h, cx);
-    assert_eq!(offscreen.kind, K::Offscreen);
-    invoke(&h, C::Undo, CommandSource::Direct, cx);
-    h.view.read_with(cx, |view, _| {
-        assert!(
-            view.editor
-                .document()
-                .unwrap()
-                .object_index()
-                .get(&offscreen)
-                .is_none()
-        )
-    });
-    invoke(&h, C::Redo, CommandSource::Direct, cx);
-    h.view.read_with(cx, |view, _| {
-        assert!(
-            view.editor
-                .document()
-                .unwrap()
-                .object_index()
-                .get(&offscreen)
-                .is_some()
-        )
-    });
 }
 
 #[gpui_kit::test]
@@ -369,68 +341,6 @@ fn creation_settles_text_and_filtered_command_result_is_revealed_and_name_focuse
         assert_eq!(doc.object_index().name(&warp), "Warp renamed");
         assert_eq!(doc.object_index().name(&mesh), "Mesh");
         assert_eq!(doc.history_lengths(), (5, 0));
-    });
-}
-
-#[gpui_kit::test]
-fn native_unavailable_reason_refreshes_when_availability_stays_disabled(cx: &mut TestAppContext) {
-    let h = blank(cx);
-    // A non-mesh selection keeps ManualMesh disabled on both sides, so this
-    // regression still changes only the creation reason rather than menu states.
-    invoke(&h, C::CreateWarp, CommandSource::Direct, cx);
-    let unowned = inspected(&h, cx);
-    invoke(&h, C::CreatePart, CommandSource::Direct, cx);
-    let part = inspected(&h, cx);
-    invoke(&h, C::CreateOffscreen, CommandSource::NativeMenu, cx);
-    let (_, duplicate, disabled) = native_action(&h, C::CreateOffscreen, cx);
-    assert!(disabled);
-    assert!(duplicate.contains("already has an Offscreen"));
-    let before = h.view.read_with(cx, |view, _| {
-        view.menu_state
-            .commands
-            .iter()
-            .zip(zipzi_editor_core::COMMANDS)
-            .filter(|(_, spec)| {
-                spec.id.scene_creation_projection()
-                    != Some(zipzi_editor_core::PaletteProjection::Deformation)
-            })
-            .map(|(state, _)| *state)
-            .collect::<Vec<_>>()
-    });
-    select(&h, unowned, cx);
-    let (_, missing, disabled) = native_action(&h, C::CreateOffscreen, cx);
-    assert!(disabled);
-    assert!(missing.contains("Select a Part"));
-    h.view.read_with(cx, |view, _| {
-        assert_eq!(
-            view.menu_state
-                .commands
-                .iter()
-                .zip(zipzi_editor_core::COMMANDS)
-                .filter(|(_, spec)| spec.id.scene_creation_projection()
-                    != Some(zipzi_editor_core::PaletteProjection::Deformation))
-                .map(|(state, _)| *state)
-                .collect::<Vec<_>>(),
-            before
-        )
-    });
-    select(&h, part.clone(), cx);
-    cx.update_window(h.window, |_, _, cx| {
-        h.view.update(cx, |view, cx| {
-            let result = view.editor.execute(EditorCommand::SetObjectsLocked {
-                objects: vec![part],
-                locked: true,
-            });
-            view.complete_edit(result, cx);
-        })
-    })
-    .unwrap();
-    let (_, locked, disabled) = native_action(&h, C::CreateMesh, cx);
-    assert!(disabled);
-    assert!(locked.contains("Unlock"));
-    invoke(&h, C::CreateMesh, CommandSource::NativeMenu, cx);
-    h.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.document().unwrap().history_lengths(), (4, 0))
     });
 }
 

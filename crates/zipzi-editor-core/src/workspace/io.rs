@@ -521,6 +521,9 @@ impl Editor {
                 if entry.saving().is_some() {
                     entry.mark_faulted();
                     fault = info.fault.clone();
+                    if self.active == Some(entry.id) {
+                        self.inspection_generation += 1;
+                    }
                     changed = true;
                 }
                 continue;
