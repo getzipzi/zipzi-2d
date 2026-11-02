@@ -373,8 +373,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservationTexturePolicyFitBudget.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.ObservationTexturePolicyOriginal': {'children': ('zipzi.modeling.observation.ObservationTexturePolicyOriginal.__repr__',
                                                                               'zipzi.modeling.observation.ObservationTexturePolicyOriginal.summary'),
-                                                                 'documentation': 'Preserve the source dimensions and '
-                                                                                  'every source byte.',
+                                                                 'documentation': 'Preserve source dimensions and '
+                                                                                  'decoded RGBA8 pixels without '
+                                                                                  'downsampling.',
                                                                  'fields': [],
                                                                  'kind': 'type',
                                                                  'signature': '()'},
@@ -617,8 +618,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                 'fields': [('targets',
                                                             'Diagnostic selection only; the textured context image is '
                                                             'unchanged. None selects all\n'
-                                                            'meshes, Some([]) selects none. Mesh/Part targets are '
-                                                            'unioned and deduplicated;\n'
+                                                            'meshes, an empty selection selects none. Mesh/Part '
+                                                            'targets are unioned and deduplicated;\n'
                                                             'Parts include nested Parts. Missing targets fail '
                                                             'explicitly. Maximum 256 selectors.'),
                                                            ('wireframe',

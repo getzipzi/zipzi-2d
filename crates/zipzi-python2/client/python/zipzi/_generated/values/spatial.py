@@ -122,7 +122,7 @@ GeometryHit.__module__ = "zipzi.modeling.spatial"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class TriangleHit(CompactValue):
-    "One evaluated triangle containing the query point.\n\nFields:\ntriangle_index: The triangle's zero-based position in the drawable's index buffer.\nvertex_indices: Offsets into the evaluated drawable's vertex arrays.\nvertex_ids: Stable authoring vertex IDs, when present.\nbarycentric: Interpolation weights corresponding to `vertex_indices`.\nuv: UV coordinate interpolated from the triangle's evaluated UVs."
+    "One evaluated triangle containing the query point.\n\nFields:\ntriangle_index: Zero-based triangle ordinal among consecutive index triples, not an index-buffer offset.\nvertex_indices: Offsets into the evaluated drawable's vertex arrays.\nvertex_ids: Stable authoring vertex IDs, when present.\nbarycentric: Interpolation weights corresponding to `vertex_indices`.\nuv: UV coordinate interpolated from the triangle's evaluated UVs."
     triangle_index: int
     vertex_indices: tuple[int, int, int]
     vertex_ids: (tuple[int, int, int] | None) = None

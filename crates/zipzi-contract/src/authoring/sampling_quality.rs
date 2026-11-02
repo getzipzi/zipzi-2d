@@ -118,7 +118,7 @@ pub struct ModelingSamples {
 #[serde(default, deny_unknown_fields)]
 pub struct TopologyOverlay {
     /// Diagnostic selection only; the textured context image is unchanged. None selects all
-    /// meshes, Some([]) selects none. Mesh/Part targets are unioned and deduplicated;
+    /// meshes, an empty selection selects none. Mesh/Part targets are unioned and deduplicated;
     /// Parts include nested Parts. Missing targets fail explicitly. Maximum 256 selectors.
     pub targets: Option<Vec<crate::spatial::ObjectTarget>>,
     /// Draw triangle edges in cyan, in final evaluated model coordinates.

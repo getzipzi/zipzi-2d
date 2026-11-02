@@ -898,7 +898,7 @@ class Python2Codegen(unittest.TestCase):
 class PythonReference(unittest.TestCase):
     # Pages only enter this set after full page acceptance. Cross-page pilots
     # are exact paths; accepting modeling does not accept modeling.* domains.
-    ACCEPTED_PAGES = frozenset({'meshes'})
+    ACCEPTED_PAGES = frozenset({'meshes', 'inspection', 'spatial', 'modeling_spatial', 'observation', 'modeling_observation'})
     # These pages have no structural gaps; cross-domain semantic acceptance remains open.
     STRUCTURAL_PAGES = frozenset(('runtime runtime_session runtime_edit modeling modeling_common modeling_runtime ops modeling_commands modeling_queries events '
                                   'parameters bindings modeling_parameters modeling_bindings modeling_bindings_edits '
@@ -1175,6 +1175,15 @@ class PythonReference(unittest.TestCase):
         row = catalog_from_output(changed)['zipzi.modeling.observation.ObservationTexturePlanningReady']
         self.assertIn(marker, row['documentation'])
         self.assertIn(marker, changed['client/python/zipzi/docs/reference/modeling_observation.md'])
+
+    def test_reference_spatial_and_observation_projection_details(self):
+        triangle = dict(self.catalog['zipzi.modeling.spatial.TriangleHit']['fields'])
+        self.assertIn('triangle ordinal', triangle['triangle_index'])
+        self.assertIn('not an index-buffer offset', triangle['triangle_index'])
+        original = self.catalog['zipzi.modeling.observation.ObservationTexturePolicyOriginal']
+        self.assertIn('decoded RGBA8 pixels', original['documentation'])
+        overlay = dict(self.catalog['zipzi.modeling.observation.TopologyOverlay']['fields'])
+        self.assertIn('empty selection selects none', overlay['targets'])
 
     def test_reference_motion_and_physics_field_context(self):
         cases = {

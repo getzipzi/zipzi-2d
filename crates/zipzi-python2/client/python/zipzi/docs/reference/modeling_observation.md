@@ -244,7 +244,7 @@ Deterministically downsample referenced base textures to fit a logical RGBA8 bud
 
 `()`
 
-Preserve the source dimensions and every source byte.
+Preserve source dimensions and decoded RGBA8 pixels without downsampling.
 
 
 ## zipzi.modeling.observation.ObservationTextureReport
@@ -405,7 +405,7 @@ Types: [TopologyThresholds](#zipzimodelingobservationtopologythresholds), [Objec
 **Fields**
 
 - `targets`: Diagnostic selection only; the textured context image is unchanged. None selects all
-meshes, Some([]) selects none. Mesh/Part targets are unioned and deduplicated;
+meshes, an empty selection selects none. Mesh/Part targets are unioned and deduplicated;
 Parts include nested Parts. Missing targets fail explicitly. Maximum 256 selectors.
 - `wireframe`: Draw triangle edges in cyan, in final evaluated model coordinates.
 - `vertices`: Draw vertex positions as yellow dots.

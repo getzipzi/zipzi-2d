@@ -777,3 +777,21 @@ Physics 复制操作的 `group_id` 现按实现区分：复制 rig 时必须为 
 必须指定目标 rig；复制节点需使用链操作。Pose Part 和 Motion PartOpacity 的目标说明也已区分，
 并增加离线 catalog 字段回归。修改前的 reference 测试 30 项与 contract 测试通过；本次新增
 字段断言通过，最终完整生成/SDK gate 仍须基于后续最终源码重跑。
+
+## 20. P7 空间、观测及 inspection 页面语义验收
+
+逐条复核 `inspection`、`spatial`、`modeling_spatial`、`observation`、
+`modeling_observation` 的公开模块、类型/字段、分支和别名，以及跨页
+`Session/Edit.modeling.{spatial,estimate_observation,observe}` 与 Preview 采样入口。
+阅读基线及当前页面和离线 `format()` 时，以相同问题检查：几何查询使用什么坐标、隐藏对象
+和遮挡如何处理；triangle 序号与顶点 ID 有什么区别；estimate 是否预留资源/验证设备；
+纹理预算和身份报告代表什么；ROI 与图像像素如何映射；结果在哪里落盘、失败如何恢复。
+当前页面能回答这些问题。三角形序号现明确是索引三元组序号而非 buffer 偏移；Original
+纹理策略明确保留解码像素，overlay 空选区改为跨语言表述。源码、catalog、reference 和离线
+帮助复用同一含义；别名只指向定义，已安装 wheel 的链接审计通过。
+
+这五个页面在 e4ad1c35 到当前同范围正文从 36,128 增至 40,989 字符，均为 81 个入口；
+增加的说明补齐类型/分支以及坐标和预算语义。规则正文没有在这些页面重复展开。CPU 空间
+冻结源/隐藏几何测试、两项 GPU observation/inspection 测试（含 Local/Connected）均通过；
+安装 wheel 离线审计通过。上述五页从结构通过提升为语义验收，范围不包含尚待逐项复核的
+mesh_generation 或其他批次；P8 仍未完成。

@@ -234,8 +234,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                      'zipzi.modeling.spatial.TriangleHit.summary'),
                                         'documentation': 'One evaluated triangle containing the query point.',
                                         'fields': [('triangle_index',
-                                                    "The triangle's zero-based position in the drawable's index "
-                                                    'buffer.'),
+                                                    'Zero-based triangle ordinal among consecutive index triples, not '
+                                                    'an index-buffer offset.'),
                                                    ('vertex_indices',
                                                     "Offsets into the evaluated drawable's vertex arrays."),
                                                    ('vertex_ids', 'Stable authoring vertex IDs, when present.'),

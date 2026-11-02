@@ -235,7 +235,7 @@ One evaluated triangle containing the query point.
 
 **Fields**
 
-- `triangle_index`: The triangle's zero-based position in the drawable's index buffer.
+- `triangle_index`: Zero-based triangle ordinal among consecutive index triples, not an index-buffer offset.
 - `vertex_indices`: Offsets into the evaluated drawable's vertex arrays.
 - `vertex_ids`: Stable authoring vertex IDs, when present.
 - `barycentric`: Interpolation weights corresponding to `vertex_indices`.

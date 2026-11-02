@@ -15,7 +15,7 @@ pub const DEFAULT_OBSERVATION_TEXTURE_RGBA_BYTES: u64 = 256 << 20;
 )]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum ObservationTexturePolicy {
-    /// Preserve the source dimensions and every source byte.
+    /// Preserve source dimensions and decoded RGBA8 pixels without downsampling.
     Original {},
     /// Deterministically downsample referenced base textures to fit a logical RGBA8 budget.
     FitBudget {

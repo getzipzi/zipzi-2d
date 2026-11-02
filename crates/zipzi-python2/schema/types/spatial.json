@@ -470,7 +470,7 @@
       "doc": "One evaluated triangle containing the query point.",
       "fields": [
         {
-          "doc": "The triangle's zero-based position in the drawable's index buffer.",
+          "doc": "Zero-based triangle ordinal among consecutive index triples, not an index-buffer offset.",
           "name": "triangle_index",
           "rust_name": "triangle_index",
           "shape": {

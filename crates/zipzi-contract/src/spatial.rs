@@ -50,7 +50,7 @@ pub struct ObjectBounds {
 /// One evaluated triangle containing the query point.
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct TriangleHit {
-    /// The triangle's zero-based position in the drawable's index buffer.
+    /// Zero-based triangle ordinal among consecutive index triples, not an index-buffer offset.
     pub triangle_index: usize,
     /// Offsets into the evaluated drawable's vertex arrays.
     pub vertex_indices: [u32; 3],
