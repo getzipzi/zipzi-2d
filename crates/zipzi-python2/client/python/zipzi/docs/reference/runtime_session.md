@@ -3,7 +3,7 @@
 
 ## Type references
 
-[Batch], [Edit], [Job], [ObjectSummary], [Page], [PageCursor], [Plan], [Receipt], [SaveReceipt], [SessionId], [SessionInfo], [Snapshot], [Source], [Preview], [MeshBinding], [SessionSubscription], [Mesh], [AddressSelector], [Capabilities], [ObservationBatch], [ObservationEstimate], [ObservationView], [ExportFormat], [ImportFormat], [ProjectReport], [ProjectRequest], [TextureSlot], [CollectionQuery], [ModelingQuery], [OwnedModelingRecords], [EditorContext], [SpatialQuery], [SpatialSamples], [PlannableOperation], [Parameter], [FieldAddress], [ObjectKind], [ObjectRef], [Image], [ImageLease], [Checks], [Result], [Summary]
+[Batch], [Edit], [Job], [ObjectSummary], [Page], [PageCursor], [Plan], [Receipt], [SaveReceipt], [SessionId], [SessionInfo], [Snapshot], [Source], [Preview], [MeshBinding], [SessionSubscription], [Mesh], [AddressSelector], [Capabilities], [ModelingCommandAttachment], [ModelingCommandBinding], [ModelingCommandContent], [ModelingCommandDeletion], [ModelingCommandDocument], [ModelingCommandExpression], [ModelingCommandMotion], [ModelingCommandOrganization], [ModelingCommandPhysics], [ModelingCommandPose], [ModelingCommandReferences], [ModelingCommandResource], [ModelingCommandScene], [ObservationBatch], [ObservationEstimate], [ObservationView], [ExportFormat], [ImportFormat], [ProjectReport], [ProjectRequest], [TextureSlot], [CollectionQuery], [ModelingQuery], [OwnedModelingRecords], [EditorContext], [SpatialQuery], [SpatialSamples], [PlannableOperation], [Parameter], [FieldAddress], [ObjectKind], [ObjectRef], [Image], [ImageLease], [Checks], [Result], [Summary]
 
 See [common behavior](common.md) for owned-value conventions and inherited methods.
 
@@ -38,8 +38,6 @@ Types: [AddressSelector], [FieldAddress].
 `session.bindings`
 
 Read bindings through a Session or Edit. Session reads committed document content; Edit reads include its pending writes.
-
-Types: [Edit], [Session](#zipzisession).
 
 
 ## zipzi.Session.bindings.get
@@ -179,8 +177,6 @@ Types: [SessionInfo].
 
 Read meshes through a Session or Edit. Session reads committed document content; Edit reads include its pending writes.
 
-Types: [Edit], [Session](#zipzisession).
-
 
 ## zipzi.Session.meshes.get
 
@@ -233,9 +229,7 @@ Types: [ObjectSummary], [Page], [PageCursor].
 
 `session.modeling`
 
-Typed modeling operations bound to this Session or Edit source.
-
-Types: [Edit], [Session](#zipzisession).
+Access as session.modeling or edit.modeling, not by constructing this facade. Reads use the bound Session formal source or Edit candidate source; records, CPU sampling and observation do not publish changes.
 
 
 ## zipzi.Session.modeling.estimate_observation
@@ -312,8 +306,6 @@ Types: [Job], [Snapshot], [Source], [SpatialQuery], [SpatialSamples].
 
 Read parameters through a Session or Edit. Session reads committed document content; Edit reads include its pending writes.
 
-Types: [Edit], [Session](#zipzisession).
-
 
 ## zipzi.Session.parameters.get
 
@@ -379,7 +371,7 @@ Types: [Plan], [PlannableOperation].
 
 Submit a registered expensive modeling plan at the captured Source. Returns Job[Plan]; wait before applying and close the resulting Plan. Input type determines this explicit Job API.
 
-Types: [Job], [Plan].
+Types: [Job], [Plan], [ModelingCommandAttachment], [ModelingCommandBinding], [ModelingCommandContent], [ModelingCommandDeletion], [ModelingCommandDocument], [ModelingCommandExpression], [ModelingCommandMotion], [ModelingCommandOrganization], [ModelingCommandPhysics], [ModelingCommandPose], [ModelingCommandReferences], [ModelingCommandResource], [ModelingCommandScene].
 
 
 ## zipzi.Session.preview
@@ -400,8 +392,6 @@ Types: [Source], [Preview].
 `session.project`
 
 Host-side format and persistence operations. Every path is absolute on the selected execution host; IO returns explicit Jobs.
-
-Types: [Session](#zipzisession).
 
 
 ## zipzi.Session.project.diagnose
@@ -500,8 +490,6 @@ Types: [ObjectKind], [ObjectRef].
 
 Read resources through a Session or Edit. Session reads committed document content; Edit reads include its pending writes.
 
-Types: [Edit], [Session](#zipzisession).
-
 
 ## zipzi.Session.resources.get
 
@@ -566,8 +554,6 @@ Types: [ImageLease].
 `session.scene`
 
 Read scene through a Session or Edit. Session reads committed document content; Edit reads include its pending writes.
-
-Types: [Edit], [Session](#zipzisession).
 
 
 ## zipzi.Session.scene.get
@@ -671,6 +657,19 @@ Types: [Job], [Receipt].
 [Mesh]: meshes.md#zipzimeshesmesh
 [AddressSelector]: modeling_addressing_selectors.md#zipzimodelingaddressingaddressselector
 [Capabilities]: modeling_addressing.md#zipzimodelingaddressingcapabilities
+[ModelingCommandAttachment]: modeling_commands.md#zipzimodelingcommandsmodelingcommandattachment
+[ModelingCommandBinding]: modeling_commands.md#zipzimodelingcommandsmodelingcommandbinding
+[ModelingCommandContent]: modeling_commands.md#zipzimodelingcommandsmodelingcommandcontent
+[ModelingCommandDeletion]: modeling_commands.md#zipzimodelingcommandsmodelingcommanddeletion
+[ModelingCommandDocument]: modeling_commands.md#zipzimodelingcommandsmodelingcommanddocument
+[ModelingCommandExpression]: modeling_commands.md#zipzimodelingcommandsmodelingcommandexpression
+[ModelingCommandMotion]: modeling_commands.md#zipzimodelingcommandsmodelingcommandmotion
+[ModelingCommandOrganization]: modeling_commands.md#zipzimodelingcommandsmodelingcommandorganization
+[ModelingCommandPhysics]: modeling_commands.md#zipzimodelingcommandsmodelingcommandphysics
+[ModelingCommandPose]: modeling_commands.md#zipzimodelingcommandsmodelingcommandpose
+[ModelingCommandReferences]: modeling_commands.md#zipzimodelingcommandsmodelingcommandreferences
+[ModelingCommandResource]: modeling_commands.md#zipzimodelingcommandsmodelingcommandresource
+[ModelingCommandScene]: modeling_commands.md#zipzimodelingcommandsmodelingcommandscene
 [ObservationBatch]: modeling_observation.md#zipzimodelingobservationobservationbatch
 [ObservationEstimate]: modeling_observation.md#zipzimodelingobservationobservationestimate
 [ObservationView]: modeling_observation.md#zipzimodelingobservationobservationview

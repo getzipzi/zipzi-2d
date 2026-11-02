@@ -3938,41 +3938,6 @@
     ],
     [
       "enum-member",
-      "python:zipzi._lifecycle.EditState",
-      "aborted"
-    ],
-    [
-      "enum-member",
-      "python:zipzi._lifecycle.EditState",
-      "cancelled"
-    ],
-    [
-      "enum-member",
-      "python:zipzi._lifecycle.EditState",
-      "committed"
-    ],
-    [
-      "enum-member",
-      "python:zipzi._lifecycle.EditState",
-      "committing"
-    ],
-    [
-      "enum-member",
-      "python:zipzi._lifecycle.EditState",
-      "editing"
-    ],
-    [
-      "enum-member",
-      "python:zipzi._lifecycle.EditState",
-      "failed"
-    ],
-    [
-      "enum-member",
-      "python:zipzi._lifecycle.EditState",
-      "unknown"
-    ],
-    [
-      "enum-member",
       "rust:zipzi_contract::authoring::DeletionReviewState|projection:canonical",
       "BLOCKED"
     ],
@@ -5008,46 +4973,6 @@
     ],
     [
       "type-reference",
-      "python:zipzi._lifecycle.Edit.plan_async",
-      "ModelingPlanOperation"
-    ],
-    [
-      "type-reference",
-      "python:zipzi._lifecycle.Session.plan_async",
-      "ModelingPlanOperation"
-    ],
-    [
-      "type-reference",
-      "python:zipzi.events.RegistrySubscription",
-      "Backend"
-    ],
-    [
-      "type-reference",
-      "python:zipzi.events.SessionSubscription",
-      "Backend"
-    ],
-    [
-      "type-reference",
-      "python:zipzi.ops.PlannableOperation",
-      "_ModelingPlanOperation"
-    ],
-    [
-      "type-reference",
-      "python:zipzi.resources.Resources",
-      "Backend"
-    ],
-    [
-      "type-reference",
-      "rust:zipzi_contract::authoring::GeometryChecks|projection:sampling_values.Checks",
-      "Point"
-    ],
-    [
-      "type-reference",
-      "rust:zipzi_contract::authoring::MeshKeyformSpec|projection:binding_values.Keyform",
-      "Point"
-    ],
-    [
-      "type-reference",
       "rust:zipzi_contract::document::CdiParameterEntry|projection:variant:Resolved",
       "ExtensionValue"
     ],
@@ -5130,21 +5055,6 @@
       "type-reference",
       "rust:zipzi_contract::document::PoseEntry|projection:canonical",
       "ExtensionValue"
-    ],
-    [
-      "type-reference",
-      "rust:zipzi_contract::evaluation::Drawable|projection:sampling_values.Drawable",
-      "Point"
-    ],
-    [
-      "type-reference",
-      "rust:zipzi_contract::evaluation::EvaluatedDeformer|projection:sampling_values.Deformer",
-      "Point"
-    ],
-    [
-      "type-reference",
-      "rust:zipzi_contract::model::MeshKeyform|projection:binding_values.KeyformSnapshot",
-      "Point"
     ],
     [
       "type-reference",

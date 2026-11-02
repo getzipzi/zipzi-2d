@@ -48,11 +48,11 @@
     "spatial"
   ],
   "reference_classifications": {
-    "builtin": 1402,
+    "builtin": 1482,
     "external": 616,
-    "public-sdk": 1472,
+    "public-sdk": 1496,
     "type-variable": 11,
-    "typing": 38
+    "typing": 64
   },
   "diagnostics": [
     {
@@ -134,162 +134,6 @@
       "status": "missing"
     },
     {
-      "identity": "python:zipzi._lifecycle.Edit.plan_async",
-      "paths": [
-        "zipzi.Edit.plan_async"
-      ],
-      "pages": [
-        "runtime_edit"
-      ],
-      "source": "python:zipzi._lifecycle.Edit.plan_async",
-      "category": "type-reference",
-      "subject": "ModelingPlanOperation",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "python:zipzi._lifecycle.EditState",
-      "paths": [
-        "zipzi.EditState"
-      ],
-      "pages": [
-        "runtime"
-      ],
-      "source": "python:zipzi._lifecycle.EditState",
-      "category": "enum-member",
-      "subject": "aborted",
-      "status": "missing"
-    },
-    {
-      "identity": "python:zipzi._lifecycle.EditState",
-      "paths": [
-        "zipzi.EditState"
-      ],
-      "pages": [
-        "runtime"
-      ],
-      "source": "python:zipzi._lifecycle.EditState",
-      "category": "enum-member",
-      "subject": "cancelled",
-      "status": "missing"
-    },
-    {
-      "identity": "python:zipzi._lifecycle.EditState",
-      "paths": [
-        "zipzi.EditState"
-      ],
-      "pages": [
-        "runtime"
-      ],
-      "source": "python:zipzi._lifecycle.EditState",
-      "category": "enum-member",
-      "subject": "committed",
-      "status": "missing"
-    },
-    {
-      "identity": "python:zipzi._lifecycle.EditState",
-      "paths": [
-        "zipzi.EditState"
-      ],
-      "pages": [
-        "runtime"
-      ],
-      "source": "python:zipzi._lifecycle.EditState",
-      "category": "enum-member",
-      "subject": "committing",
-      "status": "missing"
-    },
-    {
-      "identity": "python:zipzi._lifecycle.EditState",
-      "paths": [
-        "zipzi.EditState"
-      ],
-      "pages": [
-        "runtime"
-      ],
-      "source": "python:zipzi._lifecycle.EditState",
-      "category": "enum-member",
-      "subject": "editing",
-      "status": "missing"
-    },
-    {
-      "identity": "python:zipzi._lifecycle.EditState",
-      "paths": [
-        "zipzi.EditState"
-      ],
-      "pages": [
-        "runtime"
-      ],
-      "source": "python:zipzi._lifecycle.EditState",
-      "category": "enum-member",
-      "subject": "failed",
-      "status": "missing"
-    },
-    {
-      "identity": "python:zipzi._lifecycle.EditState",
-      "paths": [
-        "zipzi.EditState"
-      ],
-      "pages": [
-        "runtime"
-      ],
-      "source": "python:zipzi._lifecycle.EditState",
-      "category": "enum-member",
-      "subject": "unknown",
-      "status": "missing"
-    },
-    {
-      "identity": "python:zipzi._lifecycle.Session.plan_async",
-      "paths": [
-        "zipzi.Session.plan_async"
-      ],
-      "pages": [
-        "runtime_session"
-      ],
-      "source": "python:zipzi._lifecycle.Session.plan_async",
-      "category": "type-reference",
-      "subject": "ModelingPlanOperation",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "python:zipzi.events.RegistrySubscription",
-      "paths": [
-        "zipzi.events.RegistrySubscription"
-      ],
-      "pages": [
-        "events"
-      ],
-      "source": "python:zipzi.events.RegistrySubscription",
-      "category": "type-reference",
-      "subject": "Backend",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "python:zipzi.events.SessionSubscription",
-      "paths": [
-        "zipzi.events.SessionSubscription"
-      ],
-      "pages": [
-        "events"
-      ],
-      "source": "python:zipzi.events.SessionSubscription",
-      "category": "type-reference",
-      "subject": "Backend",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "python:zipzi.ops.PlannableOperation",
-      "paths": [
-        "zipzi.ops.PlannableOperation"
-      ],
-      "pages": [
-        "ops"
-      ],
-      "source": "python:zipzi.ops.PlannableOperation",
-      "category": "type-reference",
-      "subject": "_ModelingPlanOperation",
-      "status": "unresolved-sdk"
-    },
-    {
       "identity": "python:zipzi.references.LabelAddress",
       "paths": [
         "zipzi.references.LabelAddress"
@@ -314,19 +158,6 @@
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
-    },
-    {
-      "identity": "python:zipzi.resources.Resources",
-      "paths": [
-        "zipzi.Runtime.resources"
-      ],
-      "pages": [
-        "runtime"
-      ],
-      "source": "python:zipzi.resources.Resources",
-      "category": "type-reference",
-      "subject": "Backend",
-      "status": "unresolved-sdk"
     },
     {
       "identity": "rust:zipzi_contract::animation::MotionPlaybackPosition|projection:canonical",
@@ -1637,19 +1468,6 @@
         "sampling"
       ],
       "source": "rust:zipzi_contract::authoring::GeometryChecks",
-      "category": "type-reference",
-      "subject": "Point",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::GeometryChecks|projection:sampling_values.Checks",
-      "paths": [
-        "zipzi.sampling.Checks"
-      ],
-      "pages": [
-        "sampling"
-      ],
-      "source": "rust:zipzi_contract::authoring::GeometryChecks",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -2168,19 +1986,6 @@
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::MeshKeyformSpec|projection:binding_values.Keyform",
-      "paths": [
-        "zipzi.bindings.Keyform"
-      ],
-      "pages": [
-        "bindings"
-      ],
-      "source": "rust:zipzi_contract::authoring::MeshKeyformSpec",
-      "category": "type-reference",
-      "subject": "Point",
-      "status": "unresolved-sdk"
     },
     {
       "identity": "rust:zipzi_contract::authoring::MeshKeyformSpec|projection:binding_values.Keyform",
@@ -19181,19 +18986,6 @@
         "sampling"
       ],
       "source": "rust:zipzi_contract::evaluation::Drawable",
-      "category": "type-reference",
-      "subject": "Point",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "rust:zipzi_contract::evaluation::Drawable|projection:sampling_values.Drawable",
-      "paths": [
-        "zipzi.sampling.Drawable"
-      ],
-      "pages": [
-        "sampling"
-      ],
-      "source": "rust:zipzi_contract::evaluation::Drawable",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -19210,19 +19002,6 @@
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::evaluation::EvaluatedDeformer|projection:sampling_values.Deformer",
-      "paths": [
-        "zipzi.sampling.Deformer"
-      ],
-      "pages": [
-        "sampling"
-      ],
-      "source": "rust:zipzi_contract::evaluation::EvaluatedDeformer",
-      "category": "type-reference",
-      "subject": "Point",
-      "status": "unresolved-sdk"
     },
     {
       "identity": "rust:zipzi_contract::evaluation::EvaluatedDeformer|projection:sampling_values.Deformer",
@@ -20414,19 +20193,6 @@
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::MeshKeyform|projection:binding_values.KeyformSnapshot",
-      "paths": [
-        "zipzi.bindings.KeyformSnapshot"
-      ],
-      "pages": [
-        "bindings"
-      ],
-      "source": "rust:zipzi_contract::model::MeshKeyform",
-      "category": "type-reference",
-      "subject": "Point",
-      "status": "unresolved-sdk"
     },
     {
       "identity": "rust:zipzi_contract::model::MeshKeyform|projection:binding_values.KeyformSnapshot",
@@ -27960,6 +27726,97 @@
       "source": "python:zipzi._lifecycle.Edit.state",
       "category": "callable-return",
       "subject": "EditState",
+      "status": "review_required"
+    },
+    {
+      "identity": "python:zipzi._lifecycle.EditState",
+      "paths": [
+        "zipzi.EditState"
+      ],
+      "pages": [
+        "runtime"
+      ],
+      "source": "python:zipzi._lifecycle.EditState",
+      "category": "enum-member",
+      "subject": "aborted",
+      "status": "review_required"
+    },
+    {
+      "identity": "python:zipzi._lifecycle.EditState",
+      "paths": [
+        "zipzi.EditState"
+      ],
+      "pages": [
+        "runtime"
+      ],
+      "source": "python:zipzi._lifecycle.EditState",
+      "category": "enum-member",
+      "subject": "cancelled",
+      "status": "review_required"
+    },
+    {
+      "identity": "python:zipzi._lifecycle.EditState",
+      "paths": [
+        "zipzi.EditState"
+      ],
+      "pages": [
+        "runtime"
+      ],
+      "source": "python:zipzi._lifecycle.EditState",
+      "category": "enum-member",
+      "subject": "committed",
+      "status": "review_required"
+    },
+    {
+      "identity": "python:zipzi._lifecycle.EditState",
+      "paths": [
+        "zipzi.EditState"
+      ],
+      "pages": [
+        "runtime"
+      ],
+      "source": "python:zipzi._lifecycle.EditState",
+      "category": "enum-member",
+      "subject": "committing",
+      "status": "review_required"
+    },
+    {
+      "identity": "python:zipzi._lifecycle.EditState",
+      "paths": [
+        "zipzi.EditState"
+      ],
+      "pages": [
+        "runtime"
+      ],
+      "source": "python:zipzi._lifecycle.EditState",
+      "category": "enum-member",
+      "subject": "editing",
+      "status": "review_required"
+    },
+    {
+      "identity": "python:zipzi._lifecycle.EditState",
+      "paths": [
+        "zipzi.EditState"
+      ],
+      "pages": [
+        "runtime"
+      ],
+      "source": "python:zipzi._lifecycle.EditState",
+      "category": "enum-member",
+      "subject": "failed",
+      "status": "review_required"
+    },
+    {
+      "identity": "python:zipzi._lifecycle.EditState",
+      "paths": [
+        "zipzi.EditState"
+      ],
+      "pages": [
+        "runtime"
+      ],
+      "source": "python:zipzi._lifecycle.EditState",
+      "category": "enum-member",
+      "subject": "unknown",
       "status": "review_required"
     },
     {

@@ -269,12 +269,19 @@ class Project:
 class EditState(str, Enum):
     """Lifecycle of an Edit candidate and its separate commit outcome."""
     editing = "editing"
+    """Candidate is open for reads and writes; confirmed admission refusals can leave it editable."""
     committing = "committing"
+    """Commit was accepted and its Job has not yet confirmed the outcome."""
     committed = "committed"
+    """The commit Job confirmed publication; receipt holds its result."""
     cancelled = "cancelled"
+    """Candidate release was confirmed without publication."""
     aborted = "aborted"
+    """An ordinary write failure poisoned the candidate; start a new Edit."""
     failed = "failed"
+    """The Edit or accepted commit reached a failure that cannot be used as an editable candidate."""
     unknown = "unknown"
+    """The outcome of a request or commit is not confirmed; recover its original owner before cleanup."""
 
 
 _EDIT_WRITE_DOCUMENTATION = {

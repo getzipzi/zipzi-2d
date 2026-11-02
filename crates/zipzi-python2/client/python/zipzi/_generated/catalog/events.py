@@ -115,10 +115,18 @@ DATA: dict[str, Entry] = {'zipzi.events': {'children': ('zipzi.events.Closed',
                                                     'zipzi.events.RegistrySubscription.poll',
                                                     'zipzi.events.RegistrySubscription.resync'),
                                        'documentation': 'Independent cursor and initial Session list for the Runtime '
-                                                        'registry stream.',
+                                                        'registry stream.\n'
+                                                        '\n'
+                                                        'Registry event retention has separate Runtime count and byte '
+                                                        'limits. If the\n'
+                                                        'cursor falls outside that window, resync captures a new list '
+                                                        'and cursor; it\n'
+                                                        'does not replay missed events. Registry and Session sequences '
+                                                        'are independent.\n'
+                                                        'Obtain this subscription from Runtime.sessions.subscribe().',
                                        'fields': [],
                                        'kind': 'type',
-                                       'signature': "(backend: 'Backend')"},
+                                       'signature': '(factory-owned; use the documented public entry)'},
  'zipzi.events.RegistrySubscription.cursor': {'children': (),
                                               'documentation': "Return this subscription's cached exact cursor without "
                                                                'IO. Recover initial subscription before using it; '
@@ -186,11 +194,20 @@ DATA: dict[str, Entry] = {'zipzi.events': {'children': ('zipzi.events.Closed',
                                                    'zipzi.events.SessionSubscription.poll',
                                                    'zipzi.events.SessionSubscription.resync'),
                                       'documentation': 'Independent cursor and initial metadata for one Session event '
-                                                       'stream.',
+                                                       'stream.\n'
+                                                       '\n'
+                                                       "Events are retained within the Runtime's count and byte "
+                                                       'limits, not forever.\n'
+                                                       'If the cursor falls outside the retained window, poll raises '
+                                                       'RESYNC_REQUIRED;\n'
+                                                       'resync captures fresh metadata and a new cursor without '
+                                                       'replaying missed events.\n'
+                                                       'Sequence numbers order this stream only; different Sessions '
+                                                       'have no total order.\n'
+                                                       'Obtain this subscription from Session.subscribe().',
                                       'fields': [],
                                       'kind': 'type',
-                                      'signature': "(backend: 'Backend', token: object, id: SessionId)",
-                                      'type_refs': ('zipzi.SessionId',)},
+                                      'signature': '(factory-owned; use the documented public entry)'},
  'zipzi.events.SessionSubscription.cursor': {'alias': 'zipzi.events.RegistrySubscription.cursor'},
  'zipzi.events.SessionSubscription.initial': {'alias': 'zipzi.events.RegistrySubscription.initial'},
  'zipzi.events.SessionSubscription.pending_request': {'alias': 'zipzi.Buffer.pending_request'},

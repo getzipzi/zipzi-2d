@@ -46,8 +46,7 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                              'document content; Edit reads include its pending writes.',
                             'fields': [],
                             'kind': 'property',
-                            'signature': 'session.bindings',
-                            'type_refs': ('zipzi.Edit', 'zipzi.Session')},
+                            'signature': 'session.bindings'},
  'zipzi.Session.bindings.get': {'children': (),
                                 'documentation': 'Reads committed Session content.\n'
                                                  '\n'
@@ -159,8 +158,7 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                            'content; Edit reads include its pending writes.',
                           'fields': [],
                           'kind': 'property',
-                          'signature': 'session.meshes',
-                          'type_refs': ('zipzi.Edit', 'zipzi.Session')},
+                          'signature': 'session.meshes'},
  'zipzi.Session.meshes.get': {'children': (),
                               'documentation': 'Reads committed Session content.\n'
                                                '\n'
@@ -206,11 +204,12 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                          'zipzi.Session.modeling.sample',
                                          'zipzi.Session.modeling.sample_async',
                                          'zipzi.Session.modeling.spatial'),
-                            'documentation': 'Typed modeling operations bound to this Session or Edit source.',
+                            'documentation': 'Access as session.modeling or edit.modeling, not by constructing this '
+                                             'facade. Reads use the bound Session formal source or Edit candidate '
+                                             'source; records, CPU sampling and observation do not publish changes.',
                             'fields': [],
                             'kind': 'property',
-                            'signature': 'session.modeling',
-                            'type_refs': ('zipzi.Edit', 'zipzi.Session')},
+                            'signature': 'session.modeling'},
  'zipzi.Session.modeling.estimate_observation': {'alias': 'zipzi.Edit.modeling.estimate_observation'},
  'zipzi.Session.modeling.observe': {'alias': 'zipzi.Edit.modeling.observe'},
  'zipzi.Session.modeling.records': {'alias': 'zipzi.Edit.modeling.records'},
@@ -224,8 +223,7 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                                'document content; Edit reads include its pending writes.',
                               'fields': [],
                               'kind': 'property',
-                              'signature': 'session.parameters',
-                              'type_refs': ('zipzi.Edit', 'zipzi.Session')},
+                              'signature': 'session.parameters'},
  'zipzi.Session.parameters.get': {'children': (),
                                   'documentation': 'Reads committed Session content.\n'
                                                    '\n'
@@ -281,7 +279,21 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                               'fields': [],
                               'kind': 'callable',
                               'signature': '(operation: ModelingPlanOperation) -> Job[plans.Plan]',
-                              'type_refs': ('zipzi.Job', 'zipzi.Plan')},
+                              'type_refs': ('zipzi.Job',
+                                            'zipzi.Plan',
+                                            'zipzi.modeling.commands.ModelingCommandAttachment',
+                                            'zipzi.modeling.commands.ModelingCommandBinding',
+                                            'zipzi.modeling.commands.ModelingCommandContent',
+                                            'zipzi.modeling.commands.ModelingCommandDeletion',
+                                            'zipzi.modeling.commands.ModelingCommandDocument',
+                                            'zipzi.modeling.commands.ModelingCommandExpression',
+                                            'zipzi.modeling.commands.ModelingCommandMotion',
+                                            'zipzi.modeling.commands.ModelingCommandOrganization',
+                                            'zipzi.modeling.commands.ModelingCommandPhysics',
+                                            'zipzi.modeling.commands.ModelingCommandPose',
+                                            'zipzi.modeling.commands.ModelingCommandReferences',
+                                            'zipzi.modeling.commands.ModelingCommandResource',
+                                            'zipzi.modeling.commands.ModelingCommandScene')},
  'zipzi.Session.preview': {'children': (),
                            'documentation': 'Capture an independent frozen formal animation Preview. Close it '
                                             'explicitly; later edits never refresh it, and playback never changes '
@@ -300,8 +312,7 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                             'the selected execution host; IO returns explicit Jobs.',
                            'fields': [],
                            'kind': 'property',
-                           'signature': 'session.project',
-                           'type_refs': ('zipzi.Session',)},
+                           'signature': 'session.project'},
  'zipzi.Session.project.diagnose': {'children': (),
                                     'documentation': 'Submit SDK project diagnostics without publishing edited model '
                                                      'content. Returns Job[ProjectReport] with owned diagnostics; wait '
@@ -392,8 +403,7 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                               'document content; Edit reads include its pending writes.',
                              'fields': [],
                              'kind': 'property',
-                             'signature': 'session.resources',
-                             'type_refs': ('zipzi.Edit', 'zipzi.Session')},
+                             'signature': 'session.resources'},
  'zipzi.Session.resources.get': {'children': (),
                                  'documentation': 'Reads committed Session content.\n'
                                                   '\n'
@@ -441,8 +451,7 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                           'content; Edit reads include its pending writes.',
                          'fields': [],
                          'kind': 'property',
-                         'signature': 'session.scene',
-                         'type_refs': ('zipzi.Edit', 'zipzi.Session')},
+                         'signature': 'session.scene'},
  'zipzi.Session.scene.get': {'children': (),
                              'documentation': 'Reads committed Session content.\n'
                                               '\n'

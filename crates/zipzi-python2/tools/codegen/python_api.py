@@ -270,7 +270,7 @@ def document_model(contract,prepared,package,bindings=None):
             return '('+ast.unparse(arguments)+')'+(' -> '+ast.unparse(node.returns) if node.returns else '')
         init=next((n for n in node.body if isinstance(n,ast.FunctionDef) and n.name=='__init__'),None)
         if init:
-            if any(a.arg in {'backend','token','session','edit'} for a in init.args.args[1:]) and node.name in {'Runtime','Session','Edit','Job','Plan','PreparedImage','ImageLease','Buffer','Preview','ObjectRef','LabelAddress','FieldAddress'}:return '(factory-owned; use the documented public entry)'
+            if any(a.arg in {'backend','token','session','edit'} for a in init.args.args[1:]) and node.name in {'Runtime','Session','Edit','Job','Plan','PreparedImage','ImageLease','Buffer','Preview','ObjectRef','LabelAddress','FieldAddress','Resources','SessionSubscription','RegistrySubscription'}:return '(factory-owned; use the documented public entry)'
             return signature(init)
         fields=[n for n in node.body if isinstance(n,ast.AnnAssign) and isinstance(n.target,ast.Name) and not n.target.id.startswith('_') and not (isinstance(n.annotation,ast.Subscript) and ast.unparse(n.annotation.value) in {'ClassVar','_ClassVar'})]
         fields=[n for n in fields if not (isinstance(n.value,ast.Call) and isinstance(n.value.func,ast.Name) and n.value.func.id=='field' and any(a.arg=='init' and isinstance(a.value,ast.Constant) and a.value.value is False for a in n.value.keywords))]
@@ -387,13 +387,16 @@ def document_model(contract,prepared,package,bindings=None):
             kind='enum'
             shape=class_shapes.get((node_modules.get(id(node),'').rsplit('.',1)[-1],node.name),{})
             variant_docs={variant.get('wire_name',variant.get('name')):variant.get('doc','').strip() for variant in shape.get('variants',())}
+            member_docs={id(left):right.value.value.strip() for left,right in zip(node.body,node.body[1:])
+                         if isinstance(left,ast.Assign) and isinstance(right,ast.Expr)
+                         and isinstance(right.value,ast.Constant) and isinstance(right.value.value,str)}
             members=[]
             for member in node.body:
                 if not isinstance(member,ast.Assign) or not isinstance(member.targets[0],ast.Name) or member.targets[0].id.startswith('_'):continue
-                meaning=variant_docs.get(ast.literal_eval(member.value),'')
+                meaning=variant_docs.get(ast.literal_eval(member.value),'') or member_docs.get(id(member),'')
                 members.append((member.targets[0].id,ast.unparse(member.value)+(' — '+meaning if meaning else '')))
             catalog[path].update(kind='enum',signature='',fields=members,documentation=text or '')
-            catalog[path]['_diagnostics']=[('enum-member',name,'review_required' if variant_docs.get(ast.literal_eval(member.value),'') else 'missing')
+            catalog[path]['_diagnostics']=[('enum-member',name,'review_required' if variant_docs.get(ast.literal_eval(member.value),'') or member_docs.get(id(member),'') else 'missing')
                 for member in node.body if isinstance(member,ast.Assign) and isinstance(member.targets[0],ast.Name)
                 and not (name:=member.targets[0].id).startswith('_')]
         if isinstance(node,(ast.ClassDef,ast.Assign,ast.AnnAssign)):
@@ -523,10 +526,10 @@ def document_model(contract,prepared,package,bindings=None):
         imported_modules[module]=aliases
         external_names[module]=external
     reference_diagnostics=set()
-    def annotation_refs(module,annotation):
+    def annotation_refs(module,annotation,aliases=frozenset()):
         if annotation is None:return set()
         if isinstance(annotation,ast.Constant) and isinstance(annotation.value,str):
-            try:return annotation_refs(module,ast.parse(annotation.value,mode='eval').body)
+            try:return annotation_refs(module,ast.parse(annotation.value,mode='eval').body,aliases)
             except SyntaxError:
                 reference_diagnostics.add(('type-reference',annotation.value,'unresolved-sdk'))
                 return set()
@@ -544,6 +547,10 @@ def document_model(contract,prepared,package,bindings=None):
             if path:
                 reference_diagnostics.add(('type-reference',name,'public-sdk'))
                 return {path}
+            # A private alias can describe a public union without being itself an
+            # exported API. Follow its definition, retaining cycle protection.
+            if isinstance(node,(ast.Assign,ast.AnnAssign)) and isinstance(node.value,(ast.BinOp,ast.Subscript)) and id(node) not in aliases:
+                return annotation_refs(node_modules[id(node)],node.value,aliases | {id(node)})
             if parts[0] in {'str','int','float','bool','bytes','bytearray','memoryview','object','tuple','list','dict','set','frozenset','type','range','Exception','BaseException'}:
                 classification='builtin'
             elif parts[0] in {'typing','Any','Self','Generic','Sequence','Mapping','Callable','Iterator','Iterable','Literal','ClassVar','TypeAlias','Protocol','Never','Optional','Union','TypeVar'}:
@@ -555,7 +562,7 @@ def document_model(contract,prepared,package,bindings=None):
             reference_diagnostics.add(('type-reference',name,classification))
             return set()
         if isinstance(annotation,ast.Subscript) and ast.unparse(annotation.value).split('.')[-1]=='Literal':return set()
-        return set().union(*(annotation_refs(module,child) for child in ast.iter_child_nodes(annotation)))
+        return set().union(*(annotation_refs(module,child,aliases) for child in ast.iter_child_nodes(annotation)))
     for path,row in catalog.items():
         reference_diagnostics.clear()
         definition=definitions.get(row.get('_node'))
@@ -564,7 +571,7 @@ def document_model(contract,prepared,package,bindings=None):
         annotations=[]
         if isinstance(node,ast.ClassDef):
             init=next((child for child in node.body if isinstance(child,ast.FunctionDef) and child.name=='__init__'),None)
-            if init and not row['signature'].startswith('(factory-owned'):node=init
+            if init and row['kind'] != 'property' and not row['signature'].startswith('(factory-owned'):node=init
             else:annotations=[child.annotation for child in node.body if isinstance(child,ast.AnnAssign)]
         if isinstance(node,ast.FunctionDef):
             annotations=[arg.annotation for arg in [*node.args.posonlyargs,*node.args.args,*node.args.kwonlyargs]]+[node.returns]

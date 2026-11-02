@@ -3,7 +3,7 @@
 
 ## Type references
 
-[Batch], [EditState], [Job], [ObjectSummary], [Page], [PageCursor], [PendingRequest], [Plan], [PreparedImage], [Receipt], [Session], [Snapshot], [Source], [WriteResult], [Preview], [Keyform], [MeshBinding], [MeshBindingSpec], [Mesh], [MeshSpec], [Point], [ObservationBatch], [ObservationEstimate], [ObservationView], [ModelingQuery], [OwnedModelingRecords], [SpatialQuery], [SpatialSamples], [Operation], [PlannableOperation], [Parameter], [ParameterPatch], [ParameterSpec], [Image], [ImageLease], [Checks], [Result], [Summary]
+[Batch], [EditState], [Job], [ObjectSummary], [Page], [PageCursor], [PendingRequest], [Plan], [PreparedImage], [Receipt], [Snapshot], [Source], [WriteResult], [Preview], [Keyform], [MeshBinding], [MeshBindingSpec], [Mesh], [MeshSpec], [Point], [ModelingCommandAttachment], [ModelingCommandBinding], [ModelingCommandContent], [ModelingCommandDeletion], [ModelingCommandDocument], [ModelingCommandExpression], [ModelingCommandMotion], [ModelingCommandOrganization], [ModelingCommandPhysics], [ModelingCommandPose], [ModelingCommandReferences], [ModelingCommandResource], [ModelingCommandScene], [ObservationBatch], [ObservationEstimate], [ObservationView], [ModelingQuery], [OwnedModelingRecords], [SpatialQuery], [SpatialSamples], [Operation], [PlannableOperation], [Parameter], [ParameterPatch], [ParameterSpec], [Image], [ImageLease], [Checks], [Result], [Summary]
 
 See [common behavior](common.md) for owned-value conventions and inherited methods.
 
@@ -80,8 +80,6 @@ Types: [Plan], [WriteResult], [Operation].
 `edit.bindings`
 
 Read and author bindings in this Edit candidate. Reads include pending writes; commit publishes changes separately.
-
-Types: [Edit](#zipziedit), [Session].
 
 
 ## zipzi.Edit.bindings.create
@@ -191,8 +189,6 @@ Types: [Job], [Receipt].
 
 Read and author meshes in this Edit candidate. Reads include pending writes; commit publishes changes separately.
 
-Types: [Edit](#zipziedit), [Session].
-
 
 ## zipzi.Edit.meshes.create
 
@@ -299,9 +295,7 @@ Types: [WriteResult], [Point].
 
 `edit.modeling`
 
-Typed modeling operations bound to this Session or Edit source.
-
-Types: [Edit](#zipziedit), [Session].
+Access as session.modeling or edit.modeling, not by constructing this facade. Reads use the bound Session formal source or Edit candidate source; records, CPU sampling and observation do not publish changes.
 
 
 ## zipzi.Edit.modeling.estimate_observation
@@ -377,8 +371,6 @@ Types: [Job], [Snapshot], [Source], [SpatialQuery], [SpatialSamples].
 `edit.parameters`
 
 Read and author parameters in this Edit candidate. Reads include pending writes; commit publishes changes separately.
-
-Types: [Edit](#zipziedit), [Session].
 
 
 ## zipzi.Edit.parameters.create
@@ -485,7 +477,7 @@ Types: [Plan], [PlannableOperation].
 
 Submit registered modeling planning against this candidate Source. Wait for Plan before applying; a changed candidate makes it stale. Job timeout does not cancel or replay work.
 
-Types: [Job], [Plan].
+Types: [Job], [Plan], [ModelingCommandAttachment], [ModelingCommandBinding], [ModelingCommandContent], [ModelingCommandDeletion], [ModelingCommandDocument], [ModelingCommandExpression], [ModelingCommandMotion], [ModelingCommandOrganization], [ModelingCommandPhysics], [ModelingCommandPose], [ModelingCommandReferences], [ModelingCommandResource], [ModelingCommandScene].
 
 
 ## zipzi.Edit.preview
@@ -517,8 +509,6 @@ Types: [Receipt].
 `edit.resources`
 
 Read and author resources in this Edit candidate. Reads include pending writes; commit publishes changes separately.
-
-Types: [Edit](#zipziedit), [Session].
 
 
 ## zipzi.Edit.resources.create_image
@@ -636,8 +626,6 @@ Types: [ImageLease].
 
 Read scene through a Session or Edit. Session reads committed document content; Edit reads include its pending writes.
 
-Types: [Edit](#zipziedit), [Session].
-
 
 ## zipzi.Edit.scene.get
 
@@ -705,7 +693,6 @@ Types: [EditState].
 [Plan]: runtime.md#zipziplan
 [PreparedImage]: runtime.md#zipzipreparedimage
 [Receipt]: runtime.md#zipzireceipt
-[Session]: runtime_session.md#zipzisession
 [Snapshot]: runtime.md#zipzisnapshot
 [Source]: runtime.md#zipzisource
 [WriteResult]: runtime.md#zipziwriteresult
@@ -716,6 +703,19 @@ Types: [EditState].
 [Mesh]: meshes.md#zipzimeshesmesh
 [MeshSpec]: meshes.md#zipzimeshesmeshspec
 [Point]: meshes.md#zipzimeshespoint
+[ModelingCommandAttachment]: modeling_commands.md#zipzimodelingcommandsmodelingcommandattachment
+[ModelingCommandBinding]: modeling_commands.md#zipzimodelingcommandsmodelingcommandbinding
+[ModelingCommandContent]: modeling_commands.md#zipzimodelingcommandsmodelingcommandcontent
+[ModelingCommandDeletion]: modeling_commands.md#zipzimodelingcommandsmodelingcommanddeletion
+[ModelingCommandDocument]: modeling_commands.md#zipzimodelingcommandsmodelingcommanddocument
+[ModelingCommandExpression]: modeling_commands.md#zipzimodelingcommandsmodelingcommandexpression
+[ModelingCommandMotion]: modeling_commands.md#zipzimodelingcommandsmodelingcommandmotion
+[ModelingCommandOrganization]: modeling_commands.md#zipzimodelingcommandsmodelingcommandorganization
+[ModelingCommandPhysics]: modeling_commands.md#zipzimodelingcommandsmodelingcommandphysics
+[ModelingCommandPose]: modeling_commands.md#zipzimodelingcommandsmodelingcommandpose
+[ModelingCommandReferences]: modeling_commands.md#zipzimodelingcommandsmodelingcommandreferences
+[ModelingCommandResource]: modeling_commands.md#zipzimodelingcommandsmodelingcommandresource
+[ModelingCommandScene]: modeling_commands.md#zipzimodelingcommandsmodelingcommandscene
 [ObservationBatch]: modeling_observation.md#zipzimodelingobservationobservationbatch
 [ObservationEstimate]: modeling_observation.md#zipzimodelingobservationobservationestimate
 [ObservationView]: modeling_observation.md#zipzimodelingobservationobservationview

@@ -112,9 +112,14 @@ Types: [Receipt], [Cursor](#zipzieventscursor), [Origin](#zipzieventsorigin).
 
 **Type**
 
-`(backend: 'Backend')`
+`(factory-owned; use the documented public entry)`
 
 Independent cursor and initial Session list for the Runtime registry stream.
+
+Registry event retention has separate Runtime count and byte limits. If the
+cursor falls outside that window, resync captures a new list and cursor; it
+does not replay missed events. Registry and Session sequences are independent.
+Obtain this subscription from Runtime.sessions.subscribe().
 
 
 ## zipzi.events.RegistrySubscription.cursor
@@ -189,11 +194,15 @@ Types: [SaveReceipt], [Cursor](#zipzieventscursor), [Origin](#zipzieventsorigin)
 
 **Type**
 
-`(backend: 'Backend', token: object, id: SessionId)`
+`(factory-owned; use the documented public entry)`
 
 Independent cursor and initial metadata for one Session event stream.
 
-Types: [SessionId].
+Events are retained within the Runtime's count and byte limits, not forever.
+If the cursor falls outside the retained window, poll raises RESYNC_REQUIRED;
+resync captures fresh metadata and a new cursor without replaying missed events.
+Sequence numbers order this stream only; different Sessions have no total order.
+Obtain this subscription from Session.subscribe().
 
 
 ## zipzi.events.SessionSubscription.cursor

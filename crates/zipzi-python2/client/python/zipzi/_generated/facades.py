@@ -128,7 +128,7 @@ class Scene(Collection[scene.Summary]):
         return self._page(name,limit,cursor,scene.Summary._read)
 
 class Modeling:
-    """Typed modeling operations bound to this Session or Edit source."""
+    """Access as session.modeling or edit.modeling, not by constructing this facade. Reads use the bound Session formal source or Edit candidate source; records, CPU sampling and observation do not publish changes."""
     def __init__(self, session: "_lifecycle.Session", edit: "_lifecycle.Edit | None" = None):
         self._session,self._edit=session,edit
     def records(self, query: modeling.ModelingQuery) -> Snapshot[modeling.OwnedModelingRecords]:

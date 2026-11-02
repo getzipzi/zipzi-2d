@@ -330,7 +330,7 @@ def render_api(contract,header,rust_header,resolve,codec_domains,*,documentation
             if result=='str':facade+=['        return project(lambda: self._write(lambda: '+expr+'),single_id,operation='+repr(domain+'.'+name)+',inputs='+inputs+')']
             else:facade+=['        return self._write(lambda: '+expr+')']
         facade+=['']
-    facade+=['class Modeling:', '    """Typed modeling operations bound to this Session or Edit source."""', '    def __init__(self, session: "_lifecycle.Session", edit: "_lifecycle.Edit | None" = None):','        self._session,self._edit=session,edit',
+    facade+=['class Modeling:', '    """Access as session.modeling or edit.modeling, not by constructing this facade. Reads use the bound Session formal source or Edit candidate source; records, CPU sampling and observation do not publish changes."""', '    def __init__(self, session: "_lifecycle.Session", edit: "_lifecycle.Edit | None" = None):','        self._session,self._edit=session,edit',
      '    def records(self, query: modeling.ModelingQuery) -> Snapshot[modeling.OwnedModelingRecords]:',
      '        '+repr('Read selected canonical records from one exact source without editing. query lists stable IDs per domain; empty lists request no payloads, while the ids directory still exposes collection identities. Returns an owned Snapshot; payload slots follow query order and None marks a missing requested ID. This synchronous query may reject count/byte budgets but does not abort an Edit. Recover a lost response through its original Call; results need no close. Example: result = session.modeling.records(modeling.ModelingQuery(meshes=(id,))).'),
      '        return records(self,query)',

@@ -536,3 +536,32 @@ Python 入口维护生命周期和投影说明，事件 DTO 生成器直接使�
 以及 `./tools/test-sdk.sh python2 PythonSdk.test_event_subscriptions_are_paged_immutable_independent_and_source_exact`；
 后者通过 Local/Connected 行为与静态类型检查。新来源链路用例覆盖事件投影、查询和命令分支。
 后续应先解决剩余诊断并完成 P1 全部阅读问题和行为证据，再登记已验收范围。
+
+## 12. P1 结构门禁与运行时阅读检查（2026-11-02）
+
+状态：P1 **结构门禁通过、跨批语义待复核**，不计为完整领域验收；P3/P4 仍需核对
+Buffer/资源与 Plan/删除交互，其他全部领域仍待实施。本次将 P1 十个分片加入独立的
+`STRUCTURAL_PAGES` 门禁，不扩大表示语义验收的 `ACCEPTED_PAGES`。
+
+`EditState` 的七个成员在定义旁各自记录状态，Python enum 提取器同时支持成员旁的说明与
+Rust enum 分支说明。事件订阅入口记录独立有界窗口、`RESYNC_REQUIRED`、重新捕获但不回放，
+以及不同 Session 和 registry 流没有共同序号。Modeling facade 的源描述符说明真实入口是
+`session.modeling`/`edit.modeling`，分别读正式源/候选源。订阅由工厂创建，生成签名不再暴露
+内部 Backend 参数。类型引用解析展开非公开 union 别名到实际公开分支；无法解析的分支仍报错，
+而非把内部名字一概忽略。新增测试覆盖成员文义、异步规划命令导航和私有 union 的未知分支。
+
+P1 摘要及 union 分支缺口继续为零，七个 enum 成员和六个类型引用诊断全部消除；全局类型
+缺口仍为 784。基于稳定身份的债务基线移除 18 项，其中五项是其他页面上解析到内建 tuple
+的 Point 别名；没有新增键。P1 同范围仍有 306 个标题，正文 164,812 → 171,413 字符，
+主要增加公开命令分支的使用处链接；共享规则正文未新增重复展开。
+
+阅读检查覆盖 Runtime/Session/Edit 的构造、attach/detach/close、正式和候选 Source、
+Snapshot/Batch/Page 的排序和 continuation、commit Job、JobTimeout 与 OutcomeUnknown、
+事件订阅及 Modeling facade；相应条目可直接给出入口、结果和恢复方向。
+没有把这些检查扩展为所有跨领域条目的完整人工验收。
+
+执行：`generate.py --check --no-cache`、reference tooling 门禁、graph 测试，以及
+`./tools/test-sdk.sh python2 --discovery` 的离线 catalog、候选 cursor 和恢复页面三项用例；
+`./tools/test-sdk.sh python2 --recovery` 的 JobTimeout 和 Busy/领域失败两项用例。
+两个 SDK gate 均通过 Local/Connected 测试与静态类型检查。事件 Local/Connected 行为证据
+见前一记录；尚未执行完整 SDK、GPU 或真实 Editor 服务门禁。

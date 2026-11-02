@@ -899,6 +899,8 @@ class PythonReference(unittest.TestCase):
     # Pages only enter this set after full page acceptance. Cross-page pilots
     # are exact paths; accepting modeling does not accept modeling.* domains.
     ACCEPTED_PAGES = frozenset({'meshes'})
+    # P1 has no structural gaps; cross-domain semantic acceptance remains open.
+    STRUCTURAL_PAGES = frozenset('runtime runtime_session runtime_edit modeling modeling_common modeling_runtime ops modeling_commands modeling_queries events'.split())
     BATCH_PAGES = {
         'S': 'meshes',
         'P1': 'runtime runtime_session runtime_edit modeling modeling_common modeling_runtime ops modeling_commands modeling_queries events',
@@ -935,7 +937,7 @@ class PythonReference(unittest.TestCase):
     def test_reference_scoped_coverage_and_stable_debt(self):
         from codegen.documentation_audit import scoped_missing, debt_keys, validate_debt
         self.assertTrue(self.PILOT_PATHS<=self.catalog.keys(),self.PILOT_PATHS-self.catalog.keys())
-        self.assertFalse(scoped_missing(self.coverage,self.quality,self.ACCEPTED_PAGES,self.PILOT_PATHS))
+        self.assertFalse(scoped_missing(self.coverage,self.quality,self.ACCEPTED_PAGES | self.STRUCTURAL_PAGES,self.PILOT_PATHS))
         baseline=json.loads((ROOT/'tools/python/python-reference-debt.json').read_text())
         validate_debt(debt_keys(self.coverage,self.quality),{tuple(key) for key in baseline['debt']})
         current={('type-summary','rust:example::Old|projection:canonical','')}
@@ -958,7 +960,7 @@ class PythonReference(unittest.TestCase):
         assigned=[page for pages in self.BATCH_PAGES.values() for page in pages.split()]
         self.assertEqual(len(assigned),len(set(assigned)))
         self.assertEqual(set(assigned),set(self.quality['pages']))
-        self.assertTrue(self.ACCEPTED_PAGES<=set(assigned))
+        self.assertTrue((self.ACCEPTED_PAGES | self.STRUCTURAL_PAGES)<=set(assigned))
         from codegen.documentation_audit import scoped_missing
         missing=scoped_missing(self.coverage,self.quality,{'modeling'})
         self.assertFalse(any('modeling_mesh' in row.get('pages',()) and row.get('pages')==['modeling_mesh'] for _,row in missing))
@@ -1024,6 +1026,23 @@ class PythonReference(unittest.TestCase):
         command = self.catalog['zipzi.modeling.commands.ModelingCommandManualMesh']
         self.assertIn('source-checked', command['documentation'])
 
+    def test_reference_runtime_enum_and_private_union_navigation(self):
+        state = self.catalog['zipzi.EditState']
+        members = dict(state['fields'])
+        self.assertIn('original owner', members['unknown'])
+        self.assertIn('publication', members['committed'])
+        self.assertIn('start a new Edit', members['aborted'])
+        for owner in ('Session', 'Edit'):
+            refs = self.catalog[f'zipzi.{owner}.plan_async']['type_refs']
+            self.assertIn('zipzi.modeling.commands.ModelingCommandDeletion', refs)
+            self.assertIn('zipzi.modeling.commands.ModelingCommandScene', refs)
+        refs = self.catalog['zipzi.ops.PlannableOperation']['type_refs']
+        self.assertIn('zipzi.modeling.commands.ModelingCommandDeletion', refs)
+        p1 = set(self.BATCH_PAGES['P1'].split())
+        self.assertFalse([row for row in self.quality['diagnostics']
+                          if p1.intersection(row['pages'])])
+        self.assertIn('factory-owned', self.catalog['zipzi.events.SessionSubscription']['signature'])
+
     def test_reference_missing_branches_and_unknown_sdk_types_are_diagnosed(self):
         contract=gen.schema.read(PACKAGE/'schema/authoring.json')
         contract['definitions']['zipzi_contract::model::MeshConstraintKind']['variants'][0]['doc']=''
@@ -1043,6 +1062,20 @@ class PythonReference(unittest.TestCase):
         self.assertTrue({'builtin','typing','type-variable','public-sdk'}<=self.quality['reference_classifications'].keys())
         self.assertTrue(any(row['status']=='review_required' and row['category']=='callable-return' for row in self.quality['semantic_review']))
         self.assertTrue(any(row['status']=='not_applicable' for row in self.quality['semantic_review']))
+
+    def test_reference_private_union_does_not_hide_unknown_members(self):
+        original = gen._api_codegen.render_api
+        def unknown(*args, **kwargs):
+            output = original(*args, **kwargs)
+            path = 'client/python/zipzi/_generated/facades.py'
+            source = output[path].replace('-> Snapshot[meshes.Mesh]:', '-> _PrivateResult:')
+            output[path] = source + '\n_PrivateResult = meshes.Mesh | meshes.UnknownSdkType\n'
+            return output
+        with patch.object(gen._api_codegen, 'render_api', side_effect=unknown):
+            output = gen.render(gen.schema.read(PACKAGE/'schema/authoring.json'))
+        quality = json.loads(output['client/python/zipzi/docs/documentation-quality.json'])
+        self.assertTrue(any(row['category'] == 'type-reference' and row['subject'] == 'meshes.UnknownSdkType'
+                            for row in quality['diagnostics']))
 
     def test_reference_rule_and_descriptor_changes_reach_all_consumers(self):
         from dataclasses import replace

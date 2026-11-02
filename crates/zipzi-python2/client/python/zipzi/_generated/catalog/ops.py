@@ -33,5 +33,18 @@ DATA: dict[str, Entry] = {'zipzi.ops': {'children': ('zipzi.ops.Operation', 'zip
                                   'signature': '_meshes.Rename | _resources.RenameImage | _scene.Operation | '
                                                '_ModelingPlanOperation',
                                   'type_refs': ('zipzi.meshes.Rename',
+                                                'zipzi.modeling.commands.ModelingCommandAttachment',
+                                                'zipzi.modeling.commands.ModelingCommandBinding',
+                                                'zipzi.modeling.commands.ModelingCommandContent',
+                                                'zipzi.modeling.commands.ModelingCommandDeletion',
+                                                'zipzi.modeling.commands.ModelingCommandDocument',
+                                                'zipzi.modeling.commands.ModelingCommandExpression',
+                                                'zipzi.modeling.commands.ModelingCommandMotion',
+                                                'zipzi.modeling.commands.ModelingCommandOrganization',
+                                                'zipzi.modeling.commands.ModelingCommandPhysics',
+                                                'zipzi.modeling.commands.ModelingCommandPose',
+                                                'zipzi.modeling.commands.ModelingCommandReferences',
+                                                'zipzi.modeling.commands.ModelingCommandResource',
+                                                'zipzi.modeling.commands.ModelingCommandScene',
                                                 'zipzi.resources.RenameImage',
                                                 'zipzi.scene.Operation')}}

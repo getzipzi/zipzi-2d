@@ -93,12 +93,25 @@ class _Subscription(RecoveryOwner, Generic[T]):
         return self._request("poll", lambda: self._backend.events(cursor, limit, self), decode)
 
 class SessionSubscription(_Subscription[SessionInfo]):
-    """Independent cursor and initial metadata for one Session event stream."""
+    """Independent cursor and initial metadata for one Session event stream.
+
+    Events are retained within the Runtime's count and byte limits, not forever.
+    If the cursor falls outside the retained window, poll raises RESYNC_REQUIRED;
+    resync captures fresh metadata and a new cursor without replaying missed events.
+    Sequence numbers order this stream only; different Sessions have no total order.
+    Obtain this subscription from Session.subscribe().
+    """
     def __init__(self, backend: "Backend", token: object, id: SessionId):
         super().__init__(backend, token, id, lambda raw: SessionInfo._read(record(raw)["info"]))
 
 class RegistrySubscription(_Subscription[tuple[SessionInfo, ...]]):
-    """Independent cursor and initial Session list for the Runtime registry stream."""
+    """Independent cursor and initial Session list for the Runtime registry stream.
+
+    Registry event retention has separate Runtime count and byte limits. If the
+    cursor falls outside that window, resync captures a new list and cursor; it
+    does not replay missed events. Registry and Session sequences are independent.
+    Obtain this subscription from Runtime.sessions.subscribe().
+    """
     def __init__(self, backend: "Backend"):
         super().__init__(backend, None, None, lambda raw: tuple(SessionInfo._read(item) for item in sequence(record(raw)["sessions"])))
 

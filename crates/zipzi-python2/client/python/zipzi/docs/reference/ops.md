@@ -3,7 +3,7 @@
 
 ## Type references
 
-[bindings.Create], [SetKeyform], [meshes.Create], [Rename], [SetPositions], [ModelingCommand], [parameters.Create], [Patch], [CreateImage], [RenameImage], [ReplaceImage], [Operation]
+[bindings.Create], [SetKeyform], [meshes.Create], [Rename], [SetPositions], [ModelingCommand], [ModelingCommandAttachment], [ModelingCommandBinding], [ModelingCommandContent], [ModelingCommandDeletion], [ModelingCommandDocument], [ModelingCommandExpression], [ModelingCommandMotion], [ModelingCommandOrganization], [ModelingCommandPhysics], [ModelingCommandPose], [ModelingCommandReferences], [ModelingCommandResource], [ModelingCommandScene], [parameters.Create], [Patch], [CreateImage], [RenameImage], [ReplaceImage], [Operation]
 
 See [common behavior](common.md) for owned-value conventions and inherited methods.
 
@@ -33,7 +33,7 @@ Types: [bindings.Create], [SetKeyform], [meshes.Create], [Rename], [SetPositions
 
 Operations accepted for planning; inspect the source-bound plan before applying it.
 
-Types: [Rename], [RenameImage], [Operation].
+Types: [Rename], [ModelingCommandAttachment], [ModelingCommandBinding], [ModelingCommandContent], [ModelingCommandDeletion], [ModelingCommandDocument], [ModelingCommandExpression], [ModelingCommandMotion], [ModelingCommandOrganization], [ModelingCommandPhysics], [ModelingCommandPose], [ModelingCommandReferences], [ModelingCommandResource], [ModelingCommandScene], [RenameImage], [Operation].
 
 
 [bindings.Create]: bindings.md#zipzibindingscreate
@@ -42,6 +42,19 @@ Types: [Rename], [RenameImage], [Operation].
 [Rename]: meshes.md#zipzimeshesrename
 [SetPositions]: meshes.md#zipzimeshessetpositions
 [ModelingCommand]: modeling_commands.md#zipzimodelingcommandsmodelingcommand
+[ModelingCommandAttachment]: modeling_commands.md#zipzimodelingcommandsmodelingcommandattachment
+[ModelingCommandBinding]: modeling_commands.md#zipzimodelingcommandsmodelingcommandbinding
+[ModelingCommandContent]: modeling_commands.md#zipzimodelingcommandsmodelingcommandcontent
+[ModelingCommandDeletion]: modeling_commands.md#zipzimodelingcommandsmodelingcommanddeletion
+[ModelingCommandDocument]: modeling_commands.md#zipzimodelingcommandsmodelingcommanddocument
+[ModelingCommandExpression]: modeling_commands.md#zipzimodelingcommandsmodelingcommandexpression
+[ModelingCommandMotion]: modeling_commands.md#zipzimodelingcommandsmodelingcommandmotion
+[ModelingCommandOrganization]: modeling_commands.md#zipzimodelingcommandsmodelingcommandorganization
+[ModelingCommandPhysics]: modeling_commands.md#zipzimodelingcommandsmodelingcommandphysics
+[ModelingCommandPose]: modeling_commands.md#zipzimodelingcommandsmodelingcommandpose
+[ModelingCommandReferences]: modeling_commands.md#zipzimodelingcommandsmodelingcommandreferences
+[ModelingCommandResource]: modeling_commands.md#zipzimodelingcommandsmodelingcommandresource
+[ModelingCommandScene]: modeling_commands.md#zipzimodelingcommandsmodelingcommandscene
 [parameters.Create]: parameters.md#zipziparameterscreate
 [Patch]: parameters.md#zipziparameterspatch
 [CreateImage]: resources.md#zipziresourcescreateimage

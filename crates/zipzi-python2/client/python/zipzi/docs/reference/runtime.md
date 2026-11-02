@@ -11,7 +11,7 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 
 **Module**
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a5; protocol zipzi-runtime-v2; client source SHA-256 6eb2a6859acd0800919151f2eabdd9a4a637116a7c3d59033355284dd220fd36.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a5; protocol zipzi-runtime-v2; client source SHA-256 979a2cbb997b410d8599c64e0d5ef3c587bdccce4d35b7d189db4fbd82fac029.
 
 
 ## zipzi.ApiDescription
@@ -193,13 +193,13 @@ Lifecycle of an Edit candidate and its separate commit outcome.
 
 **Members**
 
-- `editing`: 'editing'
-- `committing`: 'committing'
-- `committed`: 'committed'
-- `cancelled`: 'cancelled'
-- `aborted`: 'aborted'
-- `failed`: 'failed'
-- `unknown`: 'unknown'
+- `editing`: 'editing' — Candidate is open for reads and writes; confirmed admission refusals can leave it editable.
+- `committing`: 'committing' — Commit was accepted and its Job has not yet confirmed the outcome.
+- `committed`: 'committed' — The commit Job confirmed publication; receipt holds its result.
+- `cancelled`: 'cancelled' — Candidate release was confirmed without publication.
+- `aborted`: 'aborted' — An ordinary write failure poisoned the candidate; start a new Edit.
+- `failed`: 'failed' — The Edit or accepted commit reached a failure that cannot be used as an editable candidate.
+- `unknown`: 'unknown' — The outcome of a request or commit is not confirmed; recover its original owner before cleanup.
 
 ## zipzi.Job
 
@@ -759,8 +759,6 @@ Types: [Usage].
 `runtime.sessions`
 
 Bounded host registry. Listing and attaching share the resident document; neither creates a Python mirror.
-
-Types: [Runtime](#zipziruntime).
 
 
 ## zipzi.Runtime.sessions.attach
