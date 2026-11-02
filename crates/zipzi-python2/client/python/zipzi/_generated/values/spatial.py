@@ -31,7 +31,7 @@ ObjectTarget: TypeAlias = ObjectTargetMesh | ObjectTargetPart
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SpatialQueryBounds(CompactValue):
-    '\n\nFields:\ntargets: Mesh/Part UUID selectors; an empty selection selects no meshes.\ninclude_hidden: Include disabled, hidden and zero-opacity geometry in the union.'
+    'Measure the union of evaluated geometry for the selected targets.\n\nFields:\ntargets: Mesh/Part UUID selectors; an empty selection selects no meshes.\ninclude_hidden: Include disabled, hidden and zero-opacity geometry in the union.'
     _variant: _ClassVar[str] = 'bounds'
     targets: tuple[ObjectTarget, ...]
     include_hidden: bool = field(default_factory=lambda: _boolean(False))
@@ -43,7 +43,7 @@ SpatialQueryBounds.__module__ = "zipzi.modeling.spatial"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SpatialQueryHits(CompactValue):
-    '\n\nFields:\npoint: Finite XY point in evaluated Y-up model coordinates, not screen pixels.\ninclude_hidden: Include disabled, hidden and zero-opacity geometric candidates.\ndetails: Include every containing triangle, stable vertex IDs, barycentric weights and UV.\nmax_candidates: Maximum mesh candidates retained in descending draw order; total remains untruncated.'
+    'Find geometric candidates containing a model-space point.\n\nFields:\npoint: Finite XY point in evaluated Y-up model coordinates, not screen pixels.\ninclude_hidden: Include disabled, hidden and zero-opacity geometric candidates.\ndetails: Include every containing triangle, stable vertex IDs, barycentric weights and UV.\nmax_candidates: Maximum mesh candidates retained in descending draw order; total remains untruncated.'
     _variant: _ClassVar[str] = 'hits'
     point: tuple[float, float]
     include_hidden: bool = field(default_factory=lambda: _boolean(False))
@@ -59,7 +59,7 @@ SpatialQuery: TypeAlias = SpatialQueryBounds | SpatialQueryHits
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SpatialResultBounds(CompactValue):
-    '\n\nFields:\nvalue: Bounds and resolved mesh IDs for the corresponding selector request.'
+    'Evaluated bounds for the selected targets.\n\nFields:\nvalue: Bounds and resolved mesh IDs for the corresponding selector request.'
     _variant: _ClassVar[str] = 'bounds'
     value: ObjectBounds
 
@@ -67,7 +67,7 @@ SpatialResultBounds.__module__ = "zipzi.modeling.spatial"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SpatialResultHits(CompactValue):
-    '\n\nFields:\nvalue: Geometric candidates in SDK order, including total and truncation metadata.'
+    'Geometric candidates containing the requested point.\n\nFields:\nvalue: Geometric candidates in SDK order, including total and truncation metadata.'
     _variant: _ClassVar[str] = 'hits'
     value: GeometryQuery
 
@@ -139,7 +139,7 @@ TriangleHit.__module__ = "zipzi.modeling.spatial"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SpatialSamples(CompactValue):
-    '\n\nFields:\nversion: Exact SDK version of the immutable formal or candidate snapshot.\nrequested: Owned requested parameter maps, preserving pose order and duplicates.\nqueries: Owned geometric queries shared by every returned frame.\nframes: Effective poses and query results, aligned with requested parameter maps.'
+    'Ordered CPU spatial results for poses evaluated against one frozen source.\n\nFields:\nversion: Exact SDK version of the immutable formal or candidate snapshot.\nrequested: Owned requested parameter maps, preserving pose order and duplicates.\nqueries: Owned geometric queries shared by every returned frame.\nframes: Effective poses and query results, aligned with requested parameter maps.'
     version: _Version
     requested: tuple[_Mapping[str, float], ...]
     queries: tuple[SpatialQuery, ...]
@@ -154,7 +154,7 @@ SpatialSamples.__module__ = "zipzi.modeling.spatial"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SpatialFrame(CompactValue):
-    '\n\nFields:\nparameters: Effective evaluated parameter values keyed by document UUID, including defaults/clamps.\nresults: Query results in input order, including repeated queries and empty results.'
+    'Effective parameters and ordered query results for one evaluated pose.\n\nFields:\nparameters: Effective evaluated parameter values keyed by document UUID, including defaults/clamps.\nresults: Query results in input order, including repeated queries and empty results.'
     parameters: _Mapping[str, float]
     results: tuple[SpatialResult, ...]
 

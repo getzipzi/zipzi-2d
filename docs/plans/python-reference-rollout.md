@@ -720,3 +720,28 @@ P6 类型摘要缺口 182 → 0、union 分支诊断 226 → 0、enum 成员诊�
 动画资产/地址/sidecar、独立 Preview 数值和候选源、旋转基底三项 Python 测试均通过
 Local/Connected 与静态类型检查。离线 format 检查 Preview 秒制时间和 Motion 分段，且不
 加载 native/GPU。尚未运行全量 SDK、GPU 或真实 Editor 服务门禁。
+
+## 18. P7 结构与服务行为记录
+
+本批覆盖 spatial、observation、inspection、mesh_generation 及 modeling 下的 spatial、
+observation。补充 Rust 空间查询/结果、纹理预算和身份、GPU 图像与视图类型和分支说明，
+分别说明模型坐标、几何而非像素遮挡、逻辑预算与设备检查、PNG 与 RGBA 身份、渲染结果的
+坐标映射和纹理报告。已有 Python 入口说明保留客户端 inspection 文件 IO、部分写入失败、
+Editor capability、alpha 方向、草稿与写入分离、仿射映射和 stale Source。新增来源变更
+贯穿 catalog/reference 的测试，以及不加载 native/GPU 的公开路径 `format()` 断言。
+
+P7 开始时全局缺少 20 个类型摘要、18 个分支诊断；本批结束后两者均为零，58 个稳定结构
+债务键全部消除且没有新增债务。P1–P7 所有页面加入结构门禁；这不代表所有语义已经验收。
+同范围六个 reference 页正文从 48,955 增至 50,294 字符，公开入口均为 91，规则展开数均为零；
+增量是必要的类型和分支说明，没有新增独立语义表或 workflow。所审阅入口及离线 `format()`
+可回答以上坐标、预算、服务及文件 IO 问题；跨领域完整字段和别名语义复核仍待 P8。
+
+验证通过：`generate.py --check-docs --no-cache`；reference 生成测试 29 项；
+`PythonSdk.test_r5_spatial_frozen_sources_hidden_geometry_and_animated_numerics`；
+`./tools/dev-python crates/zipzi-python2/tests/test_mesh_generation.py`（8 项）；
+GPU observation 两项指定测试（Local/Connected，含纹理预算、像素、动画和 inspection）；
+当前源码 `cargo build --locked -p zipzi-editor` 后，使用独立临时端点运行
+`./tools/dev-python crates/zipzi-python2/tests/editor_mesh_generation.py --host /Users/liangbohao/web/zipzi-2d/target/debug/zipzi-editor`，
+实际验证五种算法、阶段、Edit 提交、参数验证及 Local 拒绝。`cargo test --locked -p zipzi-contract`
+和 codegen graph/output 测试通过。结构门禁和所列行为证据通过；全套 SDK、安装客户端、
+跨领域人工语义验收及真实 Editor 安装客户端 gate 继续在 P8 处理。

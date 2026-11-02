@@ -905,7 +905,8 @@ class PythonReference(unittest.TestCase):
                                   'resources modeling_resources modeling_mesh scene modeling_scene modeling_scene_edits '
                                   'references modeling_addressing modeling_addressing_kinds modeling_addressing_patches '
                                   'modeling_addressing_selectors modeling_deletion modeling_deletion_decisions modeling_project '
-                                  'animation sampling modeling_motion modeling_expression modeling_physics modeling_pose modeling_preview modeling_sampling').split())
+                                  'animation sampling modeling_motion modeling_expression modeling_physics modeling_pose modeling_preview modeling_sampling '
+                                  'spatial observation inspection mesh_generation modeling_observation modeling_spatial').split())
     BATCH_PAGES = {
         'S': 'meshes',
         'P1': 'runtime runtime_session runtime_edit modeling modeling_common modeling_runtime ops modeling_commands modeling_queries events',
@@ -1166,6 +1167,15 @@ class PythonReference(unittest.TestCase):
         self.assertIn(marker, dict(row['fields'])['BEGIN_OFFSCREEN'])
         self.assertIn(marker, changed['client/python/zipzi/docs/reference/sampling.md'])
 
+    def test_reference_observation_planning_follows_contract_branch(self):
+        contract = gen.schema.read(PACKAGE/'schema/authoring.json')
+        marker = 'Changed observation planning source description.'
+        contract['definitions']['zipzi_contract::runtime::ObservationTexturePlanning']['variants'][0]['doc'] = marker
+        changed = gen.render(contract)
+        row = catalog_from_output(changed)['zipzi.modeling.observation.ObservationTexturePlanningReady']
+        self.assertIn(marker, row['documentation'])
+        self.assertIn(marker, changed['client/python/zipzi/docs/reference/modeling_observation.md'])
+
     def test_reference_object_kind_projection_follows_contract(self):
         contract = gen.schema.read(PACKAGE/'schema/authoring.json')
         marker = 'Changed object kind source description.'
@@ -1269,6 +1279,11 @@ for path, facts in (
     ('Session.project.export', ('diagnostics', 'durable', 'project_report')),
     ('animation.Preview.sample', ('seconds', 'frozen-source', 'CPU-only')),
     ('modeling.motion.MotionSegmentInverseStepped', ('endpoint value',)),
+    ('modeling.spatial.SpatialQueryHits', ('Y-up model coordinates', 'include_hidden', 'total remains untruncated')),
+    ('modeling.observation.ObservationImage', ('top-left image origin', 'Y=-y*scale', 'adapter')),
+    ('modeling.observation.ObservationTexturePlanningReady', ('device limits', 'unverified')),
+    ('inspection.save', ('client-side directory', 'partial output', 'No host write')),
+    ('mesh_generation.generate', ('top-down', 'bottom-up source', 'no history')),
 ):
     text = zipzi.describe(path).format()
     for fact in facts:

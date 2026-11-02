@@ -118,7 +118,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.ObjectTargetPart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.SpatialFrame': {'children': ('zipzi.modeling.spatial.SpatialFrame.__repr__',
                                                       'zipzi.modeling.spatial.SpatialFrame.summary'),
-                                         'documentation': '',
+                                         'documentation': 'Effective parameters and ordered query results for one '
+                                                          'evaluated pose.',
                                          'fields': [('parameters',
                                                      'Effective evaluated parameter values keyed by document UUID, '
                                                      'including defaults/clamps.'),
@@ -141,7 +142,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                        'zipzi.modeling.spatial.SpatialQueryHits')},
  'zipzi.modeling.spatial.SpatialQueryBounds': {'children': ('zipzi.modeling.spatial.SpatialQueryBounds.__repr__',
                                                             'zipzi.modeling.spatial.SpatialQueryBounds.summary'),
-                                               'documentation': '',
+                                               'documentation': 'Measure the union of evaluated geometry for the '
+                                                                'selected targets.',
                                                'fields': [('targets',
                                                            'Mesh/Part UUID selectors; an empty selection selects no '
                                                            'meshes.'),
@@ -156,7 +158,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.SpatialQueryBounds.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.SpatialQueryHits': {'children': ('zipzi.modeling.spatial.SpatialQueryHits.__repr__',
                                                           'zipzi.modeling.spatial.SpatialQueryHits.summary'),
-                                             'documentation': '',
+                                             'documentation': 'Find geometric candidates containing a model-space '
+                                                              'point.',
                                              'fields': [('point',
                                                          'Finite XY point in evaluated Y-up model coordinates, not '
                                                          'screen pixels.'),
@@ -175,7 +178,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.SpatialQueryHits.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.spatial.SpatialQueryHits.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.SpatialResult': {'children': (),
-                                          'documentation': '',
+                                          'documentation': 'Result of one spatial query, retaining its request kind.',
                                           'fields': [],
                                           'kind': 'alias',
                                           'signature': 'SpatialResultBounds | SpatialResultHits',
@@ -183,7 +186,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                         'zipzi.modeling.spatial.SpatialResultHits')},
  'zipzi.modeling.spatial.SpatialResultBounds': {'children': ('zipzi.modeling.spatial.SpatialResultBounds.__repr__',
                                                              'zipzi.modeling.spatial.SpatialResultBounds.summary'),
-                                                'documentation': '',
+                                                'documentation': 'Evaluated bounds for the selected targets.',
                                                 'fields': [('value',
                                                             'Bounds and resolved mesh IDs for the corresponding '
                                                             'selector request.')],
@@ -194,7 +197,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.SpatialResultBounds.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.SpatialResultHits': {'children': ('zipzi.modeling.spatial.SpatialResultHits.__repr__',
                                                            'zipzi.modeling.spatial.SpatialResultHits.summary'),
-                                              'documentation': '',
+                                              'documentation': 'Geometric candidates containing the requested point.',
                                               'fields': [('value',
                                                           'Geometric candidates in SDK order, including total and '
                                                           'truncation metadata.')],
@@ -205,7 +208,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.SpatialResultHits.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.SpatialSamples': {'children': ('zipzi.modeling.spatial.SpatialSamples.__repr__',
                                                         'zipzi.modeling.spatial.SpatialSamples.summary'),
-                                           'documentation': '',
+                                           'documentation': 'Ordered CPU spatial results for poses evaluated against '
+                                                            'one frozen source.',
                                            'fields': [('version',
                                                        'Exact SDK version of the immutable formal or candidate '
                                                        'snapshot.'),

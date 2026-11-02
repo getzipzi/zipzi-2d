@@ -71,6 +71,7 @@ pub struct PreviewState {
     pub time: f32,
 }
 
+/// Clipped image-space geometric bounds for one evaluated drawable.
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct ObservedBounds {
     /// Stable authoring drawable UUID.
@@ -80,6 +81,7 @@ pub struct ObservedBounds {
     /// Clipped image bounds [min_x,min_y,max_x,max_y], exclusive maximum; None if empty.
     pub bounds: Option<[u32; 4]>,
 }
+/// One GPU-rendered image and its source, view mapping and geometric metadata.
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct ObservationImage {
     /// Output image width in pixels.
@@ -122,6 +124,7 @@ pub struct ObservationImage {
     pub quality: Vec<crate::authoring::MeshQuality>,
 }
 
+/// Output dimensions and Y-up model-space region for GPU observation.
 #[derive(
     Debug, Clone, Serialize, Deserialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire,
 )]
@@ -159,6 +162,7 @@ impl ObservationView {
     }
 }
 
+/// Ordered GPU frames sharing one view and verified texture acquisition.
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct ObservationBatch {
     /// Verified once-per-batch source and rendering texture content.

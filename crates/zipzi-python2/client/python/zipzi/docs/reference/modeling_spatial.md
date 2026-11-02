@@ -119,6 +119,8 @@ Select all descendant meshes of a Part.
 
 `(*, parameters: _Mapping[str, float], results: tuple[SpatialResult, ...])`
 
+Effective parameters and ordered query results for one evaluated pose.
+
 Types: [SpatialResult](#zipzimodelingspatialspatialresult).
 
 **Fields**
@@ -143,6 +145,8 @@ Types: [SpatialQueryBounds](#zipzimodelingspatialspatialquerybounds), [SpatialQu
 
 `(*, targets: tuple[ObjectTarget, ...], include_hidden: bool = False)`
 
+Measure the union of evaluated geometry for the selected targets.
+
 Types: [ObjectTarget](#zipzimodelingspatialobjecttarget).
 
 **Fields**
@@ -155,6 +159,8 @@ Types: [ObjectTarget](#zipzimodelingspatialobjecttarget).
 **Type**
 
 `(*, point: tuple[float, float], include_hidden: bool = False, details: bool = False, max_candidates: int = 32)`
+
+Find geometric candidates containing a model-space point.
 
 **Fields**
 
@@ -169,6 +175,8 @@ Types: [ObjectTarget](#zipzimodelingspatialobjecttarget).
 
 `SpatialResultBounds | SpatialResultHits`
 
+Result of one spatial query, retaining its request kind.
+
 Types: [SpatialResultBounds](#zipzimodelingspatialspatialresultbounds), [SpatialResultHits](#zipzimodelingspatialspatialresulthits).
 
 
@@ -177,6 +185,8 @@ Types: [SpatialResultBounds](#zipzimodelingspatialspatialresultbounds), [Spatial
 **Type**
 
 `(*, value: ObjectBounds)`
+
+Evaluated bounds for the selected targets.
 
 Types: [ObjectBounds](#zipzimodelingspatialobjectbounds).
 
@@ -190,6 +200,8 @@ Types: [ObjectBounds](#zipzimodelingspatialobjectbounds).
 
 `(*, value: GeometryQuery)`
 
+Geometric candidates containing the requested point.
+
 Types: [GeometryQuery](#zipzimodelingspatialgeometryquery).
 
 **Fields**
@@ -201,6 +213,8 @@ Types: [GeometryQuery](#zipzimodelingspatialgeometryquery).
 **Type**
 
 `(*, version: _Version, requested: tuple[_Mapping[str, float], ...], queries: tuple[SpatialQuery, ...], frames: tuple[SpatialFrame, ...])`
+
+Ordered CPU spatial results for poses evaluated against one frozen source.
 
 Types: [Version], [SpatialFrame](#zipzimodelingspatialspatialframe), [SpatialQuery](#zipzimodelingspatialspatialquery).
 

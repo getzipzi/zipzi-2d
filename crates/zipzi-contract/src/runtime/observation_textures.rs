@@ -17,6 +17,7 @@ pub const DEFAULT_OBSERVATION_TEXTURE_RGBA_BYTES: u64 = 256 << 20;
 pub enum ObservationTexturePolicy {
     /// Preserve the source dimensions and every source byte.
     Original {},
+    /// Deterministically downsample referenced base textures to fit a logical RGBA8 budget.
     FitBudget {
         /// Positive integer no greater than the host's base RGBA limit.
         max_rgba_bytes: u64,
@@ -63,10 +64,12 @@ pub struct ObservationTextureSize {
 )]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum ObservationContentIdentity {
+    /// Digest of the encoded source PNG bytes.
     PngSha256 {
         /// SHA256 of encoded source PNG bytes; verification is a separate state.
         hash: String,
     },
+    /// Domain-separated digest of source dimensions and straight RGBA8 pixels.
     Rgba8Sha256 {
         /// Domain-separated hash including dimensions and pixel conventions.
         hash: String,
@@ -95,6 +98,7 @@ pub struct ObservationTextureSource {
     pub source_content_identity: Option<ObservationContentIdentity>,
 }
 
+/// Source metadata and planned rendering dimensions for one referenced texture.
 #[derive(
     Debug,
     Clone,
@@ -164,10 +168,12 @@ pub struct ObservationTexturePlan {
 )]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum ObservationTexturePlanning {
+    /// A feasible metadata plan; GPU device limits have not been checked.
     Ready {
         /// Feasible CPU dimensions; device limits remain unverified.
         plan: ObservationTexturePlan,
     },
+    /// The requested budget cannot accommodate the referenced textures.
     InsufficientBudget {
         /// Requested policy.
         policy: ObservationTexturePolicy,
@@ -182,6 +188,7 @@ pub enum ObservationTexturePlanning {
     },
 }
 
+/// Verified source and actual rendering content for one referenced texture.
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct ObservationTextureReportEntry {
     /// Stable image asset ID; distinct IDs count separately even for equal pixels.
@@ -196,6 +203,7 @@ pub struct ObservationTextureReportEntry {
     pub render_rgba_hash: String,
 }
 
+/// Texture policy and verified content used across an observation batch.
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct ObservationTextureReport {
     /// Requested texture policy; not part of rendering-content digests.
@@ -224,6 +232,7 @@ pub struct ObservationTextureReport {
     pub textures: Vec<ObservationTextureReportEntry>,
 }
 
+/// One metadata feasibility or current Runtime availability diagnostic.
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape)]
 pub struct ObservationEstimateIssue {
     /// Structured feasibility category, using observation execution error codes.

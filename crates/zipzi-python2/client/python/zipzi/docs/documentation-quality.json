@@ -54,558 +54,7 @@
     "type-variable": 11,
     "typing": 39
   },
-  "diagnostics": [
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationBatch|projection:canonical",
-      "paths": [
-        "zipzi.modeling.observation.ObservationBatch",
-        "zipzi.observation.Batch"
-      ],
-      "pages": [
-        "modeling_observation",
-        "observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationBatch",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationContentIdentity|projection:canonical",
-      "paths": [
-        "zipzi.modeling.observation.ObservationContentIdentity"
-      ],
-      "pages": [
-        "modeling_observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationContentIdentity",
-      "category": "union-branch",
-      "subject": "PngSha256",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationContentIdentity|projection:canonical",
-      "paths": [
-        "zipzi.modeling.observation.ObservationContentIdentity"
-      ],
-      "pages": [
-        "modeling_observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationContentIdentity",
-      "category": "union-branch",
-      "subject": "Rgba8Sha256",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationContentIdentity|projection:variant:PngSha256",
-      "paths": [
-        "zipzi.modeling.observation.ObservationContentIdentityPngSha256"
-      ],
-      "pages": [
-        "modeling_observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationContentIdentity::PngSha256",
-      "category": "union-branch",
-      "subject": "PngSha256",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationContentIdentity|projection:variant:PngSha256",
-      "paths": [
-        "zipzi.modeling.observation.ObservationContentIdentityPngSha256"
-      ],
-      "pages": [
-        "modeling_observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationContentIdentity::PngSha256",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationContentIdentity|projection:variant:Rgba8Sha256",
-      "paths": [
-        "zipzi.modeling.observation.ObservationContentIdentityRgba8Sha256"
-      ],
-      "pages": [
-        "modeling_observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationContentIdentity::Rgba8Sha256",
-      "category": "union-branch",
-      "subject": "Rgba8Sha256",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationContentIdentity|projection:variant:Rgba8Sha256",
-      "paths": [
-        "zipzi.modeling.observation.ObservationContentIdentityRgba8Sha256"
-      ],
-      "pages": [
-        "modeling_observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationContentIdentity::Rgba8Sha256",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationEstimateIssue|projection:canonical",
-      "paths": [
-        "zipzi.modeling.observation.ObservationEstimateIssue"
-      ],
-      "pages": [
-        "modeling_observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationEstimateIssue",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationImage|projection:canonical",
-      "paths": [
-        "zipzi.modeling.observation.ObservationImage",
-        "zipzi.observation.Image"
-      ],
-      "pages": [
-        "modeling_observation",
-        "observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationImage",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationTexturePlanning|projection:canonical",
-      "paths": [
-        "zipzi.modeling.observation.ObservationTexturePlanning"
-      ],
-      "pages": [
-        "modeling_observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationTexturePlanning",
-      "category": "union-branch",
-      "subject": "InsufficientBudget",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationTexturePlanning|projection:canonical",
-      "paths": [
-        "zipzi.modeling.observation.ObservationTexturePlanning"
-      ],
-      "pages": [
-        "modeling_observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationTexturePlanning",
-      "category": "union-branch",
-      "subject": "Ready",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationTexturePlanning|projection:variant:InsufficientBudget",
-      "paths": [
-        "zipzi.modeling.observation.ObservationTexturePlanningInsufficientBudget",
-        "zipzi.observation.TextureBudgetInsufficient"
-      ],
-      "pages": [
-        "modeling_observation",
-        "observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationTexturePlanning::InsufficientBudget",
-      "category": "union-branch",
-      "subject": "InsufficientBudget",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationTexturePlanning|projection:variant:InsufficientBudget",
-      "paths": [
-        "zipzi.modeling.observation.ObservationTexturePlanningInsufficientBudget",
-        "zipzi.observation.TextureBudgetInsufficient"
-      ],
-      "pages": [
-        "modeling_observation",
-        "observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationTexturePlanning::InsufficientBudget",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationTexturePlanning|projection:variant:Ready",
-      "paths": [
-        "zipzi.modeling.observation.ObservationTexturePlanningReady",
-        "zipzi.observation.TexturePlanReady"
-      ],
-      "pages": [
-        "modeling_observation",
-        "observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationTexturePlanning::Ready",
-      "category": "union-branch",
-      "subject": "Ready",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationTexturePlanning|projection:variant:Ready",
-      "paths": [
-        "zipzi.modeling.observation.ObservationTexturePlanningReady",
-        "zipzi.observation.TexturePlanReady"
-      ],
-      "pages": [
-        "modeling_observation",
-        "observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationTexturePlanning::Ready",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationTexturePolicy|projection:canonical",
-      "paths": [
-        "zipzi.modeling.observation.ObservationTexturePolicy",
-        "zipzi.observation.TexturePolicy"
-      ],
-      "pages": [
-        "modeling_observation",
-        "observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationTexturePolicy",
-      "category": "union-branch",
-      "subject": "FitBudget",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationTexturePolicy|projection:variant:FitBudget",
-      "paths": [
-        "zipzi.modeling.observation.ObservationTexturePolicyFitBudget",
-        "zipzi.observation.FitBudget"
-      ],
-      "pages": [
-        "modeling_observation",
-        "observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationTexturePolicy::FitBudget",
-      "category": "union-branch",
-      "subject": "FitBudget",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationTexturePolicy|projection:variant:FitBudget",
-      "paths": [
-        "zipzi.modeling.observation.ObservationTexturePolicyFitBudget",
-        "zipzi.observation.FitBudget"
-      ],
-      "pages": [
-        "modeling_observation",
-        "observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationTexturePolicy::FitBudget",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationTextureReportEntry|projection:canonical",
-      "paths": [
-        "zipzi.modeling.observation.ObservationTextureReportEntry",
-        "zipzi.observation.Texture"
-      ],
-      "pages": [
-        "modeling_observation",
-        "observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationTextureReportEntry",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationTextureReport|projection:canonical",
-      "paths": [
-        "zipzi.modeling.observation.ObservationTextureReport",
-        "zipzi.observation.TextureReport"
-      ],
-      "pages": [
-        "modeling_observation",
-        "observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationTextureReport",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationTextureTarget|projection:canonical",
-      "paths": [
-        "zipzi.modeling.observation.ObservationTextureTarget"
-      ],
-      "pages": [
-        "modeling_observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationTextureTarget",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservationView|projection:canonical",
-      "paths": [
-        "zipzi.modeling.observation.ObservationView",
-        "zipzi.observation.View"
-      ],
-      "pages": [
-        "modeling_observation",
-        "observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservationView",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ObservedBounds|projection:canonical",
-      "paths": [
-        "zipzi.modeling.observation.ObservedBounds",
-        "zipzi.observation.Bounds"
-      ],
-      "pages": [
-        "modeling_observation",
-        "observation"
-      ],
-      "source": "rust:zipzi_contract::runtime::ObservedBounds",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::spatial::SpatialFrame|projection:canonical",
-      "paths": [
-        "zipzi.modeling.spatial.SpatialFrame",
-        "zipzi.spatial.Frame"
-      ],
-      "pages": [
-        "modeling_spatial",
-        "spatial"
-      ],
-      "source": "rust:zipzi_contract::spatial::SpatialFrame",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::spatial::SpatialQuery|projection:canonical",
-      "paths": [
-        "zipzi.modeling.spatial.SpatialQuery",
-        "zipzi.spatial.Query"
-      ],
-      "pages": [
-        "modeling_spatial",
-        "spatial"
-      ],
-      "source": "rust:zipzi_contract::spatial::SpatialQuery",
-      "category": "union-branch",
-      "subject": "Bounds",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::spatial::SpatialQuery|projection:canonical",
-      "paths": [
-        "zipzi.modeling.spatial.SpatialQuery",
-        "zipzi.spatial.Query"
-      ],
-      "pages": [
-        "modeling_spatial",
-        "spatial"
-      ],
-      "source": "rust:zipzi_contract::spatial::SpatialQuery",
-      "category": "union-branch",
-      "subject": "Hits",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::spatial::SpatialQuery|projection:variant:Bounds",
-      "paths": [
-        "zipzi.modeling.spatial.SpatialQueryBounds",
-        "zipzi.spatial.Bounds"
-      ],
-      "pages": [
-        "modeling_spatial",
-        "spatial"
-      ],
-      "source": "rust:zipzi_contract::spatial::SpatialQuery::Bounds",
-      "category": "union-branch",
-      "subject": "Bounds",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::spatial::SpatialQuery|projection:variant:Bounds",
-      "paths": [
-        "zipzi.modeling.spatial.SpatialQueryBounds",
-        "zipzi.spatial.Bounds"
-      ],
-      "pages": [
-        "modeling_spatial",
-        "spatial"
-      ],
-      "source": "rust:zipzi_contract::spatial::SpatialQuery::Bounds",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::spatial::SpatialQuery|projection:variant:Hits",
-      "paths": [
-        "zipzi.modeling.spatial.SpatialQueryHits",
-        "zipzi.spatial.Hits"
-      ],
-      "pages": [
-        "modeling_spatial",
-        "spatial"
-      ],
-      "source": "rust:zipzi_contract::spatial::SpatialQuery::Hits",
-      "category": "union-branch",
-      "subject": "Hits",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::spatial::SpatialQuery|projection:variant:Hits",
-      "paths": [
-        "zipzi.modeling.spatial.SpatialQueryHits",
-        "zipzi.spatial.Hits"
-      ],
-      "pages": [
-        "modeling_spatial",
-        "spatial"
-      ],
-      "source": "rust:zipzi_contract::spatial::SpatialQuery::Hits",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::spatial::SpatialResult|projection:canonical",
-      "paths": [
-        "zipzi.modeling.spatial.SpatialResult",
-        "zipzi.spatial.Result"
-      ],
-      "pages": [
-        "modeling_spatial",
-        "spatial"
-      ],
-      "source": "rust:zipzi_contract::spatial::SpatialResult",
-      "category": "union-branch",
-      "subject": "Bounds",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::spatial::SpatialResult|projection:canonical",
-      "paths": [
-        "zipzi.modeling.spatial.SpatialResult",
-        "zipzi.spatial.Result"
-      ],
-      "pages": [
-        "modeling_spatial",
-        "spatial"
-      ],
-      "source": "rust:zipzi_contract::spatial::SpatialResult",
-      "category": "union-branch",
-      "subject": "Hits",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::spatial::SpatialResult|projection:canonical",
-      "paths": [
-        "zipzi.modeling.spatial.SpatialResult",
-        "zipzi.spatial.Result"
-      ],
-      "pages": [
-        "modeling_spatial",
-        "spatial"
-      ],
-      "source": "rust:zipzi_contract::spatial::SpatialResult",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::spatial::SpatialResult|projection:variant:Bounds",
-      "paths": [
-        "zipzi.modeling.spatial.SpatialResultBounds",
-        "zipzi.spatial.BoundsResult"
-      ],
-      "pages": [
-        "modeling_spatial",
-        "spatial"
-      ],
-      "source": "rust:zipzi_contract::spatial::SpatialResult::Bounds",
-      "category": "union-branch",
-      "subject": "Bounds",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::spatial::SpatialResult|projection:variant:Bounds",
-      "paths": [
-        "zipzi.modeling.spatial.SpatialResultBounds",
-        "zipzi.spatial.BoundsResult"
-      ],
-      "pages": [
-        "modeling_spatial",
-        "spatial"
-      ],
-      "source": "rust:zipzi_contract::spatial::SpatialResult::Bounds",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::spatial::SpatialResult|projection:variant:Hits",
-      "paths": [
-        "zipzi.modeling.spatial.SpatialResultHits",
-        "zipzi.spatial.HitsResult"
-      ],
-      "pages": [
-        "modeling_spatial",
-        "spatial"
-      ],
-      "source": "rust:zipzi_contract::spatial::SpatialResult::Hits",
-      "category": "union-branch",
-      "subject": "Hits",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::spatial::SpatialResult|projection:variant:Hits",
-      "paths": [
-        "zipzi.modeling.spatial.SpatialResultHits",
-        "zipzi.spatial.HitsResult"
-      ],
-      "pages": [
-        "modeling_spatial",
-        "spatial"
-      ],
-      "source": "rust:zipzi_contract::spatial::SpatialResult::Hits",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::spatial::SpatialSamples|projection:canonical",
-      "paths": [
-        "zipzi.modeling.spatial.SpatialSamples",
-        "zipzi.spatial.Batch"
-      ],
-      "pages": [
-        "modeling_spatial",
-        "spatial"
-      ],
-      "source": "rust:zipzi_contract::spatial::SpatialSamples",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    }
-  ],
+  "diagnostics": [],
   "semantic_review": [
     {
       "identity": "python:zipzi._calls.recover_call",
@@ -25539,6 +24988,129 @@
       "status": "review_required"
     },
     {
+      "identity": "rust:zipzi_contract::runtime::ObservationContentIdentity|projection:canonical",
+      "paths": [
+        "zipzi.modeling.observation.ObservationContentIdentity"
+      ],
+      "pages": [
+        "modeling_observation"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationContentIdentity",
+      "category": "union-branch",
+      "subject": "PngSha256",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ObservationContentIdentity|projection:canonical",
+      "paths": [
+        "zipzi.modeling.observation.ObservationContentIdentity"
+      ],
+      "pages": [
+        "modeling_observation"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationContentIdentity",
+      "category": "union-branch",
+      "subject": "Rgba8Sha256",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ObservationContentIdentity|projection:variant:PngSha256",
+      "paths": [
+        "zipzi.modeling.observation.ObservationContentIdentityPngSha256"
+      ],
+      "pages": [
+        "modeling_observation"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationContentIdentity::PngSha256",
+      "category": "union-branch",
+      "subject": "PngSha256",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ObservationContentIdentity|projection:variant:Rgba8Sha256",
+      "paths": [
+        "zipzi.modeling.observation.ObservationContentIdentityRgba8Sha256"
+      ],
+      "pages": [
+        "modeling_observation"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationContentIdentity::Rgba8Sha256",
+      "category": "union-branch",
+      "subject": "Rgba8Sha256",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ObservationTexturePlanning|projection:canonical",
+      "paths": [
+        "zipzi.modeling.observation.ObservationTexturePlanning"
+      ],
+      "pages": [
+        "modeling_observation"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationTexturePlanning",
+      "category": "union-branch",
+      "subject": "InsufficientBudget",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ObservationTexturePlanning|projection:canonical",
+      "paths": [
+        "zipzi.modeling.observation.ObservationTexturePlanning"
+      ],
+      "pages": [
+        "modeling_observation"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationTexturePlanning",
+      "category": "union-branch",
+      "subject": "Ready",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ObservationTexturePlanning|projection:variant:InsufficientBudget",
+      "paths": [
+        "zipzi.modeling.observation.ObservationTexturePlanningInsufficientBudget",
+        "zipzi.observation.TextureBudgetInsufficient"
+      ],
+      "pages": [
+        "modeling_observation",
+        "observation"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationTexturePlanning::InsufficientBudget",
+      "category": "union-branch",
+      "subject": "InsufficientBudget",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ObservationTexturePlanning|projection:variant:Ready",
+      "paths": [
+        "zipzi.modeling.observation.ObservationTexturePlanningReady",
+        "zipzi.observation.TexturePlanReady"
+      ],
+      "pages": [
+        "modeling_observation",
+        "observation"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationTexturePlanning::Ready",
+      "category": "union-branch",
+      "subject": "Ready",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ObservationTexturePolicy|projection:canonical",
+      "paths": [
+        "zipzi.modeling.observation.ObservationTexturePolicy",
+        "zipzi.observation.TexturePolicy"
+      ],
+      "pages": [
+        "modeling_observation",
+        "observation"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationTexturePolicy",
+      "category": "union-branch",
+      "subject": "FitBudget",
+      "status": "review_required"
+    },
+    {
       "identity": "rust:zipzi_contract::runtime::ObservationTexturePolicy|projection:canonical",
       "paths": [
         "zipzi.modeling.observation.ObservationTexturePolicy",
@@ -25551,6 +25123,21 @@
       "source": "rust:zipzi_contract::runtime::ObservationTexturePolicy",
       "category": "union-branch",
       "subject": "Original",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ObservationTexturePolicy|projection:variant:FitBudget",
+      "paths": [
+        "zipzi.modeling.observation.ObservationTexturePolicyFitBudget",
+        "zipzi.observation.FitBudget"
+      ],
+      "pages": [
+        "modeling_observation",
+        "observation"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationTexturePolicy::FitBudget",
+      "category": "union-branch",
+      "subject": "FitBudget",
       "status": "review_required"
     },
     {
@@ -25957,6 +25544,126 @@
       "source": "rust:zipzi_contract::spatial::ObjectTarget::Part",
       "category": "union-branch",
       "subject": "Part",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::spatial::SpatialQuery|projection:canonical",
+      "paths": [
+        "zipzi.modeling.spatial.SpatialQuery",
+        "zipzi.spatial.Query"
+      ],
+      "pages": [
+        "modeling_spatial",
+        "spatial"
+      ],
+      "source": "rust:zipzi_contract::spatial::SpatialQuery",
+      "category": "union-branch",
+      "subject": "Bounds",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::spatial::SpatialQuery|projection:canonical",
+      "paths": [
+        "zipzi.modeling.spatial.SpatialQuery",
+        "zipzi.spatial.Query"
+      ],
+      "pages": [
+        "modeling_spatial",
+        "spatial"
+      ],
+      "source": "rust:zipzi_contract::spatial::SpatialQuery",
+      "category": "union-branch",
+      "subject": "Hits",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::spatial::SpatialQuery|projection:variant:Bounds",
+      "paths": [
+        "zipzi.modeling.spatial.SpatialQueryBounds",
+        "zipzi.spatial.Bounds"
+      ],
+      "pages": [
+        "modeling_spatial",
+        "spatial"
+      ],
+      "source": "rust:zipzi_contract::spatial::SpatialQuery::Bounds",
+      "category": "union-branch",
+      "subject": "Bounds",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::spatial::SpatialQuery|projection:variant:Hits",
+      "paths": [
+        "zipzi.modeling.spatial.SpatialQueryHits",
+        "zipzi.spatial.Hits"
+      ],
+      "pages": [
+        "modeling_spatial",
+        "spatial"
+      ],
+      "source": "rust:zipzi_contract::spatial::SpatialQuery::Hits",
+      "category": "union-branch",
+      "subject": "Hits",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::spatial::SpatialResult|projection:canonical",
+      "paths": [
+        "zipzi.modeling.spatial.SpatialResult",
+        "zipzi.spatial.Result"
+      ],
+      "pages": [
+        "modeling_spatial",
+        "spatial"
+      ],
+      "source": "rust:zipzi_contract::spatial::SpatialResult",
+      "category": "union-branch",
+      "subject": "Bounds",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::spatial::SpatialResult|projection:canonical",
+      "paths": [
+        "zipzi.modeling.spatial.SpatialResult",
+        "zipzi.spatial.Result"
+      ],
+      "pages": [
+        "modeling_spatial",
+        "spatial"
+      ],
+      "source": "rust:zipzi_contract::spatial::SpatialResult",
+      "category": "union-branch",
+      "subject": "Hits",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::spatial::SpatialResult|projection:variant:Bounds",
+      "paths": [
+        "zipzi.modeling.spatial.SpatialResultBounds",
+        "zipzi.spatial.BoundsResult"
+      ],
+      "pages": [
+        "modeling_spatial",
+        "spatial"
+      ],
+      "source": "rust:zipzi_contract::spatial::SpatialResult::Bounds",
+      "category": "union-branch",
+      "subject": "Bounds",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::spatial::SpatialResult|projection:variant:Hits",
+      "paths": [
+        "zipzi.modeling.spatial.SpatialResultHits",
+        "zipzi.spatial.HitsResult"
+      ],
+      "pages": [
+        "modeling_spatial",
+        "spatial"
+      ],
+      "source": "rust:zipzi_contract::spatial::SpatialResult::Hits",
+      "category": "union-branch",
+      "subject": "Hits",
       "status": "review_required"
     },
     {

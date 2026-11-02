@@ -236,6 +236,7 @@
       ]
     },
     "zipzi_contract::spatial::SpatialFrame": {
+      "doc": "Effective parameters and ordered query results for one evaluated pose.",
       "fields": [
         {
           "doc": "Effective evaluated parameter values keyed by document UUID, including defaults/clamps.",
@@ -276,6 +277,7 @@
       "tag": "kind",
       "variants": [
         {
+          "doc": "Measure the union of evaluated geometry for the selected targets.",
           "fields": [
             {
               "doc": "Mesh/Part UUID selectors; an empty selection selects no meshes.",
@@ -306,6 +308,7 @@
           "rust_name": "Bounds"
         },
         {
+          "doc": "Find geometric candidates containing a model-space point.",
           "fields": [
             {
               "doc": "Finite XY point in evaluated Y-up model coordinates, not screen pixels.",
@@ -359,11 +362,13 @@
     },
     "zipzi_contract::spatial::SpatialResult": {
       "content": "value",
+      "doc": "Result of one spatial query, retaining its request kind.",
       "kind": "serde_enum",
       "name": "zipzi_contract::spatial::SpatialResult",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Evaluated bounds for the selected targets.",
           "fields": [
             {
               "doc": "Bounds and resolved mesh IDs for the corresponding selector request.",
@@ -381,6 +386,7 @@
           "rust_name": "Bounds"
         },
         {
+          "doc": "Geometric candidates containing the requested point.",
           "fields": [
             {
               "doc": "Geometric candidates in SDK order, including total and truncation metadata.",
@@ -400,6 +406,7 @@
       ]
     },
     "zipzi_contract::spatial::SpatialSamples": {
+      "doc": "Ordered CPU spatial results for poses evaluated against one frozen source.",
       "fields": [
         {
           "doc": "Exact SDK version of the immutable formal or candidate snapshot.",

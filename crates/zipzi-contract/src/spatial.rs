@@ -108,6 +108,7 @@ pub struct GeometryQuery {
 )]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum SpatialQuery {
+    /// Measure the union of evaluated geometry for the selected targets.
     Bounds {
         /// Mesh/Part UUID selectors; an empty selection selects no meshes.
         targets: Vec<ObjectTarget>,
@@ -115,6 +116,7 @@ pub enum SpatialQuery {
         #[serde(default)]
         include_hidden: bool,
     },
+    /// Find geometric candidates containing a model-space point.
     Hits {
         /// Finite XY point in evaluated Y-up model coordinates, not screen pixels.
         point: [f64; 2],
@@ -133,19 +135,23 @@ fn default_candidates() -> usize {
     32
 }
 
+/// Result of one spatial query, retaining its request kind.
 #[derive(Clone, Debug, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 #[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum SpatialResult {
+    /// Evaluated bounds for the selected targets.
     Bounds(
         /// Bounds and resolved mesh IDs for the corresponding selector request.
         ObjectBounds,
     ),
+    /// Geometric candidates containing the requested point.
     Hits(
         /// Geometric candidates in SDK order, including total and truncation metadata.
         GeometryQuery,
     ),
 }
 
+/// Effective parameters and ordered query results for one evaluated pose.
 #[derive(Clone, Debug, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct SpatialFrame {
     /// Effective evaluated parameter values keyed by document UUID, including defaults/clamps.
@@ -154,6 +160,7 @@ pub struct SpatialFrame {
     pub results: Vec<SpatialResult>,
 }
 
+/// Ordered CPU spatial results for poses evaluated against one frozen source.
 #[derive(Clone, Debug, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
 pub struct SpatialSamples {
     /// Exact SDK version of the immutable formal or candidate snapshot.

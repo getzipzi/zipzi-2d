@@ -1,6 +1,6 @@
 {
   "_generated_by": "zipzi-python2/tools/generate.py",
-  "contract_sha256": "d76ef68844f66c8e2add1da4b0d8680d423d56a4827ded2627742842ba8cca31",
+  "contract_sha256": "bc65d9a5f616fa5abb43fbc4910a402a37c77734055bf51b9e9ade10ad1b1f64",
   "format_version": 2,
   "root": {
     "binary": {
@@ -773,7 +773,7 @@
     },
     {
       "path": "types/observation.json",
-      "sha256": "0c0e16475170362163a2be372c27b5a0c94eb80bf2b917dc89f19db7b18bea3b"
+      "sha256": "c9e62f959e050408a7126309fc0ba9c116f745b6426762c4aa10a7d57dbfa89e"
     },
     {
       "path": "types/parameters.json",
@@ -817,7 +817,7 @@
     },
     {
       "path": "types/spatial.json",
-      "sha256": "4ed4558e13fda996d262f37b63f0eb8244add1059c8b7f70b30e31e3884c28ba"
+      "sha256": "337469d6cc1cb1e96b5d435cf00b10ac0c39d5c33ca93094249906dcdc0dd1ab"
     }
   ]
 }

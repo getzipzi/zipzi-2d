@@ -309,6 +309,7 @@
       "tuple": false
     },
     "zipzi_contract::runtime::ObservationBatch": {
+      "doc": "Ordered GPU frames sharing one view and verified texture acquisition.",
       "fields": [
         {
           "doc": "Verified once-per-batch source and rendering texture content.",
@@ -372,6 +373,7 @@
       "tag": "kind",
       "variants": [
         {
+          "doc": "Digest of the encoded source PNG bytes.",
           "fields": [
             {
               "doc": "SHA256 of encoded source PNG bytes; verification is a separate state.",
@@ -388,6 +390,7 @@
           "rust_name": "PngSha256"
         },
         {
+          "doc": "Domain-separated digest of source dimensions and straight RGBA8 pixels.",
           "fields": [
             {
               "doc": "Domain-separated hash including dimensions and pixel conventions.",
@@ -569,6 +572,7 @@
       "tuple": false
     },
     "zipzi_contract::runtime::ObservationEstimateIssue": {
+      "doc": "One metadata feasibility or current Runtime availability diagnostic.",
       "fields": [
         {
           "doc": "Structured feasibility category, using observation execution error codes.",
@@ -634,6 +638,7 @@
       "tuple": false
     },
     "zipzi_contract::runtime::ObservationImage": {
+      "doc": "One GPU-rendered image and its source, view mapping and geometric metadata.",
       "fields": [
         {
           "doc": "Output image width in pixels.",
@@ -944,6 +949,7 @@
       "tag": "kind",
       "variants": [
         {
+          "doc": "A feasible metadata plan; GPU device limits have not been checked.",
           "fields": [
             {
               "doc": "Feasible CPU dimensions; device limits remain unverified.",
@@ -961,6 +967,7 @@
           "rust_name": "Ready"
         },
         {
+          "doc": "The requested budget cannot accommodate the referenced textures.",
           "fields": [
             {
               "doc": "Requested policy.",
@@ -1034,6 +1041,7 @@
           "rust_name": "Original"
         },
         {
+          "doc": "Deterministically downsample referenced base textures to fit a logical RGBA8 budget.",
           "fields": [
             {
               "doc": "Positive integer no greater than the host's base RGBA limit.",
@@ -1052,6 +1060,7 @@
       ]
     },
     "zipzi_contract::runtime::ObservationTextureReport": {
+      "doc": "Texture policy and verified content used across an observation batch.",
       "fields": [
         {
           "doc": "Requested texture policy; not part of rendering-content digests.",
@@ -1177,6 +1186,7 @@
       "tuple": false
     },
     "zipzi_contract::runtime::ObservationTextureReportEntry": {
+      "doc": "Verified source and actual rendering content for one referenced texture.",
       "fields": [
         {
           "doc": "Stable image asset ID; distinct IDs count separately even for equal pixels.",
@@ -1302,6 +1312,7 @@
       "tuple": false
     },
     "zipzi_contract::runtime::ObservationTextureTarget": {
+      "doc": "Source metadata and planned rendering dimensions for one referenced texture.",
       "fields": [
         {
           "doc": "Declared source metadata; the executor must validate it again.",
@@ -1330,6 +1341,7 @@
       "tuple": false
     },
     "zipzi_contract::runtime::ObservationView": {
+      "doc": "Output dimensions and Y-up model-space region for GPU observation.",
       "fields": [
         {
           "default": {
@@ -1416,6 +1428,7 @@
       "tuple": false
     },
     "zipzi_contract::runtime::ObservedBounds": {
+      "doc": "Clipped image-space geometric bounds for one evaluated drawable.",
       "fields": [
         {
           "doc": "Stable authoring drawable UUID.",

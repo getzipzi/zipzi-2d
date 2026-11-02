@@ -20,6 +20,8 @@ Canonical observation modeling values.
 
 `(*, texture_report: ObservationTextureReport, view: ObservationView, requested: tuple[_Mapping[str, float], ...], frames: tuple[ObservationImage, ...])`
 
+Ordered GPU frames sharing one view and verified texture acquisition.
+
 Types: [ObservationImage](#zipzimodelingobservationobservationimage), [ObservationTextureReport](#zipzimodelingobservationobservationtexturereport), [ObservationView](#zipzimodelingobservationobservationview).
 
 **Fields**
@@ -47,6 +49,8 @@ Types: [ObservationContentIdentityPngSha256](#zipzimodelingobservationobservatio
 
 `(*, hash: str)`
 
+Digest of the encoded source PNG bytes.
+
 **Fields**
 
 - `hash`: SHA256 of encoded source PNG bytes; verification is a separate state.
@@ -56,6 +60,8 @@ Types: [ObservationContentIdentityPngSha256](#zipzimodelingobservationobservatio
 **Type**
 
 `(*, hash: str)`
+
+Domain-separated digest of source dimensions and straight RGBA8 pixels.
 
 **Fields**
 
@@ -96,6 +102,8 @@ Types: [Source], [ObservationEstimateIssue](#zipzimodelingobservationobservation
 
 `(*, code: str, message: str, asset_id: str | None = None, requested: int | None = None, limit: int | None = None)`
 
+One metadata feasibility or current Runtime availability diagnostic.
+
 **Fields**
 
 - `code`: Structured feasibility category, using observation execution error codes.
@@ -109,6 +117,8 @@ Types: [Source], [ObservationEstimateIssue](#zipzimodelingobservationobservation
 **Type**
 
 `(*, width: int, height: int, rgba: _Bytes, png: _Bytes, document_id: str, evaluation_revision: int, capture_id: str, scene_digest: str, render_digest: str, input_sha256: str, adapter_name: str, adapter_backend: str, parameters: _Mapping[str, float], visible_roi: tuple[float, float, float, float], scale: float, offset: tuple[float, float], drawable_bounds: tuple[ObservedBounds, ...], quality: tuple[MeshQuality, ...])`
+
+One GPU-rendered image and its source, view mapping and geometric metadata.
 
 Types: [ObservedBounds](#zipzimodelingobservationobservedbounds), [MeshQuality].
 
@@ -178,6 +188,8 @@ Types: [ObservationTexturePlanningInsufficientBudget](#zipzimodelingobservationo
 
 `(*, policy: ObservationTexturePolicy, effective_max_rgba_bytes: int, source_rgba_bytes: int, minimum_required_rgba_bytes: int, textures: tuple[ObservationTextureSource, ...])`
 
+The requested budget cannot accommodate the referenced textures.
+
 Types: [ObservationTexturePolicy](#zipzimodelingobservationobservationtexturepolicy), [ObservationTextureSource](#zipzimodelingobservationobservationtexturesource).
 
 **Fields**
@@ -193,6 +205,8 @@ Types: [ObservationTexturePolicy](#zipzimodelingobservationobservationtexturepol
 **Type**
 
 `(*, plan: ObservationTexturePlan)`
+
+A feasible metadata plan; GPU device limits have not been checked.
 
 Types: [ObservationTexturePlan](#zipzimodelingobservationobservationtextureplan).
 
@@ -218,6 +232,8 @@ Types: [ObservationTexturePolicyFitBudget](#zipzimodelingobservationobservationt
 
 `(*, max_rgba_bytes: int)`
 
+Deterministically downsample referenced base textures to fit a logical RGBA8 budget.
+
 **Fields**
 
 - `max_rgba_bytes`: Positive integer no greater than the host's base RGBA limit.
@@ -236,6 +252,8 @@ Preserve the source dimensions and every source byte.
 **Type**
 
 `(*, policy: ObservationTexturePolicy, effective_max_rgba_bytes: int, longest_edge_limit: int | None = None, source_rgba_bytes: int, render_rgba_bytes: int, estimated_mipmap_bytes: int, resized_count: int, filter: str, algorithm_version: int, planning_version: int, mipmap_version: int, textures: tuple[ObservationTextureReportEntry, ...])`
+
+Texture policy and verified content used across an observation batch.
 
 Types: [ObservationTexturePolicy](#zipzimodelingobservationobservationtexturepolicy), [ObservationTextureReportEntry](#zipzimodelingobservationobservationtexturereportentry).
 
@@ -259,6 +277,8 @@ Types: [ObservationTexturePolicy](#zipzimodelingobservationobservationtexturepol
 **Type**
 
 `(*, asset_id: str, source_size: ObservationTextureSize, render_size: ObservationTextureSize, source_content_identity: ObservationContentIdentity, render_rgba_hash: str)`
+
+Verified source and actual rendering content for one referenced texture.
 
 Types: [ObservationContentIdentity](#zipzimodelingobservationobservationcontentidentity), [ObservationTextureSize](#zipzimodelingobservationobservationtexturesize).
 
@@ -306,6 +326,8 @@ Types: [ObservationContentIdentity](#zipzimodelingobservationobservationcontenti
 
 `(*, source: ObservationTextureSource, render_size: ObservationTextureSize)`
 
+Source metadata and planned rendering dimensions for one referenced texture.
+
 Types: [ObservationTextureSize](#zipzimodelingobservationobservationtexturesize), [ObservationTextureSource](#zipzimodelingobservationobservationtexturesource).
 
 **Fields**
@@ -318,6 +340,8 @@ Types: [ObservationTextureSize](#zipzimodelingobservationobservationtexturesize)
 **Type**
 
 `(*, texture_policy: ObservationTexturePolicy = <factory>, width: int, height: int, roi: tuple[float, float, float, float], padding_model: float = 0.0, topology: TopologyOverlay | None = None, quality: bool = False)`
+
+Output dimensions and Y-up model-space region for GPU observation.
 
 Types: [ObservationTexturePolicy](#zipzimodelingobservationobservationtexturepolicy), [TopologyOverlay](#zipzimodelingobservationtopologyoverlay).
 
@@ -338,6 +362,8 @@ Uses default parameters of the same source as reference; checks requested frames
 **Type**
 
 `(*, id: str, visible: bool, bounds: tuple[int, int, int, int] | None = None)`
+
+Clipped image-space geometric bounds for one evaluated drawable.
 
 **Fields**
 
