@@ -6,6 +6,7 @@
 - [Python 契约阶段 6 验收](archive/plans/python2-contract-acceptance.md): 依赖隔离、归档安装、集成回归和实际生成／native 循环耗时
 - [Python 生成代码与文档拆分实施方案](archive/plans/python-generated-code-readability/README.md): 文档去重、类型归属、领域拆分、schema 引用和分阶段验收
 - [Python 生成代码审查与验收](archive/plans/python-generated-code-readability/python-generated-code-readability-review.md)及[后续精简验收](archive/plans/python-generated-code-readability/python-generated-code-slimming.md): 类型、编解码、安装分发、实际体积和性能对照
+- [Python generated reference 全领域推广计划](plans/python-reference-rollout.md): 从 Session/Edit 与 meshes 样板推广到全部公开领域，明确说明来源、分批任务、类型引用与验收门禁
 - [Editor development](../crates/zipzi-editor/README.md) and [dependencies](../vendor/README.md#dependencies)
 - [Test domains and CI](../tools/README.md#test-coverage)
 - [Source, wheel and app artifacts](../tools/README.md#local-distribution-artifacts)
