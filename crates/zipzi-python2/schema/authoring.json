@@ -1,6 +1,6 @@
 {
   "_generated_by": "zipzi-python2/tools/generate.py",
-  "contract_sha256": "603f6832e8d6abbacb6cd9560ff71c2c479edafd870fd3a8547b365462af5d1e",
+  "contract_sha256": "dcdfe8a5b856d4bb320d968956e6fd20b9c15a1372580c15e44f9f5f22d6ab36",
   "format_version": 2,
   "root": {
     "binary": {
@@ -741,23 +741,23 @@
     },
     {
       "path": "types/bindings.json",
-      "sha256": "af892c4b2e630964fbd59c2eb58ff4ec3e83bb5f5c6b9d65e6eec2f733e13bfa"
+      "sha256": "4a9b477d804e2790373c29bf0c7f04464dee0cac2e4a6be4f9ce88c4f9dea068"
     },
     {
       "path": "types/commands.json",
-      "sha256": "d5deef791682f947d9572c1550cad86ffadf2bef837dabaf385eaa2ec917e612"
+      "sha256": "1874b6d01a6883e72f6e52faf5461eed62605a11125874058751ecfef22f58c4"
     },
     {
       "path": "types/common.json",
-      "sha256": "9dce1bb75265566b6931c5c631c41ea58f6365864452d0a6a09f5c7c5f4dc9db"
+      "sha256": "5978595d2cb9e8f904dbc0bfdc6226b3275bac59448600a5cce75c9ee62e0579"
     },
     {
       "path": "types/deletion.json",
-      "sha256": "d3ad373b668658fe661d98b7f37f7f87c1612ec9e972f5a41306160d589484f4"
+      "sha256": "14e7c0aa3bbb2a231145f66a575ec1ec994230ff1cbe906ec3ddcfb0866b1906"
     },
     {
       "path": "types/expression.json",
-      "sha256": "397ad79bf563421d575ebd2f188c871fe8275aacdff24c9dbf83d023fed84643"
+      "sha256": "2663be51b8cf1c6766b81294b2cc63408c3f27bf15178b630b7ad97656c56925"
     },
     {
       "path": "types/external.json",
@@ -765,27 +765,27 @@
     },
     {
       "path": "types/mesh.json",
-      "sha256": "fecc6c76f8bb27981661141d88ff40c9cc312acf70bb1a1daf229ae7ce4ca04e"
+      "sha256": "727a922148b90418b6e93c9bf1583ceb1de85a64a2b99cc75a64ebea48dd2c78"
     },
     {
       "path": "types/motion.json",
-      "sha256": "ed935fa8073723e37359c128a11be885118fbe9e4749b2aab1f9ccb38310b47c"
+      "sha256": "404f29d10d646ff8c4f82b62d3ae568dcd1737e95ea0421c4690c0e72f8375f5"
     },
     {
       "path": "types/observation.json",
-      "sha256": "b4cf6978d0b4f37d5813b9569afae4e367bce8231b054347459c0117ad590852"
+      "sha256": "339c02a3312a72dfcef85f8fdc58302b8dcab548db971553664c1833172ec419"
     },
     {
       "path": "types/parameters.json",
-      "sha256": "a5bf80861b1fd46b9fbc4f94440737ac27aeae3265dfde71144e87b6f24d2000"
+      "sha256": "3d790734ab96cc7db54bfece08c7bfa7a54e990e5575d11967fef4cc01bc79c0"
     },
     {
       "path": "types/physics.json",
-      "sha256": "c8ac699436dc0c1696d18f160fd061f83ddc453029822a61410092fdd5ee03d9"
+      "sha256": "98a2722a23451ab786dc8b1facdfd747559440059a021bbc3efb8c35a7008c87"
     },
     {
       "path": "types/pose.json",
-      "sha256": "d474940295b688ae739673ba8bc53a95bc74a186f0a18bfd9684713b9152b889"
+      "sha256": "76e22467b5f505c2bdd993198341cdc4df546eb2950560f2884fb21091bdf9c5"
     },
     {
       "path": "types/preview.json",
@@ -793,31 +793,31 @@
     },
     {
       "path": "types/project.json",
-      "sha256": "e7dae4e1a9e3f65cebadc11820bf47500a3c8831e07f981d827d22d96463f564"
+      "sha256": "565ee9070563537d064de01d215dc0b7adb6c43e61a3a2fb196720a13d43c631"
     },
     {
       "path": "types/queries.json",
-      "sha256": "613ee4e2a698d775929e7931b019593a9181ab4c1a9d5171c4a5783e1af5528b"
+      "sha256": "bbcec911e52492ff97a189de5aa757d2730f13d23f540a2059a7cd51b9dad996"
     },
     {
       "path": "types/resources.json",
-      "sha256": "6461acab55a60b7a0283dabd8340a4259a5efaf5733fa447b6b08bd7390e8f22"
+      "sha256": "42825ca1ea136df6e3d3d1fbaec2df1a5b0f4e5a93d02bedcabb07842580d627"
     },
     {
       "path": "types/runtime.json",
-      "sha256": "a8546354e6671b52845f3440e2528a214550a90162c2f004d9587eb4a853e611"
+      "sha256": "101b526d5e27dcd01793baa5ee6472cbb69e863eddc84226bb07ac098c092228"
     },
     {
       "path": "types/sampling.json",
-      "sha256": "67c5e061d0b378faa825cd4b1b0a05629bd3d97ea32c7f439b4194923766be9d"
+      "sha256": "f6e5753af4896b6402b24e79e3b6278e8c2630263d4612afa49f4b946eb5c7d3"
     },
     {
       "path": "types/scene.json",
-      "sha256": "bb531595b6df849dc42dd578db08b06f0e290d062b117a5f46435777f2dd2f4a"
+      "sha256": "e462283d292576f9a16a9ab597e5ccd111260b072bb14a59ebafb9687aabf0ff"
     },
     {
       "path": "types/spatial.json",
-      "sha256": "8ba6648ddc4c9a7fb8b26bef7d4209617ac129b4c8a9ba1fad7d61ffe89714f0"
+      "sha256": "4ed4558e13fda996d262f37b63f0eb8244add1059c8b7f70b30e31e3884c28ba"
     }
   ]
 }

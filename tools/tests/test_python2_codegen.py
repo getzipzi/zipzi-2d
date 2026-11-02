@@ -69,6 +69,160 @@ class Python2ContractIsolation(unittest.TestCase):
 
 
 class Python2Codegen(unittest.TestCase):
+    def test_mesh_reference_has_public_signatures_context_and_definitions(self):
+        output = render_fixture(self.contract())
+        catalog = catalog_from_output(output)
+        self.assertEqual(catalog['zipzi.Session.id']['kind'], 'property')
+        self.assertEqual(catalog['zipzi.Session.id']['signature'], ': SessionId')
+        self.assertEqual(catalog['zipzi.Session.project']['signature'], 'session.project')
+        self.assertEqual(catalog['zipzi.Session.project']['kind'], 'property')
+        for owner in ('Session', 'Edit'):
+            entry = catalog['zipzi.' + owner + '.meshes']
+            self.assertEqual(entry['kind'], 'property')
+            self.assertNotIn('session:', entry['signature'])
+        self.assertIn('committed Session', catalog['zipzi.Session.meshes.get']['documentation'])
+        self.assertIn('pending writes', catalog['zipzi.Edit.meshes.get']['documentation'])
+        self.assertEqual(catalog['zipzi.meshes.Point']['signature'], 'tuple[float, float]')
+        self.assertEqual(catalog['zipzi.meshes.ConstraintKind']['kind'], 'enum')
+        self.assertTrue(catalog['zipzi.meshes.ConstraintKind']['fields'])
+        self.assertNotIn('kind:', catalog['zipzi.meshes.Create']['signature'])
+        self.assertEqual(catalog['zipzi.meshes.Rename']['signature'],
+                         '(id: str, name: str, *, expected_name: str | None = None)')
+        for name in ('Geometry', 'Mesh', 'MeshSpec', 'Create', 'Rename', 'SetPositions'):
+            entry = catalog['zipzi.meshes.' + name]
+            self.assertNotIn('Immutable owned', entry['documentation'])
+        page = output['client/python/zipzi/docs/reference/runtime_session.md']
+        section = page.split('## zipzi.Session.meshes.get\n', 1)[1].split('\n## ', 1)[0]
+        self.assertNotIn('Alias of', section)
+        self.assertNotIn('Types:', section)
+        self.assertEqual(page.count('## Type references'),1)
+        self.assertIn('[Mesh]: meshes.md#zipzimeshesmesh',page)
+        self.assertIn('zipzi.meshes.Mesh',catalog['zipzi.Session.meshes.get']['type_refs'])
+        self.assertIn('zipzi.Snapshot',catalog['zipzi.Session.meshes.get']['type_refs'])
+        for name in ('create','rename','set_positions'):
+            documentation=catalog['zipzi.Edit.meshes.'+name]['documentation']
+            self.assertIn('OutcomeUnknown', documentation)
+            self.assertIn('abort the candidate', documentation)
+            self.assertNotIn('(...)', documentation)
+
+    def test_reference_types_resolve_import_aliases_and_forward_annotations(self):
+        original=gen._api_codegen.render_api
+        def renamed(*args,**kwargs):
+            import re
+            output=original(*args,**kwargs)
+            path='client/python/zipzi/_generated/facades.py'
+            source=output[path].replace('import Source,','import Source as CapturedSource,')
+            source=re.sub(r'expected: Source \| None', "expected: 'CapturedSource | None'",source)
+            output[path]=source
+            return output
+        with patch.object(gen._api_codegen,'render_api',side_effect=renamed):
+            output=render_fixture(self.contract())
+        catalog=catalog_from_output(output)
+        refs=catalog['zipzi.Session.meshes.get']['type_refs']
+        self.assertIn('zipzi.Source',refs)
+        self.assertIn('zipzi.Snapshot',refs)
+        self.assertIn('zipzi.meshes.Mesh',refs)
+        for row in catalog.values():
+            for ref in row.get('type_refs',()):self.assertIn(ref,catalog)
+
+    def test_reference_reports_missing_type_semantics_without_boilerplate(self):
+        contract=self.contract()
+        def remove(node):
+            if isinstance(node,dict):
+                if node.get('name','').endswith('::MeshGeometry'):node.pop('doc',None)
+                for child in node.values():remove(child)
+            elif isinstance(node,list):
+                for child in node:remove(child)
+        remove(contract)
+        output=render_fixture(contract)
+        report=json.loads(output['client/python/zipzi/docs/type-documentation.json'])
+        gap=next(item for item in report['missing'] if 'zipzi.meshes.Geometry' in item['paths'])
+        self.assertEqual(gap['source'],'rust:zipzi_contract::authoring::MeshGeometry')
+        catalog=catalog_from_output(output)
+        self.assertEqual(catalog['zipzi.meshes.Geometry']['documentation'],'')
+        self.assertTrue(catalog['zipzi.meshes.Geometry']['fields'])
+        self.assertIn('Constructors normalize declared collections',output['client/python/zipzi/docs/reference/common.md'])
+        for path,text in output.items():
+            if path.endswith(('.py','.md')):
+                self.assertNotIn('Construction owns declared collections;',text,path)
+                self.assertNotIn('Immutable typed value. See field semantics',text,path)
+                self.assertNotIn('Typed public API entry.',text,path)
+        with self.assertRaisesRegex(ValueError,'Missing type documentation:'):
+            gen.check_type_documentation(output)
+
+    def test_reference_strict_documentation_gate_accepts_complete_coverage(self):
+        report={'type_count':1,'documented_type_count':1,'missing_type_count':0,'missing':[]}
+        self.assertIsNone(gen.check_type_documentation({'client/python/zipzi/docs/type-documentation.json':json.dumps(report)}))
+
+    def test_reference_strict_documentation_cli_checks_without_writing(self):
+        report={'type_count':1,'documented_type_count':0,'missing_type_count':1,
+                'missing':[{'paths':['zipzi.Example'],'source':'rust:example::Example'}]}
+        output={'client/python/zipzi/docs/type-documentation.json':json.dumps(report)}
+        with patch.object(gen.sys,'argv',['generate.py','--check-docs']), \
+             patch.object(gen,'export',return_value={}), \
+             patch.object(gen,'cached_render',return_value=output), \
+             patch.object(gen,'write_outputs',return_value=[]) as write:
+            with self.assertRaisesRegex(SystemExit,'Missing type documentation: 1 types'):
+                gen.main()
+        self.assertTrue(write.call_args.args[1])
+
+    def test_reference_semantics_follow_contract_type_variant_and_member_docs(self):
+        contract=self.contract()
+        def mutate(node):
+            if isinstance(node,dict):
+                name=node.get('name','')
+                if name.endswith('::MeshGeometry'):node['doc']='Updated mesh geometry meaning.'
+                if name.endswith('::ManualMeshOperation'):node['doc']='Updated mesh operation union meaning.'
+                if name.endswith('::MeshOperation'):
+                    next(v for v in node['variants'] if v['rust_name']=='Rename')['doc']='Updated rename meaning.'
+                if name.endswith('::MeshConstraintKind'):
+                    next(v for v in node['variants'] if v['rust_name']=='User')['doc']='Updated constraint meaning.'
+                for child in node.values():mutate(child)
+            elif isinstance(node,list):
+                for child in node:mutate(child)
+        mutate(contract)
+        output=render_fixture(contract)
+        catalog=catalog_from_output(output)
+        cases=(('zipzi.meshes.Geometry','Updated mesh geometry meaning.','meshes.py'),
+               ('zipzi.meshes.Rename','Updated rename meaning.','mesh_ops.py'),
+               ('zipzi.Edit.meshes.rename','Updated rename meaning.','facades.py'))
+        for path,meaning,source in cases:
+            self.assertIn(meaning,catalog[path]['documentation'])
+            self.assertIn(meaning,output['client/python/zipzi/_generated/'+source])
+            self.assertIn(meaning,output['client/python/zipzi/docs/reference/'+('runtime_edit' if 'Edit.' in path else 'meshes')+'.md'])
+        self.assertIn('Updated mesh operation union meaning.',catalog['zipzi.modeling.mesh.ManualMeshOperation']['documentation'])
+        self.assertIn('Updated mesh operation union meaning.',output['client/python/zipzi/docs/reference/modeling_mesh.md'])
+        self.assertIn('Updated constraint meaning.',str(catalog['zipzi.meshes.ConstraintKind']['fields']))
+        self.assertIn('Updated constraint meaning.',output['client/python/zipzi/docs/reference/modeling_mesh.md'])
+
+    def test_reference_rejects_missing_example_target(self):
+        original = Path.is_file
+        with patch.object(Path, 'is_file', lambda path: False if path.name == 'recipes.py' else original(path)):
+            with self.assertRaisesRegex(ValueError, 'Missing API example: docs/recipes.py'):
+                render_fixture(self.contract())
+
+    def test_reference_links_and_fragments_resolve(self):
+        import re
+        import posixpath
+        output = render_fixture(self.contract())
+        prefix = 'client/python/zipzi/docs/'
+        documents = {path: text for path, text in output.items()
+                     if path.startswith(prefix) and path.endswith('.md')}
+        for path in (PACKAGE / prefix).rglob('*.md'):
+            documents.setdefault(path.relative_to(PACKAGE).as_posix(), path.read_text(encoding='utf-8'))
+        for path, text in documents.items():
+            if '/reference/' not in path and not path.endswith('reference.md'):
+                continue
+            for target in re.findall(r'\[[^\]]+\]\(([^)]+)\)', text)+re.findall(r'^\[[^\]]+\]: (\S+)$',text,re.MULTILINE):
+                file, _, fragment = target.partition('#')
+                if ':' in file:continue
+                destination = posixpath.normpath(posixpath.join(posixpath.dirname(path), file)) if file else path
+                self.assertIn(destination, documents, (path, target))
+                if fragment:
+                    headings = re.findall(r'^#+ (.+)$', documents[destination], re.MULTILINE)
+                    anchors = {re.sub(r'[^\w -]', '', heading.lower()).replace(' ', '-') for heading in headings}
+                    self.assertIn(fragment, anchors, (path, target))
+
     def test_generated_files_keep_lf_in_windows_checkout(self):
         manifest = json.loads((PACKAGE / 'generated-manifest.json').read_text(encoding='utf-8'))
         paths = ['crates/zipzi-python2/' + entry['path'] for entry in manifest['files']]
@@ -128,11 +282,16 @@ class Python2Codegen(unittest.TestCase):
             self.assertTrue(held)
             return {}
 
+        def render_under_lock(*args, **kwargs):
+            require_lock()
+            return {'client/python/zipzi/docs/type-documentation.json':json.dumps(
+                {'type_count':0,'documented_type_count':0,'missing_type_count':0})}
+
         for check in (False, True):
             args = ['generate.py'] + (['--check'] if check else [])
             with patch.object(gen.sys, 'argv', args), patch.object(gen, 'file_lock', lock), \
                  patch.object(gen, 'export', side_effect=require_lock), \
-                 patch.object(gen, 'cached_render', side_effect=require_lock), \
+                 patch.object(gen, 'cached_render', side_effect=render_under_lock), \
                  patch.object(gen, 'write_outputs', side_effect=require_lock) as write:
                 gen.main()
             self.assertFalse(held)

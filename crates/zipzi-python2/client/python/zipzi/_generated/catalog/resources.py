@@ -14,8 +14,7 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
                      'signature': ''},
  'zipzi.resources.CreateImage': {'children': ('zipzi.resources.CreateImage.__repr__',
                                               'zipzi.resources.CreateImage.summary'),
-                                 'documentation': 'Immutable owned CreateImage value. Construction owns declared '
-                                                  'collections; reading fields, repr and summary performs no IO.',
+                                 'documentation': '',
                                  'example': 'docs/recipes.py',
                                  'fields': [('id',
                                              'Optional new object UUID; None allocates a fresh UUID in the SDK when '
@@ -31,13 +30,12 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
                                              'Fixed operation discriminator supplied by this value type; not a '
                                              'constructor argument or a mutable object field.')],
                                  'kind': 'type',
-                                 'signature': '(name: str, image: resources.PreparedImage, id: str | None = None, '
-                                              "kind: Literal['create_image'] = <factory>)"},
+                                 'signature': '(name: str, image: resources.PreparedImage, id: str | None = None)',
+                                 'type_refs': ('zipzi.PreparedImage',)},
  'zipzi.resources.CreateImage.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.resources.CreateImage.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.resources.Image': {'children': ('zipzi.resources.Image.__repr__', 'zipzi.resources.Image.summary'),
-                           'documentation': 'Immutable owned Image value. Construction owns declared collections; '
-                                            'reading fields, repr and summary performs no IO.',
+                           'documentation': '',
                            'example': 'docs/recipes.py',
                            'fields': [('id',
                                        'Stable document object ID used by references; it is distinct from the exported '
@@ -49,7 +47,8 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
                                        'Owned decoded image pixels; reading this value does not perform another host '
                                        'request.')],
                            'kind': 'type',
-                           'signature': '(id: str, name: str, pixels: ImagePixels)'},
+                           'signature': '(id: str, name: str, pixels: ImagePixels)',
+                           'type_refs': ('zipzi.resources.ImagePixels',)},
  'zipzi.resources.Image.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.resources.Image.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.resources.ImageLease': {'children': ('zipzi.resources.ImageLease.__enter__',
@@ -69,7 +68,8 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
                                             'Exact formal or candidate source captured with the pixels; reading this '
                                             'cached value performs no IO.')],
                                 'kind': 'type',
-                                'signature': '(source: Source)'},
+                                'signature': '(source: Source)',
+                                'type_refs': ('zipzi.Source',)},
  'zipzi.resources.ImageLease.__enter__': {'children': (),
                                           'documentation': 'Check the owning client/lease locally and return this '
                                                            'ImageLease without IO. Use with to close on exit; pending '
@@ -78,7 +78,8 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
                                           'example': 'docs/recipes.py',
                                           'fields': [],
                                           'kind': 'callable',
-                                          'signature': '() -> ImageLease'},
+                                          'signature': '() -> ImageLease',
+                                          'type_refs': ('zipzi.resources.ImageLease',)},
  'zipzi.resources.ImageLease.__exit__': {'alias': 'zipzi.Buffer.__exit__'},
  'zipzi.resources.ImageLease.close': {'alias': 'zipzi.Buffer.close'},
  'zipzi.resources.ImageLease.height': {'alias': 'zipzi.PreparedImage.height'},
@@ -87,8 +88,7 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
  'zipzi.resources.ImageLease.width': {'alias': 'zipzi.PreparedImage.width'},
  'zipzi.resources.ImagePixels': {'children': ('zipzi.resources.ImagePixels.__repr__',
                                               'zipzi.resources.ImagePixels.summary'),
-                                 'documentation': 'Immutable owned ImagePixels value. Construction owns declared '
-                                                  'collections; reading fields, repr and summary performs no IO.',
+                                 'documentation': '',
                                  'example': 'docs/recipes.py',
                                  'fields': [('width',
                                              'Image width in pixels; prepared image content requires a positive '
@@ -114,8 +114,7 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
  'zipzi.resources.PreparedImage.width': {'alias': 'zipzi.PreparedImage.width'},
  'zipzi.resources.RenameImage': {'children': ('zipzi.resources.RenameImage.__repr__',
                                               'zipzi.resources.RenameImage.summary'),
-                                 'documentation': 'Immutable owned RenameImage value. Construction owns declared '
-                                                  'collections; reading fields, repr and summary performs no IO.',
+                                 'documentation': '',
                                  'example': 'docs/recipes.py',
                                  'fields': [('id',
                                              'Stable document object ID used by references; it is distinct from the '
@@ -130,14 +129,12 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
                                              'Fixed operation discriminator supplied by this value type; not a '
                                              'constructor argument or a mutable object field.')],
                                  'kind': 'type',
-                                 'signature': '(id: str, name: str, expected_name: str | None = <factory>, kind: '
-                                              "Literal['rename_image'] = <factory>)"},
+                                 'signature': '(id: str, name: str, *, expected_name: str | None = None)'},
  'zipzi.resources.RenameImage.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.resources.RenameImage.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.resources.ReplaceImage': {'children': ('zipzi.resources.ReplaceImage.__repr__',
                                                'zipzi.resources.ReplaceImage.summary'),
-                                  'documentation': 'Immutable owned ReplaceImage value. Construction owns declared '
-                                                   'collections; reading fields, repr and summary performs no IO.',
+                                  'documentation': '',
                                   'example': 'docs/recipes.py',
                                   'fields': [('id',
                                               'Stable document object ID used by references; it is distinct from the '
@@ -151,16 +148,15 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
                                               'Fixed operation discriminator supplied by this value type; not a '
                                               'constructor argument or a mutable object field.')],
                                   'kind': 'type',
-                                  'signature': '(id: str, image: resources.PreparedImage, kind: '
-                                               "Literal['replace_image'] = <factory>)"},
+                                  'signature': '(id: str, image: resources.PreparedImage)',
+                                  'type_refs': ('zipzi.PreparedImage',)},
  'zipzi.resources.ReplaceImage.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.resources.ReplaceImage.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.resources.Summary': {'alias': 'zipzi.ObjectSummary'},
  'zipzi.resources.Summary.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.resources.Summary.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.resources.Usage': {'children': ('zipzi.resources.Usage.__repr__', 'zipzi.resources.Usage.summary'),
-                           'documentation': 'Immutable owned Usage value. Construction owns declared collections; '
-                                            'reading fields, repr and summary performs no IO.',
+                           'documentation': '',
                            'example': 'docs/recipes.py',
                            'fields': [('previews',
                                        'Runtime-wide retained independent Preview leases; active Jobs can retain '

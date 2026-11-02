@@ -39,4 +39,8 @@ DATA: dict[str, Entry] = {'zipzi.inspection': {'children': ('zipzi.inspection.Re
                            'fields': [],
                            'kind': 'callable',
                            'signature': '(result: Snapshot[m.ObservationBatch] | Snapshot[m.PreviewBatch], directory: '
-                                        'Path) -> Report'}}
+                                        'Path) -> Report',
+                           'type_refs': ('zipzi.Snapshot',
+                                         'zipzi.inspection.Report',
+                                         'zipzi.modeling.observation.ObservationBatch',
+                                         'zipzi.modeling.preview.PreviewBatch')}}

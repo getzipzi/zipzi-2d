@@ -108,6 +108,7 @@
       "tuple": false
     },
     "zipzi_contract::authoring::TopologyOverlay": {
+      "doc": "Explicit diagnostic drawing options; overlays ignore masks and occlusion.",
       "fields": [
         {
           "default": null,
@@ -268,6 +269,7 @@
       "tuple": false
     },
     "zipzi_contract::authoring::TopologyThresholds": {
+      "doc": "Advisory anomaly thresholds in evaluated model space, relative to the default pose.",
       "fields": [
         {
           "default": 10.0,
@@ -363,6 +365,7 @@
     },
     "zipzi_contract::runtime::ObservationContentIdentity": {
       "content": null,
+      "doc": "A source content identity includes its representation. A PNG byte digest\nand a domain-separated straight RGBA8 pixel digest are not interchangeable.",
       "kind": "serde_enum",
       "name": "zipzi_contract::runtime::ObservationContentIdentity",
       "tag": "kind",
@@ -402,6 +405,7 @@
       ]
     },
     "zipzi_contract::runtime::ObservationEstimate": {
+      "doc": "Synchronous metadata estimate; it does not pin a plan, reserve a task, decode\nresources, evaluate poses, replay animation or initialize a GPU.",
       "fields": [
         {
           "doc": "Formal/candidate snapshot identity; external file bytes are not frozen.",
@@ -824,6 +828,7 @@
       "tuple": false
     },
     "zipzi_contract::runtime::ObservationTexturePlan": {
+      "doc": "Feasible deterministic CPU plan. Clients cannot submit this as a trusted\nexecution plan. Mipmap bytes exclude the base level and are logical bytes,\nnot GPU allocation measurements.",
       "fields": [
         {
           "doc": "Requested policy; equivalent actual pixels may have different policies.",
@@ -932,6 +937,7 @@
     },
     "zipzi_contract::runtime::ObservationTexturePlanning": {
       "content": null,
+      "doc": "A valid policy can be statically infeasible. Retain source dimensions for\ndiagnosis instead of treating a budget shortfall as malformed input.",
       "kind": "serde_enum",
       "name": "zipzi_contract::runtime::ObservationTexturePlanning",
       "tag": "kind",
@@ -1014,11 +1020,13 @@
     },
     "zipzi_contract::runtime::ObservationTexturePolicy": {
       "content": null,
+      "doc": "Explicit base-level texture policy. Budgets count logical straight RGBA8\nbytes per referenced asset ID, independently of physical buffer sharing.",
       "kind": "serde_enum",
       "name": "zipzi_contract::runtime::ObservationTexturePolicy",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Preserve the source dimensions and every source byte.",
           "fields": [],
           "form": "record",
           "name": "original",
@@ -1224,6 +1232,7 @@
       "tuple": false
     },
     "zipzi_contract::runtime::ObservationTextureSize": {
+      "doc": "Pixel dimensions; zero axes are invalid resource metadata.",
       "fields": [
         {
           "doc": "Width in pixels.",
@@ -1250,6 +1259,7 @@
       "tuple": false
     },
     "zipzi_contract::runtime::ObservationTextureSource": {
+      "doc": "Metadata-only source description. A declared identity has not been verified\nby estimation; Source freezes the document, not external file bytes.",
       "fields": [
         {
           "doc": "Stable image asset ID, counted once across all batch frames.",

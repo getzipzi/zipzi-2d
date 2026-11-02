@@ -97,6 +97,9 @@ class TypeGraph(unittest.TestCase):
         entry = DocEntry.from_row('zipzi.A',row,{})
         self.assertEqual(entry.summary,'Meaning.')
         self.assertEqual(entry.fields,(('x','Useful value.'),))
+        fields_only=DocEntry.from_row('zipzi.A',dict(row,documentation='Fields:\nx: Useful value.'),{})
+        self.assertEqual(fields_only.summary,'')
+        self.assertEqual(fields_only.fields,entry.fields)
         with self.assertRaisesRegex(ValueError,'Missing semantic field'):
             DocEntry.from_row('zipzi.A',dict(row,fields=[('x','')]),{})
 

@@ -13,7 +13,7 @@ def read_ParameterKind(value: object) -> ParameterKind:
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class Parameter(CompactValue):
-    'Immutable owned Parameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\nminimum: Lower endpoint of the parameter domain, in model-defined parameter units.\nmaximum: Upper endpoint of the parameter domain, in the same units as minimum.\ndefault_value: Default parameter value used when no override is supplied.\ndecimal_places: Decimal precision used for runtime parameter handling; native default is 6.\nkind: Normal or BlendShape parameter behavior; native default is Normal.\nrepeat: Whether parameter values repeat across the declared range; native default is false.'
+    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\nminimum: Lower endpoint of the parameter domain, in model-defined parameter units.\nmaximum: Upper endpoint of the parameter domain, in the same units as minimum.\ndefault_value: Default parameter value used when no override is supplied.\ndecimal_places: Decimal precision used for runtime parameter handling; native default is 6.\nkind: Normal or BlendShape parameter behavior; native default is Normal.\nrepeat: Whether parameter values repeat across the declared range; native default is false.'
     id: str
     runtime_id: str
     name: str
@@ -27,18 +27,20 @@ class Parameter(CompactValue):
 Parameter.__module__ = "zipzi.modeling.parameters"
 
 class ParameterKind(str, Enum):
+    ''
     __module__ = "zipzi.modeling.parameters"
     NORMAL = 'normal'
     BLEND_SHAPE = 'blend_shape'
 
 class ParameterRangePolicy(str, Enum):
+    ''
     __module__ = "zipzi.modeling.parameters"
     KEEP_KEY_VALUES = 'KeepKeyValues'
     MAP_KEY_VALUES = 'MapKeyValues'
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ParameterRangeEdit(CompactValue):
-    'Immutable owned ParameterRangeEdit value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nminimum: Lower endpoint of the parameter domain, in parameter units.\nmaximum: Upper endpoint of the parameter domain, in parameter units.\ndefault_value: Default parameter value within the declared domain.\npolicy: Explicit native conflict/conversion policy; no implicit removal or remapping is requested.'
+    '\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nminimum: Lower endpoint of the parameter domain, in parameter units.\nmaximum: Upper endpoint of the parameter domain, in parameter units.\ndefault_value: Default parameter value within the declared domain.\npolicy: Explicit native conflict/conversion policy; no implicit removal or remapping is requested.'
     parameter_id: str
     minimum: float
     maximum: float

@@ -84,6 +84,8 @@ class DocEntry:
     example: str | None
     inherited: str | None = None
     identity: int | None = None
+    type_refs: tuple[str, ...] = ()
+    documentation_source: str = ''
 
     @classmethod
     def from_row(cls, path: str, row: dict[str, Any], common: dict[str, str]) -> 'DocEntry':
@@ -92,17 +94,18 @@ class DocEntry:
             raise ValueError('Missing semantic field documentation: '+path)
         summary = row.get('documentation', '')
         if fields:
-            summary = summary.partition('\n\nFields:\n')[0]
+            summary = '' if summary.startswith('Fields:\n') else summary.partition('\n\nFields:\n')[0]
         if row['kind'] == 'callable' and not summary.strip():
             raise ValueError('Missing semantic callable documentation: '+path)
         method = path.rsplit('.', 1)[-1]
         inherited = method if method in common and summary == common[method] else None
         return cls(path, row['kind'], row.get('signature', ''), summary, fields,
-                   tuple(sorted(set(row.get('children', ())))), row.get('example'), inherited, row.get('_identity'))
+                   tuple(sorted(set(row.get('children', ())))), row.get('example'), inherited, row.get('_identity'), tuple(row.get('type_refs', ())), row.get('_documentation_source', ''))
 
     def row(self) -> dict[str, Any]:
         result: dict[str, Any] = {'kind': self.kind, 'signature': self.signature,
                                   'documentation': self.summary, 'children': self.children}
+        if self.type_refs:result['type_refs'] = self.type_refs
         if self.fields is not None:
             result['fields'] = list(self.fields)
         if self.example is not None:

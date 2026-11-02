@@ -865,6 +865,7 @@
           "rust_name": "MotionRegistrationMoved"
         },
         {
+          "doc": "A retained native record loses selected samples, pairs or keys.",
           "fields": [
             {
               "doc": "Retained owner whose selected stable content identities disappear.",
@@ -2244,6 +2245,7 @@
     },
     "zipzi_contract::document::DeletionTarget": {
       "content": null,
+      "doc": "Typed deletion scopes and native business identities.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::DeletionTarget",
       "tag": null,

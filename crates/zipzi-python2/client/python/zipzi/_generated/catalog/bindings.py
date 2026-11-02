@@ -60,7 +60,8 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
                                              'pending/unassigned\n'
                                              'axis.')],
                                  'kind': 'type',
-                                 'signature': '(id: str, samples: Sequence[Sample], parameter_id: str) -> None'},
+                                 'signature': '(id: str, samples: Sequence[Sample], parameter_id: str) -> None',
+                                 'type_refs': ('zipzi.bindings.Sample',)},
  'zipzi.bindings.AxisSnapshot.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.bindings.AxisSnapshot.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.Create': {'children': ('zipzi.bindings.Create.__repr__', 'zipzi.bindings.Create.summary'),
@@ -75,7 +76,8 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
                                        'Fixed operation discriminator supplied by this value type; not a constructor '
                                        'argument or a mutable object field.')],
                            'kind': 'type',
-                           'signature': '(spec: MeshBindingSpec) -> None'},
+                           'signature': '(spec: MeshBindingSpec) -> None',
+                           'type_refs': ('zipzi.bindings.MeshBindingSpec',)},
  'zipzi.bindings.Create.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.bindings.Create.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.Keyform': {'children': ('zipzi.bindings.Keyform.__repr__', 'zipzi.bindings.Keyform.summary'),
@@ -126,7 +128,8 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
                                                 'unoverridden order.')],
                                     'kind': 'type',
                                     'signature': '(samples: Sequence[str], positions: Sequence[Point], appearance: '
-                                                 'Appearance, draw_order: float | None) -> None'},
+                                                 'Appearance, draw_order: float | None) -> None',
+                                    'type_refs': ('zipzi.bindings.Appearance',)},
  'zipzi.bindings.KeyformSnapshot.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.bindings.KeyformSnapshot.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.MeshBinding': {'children': ('zipzi.bindings.MeshBinding.__repr__',
@@ -148,7 +151,8 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
                                             'table.')],
                                 'kind': 'type',
                                 'signature': '(id: str, mesh_id: str, axes: Sequence[AxisSnapshot], keyforms: '
-                                             'Sequence[KeyformSnapshot]) -> None'},
+                                             'Sequence[KeyformSnapshot]) -> None',
+                                'type_refs': ('zipzi.bindings.AxisSnapshot', 'zipzi.bindings.KeyformSnapshot')},
  'zipzi.bindings.MeshBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.bindings.MeshBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.MeshBindingSpec': {'children': ('zipzi.bindings.MeshBindingSpec.__repr__',
@@ -170,7 +174,8 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
                                                 'create operation executes.')],
                                     'kind': 'type',
                                     'signature': '(mesh_id: str, axes: Sequence[Axis], keyforms: Sequence[Keyform], '
-                                                 'id: str | None=None) -> None'},
+                                                 'id: str | None=None) -> None',
+                                    'type_refs': ('zipzi.bindings.Axis', 'zipzi.bindings.Keyform')},
  'zipzi.bindings.MeshBindingSpec.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.bindings.MeshBindingSpec.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.Sample': {'children': ('zipzi.bindings.Sample.__repr__', 'zipzi.bindings.Sample.summary'),
@@ -202,7 +207,8 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
                                            'Fixed operation discriminator supplied by this value type; not a '
                                            'constructor argument or a mutable object field.')],
                                'kind': 'type',
-                               'signature': '(id: str, keyform: Keyform) -> None'},
+                               'signature': '(id: str, keyform: Keyform) -> None',
+                               'type_refs': ('zipzi.bindings.Keyform',)},
  'zipzi.bindings.SetKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.bindings.SetKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.Summary': {'alias': 'zipzi.ObjectSummary'},

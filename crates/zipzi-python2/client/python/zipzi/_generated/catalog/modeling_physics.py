@@ -65,9 +65,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                             'signature': ''},
  'zipzi.modeling.physics.PhysicsAsset': {'children': ('zipzi.modeling.physics.PhysicsAsset.__repr__',
                                                       'zipzi.modeling.physics.PhysicsAsset.summary'),
-                                         'documentation': 'Immutable owned PhysicsAsset value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('id',
                                                      'Stable identity in the owning authoring domain; exported '
@@ -84,14 +82,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                          'kind': 'type',
                                          'signature': '(*, id: str, data: PhysicsDefinition, opaque_source_ids: '
                                                       '_Mapping[str, str] | None = None, opaque_source_content_hash: '
-                                                      'str | None = None)'},
+                                                      'str | None = None)',
+                                         'type_refs': ('zipzi.modeling.physics.PhysicsDefinition',)},
  'zipzi.modeling.physics.PhysicsAsset.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsAsset.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsAssetProperty': {'children': ('zipzi.modeling.physics.PhysicsAssetProperty.__repr__',
                                                               'zipzi.modeling.physics.PhysicsAssetProperty.summary'),
-                                                 'documentation': 'Immutable owned PhysicsAssetPropertyFps value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': 'None or zero follows the evaluation delta; positive '
+                                                                  'values select a fixed step.',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('value',
                                                              'Optional Physics fixed-step frequency; None follows the '
@@ -104,23 +102,25 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsAssetPropertyFps.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsAssetPropertyFps.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsAxis': {'children': (),
-                                        'documentation': 'Immutable typed value. See field semantics and the linked '
-                                                         'workflow.',
+                                        'documentation': '',
                                         'example': 'docs/recipes.py',
-                                        'fields': [],
-                                        'kind': 'type',
-                                        'signature': '()'},
+                                        'fields': [('X', "'X'"), ('Y', "'Y'"), ('ANGLE', "'Angle'")],
+                                        'kind': 'enum',
+                                        'signature': ''},
  'zipzi.modeling.physics.PhysicsCollection': {'children': (),
-                                              'documentation': 'Typed public API entry.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [],
-                                              'kind': 'value',
-                                              'signature': ''},
+                                              'kind': 'alias',
+                                              'signature': 'PhysicsCollectionGroups | PhysicsCollectionInputs | '
+                                                           'PhysicsCollectionOutputs | PhysicsCollectionNodes',
+                                              'type_refs': ('zipzi.modeling.physics.PhysicsCollectionGroups',
+                                                            'zipzi.modeling.physics.PhysicsCollectionInputs',
+                                                            'zipzi.modeling.physics.PhysicsCollectionNodes',
+                                                            'zipzi.modeling.physics.PhysicsCollectionOutputs')},
  'zipzi.modeling.physics.PhysicsCollectionGroups': {'children': ('zipzi.modeling.physics.PhysicsCollectionGroups.__repr__',
                                                                  'zipzi.modeling.physics.PhysicsCollectionGroups.summary'),
-                                                    'documentation': 'Immutable owned PhysicsCollectionGroups value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [],
                                                     'kind': 'type',
@@ -129,9 +129,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsCollectionGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsCollectionInputs': {'children': ('zipzi.modeling.physics.PhysicsCollectionInputs.__repr__',
                                                                  'zipzi.modeling.physics.PhysicsCollectionInputs.summary'),
-                                                    'documentation': 'Immutable owned PhysicsCollectionInputs value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('group_id',
                                                                 'Stable Physics rig ID owning the selected rows.')],
@@ -141,9 +139,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsCollectionInputs.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsCollectionNodes': {'children': ('zipzi.modeling.physics.PhysicsCollectionNodes.__repr__',
                                                                 'zipzi.modeling.physics.PhysicsCollectionNodes.summary'),
-                                                   'documentation': 'Immutable owned PhysicsCollectionNodes value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('group_id',
                                                                'Stable Physics rig ID owning the selected rows.')],
@@ -153,9 +149,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsCollectionNodes.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsCollectionOutputs': {'children': ('zipzi.modeling.physics.PhysicsCollectionOutputs.__repr__',
                                                                   'zipzi.modeling.physics.PhysicsCollectionOutputs.summary'),
-                                                     'documentation': 'Immutable owned PhysicsCollectionOutputs value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('group_id',
                                                                  'Stable Physics rig ID owning the selected rows.')],
@@ -165,9 +159,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsCollectionOutputs.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsDefinition': {'children': ('zipzi.modeling.physics.PhysicsDefinition.__repr__',
                                                            'zipzi.modeling.physics.PhysicsDefinition.summary'),
-                                              'documentation': 'Immutable owned PhysicsDefinition value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('version', 'Native Physics format version number.'),
                                                          ('meta',
@@ -180,14 +172,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                               'kind': 'type',
                                               'signature': '(*, version: int, meta: PhysicsMeta, settings: '
                                                            'tuple[PhysicsSetting, ...], extensions: _Mapping[str, '
-                                                           'ExtensionValue])'},
+                                                           'ExtensionValue])',
+                                              'type_refs': ('zipzi.modeling.physics.PhysicsMeta',
+                                                            'zipzi.modeling.physics.PhysicsSetting')},
  'zipzi.modeling.physics.PhysicsDefinition.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsDefinition.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsDictionaryEntry': {'children': ('zipzi.modeling.physics.PhysicsDictionaryEntry.__repr__',
                                                                 'zipzi.modeling.physics.PhysicsDictionaryEntry.summary'),
-                                                   'documentation': 'Immutable owned PhysicsDictionaryEntry value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('Id',
                                                                'Stable identity in the owning authoring domain; '
@@ -204,16 +196,31 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsDictionaryEntry.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsDictionaryEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEdit': {'children': (),
-                                        'documentation': 'Typed public API entry.',
+                                        'documentation': '',
                                         'example': 'docs/recipes.py',
                                         'fields': [],
-                                        'kind': 'value',
-                                        'signature': ''},
+                                        'kind': 'alias',
+                                        'signature': 'PhysicsEditCreateGroup | PhysicsEditCreateInput | '
+                                                     'PhysicsEditCreateOutput | PhysicsEditInsertNode | '
+                                                     'PhysicsEditMoveNode | PhysicsEditDuplicateNode | '
+                                                     'PhysicsEditPatch | PhysicsEditMoveInputs | '
+                                                     'PhysicsEditMoveOutputs | PhysicsEditReorderGroups | '
+                                                     'PhysicsEditDuplicate | PhysicsEditDelete',
+                                        'type_refs': ('zipzi.modeling.physics.PhysicsEditCreateGroup',
+                                                      'zipzi.modeling.physics.PhysicsEditCreateInput',
+                                                      'zipzi.modeling.physics.PhysicsEditCreateOutput',
+                                                      'zipzi.modeling.physics.PhysicsEditDelete',
+                                                      'zipzi.modeling.physics.PhysicsEditDuplicate',
+                                                      'zipzi.modeling.physics.PhysicsEditDuplicateNode',
+                                                      'zipzi.modeling.physics.PhysicsEditInsertNode',
+                                                      'zipzi.modeling.physics.PhysicsEditMoveInputs',
+                                                      'zipzi.modeling.physics.PhysicsEditMoveNode',
+                                                      'zipzi.modeling.physics.PhysicsEditMoveOutputs',
+                                                      'zipzi.modeling.physics.PhysicsEditPatch',
+                                                      'zipzi.modeling.physics.PhysicsEditReorderGroups')},
  'zipzi.modeling.physics.PhysicsEditCreateGroup': {'children': ('zipzi.modeling.physics.PhysicsEditCreateGroup.__repr__',
                                                                 'zipzi.modeling.physics.PhysicsEditCreateGroup.summary'),
-                                                   'documentation': 'Immutable owned PhysicsEditCreateGroup value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('asset_id',
                                                                'Stable Physics singleton ID owning these changes.'),
@@ -233,9 +240,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditCreateGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditCreateInput': {'children': ('zipzi.modeling.physics.PhysicsEditCreateInput.__repr__',
                                                                 'zipzi.modeling.physics.PhysicsEditCreateInput.summary'),
-                                                   'documentation': 'Immutable owned PhysicsEditCreateInput value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('group_id',
                                                                'Stable ID of the group owning the affected rows or '
@@ -253,9 +258,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditCreateInput.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditCreateOutput': {'children': ('zipzi.modeling.physics.PhysicsEditCreateOutput.__repr__',
                                                                  'zipzi.modeling.physics.PhysicsEditCreateOutput.summary'),
-                                                    'documentation': 'Immutable owned PhysicsEditCreateOutput value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('group_id',
                                                                 'Stable ID of the group owning the affected rows or '
@@ -276,9 +279,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditCreateOutput.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditDelete': {'children': ('zipzi.modeling.physics.PhysicsEditDelete.__repr__',
                                                            'zipzi.modeling.physics.PhysicsEditDelete.summary'),
-                                              'documentation': 'Immutable owned PhysicsEditDelete value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('ids',
                                                           'Ordered stable IDs selected by this operation; names and '
@@ -293,9 +294,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditDelete.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditDuplicate': {'children': ('zipzi.modeling.physics.PhysicsEditDuplicate.__repr__',
                                                               'zipzi.modeling.physics.PhysicsEditDuplicate.summary'),
-                                                 'documentation': 'Immutable owned PhysicsEditDuplicate value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('ids',
                                                              'Ordered stable IDs selected by this operation; names and '
@@ -313,9 +312,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditDuplicate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditDuplicateNode': {'children': ('zipzi.modeling.physics.PhysicsEditDuplicateNode.__repr__',
                                                                   'zipzi.modeling.physics.PhysicsEditDuplicateNode.summary'),
-                                                     'documentation': 'Immutable owned PhysicsEditDuplicateNode value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('id',
                                                                  'Stable identity in the owning authoring domain; '
@@ -329,9 +326,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditDuplicateNode.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditInsertNode': {'children': ('zipzi.modeling.physics.PhysicsEditInsertNode.__repr__',
                                                                'zipzi.modeling.physics.PhysicsEditInsertNode.summary'),
-                                                  'documentation': 'Immutable owned PhysicsEditInsertNode value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('group_id',
                                                               'Stable ID of the group owning the affected rows or node '
@@ -344,14 +339,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                               'appends.')],
                                                   'kind': 'type',
                                                   'signature': '(*, group_id: str, node: PhysicsNode, before: str | '
-                                                               'None = None)'},
+                                                               'None = None)',
+                                                  'type_refs': ('zipzi.modeling.physics.PhysicsNode',)},
  'zipzi.modeling.physics.PhysicsEditInsertNode.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsEditInsertNode.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditMoveInputs': {'children': ('zipzi.modeling.physics.PhysicsEditMoveInputs.__repr__',
                                                                'zipzi.modeling.physics.PhysicsEditMoveInputs.summary'),
-                                                  'documentation': 'Immutable owned PhysicsEditMoveInputs value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('ids',
                                                               'Ordered stable IDs selected by this operation; names '
@@ -369,9 +363,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditMoveInputs.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditMoveNode': {'children': ('zipzi.modeling.physics.PhysicsEditMoveNode.__repr__',
                                                              'zipzi.modeling.physics.PhysicsEditMoveNode.summary'),
-                                                'documentation': 'Immutable owned PhysicsEditMoveNode value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('id',
                                                             'Stable identity in the owning authoring domain; exported '
@@ -385,9 +377,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditMoveNode.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditMoveOutputs': {'children': ('zipzi.modeling.physics.PhysicsEditMoveOutputs.__repr__',
                                                                 'zipzi.modeling.physics.PhysicsEditMoveOutputs.summary'),
-                                                   'documentation': 'Immutable owned PhysicsEditMoveOutputs value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('ids',
                                                                'Ordered stable IDs selected by this operation; names '
@@ -409,22 +399,19 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditMoveOutputs.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditPatch': {'children': ('zipzi.modeling.physics.PhysicsEditPatch.__repr__',
                                                           'zipzi.modeling.physics.PhysicsEditPatch.summary'),
-                                             'documentation': 'Immutable owned PhysicsEditPatch value. Construction '
-                                                              'owns declared collections; reading fields, repr and '
-                                                              'summary performs no IO.',
+                                             'documentation': '',
                                              'example': 'docs/recipes.py',
                                              'fields': [('patch',
                                                          'Typed atomic Physics changes validated against the current '
                                                          'candidate.')],
                                              'kind': 'type',
-                                             'signature': '(*, patch: PhysicsPatch)'},
+                                             'signature': '(*, patch: PhysicsPatch)',
+                                             'type_refs': ('zipzi.modeling.physics.PhysicsPatch',)},
  'zipzi.modeling.physics.PhysicsEditPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsEditPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditReorderGroups': {'children': ('zipzi.modeling.physics.PhysicsEditReorderGroups.__repr__',
                                                                   'zipzi.modeling.physics.PhysicsEditReorderGroups.summary'),
-                                                     'documentation': 'Immutable owned PhysicsEditReorderGroups value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('ids',
                                                                  'Ordered stable IDs selected by this operation; names '
@@ -439,9 +426,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditReorderGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsForces': {'children': ('zipzi.modeling.physics.PhysicsForces.__repr__',
                                                        'zipzi.modeling.physics.PhysicsForces.summary'),
-                                          'documentation': 'Immutable owned PhysicsForces value. Construction owns '
-                                                           'declared collections; reading fields, repr and summary '
-                                                           'performs no IO.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
                                           'fields': [('Gravity',
                                                       'Effective gravity vector in the native Physics coordinate '
@@ -454,14 +439,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                       'declared fields cannot be shadowed.')],
                                           'kind': 'type',
                                           'signature': '(*, Gravity: PhysicsVector, Wind: PhysicsVector, extensions: '
-                                                       '_Mapping[str, ExtensionValue])'},
+                                                       '_Mapping[str, ExtensionValue])',
+                                          'type_refs': ('zipzi.modeling.physics.PhysicsVector',)},
  'zipzi.modeling.physics.PhysicsForces.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsForces.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsInput': {'children': ('zipzi.modeling.physics.PhysicsInput.__repr__',
                                                       'zipzi.modeling.physics.PhysicsInput.summary'),
-                                         'documentation': 'Immutable owned PhysicsInput value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('id',
                                                      'Stable identity in the owning authoring domain; exported '
@@ -486,14 +470,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                          'signature': '(*, id: str, source: PhysicsTarget, reference_extensions: '
                                                       '_Mapping[str, ExtensionValue], weight: float, kind: '
                                                       'PhysicsAxis, reflect: bool, extensions: _Mapping[str, '
-                                                      'ExtensionValue])'},
+                                                      'ExtensionValue])',
+                                         'type_refs': ('zipzi.modeling.physics.PhysicsAxis',
+                                                       'zipzi.modeling.physics.PhysicsTarget')},
  'zipzi.modeling.physics.PhysicsInput.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsInput.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsMeta': {'children': ('zipzi.modeling.physics.PhysicsMeta.__repr__',
                                                      'zipzi.modeling.physics.PhysicsMeta.summary'),
-                                        'documentation': 'Immutable owned PhysicsMeta value. Construction owns '
-                                                         'declared collections; reading fields, repr and summary '
-                                                         'performs no IO.',
+                                        'documentation': '',
                                         'example': 'docs/recipes.py',
                                         'fields': [('PhysicsSettingCount',
                                                     'Exported count of Physics settings, maintained by native '
@@ -521,14 +505,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                      'TotalOutputCount: int, VertexCount: int, EffectiveForces: '
                                                      'PhysicsForces, PhysicsDictionary: tuple[PhysicsDictionaryEntry, '
                                                      '...], Fps: float | None = None, extensions: _Mapping[str, '
-                                                     'ExtensionValue])'},
+                                                     'ExtensionValue])',
+                                        'type_refs': ('zipzi.modeling.physics.PhysicsDictionaryEntry',
+                                                      'zipzi.modeling.physics.PhysicsForces')},
  'zipzi.modeling.physics.PhysicsMeta.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsMeta.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsNode': {'children': ('zipzi.modeling.physics.PhysicsNode.__repr__',
                                                      'zipzi.modeling.physics.PhysicsNode.summary'),
-                                        'documentation': 'Immutable owned PhysicsNode value. Construction owns '
-                                                         'declared collections; reading fields, repr and summary '
-                                                         'performs no IO.',
+                                        'documentation': '',
                                         'example': 'docs/recipes.py',
                                         'fields': [('id',
                                                     'Stable identity in the owning authoring domain; exported metadata '
@@ -546,14 +530,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                         'kind': 'type',
                                         'signature': '(*, id: str, position: PhysicsVector, mobility: float, delay: '
                                                      'float, acceleration: float, radius: float, extensions: '
-                                                     '_Mapping[str, ExtensionValue])'},
+                                                     '_Mapping[str, ExtensionValue])',
+                                        'type_refs': ('zipzi.modeling.physics.PhysicsVector',)},
  'zipzi.modeling.physics.PhysicsNode.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsNode.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsNormalization': {'children': ('zipzi.modeling.physics.PhysicsNormalization.__repr__',
                                                               'zipzi.modeling.physics.PhysicsNormalization.summary'),
-                                                 'documentation': 'Immutable owned PhysicsNormalization value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('Position',
                                                              'Authored two-dimensional Physics node position or '
@@ -566,14 +549,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                              'roundtrips; declared fields cannot be shadowed.')],
                                                  'kind': 'type',
                                                  'signature': '(*, Position: PhysicsRange, Angle: PhysicsRange, '
-                                                              'extensions: _Mapping[str, ExtensionValue])'},
+                                                              'extensions: _Mapping[str, ExtensionValue])',
+                                                 'type_refs': ('zipzi.modeling.physics.PhysicsRange',)},
  'zipzi.modeling.physics.PhysicsNormalization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsNormalization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsOutput': {'children': ('zipzi.modeling.physics.PhysicsOutput.__repr__',
                                                        'zipzi.modeling.physics.PhysicsOutput.summary'),
-                                          'documentation': 'Immutable owned PhysicsOutput value. Construction owns '
-                                                           'declared collections; reading fields, repr and summary '
-                                                           'performs no IO.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
                                           'fields': [('id',
                                                       'Stable identity in the owning authoring domain; exported '
@@ -603,14 +585,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                           'signature': '(*, id: str, destination: PhysicsTarget, reference_extensions: '
                                                        '_Mapping[str, ExtensionValue], node_id: str, scale: float, '
                                                        'weight: float, kind: PhysicsAxis, reflect: bool, extensions: '
-                                                       '_Mapping[str, ExtensionValue])'},
+                                                       '_Mapping[str, ExtensionValue])',
+                                          'type_refs': ('zipzi.modeling.physics.PhysicsAxis',
+                                                        'zipzi.modeling.physics.PhysicsTarget')},
  'zipzi.modeling.physics.PhysicsOutput.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsOutput.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsOutputSnapshot': {'children': ('zipzi.modeling.physics.PhysicsOutputSnapshot.__repr__',
                                                                'zipzi.modeling.physics.PhysicsOutputSnapshot.summary'),
-                                                  'documentation': 'Immutable owned PhysicsOutputSnapshot value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('raw',
                                                               'Raw output value before weight and parameter clamping.'),
@@ -629,9 +611,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsOutputSnapshot.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPatch': {'children': ('zipzi.modeling.physics.PhysicsPatch.__repr__',
                                                       'zipzi.modeling.physics.PhysicsPatch.summary'),
-                                         'documentation': 'Immutable owned PhysicsPatch value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': 'Atomic asset edits plus optional rig edits; asset-only '
+                                                          'patches support empty assets.',
                                          'example': 'docs/recipes.py',
                                          'fields': [('asset_id', 'Stable Physics singleton ID owning these changes.'),
                                                     ('asset_changes',
@@ -640,35 +621,60 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                     ('rig', 'Optional atomic changes to one owned Physics rig/group.')],
                                          'kind': 'type',
                                          'signature': '(*, asset_id: str, asset_changes: tuple[PhysicsAssetProperty, '
-                                                      '...], rig: PhysicsRigPatch | None = None)'},
+                                                      '...], rig: PhysicsRigPatch | None = None)',
+                                         'type_refs': ('zipzi.modeling.physics.PhysicsAssetProperty',
+                                                       'zipzi.modeling.physics.PhysicsRigPatch')},
  'zipzi.modeling.physics.PhysicsPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsProperty': {'children': (),
-                                            'documentation': 'Typed public API entry.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
                                             'fields': [],
-                                            'kind': 'value',
-                                            'signature': ''},
+                                            'kind': 'alias',
+                                            'signature': 'PhysicsPropertyName | PhysicsPropertyInputWeight | '
+                                                         'PhysicsPropertyInputAxis | PhysicsPropertyInputReflect | '
+                                                         'PhysicsPropertyInputParameter | PhysicsPropertyOutputWeight '
+                                                         '| PhysicsPropertyOutputScale | PhysicsPropertyOutputAxis | '
+                                                         'PhysicsPropertyOutputReflect | '
+                                                         'PhysicsPropertyOutputParameter | PhysicsPropertyOutputNode | '
+                                                         'PhysicsPropertyVertexPosition | PhysicsPropertyVertexRadius '
+                                                         '| PhysicsPropertyVertexMobility | PhysicsPropertyVertexDelay '
+                                                         '| PhysicsPropertyVertexAcceleration | '
+                                                         'PhysicsPropertyPositionNormalization | '
+                                                         'PhysicsPropertyAngleNormalization',
+                                            'type_refs': ('zipzi.modeling.physics.PhysicsPropertyAngleNormalization',
+                                                          'zipzi.modeling.physics.PhysicsPropertyInputAxis',
+                                                          'zipzi.modeling.physics.PhysicsPropertyInputParameter',
+                                                          'zipzi.modeling.physics.PhysicsPropertyInputReflect',
+                                                          'zipzi.modeling.physics.PhysicsPropertyInputWeight',
+                                                          'zipzi.modeling.physics.PhysicsPropertyName',
+                                                          'zipzi.modeling.physics.PhysicsPropertyOutputAxis',
+                                                          'zipzi.modeling.physics.PhysicsPropertyOutputNode',
+                                                          'zipzi.modeling.physics.PhysicsPropertyOutputParameter',
+                                                          'zipzi.modeling.physics.PhysicsPropertyOutputReflect',
+                                                          'zipzi.modeling.physics.PhysicsPropertyOutputScale',
+                                                          'zipzi.modeling.physics.PhysicsPropertyOutputWeight',
+                                                          'zipzi.modeling.physics.PhysicsPropertyPositionNormalization',
+                                                          'zipzi.modeling.physics.PhysicsPropertyVertexAcceleration',
+                                                          'zipzi.modeling.physics.PhysicsPropertyVertexDelay',
+                                                          'zipzi.modeling.physics.PhysicsPropertyVertexMobility',
+                                                          'zipzi.modeling.physics.PhysicsPropertyVertexPosition',
+                                                          'zipzi.modeling.physics.PhysicsPropertyVertexRadius')},
  'zipzi.modeling.physics.PhysicsPropertyAngleNormalization': {'children': ('zipzi.modeling.physics.PhysicsPropertyAngleNormalization.__repr__',
                                                                            'zipzi.modeling.physics.PhysicsPropertyAngleNormalization.summary'),
-                                                              'documentation': 'Immutable owned '
-                                                                               'PhysicsPropertyAngleNormalization '
-                                                                               'value. Construction owns declared '
-                                                                               'collections; reading fields, repr and '
-                                                                               'summary performs no IO.',
+                                                              'documentation': '',
                                                               'example': 'docs/recipes.py',
                                                               'fields': [('value',
                                                                           'Replacement minimum/default/maximum range '
                                                                           'for angle normalization.')],
                                                               'kind': 'type',
-                                                              'signature': '(*, value: PhysicsRange)'},
+                                                              'signature': '(*, value: PhysicsRange)',
+                                                              'type_refs': ('zipzi.modeling.physics.PhysicsRange',)},
  'zipzi.modeling.physics.PhysicsPropertyAngleNormalization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyAngleNormalization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyInputAxis': {'children': ('zipzi.modeling.physics.PhysicsPropertyInputAxis.__repr__',
                                                                   'zipzi.modeling.physics.PhysicsPropertyInputAxis.summary'),
-                                                     'documentation': 'Immutable owned PhysicsPropertyInputAxis value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('id',
                                                                  'Stable identity in the owning authoring domain; '
@@ -677,16 +683,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                  'Channel value or replacement payload in the domain '
                                                                  'declared by this field type.')],
                                                      'kind': 'type',
-                                                     'signature': '(*, id: str, value: PhysicsAxis)'},
+                                                     'signature': '(*, id: str, value: PhysicsAxis)',
+                                                     'type_refs': ('zipzi.modeling.physics.PhysicsAxis',)},
  'zipzi.modeling.physics.PhysicsPropertyInputAxis.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyInputAxis.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyInputParameter': {'children': ('zipzi.modeling.physics.PhysicsPropertyInputParameter.__repr__',
                                                                        'zipzi.modeling.physics.PhysicsPropertyInputParameter.summary'),
-                                                          'documentation': 'Immutable owned '
-                                                                           'PhysicsPropertyInputParameter value. '
-                                                                           'Construction owns declared collections; '
-                                                                           'reading fields, repr and summary performs '
-                                                                           'no IO.',
+                                                          'documentation': '',
                                                           'example': 'docs/recipes.py',
                                                           'fields': [('id',
                                                                       'Stable identity in the owning authoring domain; '
@@ -696,15 +699,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                       'Typed target reference; unresolved imported '
                                                                       'runtime labels remain explicit.')],
                                                           'kind': 'type',
-                                                          'signature': '(*, id: str, target: PhysicsTarget)'},
+                                                          'signature': '(*, id: str, target: PhysicsTarget)',
+                                                          'type_refs': ('zipzi.modeling.physics.PhysicsTarget',)},
  'zipzi.modeling.physics.PhysicsPropertyInputParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyInputParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyInputReflect': {'children': ('zipzi.modeling.physics.PhysicsPropertyInputReflect.__repr__',
                                                                      'zipzi.modeling.physics.PhysicsPropertyInputReflect.summary'),
-                                                        'documentation': 'Immutable owned PhysicsPropertyInputReflect '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('id',
                                                                     'Stable identity in the owning authoring domain; '
@@ -718,10 +719,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyInputReflect.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyInputWeight': {'children': ('zipzi.modeling.physics.PhysicsPropertyInputWeight.__repr__',
                                                                     'zipzi.modeling.physics.PhysicsPropertyInputWeight.summary'),
-                                                       'documentation': 'Immutable owned PhysicsPropertyInputWeight '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('id',
                                                                    'Stable identity in the owning authoring domain; '
@@ -735,9 +733,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyInputWeight.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyName': {'children': ('zipzi.modeling.physics.PhysicsPropertyName.__repr__',
                                                              'zipzi.modeling.physics.PhysicsPropertyName.summary'),
-                                                'documentation': 'Immutable owned PhysicsPropertyName value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('value', 'Replacement display name of the Physics group.')],
                                                 'kind': 'type',
@@ -746,10 +742,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyName.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyOutputAxis': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputAxis.__repr__',
                                                                    'zipzi.modeling.physics.PhysicsPropertyOutputAxis.summary'),
-                                                      'documentation': 'Immutable owned PhysicsPropertyOutputAxis '
-                                                                       'value. Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('id',
                                                                   'Stable identity in the owning authoring domain; '
@@ -758,15 +751,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                   'Channel value or replacement payload in the domain '
                                                                   'declared by this field type.')],
                                                       'kind': 'type',
-                                                      'signature': '(*, id: str, value: PhysicsAxis)'},
+                                                      'signature': '(*, id: str, value: PhysicsAxis)',
+                                                      'type_refs': ('zipzi.modeling.physics.PhysicsAxis',)},
  'zipzi.modeling.physics.PhysicsPropertyOutputAxis.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyOutputAxis.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyOutputNode': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputNode.__repr__',
                                                                    'zipzi.modeling.physics.PhysicsPropertyOutputNode.summary'),
-                                                      'documentation': 'Immutable owned PhysicsPropertyOutputNode '
-                                                                       'value. Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('id',
                                                                   'Stable identity in the owning authoring domain; '
@@ -780,11 +771,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyOutputNode.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyOutputParameter': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputParameter.__repr__',
                                                                         'zipzi.modeling.physics.PhysicsPropertyOutputParameter.summary'),
-                                                           'documentation': 'Immutable owned '
-                                                                            'PhysicsPropertyOutputParameter value. '
-                                                                            'Construction owns declared collections; '
-                                                                            'reading fields, repr and summary performs '
-                                                                            'no IO.',
+                                                           'documentation': '',
                                                            'example': 'docs/recipes.py',
                                                            'fields': [('id',
                                                                        'Stable identity in the owning authoring '
@@ -794,16 +781,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                        'Typed target reference; unresolved imported '
                                                                        'runtime labels remain explicit.')],
                                                            'kind': 'type',
-                                                           'signature': '(*, id: str, target: PhysicsTarget)'},
+                                                           'signature': '(*, id: str, target: PhysicsTarget)',
+                                                           'type_refs': ('zipzi.modeling.physics.PhysicsTarget',)},
  'zipzi.modeling.physics.PhysicsPropertyOutputParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyOutputParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyOutputReflect': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputReflect.__repr__',
                                                                       'zipzi.modeling.physics.PhysicsPropertyOutputReflect.summary'),
-                                                         'documentation': 'Immutable owned '
-                                                                          'PhysicsPropertyOutputReflect value. '
-                                                                          'Construction owns declared collections; '
-                                                                          'reading fields, repr and summary performs '
-                                                                          'no IO.',
+                                                         'documentation': '',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [('id',
                                                                      'Stable identity in the owning authoring domain; '
@@ -817,10 +801,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyOutputReflect.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyOutputScale': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputScale.__repr__',
                                                                     'zipzi.modeling.physics.PhysicsPropertyOutputScale.summary'),
-                                                       'documentation': 'Immutable owned PhysicsPropertyOutputScale '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('id',
                                                                    'Stable identity in the owning authoring domain; '
@@ -834,10 +815,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyOutputScale.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyOutputWeight': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputWeight.__repr__',
                                                                      'zipzi.modeling.physics.PhysicsPropertyOutputWeight.summary'),
-                                                        'documentation': 'Immutable owned PhysicsPropertyOutputWeight '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('id',
                                                                     'Stable identity in the owning authoring domain; '
@@ -851,26 +829,19 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyOutputWeight.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyPositionNormalization': {'children': ('zipzi.modeling.physics.PhysicsPropertyPositionNormalization.__repr__',
                                                                               'zipzi.modeling.physics.PhysicsPropertyPositionNormalization.summary'),
-                                                                 'documentation': 'Immutable owned '
-                                                                                  'PhysicsPropertyPositionNormalization '
-                                                                                  'value. Construction owns declared '
-                                                                                  'collections; reading fields, repr '
-                                                                                  'and summary performs no IO.',
+                                                                 'documentation': '',
                                                                  'example': 'docs/recipes.py',
                                                                  'fields': [('value',
                                                                              'Replacement minimum/default/maximum '
                                                                              'range for position normalization.')],
                                                                  'kind': 'type',
-                                                                 'signature': '(*, value: PhysicsRange)'},
+                                                                 'signature': '(*, value: PhysicsRange)',
+                                                                 'type_refs': ('zipzi.modeling.physics.PhysicsRange',)},
  'zipzi.modeling.physics.PhysicsPropertyPositionNormalization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyPositionNormalization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyVertexAcceleration': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexAcceleration.__repr__',
                                                                            'zipzi.modeling.physics.PhysicsPropertyVertexAcceleration.summary'),
-                                                              'documentation': 'Immutable owned '
-                                                                               'PhysicsPropertyVertexAcceleration '
-                                                                               'value. Construction owns declared '
-                                                                               'collections; reading fields, repr and '
-                                                                               'summary performs no IO.',
+                                                              'documentation': '',
                                                               'example': 'docs/recipes.py',
                                                               'fields': [('id',
                                                                           'Stable identity in the owning authoring '
@@ -885,10 +856,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyVertexAcceleration.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyVertexDelay': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexDelay.__repr__',
                                                                     'zipzi.modeling.physics.PhysicsPropertyVertexDelay.summary'),
-                                                       'documentation': 'Immutable owned PhysicsPropertyVertexDelay '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('id',
                                                                    'Stable identity in the owning authoring domain; '
@@ -902,11 +870,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyVertexDelay.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyVertexMobility': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexMobility.__repr__',
                                                                        'zipzi.modeling.physics.PhysicsPropertyVertexMobility.summary'),
-                                                          'documentation': 'Immutable owned '
-                                                                           'PhysicsPropertyVertexMobility value. '
-                                                                           'Construction owns declared collections; '
-                                                                           'reading fields, repr and summary performs '
-                                                                           'no IO.',
+                                                          'documentation': '',
                                                           'example': 'docs/recipes.py',
                                                           'fields': [('id',
                                                                       'Stable identity in the owning authoring domain; '
@@ -921,11 +885,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyVertexMobility.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyVertexPosition': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexPosition.__repr__',
                                                                        'zipzi.modeling.physics.PhysicsPropertyVertexPosition.summary'),
-                                                          'documentation': 'Immutable owned '
-                                                                           'PhysicsPropertyVertexPosition value. '
-                                                                           'Construction owns declared collections; '
-                                                                           'reading fields, repr and summary performs '
-                                                                           'no IO.',
+                                                          'documentation': '',
                                                           'example': 'docs/recipes.py',
                                                           'fields': [('id',
                                                                       'Stable identity in the owning authoring domain; '
@@ -935,15 +895,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                       'Channel value or replacement payload in the '
                                                                       'domain declared by this field type.')],
                                                           'kind': 'type',
-                                                          'signature': '(*, id: str, value: PhysicsVector)'},
+                                                          'signature': '(*, id: str, value: PhysicsVector)',
+                                                          'type_refs': ('zipzi.modeling.physics.PhysicsVector',)},
  'zipzi.modeling.physics.PhysicsPropertyVertexPosition.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyVertexPosition.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyVertexRadius': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexRadius.__repr__',
                                                                      'zipzi.modeling.physics.PhysicsPropertyVertexRadius.summary'),
-                                                        'documentation': 'Immutable owned PhysicsPropertyVertexRadius '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('id',
                                                                     'Stable identity in the owning authoring domain; '
@@ -957,9 +915,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyVertexRadius.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsRange': {'children': ('zipzi.modeling.physics.PhysicsRange.__repr__',
                                                       'zipzi.modeling.physics.PhysicsRange.summary'),
-                                         'documentation': 'Immutable owned PhysicsRange value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('Minimum',
                                                      'Lower normalization bound in the declared position or angle '
@@ -975,9 +931,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsRange.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsRigPatch': {'children': ('zipzi.modeling.physics.PhysicsRigPatch.__repr__',
                                                          'zipzi.modeling.physics.PhysicsRigPatch.summary'),
-                                            'documentation': 'Immutable owned PhysicsRigPatch value. Construction owns '
-                                                             'declared collections; reading fields, repr and summary '
-                                                             'performs no IO.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
                                             'fields': [('group_id',
                                                         'Stable ID of the group owning the affected rows or node '
@@ -986,14 +940,16 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                         'Ordered typed property changes validated as one native '
                                                         'operation.')],
                                             'kind': 'type',
-                                            'signature': '(*, group_id: str, changes: tuple[PhysicsProperty, ...])'},
+                                            'signature': '(*, group_id: str, changes: tuple[PhysicsProperty, ...])',
+                                            'type_refs': ('zipzi.modeling.physics.PhysicsProperty',)},
  'zipzi.modeling.physics.PhysicsRigPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsRigPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsRigSnapshot': {'children': ('zipzi.modeling.physics.PhysicsRigSnapshot.__repr__',
                                                             'zipzi.modeling.physics.PhysicsRigSnapshot.summary'),
-                                               'documentation': 'Immutable owned PhysicsRigSnapshot value. '
-                                                                'Construction owns declared collections; reading '
-                                                                'fields, repr and summary performs no IO.',
+                                               'documentation': 'Read-only observation of one rig. Positions are the '
+                                                                'latest solved physics\n'
+                                                                'step, not model-space attachment points or '
+                                                                'interpolated render geometry.',
                                                'example': 'docs/recipes.py',
                                                'fields': [('id', 'Native physics group UUID.'),
                                                           ('input_ids', 'Input channel UUIDs aligned with inputs.'),
@@ -1018,14 +974,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                             'tuple[str, ...], node_ids: tuple[str, ...], particles: '
                                                             'tuple[tuple[float, float], ...], input_angle: float, '
                                                             'inputs: tuple[float, ...], outputs: '
-                                                            'tuple[PhysicsOutputSnapshot | None, ...])'},
+                                                            'tuple[PhysicsOutputSnapshot | None, ...])',
+                                               'type_refs': ('zipzi.modeling.physics.PhysicsOutputSnapshot',)},
  'zipzi.modeling.physics.PhysicsRigSnapshot.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsRigSnapshot.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsSetting': {'children': ('zipzi.modeling.physics.PhysicsSetting.__repr__',
                                                         'zipzi.modeling.physics.PhysicsSetting.summary'),
-                                           'documentation': 'Immutable owned PhysicsSetting value. Construction owns '
-                                                            'declared collections; reading fields, repr and summary '
-                                                            'performs no IO.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [('id',
                                                        'Stable identity in the owning authoring domain; exported '
@@ -1051,20 +1006,26 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                            'signature': '(*, id: str, external_id: str, inputs: tuple[PhysicsInput, '
                                                         '...], outputs: tuple[PhysicsOutput, ...], vertices: '
                                                         'tuple[PhysicsNode, ...], normalization: PhysicsNormalization, '
-                                                        'extensions: _Mapping[str, ExtensionValue])'},
+                                                        'extensions: _Mapping[str, ExtensionValue])',
+                                           'type_refs': ('zipzi.modeling.physics.PhysicsInput',
+                                                         'zipzi.modeling.physics.PhysicsNode',
+                                                         'zipzi.modeling.physics.PhysicsNormalization',
+                                                         'zipzi.modeling.physics.PhysicsOutput')},
  'zipzi.modeling.physics.PhysicsSetting.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsSetting.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsTarget': {'children': (),
-                                          'documentation': 'Typed public API entry.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
                                           'fields': [],
-                                          'kind': 'value',
-                                          'signature': ''},
+                                          'kind': 'alias',
+                                          'signature': 'PhysicsTargetUnspecified | PhysicsTargetResolved | '
+                                                       'PhysicsTargetUnresolved',
+                                          'type_refs': ('zipzi.modeling.physics.PhysicsTargetResolved',
+                                                        'zipzi.modeling.physics.PhysicsTargetUnresolved',
+                                                        'zipzi.modeling.physics.PhysicsTargetUnspecified')},
  'zipzi.modeling.physics.PhysicsTargetResolved': {'children': ('zipzi.modeling.physics.PhysicsTargetResolved.__repr__',
                                                                'zipzi.modeling.physics.PhysicsTargetResolved.summary'),
-                                                  'documentation': 'Immutable owned PhysicsTargetResolved value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('parameter_id',
                                                               'Stable document parameter UUID; evaluation uses its '
@@ -1075,9 +1036,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsTargetResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsTargetUnresolved': {'children': ('zipzi.modeling.physics.PhysicsTargetUnresolved.__repr__',
                                                                  'zipzi.modeling.physics.PhysicsTargetUnresolved.summary'),
-                                                    'documentation': 'Immutable owned PhysicsTargetUnresolved value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('runtime_id',
                                                                 'Imported/exported runtime label, distinct from the '
@@ -1088,9 +1047,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsTargetUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsTargetUnspecified': {'children': ('zipzi.modeling.physics.PhysicsTargetUnspecified.__repr__',
                                                                   'zipzi.modeling.physics.PhysicsTargetUnspecified.summary'),
-                                                     'documentation': 'Immutable owned PhysicsTargetUnspecified value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [],
                                                      'kind': 'type',
@@ -1099,9 +1056,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsTargetUnspecified.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsVector': {'children': ('zipzi.modeling.physics.PhysicsVector.__repr__',
                                                        'zipzi.modeling.physics.PhysicsVector.summary'),
-                                          'documentation': 'Immutable owned PhysicsVector value. Construction owns '
-                                                           'declared collections; reading fields, repr and summary '
-                                                           'performs no IO.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
                                           'fields': [('X',
                                                       'Horizontal component in the native Physics coordinate '

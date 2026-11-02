@@ -309,7 +309,7 @@ def render_mesh(contract, resolve=lambda shape: shape):
         raise ValueError("Point adapter requires exactly two f32 fields")
     mesh = [HEADER.rstrip(), '"""Selected immutable mesh values, derived from Rust declarations."""',
         'from dataclasses import dataclass', 'from collections.abc import Sequence', 'from .._values import integer, number, record, sequence, string', '',
-        'Point = tuple[float, float]', '', 'def _point(value: object) -> Point:', '    r = record(value)',
+        'Point = tuple[float, float]', repr('A pair of float coordinates (x, y); Geometry uses it for positions and UVs. The containing field determines the coordinate space.'), '', 'def _point(value: object) -> Point:', '    r = record(value)',
         '    return (' + ', '.join(m.read(f["shape"], f'r["{f["name"]}"]') for f in fields) + ')', '',
         'def _array3(value: object) -> tuple[int, int, int]:', '    raw = sequence(value)', '    if len(raw) != 3:',
         '        raise ValueError("Invalid triangle")', '    return integer(raw[0]), integer(raw[1]), integer(raw[2])', '']
@@ -594,19 +594,40 @@ def write_outputs(output, check=False, package=PACKAGE):
     return _outputs.write_outputs(output, check, package, TARGETS)
 
 
+def check_type_documentation(output):
+    """Fail the semantic coverage gate independently of generated-file drift."""
+    path = 'client/python/zipzi/docs/type-documentation.json'
+    coverage = json.loads(output[path])
+    if coverage['missing']:
+        examples = '\n'.join('  '+item['paths'][0]+' ('+item['source']+')'
+                             for item in coverage['missing'][:10])
+        raise ValueError(f"Missing type documentation: {coverage['missing_type_count']} types; "
+                         f"see {path}\n{examples}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--check', action='store_true', help='Compare only; do not write sources')
+    parser.add_argument('--check-docs', action='store_true', help='Compare without writing and fail on missing type documentation')
     parser.add_argument('--schema', type=Path, help='Replay an exported intermediate schema for diagnostics')
     parser.add_argument('--no-cache', action='store_true', help='Render all outputs without using the local generation cache')
     args = parser.parse_args()
+    check = args.check or args.check_docs
     with file_lock(ROOT / 'target/python2/generate.lock'):
         contract = schema.read(args.schema) if args.schema else export()
-        output = render(contract) if args.no_cache else cached_render(contract, ROOT / 'target/python2/generate-cache.json', read_only=args.check)
-        changes = write_outputs(output, args.check)
-    if args.check and changes:
+        output = render(contract) if args.no_cache else cached_render(contract, ROOT / 'target/python2/generate-cache.json', read_only=check)
+        changes = write_outputs(output, check)
+    if check and changes:
         raise SystemExit('Generated drift: ' + ', '.join(changes))
-    print('zipzi-python2 authoring contract: ' + ('verified' if args.check else 'generated') + f' {len(output)} files')
+    coverage = json.loads(output['client/python/zipzi/docs/type-documentation.json'])
+    print(f"Type documentation: {coverage['documented_type_count']}/{coverage['type_count']} types documented; "
+          f"{coverage['missing_type_count']} missing (client/python/zipzi/docs/type-documentation.json)")
+    if args.check_docs:
+        try:
+            check_type_documentation(output)
+        except ValueError as error:
+            raise SystemExit(str(error)) from None
+    print('zipzi-python2 authoring contract: ' + ('verified' if check else 'generated') + f' {len(output)} files')
 
 if __name__ == '__main__':
     main()

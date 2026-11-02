@@ -14,9 +14,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
                               'signature': ''},
  'zipzi.modeling.resources.ImageAsset': {'children': ('zipzi.modeling.resources.ImageAsset.__repr__',
                                                       'zipzi.modeling.resources.ImageAsset.summary'),
-                                         'documentation': 'Immutable owned ImageAsset value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('unresolved_source',
                                                      'Original imported path or external slot when no decoded content '
@@ -32,14 +30,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
                                                      'no loaded image content.')],
                                          'kind': 'type',
                                          'signature': '(*, unresolved_source: str | None = None, id: str, name: str, '
-                                                      'content: ImageContent | None = None)'},
+                                                      'content: ImageContent | None = None)',
+                                         'type_refs': ('zipzi.modeling.resources.ImageContent',)},
  'zipzi.modeling.resources.ImageAsset.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.resources.ImageAsset.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.resources.ImageContent': {'children': ('zipzi.modeling.resources.ImageContent.__repr__',
                                                         'zipzi.modeling.resources.ImageContent.summary'),
-                                           'documentation': 'Immutable owned ImageContent value. Construction owns '
-                                                            'declared collections; reading fields, repr and summary '
-                                                            'performs no IO.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [('source',
                                                        'Stored resource location, normally a package-relative path or '
@@ -59,16 +56,22 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
  'zipzi.modeling.resources.ImageContent.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.resources.ImageContent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.resources.ResourceEdit': {'children': (),
-                                           'documentation': 'Typed public API entry.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [],
-                                           'kind': 'value',
-                                           'signature': ''},
+                                           'kind': 'alias',
+                                           'signature': 'ResourceEditCreate | ResourceEditPatchName | '
+                                                        'ResourceEditSetContent | ResourceEditReorder | '
+                                                        'ResourceEditDuplicate | ResourceEditDelete',
+                                           'type_refs': ('zipzi.modeling.resources.ResourceEditCreate',
+                                                         'zipzi.modeling.resources.ResourceEditDelete',
+                                                         'zipzi.modeling.resources.ResourceEditDuplicate',
+                                                         'zipzi.modeling.resources.ResourceEditPatchName',
+                                                         'zipzi.modeling.resources.ResourceEditReorder',
+                                                         'zipzi.modeling.resources.ResourceEditSetContent')},
  'zipzi.modeling.resources.ResourceEditCreate': {'children': ('zipzi.modeling.resources.ResourceEditCreate.__repr__',
                                                               'zipzi.modeling.resources.ResourceEditCreate.summary'),
-                                                 'documentation': 'Immutable owned ResourceEditCreate value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('id',
                                                              'New stable UUID for this object; it must not conflict '
@@ -86,9 +89,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
  'zipzi.modeling.resources.ResourceEditCreate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.resources.ResourceEditDelete': {'children': ('zipzi.modeling.resources.ResourceEditDelete.__repr__',
                                                               'zipzi.modeling.resources.ResourceEditDelete.summary'),
-                                                 'documentation': 'Immutable owned ResourceEditDelete value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': 'None rejects references; Some explicitly redirects '
+                                                                  'or detaches every user.',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('id',
                                                              'Stable document object ID used by references; it is '
@@ -99,15 +101,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
                                                              'redirects users to a\n'
                                                              'resolved target or an unresolved/detached reference.')],
                                                  'kind': 'type',
-                                                 'signature': '(*, id: str, replacement: SceneReference | None = '
-                                                              'None)'},
+                                                 'signature': '(*, id: str, replacement: SceneReference | None = None)',
+                                                 'type_refs': ('zipzi.modeling.scene.SceneReference',)},
  'zipzi.modeling.resources.ResourceEditDelete.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.resources.ResourceEditDelete.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.resources.ResourceEditDuplicate': {'children': ('zipzi.modeling.resources.ResourceEditDuplicate.__repr__',
                                                                  'zipzi.modeling.resources.ResourceEditDuplicate.summary'),
-                                                    'documentation': 'Immutable owned ResourceEditDuplicate value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('source',
                                                                 'Stable ID of the existing source object to duplicate, '
@@ -129,9 +129,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
  'zipzi.modeling.resources.ResourceEditDuplicate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.resources.ResourceEditPatchName': {'children': ('zipzi.modeling.resources.ResourceEditPatchName.__repr__',
                                                                  'zipzi.modeling.resources.ResourceEditPatchName.summary'),
-                                                    'documentation': 'Immutable owned ResourceEditPatchName value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('id',
                                                                 'Stable document object ID used by references; it is '
@@ -150,9 +148,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
  'zipzi.modeling.resources.ResourceEditPatchName.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.resources.ResourceEditReorder': {'children': ('zipzi.modeling.resources.ResourceEditReorder.__repr__',
                                                                'zipzi.modeling.resources.ResourceEditReorder.summary'),
-                                                  'documentation': 'Immutable owned ResourceEditReorder value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('ids',
                                                               'Ordered stable object IDs selected for this operation; '
@@ -168,9 +164,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
  'zipzi.modeling.resources.ResourceEditReorder.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.resources.ResourceEditSetContent': {'children': ('zipzi.modeling.resources.ResourceEditSetContent.__repr__',
                                                                   'zipzi.modeling.resources.ResourceEditSetContent.summary'),
-                                                     'documentation': 'Immutable owned ResourceEditSetContent value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('id',
                                                                  'Stable document object ID used by references; it is '
@@ -186,6 +180,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
                                                                  'content.')],
                                                      'kind': 'type',
                                                      'signature': '(*, id: str, expected: ImageContent | None = None, '
-                                                                  'content: ImageContent | None = None)'},
+                                                                  'content: ImageContent | None = None)',
+                                                     'type_refs': ('zipzi.modeling.resources.ImageContent',)},
  'zipzi.modeling.resources.ResourceEditSetContent.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.resources.ResourceEditSetContent.summary': {'alias': 'zipzi.ApiDescription.summary'}}

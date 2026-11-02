@@ -172,6 +172,7 @@ class Offscreen(CompactValue):
         return cls(renderable=_flag(_get(value, 'renderable')), id=_text(_get(value, 'id')), runtime_id=_text(_get(value, 'runtime_id')), owner_part_id=_text(_get(value, 'owner_part_id')), parent_offscreen_id=None if _get(value, 'parent_offscreen_id') is None else _text(_get(value, 'parent_offscreen_id')), render_order=_whole(_get(value, 'render_order'), 'i32'), opacity=_numeric(_get(value, 'opacity'), 'f32'), enabled=_flag(_get(value, 'enabled')), blend_mode=_whole(_get(value, 'blend_mode'), 'u32'), flags=_whole(_get(value, 'flags'), 'u8'), masks=tuple(_text(item) for item in _items(_get(value, 'masks'))), multiply_color=cast('tuple[float, float, float, float]', _array(tuple(_numeric(item, 'f32') for item in _items(_get(value, 'multiply_color'))), 4)), screen_color=cast('tuple[float, float, float, float]', _array(tuple(_numeric(item, 'f32') for item in _items(_get(value, 'screen_color'))), 4)))
 
 class RenderKind(str, Enum):
+    ''
     __module__ = "zipzi.sampling"
     BEGIN_OFFSCREEN = 'BeginOffscreen'
     DRAW_MESH = 'DrawMesh'

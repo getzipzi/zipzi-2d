@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class EditorContext(CompactValue):
-    'Immutable owned EditorContext value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nversion: Exact SDK version captured for this value; not a best-effort latest-version marker.\nview_id: Identity of the Editor view that supplied this UI context.\nselected_ids: Stable document IDs selected in that Editor view, in its selection order.\nworkspace: Editor workspace name captured with the context.\nediting_context: Active Editor editing context captured with the view.\nactive_tool: Editor tool name captured with the context.\npending_interaction: Whether an unfinished UI interaction was present when the context was captured.'
+    '\n\nFields:\nversion: Exact SDK version captured for this value; not a best-effort latest-version marker.\nview_id: Identity of the Editor view that supplied this UI context.\nselected_ids: Stable document IDs selected in that Editor view, in its selection order.\nworkspace: Editor workspace name captured with the context.\nediting_context: Active Editor editing context captured with the view.\nactive_tool: Editor tool name captured with the context.\npending_interaction: Whether an unfinished UI interaction was present when the context was captured.'
     version: _Version
     view_id: str
     selected_ids: tuple[str, ...]

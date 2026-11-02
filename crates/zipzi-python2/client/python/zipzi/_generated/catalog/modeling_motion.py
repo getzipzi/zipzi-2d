@@ -53,8 +53,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                            'signature': ''},
  'zipzi.modeling.motion.MotionClip': {'children': ('zipzi.modeling.motion.MotionClip.__repr__',
                                                    'zipzi.modeling.motion.MotionClip.summary'),
-                                      'documentation': 'Immutable owned MotionClip value. Construction owns declared '
-                                                       'collections; reading fields, repr and summary performs no IO.',
+                                      'documentation': '',
                                       'example': 'docs/recipes.py',
                                       'fields': [('id',
                                                   'Stable identity in the owning authoring domain; exported metadata '
@@ -106,21 +105,22 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                    'tracks: tuple[MotionTrack, ...], events: tuple[MotionEvent, ...], '
                                                    'extensions: _Mapping[str, ExtensionValue], meta_extensions: '
                                                    '_Mapping[str, ExtensionValue], opaque_source_ids: _Mapping[str, '
-                                                   'str] | None = None, opaque_source_content_hash: str | None = '
-                                                   'None)'},
+                                                   'str] | None = None, opaque_source_content_hash: str | None = None)',
+                                      'type_refs': ('zipzi.modeling.motion.MotionEvent',
+                                                    'zipzi.modeling.motion.MotionTrack')},
  'zipzi.modeling.motion.MotionClip.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionClip.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionContainer': {'children': (),
-                                           'documentation': 'Typed public API entry.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [],
-                                           'kind': 'value',
-                                           'signature': ''},
+                                           'kind': 'alias',
+                                           'signature': 'MotionContainerRoot | MotionContainerGroup',
+                                           'type_refs': ('zipzi.modeling.motion.MotionContainerGroup',
+                                                         'zipzi.modeling.motion.MotionContainerRoot')},
  'zipzi.modeling.motion.MotionContainerGroup': {'children': ('zipzi.modeling.motion.MotionContainerGroup.__repr__',
                                                              'zipzi.modeling.motion.MotionContainerGroup.summary'),
-                                                'documentation': 'Immutable owned MotionContainerGroup value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('value',
                                                             'Destination motion-group identity; Root selects ungrouped '
@@ -131,9 +131,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionContainerGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionContainerRoot': {'children': ('zipzi.modeling.motion.MotionContainerRoot.__repr__',
                                                             'zipzi.modeling.motion.MotionContainerRoot.summary'),
-                                               'documentation': 'Immutable owned MotionContainerRoot value. '
-                                                                'Construction owns declared collections; reading '
-                                                                'fields, repr and summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [],
                                                'kind': 'type',
@@ -141,16 +139,47 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionContainerRoot.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionContainerRoot.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEdit': {'children': (),
-                                      'documentation': 'Typed public API entry.',
+                                      'documentation': '',
                                       'example': 'docs/recipes.py',
                                       'fields': [],
-                                      'kind': 'value',
-                                      'signature': ''},
+                                      'kind': 'alias',
+                                      'signature': 'MotionEditCreate | MotionEditCreateGroup | MotionEditRenameGroup | '
+                                                   'MotionEditReorderGroups | MotionEditRegister | '
+                                                   'MotionEditPatchRegistration | MotionEditMoveRegistrations | '
+                                                   'MotionEditDuplicateRegistrations | MotionEditDeleteRegistrations | '
+                                                   'MotionEditDissolveGroup | MotionEditDeleteGroup | '
+                                                   'MotionEditDuplicateGroup | MotionEditDuplicateClip | '
+                                                   'MotionEditDeleteClip | MotionEditReorderTracks | '
+                                                   'MotionEditCreateTrack | MotionEditSetTrackTarget | '
+                                                   'MotionEditMoveTracks | MotionEditDeleteTracks | '
+                                                   'MotionEditTransferKeys | MotionEditSetEvent | '
+                                                   'MotionEditDeleteEvents | MotionEditMoveEvents',
+                                      'type_refs': ('zipzi.modeling.motion.MotionEditCreate',
+                                                    'zipzi.modeling.motion.MotionEditCreateGroup',
+                                                    'zipzi.modeling.motion.MotionEditCreateTrack',
+                                                    'zipzi.modeling.motion.MotionEditDeleteClip',
+                                                    'zipzi.modeling.motion.MotionEditDeleteEvents',
+                                                    'zipzi.modeling.motion.MotionEditDeleteGroup',
+                                                    'zipzi.modeling.motion.MotionEditDeleteRegistrations',
+                                                    'zipzi.modeling.motion.MotionEditDeleteTracks',
+                                                    'zipzi.modeling.motion.MotionEditDissolveGroup',
+                                                    'zipzi.modeling.motion.MotionEditDuplicateClip',
+                                                    'zipzi.modeling.motion.MotionEditDuplicateGroup',
+                                                    'zipzi.modeling.motion.MotionEditDuplicateRegistrations',
+                                                    'zipzi.modeling.motion.MotionEditMoveEvents',
+                                                    'zipzi.modeling.motion.MotionEditMoveRegistrations',
+                                                    'zipzi.modeling.motion.MotionEditMoveTracks',
+                                                    'zipzi.modeling.motion.MotionEditPatchRegistration',
+                                                    'zipzi.modeling.motion.MotionEditRegister',
+                                                    'zipzi.modeling.motion.MotionEditRenameGroup',
+                                                    'zipzi.modeling.motion.MotionEditReorderGroups',
+                                                    'zipzi.modeling.motion.MotionEditReorderTracks',
+                                                    'zipzi.modeling.motion.MotionEditSetEvent',
+                                                    'zipzi.modeling.motion.MotionEditSetTrackTarget',
+                                                    'zipzi.modeling.motion.MotionEditTransferKeys')},
  'zipzi.modeling.motion.MotionEditCreate': {'children': ('zipzi.modeling.motion.MotionEditCreate.__repr__',
                                                          'zipzi.modeling.motion.MotionEditCreate.summary'),
-                                            'documentation': 'Immutable owned MotionEditCreate value. Construction '
-                                                             'owns declared collections; reading fields, repr and '
-                                                             'summary performs no IO.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
                                             'fields': [('id',
                                                         'Stable identity in the owning authoring domain; exported '
@@ -165,14 +194,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                         'separately by before.')],
                                             'kind': 'type',
                                             'signature': '(*, id: str, name: str, registration_id: str, destination: '
-                                                         'MotionContainer)'},
+                                                         'MotionContainer)',
+                                            'type_refs': ('zipzi.modeling.motion.MotionContainer',)},
  'zipzi.modeling.motion.MotionEditCreate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditCreate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditCreateGroup': {'children': ('zipzi.modeling.motion.MotionEditCreateGroup.__repr__',
                                                               'zipzi.modeling.motion.MotionEditCreateGroup.summary'),
-                                                 'documentation': 'Immutable owned MotionEditCreateGroup value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('id',
                                                              'Stable identity in the owning authoring domain; exported '
@@ -186,9 +214,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditCreateGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditCreateTrack': {'children': ('zipzi.modeling.motion.MotionEditCreateTrack.__repr__',
                                                               'zipzi.modeling.motion.MotionEditCreateTrack.summary'),
-                                                 'documentation': 'Immutable owned MotionEditCreateTrack value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('clip',
                                                              'Stable ID of the motion clip owning the affected track '
@@ -208,9 +234,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditCreateTrack.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditDeleteClip': {'children': ('zipzi.modeling.motion.MotionEditDeleteClip.__repr__',
                                                              'zipzi.modeling.motion.MotionEditDeleteClip.summary'),
-                                                'documentation': 'Immutable owned MotionEditDeleteClip value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('id',
                                                             'Stable identity in the owning authoring domain; exported '
@@ -221,9 +245,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditDeleteClip.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditDeleteEvents': {'children': ('zipzi.modeling.motion.MotionEditDeleteEvents.__repr__',
                                                                'zipzi.modeling.motion.MotionEditDeleteEvents.summary'),
-                                                  'documentation': 'Immutable owned MotionEditDeleteEvents value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('ids',
                                                               'Ordered stable IDs selected by this operation; names '
@@ -234,9 +256,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditDeleteEvents.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditDeleteGroup': {'children': ('zipzi.modeling.motion.MotionEditDeleteGroup.__repr__',
                                                               'zipzi.modeling.motion.MotionEditDeleteGroup.summary'),
-                                                 'documentation': 'Immutable owned MotionEditDeleteGroup value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('id',
                                                              'Stable identity in the owning authoring domain; exported '
@@ -247,11 +267,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditDeleteGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditDeleteRegistrations': {'children': ('zipzi.modeling.motion.MotionEditDeleteRegistrations.__repr__',
                                                                       'zipzi.modeling.motion.MotionEditDeleteRegistrations.summary'),
-                                                         'documentation': 'Immutable owned '
-                                                                          'MotionEditDeleteRegistrations value. '
-                                                                          'Construction owns declared collections; '
-                                                                          'reading fields, repr and summary performs '
-                                                                          'no IO.',
+                                                         'documentation': '',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [('ids',
                                                                      'Ordered stable IDs selected by this operation; '
@@ -262,9 +278,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditDeleteRegistrations.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditDeleteTracks': {'children': ('zipzi.modeling.motion.MotionEditDeleteTracks.__repr__',
                                                                'zipzi.modeling.motion.MotionEditDeleteTracks.summary'),
-                                                  'documentation': 'Immutable owned MotionEditDeleteTracks value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('ids',
                                                               'Ordered stable IDs selected by this operation; names '
@@ -275,9 +289,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditDeleteTracks.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditDissolveGroup': {'children': ('zipzi.modeling.motion.MotionEditDissolveGroup.__repr__',
                                                                 'zipzi.modeling.motion.MotionEditDissolveGroup.summary'),
-                                                   'documentation': 'Immutable owned MotionEditDissolveGroup value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('id',
                                                                'Stable identity in the owning authoring domain; '
@@ -288,9 +300,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditDissolveGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditDuplicateClip': {'children': ('zipzi.modeling.motion.MotionEditDuplicateClip.__repr__',
                                                                 'zipzi.modeling.motion.MotionEditDuplicateClip.summary'),
-                                                   'documentation': 'Immutable owned MotionEditDuplicateClip value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('source',
                                                                'Typed parameter reference or stable source object ID, '
@@ -309,14 +319,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                'controlled separately by before.')],
                                                    'kind': 'type',
                                                    'signature': '(*, source: str, id: str, name: str, registration_id: '
-                                                                'str, destination: MotionContainer)'},
+                                                                'str, destination: MotionContainer)',
+                                                   'type_refs': ('zipzi.modeling.motion.MotionContainer',)},
  'zipzi.modeling.motion.MotionEditDuplicateClip.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditDuplicateClip.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditDuplicateGroup': {'children': ('zipzi.modeling.motion.MotionEditDuplicateGroup.__repr__',
                                                                  'zipzi.modeling.motion.MotionEditDuplicateGroup.summary'),
-                                                    'documentation': 'Immutable owned MotionEditDuplicateGroup value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('source',
                                                                 'Typed parameter reference or stable source object ID, '
@@ -333,11 +342,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditDuplicateGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditDuplicateRegistrations': {'children': ('zipzi.modeling.motion.MotionEditDuplicateRegistrations.__repr__',
                                                                          'zipzi.modeling.motion.MotionEditDuplicateRegistrations.summary'),
-                                                            'documentation': 'Immutable owned '
-                                                                             'MotionEditDuplicateRegistrations value. '
-                                                                             'Construction owns declared collections; '
-                                                                             'reading fields, repr and summary '
-                                                                             'performs no IO.',
+                                                            'documentation': '',
                                                             'example': 'docs/recipes.py',
                                                             'fields': [('ids',
                                                                         'Ordered stable IDs selected by this '
@@ -351,14 +356,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                         'insert; None appends.')],
                                                             'kind': 'type',
                                                             'signature': '(*, ids: tuple[str, ...], destination: '
-                                                                         'MotionContainer, before: str | None = None)'},
+                                                                         'MotionContainer, before: str | None = None)',
+                                                            'type_refs': ('zipzi.modeling.motion.MotionContainer',)},
  'zipzi.modeling.motion.MotionEditDuplicateRegistrations.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditDuplicateRegistrations.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditMoveEvents': {'children': ('zipzi.modeling.motion.MotionEditMoveEvents.__repr__',
                                                              'zipzi.modeling.motion.MotionEditMoveEvents.summary'),
-                                                'documentation': 'Immutable owned MotionEditMoveEvents value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('ids',
                                                             'Ordered stable IDs selected by this operation; names and '
@@ -379,10 +383,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditMoveEvents.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditMoveRegistrations': {'children': ('zipzi.modeling.motion.MotionEditMoveRegistrations.__repr__',
                                                                     'zipzi.modeling.motion.MotionEditMoveRegistrations.summary'),
-                                                       'documentation': 'Immutable owned MotionEditMoveRegistrations '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('ids',
                                                                    'Ordered stable IDs selected by this operation; '
@@ -395,14 +396,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                    'None appends.')],
                                                        'kind': 'type',
                                                        'signature': '(*, ids: tuple[str, ...], destination: '
-                                                                    'MotionContainer, before: str | None = None)'},
+                                                                    'MotionContainer, before: str | None = None)',
+                                                       'type_refs': ('zipzi.modeling.motion.MotionContainer',)},
  'zipzi.modeling.motion.MotionEditMoveRegistrations.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditMoveRegistrations.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditMoveTracks': {'children': ('zipzi.modeling.motion.MotionEditMoveTracks.__repr__',
                                                              'zipzi.modeling.motion.MotionEditMoveTracks.summary'),
-                                                'documentation': 'Immutable owned MotionEditMoveTracks value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('ids',
                                                             'Ordered stable IDs selected by this operation; names and '
@@ -423,10 +423,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditMoveTracks.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditPatchRegistration': {'children': ('zipzi.modeling.motion.MotionEditPatchRegistration.__repr__',
                                                                     'zipzi.modeling.motion.MotionEditPatchRegistration.summary'),
-                                                       'documentation': 'Immutable owned MotionEditPatchRegistration '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('id',
                                                                    'Stable identity in the owning authoring domain; '
@@ -439,14 +436,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                    'owner is selected separately.')],
                                                        'kind': 'type',
                                                        'signature': '(*, id: str, expected: MotionRegistration, entry: '
-                                                                    'MotionRegistration)'},
+                                                                    'MotionRegistration)',
+                                                       'type_refs': ('zipzi.modeling.motion.MotionRegistration',)},
  'zipzi.modeling.motion.MotionEditPatchRegistration.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditPatchRegistration.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditRegister': {'children': ('zipzi.modeling.motion.MotionEditRegister.__repr__',
                                                            'zipzi.modeling.motion.MotionEditRegister.summary'),
-                                              'documentation': 'Immutable owned MotionEditRegister value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('entry',
                                                           'Complete replacement motion registration; its owner is '
@@ -459,14 +455,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                           'appends.')],
                                               'kind': 'type',
                                               'signature': '(*, entry: MotionRegistration, destination: '
-                                                           'MotionContainer, before: str | None = None)'},
+                                                           'MotionContainer, before: str | None = None)',
+                                              'type_refs': ('zipzi.modeling.motion.MotionContainer',
+                                                            'zipzi.modeling.motion.MotionRegistration')},
  'zipzi.modeling.motion.MotionEditRegister.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditRegister.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditRenameGroup': {'children': ('zipzi.modeling.motion.MotionEditRenameGroup.__repr__',
                                                               'zipzi.modeling.motion.MotionEditRenameGroup.summary'),
-                                                 'documentation': 'Immutable owned MotionEditRenameGroup value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('id',
                                                              'Stable identity in the owning authoring domain; exported '
@@ -480,9 +476,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditRenameGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditReorderGroups': {'children': ('zipzi.modeling.motion.MotionEditReorderGroups.__repr__',
                                                                 'zipzi.modeling.motion.MotionEditReorderGroups.summary'),
-                                                   'documentation': 'Immutable owned MotionEditReorderGroups value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('ids',
                                                                'Ordered stable IDs selected by this operation; names '
@@ -493,9 +487,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditReorderGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditReorderTracks': {'children': ('zipzi.modeling.motion.MotionEditReorderTracks.__repr__',
                                                                 'zipzi.modeling.motion.MotionEditReorderTracks.summary'),
-                                                   'documentation': 'Immutable owned MotionEditReorderTracks value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('clip',
                                                                'Stable ID of the motion clip owning the affected track '
@@ -509,9 +501,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditReorderTracks.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditSetEvent': {'children': ('zipzi.modeling.motion.MotionEditSetEvent.__repr__',
                                                            'zipzi.modeling.motion.MotionEditSetEvent.summary'),
-                                              'documentation': 'Immutable owned MotionEditSetEvent value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('clip',
                                                           'Stable ID of the motion clip owning the affected track or '
@@ -520,14 +510,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                           'Owned motion event with a stable ID, time in seconds and '
                                                           'string payload.')],
                                               'kind': 'type',
-                                              'signature': '(*, clip: str, event: MotionEvent)'},
+                                              'signature': '(*, clip: str, event: MotionEvent)',
+                                              'type_refs': ('zipzi.modeling.motion.MotionEvent',)},
  'zipzi.modeling.motion.MotionEditSetEvent.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditSetEvent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditSetTrackTarget': {'children': ('zipzi.modeling.motion.MotionEditSetTrackTarget.__repr__',
                                                                  'zipzi.modeling.motion.MotionEditSetTrackTarget.summary'),
-                                                    'documentation': 'Immutable owned MotionEditSetTrackTarget value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('id',
                                                                 'Stable identity in the owning authoring domain; '
@@ -536,14 +525,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                 'Typed target reference; unresolved imported runtime '
                                                                 'labels remain explicit.')],
                                                     'kind': 'type',
-                                                    'signature': '(*, id: str, target: MotionTrackTarget)'},
+                                                    'signature': '(*, id: str, target: MotionTrackTarget)',
+                                                    'type_refs': ('zipzi.modeling.motion.MotionTrackTarget',)},
  'zipzi.modeling.motion.MotionEditSetTrackTarget.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEditSetTrackTarget.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEditTransferKeys': {'children': ('zipzi.modeling.motion.MotionEditTransferKeys.__repr__',
                                                                'zipzi.modeling.motion.MotionEditTransferKeys.summary'),
-                                                  'documentation': 'Immutable owned MotionEditTransferKeys value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('ids',
                                                               'Ordered stable IDs selected by this operation; names '
@@ -563,8 +551,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditTransferKeys.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEvent': {'children': ('zipzi.modeling.motion.MotionEvent.__repr__',
                                                     'zipzi.modeling.motion.MotionEvent.summary'),
-                                       'documentation': 'Immutable owned MotionEvent value. Construction owns declared '
-                                                        'collections; reading fields, repr and summary performs no IO.',
+                                       'documentation': '',
                                        'example': 'docs/recipes.py',
                                        'fields': [('id',
                                                    'Stable identity in the owning authoring domain; exported metadata '
@@ -583,9 +570,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEvent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEventFired': {'children': ('zipzi.modeling.motion.MotionEventFired.__repr__',
                                                          'zipzi.modeling.motion.MotionEventFired.summary'),
-                                            'documentation': 'Immutable owned MotionEventFired value. Construction '
-                                                             'owns declared collections; reading fields, repr and '
-                                                             'summary performs no IO.',
+                                            'documentation': 'A motion event crossed during the last update, returned '
+                                                             'without side effects.',
                                             'example': 'docs/recipes.py',
                                             'fields': [('motion_id', 'Source clip UUID.'),
                                                        ('event_id', 'Source event UUID.'),
@@ -596,8 +582,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEventFired.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionGroup': {'children': ('zipzi.modeling.motion.MotionGroup.__repr__',
                                                     'zipzi.modeling.motion.MotionGroup.summary'),
-                                       'documentation': 'Immutable owned MotionGroup value. Construction owns declared '
-                                                        'collections; reading fields, repr and summary performs no IO.',
+                                       'documentation': '',
                                        'example': 'docs/recipes.py',
                                        'fields': [('id',
                                                    'Stable identity in the owning authoring domain; exported metadata '
@@ -609,13 +594,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                    'Ordered owned registrations or expression/Pose entries, with '
                                                    'stable identities.')],
                                        'kind': 'type',
-                                       'signature': '(*, id: str, name: str, entries: tuple[MotionRegistration, ...])'},
+                                       'signature': '(*, id: str, name: str, entries: tuple[MotionRegistration, ...])',
+                                       'type_refs': ('zipzi.modeling.motion.MotionRegistration',)},
  'zipzi.modeling.motion.MotionGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionKey': {'children': ('zipzi.modeling.motion.MotionKey.__repr__',
                                                   'zipzi.modeling.motion.MotionKey.summary'),
-                                     'documentation': 'Immutable owned MotionKey value. Construction owns declared '
-                                                      'collections; reading fields, repr and summary performs no IO.',
+                                     'documentation': 'Persistent identity belongs to keys, never to Bezier control '
+                                                      'points.',
                                      'example': 'docs/recipes.py',
                                      'fields': [('id',
                                                  'Stable identity in the owning authoring domain; exported metadata '
@@ -630,9 +616,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionKey.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionPlaybackPosition': {'children': ('zipzi.modeling.motion.MotionPlaybackPosition.__repr__',
                                                                'zipzi.modeling.motion.MotionPlaybackPosition.summary'),
-                                                  'documentation': 'Immutable owned MotionPlaybackPosition value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('motion_id',
                                                               'Source motion clip UUID for this SDK playback '
@@ -655,8 +639,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionPlaybackPosition.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionPoint': {'children': ('zipzi.modeling.motion.MotionPoint.__repr__',
                                                     'zipzi.modeling.motion.MotionPoint.summary'),
-                                       'documentation': 'Immutable owned MotionPoint value. Construction owns declared '
-                                                        'collections; reading fields, repr and summary performs no IO.',
+                                       'documentation': '',
                                        'example': 'docs/recipes.py',
                                        'fields': [('time', 'Absolute time in seconds within the owning motion clip.'),
                                                   ('value',
@@ -668,9 +651,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionPoint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionRegistration': {'children': ('zipzi.modeling.motion.MotionRegistration.__repr__',
                                                            'zipzi.modeling.motion.MotionRegistration.summary'),
-                                              'documentation': 'Immutable owned MotionRegistration value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': 'model3 registration is separate from a clip: one file '
+                                                               'may appear in multiple groups.',
                                               'example': 'docs/recipes.py',
                                               'fields': [('id',
                                                           'Stable identity in the owning authoring domain; exported '
@@ -692,20 +674,24 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                               'kind': 'type',
                                               'signature': '(*, id: str, clip_id: str, fade_in: float | None = None, '
                                                            'fade_out: float | None = None, sound: AttachmentRef | None '
-                                                           '= None, extensions: _Mapping[str, ExtensionValue])'},
+                                                           '= None, extensions: _Mapping[str, ExtensionValue])',
+                                              'type_refs': ('zipzi.modeling.scene.AttachmentRef',)},
  'zipzi.modeling.motion.MotionRegistration.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionRegistration.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionSegment': {'children': (),
-                                         'documentation': 'Typed public API entry.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [],
-                                         'kind': 'value',
-                                         'signature': ''},
+                                         'kind': 'alias',
+                                         'signature': 'MotionSegmentLinear | MotionSegmentBezier | '
+                                                      'MotionSegmentStepped | MotionSegmentInverseStepped',
+                                         'type_refs': ('zipzi.modeling.motion.MotionSegmentBezier',
+                                                       'zipzi.modeling.motion.MotionSegmentInverseStepped',
+                                                       'zipzi.modeling.motion.MotionSegmentLinear',
+                                                       'zipzi.modeling.motion.MotionSegmentStepped')},
  'zipzi.modeling.motion.MotionSegmentBezier': {'children': ('zipzi.modeling.motion.MotionSegmentBezier.__repr__',
                                                             'zipzi.modeling.motion.MotionSegmentBezier.summary'),
-                                               'documentation': 'Immutable owned MotionSegmentBezier value. '
-                                                                'Construction owns declared collections; reading '
-                                                                'fields, repr and summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('control1',
                                                            'First Bezier control point in seconds/channel-value '
@@ -718,54 +704,51 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                            'by the enclosing type.')],
                                                'kind': 'type',
                                                'signature': '(*, control1: MotionPoint, control2: MotionPoint, end: '
-                                                            'MotionKey)'},
+                                                            'MotionKey)',
+                                               'type_refs': ('zipzi.modeling.motion.MotionKey',
+                                                             'zipzi.modeling.motion.MotionPoint')},
  'zipzi.modeling.motion.MotionSegmentBezier.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionSegmentBezier.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionSegmentInverseStepped': {'children': ('zipzi.modeling.motion.MotionSegmentInverseStepped.__repr__',
                                                                     'zipzi.modeling.motion.MotionSegmentInverseStepped.summary'),
-                                                       'documentation': 'Immutable owned MotionSegmentInverseStepped '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('end',
                                                                    'Segment endpoint key or source-range end time, as '
                                                                    'declared by the enclosing type.')],
                                                        'kind': 'type',
-                                                       'signature': '(*, end: MotionKey)'},
+                                                       'signature': '(*, end: MotionKey)',
+                                                       'type_refs': ('zipzi.modeling.motion.MotionKey',)},
  'zipzi.modeling.motion.MotionSegmentInverseStepped.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionSegmentInverseStepped.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionSegmentLinear': {'children': ('zipzi.modeling.motion.MotionSegmentLinear.__repr__',
                                                             'zipzi.modeling.motion.MotionSegmentLinear.summary'),
-                                               'documentation': 'Immutable owned MotionSegmentLinear value. '
-                                                                'Construction owns declared collections; reading '
-                                                                'fields, repr and summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('end',
                                                            'Segment endpoint key or source-range end time, as declared '
                                                            'by the enclosing type.')],
                                                'kind': 'type',
-                                               'signature': '(*, end: MotionKey)'},
+                                               'signature': '(*, end: MotionKey)',
+                                               'type_refs': ('zipzi.modeling.motion.MotionKey',)},
  'zipzi.modeling.motion.MotionSegmentLinear.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionSegmentLinear.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionSegmentStepped': {'children': ('zipzi.modeling.motion.MotionSegmentStepped.__repr__',
                                                              'zipzi.modeling.motion.MotionSegmentStepped.summary'),
-                                                'documentation': 'Immutable owned MotionSegmentStepped value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('end',
                                                             'Segment endpoint key or source-range end time, as '
                                                             'declared by the enclosing type.')],
                                                 'kind': 'type',
-                                                'signature': '(*, end: MotionKey)'},
+                                                'signature': '(*, end: MotionKey)',
+                                                'type_refs': ('zipzi.modeling.motion.MotionKey',)},
  'zipzi.modeling.motion.MotionSegmentStepped.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionSegmentStepped.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionSnapshot': {'children': ('zipzi.modeling.motion.MotionSnapshot.__repr__',
                                                        'zipzi.modeling.motion.MotionSnapshot.summary'),
-                                          'documentation': 'Immutable owned MotionSnapshot value. Construction owns '
-                                                           'declared collections; reading fields, repr and summary '
-                                                           'performs no IO.',
+                                          'documentation': 'Combined values after Motion, Expression, Physics and Pose '
+                                                           'evaluation.',
                                           'example': 'docs/recipes.py',
                                           'fields': [('physics',
                                                       'Optional inspector observations. Collected explicitly by a host '
@@ -807,13 +790,15 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                        'model_opacity: float, active_motions: tuple[str, ...], '
                                                        'active_expressions: tuple[str, ...], fired_events: '
                                                        'tuple[MotionEventFired, ...], coverage: tuple[str, ...], '
-                                                       'motion_positions: tuple[MotionPlaybackPosition, ...])'},
+                                                       'motion_positions: tuple[MotionPlaybackPosition, ...])',
+                                          'type_refs': ('zipzi.modeling.motion.MotionEventFired',
+                                                        'zipzi.modeling.motion.MotionPlaybackPosition',
+                                                        'zipzi.modeling.physics.PhysicsRigSnapshot')},
  'zipzi.modeling.motion.MotionSnapshot.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionSnapshot.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionTrack': {'children': ('zipzi.modeling.motion.MotionTrack.__repr__',
                                                     'zipzi.modeling.motion.MotionTrack.summary'),
-                                       'documentation': 'Immutable owned MotionTrack value. Construction owns declared '
-                                                        'collections; reading fields, repr and summary performs no IO.',
+                                       'documentation': '',
                                        'example': 'docs/recipes.py',
                                        'fields': [('id',
                                                    'Stable identity in the owning authoring domain; exported metadata '
@@ -840,20 +825,28 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                        'signature': '(*, id: str, target: MotionTrackTarget, initial: MotionKey, '
                                                     'segments: tuple[MotionSegment, ...], fade_in: float | None = '
                                                     'None, fade_out: float | None = None, extensions: _Mapping[str, '
-                                                    'ExtensionValue])'},
+                                                    'ExtensionValue])',
+                                       'type_refs': ('zipzi.modeling.motion.MotionKey',
+                                                     'zipzi.modeling.motion.MotionSegment',
+                                                     'zipzi.modeling.motion.MotionTrackTarget')},
  'zipzi.modeling.motion.MotionTrack.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionTrack.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionTrackTarget': {'children': (),
-                                             'documentation': 'Typed public API entry.',
+                                             'documentation': '',
                                              'example': 'docs/recipes.py',
                                              'fields': [],
-                                             'kind': 'value',
-                                             'signature': ''},
+                                             'kind': 'alias',
+                                             'signature': 'MotionTrackTargetUnspecified | MotionTrackTargetModel | '
+                                                          'MotionTrackTargetParameter | MotionTrackTargetPartOpacity | '
+                                                          'MotionTrackTargetUnresolved',
+                                             'type_refs': ('zipzi.modeling.motion.MotionTrackTargetModel',
+                                                           'zipzi.modeling.motion.MotionTrackTargetParameter',
+                                                           'zipzi.modeling.motion.MotionTrackTargetPartOpacity',
+                                                           'zipzi.modeling.motion.MotionTrackTargetUnresolved',
+                                                           'zipzi.modeling.motion.MotionTrackTargetUnspecified')},
  'zipzi.modeling.motion.MotionTrackTargetModel': {'children': ('zipzi.modeling.motion.MotionTrackTargetModel.__repr__',
                                                                'zipzi.modeling.motion.MotionTrackTargetModel.summary'),
-                                                  'documentation': 'Immutable owned MotionTrackTargetModel value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('runtime_id',
                                                               'Imported/exported runtime label, distinct from the '
@@ -864,10 +857,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionTrackTargetModel.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionTrackTargetParameter': {'children': ('zipzi.modeling.motion.MotionTrackTargetParameter.__repr__',
                                                                    'zipzi.modeling.motion.MotionTrackTargetParameter.summary'),
-                                                      'documentation': 'Immutable owned MotionTrackTargetParameter '
-                                                                       'value. Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('parameter_id',
                                                                   'Stable document parameter UUID; evaluation uses its '
@@ -878,10 +868,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionTrackTargetParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionTrackTargetPartOpacity': {'children': ('zipzi.modeling.motion.MotionTrackTargetPartOpacity.__repr__',
                                                                      'zipzi.modeling.motion.MotionTrackTargetPartOpacity.summary'),
-                                                        'documentation': 'Immutable owned MotionTrackTargetPartOpacity '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('part_id',
                                                                     'Stable document Part UUID for this opacity or '
@@ -892,10 +879,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionTrackTargetPartOpacity.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionTrackTargetUnresolved': {'children': ('zipzi.modeling.motion.MotionTrackTargetUnresolved.__repr__',
                                                                     'zipzi.modeling.motion.MotionTrackTargetUnresolved.summary'),
-                                                       'documentation': 'Immutable owned MotionTrackTargetUnresolved '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('category',
                                                                    'Imported Physics target category retained by this '
@@ -909,10 +893,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionTrackTargetUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionTrackTargetUnspecified': {'children': ('zipzi.modeling.motion.MotionTrackTargetUnspecified.__repr__',
                                                                      'zipzi.modeling.motion.MotionTrackTargetUnspecified.summary'),
-                                                        'documentation': 'Immutable owned MotionTrackTargetUnspecified '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [],
                                                         'kind': 'type',

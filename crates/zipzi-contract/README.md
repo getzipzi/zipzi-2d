@@ -9,6 +9,12 @@ The `authoring-schema` binary selects the Python projections and emits their
 schema. `crates/zipzi-python2/tools/generate.py` always exports the current
 contract before rendering and uses a checkout-local Cargo target and lock.
 
+Maintain shared type, operation-variant and field semantics in their `///`
+comments. Both derived shapes and `api_record!` / `api_union!` declarations
+export these comments, including enum member descriptions, to downstream API
+documentation. Python-specific calling conventions belong to Python definitions
+or their generation descriptors rather than a separate type-name lookup table.
+
 The `model`, `document`, `authoring`, `runtime` and `binary_wire` module files
 include their domain-focused source files in the same module; their shared
 imports live in the module files. This preserves Rust type paths and binary wire

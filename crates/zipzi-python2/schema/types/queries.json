@@ -2,6 +2,7 @@
   "_generated_by": "zipzi-python2/tools/generate.py",
   "definitions": {
     "zipzi_contract::authoring::ModelingQuery": {
+      "doc": "Select explicit record IDs; empty lists return collection identities only.",
       "fields": [
         {
           "default": [],
@@ -264,6 +265,7 @@
       "tuple": false
     },
     "zipzi_contract::authoring::OwnedModelingRecords": {
+      "doc": "Owned selected query results. No mutation or query behavior lives in this DTO.",
       "fields": [
         {
           "doc": "Stable document UUID; not a Runtime Session handle.",

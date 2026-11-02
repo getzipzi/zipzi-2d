@@ -60,9 +60,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                             'signature': ''},
  'zipzi.modeling.project.CdiCombinedSet': {'children': ('zipzi.modeling.project.CdiCombinedSet.__repr__',
                                                         'zipzi.modeling.project.CdiCombinedSet.summary'),
-                                           'documentation': 'Immutable owned CdiCombinedSet value. Construction owns '
-                                                            'declared collections; reading fields, repr and summary '
-                                                            'performs no IO.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [('id',
                                                        'Stable UUID of this CDI combined set; not the identity of its '
@@ -73,14 +71,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                        'object identity.')],
                                            'kind': 'type',
                                            'signature': '(*, id: str, members: tuple[ReferenceEntryCdiParameterRef, '
-                                                        '...])'},
+                                                        '...])',
+                                           'type_refs': ('zipzi.modeling.addressing.ReferenceEntryCdiParameterRef',)},
  'zipzi.modeling.project.CdiCombinedSet.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.CdiCombinedSet.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiNamespaceIds': {'children': ('zipzi.modeling.project.CdiNamespaceIds.__repr__',
                                                          'zipzi.modeling.project.CdiNamespaceIds.summary'),
-                                            'documentation': 'Immutable owned CdiNamespaceIds value. Construction owns '
-                                                             'declared collections; reading fields, repr and summary '
-                                                             'performs no IO.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
                                             'fields': [('parameters',
                                                         'Imported parameter document-ID to runtime-ID map, retained to '
@@ -97,17 +94,16 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiNamespaceIds.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.CdiNamespaceIds.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiParameterEntry': {'children': (),
-                                              'documentation': 'Typed public API entry.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [],
-                                              'kind': 'value',
-                                              'signature': ''},
+                                              'kind': 'alias',
+                                              'signature': 'CdiParameterEntryResolved | CdiParameterEntryUnresolved',
+                                              'type_refs': ('zipzi.modeling.project.CdiParameterEntryResolved',
+                                                            'zipzi.modeling.project.CdiParameterEntryUnresolved')},
  'zipzi.modeling.project.CdiParameterEntryResolved': {'children': ('zipzi.modeling.project.CdiParameterEntryResolved.__repr__',
                                                                    'zipzi.modeling.project.CdiParameterEntryResolved.summary'),
-                                                      'documentation': 'Immutable owned CdiParameterEntryResolved '
-                                                                       'value. Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('parameter_id',
                                                                   'Stable document parameter ID, not its exported '
@@ -127,10 +123,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiParameterEntryResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiParameterEntryUnresolved': {'children': ('zipzi.modeling.project.CdiParameterEntryUnresolved.__repr__',
                                                                      'zipzi.modeling.project.CdiParameterEntryUnresolved.summary'),
-                                                        'documentation': 'Immutable owned CdiParameterEntryUnresolved '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('runtime_id',
                                                                     'External format/runtime identifier retained for '
@@ -155,9 +148,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiParameterEntryUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiParameterGroup': {'children': ('zipzi.modeling.project.CdiParameterGroup.__repr__',
                                                            'zipzi.modeling.project.CdiParameterGroup.summary'),
-                                              'documentation': 'Immutable owned CdiParameterGroup value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('id',
                                                           'Stable document object ID used by references; it is '
@@ -182,16 +173,18 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiParameterGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.CdiParameterGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiParameterRef': {'children': (),
-                                            'documentation': 'Typed public API entry.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
                                             'fields': [],
-                                            'kind': 'value',
-                                            'signature': ''},
+                                            'kind': 'alias',
+                                            'signature': 'CdiParameterRefUnspecified | CdiParameterRefResolved | '
+                                                         'CdiParameterRefUnresolved',
+                                            'type_refs': ('zipzi.modeling.project.CdiParameterRefResolved',
+                                                          'zipzi.modeling.project.CdiParameterRefUnresolved',
+                                                          'zipzi.modeling.project.CdiParameterRefUnspecified')},
  'zipzi.modeling.project.CdiParameterRefResolved': {'children': ('zipzi.modeling.project.CdiParameterRefResolved.__repr__',
                                                                  'zipzi.modeling.project.CdiParameterRefResolved.summary'),
-                                                    'documentation': 'Immutable owned CdiParameterRefResolved value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('parameter_id',
                                                                 'Stable document parameter ID, not its exported '
@@ -202,10 +195,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiParameterRefResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiParameterRefUnresolved': {'children': ('zipzi.modeling.project.CdiParameterRefUnresolved.__repr__',
                                                                    'zipzi.modeling.project.CdiParameterRefUnresolved.summary'),
-                                                      'documentation': 'Immutable owned CdiParameterRefUnresolved '
-                                                                       'value. Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('runtime_id',
                                                                   'External format/runtime identifier retained for '
@@ -217,10 +207,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiParameterRefUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiParameterRefUnspecified': {'children': ('zipzi.modeling.project.CdiParameterRefUnspecified.__repr__',
                                                                     'zipzi.modeling.project.CdiParameterRefUnspecified.summary'),
-                                                       'documentation': 'Immutable owned CdiParameterRefUnspecified '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [],
                                                        'kind': 'type',
@@ -228,16 +215,16 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiParameterRefUnspecified.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.CdiParameterRefUnspecified.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiPartEntry': {'children': (),
-                                         'documentation': 'Typed public API entry.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [],
-                                         'kind': 'value',
-                                         'signature': ''},
+                                         'kind': 'alias',
+                                         'signature': 'CdiPartEntryResolved | CdiPartEntryUnresolved',
+                                         'type_refs': ('zipzi.modeling.project.CdiPartEntryResolved',
+                                                       'zipzi.modeling.project.CdiPartEntryUnresolved')},
  'zipzi.modeling.project.CdiPartEntryResolved': {'children': ('zipzi.modeling.project.CdiPartEntryResolved.__repr__',
                                                               'zipzi.modeling.project.CdiPartEntryResolved.summary'),
-                                                 'documentation': 'Immutable owned CdiPartEntryResolved value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('part_id',
                                                              'Resolved stable document Part ID; use an Unresolved '
@@ -253,9 +240,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiPartEntryResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiPartEntryUnresolved': {'children': ('zipzi.modeling.project.CdiPartEntryUnresolved.__repr__',
                                                                 'zipzi.modeling.project.CdiPartEntryUnresolved.summary'),
-                                                   'documentation': 'Immutable owned CdiPartEntryUnresolved value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('runtime_id',
                                                                'External format/runtime identifier retained for '
@@ -275,9 +260,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiPartEntryUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DisplayInfo': {'children': ('zipzi.modeling.project.DisplayInfo.__repr__',
                                                      'zipzi.modeling.project.DisplayInfo.summary'),
-                                        'documentation': 'Immutable owned DisplayInfo value. Construction owns '
-                                                         'declared collections; reading fields, repr and summary '
-                                                         'performs no IO.',
+                                        'documentation': '',
                                         'example': 'docs/recipes.py',
                                         'fields': [('origin',
                                                     'Import/generation provenance of these display metadata records.'),
@@ -310,28 +293,37 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                      'tuple[CdiPartEntry, ...] | None = None, combined_parameters: '
                                                      'tuple[CdiCombinedSet, ...] | None = None, extensions: '
                                                      '_Mapping[str, ExtensionValue], opaque_source_ids: '
-                                                     'CdiNamespaceIds | None = None)'},
+                                                     'CdiNamespaceIds | None = None)',
+                                        'type_refs': ('zipzi.modeling.project.CdiCombinedSet',
+                                                      'zipzi.modeling.project.CdiNamespaceIds',
+                                                      'zipzi.modeling.project.CdiParameterEntry',
+                                                      'zipzi.modeling.project.CdiParameterGroup',
+                                                      'zipzi.modeling.project.CdiPartEntry',
+                                                      'zipzi.modeling.project.DisplayInfoOrigin')},
  'zipzi.modeling.project.DisplayInfo.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.DisplayInfo.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DisplayInfoOrigin': {'children': (),
-                                              'documentation': 'Immutable typed value. See field semantics and the '
-                                                               'linked workflow.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
-                                              'fields': [],
-                                              'kind': 'type',
-                                              'signature': '()'},
+                                              'fields': [('GENERATED', "'generated'"), ('IMPORTED', "'imported'")],
+                                              'kind': 'enum',
+                                              'signature': ''},
  'zipzi.modeling.project.DocumentAuthoringEdit': {'children': (),
-                                                  'documentation': 'Typed public API entry.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [],
-                                                  'kind': 'value',
-                                                  'signature': ''},
+                                                  'kind': 'alias',
+                                                  'signature': 'DocumentAuthoringEditPatch | '
+                                                               'DocumentAuthoringEditRepairMissingAttachment | '
+                                                               'DocumentAuthoringEditRepairCdiParameter | '
+                                                               'DocumentAuthoringEditRepairCdiPart',
+                                                  'type_refs': ('zipzi.modeling.project.DocumentAuthoringEditPatch',
+                                                                'zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter',
+                                                                'zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart',
+                                                                'zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment')},
  'zipzi.modeling.project.DocumentAuthoringEditPatch': {'children': ('zipzi.modeling.project.DocumentAuthoringEditPatch.__repr__',
                                                                     'zipzi.modeling.project.DocumentAuthoringEditPatch.summary'),
-                                                       'documentation': 'Immutable owned DocumentAuthoringEditPatch '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('expected',
                                                                    'Exact current field value used as an optimistic '
@@ -341,17 +333,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                    'Scalar value in the referenced parameter domain.')],
                                                        'kind': 'type',
                                                        'signature': '(*, expected: DocumentValue, value: '
-                                                                    'DocumentValue)'},
+                                                                    'DocumentValue)',
+                                                       'type_refs': ('zipzi.modeling.project.DocumentValue',)},
  'zipzi.modeling.project.DocumentAuthoringEditPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.DocumentAuthoringEditPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter': {'children': ('zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter.__repr__',
                                                                                  'zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter.summary'),
-                                                                    'documentation': 'Immutable owned '
-                                                                                     'DocumentAuthoringEditRepairCdiParameter '
-                                                                                     'value. Construction owns '
-                                                                                     'declared collections; reading '
-                                                                                     'fields, repr and summary '
-                                                                                     'performs no IO.',
+                                                                    'documentation': '',
                                                                     'example': 'docs/recipes.py',
                                                                     'fields': [('runtime_id',
                                                                                 'External format/runtime identifier '
@@ -368,11 +356,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart': {'children': ('zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart.__repr__',
                                                                             'zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart.summary'),
-                                                               'documentation': 'Immutable owned '
-                                                                                'DocumentAuthoringEditRepairCdiPart '
-                                                                                'value. Construction owns declared '
-                                                                                'collections; reading fields, repr and '
-                                                                                'summary performs no IO.',
+                                                               'documentation': '',
                                                                'example': 'docs/recipes.py',
                                                                'fields': [('runtime_id',
                                                                            'External format/runtime identifier '
@@ -390,12 +374,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment': {'children': ('zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment.__repr__',
                                                                                       'zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment.summary'),
-                                                                         'documentation': 'Immutable owned '
-                                                                                          'DocumentAuthoringEditRepairMissingAttachment '
-                                                                                          'value. Construction owns '
-                                                                                          'declared collections; '
-                                                                                          'reading fields, repr and '
-                                                                                          'summary performs no IO.',
+                                                                         'documentation': '',
                                                                          'example': 'docs/recipes.py',
                                                                          'fields': [('path',
                                                                                      'Unresolved imported attachment '
@@ -412,37 +391,41 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DocumentField': {'children': (),
-                                          'documentation': 'Immutable typed value. See field semantics and the linked '
-                                                           'workflow.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
-                                          'fields': [],
-                                          'kind': 'type',
-                                          'signature': '()'},
- 'zipzi.modeling.project.DocumentValue': {'children': (),
-                                          'documentation': 'Typed public API entry.',
-                                          'example': 'docs/recipes.py',
-                                          'fields': [],
-                                          'kind': 'value',
+                                          'fields': [('LAYOUT', "'layout'"),
+                                                     ('EXPORT_SETTINGS', "'export_settings'"),
+                                                     ('SOURCE_CANVAS', "'source_canvas'"),
+                                                     ('OPAQUE_METADATA', "'opaque_metadata'"),
+                                                     ('MISSING_ATTACHMENTS', "'missing_attachments'"),
+                                                     ('DISPLAY_INFO', "'display_info'")],
+                                          'kind': 'enum',
                                           'signature': ''},
+ 'zipzi.modeling.project.DocumentValue': {'children': (),
+                                          'documentation': '',
+                                          'example': 'docs/recipes.py',
+                                          'fields': [],
+                                          'kind': 'alias',
+                                          'signature': 'DocumentValueLayout | DocumentValueExportSettings | '
+                                                       'DocumentValueSourceCanvas',
+                                          'type_refs': ('zipzi.modeling.project.DocumentValueExportSettings',
+                                                        'zipzi.modeling.project.DocumentValueLayout',
+                                                        'zipzi.modeling.project.DocumentValueSourceCanvas')},
  'zipzi.modeling.project.DocumentValueExportSettings': {'children': ('zipzi.modeling.project.DocumentValueExportSettings.__repr__',
                                                                      'zipzi.modeling.project.DocumentValueExportSettings.summary'),
-                                                        'documentation': 'Immutable owned DocumentValueExportSettings '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('value',
                                                                     'Replacement export-frame scale and padding '
                                                                     'settings.')],
                                                         'kind': 'type',
-                                                        'signature': '(*, value: ExportSettings)'},
+                                                        'signature': '(*, value: ExportSettings)',
+                                                        'type_refs': ('zipzi.modeling.project.ExportSettings',)},
  'zipzi.modeling.project.DocumentValueExportSettings.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.DocumentValueExportSettings.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DocumentValueLayout': {'children': ('zipzi.modeling.project.DocumentValueLayout.__repr__',
                                                              'zipzi.modeling.project.DocumentValueLayout.summary'),
-                                                'documentation': 'Immutable owned DocumentValueLayout value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('value',
                                                             'Replacement model3 layout map; None explicitly removes '
@@ -453,43 +436,48 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentValueLayout.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DocumentValueSourceCanvas': {'children': ('zipzi.modeling.project.DocumentValueSourceCanvas.__repr__',
                                                                    'zipzi.modeling.project.DocumentValueSourceCanvas.summary'),
-                                                      'documentation': 'Immutable owned DocumentValueSourceCanvas '
-                                                                       'value. Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('value',
                                                                   'Replacement source-canvas metadata; None explicitly '
                                                                   'removes the canvas provenance.')],
                                                       'kind': 'type',
-                                                      'signature': '(*, value: Canvas | None = None)'},
+                                                      'signature': '(*, value: Canvas | None = None)',
+                                                      'type_refs': ('zipzi.modeling.scene.Canvas',)},
  'zipzi.modeling.project.DocumentValueSourceCanvas.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.DocumentValueSourceCanvas.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.EditorState': {'children': ('zipzi.modeling.project.EditorState.__repr__',
                                                      'zipzi.modeling.project.EditorState.summary'),
-                                        'documentation': 'Immutable owned EditorState value. Construction owns '
-                                                         'declared collections; reading fields, repr and summary '
-                                                         'performs no IO.',
+                                        'documentation': '',
                                         'example': 'docs/recipes.py',
                                         'fields': [('objects',
                                                     'Explicit flags only, keyed by globally unique object ID. Defaults '
                                                     'are omitted.')],
                                         'kind': 'type',
-                                        'signature': '(*, objects: _Mapping[str, ObjectEditorState] = <factory>)'},
+                                        'signature': '(*, objects: _Mapping[str, ObjectEditorState] = <factory>)',
+                                        'type_refs': ('zipzi.modeling.project.ObjectEditorState',)},
  'zipzi.modeling.project.EditorState.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.EditorState.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ExportFormat': {'children': (),
-                                         'documentation': 'Immutable typed value. See field semantics and the linked '
-                                                          'workflow.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
-                                         'fields': [],
-                                         'kind': 'type',
-                                         'signature': '()'},
+                                         'fields': [('PACKAGE', "'package'"),
+                                                    ('CMO3', "'cmo3'"),
+                                                    ('CAN3', "'can3'"),
+                                                    ('CUBISM', "'cubism'"),
+                                                    ('MOTION3', "'motion3'"),
+                                                    ('EXPRESSION3', "'expression3'"),
+                                                    ('PHYSICS3', "'physics3'"),
+                                                    ('POSE3', "'pose3'"),
+                                                    ('CDI3', "'cdi3'")],
+                                         'kind': 'enum',
+                                         'signature': ''},
  'zipzi.modeling.project.ExportSettings': {'children': ('zipzi.modeling.project.ExportSettings.__repr__',
                                                         'zipzi.modeling.project.ExportSettings.summary'),
-                                           'documentation': 'Immutable owned ExportSettings value. Construction owns '
-                                                            'declared collections; reading fields, repr and summary '
-                                                            'performs no IO.',
+                                           'documentation': 'Cubism output policy. A model unit corresponds to one '
+                                                            'canvas pixel; PPU\n'
+                                                            'converts those lengths into Cubism runtime units only at '
+                                                            'the file boundary.',
                                            'example': 'docs/recipes.py',
                                            'fields': [('pixels_per_unit',
                                                        'Positive model-length to Cubism-runtime-unit conversion scale '
@@ -515,17 +503,17 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ExportSettings.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ExportSettings.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ImportFormat': {'children': (),
-                                         'documentation': 'Immutable typed value. See field semantics and the linked '
-                                                          'workflow.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
-                                         'fields': [],
-                                         'kind': 'type',
-                                         'signature': '()'},
+                                         'fields': [('MODEL3', "'model3'"),
+                                                    ('PSD', "'psd'"),
+                                                    ('CUBISM', "'cubism'"),
+                                                    ('MOC3', "'moc3'")],
+                                         'kind': 'enum',
+                                         'signature': ''},
  'zipzi.modeling.project.Model3Settings': {'children': ('zipzi.modeling.project.Model3Settings.__repr__',
                                                         'zipzi.modeling.project.Model3Settings.summary'),
-                                           'documentation': 'Immutable owned Model3Settings value. Construction owns '
-                                                            'declared collections; reading fields, repr and summary '
-                                                            'performs no IO.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [('groups',
                                                        'Optional ordered model3 parameter groups; None preserves '
@@ -557,14 +545,15 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                         'tuple[ModelHitArea, ...] | None = None, user_data: '
                                                         'AttachmentRef | None = None, extensions: _Mapping[str, '
                                                         'ExtensionValue], source_runtime_ids: _Mapping[str, str] | '
-                                                        'None = None, source_content: str | None = None)'},
+                                                        'None = None, source_content: str | None = None)',
+                                           'type_refs': ('zipzi.modeling.project.ModelHitArea',
+                                                         'zipzi.modeling.project.ModelParameterGroup',
+                                                         'zipzi.modeling.scene.AttachmentRef')},
  'zipzi.modeling.project.Model3Settings.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.Model3Settings.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ModelHitArea': {'children': ('zipzi.modeling.project.ModelHitArea.__repr__',
                                                       'zipzi.modeling.project.ModelHitArea.summary'),
-                                         'documentation': 'Immutable owned ModelHitArea value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('id',
                                                      'Stable document object ID used by references; it is distinct '
@@ -581,14 +570,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                      'fields.')],
                                          'kind': 'type',
                                          'signature': '(*, id: str, name: str, mesh: ModelTargetRef, extensions: '
-                                                      '_Mapping[str, ExtensionValue] = <factory>)'},
+                                                      '_Mapping[str, ExtensionValue] = <factory>)',
+                                         'type_refs': ('zipzi.modeling.project.ModelTargetRef',)},
  'zipzi.modeling.project.ModelHitArea.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ModelHitArea.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ModelParameterGroup': {'children': ('zipzi.modeling.project.ModelParameterGroup.__repr__',
                                                              'zipzi.modeling.project.ModelParameterGroup.summary'),
-                                                'documentation': 'Immutable owned ModelParameterGroup value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('id',
                                                             'Stable document object ID used by references; it is '
@@ -607,20 +595,23 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                 'kind': 'type',
                                                 'signature': '(*, id: str, name: str, parameters: '
                                                              'tuple[ReferenceEntryModelTargetRef, ...], extensions: '
-                                                             '_Mapping[str, ExtensionValue] = <factory>)'},
+                                                             '_Mapping[str, ExtensionValue] = <factory>)',
+                                                'type_refs': ('zipzi.modeling.addressing.ReferenceEntryModelTargetRef',)},
  'zipzi.modeling.project.ModelParameterGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ModelParameterGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ModelTargetRef': {'children': (),
-                                           'documentation': 'Typed public API entry.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [],
-                                           'kind': 'value',
-                                           'signature': ''},
+                                           'kind': 'alias',
+                                           'signature': 'ModelTargetRefUnspecified | ModelTargetRefResolved | '
+                                                        'ModelTargetRefUnresolved',
+                                           'type_refs': ('zipzi.modeling.project.ModelTargetRefResolved',
+                                                         'zipzi.modeling.project.ModelTargetRefUnresolved',
+                                                         'zipzi.modeling.project.ModelTargetRefUnspecified')},
  'zipzi.modeling.project.ModelTargetRefResolved': {'children': ('zipzi.modeling.project.ModelTargetRefResolved.__repr__',
                                                                 'zipzi.modeling.project.ModelTargetRefResolved.summary'),
-                                                   'documentation': 'Immutable owned ModelTargetRefResolved value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('object_id',
                                                                'Stable document ID of the object described or selected '
@@ -631,9 +622,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ModelTargetRefResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ModelTargetRefUnresolved': {'children': ('zipzi.modeling.project.ModelTargetRefUnresolved.__repr__',
                                                                   'zipzi.modeling.project.ModelTargetRefUnresolved.summary'),
-                                                     'documentation': 'Immutable owned ModelTargetRefUnresolved value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('runtime_id',
                                                                  'External format/runtime identifier retained for '
@@ -645,10 +634,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ModelTargetRefUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ModelTargetRefUnspecified': {'children': ('zipzi.modeling.project.ModelTargetRefUnspecified.__repr__',
                                                                    'zipzi.modeling.project.ModelTargetRefUnspecified.summary'),
-                                                      'documentation': 'Immutable owned ModelTargetRefUnspecified '
-                                                                       'value. Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [],
                                                       'kind': 'type',
@@ -657,9 +643,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ModelTargetRefUnspecified.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ObjectEditorState': {'children': ('zipzi.modeling.project.ObjectEditorState.__repr__',
                                                            'zipzi.modeling.project.ObjectEditorState.summary'),
-                                              'documentation': 'Immutable owned ObjectEditorState value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('hidden_in_editor',
                                                           'Editor-only hiding flag; does not replace the model '
@@ -672,30 +656,35 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ObjectEditorState.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ObjectEditorState.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportIssue': {'children': (),
-                                              'documentation': 'Typed public API entry.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [],
-                                              'kind': 'value',
-                                              'signature': ''},
+                                              'kind': 'alias',
+                                              'signature': 'OpaqueExportIssueModel3NamespaceChanged | '
+                                                           'OpaqueExportIssueCdi | OpaqueExportIssueMotion | '
+                                                           'OpaqueExportIssueExpression | OpaqueExportIssuePose | '
+                                                           'OpaqueExportIssuePhysics',
+                                              'type_refs': ('zipzi.modeling.project.OpaqueExportIssueCdi',
+                                                            'zipzi.modeling.project.OpaqueExportIssueExpression',
+                                                            'zipzi.modeling.project.OpaqueExportIssueModel3NamespaceChanged',
+                                                            'zipzi.modeling.project.OpaqueExportIssueMotion',
+                                                            'zipzi.modeling.project.OpaqueExportIssuePhysics',
+                                                            'zipzi.modeling.project.OpaqueExportIssuePose')},
  'zipzi.modeling.project.OpaqueExportIssueCdi': {'children': ('zipzi.modeling.project.OpaqueExportIssueCdi.__repr__',
                                                               'zipzi.modeling.project.OpaqueExportIssueCdi.summary'),
-                                                 'documentation': 'Immutable owned OpaqueExportIssueCdi value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('problem',
                                                              'Exact native opaque-field guard violated by this '
                                                              'retained resource.')],
                                                  'kind': 'type',
-                                                 'signature': '(*, problem: OpaqueExportProblem)'},
+                                                 'signature': '(*, problem: OpaqueExportProblem)',
+                                                 'type_refs': ('zipzi.modeling.project.OpaqueExportProblem',)},
  'zipzi.modeling.project.OpaqueExportIssueCdi.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.OpaqueExportIssueCdi.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportIssueExpression': {'children': ('zipzi.modeling.project.OpaqueExportIssueExpression.__repr__',
                                                                      'zipzi.modeling.project.OpaqueExportIssueExpression.summary'),
-                                                        'documentation': 'Immutable owned OpaqueExportIssueExpression '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('id',
                                                                     'Persistent retained resource UUID in the frozen '
@@ -704,17 +693,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                     'Exact native opaque-field guard violated by this '
                                                                     'retained resource.')],
                                                         'kind': 'type',
-                                                        'signature': '(*, id: str, problem: OpaqueExportProblem)'},
+                                                        'signature': '(*, id: str, problem: OpaqueExportProblem)',
+                                                        'type_refs': ('zipzi.modeling.project.OpaqueExportProblem',)},
  'zipzi.modeling.project.OpaqueExportIssueExpression.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.OpaqueExportIssueExpression.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportIssueModel3NamespaceChanged': {'children': ('zipzi.modeling.project.OpaqueExportIssueModel3NamespaceChanged.__repr__',
                                                                                  'zipzi.modeling.project.OpaqueExportIssueModel3NamespaceChanged.summary'),
-                                                                    'documentation': 'Immutable owned '
-                                                                                     'OpaqueExportIssueModel3NamespaceChanged '
-                                                                                     'value. Construction owns '
-                                                                                     'declared collections; reading '
-                                                                                     'fields, repr and summary '
-                                                                                     'performs no IO.',
+                                                                    'documentation': '',
                                                                     'example': 'docs/recipes.py',
                                                                     'fields': [],
                                                                     'kind': 'type',
@@ -723,9 +708,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.OpaqueExportIssueModel3NamespaceChanged.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportIssueMotion': {'children': ('zipzi.modeling.project.OpaqueExportIssueMotion.__repr__',
                                                                  'zipzi.modeling.project.OpaqueExportIssueMotion.summary'),
-                                                    'documentation': 'Immutable owned OpaqueExportIssueMotion value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('id',
                                                                 'Persistent retained resource UUID in the frozen '
@@ -734,14 +717,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                 'Exact native opaque-field guard violated by this '
                                                                 'retained resource.')],
                                                     'kind': 'type',
-                                                    'signature': '(*, id: str, problem: OpaqueExportProblem)'},
+                                                    'signature': '(*, id: str, problem: OpaqueExportProblem)',
+                                                    'type_refs': ('zipzi.modeling.project.OpaqueExportProblem',)},
  'zipzi.modeling.project.OpaqueExportIssueMotion.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.OpaqueExportIssueMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportIssuePhysics': {'children': ('zipzi.modeling.project.OpaqueExportIssuePhysics.__repr__',
                                                                   'zipzi.modeling.project.OpaqueExportIssuePhysics.summary'),
-                                                     'documentation': 'Immutable owned OpaqueExportIssuePhysics value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('id',
                                                                  'Persistent retained resource UUID in the frozen '
@@ -750,14 +732,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                  'Exact native opaque-field guard violated by this '
                                                                  'retained resource.')],
                                                      'kind': 'type',
-                                                     'signature': '(*, id: str, problem: OpaqueExportProblem)'},
+                                                     'signature': '(*, id: str, problem: OpaqueExportProblem)',
+                                                     'type_refs': ('zipzi.modeling.project.OpaqueExportProblem',)},
  'zipzi.modeling.project.OpaqueExportIssuePhysics.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.OpaqueExportIssuePhysics.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportIssuePose': {'children': ('zipzi.modeling.project.OpaqueExportIssuePose.__repr__',
                                                                'zipzi.modeling.project.OpaqueExportIssuePose.summary'),
-                                                  'documentation': 'Immutable owned OpaqueExportIssuePose value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('id',
                                                               'Persistent retained resource UUID in the frozen '
@@ -766,21 +747,21 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                               'Exact native opaque-field guard violated by this '
                                                               'retained resource.')],
                                                   'kind': 'type',
-                                                  'signature': '(*, id: str, problem: OpaqueExportProblem)'},
+                                                  'signature': '(*, id: str, problem: OpaqueExportProblem)',
+                                                  'type_refs': ('zipzi.modeling.project.OpaqueExportProblem',)},
  'zipzi.modeling.project.OpaqueExportIssuePose.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.OpaqueExportIssuePose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportProblem': {'children': (),
-                                                'documentation': 'Immutable typed value. See field semantics and the '
-                                                                 'linked workflow.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
-                                                'fields': [],
-                                                'kind': 'type',
-                                                'signature': '()'},
+                                                'fields': [('NAMESPACE_CHANGED', "'NamespaceChanged'"),
+                                                           ('CONTENT_CHANGED', "'ContentChanged'"),
+                                                           ('PROVENANCE_MISSING', "'ProvenanceMissing'")],
+                                                'kind': 'enum',
+                                                'signature': ''},
  'zipzi.modeling.project.PackageAttachment': {'children': ('zipzi.modeling.project.PackageAttachment.__repr__',
                                                            'zipzi.modeling.project.PackageAttachment.summary'),
-                                              'documentation': 'Immutable owned PackageAttachment value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('id',
                                                           'Stable document object ID used by references; it is '
@@ -798,9 +779,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.PackageAttachment.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectDiagnostic': {'children': ('zipzi.modeling.project.ProjectDiagnostic.__repr__',
                                                            'zipzi.modeling.project.ProjectDiagnostic.summary'),
-                                              'documentation': 'Immutable owned ProjectDiagnostic value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('severity',
                                                           'Diagnostic severity label; inspect code for stable '
@@ -821,9 +800,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ProjectDiagnostic.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectReport': {'children': ('zipzi.modeling.project.ProjectReport.__repr__',
                                                        'zipzi.modeling.project.ProjectReport.summary'),
-                                          'documentation': 'Immutable owned ProjectReport value. Construction owns '
-                                                           'declared collections; reading fields, repr and summary '
-                                                           'performs no IO.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
                                           'fields': [('before', 'Exact SDK version before the operation.'),
                                                      ('after',
@@ -851,20 +828,25 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                           'kind': 'type',
                                           'signature': '(*, before: _Version, after: _Version, warnings: tuple[str, '
                                                        '...], diagnostics: tuple[ProjectDiagnostic, ...], published: '
-                                                       'bool, durable: bool, paths: tuple[str, ...])'},
+                                                       'bool, durable: bool, paths: tuple[str, ...])',
+                                          'type_refs': ('zipzi.Version', 'zipzi.modeling.project.ProjectDiagnostic')},
  'zipzi.modeling.project.ProjectReport.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ProjectReport.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectRequest': {'children': (),
-                                           'documentation': 'Typed public API entry.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [],
-                                           'kind': 'value',
-                                           'signature': ''},
+                                           'kind': 'alias',
+                                           'signature': 'ProjectRequestDiagnose | ProjectRequestImport | '
+                                                        'ProjectRequestOpen | ProjectRequestNew | ProjectRequestExport',
+                                           'type_refs': ('zipzi.modeling.project.ProjectRequestDiagnose',
+                                                         'zipzi.modeling.project.ProjectRequestExport',
+                                                         'zipzi.modeling.project.ProjectRequestImport',
+                                                         'zipzi.modeling.project.ProjectRequestNew',
+                                                         'zipzi.modeling.project.ProjectRequestOpen')},
  'zipzi.modeling.project.ProjectRequestDiagnose': {'children': ('zipzi.modeling.project.ProjectRequestDiagnose.__repr__',
                                                                 'zipzi.modeling.project.ProjectRequestDiagnose.summary'),
-                                                   'documentation': 'Immutable owned ProjectRequestDiagnose value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [],
                                                    'kind': 'type',
@@ -873,9 +855,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ProjectRequestDiagnose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectRequestExport': {'children': ('zipzi.modeling.project.ProjectRequestExport.__repr__',
                                                               'zipzi.modeling.project.ProjectRequestExport.summary'),
-                                                 'documentation': 'Immutable owned ProjectRequestExport value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('path',
                                                              'Host-side filesystem path for this IO request; resolve '
@@ -903,14 +883,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                  'kind': 'type',
                                                  'signature': '(*, path: str, format: ExportFormat, name: str, '
                                                               'object_id: str | None = None, allow_loss: bool, '
-                                                              'bake_animation: bool, auto_frame_rate: bool)'},
+                                                              'bake_animation: bool, auto_frame_rate: bool)',
+                                                 'type_refs': ('zipzi.modeling.project.ExportFormat',)},
  'zipzi.modeling.project.ProjectRequestExport.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ProjectRequestExport.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectRequestImport': {'children': ('zipzi.modeling.project.ProjectRequestImport.__repr__',
                                                               'zipzi.modeling.project.ProjectRequestImport.summary'),
-                                                 'documentation': 'Immutable owned ProjectRequestImport value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('path',
                                                              'Host-side filesystem path for this IO request; resolve '
@@ -924,28 +903,27 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                              'separate images.')],
                                                  'kind': 'type',
                                                  'signature': '(*, path: str, format: ImportFormat, textures: '
-                                                              'tuple[TextureSlot, ...])'},
+                                                              'tuple[TextureSlot, ...])',
+                                                 'type_refs': ('zipzi.modeling.project.ImportFormat',
+                                                               'zipzi.modeling.project.TextureSlot')},
  'zipzi.modeling.project.ProjectRequestImport.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ProjectRequestImport.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectRequestNew': {'children': ('zipzi.modeling.project.ProjectRequestNew.__repr__',
                                                            'zipzi.modeling.project.ProjectRequestNew.summary'),
-                                              'documentation': 'Immutable owned ProjectRequestNew value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('document_id',
                                                           'Stable document UUID; not a Runtime Session handle.'),
                                                          ('setup',
                                                           'Model source-canvas and export-frame configuration.')],
                                               'kind': 'type',
-                                              'signature': '(*, document_id: str, setup: ModelSetup)'},
+                                              'signature': '(*, document_id: str, setup: ModelSetup)',
+                                              'type_refs': ('zipzi.modeling.scene.ModelSetup',)},
  'zipzi.modeling.project.ProjectRequestNew.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ProjectRequestNew.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectRequestOpen': {'children': ('zipzi.modeling.project.ProjectRequestOpen.__repr__',
                                                             'zipzi.modeling.project.ProjectRequestOpen.summary'),
-                                               'documentation': 'Immutable owned ProjectRequestOpen value. '
-                                                                'Construction owns declared collections; reading '
-                                                                'fields, repr and summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('path',
                                                            'Host-side filesystem path for this IO request; resolve it '
@@ -956,9 +934,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ProjectRequestOpen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.TextureSlot': {'children': ('zipzi.modeling.project.TextureSlot.__repr__',
                                                      'zipzi.modeling.project.TextureSlot.summary'),
-                                        'documentation': 'Immutable owned TextureSlot value. Construction owns '
-                                                         'declared collections; reading fields, repr and summary '
-                                                         'performs no IO.',
+                                        'documentation': '',
                                         'example': 'docs/recipes.py',
                                         'fields': [('slot',
                                                     'Zero-based external texture slot number used by the import '

@@ -41,7 +41,8 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                              'example': 'docs/recipes.py',
                                              'fields': [],
                                              'kind': 'callable',
-                                             'signature': '() -> FieldAddress'},
+                                             'signature': '() -> FieldAddress',
+                                             'type_refs': ('zipzi.references.FieldAddress',)},
  'zipzi.references.FieldAddress.__exit__': {'alias': 'zipzi.Buffer.__exit__'},
  'zipzi.references.FieldAddress.close': {'alias': 'zipzi.Buffer.close'},
  'zipzi.references.FieldAddress.pending_request': {'alias': 'zipzi.Buffer.pending_request'},
@@ -52,7 +53,8 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                         'example': 'docs/recipes.py',
                                         'fields': [],
                                         'kind': 'callable',
-                                        'signature': '(patch: modeling.addressing.AddressPatch) -> Plan'},
+                                        'signature': '(patch: modeling.addressing.AddressPatch) -> Plan',
+                                        'type_refs': ('zipzi.Plan', 'zipzi.modeling.addressing.AddressPatch')},
  'zipzi.references.LabelAddress': {'children': ('zipzi.references.LabelAddress.__enter__',
                                                 'zipzi.references.LabelAddress.__exit__',
                                                 'zipzi.references.LabelAddress.close',
@@ -60,8 +62,7 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                                 'zipzi.references.LabelAddress.id',
                                                 'zipzi.references.LabelAddress.pending_request',
                                                 'zipzi.references.LabelAddress.plan'),
-                                   'documentation': 'Immutable typed value. See field semantics and the linked '
-                                                    'workflow.',
+                                   'documentation': '',
                                    'example': 'docs/recipes.py',
                                    'fields': [],
                                    'kind': 'type',
@@ -74,7 +75,8 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                              'example': 'docs/recipes.py',
                                              'fields': [],
                                              'kind': 'callable',
-                                             'signature': '() -> LabelAddress'},
+                                             'signature': '() -> LabelAddress',
+                                             'type_refs': ('zipzi.references.LabelAddress',)},
  'zipzi.references.LabelAddress.__exit__': {'alias': 'zipzi.Buffer.__exit__'},
  'zipzi.references.LabelAddress.close': {'alias': 'zipzi.Buffer.close'},
  'zipzi.references.LabelAddress.expected': {'children': (),
@@ -84,16 +86,16 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                                              'precondition.',
                                             'example': 'docs/recipes.py',
                                             'fields': [],
-                                            'kind': 'callable',
-                                            'signature': '() -> str'},
+                                            'kind': 'property',
+                                            'signature': ': str'},
  'zipzi.references.LabelAddress.id': {'children': (),
                                       'documentation': 'Return the cached target UUID without IO. Field epoch and '
                                                        'incarnation remain part of this address; the ID alone cannot '
                                                        'replace them.',
                                       'example': 'docs/recipes.py',
                                       'fields': [],
-                                      'kind': 'callable',
-                                      'signature': '() -> str'},
+                                      'kind': 'property',
+                                      'signature': ': str'},
  'zipzi.references.LabelAddress.pending_request': {'alias': 'zipzi.Buffer.pending_request'},
  'zipzi.references.LabelAddress.plan': {'children': (),
                                         'documentation': 'Plan the label change using captured '
@@ -103,13 +105,25 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                         'example': 'docs/recipes.py',
                                         'fields': [],
                                         'kind': 'callable',
-                                        'signature': '(name: str) -> Plan'},
+                                        'signature': '(name: str) -> Plan',
+                                        'type_refs': ('zipzi.Plan',)},
  'zipzi.references.ObjectKind': {'children': (),
-                                 'documentation': 'Typed public API entry.',
+                                 'documentation': '',
                                  'example': 'docs/recipes.py',
                                  'fields': [],
-                                 'kind': 'value',
-                                 'signature': ''},
+                                 'kind': 'alias',
+                                 'signature': "Literal['asset', 'mesh', 'parameter', 'mesh_binding', 'binding_axis', "
+                                              "'binding_sample', 'part', 'transform', 'scene_binding', "
+                                              "'blend_key_table', 'blend_constraint', 'blend_binding', 'glue', "
+                                              "'glue_vertex_pair', 'offscreen', 'draw_order_group', "
+                                              "'cdi_parameter_group', 'cdi_combined_set', 'cdi_combined_member', "
+                                              "'model_parameter_group', 'model_parameter_member', 'model_hit_area', "
+                                              "'expression', 'expression_entry', 'motion', 'motion_group', "
+                                              "'motion_registration', 'motion_track', 'motion_key', 'motion_event', "
+                                              "'attachment', 'pose', 'pose_group', 'pose_entry', 'pose_link', "
+                                              "'physics', 'physics_group', 'physics_input', 'physics_output', "
+                                              "'physics_node'] | _ObjectKind",
+                                 'type_refs': ('zipzi.modeling.addressing.ObjectKind',)},
  'zipzi.references.ObjectRef': {'children': ('zipzi.references.ObjectRef.__enter__',
                                              'zipzi.references.ObjectRef.__exit__',
                                              'zipzi.references.ObjectRef.capabilities',
@@ -120,11 +134,12 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                              'zipzi.references.ObjectRef.pending_request',
                                              'zipzi.references.ObjectRef.resolve',
                                              'zipzi.references.ObjectRef.scene_capabilities'),
-                                'documentation': 'Immutable typed value. See field semantics and the linked workflow.',
+                                'documentation': '',
                                 'example': 'docs/recipes.py',
                                 'fields': [],
                                 'kind': 'type',
-                                'signature': '(factory-owned; use the documented public entry)'},
+                                'signature': '(factory-owned; use the documented public entry)',
+                                'type_refs': ('zipzi.references.ObjectKind',)},
  'zipzi.references.ObjectRef.__enter__': {'children': (),
                                           'documentation': 'Check the owning client/lease locally and return this '
                                                            'ObjectRef without IO. Use with to close on exit; pending '
@@ -133,7 +148,8 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                           'example': 'docs/recipes.py',
                                           'fields': [],
                                           'kind': 'callable',
-                                          'signature': '() -> ObjectRef'},
+                                          'signature': '() -> ObjectRef',
+                                          'type_refs': ('zipzi.references.ObjectRef',)},
  'zipzi.references.ObjectRef.__exit__': {'alias': 'zipzi.Buffer.__exit__'},
  'zipzi.references.ObjectRef.capabilities': {'children': (),
                                              'documentation': 'Query a declared capability domain for this live '
@@ -143,21 +159,25 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                              'fields': [],
                                              'kind': 'callable',
                                              'signature': '(domain: modeling.addressing.CapabilityDomain) -> '
-                                                          'Snapshot[modeling.addressing.Capabilities]'},
+                                                          'Snapshot[modeling.addressing.Capabilities]',
+                                             'type_refs': ('zipzi.Snapshot',
+                                                           'zipzi.modeling.addressing.Capabilities',
+                                                           'zipzi.modeling.addressing.CapabilityDomain')},
  'zipzi.references.ObjectRef.close': {'alias': 'zipzi.Buffer.close'},
  'zipzi.references.ObjectRef.id': {'children': (),
                                    'documentation': 'Read the cached persistent UUID without IO. It is distinct from '
                                                     'the reference incarnation and Runtime lease.',
                                    'example': 'docs/recipes.py',
                                    'fields': [],
-                                   'kind': 'callable',
-                                   'signature': '() -> str'},
+                                   'kind': 'property',
+                                   'signature': ': str'},
  'zipzi.references.ObjectRef.kind': {'children': (),
                                      'documentation': 'Read the cached SDK object-kind tag without IO.',
                                      'example': 'docs/recipes.py',
                                      'fields': [],
-                                     'kind': 'callable',
-                                     'signature': '() -> ObjectKind'},
+                                     'kind': 'property',
+                                     'signature': ': ObjectKind',
+                                     'type_refs': ('zipzi.references.ObjectKind',)},
  'zipzi.references.ObjectRef.label': {'children': (),
                                       'documentation': 'Capture a label address bound to this reference incarnation '
                                                        'and field epoch. Close the address independently; do not '
@@ -165,7 +185,8 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                       'example': 'docs/recipes.py',
                                       'fields': [],
                                       'kind': 'callable',
-                                      'signature': '() -> LabelAddress'},
+                                      'signature': '() -> LabelAddress',
+                                      'type_refs': ('zipzi.references.LabelAddress',)},
  'zipzi.references.ObjectRef.pending_request': {'alias': 'zipzi.Buffer.pending_request'},
  'zipzi.references.ObjectRef.resolve': {'children': (),
                                         'documentation': 'Validate the SDK reference against current '
@@ -174,7 +195,8 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                         'example': 'docs/recipes.py',
                                         'fields': [],
                                         'kind': 'callable',
-                                        'signature': '() -> Source'},
+                                        'signature': '() -> Source',
+                                        'type_refs': ('zipzi.Source',)},
  'zipzi.references.ObjectRef.scene_capabilities': {'children': (),
                                                    'documentation': 'Query SDK scene capability states for this live '
                                                                     'reference. Unavailable and unsupported states '
@@ -182,7 +204,8 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                                    'example': 'docs/recipes.py',
                                                    'fields': [],
                                                    'kind': 'callable',
-                                                   'signature': '() -> SceneCapabilities'},
+                                                   'signature': '() -> SceneCapabilities',
+                                                   'type_refs': ('zipzi.references.SceneCapabilities',)},
  'zipzi.references.SceneCapabilities': {'children': ('zipzi.references.SceneCapabilities.__repr__',
                                                      'zipzi.references.SceneCapabilities.summary'),
                                         'documentation': 'Owned references SceneCapabilities value; reading fields, '
@@ -224,6 +247,7 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                         'signature': '(inspect: Capability, patch: Capability, move_object: '
                                                      'Capability, reparent: Capability, reorder: Capability, '
                                                      'duplicate: Capability, delete: Capability, dissolve: Capability) '
-                                                     '-> None'},
+                                                     '-> None',
+                                        'type_refs': ('zipzi.references.Capability',)},
  'zipzi.references.SceneCapabilities.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.references.SceneCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'}}

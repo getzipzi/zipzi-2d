@@ -2,6 +2,7 @@
   "_generated_by": "zipzi-python2/tools/generate.py",
   "definitions": {
     "zipzi_contract::model::PreciseVec2": {
+      "doc": "Authoring-space origins need f64: adding a pixel-space canvas origin to an\nimported f32 runtime position must remain reversible before evaluation.",
       "fields": [
         {
           "doc": "Horizontal coordinate; its space and units are determined by the containing geometry or\npose.",

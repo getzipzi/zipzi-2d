@@ -25,11 +25,14 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                 'zipzi.Session.undo'),
                    'documentation': 'One client binding to a resident document. Use runtime.sessions factories; '
                                     'aliases share detach/close state. id is pure cached identity, while info queries '
-                                    'host state.',
+                                    'host state. Session queries read committed content, including while an Edit is '
+                                    'open. Use session.edit(label) to author candidate changes; commit publishes into '
+                                    'shared history and saving is separate.',
                    'example': 'docs/recipes.py',
                    'fields': [],
                    'kind': 'type',
-                   'signature': '(factory-owned; use the documented public entry)'},
+                   'signature': '(factory-owned; use the documented public entry)',
+                   'type_refs': ('zipzi.Runtime',)},
  'zipzi.Session.address': {'children': (),
                            'documentation': 'Capture a field address with incarnation, context and field epochs. The '
                                             'returned handle owns a lease and must be closed; recreated IDs cannot '
@@ -37,15 +40,18 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                            'example': 'docs/recipes.py',
                            'fields': [],
                            'kind': 'callable',
-                           'signature': '(selector: modeling.addressing.AddressSelector) -> references.FieldAddress'},
+                           'signature': '(selector: modeling.addressing.AddressSelector) -> references.FieldAddress',
+                           'type_refs': ('zipzi.modeling.addressing.AddressSelector', 'zipzi.references.FieldAddress')},
  'zipzi.Session.bindings': {'children': ('zipzi.Session.bindings.get',
                                          'zipzi.Session.bindings.get_many',
                                          'zipzi.Session.bindings.list'),
-                            'documentation': 'Immutable typed value. See field semantics and the linked workflow.',
+                            'documentation': 'Read bindings through a Session or Edit. Session reads committed '
+                                             'document content; Edit reads include its pending writes.',
                             'example': 'docs/recipes.py',
                             'fields': [],
-                            'kind': 'type',
-                            'signature': "(session: '_lifecycle.Session', edit: '_lifecycle.Edit | None'=None)"},
+                            'kind': 'property',
+                            'signature': 'session.bindings',
+                            'type_refs': ('zipzi.Edit', 'zipzi.Session')},
  'zipzi.Session.bindings.get': {'alias': 'zipzi.Edit.bindings.get'},
  'zipzi.Session.bindings.get_many': {'alias': 'zipzi.Edit.bindings.get_many'},
  'zipzi.Session.bindings.list': {'alias': 'zipzi.Edit.bindings.list'},
@@ -57,7 +63,10 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                 'fields': [],
                                 'kind': 'callable',
                                 'signature': '(query: modeling.queries.CollectionQuery) -> '
-                                             'Snapshot[modeling.addressing.Capabilities]'},
+                                             'Snapshot[modeling.addressing.Capabilities]',
+                                'type_refs': ('zipzi.Snapshot',
+                                              'zipzi.modeling.addressing.Capabilities',
+                                              'zipzi.modeling.queries.CollectionQuery')},
  'zipzi.Session.close': {'children': (),
                          'documentation': 'Close the host document and return its final SessionInfo, without saving.\n'
                                           '\n'
@@ -74,7 +83,8 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                          'example': 'docs/recipes.py',
                          'fields': [],
                          'kind': 'callable',
-                         'signature': '(*, discard_modified: bool=False) -> SessionInfo'},
+                         'signature': '(*, discard_modified: bool=False) -> SessionInfo',
+                         'type_refs': ('zipzi.SessionInfo',)},
  'zipzi.Session.detach': {'children': (),
                           'documentation': "Release this client's binding and its references. Active work refuses "
                                            'detach; the host session remains resident. Aliases become invalid.',
@@ -89,7 +99,8 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                         'example': 'docs/recipes.py',
                         'fields': [],
                         'kind': 'callable',
-                        'signature': "(label: str) -> 'Edit'"},
+                        'signature': "(label: str) -> 'Edit'",
+                        'type_refs': ('zipzi.Edit',)},
  'zipzi.Session.editor_context': {'children': (),
                                   'documentation': 'Read an owned optional Editor context and exact formal Source. '
                                                    'Local or non-Editor hosts can return None; no Editor object is '
@@ -97,33 +108,49 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                   'example': 'docs/recipes.py',
                                   'fields': [],
                                   'kind': 'callable',
-                                  'signature': '() -> Snapshot[modeling.runtime.EditorContext | None]'},
+                                  'signature': '() -> Snapshot[modeling.runtime.EditorContext | None]',
+                                  'type_refs': ('zipzi.Snapshot', 'zipzi.modeling.runtime.EditorContext')},
  'zipzi.Session.id': {'children': (),
                       'documentation': 'Return cached Runtime-scoped identity without IO. Persistent object IDs belong '
                                        'to this session and do not substitute for a SessionId.',
                       'example': 'docs/recipes.py',
                       'fields': [],
-                      'kind': 'callable',
-                      'signature': '() -> SessionId'},
+                      'kind': 'property',
+                      'signature': ': SessionId',
+                      'type_refs': ('zipzi.SessionId',)},
  'zipzi.Session.info': {'children': (),
                         'documentation': 'Read current version, modified state, history lengths, path and host state. '
                                          'Returns an owned value; a lost response recovers the original query.',
                         'example': 'docs/recipes.py',
                         'fields': [],
                         'kind': 'callable',
-                        'signature': '() -> SessionInfo'},
+                        'signature': '() -> SessionInfo',
+                        'type_refs': ('zipzi.SessionInfo',)},
  'zipzi.Session.meshes': {'children': ('zipzi.Session.meshes.get',
                                        'zipzi.Session.meshes.get_many',
                                        'zipzi.Session.meshes.list'),
-                          'documentation': 'Immutable typed value. See field semantics and the linked workflow.',
+                          'documentation': 'Read meshes through a Session or Edit. Session reads committed document '
+                                           'content; Edit reads include its pending writes.',
                           'example': 'docs/recipes.py',
                           'fields': [],
-                          'kind': 'type',
-                          'signature': "(session: '_lifecycle.Session', edit: '_lifecycle.Edit | None'=None)"},
+                          'kind': 'property',
+                          'signature': 'session.meshes',
+                          'type_refs': ('zipzi.Edit', 'zipzi.Session')},
  'zipzi.Session.meshes.get': {'alias': 'zipzi.Edit.meshes.get'},
  'zipzi.Session.meshes.get_many': {'alias': 'zipzi.Edit.meshes.get_many'},
  'zipzi.Session.meshes.list': {'alias': 'zipzi.Edit.meshes.list'},
- 'zipzi.Session.modeling': {'alias': 'zipzi.Edit.modeling'},
+ 'zipzi.Session.modeling': {'children': ('zipzi.Session.modeling.estimate_observation',
+                                         'zipzi.Session.modeling.observe',
+                                         'zipzi.Session.modeling.records',
+                                         'zipzi.Session.modeling.sample',
+                                         'zipzi.Session.modeling.sample_async',
+                                         'zipzi.Session.modeling.spatial'),
+                            'documentation': '',
+                            'example': 'docs/recipes.py',
+                            'fields': [],
+                            'kind': 'property',
+                            'signature': 'session.modeling',
+                            'type_refs': ('zipzi.Edit', 'zipzi.Session')},
  'zipzi.Session.modeling.estimate_observation': {'alias': 'zipzi.Edit.modeling.estimate_observation'},
  'zipzi.Session.modeling.observe': {'alias': 'zipzi.Edit.modeling.observe'},
  'zipzi.Session.modeling.records': {'alias': 'zipzi.Edit.modeling.records'},
@@ -133,11 +160,13 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
  'zipzi.Session.parameters': {'children': ('zipzi.Session.parameters.get',
                                            'zipzi.Session.parameters.get_many',
                                            'zipzi.Session.parameters.list'),
-                              'documentation': 'Immutable typed value. See field semantics and the linked workflow.',
+                              'documentation': 'Read parameters through a Session or Edit. Session reads committed '
+                                               'document content; Edit reads include its pending writes.',
                               'example': 'docs/recipes.py',
                               'fields': [],
-                              'kind': 'type',
-                              'signature': "(session: '_lifecycle.Session', edit: '_lifecycle.Edit | None'=None)"},
+                              'kind': 'property',
+                              'signature': 'session.parameters',
+                              'type_refs': ('zipzi.Edit', 'zipzi.Session')},
  'zipzi.Session.parameters.get': {'alias': 'zipzi.Edit.parameters.get'},
  'zipzi.Session.parameters.get_many': {'alias': 'zipzi.Edit.parameters.get_many'},
  'zipzi.Session.parameters.list': {'alias': 'zipzi.Edit.parameters.list'},
@@ -148,7 +177,8 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                         'example': 'docs/recipes.py',
                         'fields': [],
                         'kind': 'callable',
-                        'signature': '(operation: ops.PlannableOperation) -> plans.Plan'},
+                        'signature': '(operation: ops.PlannableOperation) -> plans.Plan',
+                        'type_refs': ('zipzi.Plan', 'zipzi.ops.PlannableOperation')},
  'zipzi.Session.plan_async': {'children': (),
                               'documentation': 'Submit a registered expensive modeling plan at the captured Source. '
                                                'Returns Job[Plan]; wait before applying and close the resulting Plan. '
@@ -156,7 +186,8 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                               'example': 'docs/recipes.py',
                               'fields': [],
                               'kind': 'callable',
-                              'signature': '(operation: ModelingPlanOperation) -> Job[plans.Plan]'},
+                              'signature': '(operation: ModelingPlanOperation) -> Job[plans.Plan]',
+                              'type_refs': ('zipzi.Job', 'zipzi.Plan')},
  'zipzi.Session.preview': {'children': (),
                            'documentation': 'Capture an independent frozen formal animation Preview. Close it '
                                             'explicitly; later edits never refresh it, and playback never changes '
@@ -164,7 +195,8 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                            'example': 'docs/recipes.py',
                            'fields': [],
                            'kind': 'callable',
-                           'signature': '(*, expected: Source | None=None) -> Preview'},
+                           'signature': '(*, expected: Source | None=None) -> Preview',
+                           'type_refs': ('zipzi.Source', 'zipzi.animation.Preview')},
  'zipzi.Session.project': {'children': ('zipzi.Session.project.diagnose',
                                         'zipzi.Session.project.export',
                                         'zipzi.Session.project.open',
@@ -175,8 +207,9 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                             'the selected execution host; IO returns explicit Jobs.',
                            'example': 'docs/recipes.py',
                            'fields': [],
-                           'kind': 'type',
-                           'signature': '(session: Session)'},
+                           'kind': 'property',
+                           'signature': 'session.project',
+                           'type_refs': ('zipzi.Session',)},
  'zipzi.Session.project.diagnose': {'children': (),
                                     'documentation': 'Submit SDK project diagnostics without publishing edited model '
                                                      'content. Returns Job[ProjectReport] with owned diagnostics; wait '
@@ -184,7 +217,8 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                     'example': 'docs/recipes.py',
                                     'fields': [],
                                     'kind': 'callable',
-                                    'signature': '() -> Job[modeling.project.ProjectReport]'},
+                                    'signature': '() -> Job[modeling.project.ProjectReport]',
+                                    'type_refs': ('zipzi.Job', 'zipzi.modeling.project.ProjectReport')},
  'zipzi.Session.project.export': {'children': (),
                                   'documentation': 'Submit a selected export to a host-absolute path. allow_loss, '
                                                    'animation baking and frame-rate choices are explicit. Read report '
@@ -195,7 +229,10 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                   'signature': '(path: Path, format: modeling.project.ExportFormat, *, name: '
                                                "str='model', object_id: str | None=None, allow_loss: bool=False, "
                                                'bake_animation: bool=False, auto_frame_rate: bool=False) -> '
-                                               'Job[modeling.project.ProjectReport]'},
+                                               'Job[modeling.project.ProjectReport]',
+                                  'type_refs': ('zipzi.Job',
+                                                'zipzi.modeling.project.ExportFormat',
+                                                'zipzi.modeling.project.ProjectReport')},
  'zipzi.Session.project.open': {'children': (),
                                 'documentation': 'Replace this session from an absolute host project path through an '
                                                  'explicit Job. Successful replacement advances generation and '
@@ -203,7 +240,8 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                 'example': 'docs/recipes.py',
                                 'fields': [],
                                 'kind': 'callable',
-                                'signature': '(path: Path) -> Job[modeling.project.ProjectReport]'},
+                                'signature': '(path: Path) -> Job[modeling.project.ProjectReport]',
+                                'type_refs': ('zipzi.Job', 'zipzi.modeling.project.ProjectReport')},
  'zipzi.Session.project.replace': {'children': (),
                                    'documentation': 'Submit explicit format import to replace this session. Textures '
                                                     'are host-absolute slots. Wait for the real report; generation '
@@ -213,7 +251,11 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                    'kind': 'callable',
                                    'signature': '(path: Path, format: modeling.project.ImportFormat, *, textures: '
                                                 'tuple[modeling.project.TextureSlot, ...]=()) -> '
-                                                'Job[modeling.project.ProjectReport]'},
+                                                'Job[modeling.project.ProjectReport]',
+                                   'type_refs': ('zipzi.Job',
+                                                 'zipzi.modeling.project.ImportFormat',
+                                                 'zipzi.modeling.project.ProjectReport',
+                                                 'zipzi.modeling.project.TextureSlot')},
  'zipzi.Session.project.run': {'children': (),
                                'documentation': 'Submit one typed ProjectRequest and return Job[ProjectReport]. Input '
                                                 'selects explicit format/IO policy; losses and notices belong to the '
@@ -222,7 +264,10 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                'fields': [],
                                'kind': 'callable',
                                'signature': '(request: modeling.project.ProjectRequest) -> '
-                                            'Job[modeling.project.ProjectReport]'},
+                                            'Job[modeling.project.ProjectReport]',
+                               'type_refs': ('zipzi.Job',
+                                             'zipzi.modeling.project.ProjectReport',
+                                             'zipzi.modeling.project.ProjectRequest')},
  'zipzi.Session.project.save': {'children': (),
                                 'documentation': 'Submit saving to host-absolute project folder path and return '
                                                  'Job[SaveReceipt]. Wait for the receipt, then inspect durable and its '
@@ -235,7 +280,8 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                 'example': 'docs/recipes.py',
                                 'fields': [],
                                 'kind': 'callable',
-                                'signature': '(path: Path) -> Job[SaveReceipt]'},
+                                'signature': '(path: Path) -> Job[SaveReceipt]',
+                                'type_refs': ('zipzi.Job', 'zipzi.SaveReceipt')},
  'zipzi.Session.redo': {'children': (),
                         'documentation': 'Submit one formal history redo and return Job[Receipt]. Wait for the actual '
                                          'receipt. Cancelling or a no-op Edit preserves redo according to SDK history '
@@ -243,7 +289,8 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                         'example': 'docs/recipes.py',
                         'fields': [],
                         'kind': 'callable',
-                        'signature': '() -> Job[Receipt]'},
+                        'signature': '() -> Job[Receipt]',
+                        'type_refs': ('zipzi.Job', 'zipzi.Receipt')},
  'zipzi.Session.reference': {'children': (),
                              'documentation': 'Capture an SDK object reference for the declared kind and canonical '
                                               'UUID. Runtime validates session ownership and incarnation. Close the '
@@ -251,21 +298,33 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                              'example': 'docs/recipes.py',
                              'fields': [],
                              'kind': 'callable',
-                             'signature': '(kind: references.ObjectKind, id: str) -> references.ObjectRef'},
+                             'signature': '(kind: references.ObjectKind, id: str) -> references.ObjectRef',
+                             'type_refs': ('zipzi.references.ObjectKind', 'zipzi.references.ObjectRef')},
  'zipzi.Session.resources': {'children': ('zipzi.Session.resources.get',
                                           'zipzi.Session.resources.get_many',
                                           'zipzi.Session.resources.list',
                                           'zipzi.Session.resources.snapshot'),
-                             'documentation': 'Immutable typed value. See field semantics and the linked workflow.',
+                             'documentation': 'Read resources through a Session or Edit. Session reads committed '
+                                              'document content; Edit reads include its pending writes.',
                              'example': 'docs/recipes.py',
                              'fields': [],
-                             'kind': 'type',
-                             'signature': "(session: '_lifecycle.Session', edit: '_lifecycle.Edit | None'=None)"},
+                             'kind': 'property',
+                             'signature': 'session.resources',
+                             'type_refs': ('zipzi.Edit', 'zipzi.Session')},
  'zipzi.Session.resources.get': {'alias': 'zipzi.Edit.resources.get'},
  'zipzi.Session.resources.get_many': {'alias': 'zipzi.Edit.resources.get_many'},
  'zipzi.Session.resources.list': {'alias': 'zipzi.Edit.resources.list'},
  'zipzi.Session.resources.snapshot': {'alias': 'zipzi.Edit.resources.snapshot'},
- 'zipzi.Session.scene': {'alias': 'zipzi.Edit.scene'},
+ 'zipzi.Session.scene': {'children': ('zipzi.Session.scene.get',
+                                      'zipzi.Session.scene.get_many',
+                                      'zipzi.Session.scene.list'),
+                         'documentation': 'Read scene through a Session or Edit. Session reads committed document '
+                                          'content; Edit reads include its pending writes.',
+                         'example': 'docs/recipes.py',
+                         'fields': [],
+                         'kind': 'property',
+                         'signature': 'session.scene',
+                         'type_refs': ('zipzi.Edit', 'zipzi.Session')},
  'zipzi.Session.scene.get': {'alias': 'zipzi.Edit.scene.get'},
  'zipzi.Session.scene.get_many': {'alias': 'zipzi.Edit.scene.get_many'},
  'zipzi.Session.scene.list': {'alias': 'zipzi.Edit.scene.list'},
@@ -291,7 +350,8 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                              'example': 'docs/recipes.py',
                              'fields': [],
                              'kind': 'callable',
-                             'signature': '() -> events.SessionSubscription'},
+                             'signature': '() -> events.SessionSubscription',
+                             'type_refs': ('zipzi.events.SessionSubscription',)},
  'zipzi.Session.undo': {'children': (),
                         'documentation': 'Submit one formal history undo and return Job[Receipt]. Wait for confirmed '
                                          'content/version/history; conflicting or busy sessions reject without '
@@ -299,4 +359,5 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                         'example': 'docs/recipes.py',
                         'fields': [],
                         'kind': 'callable',
-                        'signature': '() -> Job[Receipt]'}}
+                        'signature': '() -> Job[Receipt]',
+                        'type_refs': ('zipzi.Job', 'zipzi.Receipt')}}

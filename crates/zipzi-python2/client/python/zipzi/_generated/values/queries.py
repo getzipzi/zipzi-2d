@@ -48,7 +48,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingQuery(CompactValue):
-    'Immutable owned ModelingQuery value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nassets: Explicit IDs of image assets to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nmeshes: Explicit IDs of meshes to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nparameters: Explicit IDs of parameters to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nparts: Explicit IDs of Parts to read, in result-slot order; an empty list requests no payloads,\nwhile collection IDs remain discoverable.\ntransforms: Explicit IDs of deformation transforms to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nbindings: Explicit IDs of ordinary mesh bindings to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nscene_bindings: Explicit IDs of scene bindings to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nblend_key_tables: Explicit IDs of BlendShape key tables to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nblend_constraints: Explicit IDs of BlendShape constraints to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nblend_bindings: Explicit IDs of BlendShape bindings to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nglues: Explicit IDs of Glue objects to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\noffscreens: Explicit IDs of Offscreen objects to read, in result-slot order; an empty list requests\nno payloads, while collection IDs remain discoverable.\nparameter_groups: Explicit IDs of CDI parameter groups to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nattachments: Explicit IDs of package attachments to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nmotions: Explicit motion clip IDs; payload slots follow order and retain missing IDs.\nmotion_groups: Explicit motion registration-group IDs; group payloads include their ordered entries.\nmotion_registrations: Explicit registration IDs, including root and grouped registrations.\nexpressions: Explicit expression asset IDs; entries are owned by the selected asset.\nphysics: Request the Physics singleton payload; false requests no Physics content.\npose: Request the Pose singleton payload; false requests no Pose content.'
+    'Select explicit record IDs; empty lists return collection identities only.\n\nFields:\nassets: Explicit IDs of image assets to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nmeshes: Explicit IDs of meshes to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nparameters: Explicit IDs of parameters to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nparts: Explicit IDs of Parts to read, in result-slot order; an empty list requests no payloads,\nwhile collection IDs remain discoverable.\ntransforms: Explicit IDs of deformation transforms to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nbindings: Explicit IDs of ordinary mesh bindings to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nscene_bindings: Explicit IDs of scene bindings to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\nblend_key_tables: Explicit IDs of BlendShape key tables to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nblend_constraints: Explicit IDs of BlendShape constraints to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nblend_bindings: Explicit IDs of BlendShape bindings to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nglues: Explicit IDs of Glue objects to read, in result-slot order; an empty list requests no\npayloads, while collection IDs remain discoverable.\noffscreens: Explicit IDs of Offscreen objects to read, in result-slot order; an empty list requests\nno payloads, while collection IDs remain discoverable.\nparameter_groups: Explicit IDs of CDI parameter groups to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nattachments: Explicit IDs of package attachments to read, in result-slot order; an empty list\nrequests no payloads, while collection IDs remain discoverable.\nmotions: Explicit motion clip IDs; payload slots follow order and retain missing IDs.\nmotion_groups: Explicit motion registration-group IDs; group payloads include their ordered entries.\nmotion_registrations: Explicit registration IDs, including root and grouped registrations.\nexpressions: Explicit expression asset IDs; entries are owned by the selected asset.\nphysics: Request the Physics singleton payload; false requests no Physics content.\npose: Request the Pose singleton payload; false requests no Pose content.'
     assets: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     meshes: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     parameters: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
@@ -94,7 +94,7 @@ ModelingQuery.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OwnedModelingRecords(CompactValue):
-    'Immutable owned OwnedModelingRecords value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ndocument_id: Stable document UUID; not a Runtime Session handle.\nsetup: Model source-canvas and export-frame configuration.\nhierarchy_order: Independent organization/deformation palette ranks; does not alter model relationships.\neditor_state: Owned authoring visibility/lock metadata; separate from evaluated model appearance.\ndisplay_info: Owned CDI display metadata, including explicit imported unresolved references.\nmodel3_settings: Owned model3 export metadata and reference registrations.\ndraw_order_groups: Optional drawing-order groups; None leaves grouping absent instead of supplying an empty\ngroup list.\nids: Domain-name-to-ID directory of document collections; identities remain available even\nwhen no record payloads were requested.\nassets: Owned image assets aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\nmeshes: Owned meshes aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\nparameters: Owned parameters aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\nparts: Owned Parts aligned with the corresponding query ID list; None marks a missing requested\nID and an empty query returns no payloads.\ntransforms: Owned deformation transforms aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nbindings: Owned ordinary mesh bindings aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nscene_bindings: Owned scene bindings aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\nblend_key_tables: Owned BlendShape key tables aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nblend_constraints: Owned BlendShape constraints aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nblend_bindings: Owned BlendShape bindings aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nglues: Owned Glue objects aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\noffscreens: Owned Offscreen objects aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nparameter_groups: Owned CDI parameter groups aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nattachments: Owned package attachments aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nmotions: Owned selected motions aligned with query IDs; None marks a missing ID.\nmotion_groups: Owned selected motion_groups aligned with query IDs; None marks a missing ID.\nmotion_registrations: Owned selected motion_registrations aligned with query IDs; None marks a missing ID.\nexpressions: Owned selected expressions aligned with query IDs; None marks a missing ID.\nphysics: Owned Physics singleton when requested and present; None otherwise.\npose: Owned Pose singleton when requested and present; None otherwise.'
+    'Owned selected query results. No mutation or query behavior lives in this DTO.\n\nFields:\ndocument_id: Stable document UUID; not a Runtime Session handle.\nsetup: Model source-canvas and export-frame configuration.\nhierarchy_order: Independent organization/deformation palette ranks; does not alter model relationships.\neditor_state: Owned authoring visibility/lock metadata; separate from evaluated model appearance.\ndisplay_info: Owned CDI display metadata, including explicit imported unresolved references.\nmodel3_settings: Owned model3 export metadata and reference registrations.\ndraw_order_groups: Optional drawing-order groups; None leaves grouping absent instead of supplying an empty\ngroup list.\nids: Domain-name-to-ID directory of document collections; identities remain available even\nwhen no record payloads were requested.\nassets: Owned image assets aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\nmeshes: Owned meshes aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\nparameters: Owned parameters aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\nparts: Owned Parts aligned with the corresponding query ID list; None marks a missing requested\nID and an empty query returns no payloads.\ntransforms: Owned deformation transforms aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nbindings: Owned ordinary mesh bindings aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nscene_bindings: Owned scene bindings aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\nblend_key_tables: Owned BlendShape key tables aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nblend_constraints: Owned BlendShape constraints aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nblend_bindings: Owned BlendShape bindings aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nglues: Owned Glue objects aligned with the corresponding query ID list; None marks a missing\nrequested ID and an empty query returns no payloads.\noffscreens: Owned Offscreen objects aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nparameter_groups: Owned CDI parameter groups aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nattachments: Owned package attachments aligned with the corresponding query ID list; None marks a\nmissing requested ID and an empty query returns no payloads.\nmotions: Owned selected motions aligned with query IDs; None marks a missing ID.\nmotion_groups: Owned selected motion_groups aligned with query IDs; None marks a missing ID.\nmotion_registrations: Owned selected motion_registrations aligned with query IDs; None marks a missing ID.\nexpressions: Owned selected expressions aligned with query IDs; None marks a missing ID.\nphysics: Owned Physics singleton when requested and present; None otherwise.\npose: Owned Pose singleton when requested and present; None otherwise.'
     document_id: str
     setup: ModelSetup
     hierarchy_order: HierarchyOrder
@@ -150,7 +150,7 @@ OwnedModelingRecords.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryScene(CompactValue):
-    'Immutable owned CollectionQueryScene value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncollection: Explicit native collection selector; it does not imply loading every object payload.'
+    '\n\nFields:\ncollection: Explicit native collection selector; it does not imply loading every object payload.'
     _variant: _ClassVar[str] = 'scene'
     collection: SceneCollection
 
@@ -158,7 +158,7 @@ CollectionQueryScene.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryOrganization(CompactValue):
-    'Immutable owned CollectionQueryOrganization value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncollection: Explicit native collection selector; it does not imply loading every object payload.'
+    '\n\nFields:\ncollection: Explicit native collection selector; it does not imply loading every object payload.'
     _variant: _ClassVar[str] = 'organization'
     collection: OrganizationCollection
 
@@ -166,7 +166,7 @@ CollectionQueryOrganization.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryReferences(CompactValue):
-    'Immutable owned CollectionQueryReferences value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncollection: Explicit native collection selector; it does not imply loading every object payload.'
+    '\n\nFields:\ncollection: Explicit native collection selector; it does not imply loading every object payload.'
     _variant: _ClassVar[str] = 'references'
     collection: ReferenceCollection
 
@@ -174,21 +174,21 @@ CollectionQueryReferences.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryResources(CompactValue):
-    'Immutable owned CollectionQueryResources value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    ''
     _variant: _ClassVar[str] = 'resources'
 
 CollectionQueryResources.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryAttachments(CompactValue):
-    'Immutable owned CollectionQueryAttachments value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    ''
     _variant: _ClassVar[str] = 'attachments'
 
 CollectionQueryAttachments.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryDocument(CompactValue):
-    'Immutable owned CollectionQueryDocument value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nfield: Explicit field discriminator; must match the addressed object/domain.'
+    '\n\nFields:\nfield: Explicit field discriminator; must match the addressed object/domain.'
     _variant: _ClassVar[str] = 'document'
     field: DocumentField
 
@@ -196,7 +196,7 @@ CollectionQueryDocument.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryMotion(CompactValue):
-    'Immutable owned CollectionQueryMotion value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncollection: Root or stable motion-group container for library registrations.'
+    '\n\nFields:\ncollection: Root or stable motion-group container for library registrations.'
     _variant: _ClassVar[str] = 'motion'
     collection: MotionContainer
 
@@ -204,28 +204,28 @@ CollectionQueryMotion.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryMotionGroups(CompactValue):
-    'Immutable owned CollectionQueryMotionGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    ''
     _variant: _ClassVar[str] = 'motion_groups'
 
 CollectionQueryMotionGroups.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryClips(CompactValue):
-    'Immutable owned CollectionQueryClips value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    ''
     _variant: _ClassVar[str] = 'clips'
 
 CollectionQueryClips.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryExpressions(CompactValue):
-    'Immutable owned CollectionQueryExpressions value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    ''
     _variant: _ClassVar[str] = 'expressions'
 
 CollectionQueryExpressions.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryExpressionEntries(CompactValue):
-    'Immutable owned CollectionQueryExpressionEntries value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nexpression_id: Stable expression asset ID owning the entry collection.'
+    '\n\nFields:\nexpression_id: Stable expression asset ID owning the entry collection.'
     _variant: _ClassVar[str] = 'expression_entries'
     expression_id: str
 
@@ -233,7 +233,7 @@ CollectionQueryExpressionEntries.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryPhysics(CompactValue):
-    'Immutable owned CollectionQueryPhysics value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncollection: Native Physics group/input/output/node collection selector.'
+    '\n\nFields:\ncollection: Native Physics group/input/output/node collection selector.'
     _variant: _ClassVar[str] = 'physics'
     collection: PhysicsCollection
 
@@ -241,7 +241,7 @@ CollectionQueryPhysics.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryPose(CompactValue):
-    'Immutable owned CollectionQueryPose value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncollection: Native Pose group/entry/link collection selector.'
+    '\n\nFields:\ncollection: Native Pose group/entry/link collection selector.'
     _variant: _ClassVar[str] = 'pose'
     collection: PoseCollection
 

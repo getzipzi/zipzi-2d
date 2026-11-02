@@ -46,6 +46,7 @@
       "tuple": false
     },
     "zipzi_contract::animation::PhysicsRigSnapshot": {
+      "doc": "Read-only observation of one rig. Positions are the latest solved physics\nstep, not model-space attachment points or interpolated render geometry.",
       "fields": [
         {
           "doc": "Native physics group UUID.",
@@ -577,6 +578,7 @@
       "tag": null,
       "variants": [
         {
+          "doc": "None or zero follows the evaluation delta; positive values select a fixed step.",
           "fields": [
             {
               "default": null,
@@ -1361,6 +1363,7 @@
       "tuple": false
     },
     "zipzi_contract::physics_document::PhysicsPatch": {
+      "doc": "Atomic asset edits plus optional rig edits; asset-only patches support empty assets.",
       "fields": [
         {
           "doc": "Stable Physics singleton ID owning these changes.",

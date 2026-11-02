@@ -1,0 +1,5152 @@
+{
+  "_generated_by": "zipzi-python2/tools/generate.py",
+  "type_count": 991,
+  "documented_type_count": 140,
+  "missing_type_count": 851,
+  "missing": [
+    {
+      "paths": [
+        "zipzi.Buffer"
+      ],
+      "source": "python:zipzi.buffers.Buffer"
+    },
+    {
+      "paths": [
+        "zipzi.Edit.modeling",
+        "zipzi.Session.modeling"
+      ],
+      "source": "python:zipzi._generated.facades.Modeling"
+    },
+    {
+      "paths": [
+        "zipzi.EditState"
+      ],
+      "source": "python:zipzi._lifecycle.EditState"
+    },
+    {
+      "paths": [
+        "zipzi.JobState"
+      ],
+      "source": "python:zipzi._jobs.JobState"
+    },
+    {
+      "paths": [
+        "zipzi.PlanCost"
+      ],
+      "source": "rust:zipzi_contract::document::ConversionCost"
+    },
+    {
+      "paths": [
+        "zipzi.PlanReport"
+      ],
+      "source": "rust:zipzi_contract::authoring::ModelingPlanReport"
+    },
+    {
+      "paths": [
+        "zipzi.RecoveryAction"
+      ],
+      "source": "python:zipzi._errors.RecoveryAction"
+    },
+    {
+      "paths": [
+        "zipzi.Runtime.resources"
+      ],
+      "source": "python:zipzi.resources.Resources"
+    },
+    {
+      "paths": [
+        "zipzi.RuntimeCapabilities"
+      ],
+      "source": "rust:zipzi_contract::runtime::RuntimeCapabilities"
+    },
+    {
+      "paths": [
+        "zipzi.animation.Batch",
+        "zipzi.modeling.preview.PreviewBatch"
+      ],
+      "source": "rust:zipzi_contract::runtime::PreviewBatch"
+    },
+    {
+      "paths": [
+        "zipzi.animation.Command",
+        "zipzi.modeling.preview.PreviewCommand"
+      ],
+      "source": "rust:zipzi_contract::runtime::PreviewCommand"
+    },
+    {
+      "paths": [
+        "zipzi.animation.Frame",
+        "zipzi.modeling.preview.PreviewFrame"
+      ],
+      "source": "rust:zipzi_contract::runtime::PreviewFrame"
+    },
+    {
+      "paths": [
+        "zipzi.animation.Reset",
+        "zipzi.modeling.preview.PreviewCommandReset"
+      ],
+      "source": "rust:zipzi_contract::runtime::PreviewCommand::Reset"
+    },
+    {
+      "paths": [
+        "zipzi.animation.ScheduleExpression",
+        "zipzi.modeling.preview.PreviewCommandScheduleExpression"
+      ],
+      "source": "rust:zipzi_contract::runtime::PreviewCommand::ScheduleExpression"
+    },
+    {
+      "paths": [
+        "zipzi.animation.ScheduleMotion",
+        "zipzi.modeling.preview.PreviewCommandScheduleMotion"
+      ],
+      "source": "rust:zipzi_contract::runtime::PreviewCommand::ScheduleMotion"
+    },
+    {
+      "paths": [
+        "zipzi.animation.ScheduleParameter",
+        "zipzi.modeling.preview.PreviewCommandScheduleParameter"
+      ],
+      "source": "rust:zipzi_contract::runtime::PreviewCommand::ScheduleParameter"
+    },
+    {
+      "paths": [
+        "zipzi.animation.ScheduleRegistration",
+        "zipzi.modeling.preview.PreviewCommandScheduleRegistration"
+      ],
+      "source": "rust:zipzi_contract::runtime::PreviewCommand::ScheduleRegistration"
+    },
+    {
+      "paths": [
+        "zipzi.animation.SetParameter",
+        "zipzi.modeling.preview.PreviewCommandSetParameter"
+      ],
+      "source": "rust:zipzi_contract::runtime::PreviewCommand::SetParameter"
+    },
+    {
+      "paths": [
+        "zipzi.animation.SetPhysics",
+        "zipzi.modeling.preview.PreviewCommandSetPhysics"
+      ],
+      "source": "rust:zipzi_contract::runtime::PreviewCommand::SetPhysics"
+    },
+    {
+      "paths": [
+        "zipzi.animation.State",
+        "zipzi.modeling.preview.PreviewState"
+      ],
+      "source": "rust:zipzi_contract::runtime::PreviewState"
+    },
+    {
+      "paths": [
+        "zipzi.events.Event"
+      ],
+      "source": "python:zipzi._generated.event_values.Event"
+    },
+    {
+      "paths": [
+        "zipzi.events.RegistrySubscription"
+      ],
+      "source": "python:zipzi.events.RegistrySubscription"
+    },
+    {
+      "paths": [
+        "zipzi.events.SessionSubscription"
+      ],
+      "source": "python:zipzi.events.SessionSubscription"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressPatch"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressPatch"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressPatchAttachmentPath"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressPatch::AttachmentPath"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressPatchBinding"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressPatch::Binding"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressPatchContent"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressPatch::Content"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressPatchDocument"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressPatch::Document"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressPatchDrawingRange"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressPatch::DrawingRange"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressPatchExpressionEntry"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressPatch::ExpressionEntry"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressPatchMotionRegistration"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressPatch::MotionRegistration"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressPatchOrganization"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressPatch::Organization"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressPatchPhysics"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressPatch::Physics"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressPatchPose"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressPatch::Pose"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressPatchReference"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressPatch::Reference"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressPatchResourceName"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressPatch::ResourceName"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressPatchScene"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressPatch::Scene"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressPatchSelection"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressPatch::Selection"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressSelector"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressSelector"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressSelectorAttachmentPath"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressSelector::AttachmentPath"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressSelectorBinding"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressSelector::Binding"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressSelectorContent"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressSelector::Content"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressSelectorDocument"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressSelector::Document"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressSelectorDrawingGroup"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressSelector::DrawingGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressSelectorExpressionEntry"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressSelector::ExpressionEntry"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressSelectorMotionRegistration"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressSelector::MotionRegistration"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressSelectorOrganization"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressSelector::Organization"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressSelectorPhysics"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressSelector::Physics"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressSelectorPose"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressSelector::Pose"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressSelectorReference"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressSelector::Reference"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressSelectorResourceName"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressSelector::ResourceName"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressSelectorScene"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressSelector::Scene"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AddressSelectorSelection"
+      ],
+      "source": "rust:zipzi_contract::runtime::AddressSelector::Selection"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.AttachmentCapabilities"
+      ],
+      "source": "rust:zipzi_contract::authoring::AttachmentCapabilities"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.BindingCapabilities"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingCapabilities"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.Capabilities"
+      ],
+      "source": "rust:zipzi_contract::runtime::Capabilities"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.CapabilitiesAttachment"
+      ],
+      "source": "rust:zipzi_contract::runtime::Capabilities::Attachment"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.CapabilitiesBinding"
+      ],
+      "source": "rust:zipzi_contract::runtime::Capabilities::Binding"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.CapabilitiesCollection"
+      ],
+      "source": "rust:zipzi_contract::runtime::Capabilities::Collection"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.CapabilitiesContent"
+      ],
+      "source": "rust:zipzi_contract::runtime::Capabilities::Content"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.CapabilitiesDocument"
+      ],
+      "source": "rust:zipzi_contract::runtime::Capabilities::Document"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.CapabilitiesExpression"
+      ],
+      "source": "rust:zipzi_contract::runtime::Capabilities::Expression"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.CapabilitiesMotion"
+      ],
+      "source": "rust:zipzi_contract::runtime::Capabilities::Motion"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.CapabilitiesOrganization"
+      ],
+      "source": "rust:zipzi_contract::runtime::Capabilities::Organization"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.CapabilitiesPhysics"
+      ],
+      "source": "rust:zipzi_contract::runtime::Capabilities::Physics"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.CapabilitiesPose"
+      ],
+      "source": "rust:zipzi_contract::runtime::Capabilities::Pose"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.CapabilitiesReferences"
+      ],
+      "source": "rust:zipzi_contract::runtime::Capabilities::References"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.CapabilitiesResource"
+      ],
+      "source": "rust:zipzi_contract::runtime::Capabilities::Resource"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.CapabilitiesScene"
+      ],
+      "source": "rust:zipzi_contract::runtime::Capabilities::Scene"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.CapabilityDomain"
+      ],
+      "source": "rust:zipzi_contract::runtime::CapabilityDomain"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.CapabilityState"
+      ],
+      "source": "rust:zipzi_contract::authoring::CapabilityState"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.CapabilityStateAvailable"
+      ],
+      "source": "rust:zipzi_contract::authoring::CapabilityState::Available"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.CapabilityStateUnavailable"
+      ],
+      "source": "rust:zipzi_contract::authoring::CapabilityState::Unavailable"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.CapabilityStateUnsupported"
+      ],
+      "source": "rust:zipzi_contract::authoring::CapabilityState::Unsupported"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.CollectionCapabilities"
+      ],
+      "source": "rust:zipzi_contract::authoring::CollectionCapabilities"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ExpressionCapabilities"
+      ],
+      "source": "rust:zipzi_contract::authoring::ExpressionCapabilities"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.MotionCapabilities"
+      ],
+      "source": "rust:zipzi_contract::authoring::MotionCapabilities"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ObjectKind"
+      ],
+      "source": "rust:zipzi_contract::authoring::ObjectKind"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.OrganizationCapabilities"
+      ],
+      "source": "rust:zipzi_contract::authoring::OrganizationCapabilities"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.PhysicsCapabilities"
+      ],
+      "source": "rust:zipzi_contract::authoring::PhysicsCapabilities"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.PoseCapabilities"
+      ],
+      "source": "rust:zipzi_contract::authoring::PoseCapabilities"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceCapabilities"
+      ],
+      "source": "rust:zipzi_contract::authoring::ReferenceCapabilities"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceCollection"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceCollection"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceCollectionCdiCombinedMembers"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceCollection::CdiCombinedMembers"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceCollectionCdiCombinedSets"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceCollection::CdiCombinedSets"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceCollectionModelHitAreas"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceCollection::ModelHitAreas"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceCollectionModelParameterGroups"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceCollection::ModelParameterGroups"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceCollectionModelParameterMembers"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceCollection::ModelParameterMembers"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceEdit"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceEdit"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceEditCreateCdiCombinedSet"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceEdit::CreateCdiCombinedSet"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceEditCreateMember"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceEdit::CreateMember"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceEditCreateModelHitArea"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceEdit::CreateModelHitArea"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceEditCreateModelParameterGroup"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceEdit::CreateModelParameterGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceEditDelete"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceEdit::Delete"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceEditDissolve"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceEdit::Dissolve"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceEditDuplicate"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceEdit::Duplicate"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceEditMove"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceEdit::Move"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceEditPatch"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceEdit::Patch"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceEditReplaceSelection"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceEdit::ReplaceSelection"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceEntryCdiParameterRef"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceEntry<zipzi_contract::document::CdiParameterRef>"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceEntryModelTargetRef"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceEntry<zipzi_contract::document::ModelTargetRef>"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceFields"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceFields"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceFieldsCdiCombinedMember"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceFields::CdiCombinedMember"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceFieldsModelHitArea"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceFields::ModelHitArea"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceFieldsModelParameterGroup"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceFields::ModelParameterGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceFieldsModelParameterMember"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceFields::ModelParameterMember"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ReferenceSelectionField"
+      ],
+      "source": "rust:zipzi_contract::document::ReferenceSelectionField"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.ResourceCapabilities"
+      ],
+      "source": "rust:zipzi_contract::authoring::ResourceCapabilities"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.SceneCapabilities"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneCapabilities"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.addressing.SceneContentCapabilities"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneContentCapabilities"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.AxisReduction"
+      ],
+      "source": "rust:zipzi_contract::document::AxisReduction"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.AxisReductionResample"
+      ],
+      "source": "rust:zipzi_contract::document::AxisReduction::Resample"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.AxisReductionSlice"
+      ],
+      "source": "rust:zipzi_contract::document::AxisReduction::Slice"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BindingAuthoringEdit"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BindingAuthoringEditBlend"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::Blend"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BindingAuthoringEditGrid"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::Grid"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BindingAuthoringEditMeshGrid"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::MeshGrid"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BindingAuthoringEditParameterRange"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::ParameterRange"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BindingAuthoringEditReparent"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::Reparent"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BindingAxis"
+      ],
+      "source": "rust:zipzi_contract::model::BindingAxis"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BindingFieldPatch"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingFieldPatch"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BindingFieldPatchAxisParameter"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingFieldPatch::AxisParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BindingFieldPatchConstraintSample"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingFieldPatch::ConstraintSample"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BindingFieldPatchSampleValue"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingFieldPatch::SampleValue"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BindingGridEdit"
+      ],
+      "source": "rust:zipzi_contract::document::BindingGridEdit"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BindingGridEditCreate"
+      ],
+      "source": "rust:zipzi_contract::document::BindingGridEdit::Create"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BindingGridEditEdit"
+      ],
+      "source": "rust:zipzi_contract::document::BindingGridEdit::Edit"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BindingGridTarget"
+      ],
+      "source": "rust:zipzi_contract::document::BindingGridTarget"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BindingGridTargetGlue"
+      ],
+      "source": "rust:zipzi_contract::document::BindingGridTarget::Glue"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BindingGridTargetMesh"
+      ],
+      "source": "rust:zipzi_contract::document::BindingGridTarget::Mesh"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BindingGridTargetScene"
+      ],
+      "source": "rust:zipzi_contract::document::BindingGridTarget::Scene"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BindingSample"
+      ],
+      "source": "rust:zipzi_contract::model::BindingSample"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BlendAuthoringEdit"
+      ],
+      "source": "rust:zipzi_contract::document::BlendAuthoringEdit"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BlendAuthoringEditConstraint"
+      ],
+      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::Constraint"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BlendAuthoringEditCreateBinding"
+      ],
+      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::CreateBinding"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BlendAuthoringEditCreateConstraint"
+      ],
+      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::CreateConstraint"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BlendAuthoringEditCreateTable"
+      ],
+      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::CreateTable"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BlendAuthoringEditSetBindingTable"
+      ],
+      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::SetBindingTable"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BlendAuthoringEditTable"
+      ],
+      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::Table"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BlendShapeBinding"
+      ],
+      "source": "rust:zipzi_contract::model::BlendShapeBinding"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BlendShapeConstraint"
+      ],
+      "source": "rust:zipzi_contract::model::BlendShapeConstraint"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BlendShapeKeyTable"
+      ],
+      "source": "rust:zipzi_contract::model::BlendShapeKeyTable"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BlendShapeTargetKind"
+      ],
+      "source": "rust:zipzi_contract::model::BlendShapeTargetKind"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BlendTableOperation"
+      ],
+      "source": "rust:zipzi_contract::document::BlendTableOperation"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BlendTableOperationDelete"
+      ],
+      "source": "rust:zipzi_contract::document::BlendTableOperation::Delete"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BlendTableOperationInsert"
+      ],
+      "source": "rust:zipzi_contract::document::BlendTableOperation::Insert"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BlendTableOperationMove"
+      ],
+      "source": "rust:zipzi_contract::document::BlendTableOperation::Move"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BlendTableOperationRemapParameter"
+      ],
+      "source": "rust:zipzi_contract::document::BlendTableOperation::RemapParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BlendTableOperationSetBase"
+      ],
+      "source": "rust:zipzi_contract::document::BlendTableOperation::SetBase"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.BlendTableOperationSetParameter"
+      ],
+      "source": "rust:zipzi_contract::document::BlendTableOperation::SetParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.ConstraintSample"
+      ],
+      "source": "rust:zipzi_contract::model::ConstraintSample"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.DeltaGlueKeyform"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaGlueKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.DeltaKeyforms"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaKeyforms"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.DeltaKeyformsGlue"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaKeyforms::Glue"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.DeltaKeyformsMesh"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaKeyforms::Mesh"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.DeltaKeyformsOffscreen"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaKeyforms::Offscreen"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.DeltaKeyformsPart"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaKeyforms::Part"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.DeltaKeyformsRotation"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaKeyforms::Rotation"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.DeltaKeyformsWarp"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaKeyforms::Warp"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.DeltaMeshKeyform"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaMeshKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.DeltaOffscreenKeyform"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaOffscreenKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.DeltaPartKeyform"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaPartKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.DeltaRotationKeyform"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaRotationKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.DeltaWarpKeyform"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaWarpKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.GlueKeyform"
+      ],
+      "source": "rust:zipzi_contract::model::GlueKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.GridOperation"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.GridOperationAddAxis"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation::AddAxis"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.GridOperationDeleteSample"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation::DeleteSample"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.GridOperationInsertSample"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation::InsertSample"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.GridOperationMoveSample"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation::MoveSample"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.GridOperationRemapParameter"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation::RemapParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.GridOperationRemoveAxis"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation::RemoveAxis"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.GridOperationReorderAxes"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation::ReorderAxes"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.GridOperationSetParameter"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation::SetParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.MeshBinding"
+      ],
+      "source": "rust:zipzi_contract::model::MeshBinding"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEdit"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEditAddAxis"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit::AddAxis"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEditCreate"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit::Create"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEditDeleteSample"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit::DeleteSample"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEditInsertSample"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit::InsertSample"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEditMoveSample"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit::MoveSample"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEditRemoveAxis"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit::RemoveAxis"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEditReorderAxes"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit::ReorderAxes"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.MeshKeyform"
+      ],
+      "source": "rust:zipzi_contract::model::MeshKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.OffscreenKeyform"
+      ],
+      "source": "rust:zipzi_contract::model::OffscreenKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.PartKeyform"
+      ],
+      "source": "rust:zipzi_contract::model::PartKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.PartKeyformSlot"
+      ],
+      "source": "rust:zipzi_contract::document::PartKeyformSlot"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.PartKeyformSlotSamples"
+      ],
+      "source": "rust:zipzi_contract::document::PartKeyformSlot::Samples"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.PartKeyformSlotStatic"
+      ],
+      "source": "rust:zipzi_contract::document::PartKeyformSlot::Static"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.RotationKeyform"
+      ],
+      "source": "rust:zipzi_contract::model::RotationKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.SceneBinding"
+      ],
+      "source": "rust:zipzi_contract::model::SceneBinding"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.SceneKeyformPart"
+      ],
+      "source": "rust:zipzi_contract::model::SceneKeyform::Part"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.SceneKeyformRotation"
+      ],
+      "source": "rust:zipzi_contract::model::SceneKeyform::Rotation"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.SceneKeyformWarp"
+      ],
+      "source": "rust:zipzi_contract::model::SceneKeyform::Warp"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.SceneTrack"
+      ],
+      "source": "rust:zipzi_contract::model::SceneTrack"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.SceneTrackPart"
+      ],
+      "source": "rust:zipzi_contract::model::SceneTrack::Part"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.SceneTrackRotation"
+      ],
+      "source": "rust:zipzi_contract::model::SceneTrack::Rotation"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.SceneTrackWarp"
+      ],
+      "source": "rust:zipzi_contract::model::SceneTrack::Warp"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.bindings.WarpKeyform"
+      ],
+      "source": "rust:zipzi_contract::model::WarpKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ConversionCost"
+      ],
+      "source": "rust:zipzi_contract::document::ConversionCost"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ConversionDomain"
+      ],
+      "source": "rust:zipzi_contract::document::ConversionDomain"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandAttachment"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Attachment"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandBinding"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Binding"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandContent"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Content"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateAsset"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateAsset"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateBinding"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateBinding"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateBlendBinding"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateBlendBinding"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateBlendConstraint"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateBlendConstraint"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateBlendKeyTable"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateExpression"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateExpression"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateGlue"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateGlue"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateMesh"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateMesh"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateMotion"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateMotion"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateOffscreen"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateOffscreen"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateParameter"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreatePart"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreatePart"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateSceneBinding"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateSceneBinding"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateTransform"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateTransform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandDeletion"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Deletion"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandDocument"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Document"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandEraseObject"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::EraseObject"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandExpression"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Expression"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandManualMesh"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ManualMesh"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandMotion"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Motion"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandOrganization"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Organization"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandPhysics"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Physics"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandPose"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Pose"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReferences"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::References"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::RemeshRectangleGrid"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandRenameMesh"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::RenameMesh"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceAsset"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceAsset"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceBinding"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceBinding"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceBlendBinding"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceBlendBinding"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceBlendConstraint"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceBlendKeyTable"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceDrawOrderGroups"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceEditorState"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceEditorState"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceExpression"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceExpression"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceGlue"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceGlue"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceHierarchyOrder"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceMesh"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceMesh"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceModelSetup"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceModelSetup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceMotion"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceMotion"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceOffscreen"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceOffscreen"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceParameter"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplacePart"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplacePart"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceSceneBinding"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceSceneBinding"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceTopology"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceTopology"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceTransform"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceTransform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandResource"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Resource"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandScene"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Scene"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandSetMeshKeyform"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::SetMeshKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandSetPhysics"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::SetPhysics"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandSetPose"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::SetPose"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandSetSceneKeyform"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::SetSceneKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandUpdatePositions"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::UpdatePositions"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.common.Vec2"
+      ],
+      "source": "rust:zipzi_contract::model::Vec2"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionChannel"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionChannel"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionChoice"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionChoice"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionDecision"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionDecision"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionDecisionReason"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionDecisionReason"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionDecisionReasonBlendBaseReplacementRequired"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionDecisionReason::BlendBaseReplacementRequired"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionDecisionReasonConversionUnproven"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionDecisionReason::ConversionUnproven"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionDecisionReasonInvalidContainer"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionDecisionReason::InvalidContainer"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionDecisionReasonOffscreenMappingRequired"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionDecisionReason::OffscreenMappingRequired"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionDecisionReasonOffscreenOwnerUnavailable"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionDecisionReason::OffscreenOwnerUnavailable"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionDecisionReasonPartStateUnpreserved"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionDecisionReason::PartStateUnpreserved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionDecisionReasonPhysicsNodeReplacementRequired"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionDecisionReason::PhysicsNodeReplacementRequired"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionDecisionReasonTextureReplacementRequired"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionDecisionReason::TextureReplacementRequired"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionEffect"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionEffect"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionEffectBindingContributionRemoved"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionEffect::BindingContributionRemoved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionEffectCompositionChanged"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionEffect::CompositionChanged"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionEffectDeformationChanged"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionEffect::DeformationChanged"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionEffectDrawingGroupFlattened"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionEffect::DrawingGroupFlattened"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionEffectGlueRemoved"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionEffect::GlueRemoved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionEffectHitAreaRemoved"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionEffect::HitAreaRemoved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionEffectMaskChanged"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionEffect::MaskChanged"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionEffectMotionRegistrationMoved"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionEffect::MotionRegistrationMoved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionEffectOrganizationChanged"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionEffect::OrganizationChanged"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionEffectParameterAnimationRemoved"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionEffect::ParameterAnimationRemoved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionEffectParameterDimensionRemoved"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionEffect::ParameterDimensionRemoved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionEffectPartAnimationRemoved"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionEffect::PartAnimationRemoved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionEffectPartStateRemoved"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionEffect::PartStateRemoved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionEffectPhysicsChannelRemoved"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionEffect::PhysicsChannelRemoved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionEffectResourceReplaced"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionEffect::ResourceReplaced"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionEffectUnpreservedChannels"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionEffect::UnpreservedChannels"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionField"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldAttachmentSound"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::AttachmentSound"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldAttachmentUserData"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::AttachmentUserData"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldBlendConstraint"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::BlendConstraint"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldBlendConstraintParameter"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::BlendConstraintParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldBlendTable"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::BlendTable"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldBlendTableParameter"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::BlendTableParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldCdiCombinedParameter"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::CdiCombinedParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldCdiParameter"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::CdiParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldCdiPart"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::CdiPart"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldConvertedData"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::ConvertedData"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldDeformationParent"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::DeformationParent"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldDrawingItem"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::DrawingItem"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldExpressionParameter"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::ExpressionParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldExpressionSourceParameter"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::ExpressionSourceParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldExpressionSourcePart"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::ExpressionSourcePart"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldGlueMeshA"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::GlueMeshA"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldGlueMeshB"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::GlueMeshB"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldHitAreaMesh"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::HitAreaMesh"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldMeshInvertedMask"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::MeshInvertedMask"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldMeshMask"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::MeshMask"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldModelParameter"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::ModelParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldMotionClip"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::MotionClip"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldMotionParameter"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::MotionParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldMotionPart"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::MotionPart"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldMotionRegistrationContainer"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::MotionRegistrationContainer"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldOffscreenMask"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::OffscreenMask"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldOrganizationParent"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::OrganizationParent"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldOwned"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::Owned"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldParameterAxis"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::ParameterAxis"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldParameterFolder"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::ParameterFolder"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldPhysicsNode"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::PhysicsNode"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldPhysicsParameter"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::PhysicsParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldPoseLinkPart"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::PoseLinkPart"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldPosePart"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::PosePart"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldRequestedScope"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::RequestedScope"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionFieldTexture"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionField::Texture"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionIntent"
+      ],
+      "source": "rust:zipzi_contract::authoring::DeletionIntent"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionKind"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionKind"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionLock"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionLock"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionObject"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionObject"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionOffscreenPlacement"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionOffscreenPlacement"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionPage"
+      ],
+      "source": "rust:zipzi_contract::authoring::DeletionPage"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionPositionGuarantee"
+      ],
+      "source": "rust:zipzi_contract::authoring::DeletionPositionGuarantee"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionReason"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionReason"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionRelation"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionRelation"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionRemoval"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionRemoval"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionRequest"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionRequest"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionReviewState"
+      ],
+      "source": "rust:zipzi_contract::authoring::DeletionReviewState"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionRow"
+      ],
+      "source": "rust:zipzi_contract::authoring::DeletionRow"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionRowDecision"
+      ],
+      "source": "rust:zipzi_contract::authoring::DeletionRow::Decision"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionRowDeformation"
+      ],
+      "source": "rust:zipzi_contract::authoring::DeletionRow::Deformation"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionRowDomain"
+      ],
+      "source": "rust:zipzi_contract::authoring::DeletionRow::Domain"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionRowEffect"
+      ],
+      "source": "rust:zipzi_contract::authoring::DeletionRow::Effect"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionRowExport"
+      ],
+      "source": "rust:zipzi_contract::authoring::DeletionRow::Export"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionRowGuaranteeLimit"
+      ],
+      "source": "rust:zipzi_contract::authoring::DeletionRow::GuaranteeLimit"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionRowLock"
+      ],
+      "source": "rust:zipzi_contract::authoring::DeletionRow::Lock"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionRowOrganization"
+      ],
+      "source": "rust:zipzi_contract::authoring::DeletionRow::Organization"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionRowRelation"
+      ],
+      "source": "rust:zipzi_contract::authoring::DeletionRow::Relation"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionRowRemoval"
+      ],
+      "source": "rust:zipzi_contract::authoring::DeletionRow::Removal"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionRowStructural"
+      ],
+      "source": "rust:zipzi_contract::authoring::DeletionRow::Structural"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionSection"
+      ],
+      "source": "rust:zipzi_contract::authoring::DeletionSection"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionSectionCount"
+      ],
+      "source": "rust:zipzi_contract::authoring::DeletionSectionCount"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionStructuralBlocker"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionStructuralBlocker"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionSummary"
+      ],
+      "source": "rust:zipzi_contract::authoring::DeletionSummary"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionTargetAttachment"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionTarget::Attachment"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionTargetDeformer"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionTarget::Deformer"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionTargetDissolvePart"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionTarget::DissolvePart"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionTargetGlue"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionTarget::Glue"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionTargetMesh"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionTarget::Mesh"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionTargetOffscreen"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionTarget::Offscreen"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionTargetParameter"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionTarget::Parameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionTargetParameterFolder"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionTarget::ParameterFolder"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionTargetParameterFolderContents"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionTarget::ParameterFolderContents"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionTargetPart"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionTarget::Part"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionTargetRecord"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionTarget::Record"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionTargetRemoveDeformer"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionTarget::RemoveDeformer"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionTargetTexture"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionTarget::Texture"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.deletion.DeletionTolerance"
+      ],
+      "source": "rust:zipzi_contract::document::DeletionTolerance"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.expression.ExpressionAsset"
+      ],
+      "source": "rust:zipzi_contract::document::ExpressionAsset"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.expression.ExpressionBlend"
+      ],
+      "source": "rust:zipzi_contract::document::ExpressionBlend"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.expression.ExpressionEditCreate"
+      ],
+      "source": "rust:zipzi_contract::document::ExpressionEdit::Create"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.expression.ExpressionEditCreateEntry"
+      ],
+      "source": "rust:zipzi_contract::document::ExpressionEdit::CreateEntry"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.expression.ExpressionEditDelete"
+      ],
+      "source": "rust:zipzi_contract::document::ExpressionEdit::Delete"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.expression.ExpressionEditDeleteEntries"
+      ],
+      "source": "rust:zipzi_contract::document::ExpressionEdit::DeleteEntries"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.expression.ExpressionEditDuplicate"
+      ],
+      "source": "rust:zipzi_contract::document::ExpressionEdit::Duplicate"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.expression.ExpressionEditDuplicateEntries"
+      ],
+      "source": "rust:zipzi_contract::document::ExpressionEdit::DuplicateEntries"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.expression.ExpressionEditMoveEntries"
+      ],
+      "source": "rust:zipzi_contract::document::ExpressionEdit::MoveEntries"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.expression.ExpressionEditPatchEntry"
+      ],
+      "source": "rust:zipzi_contract::document::ExpressionEdit::PatchEntry"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.expression.ExpressionEditReorder"
+      ],
+      "source": "rust:zipzi_contract::document::ExpressionEdit::Reorder"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.expression.ExpressionEntry"
+      ],
+      "source": "rust:zipzi_contract::document::ExpressionEntry"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.expression.ExpressionEntryFields"
+      ],
+      "source": "rust:zipzi_contract::document::ExpressionEntryFields"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.expression.ExpressionTarget"
+      ],
+      "source": "rust:zipzi_contract::document::ExpressionTarget"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.expression.ExpressionTargetResolved"
+      ],
+      "source": "rust:zipzi_contract::document::ExpressionTarget::Resolved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.expression.ExpressionTargetUnresolved"
+      ],
+      "source": "rust:zipzi_contract::document::ExpressionTarget::Unresolved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.expression.ExpressionTargetUnspecified"
+      ],
+      "source": "rust:zipzi_contract::document::ExpressionTarget::Unspecified"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.mesh.ManualMeshOperation"
+      ],
+      "source": "rust:zipzi_contract::authoring::ManualMeshOperation"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.mesh.ManualMeshOperationConstrainEdge"
+      ],
+      "source": "rust:zipzi_contract::authoring::ManualMeshOperation::ConstrainEdge"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.mesh.ManualMeshOperationDeleteVertices"
+      ],
+      "source": "rust:zipzi_contract::authoring::ManualMeshOperation::DeleteVertices"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.mesh.ManualMeshOperationReconnect"
+      ],
+      "source": "rust:zipzi_contract::authoring::ManualMeshOperation::Reconnect"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.mesh.ManualMeshOperationReleaseConstraint"
+      ],
+      "source": "rust:zipzi_contract::authoring::ManualMeshOperation::ReleaseConstraint"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.mesh.ManualMeshTransferReport"
+      ],
+      "source": "rust:zipzi_contract::authoring::ManualMeshTransferReport"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.mesh.ManualVertexTarget"
+      ],
+      "source": "rust:zipzi_contract::authoring::ManualVertexTarget"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.mesh.Mesh"
+      ],
+      "source": "rust:zipzi_contract::model::Mesh"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.mesh.NewMeshVertex"
+      ],
+      "source": "rust:zipzi_contract::document::NewMeshVertex"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.mesh.TopologyReplacement"
+      ],
+      "source": "rust:zipzi_contract::authoring::TopologyReplacement"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.mesh.VertexContentPatch"
+      ],
+      "source": "rust:zipzi_contract::document::VertexContentPatch"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.mesh.VertexDeletePolicy"
+      ],
+      "source": "rust:zipzi_contract::document::VertexDeletePolicy"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.mesh.VertexSeed"
+      ],
+      "source": "rust:zipzi_contract::document::VertexSeed"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.mesh.VertexSeedBase"
+      ],
+      "source": "rust:zipzi_contract::document::VertexSeed::Base"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.mesh.VertexSeedInterpolate"
+      ],
+      "source": "rust:zipzi_contract::document::VertexSeed::Interpolate"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.mesh.VertexWeight"
+      ],
+      "source": "rust:zipzi_contract::document::VertexWeight"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionClip"
+      ],
+      "source": "rust:zipzi_contract::document::MotionClip"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionContainer"
+      ],
+      "source": "rust:zipzi_contract::document::MotionContainer"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionContainerGroup"
+      ],
+      "source": "rust:zipzi_contract::document::MotionContainer::Group"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionContainerRoot"
+      ],
+      "source": "rust:zipzi_contract::document::MotionContainer::Root"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEdit"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditCreate"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::Create"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditCreateGroup"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::CreateGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditCreateTrack"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::CreateTrack"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditDeleteClip"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::DeleteClip"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditDeleteEvents"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::DeleteEvents"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditDeleteGroup"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::DeleteGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditDeleteRegistrations"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::DeleteRegistrations"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditDeleteTracks"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::DeleteTracks"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditDissolveGroup"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::DissolveGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditDuplicateClip"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::DuplicateClip"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditDuplicateGroup"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::DuplicateGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditDuplicateRegistrations"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::DuplicateRegistrations"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditMoveEvents"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::MoveEvents"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditMoveRegistrations"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::MoveRegistrations"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditMoveTracks"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::MoveTracks"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditPatchRegistration"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::PatchRegistration"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditRegister"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::Register"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditRenameGroup"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::RenameGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditReorderGroups"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::ReorderGroups"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditReorderTracks"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::ReorderTracks"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditSetEvent"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::SetEvent"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditSetTrackTarget"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::SetTrackTarget"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEditTransferKeys"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEdit::TransferKeys"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionEvent"
+      ],
+      "source": "rust:zipzi_contract::document::MotionEvent"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionGroup"
+      ],
+      "source": "rust:zipzi_contract::document::MotionGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionPlaybackPosition"
+      ],
+      "source": "rust:zipzi_contract::animation::MotionPlaybackPosition"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionPoint"
+      ],
+      "source": "rust:zipzi_contract::document::MotionPoint"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionSegment"
+      ],
+      "source": "rust:zipzi_contract::document::MotionSegment"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionSegmentBezier"
+      ],
+      "source": "rust:zipzi_contract::document::MotionSegment::Bezier"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionSegmentInverseStepped"
+      ],
+      "source": "rust:zipzi_contract::document::MotionSegment::InverseStepped"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionSegmentLinear"
+      ],
+      "source": "rust:zipzi_contract::document::MotionSegment::Linear"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionSegmentStepped"
+      ],
+      "source": "rust:zipzi_contract::document::MotionSegment::Stepped"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionTrack"
+      ],
+      "source": "rust:zipzi_contract::document::MotionTrack"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionTrackTarget"
+      ],
+      "source": "rust:zipzi_contract::document::MotionTrackTarget"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionTrackTargetModel"
+      ],
+      "source": "rust:zipzi_contract::document::MotionTrackTarget::Model"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionTrackTargetParameter"
+      ],
+      "source": "rust:zipzi_contract::document::MotionTrackTarget::Parameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionTrackTargetPartOpacity"
+      ],
+      "source": "rust:zipzi_contract::document::MotionTrackTarget::PartOpacity"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionTrackTargetUnresolved"
+      ],
+      "source": "rust:zipzi_contract::document::MotionTrackTarget::Unresolved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.motion.MotionTrackTargetUnspecified"
+      ],
+      "source": "rust:zipzi_contract::document::MotionTrackTarget::Unspecified"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.observation.ObservationBatch",
+        "zipzi.observation.Batch"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationBatch"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.observation.ObservationContentIdentityPngSha256"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationContentIdentity::PngSha256"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.observation.ObservationContentIdentityRgba8Sha256"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationContentIdentity::Rgba8Sha256"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.observation.ObservationEstimateIssue"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationEstimateIssue"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.observation.ObservationImage",
+        "zipzi.observation.Image"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationImage"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.observation.ObservationTexturePlanningInsufficientBudget",
+        "zipzi.observation.TextureBudgetInsufficient"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationTexturePlanning::InsufficientBudget"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.observation.ObservationTexturePlanningReady",
+        "zipzi.observation.TexturePlanReady"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationTexturePlanning::Ready"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.observation.ObservationTexturePolicyFitBudget",
+        "zipzi.observation.FitBudget"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationTexturePolicy::FitBudget"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.observation.ObservationTextureReport",
+        "zipzi.observation.TextureReport"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationTextureReport"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.observation.ObservationTextureReportEntry",
+        "zipzi.observation.Texture"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationTextureReportEntry"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.observation.ObservationTextureTarget"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationTextureTarget"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.observation.ObservationView",
+        "zipzi.observation.View"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservationView"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.observation.ObservedBounds",
+        "zipzi.observation.Bounds"
+      ],
+      "source": "rust:zipzi_contract::runtime::ObservedBounds"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.observation.TextureCoverage",
+        "zipzi.observation.TextureCoverage",
+        "zipzi.sampling.TextureCoverage"
+      ],
+      "source": "rust:zipzi_contract::authoring::TextureCoverage"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.parameters.Parameter"
+      ],
+      "source": "rust:zipzi_contract::model::Parameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.parameters.ParameterKind",
+        "zipzi.parameters.Kind"
+      ],
+      "source": "rust:zipzi_contract::model::ParameterKind"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.parameters.ParameterRangeEdit"
+      ],
+      "source": "rust:zipzi_contract::document::ParameterRangeEdit"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.parameters.ParameterRangePolicy"
+      ],
+      "source": "rust:zipzi_contract::document::ParameterRangePolicy"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsAsset"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsAsset"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsAxis"
+      ],
+      "source": "rust:zipzi_contract::physics::PhysicsAxis"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsCollection"
+      ],
+      "source": "rust:zipzi_contract::authoring::PhysicsCollection"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsCollectionGroups"
+      ],
+      "source": "rust:zipzi_contract::authoring::PhysicsCollection::Groups"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsCollectionInputs"
+      ],
+      "source": "rust:zipzi_contract::authoring::PhysicsCollection::Inputs"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsCollectionNodes"
+      ],
+      "source": "rust:zipzi_contract::authoring::PhysicsCollection::Nodes"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsCollectionOutputs"
+      ],
+      "source": "rust:zipzi_contract::authoring::PhysicsCollection::Outputs"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsDefinition"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsDefinition"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsDictionaryEntry"
+      ],
+      "source": "rust:zipzi_contract::physics::PhysicsDictionaryEntry"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsEdit"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsEdit"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsEditCreateGroup"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsEdit::CreateGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsEditCreateInput"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsEdit::CreateInput"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsEditCreateOutput"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsEdit::CreateOutput"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsEditDelete"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsEdit::Delete"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsEditDuplicate"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsEdit::Duplicate"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsEditDuplicateNode"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsEdit::DuplicateNode"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsEditInsertNode"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsEdit::InsertNode"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsEditMoveInputs"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsEdit::MoveInputs"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsEditMoveNode"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsEdit::MoveNode"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsEditMoveOutputs"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsEdit::MoveOutputs"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsEditPatch"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsEdit::Patch"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsEditReorderGroups"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsEdit::ReorderGroups"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsForces"
+      ],
+      "source": "rust:zipzi_contract::physics::PhysicsForces"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsInput"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsInput"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsMeta"
+      ],
+      "source": "rust:zipzi_contract::physics::PhysicsMeta"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsNode"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsNode"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsNormalization"
+      ],
+      "source": "rust:zipzi_contract::physics::PhysicsNormalization"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsOutput"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsOutput"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsOutputSnapshot"
+      ],
+      "source": "rust:zipzi_contract::animation::PhysicsOutputSnapshot"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsProperty"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsProperty"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsPropertyAngleNormalization"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsProperty::AngleNormalization"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsPropertyInputAxis"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsProperty::InputAxis"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsPropertyInputParameter"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsProperty::InputParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsPropertyInputReflect"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsProperty::InputReflect"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsPropertyInputWeight"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsProperty::InputWeight"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsPropertyName"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsProperty::Name"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsPropertyOutputAxis"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsProperty::OutputAxis"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsPropertyOutputNode"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsProperty::OutputNode"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsPropertyOutputParameter"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsProperty::OutputParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsPropertyOutputReflect"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsProperty::OutputReflect"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsPropertyOutputScale"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsProperty::OutputScale"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsPropertyOutputWeight"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsProperty::OutputWeight"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsPropertyPositionNormalization"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsProperty::PositionNormalization"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsPropertyVertexAcceleration"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsProperty::VertexAcceleration"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsPropertyVertexDelay"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsProperty::VertexDelay"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsPropertyVertexMobility"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsProperty::VertexMobility"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsPropertyVertexPosition"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsProperty::VertexPosition"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsPropertyVertexRadius"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsProperty::VertexRadius"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsRange"
+      ],
+      "source": "rust:zipzi_contract::physics::PhysicsRange"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsRigPatch"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsRigPatch"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsSetting"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsSetting"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsTarget"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsTarget"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsTargetResolved"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsTarget::Resolved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsTargetUnresolved"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsTarget::Unresolved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsTargetUnspecified"
+      ],
+      "source": "rust:zipzi_contract::physics_document::PhysicsTarget::Unspecified"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.physics.PhysicsVector"
+      ],
+      "source": "rust:zipzi_contract::physics::PhysicsVector"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseAsset"
+      ],
+      "source": "rust:zipzi_contract::document::PoseAsset"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseCollection"
+      ],
+      "source": "rust:zipzi_contract::document::PoseCollection"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseCollectionEntries"
+      ],
+      "source": "rust:zipzi_contract::document::PoseCollection::Entries"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseCollectionGroups"
+      ],
+      "source": "rust:zipzi_contract::document::PoseCollection::Groups"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseCollectionLinks"
+      ],
+      "source": "rust:zipzi_contract::document::PoseCollection::Links"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseEdit"
+      ],
+      "source": "rust:zipzi_contract::document::PoseEdit"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseEditCreate"
+      ],
+      "source": "rust:zipzi_contract::document::PoseEdit::Create"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseEditCreateEntry"
+      ],
+      "source": "rust:zipzi_contract::document::PoseEdit::CreateEntry"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseEditCreateLink"
+      ],
+      "source": "rust:zipzi_contract::document::PoseEdit::CreateLink"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseEditDelete"
+      ],
+      "source": "rust:zipzi_contract::document::PoseEdit::Delete"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseEditDuplicate"
+      ],
+      "source": "rust:zipzi_contract::document::PoseEdit::Duplicate"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseEditMove"
+      ],
+      "source": "rust:zipzi_contract::document::PoseEdit::Move"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseEditPatch"
+      ],
+      "source": "rust:zipzi_contract::document::PoseEdit::Patch"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseEntry"
+      ],
+      "source": "rust:zipzi_contract::document::PoseEntry"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseFields"
+      ],
+      "source": "rust:zipzi_contract::document::PoseFields"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseFieldsAsset"
+      ],
+      "source": "rust:zipzi_contract::document::PoseFields::Asset"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseFieldsEntry"
+      ],
+      "source": "rust:zipzi_contract::document::PoseFields::Entry"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseFieldsGroup"
+      ],
+      "source": "rust:zipzi_contract::document::PoseFields::Group"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseFieldsLink"
+      ],
+      "source": "rust:zipzi_contract::document::PoseFields::Link"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseGroup"
+      ],
+      "source": "rust:zipzi_contract::document::PoseGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PoseLink"
+      ],
+      "source": "rust:zipzi_contract::document::PoseLink"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PosePartRef"
+      ],
+      "source": "rust:zipzi_contract::document::PosePartRef"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PosePartRefResolved"
+      ],
+      "source": "rust:zipzi_contract::document::PosePartRef::Resolved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PosePartRefUnresolved"
+      ],
+      "source": "rust:zipzi_contract::document::PosePartRef::Unresolved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.pose.PosePartRefUnspecified"
+      ],
+      "source": "rust:zipzi_contract::document::PosePartRef::Unspecified"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.CdiCombinedSet"
+      ],
+      "source": "rust:zipzi_contract::document::CdiCombinedSet"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.CdiNamespaceIds"
+      ],
+      "source": "rust:zipzi_contract::document::CdiNamespaceIds"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.CdiParameterEntry"
+      ],
+      "source": "rust:zipzi_contract::document::CdiParameterEntry"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.CdiParameterEntryResolved"
+      ],
+      "source": "rust:zipzi_contract::document::CdiParameterEntry::Resolved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.CdiParameterEntryUnresolved"
+      ],
+      "source": "rust:zipzi_contract::document::CdiParameterEntry::Unresolved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.CdiParameterGroup"
+      ],
+      "source": "rust:zipzi_contract::document::CdiParameterGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.CdiParameterRef"
+      ],
+      "source": "rust:zipzi_contract::document::CdiParameterRef"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.CdiParameterRefResolved"
+      ],
+      "source": "rust:zipzi_contract::document::CdiParameterRef::Resolved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.CdiParameterRefUnresolved"
+      ],
+      "source": "rust:zipzi_contract::document::CdiParameterRef::Unresolved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.CdiParameterRefUnspecified"
+      ],
+      "source": "rust:zipzi_contract::document::CdiParameterRef::Unspecified"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.CdiPartEntry"
+      ],
+      "source": "rust:zipzi_contract::document::CdiPartEntry"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.CdiPartEntryResolved"
+      ],
+      "source": "rust:zipzi_contract::document::CdiPartEntry::Resolved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.CdiPartEntryUnresolved"
+      ],
+      "source": "rust:zipzi_contract::document::CdiPartEntry::Unresolved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.DisplayInfo"
+      ],
+      "source": "rust:zipzi_contract::document::DisplayInfo"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.DisplayInfoOrigin"
+      ],
+      "source": "rust:zipzi_contract::document::DisplayInfoOrigin"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.DocumentAuthoringEdit"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.DocumentAuthoringEditPatch"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit::Patch"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit::RepairCdiParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit::RepairCdiPart"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit::RepairMissingAttachment"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.DocumentField"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentField"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.DocumentValue"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentValue"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.DocumentValueExportSettings"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentValue::ExportSettings"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.DocumentValueLayout"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentValue::Layout"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.DocumentValueSourceCanvas"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentValue::SourceCanvas"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.EditorState"
+      ],
+      "source": "rust:zipzi_contract::document::EditorState"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.ExportFormat"
+      ],
+      "source": "rust:zipzi_contract::project::ExportFormat"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.ImportFormat"
+      ],
+      "source": "rust:zipzi_contract::project::ImportFormat"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.Model3Settings"
+      ],
+      "source": "rust:zipzi_contract::document::Model3Settings"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.ModelHitArea"
+      ],
+      "source": "rust:zipzi_contract::document::ModelHitArea"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.ModelParameterGroup"
+      ],
+      "source": "rust:zipzi_contract::document::ModelParameterGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.ModelTargetRef"
+      ],
+      "source": "rust:zipzi_contract::document::ModelTargetRef"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.ModelTargetRefResolved"
+      ],
+      "source": "rust:zipzi_contract::document::ModelTargetRef::Resolved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.ModelTargetRefUnresolved"
+      ],
+      "source": "rust:zipzi_contract::document::ModelTargetRef::Unresolved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.ModelTargetRefUnspecified"
+      ],
+      "source": "rust:zipzi_contract::document::ModelTargetRef::Unspecified"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.ObjectEditorState"
+      ],
+      "source": "rust:zipzi_contract::document::ObjectEditorState"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportIssue"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportIssue"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportIssueCdi"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Cdi"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportIssueExpression"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Expression"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportIssueModel3NamespaceChanged"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Model3NamespaceChanged"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportIssueMotion"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Motion"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportIssuePhysics"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Physics"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportIssuePose"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Pose"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportProblem"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportProblem"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.PackageAttachment"
+      ],
+      "source": "rust:zipzi_contract::document::PackageAttachment"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.ProjectDiagnostic"
+      ],
+      "source": "rust:zipzi_contract::project::ProjectDiagnostic"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.ProjectReport"
+      ],
+      "source": "rust:zipzi_contract::project::ProjectReport"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.ProjectRequest"
+      ],
+      "source": "rust:zipzi_contract::project::ProjectRequest"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.ProjectRequestDiagnose"
+      ],
+      "source": "rust:zipzi_contract::project::ProjectRequest::Diagnose"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.ProjectRequestExport"
+      ],
+      "source": "rust:zipzi_contract::project::ProjectRequest::Export"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.ProjectRequestImport"
+      ],
+      "source": "rust:zipzi_contract::project::ProjectRequest::Import"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.ProjectRequestNew"
+      ],
+      "source": "rust:zipzi_contract::project::ProjectRequest::New"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.ProjectRequestOpen"
+      ],
+      "source": "rust:zipzi_contract::project::ProjectRequest::Open"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.project.TextureSlot"
+      ],
+      "source": "rust:zipzi_contract::project::TextureSlot"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.queries.CollectionQuery"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryAttachments"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Attachments"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryClips"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Clips"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryDocument"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Document"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryExpressionEntries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::ExpressionEntries"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryExpressions"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Expressions"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryMotion"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Motion"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryMotionGroups"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::MotionGroups"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryOrganization"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Organization"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryPhysics"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Physics"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryPose"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Pose"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryReferences"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::References"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryResources"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Resources"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryScene"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Scene"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.resources.ImageAsset"
+      ],
+      "source": "rust:zipzi_contract::model::ImageAsset"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.resources.ImageContent"
+      ],
+      "source": "rust:zipzi_contract::model::ImageContent"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.resources.ResourceEdit"
+      ],
+      "source": "rust:zipzi_contract::document::ResourceEdit"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.resources.ResourceEditCreate"
+      ],
+      "source": "rust:zipzi_contract::document::ResourceEdit::Create"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.resources.ResourceEditDuplicate"
+      ],
+      "source": "rust:zipzi_contract::document::ResourceEdit::Duplicate"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.resources.ResourceEditPatchName"
+      ],
+      "source": "rust:zipzi_contract::document::ResourceEdit::PatchName"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.resources.ResourceEditReorder"
+      ],
+      "source": "rust:zipzi_contract::document::ResourceEdit::Reorder"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.resources.ResourceEditSetContent"
+      ],
+      "source": "rust:zipzi_contract::document::ResourceEdit::SetContent"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.runtime.EditorContext"
+      ],
+      "source": "rust:zipzi_contract::runtime::EditorContext"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.sampling.Drawable"
+      ],
+      "source": "rust:zipzi_contract::evaluation::Drawable"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.sampling.DrawableFrame"
+      ],
+      "source": "rust:zipzi_contract::evaluation::DrawableFrame"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.sampling.EvaluatedDeformer"
+      ],
+      "source": "rust:zipzi_contract::evaluation::EvaluatedDeformer"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.sampling.EvaluatedParameter"
+      ],
+      "source": "rust:zipzi_contract::evaluation::EvaluatedParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.sampling.GeometryDiagnostic"
+      ],
+      "source": "rust:zipzi_contract::authoring::GeometryDiagnostic"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.sampling.GeometryDiagnosticKind",
+        "zipzi.sampling.DiagnosticKind"
+      ],
+      "source": "rust:zipzi_contract::authoring::GeometryDiagnosticKind"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.sampling.GeometrySnapshot"
+      ],
+      "source": "rust:zipzi_contract::authoring::GeometrySnapshot"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.sampling.GeometrySpace"
+      ],
+      "source": "rust:zipzi_contract::authoring::GeometrySpace"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.sampling.GeometrySpaceModel"
+      ],
+      "source": "rust:zipzi_contract::authoring::GeometrySpace::Model"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.sampling.GeometrySpaceRotationLocal"
+      ],
+      "source": "rust:zipzi_contract::authoring::GeometrySpace::RotationLocal"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.sampling.GeometrySpaceWarpParameter"
+      ],
+      "source": "rust:zipzi_contract::authoring::GeometrySpace::WarpParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.sampling.MeshQuality",
+        "zipzi.observation.MeshQuality",
+        "zipzi.sampling.MeshQuality"
+      ],
+      "source": "rust:zipzi_contract::authoring::MeshQuality"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.sampling.ModelingSamples"
+      ],
+      "source": "rust:zipzi_contract::authoring::ModelingSamples"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.sampling.OffscreenFrame"
+      ],
+      "source": "rust:zipzi_contract::evaluation::OffscreenFrame"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.sampling.RenderCommand"
+      ],
+      "source": "rust:zipzi_contract::evaluation::RenderCommand"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.sampling.RenderCommandBeginOffscreen"
+      ],
+      "source": "rust:zipzi_contract::evaluation::RenderCommand::BeginOffscreen"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.sampling.RenderCommandDrawMesh"
+      ],
+      "source": "rust:zipzi_contract::evaluation::RenderCommand::DrawMesh"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.sampling.RenderCommandEndOffscreen"
+      ],
+      "source": "rust:zipzi_contract::evaluation::RenderCommand::EndOffscreen"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.sampling.TriangleQuality",
+        "zipzi.observation.TriangleQuality",
+        "zipzi.sampling.TriangleQuality"
+      ],
+      "source": "rust:zipzi_contract::authoring::TriangleQuality"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.Appearance"
+      ],
+      "source": "rust:zipzi_contract::model::Appearance"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.AttachmentEdit"
+      ],
+      "source": "rust:zipzi_contract::document::AttachmentEdit"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.AttachmentEditCreate"
+      ],
+      "source": "rust:zipzi_contract::document::AttachmentEdit::Create"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.AttachmentEditDelete"
+      ],
+      "source": "rust:zipzi_contract::document::AttachmentEdit::Delete"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.AttachmentEditDeleteWithReplacement"
+      ],
+      "source": "rust:zipzi_contract::document::AttachmentEdit::DeleteWithReplacement"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.AttachmentEditDuplicate"
+      ],
+      "source": "rust:zipzi_contract::document::AttachmentEdit::Duplicate"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.AttachmentEditReorder"
+      ],
+      "source": "rust:zipzi_contract::document::AttachmentEdit::Reorder"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.AttachmentEditReplace"
+      ],
+      "source": "rust:zipzi_contract::document::AttachmentEdit::Replace"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.AttachmentEditSetSound"
+      ],
+      "source": "rust:zipzi_contract::document::AttachmentEdit::SetSound"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.AttachmentEditSetUserData"
+      ],
+      "source": "rust:zipzi_contract::document::AttachmentEdit::SetUserData"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.AttachmentRefResolved"
+      ],
+      "source": "rust:zipzi_contract::document::AttachmentRef::Resolved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.AttachmentRefUnresolved"
+      ],
+      "source": "rust:zipzi_contract::document::AttachmentRef::Unresolved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.BlendMode",
+        "zipzi.sampling.BlendMode"
+      ],
+      "source": "rust:zipzi_contract::model::BlendMode"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.DeformerOriginal"
+      ],
+      "source": "rust:zipzi_contract::model::DeformerOriginal"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.DeformerOriginalAction"
+      ],
+      "source": "rust:zipzi_contract::model::DeformerOriginalAction"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.DeformerOriginalActionAutoUpdate"
+      ],
+      "source": "rust:zipzi_contract::model::DeformerOriginalAction::AutoUpdate"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.DeformerOriginalActionRestore"
+      ],
+      "source": "rust:zipzi_contract::model::DeformerOriginalAction::Restore"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.DeformerOriginalActionUpdate"
+      ],
+      "source": "rust:zipzi_contract::model::DeformerOriginalAction::Update"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.DeformerOriginalShape"
+      ],
+      "source": "rust:zipzi_contract::model::DeformerOriginalShape"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.DeformerOriginalShapeRotation"
+      ],
+      "source": "rust:zipzi_contract::model::DeformerOriginalShape::Rotation"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.DeformerOriginalShapeWarp"
+      ],
+      "source": "rust:zipzi_contract::model::DeformerOriginalShape::Warp"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.DeformerOriginalSnapshot"
+      ],
+      "source": "rust:zipzi_contract::model::DeformerOriginalSnapshot"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.DeformerOriginalSource"
+      ],
+      "source": "rust:zipzi_contract::model::DeformerOriginalSource"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.DrawOrderGroup"
+      ],
+      "source": "rust:zipzi_contract::document::DrawOrderGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.Glue"
+      ],
+      "source": "rust:zipzi_contract::model::Glue"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.GlueVertexPair"
+      ],
+      "source": "rust:zipzi_contract::model::GlueVertexPair"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.Offscreen"
+      ],
+      "source": "rust:zipzi_contract::model::Offscreen"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.OffscreenDeletePolicy"
+      ],
+      "source": "rust:zipzi_contract::document::OffscreenDeletePolicy"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.OffscreenDeletePolicyNeutral"
+      ],
+      "source": "rust:zipzi_contract::document::OffscreenDeletePolicy::Neutral"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.OffscreenDeletePolicyRejectReferences"
+      ],
+      "source": "rust:zipzi_contract::document::OffscreenDeletePolicy::RejectReferences"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.OffscreenDeletePolicyRemap"
+      ],
+      "source": "rust:zipzi_contract::document::OffscreenDeletePolicy::Remap"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.OffscreenMappingPatch"
+      ],
+      "source": "rust:zipzi_contract::document::OffscreenMappingPatch"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.OrganizationCollection"
+      ],
+      "source": "rust:zipzi_contract::document::OrganizationCollection"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.OrganizationCollectionParameterGroups"
+      ],
+      "source": "rust:zipzi_contract::document::OrganizationCollection::ParameterGroups"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.OrganizationCollectionParameters"
+      ],
+      "source": "rust:zipzi_contract::document::OrganizationCollection::Parameters"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.OrganizationCollectionPartMembers"
+      ],
+      "source": "rust:zipzi_contract::document::OrganizationCollection::PartMembers"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.OrganizationDeletePolicy"
+      ],
+      "source": "rust:zipzi_contract::document::OrganizationDeletePolicy"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.OrganizationEdit"
+      ],
+      "source": "rust:zipzi_contract::document::OrganizationEdit"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.OrganizationEditCreateGroup"
+      ],
+      "source": "rust:zipzi_contract::document::OrganizationEdit::CreateGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.OrganizationEditCreateParameter"
+      ],
+      "source": "rust:zipzi_contract::document::OrganizationEdit::CreateParameter"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.OrganizationEditCreatePart"
+      ],
+      "source": "rust:zipzi_contract::document::OrganizationEdit::CreatePart"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.OrganizationEditDelete"
+      ],
+      "source": "rust:zipzi_contract::document::OrganizationEdit::Delete"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.OrganizationEditDuplicate"
+      ],
+      "source": "rust:zipzi_contract::document::OrganizationEdit::Duplicate"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.OrganizationEditMove"
+      ],
+      "source": "rust:zipzi_contract::document::OrganizationEdit::Move"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.OrganizationEditPatchGroup"
+      ],
+      "source": "rust:zipzi_contract::document::OrganizationEdit::PatchGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.OrganizationEditSetParameterGroup"
+      ],
+      "source": "rust:zipzi_contract::document::OrganizationEdit::SetParameterGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.Part"
+      ],
+      "source": "rust:zipzi_contract::model::Part"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.ReparentContext"
+      ],
+      "source": "rust:zipzi_contract::document::ReparentContext"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.ReparentEdit"
+      ],
+      "source": "rust:zipzi_contract::document::ReparentEdit"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.ReparentPlacement"
+      ],
+      "source": "rust:zipzi_contract::document::ReparentPlacement"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.ReparentStrategy"
+      ],
+      "source": "rust:zipzi_contract::document::ReparentStrategy"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.RotationPose"
+      ],
+      "source": "rust:zipzi_contract::model::RotationPose"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.RotationTransform"
+      ],
+      "source": "rust:zipzi_contract::model::RotationTransform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneCollection"
+      ],
+      "source": "rust:zipzi_contract::document::SceneCollection"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneCollectionDeformation"
+      ],
+      "source": "rust:zipzi_contract::document::SceneCollection::Deformation"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneCollectionDrawing"
+      ],
+      "source": "rust:zipzi_contract::document::SceneCollection::Drawing"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneCollectionDrawingGroups"
+      ],
+      "source": "rust:zipzi_contract::document::SceneCollection::DrawingGroups"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneCollectionGlues"
+      ],
+      "source": "rust:zipzi_contract::document::SceneCollection::Glues"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneCollectionOrganization"
+      ],
+      "source": "rust:zipzi_contract::document::SceneCollection::Organization"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEdit"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditDeformerOriginal"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::DeformerOriginal"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditDeleteGluePairs"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::DeleteGluePairs"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditDeleteMeshVertices"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::DeleteMeshVertices"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditDeleteOffscreenKeyforms"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::DeleteOffscreenKeyforms"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditDeleteTriangles"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::DeleteTriangles"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditDuplicateGluePairs"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::DuplicateGluePairs"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditDuplicateOffscreenKeyforms"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::DuplicateOffscreenKeyforms"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditInsertGluePair"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::InsertGluePair"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditInsertMeshVertices"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::InsertMeshVertices"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditInsertOffscreenKeyform"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::InsertOffscreenKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditInsertTriangle"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::InsertTriangle"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditMeshVertices"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::MeshVertices"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditMoveGluePairs"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::MoveGluePairs"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditPatchGluePair"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::PatchGluePair"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditPatchOffscreenKeyform"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::PatchOffscreenKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditPatchTriangle"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::PatchTriangle"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditReorderMeshVertices"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::ReorderMeshVertices"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditReorderOffscreenKeyforms"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::ReorderOffscreenKeyforms"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditReplaceTriangles"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::ReplaceTriangles"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditResizeWarp"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::ResizeWarp"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditRotationKeepChildren"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::RotationKeepChildren"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditSetOffscreenMapping"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::SetOffscreenMapping"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditTransferGluePairs"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::TransferGluePairs"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditWarpAuthoring"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::WarpAuthoring"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditWarpBezier"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::WarpBezier"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditWarpBezierControls"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::WarpBezierControls"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditWarpKeepChildren"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::WarpKeepChildren"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditWarpPoints"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::WarpPoints"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentEditWarpShape"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentEdit::WarpShape"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentTarget"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentTarget"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentTargetGluePair"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentTarget::GluePair"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentTargetOffscreenKeyform"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentTarget::OffscreenKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentTargetOffscreenMapping"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentTarget::OffscreenMapping"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentTargetTriangle"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentTarget::Triangle"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentTargetVertexPosition"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentTarget::VertexPosition"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentTargetVertexUv"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentTarget::VertexUv"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentTargetWarpPoint"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentTarget::WarpPoint"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentValue"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentValue"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentValueGluePair"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentValue::GluePair"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentValueMapping"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentValue::Mapping"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentValueOffscreenKeyform"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentValue::OffscreenKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentValuePoint"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentValue::Point"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneContentValueTriangle"
+      ],
+      "source": "rust:zipzi_contract::document::SceneContentValue::Triangle"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneCopyScope"
+      ],
+      "source": "rust:zipzi_contract::document::SceneCopyScope"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneCreate"
+      ],
+      "source": "rust:zipzi_contract::document::SceneCreate"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneCreateGlue"
+      ],
+      "source": "rust:zipzi_contract::document::SceneCreate::Glue"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneCreateMesh"
+      ],
+      "source": "rust:zipzi_contract::document::SceneCreate::Mesh"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneCreateOffscreen"
+      ],
+      "source": "rust:zipzi_contract::document::SceneCreate::Offscreen"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneCreateRotation"
+      ],
+      "source": "rust:zipzi_contract::document::SceneCreate::Rotation"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneCreateWarp"
+      ],
+      "source": "rust:zipzi_contract::document::SceneCreate::Warp"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneEdit"
+      ],
+      "source": "rust:zipzi_contract::document::SceneEdit"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneEditCreate"
+      ],
+      "source": "rust:zipzi_contract::document::SceneEdit::Create"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneEditDelete"
+      ],
+      "source": "rust:zipzi_contract::document::SceneEdit::Delete"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneEditDissolveDrawingGroup"
+      ],
+      "source": "rust:zipzi_contract::document::SceneEdit::DissolveDrawingGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneEditDuplicate"
+      ],
+      "source": "rust:zipzi_contract::document::SceneEdit::Duplicate"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneEditDuplicateDrawingGroup"
+      ],
+      "source": "rust:zipzi_contract::document::SceneEdit::DuplicateDrawingGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneEditEnsureDrawingGroup"
+      ],
+      "source": "rust:zipzi_contract::document::SceneEdit::EnsureDrawingGroup"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneEditMove"
+      ],
+      "source": "rust:zipzi_contract::document::SceneEdit::Move"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneEditPatch"
+      ],
+      "source": "rust:zipzi_contract::document::SceneEdit::Patch"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneEditReparent"
+      ],
+      "source": "rust:zipzi_contract::document::SceneEdit::Reparent"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneEditSetDrawingRange"
+      ],
+      "source": "rust:zipzi_contract::document::SceneEdit::SetDrawingRange"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneEditTransferOffscreen"
+      ],
+      "source": "rust:zipzi_contract::document::SceneEdit::TransferOffscreen"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneField"
+      ],
+      "source": "rust:zipzi_contract::document::SceneField"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneFieldValue"
+      ],
+      "source": "rust:zipzi_contract::document::SceneFieldValue"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneFieldValueAppearance"
+      ],
+      "source": "rust:zipzi_contract::document::SceneFieldValue::Appearance"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneFieldValueContext"
+      ],
+      "source": "rust:zipzi_contract::document::SceneFieldValue::Context"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneFieldValueEnabled"
+      ],
+      "source": "rust:zipzi_contract::document::SceneFieldValue::Enabled"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneFieldValueGlueEndpoints"
+      ],
+      "source": "rust:zipzi_contract::document::SceneFieldValue::GlueEndpoints"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneFieldValueGlueIntensity"
+      ],
+      "source": "rust:zipzi_contract::document::SceneFieldValue::GlueIntensity"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneFieldValueLabel"
+      ],
+      "source": "rust:zipzi_contract::document::SceneFieldValue::Label"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneFieldValueMasks"
+      ],
+      "source": "rust:zipzi_contract::document::SceneFieldValue::Masks"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneFieldValueMeshDrawing"
+      ],
+      "source": "rust:zipzi_contract::document::SceneFieldValue::MeshDrawing"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneFieldValueOffscreen"
+      ],
+      "source": "rust:zipzi_contract::document::SceneFieldValue::Offscreen"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneFieldValueRotation"
+      ],
+      "source": "rust:zipzi_contract::document::SceneFieldValue::Rotation"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneFieldValueRuntimeId"
+      ],
+      "source": "rust:zipzi_contract::document::SceneFieldValue::RuntimeId"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneFieldValueTexture"
+      ],
+      "source": "rust:zipzi_contract::document::SceneFieldValue::Texture"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneFieldValueWarp"
+      ],
+      "source": "rust:zipzi_contract::document::SceneFieldValue::Warp"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneReference"
+      ],
+      "source": "rust:zipzi_contract::scene_reference::SceneReference"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneReferenceResolved"
+      ],
+      "source": "rust:zipzi_contract::scene_reference::SceneReference::Resolved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneReferenceUnresolved"
+      ],
+      "source": "rust:zipzi_contract::scene_reference::SceneReference::Unresolved"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.SceneReferenceUnspecified"
+      ],
+      "source": "rust:zipzi_contract::scene_reference::SceneReference::Unspecified"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.ShapeTarget"
+      ],
+      "source": "rust:zipzi_contract::document::ShapeTarget"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.ShapeTargetBase"
+      ],
+      "source": "rust:zipzi_contract::document::ShapeTarget::Base"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.ShapeTargetBlend"
+      ],
+      "source": "rust:zipzi_contract::document::ShapeTarget::Blend"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.ShapeTargetOrdinary"
+      ],
+      "source": "rust:zipzi_contract::document::ShapeTarget::Ordinary"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.Transform"
+      ],
+      "source": "rust:zipzi_contract::model::Transform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.TransformData"
+      ],
+      "source": "rust:zipzi_contract::model::TransformData"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.TransformDataRotation"
+      ],
+      "source": "rust:zipzi_contract::model::TransformData::Rotation"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.TransformDataWarp"
+      ],
+      "source": "rust:zipzi_contract::model::TransformData::Warp"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.WarpAuthoringSettings"
+      ],
+      "source": "rust:zipzi_contract::warp_bezier::WarpAuthoringSettings"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.WarpBezier"
+      ],
+      "source": "rust:zipzi_contract::warp_bezier::WarpBezier"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.WarpBezierControlPatch"
+      ],
+      "source": "rust:zipzi_contract::warp_bezier::WarpBezierControlPatch"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.WarpBezierGrid"
+      ],
+      "source": "rust:zipzi_contract::warp_bezier::WarpBezierGrid"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.WarpBezierNode"
+      ],
+      "source": "rust:zipzi_contract::warp_bezier::WarpBezierNode"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.WarpPointPatch"
+      ],
+      "source": "rust:zipzi_contract::document::WarpPointPatch"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.WarpShapeAction"
+      ],
+      "source": "rust:zipzi_contract::warp_bezier::WarpShapeAction"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.scene.WarpTransform"
+      ],
+      "source": "rust:zipzi_contract::model::WarpTransform"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.spatial.SpatialFrame",
+        "zipzi.spatial.Frame"
+      ],
+      "source": "rust:zipzi_contract::spatial::SpatialFrame"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.spatial.SpatialQueryBounds",
+        "zipzi.spatial.Bounds"
+      ],
+      "source": "rust:zipzi_contract::spatial::SpatialQuery::Bounds"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.spatial.SpatialQueryHits",
+        "zipzi.spatial.Hits"
+      ],
+      "source": "rust:zipzi_contract::spatial::SpatialQuery::Hits"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.spatial.SpatialResult",
+        "zipzi.spatial.Result"
+      ],
+      "source": "rust:zipzi_contract::spatial::SpatialResult"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.spatial.SpatialResultBounds",
+        "zipzi.spatial.BoundsResult"
+      ],
+      "source": "rust:zipzi_contract::spatial::SpatialResult::Bounds"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.spatial.SpatialResultHits",
+        "zipzi.spatial.HitsResult"
+      ],
+      "source": "rust:zipzi_contract::spatial::SpatialResult::Hits"
+    },
+    {
+      "paths": [
+        "zipzi.modeling.spatial.SpatialSamples",
+        "zipzi.spatial.Batch"
+      ],
+      "source": "rust:zipzi_contract::spatial::SpatialSamples"
+    },
+    {
+      "paths": [
+        "zipzi.ops.Operation"
+      ],
+      "source": "python:zipzi.ops.Operation"
+    },
+    {
+      "paths": [
+        "zipzi.ops.PlannableOperation"
+      ],
+      "source": "python:zipzi.ops.PlannableOperation"
+    },
+    {
+      "paths": [
+        "zipzi.references.LabelAddress"
+      ],
+      "source": "python:zipzi.references.LabelAddress"
+    },
+    {
+      "paths": [
+        "zipzi.references.ObjectKind"
+      ],
+      "source": "python:zipzi._generated.reference_values.ObjectKind"
+    },
+    {
+      "paths": [
+        "zipzi.references.ObjectRef"
+      ],
+      "source": "python:zipzi.references.ObjectRef"
+    },
+    {
+      "paths": [
+        "zipzi.resources.CreateImage"
+      ],
+      "source": "rust:zipzi_contract::runtime::ResourceOperation::CreateImage"
+    },
+    {
+      "paths": [
+        "zipzi.resources.Image"
+      ],
+      "source": "rust:zipzi_contract::runtime::ImageSnapshot"
+    },
+    {
+      "paths": [
+        "zipzi.resources.ImagePixels"
+      ],
+      "source": "rust:zipzi_contract::runtime::ImagePixels"
+    },
+    {
+      "paths": [
+        "zipzi.resources.RenameImage"
+      ],
+      "source": "rust:zipzi_contract::runtime::ResourceOperation::RenameImage"
+    },
+    {
+      "paths": [
+        "zipzi.resources.ReplaceImage"
+      ],
+      "source": "rust:zipzi_contract::runtime::ResourceOperation::ReplaceImage"
+    },
+    {
+      "paths": [
+        "zipzi.resources.Usage"
+      ],
+      "source": "rust:zipzi_contract::runtime::ResourceUsage"
+    },
+    {
+      "paths": [
+        "zipzi.sampling.RenderKind"
+      ],
+      "source": "python:zipzi._generated.sampling_values.RenderKind"
+    },
+    {
+      "paths": [
+        "zipzi.scene.CreateBlendTable"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::CreateBlendTable"
+    },
+    {
+      "paths": [
+        "zipzi.scene.CreateGlue"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::CreateGlue"
+    },
+    {
+      "paths": [
+        "zipzi.scene.CreateMeshBlend"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::CreateMeshBlend"
+    },
+    {
+      "paths": [
+        "zipzi.scene.CreateOffscreen"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::CreateOffscreen"
+    },
+    {
+      "paths": [
+        "zipzi.scene.CreateParameterGroup"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::CreateParameterGroup"
+    },
+    {
+      "paths": [
+        "zipzi.scene.CreatePart"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::CreatePart"
+    },
+    {
+      "paths": [
+        "zipzi.scene.CreateRotation"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::CreateRotation"
+    },
+    {
+      "paths": [
+        "zipzi.scene.CreateWarp"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::CreateWarp"
+    },
+    {
+      "paths": [
+        "zipzi.scene.DeleteGluePairs"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::DeleteGluePairs"
+    },
+    {
+      "paths": [
+        "zipzi.scene.DeleteMeshVertices"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::DeleteMeshVertices"
+    },
+    {
+      "paths": [
+        "zipzi.scene.DeleteOrganization"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::DeleteOrganization"
+    },
+    {
+      "paths": [
+        "zipzi.scene.DeleteScene"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::DeleteScene"
+    },
+    {
+      "paths": [
+        "zipzi.scene.DuplicateScene"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::DuplicateScene"
+    },
+    {
+      "paths": [
+        "zipzi.scene.GluePair"
+      ],
+      "source": "rust:zipzi_contract::authoring::GluePairSpec"
+    },
+    {
+      "paths": [
+        "zipzi.scene.InsertGluePair"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::InsertGluePair"
+    },
+    {
+      "paths": [
+        "zipzi.scene.InsertMeshVertex"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::InsertMeshVertex"
+    },
+    {
+      "paths": [
+        "zipzi.scene.InsertOffscreenKeyform"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::InsertOffscreenKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.scene.MoveDeformation"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::MoveDeformation"
+    },
+    {
+      "paths": [
+        "zipzi.scene.MoveParameterGroups"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::MoveParameterGroups"
+    },
+    {
+      "paths": [
+        "zipzi.scene.MoveParameters"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::MoveParameters"
+    },
+    {
+      "paths": [
+        "zipzi.scene.MoveToPart"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::MoveToPart"
+    },
+    {
+      "paths": [
+        "zipzi.scene.OffscreenForm"
+      ],
+      "source": "rust:zipzi_contract::authoring::OffscreenFormSpec"
+    },
+    {
+      "paths": [
+        "zipzi.scene.Operation"
+      ],
+      "source": "python:zipzi._generated.scene.Operation"
+    },
+    {
+      "paths": [
+        "zipzi.scene.ParameterGroupSpec"
+      ],
+      "source": "rust:zipzi_contract::authoring::ParameterGroupCreateSpec"
+    },
+    {
+      "paths": [
+        "zipzi.scene.PartSpec"
+      ],
+      "source": "rust:zipzi_contract::authoring::PartCreateSpec"
+    },
+    {
+      "paths": [
+        "zipzi.scene.PatchOffscreenKeyform"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::PatchOffscreenKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.scene.Placement"
+      ],
+      "source": "rust:zipzi_contract::authoring::ScenePlacement"
+    },
+    {
+      "paths": [
+        "zipzi.scene.ReorderMeshVertices"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::ReorderMeshVertices"
+    },
+    {
+      "paths": [
+        "zipzi.scene.ReparentLocal"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::ReparentLocal"
+    },
+    {
+      "paths": [
+        "zipzi.scene.ReplaceTriangles"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::ReplaceTriangles"
+    },
+    {
+      "paths": [
+        "zipzi.scene.Sample"
+      ],
+      "source": "rust:zipzi_contract::authoring::ScalarSample"
+    },
+    {
+      "paths": [
+        "zipzi.scene.SetMeshBlendVertices"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::SetMeshBlendVertices"
+    },
+    {
+      "paths": [
+        "zipzi.scene.SetOffscreenStaticKeyform"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::SetOffscreenStaticKeyform"
+    },
+    {
+      "paths": [
+        "zipzi.scene.SetSceneEnabled"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::SetSceneEnabled"
+    },
+    {
+      "paths": [
+        "zipzi.scene.SetSceneLabel"
+      ],
+      "source": "rust:zipzi_contract::authoring::SceneOperation::SetSceneLabel"
+    },
+    {
+      "paths": [
+        "zipzi.scene.VertexPatch"
+      ],
+      "source": "rust:zipzi_contract::authoring::VertexPatchSpec"
+    },
+    {
+      "paths": [
+        "zipzi.scene.VertexWeight"
+      ],
+      "source": "rust:zipzi_contract::authoring::VertexWeightSpec"
+    }
+  ]
+}

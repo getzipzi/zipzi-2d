@@ -11,7 +11,7 @@ from typing import TypeAlias
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseEditCreate(CompactValue):
-    'Immutable owned PoseEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
+    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
     _variant: _ClassVar[str] = 'create'
     id: str
 
@@ -19,7 +19,7 @@ PoseEditCreate.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseEditCreateGroup(CompactValue):
-    'Immutable owned PoseEditCreateGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npose_id: Stable Pose singleton ID; the operation may create it when absent.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    'Also creates the singleton when absent, in the same transaction.\n\nFields:\npose_id: Stable Pose singleton ID; the operation may create it when absent.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'create_group'
     pose_id: str
     id: str
@@ -30,7 +30,7 @@ PoseEditCreateGroup.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseEditCreateEntry(CompactValue):
-    'Immutable owned PoseEditCreateEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    '\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'create_entry'
     group_id: str
     id: str
@@ -40,7 +40,7 @@ PoseEditCreateEntry.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseEditCreateLink(CompactValue):
-    'Immutable owned PoseEditCreateLink value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nentry_id: Stable ID of the owning entry; links remain owned by that entry.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    '\n\nFields:\nentry_id: Stable ID of the owning entry; links remain owned by that entry.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'create_link'
     entry_id: str
     id: str
@@ -50,7 +50,7 @@ PoseEditCreateLink.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseEditPatch(CompactValue):
-    'Immutable owned PoseEditPatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nexpected: Exact current field values required by the optimistic edit; stale values reject it.\nfields: Typed replacement fields for the addressed object, applied atomically.'
+    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nexpected: Exact current field values required by the optimistic edit; stale values reject it.\nfields: Typed replacement fields for the addressed object, applied atomically.'
     _variant: _ClassVar[str] = 'patch'
     id: str
     expected: PoseFields
@@ -60,7 +60,7 @@ PoseEditPatch.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseEditMove(CompactValue):
-    'Immutable owned PoseEditMove value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'move'
     ids: tuple[str, ...]
     destination: PoseCollection
@@ -73,7 +73,7 @@ PoseEditMove.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseEditDuplicate(CompactValue):
-    'Immutable owned PoseEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'duplicate'
     ids: tuple[str, ...]
     destination: PoseCollection
@@ -86,7 +86,7 @@ PoseEditDuplicate.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseEditDelete(CompactValue):
-    'Immutable owned PoseEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
+    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
     _variant: _ClassVar[str] = 'delete'
     ids: tuple[str, ...]
 
@@ -97,7 +97,7 @@ PoseEditDelete.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseEditDissolveGroup(CompactValue):
-    'Immutable owned PoseEditDissolveGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    'A Pose group has no root member container; a receiving group is required.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'dissolve_group'
     id: str
     destination: str
@@ -109,7 +109,7 @@ PoseEdit: TypeAlias = PoseEditCreate | PoseEditCreateGroup | PoseEditCreateEntry
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseFieldsAsset(CompactValue):
-    'Immutable owned PoseFieldsAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.'
+    '\n\nFields:\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.'
     _variant: _ClassVar[str] = 'asset'
     fade_in: (float | None) = None
 
@@ -117,7 +117,7 @@ PoseFieldsAsset.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseFieldsGroup(CompactValue):
-    'Immutable owned PoseFieldsGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nname: Human-readable display or registration name; distinct from persistent object identity.'
+    '\n\nFields:\nname: Human-readable display or registration name; distinct from persistent object identity.'
     _variant: _ClassVar[str] = 'group'
     name: str
 
@@ -125,7 +125,7 @@ PoseFieldsGroup.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseFieldsEntry(CompactValue):
-    'Immutable owned PoseFieldsEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npart: Typed resolved/unresolved Part reference retained by the Pose entry or link.'
+    '\n\nFields:\npart: Typed resolved/unresolved Part reference retained by the Pose entry or link.'
     _variant: _ClassVar[str] = 'entry'
     part: PosePartRef
 
@@ -133,7 +133,7 @@ PoseFieldsEntry.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseFieldsLink(CompactValue):
-    'Immutable owned PoseFieldsLink value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.'
+    '\n\nFields:\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.'
     _variant: _ClassVar[str] = 'link'
     target: PosePartRef
 
@@ -143,14 +143,14 @@ PoseFields: TypeAlias = PoseFieldsAsset | PoseFieldsGroup | PoseFieldsEntry | Po
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PosePartRefUnspecified(CompactValue):
-    'Immutable owned PosePartRefUnspecified value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    ''
     _variant: _ClassVar[str] = 'unspecified'
 
 PosePartRefUnspecified.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PosePartRefResolved(CompactValue):
-    'Immutable owned PosePartRefResolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npart_id: Stable document Part UUID for this opacity or visibility reference.'
+    '\n\nFields:\npart_id: Stable document Part UUID for this opacity or visibility reference.'
     _variant: _ClassVar[str] = 'resolved'
     part_id: str
 
@@ -158,7 +158,7 @@ PosePartRefResolved.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PosePartRefUnresolved(CompactValue):
-    'Immutable owned PosePartRefUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nruntime_id: Imported/exported runtime label, distinct from the document object UUID.'
+    '\n\nFields:\nruntime_id: Imported/exported runtime label, distinct from the document object UUID.'
     _variant: _ClassVar[str] = 'unresolved'
     runtime_id: str
 
@@ -168,14 +168,14 @@ PosePartRef: TypeAlias = PosePartRefUnspecified | PosePartRefResolved | PosePart
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseCollectionGroups(CompactValue):
-    'Immutable owned PoseCollectionGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    ''
     _variant: _ClassVar[str] = 'groups'
 
 PoseCollectionGroups.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseCollectionEntries(CompactValue):
-    'Immutable owned PoseCollectionEntries value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.'
+    '\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.'
     _variant: _ClassVar[str] = 'entries'
     group_id: str
 
@@ -183,7 +183,7 @@ PoseCollectionEntries.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseCollectionLinks(CompactValue):
-    'Immutable owned PoseCollectionLinks value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nentry_id: Stable ID of the owning entry; links remain owned by that entry.'
+    '\n\nFields:\nentry_id: Stable ID of the owning entry; links remain owned by that entry.'
     _variant: _ClassVar[str] = 'links'
     entry_id: str
 
@@ -193,7 +193,7 @@ PoseCollection: TypeAlias = PoseCollectionGroups | PoseCollectionEntries | PoseC
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseAsset(CompactValue):
-    'Immutable owned PoseAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nfile_type: Optional format type label retained from the imported expression or Pose asset.\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.\ngroups: Ordered owned Pose groups; each owns its entries and link rows.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.\nopaque_source_ids: Original runtime-ID namespace used to validate preservation of opaque imported fields.\nopaque_source_content_hash: Original imported-content hash used to detect unsupported changes to opaque fields.'
+    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nfile_type: Optional format type label retained from the imported expression or Pose asset.\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.\ngroups: Ordered owned Pose groups; each owns its entries and link rows.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.\nopaque_source_ids: Original runtime-ID namespace used to validate preservation of opaque imported fields.\nopaque_source_content_hash: Original imported-content hash used to detect unsupported changes to opaque fields.'
     id: str
     file_type: (str | None) = None
     fade_in: (float | None) = None
@@ -211,7 +211,7 @@ PoseAsset.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseGroup(CompactValue):
-    'Immutable owned PoseGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nentries: Ordered owned registrations or expression/Pose entries, with stable identities.'
+    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nentries: Ordered owned registrations or expression/Pose entries, with stable identities.'
     id: str
     name: str
     entries: tuple[PoseEntry, ...]
@@ -223,7 +223,7 @@ PoseGroup.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseEntry(CompactValue):
-    'Immutable owned PoseEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\npart: Typed resolved/unresolved Part reference retained by the Pose entry or link.\nlinks: Optional ordered Pose links; None retains absence rather than an explicit empty list.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\npart: Typed resolved/unresolved Part reference retained by the Pose entry or link.\nlinks: Optional ordered Pose links; None retains absence rather than an explicit empty list.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
     id: str
     part: PosePartRef
     links: (tuple[PoseLink, ...] | None) = None
@@ -237,7 +237,7 @@ PoseEntry.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseLink(CompactValue):
-    'Immutable owned PoseLink value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.'
+    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.'
     id: str
     target: PosePartRef
 

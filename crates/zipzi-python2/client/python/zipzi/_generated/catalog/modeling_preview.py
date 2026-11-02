@@ -16,9 +16,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
                             'signature': ''},
  'zipzi.modeling.preview.PreviewBatch': {'children': ('zipzi.modeling.preview.PreviewBatch.__repr__',
                                                       'zipzi.modeling.preview.PreviewBatch.summary'),
-                                         'documentation': 'Immutable owned PreviewBatch value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('texture_report',
                                                      'Verified texture content for a View; None for CPU-only '
@@ -38,20 +36,33 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
                                          'signature': '(*, texture_report: ObservationTextureReport | None = None, '
                                                       'view: ObservationView | None = None, queries: '
                                                       'tuple[SpatialQuery, ...], sequence: int, frames: '
-                                                      'tuple[PreviewFrame, ...])'},
+                                                      'tuple[PreviewFrame, ...])',
+                                         'type_refs': ('zipzi.modeling.observation.ObservationTextureReport',
+                                                       'zipzi.modeling.observation.ObservationView',
+                                                       'zipzi.modeling.preview.PreviewFrame',
+                                                       'zipzi.modeling.spatial.SpatialQuery')},
  'zipzi.modeling.preview.PreviewBatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.preview.PreviewBatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.preview.PreviewCommand': {'children': (),
-                                           'documentation': 'Typed public API entry.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [],
-                                           'kind': 'value',
-                                           'signature': ''},
+                                           'kind': 'alias',
+                                           'signature': 'PreviewCommandSetParameter | PreviewCommandScheduleMotion | '
+                                                        'PreviewCommandScheduleRegistration | '
+                                                        'PreviewCommandScheduleExpression | '
+                                                        'PreviewCommandScheduleParameter | PreviewCommandSetPhysics | '
+                                                        'PreviewCommandReset',
+                                           'type_refs': ('zipzi.modeling.preview.PreviewCommandReset',
+                                                         'zipzi.modeling.preview.PreviewCommandScheduleExpression',
+                                                         'zipzi.modeling.preview.PreviewCommandScheduleMotion',
+                                                         'zipzi.modeling.preview.PreviewCommandScheduleParameter',
+                                                         'zipzi.modeling.preview.PreviewCommandScheduleRegistration',
+                                                         'zipzi.modeling.preview.PreviewCommandSetParameter',
+                                                         'zipzi.modeling.preview.PreviewCommandSetPhysics')},
  'zipzi.modeling.preview.PreviewCommandReset': {'children': ('zipzi.modeling.preview.PreviewCommandReset.__repr__',
                                                              'zipzi.modeling.preview.PreviewCommandReset.summary'),
-                                                'documentation': 'Immutable owned PreviewCommandReset value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [],
                                                 'kind': 'type',
@@ -60,11 +71,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandReset.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.preview.PreviewCommandScheduleExpression': {'children': ('zipzi.modeling.preview.PreviewCommandScheduleExpression.__repr__',
                                                                           'zipzi.modeling.preview.PreviewCommandScheduleExpression.summary'),
-                                                             'documentation': 'Immutable owned '
-                                                                              'PreviewCommandScheduleExpression value. '
-                                                                              'Construction owns declared collections; '
-                                                                              'reading fields, repr and summary '
-                                                                              'performs no IO.',
+                                                             'documentation': '',
                                                              'example': 'docs/recipes.py',
                                                              'fields': [('id', 'Native expression asset UUID.'),
                                                                         ('time',
@@ -76,11 +83,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandScheduleExpression.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.preview.PreviewCommandScheduleMotion': {'children': ('zipzi.modeling.preview.PreviewCommandScheduleMotion.__repr__',
                                                                       'zipzi.modeling.preview.PreviewCommandScheduleMotion.summary'),
-                                                         'documentation': 'Immutable owned '
-                                                                          'PreviewCommandScheduleMotion value. '
-                                                                          'Construction owns declared collections; '
-                                                                          'reading fields, repr and summary performs '
-                                                                          'no IO.',
+                                                         'documentation': '',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [('id', "Clip UUID; uses the clip's own fades."),
                                                                     ('time',
@@ -92,11 +95,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandScheduleMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.preview.PreviewCommandScheduleParameter': {'children': ('zipzi.modeling.preview.PreviewCommandScheduleParameter.__repr__',
                                                                          'zipzi.modeling.preview.PreviewCommandScheduleParameter.summary'),
-                                                            'documentation': 'Immutable owned '
-                                                                             'PreviewCommandScheduleParameter value. '
-                                                                             'Construction owns declared collections; '
-                                                                             'reading fields, repr and summary '
-                                                                             'performs no IO.',
+                                                            'documentation': '',
                                                             'example': 'docs/recipes.py',
                                                             'fields': [('id',
                                                                         'Document parameter UUID for an SDK input '
@@ -113,11 +112,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandScheduleParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.preview.PreviewCommandScheduleRegistration': {'children': ('zipzi.modeling.preview.PreviewCommandScheduleRegistration.__repr__',
                                                                             'zipzi.modeling.preview.PreviewCommandScheduleRegistration.summary'),
-                                                               'documentation': 'Immutable owned '
-                                                                                'PreviewCommandScheduleRegistration '
-                                                                                'value. Construction owns declared '
-                                                                                'collections; reading fields, repr and '
-                                                                                'summary performs no IO.',
+                                                               'documentation': '',
                                                                'example': 'docs/recipes.py',
                                                                'fields': [('id',
                                                                            "Registration UUID; uses the registration's "
@@ -131,10 +126,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandScheduleRegistration.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.preview.PreviewCommandSetParameter': {'children': ('zipzi.modeling.preview.PreviewCommandSetParameter.__repr__',
                                                                     'zipzi.modeling.preview.PreviewCommandSetParameter.summary'),
-                                                       'documentation': 'Immutable owned PreviewCommandSetParameter '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('id',
                                                                    'Document parameter UUID; the SDK validates '
@@ -148,9 +140,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandSetParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.preview.PreviewCommandSetPhysics': {'children': ('zipzi.modeling.preview.PreviewCommandSetPhysics.__repr__',
                                                                   'zipzi.modeling.preview.PreviewCommandSetPhysics.summary'),
-                                                     'documentation': 'Immutable owned PreviewCommandSetPhysics value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('enabled',
                                                                  'Enable the SDK Physics stage in this Preview only.'),
@@ -163,9 +153,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandSetPhysics.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.preview.PreviewFrame': {'children': ('zipzi.modeling.preview.PreviewFrame.__repr__',
                                                       'zipzi.modeling.preview.PreviewFrame.summary'),
-                                         'documentation': 'Immutable owned PreviewFrame value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('observation',
                                                      'Optional GPU image from this exact animation state and '
@@ -190,14 +178,16 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
                                          'signature': '(*, observation: ObservationImage | None = None, spatial: '
                                                       'tuple[SpatialResult, ...], preview_id: int, sequence: int, '
                                                       'index: int, motion: MotionSnapshot, geometry: DrawableFrame | '
-                                                      'None = None)'},
+                                                      'None = None)',
+                                         'type_refs': ('zipzi.modeling.motion.MotionSnapshot',
+                                                       'zipzi.modeling.observation.ObservationImage',
+                                                       'zipzi.modeling.sampling.DrawableFrame',
+                                                       'zipzi.modeling.spatial.SpatialResult')},
  'zipzi.modeling.preview.PreviewFrame.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.preview.PreviewFrame.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.preview.PreviewState': {'children': ('zipzi.modeling.preview.PreviewState.__repr__',
                                                       'zipzi.modeling.preview.PreviewState.summary'),
-                                         'documentation': 'Immutable owned PreviewState value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('sequence',
                                                      'Monotonic accepted operation ordinal, including cancelled sample '

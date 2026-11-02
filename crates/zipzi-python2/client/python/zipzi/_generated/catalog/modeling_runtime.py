@@ -6,9 +6,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.runtime': {'children': ('zipzi.modelin
                             'signature': ''},
  'zipzi.modeling.runtime.EditorContext': {'children': ('zipzi.modeling.runtime.EditorContext.__repr__',
                                                        'zipzi.modeling.runtime.EditorContext.summary'),
-                                          'documentation': 'Immutable owned EditorContext value. Construction owns '
-                                                           'declared collections; reading fields, repr and summary '
-                                                           'performs no IO.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
                                           'fields': [('version',
                                                       'Exact SDK version captured for this value; not a best-effort '
@@ -28,6 +26,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.runtime': {'children': ('zipzi.modelin
                                           'kind': 'type',
                                           'signature': '(*, version: _Version, view_id: str, selected_ids: tuple[str, '
                                                        '...], workspace: str, editing_context: str, active_tool: str, '
-                                                       'pending_interaction: bool)'},
+                                                       'pending_interaction: bool)',
+                                          'type_refs': ('zipzi.Version',)},
  'zipzi.modeling.runtime.EditorContext.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.runtime.EditorContext.summary': {'alias': 'zipzi.ApiDescription.summary'}}

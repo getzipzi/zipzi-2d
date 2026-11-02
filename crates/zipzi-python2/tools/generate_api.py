@@ -11,7 +11,7 @@ _python_api_spec.loader.exec_module(_python_api)
 build_api = _python_api.build_api
 document_model = _python_api.document_model
 
-PUBLIC_EXPORTS = {'meshes': ('Mesh values are generated; selected Plan intents are generated.',
+PUBLIC_EXPORTS = {'meshes': ('Mesh geometry, creation specifications and typed operations. Read through session.meshes and author through edit.meshes.',
             ['from ._generated.meshes import Geometry as Geometry, MeshSpec as '
              'MeshSpec, Point as Point, Mesh as Mesh, Meshing as Meshing, Constraint as Constraint, ConstraintKind as ConstraintKind',
              'from ._generated.mesh_ops import Create as Create, Rename as '
@@ -146,18 +146,21 @@ WRITES = {'Meshes': [('create',
              'spec: meshes.MeshSpec',
              'str',
              'meshes.Create(spec)',
-             '(spec,)'),
+             '(spec,)',
+             'Apply through edit.meshes.create(spec) and return the stable mesh ID as str. Example: mesh_id = edit.meshes.create(meshes.MeshSpec("Triangle", geometry)).'),
             ('rename',
              'id: str, name: str, *, expected_name: str | None = None',
              'WriteResult',
              'meshes.Rename(id,name,expected_name=expected_name)',
-             '(id,name,expected_name)'),
+             '(id,name,expected_name)',
+             'Apply through edit.meshes.rename() and return WriteResult with the candidate Source. Example: edit.meshes.rename(mesh_id, "Face", expected_name="Triangle").'),
             ('set_positions',
              'id: str, *, vertex_ids: Sequence[int], positions: '
              'Sequence[meshes.Point]',
              'WriteResult',
              'meshes.SetPositions(id,vertex_ids,positions)',
-             '(id,vertex_ids,positions)')],
+             '(id,vertex_ids,positions)',
+             'Apply through edit.meshes.set_positions() and return WriteResult with the candidate Source. Example: edit.meshes.set_positions(mesh_id, vertex_ids=(7,), positions=((2.0, 0.0),)).')],
  'Parameters': [('create',
                  'spec: parameters.ParameterSpec',
                  'str',
@@ -190,6 +193,12 @@ OWNED_REQUESTS={'resources.Resources':'prepare_image prepare_buffer load_png pre
 
 def render_api(contract,header,rust_header,resolve,codec_domains):
     runtime=contract['runtime']
+    operation_docs={}
+    for binding in contract['bindings']:
+        if binding['form']!='union':continue
+        shape=resolve({'kind':'ref','name':binding['rust']})
+        for variant in shape['variants']:
+            operation_docs['meshes.'+variant['rust_name']]=variant.get('doc','').strip()
     writes={key:list(value) for key,value in WRITES.items()}
     # Public resource constructors flatten the selected SDK spec and replace
     # only the runtime ImageId leaf with its ownership wrapper.
@@ -260,9 +269,9 @@ def render_api(contract,header,rust_header,resolve,codec_domains):
     facade=[header.rstrip(),'"""Uniform, typed domain calls. Only registered hooks own execution policy."""','from collections.abc import Sequence, Mapping','from .. import meshes, parameters, bindings, resources, scene, sampling, modeling','from .. import spatial as _spatial, observation','from .. import _lifecycle','from .._results import Snapshot, Batch, Page, PageCursor','from .._values import Source, WriteResult','from .._calls import project, single_id','from .._facade_support import Collection, records, sample','from .._spatial import sample as spatial_sample','from .._observation import sample as observation_sample, estimate as observation_estimate','']
     for cls,domain,value,key in DOMAINS:
         summary='scene.Summary' if domain=='scene' else domain+'.Summary'
-        facade+=['class '+cls+'(Collection['+domain+'.'+value+']):','    def __init__(self, session: "_lifecycle.Session", edit: "_lifecycle.Edit | None" = None):','        super().__init__(session,edit,'+repr(domain)+','+domain+'.'+value+'.read,'+repr(key)+')',
+        facade+=['class '+cls+'(Collection['+domain+'.'+value+']):','    '+repr('Read '+domain+' through a Session or Edit. Session reads committed document content; Edit reads include its pending writes.'),'    def __init__(self, session: "_lifecycle.Session", edit: "_lifecycle.Edit | None" = None):','        super().__init__(session,edit,'+repr(domain)+','+domain+'.'+value+'.read,'+repr(key)+')',
          '    def get(self, id: str, *, expected: Source | None = None) -> Snapshot['+domain+'.'+value+']:',
-         '        '+repr('Read one owned value at an exact formal or candidate Source.\n\n'
+         '        '+repr('Read one owned value at an exact formal or candidate Source.\n\nThrough Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.\n\n'
              'id is the stable document object ID, not a name. expected=None reads current content; '
              'an explicit Source is checked atomically and stale sources raise STALE_SOURCE. '
              'Returns Snapshot[value] with the captured Source; reading its fields performs no IO. '
@@ -272,7 +281,7 @@ def render_api(contract,header,rust_header,resolve,codec_domains):
              'Example: snapshot = session.'+domain+'.get(id); value = snapshot.value.'),
          '        return project(lambda: self._read((id,),expected), self._single, operation='+repr(domain+'.get')+', inputs=(id,expected))',
          '    def get_many(self, ids: Sequence[str], *, expected: Source | None = None) -> Batch['+domain+'.'+value+']:',
-         '        '+repr('Read all selected IDs atomically from one formal or candidate Source.\n\n'
+         '        '+repr('Read all selected IDs atomically from one formal or candidate Source.\n\nThrough Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.\n\n'
              'ids is copied before execution; requested order and duplicates are preserved. '
              'expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. '
              'Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte '
@@ -281,7 +290,7 @@ def render_api(contract,header,rust_header,resolve,codec_domains):
              'the captured source. Example: batch = session.'+domain+'.get_many((id, id)).'),
          '        return self._read(tuple(ids),expected)',
          '    def list(self, *, name: str | None = None, limit: int = 128, cursor: PageCursor | None = None) -> Page['+summary+']:',
-         '        '+repr('Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.\n\n'
+         '        '+repr('Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.\n\nThrough Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.\n\n'
              'name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate '
              'names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan '
              'budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the '
@@ -299,19 +308,22 @@ def render_api(contract,header,rust_header,resolve,codec_domains):
                 'Example: with session.resources.snapshot(id) as lease: pixels = lease.pixels().'),
             '        return self._image_lease(id)','']
         if cls not in writes:continue
-        facade+=['class Editable'+cls+'('+cls+'):']
-        for name,args,result,expr,inputs in writes[cls]:
+        facade+=['class Editable'+cls+'('+cls+'):', '    '+repr('Read and author '+domain+' in this Edit candidate. Reads include pending writes; commit publishes changes separately.')]
+        for name,args,result,expr,inputs,*documentation in writes[cls]:
             operation=expr.split('(',1)[0]
             returns='the stable object ID as str' if result=='str' else 'WriteResult with the new candidate Source and ordered result IDs'
             detail='Arguments have the semantics of '+operation+'; inspect that operation and its input DTO fields with zipzi.describe. '
             if cls=='Images' and name in {'create_image','replace_image'}:detail+='image must be a live PreparedImage from this Runtime; close that independent lease after acceptance, while native candidate/history owners retain the pixels. '
+            summary=(documentation[0] if documentation else 'Apply '+operation+' synchronously to this Edit and return '+returns+'.\n\n'+detail).rstrip()
+            shared=operation_docs.get(operation,'')
+            if shared:summary=shared+'\n\n'+summary
             facade+=['    def '+name+'(self, '+args+') -> '+result+':',
-                '        '+repr('Apply '+operation+' synchronously to this Edit and return '+returns+'.\n\n'+detail+
+                '        '+repr(summary+'\n\n'+
                     'This changes candidate state only; commit publishes separately. Ordinary write failures '
                     'abort the candidate even when caught, so repair inputs and start a new Edit. Confirmed Busy '
                     'or pre-execution admission refusal preserves it; act on recovery_action. OutcomeUnknown '
-                    'retains the original Call and exact return type: recover it instead of replaying the write. '
-                    'Example: result = edit.'+domain+'.'+name+'(...), using the arguments shown in its signature.')]
+                    'retains the original Call and exact return type: recover it instead of replaying the write.'
+                    + ('' if documentation else ' Example: result = edit.'+domain+'.'+name+'(...), using the arguments shown in its signature.'))]
             if result=='str':facade+=['        return project(lambda: self._write(lambda: '+expr+'),single_id,operation='+repr(domain+'.'+name)+',inputs='+inputs+')']
             else:facade+=['        return self._write(lambda: '+expr+')']
         facade+=['']

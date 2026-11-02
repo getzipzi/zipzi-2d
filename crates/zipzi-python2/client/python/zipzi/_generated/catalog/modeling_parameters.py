@@ -9,9 +9,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.parameters': {'children': ('zipzi.mode
                                'signature': ''},
  'zipzi.modeling.parameters.Parameter': {'children': ('zipzi.modeling.parameters.Parameter.__repr__',
                                                       'zipzi.modeling.parameters.Parameter.summary'),
-                                         'documentation': 'Immutable owned Parameter value. Construction owns declared '
-                                                          'collections; reading fields, repr and summary performs no '
-                                                          'IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('id',
                                                      'Stable document object ID used by references; it is distinct '
@@ -43,21 +41,19 @@ DATA: dict[str, Entry] = {'zipzi.modeling.parameters': {'children': ('zipzi.mode
                                          'signature': '(*, id: str, runtime_id: str, name: str, minimum: float, '
                                                       'maximum: float, default_value: float, decimal_places: int = 6, '
                                                       'kind: ParameterKind = ParameterKind.NORMAL, repeat: bool = '
-                                                      'False)'},
+                                                      'False)',
+                                         'type_refs': ('zipzi.modeling.parameters.ParameterKind',)},
  'zipzi.modeling.parameters.Parameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.parameters.Parameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.parameters.ParameterKind': {'children': (),
-                                             'documentation': 'Immutable typed value. See field semantics and the '
-                                                              'linked workflow.',
+                                             'documentation': '',
                                              'example': 'docs/recipes.py',
-                                             'fields': [],
-                                             'kind': 'type',
-                                             'signature': '()'},
+                                             'fields': [('NORMAL', "'normal'"), ('BLEND_SHAPE', "'blend_shape'")],
+                                             'kind': 'enum',
+                                             'signature': ''},
  'zipzi.modeling.parameters.ParameterRangeEdit': {'children': ('zipzi.modeling.parameters.ParameterRangeEdit.__repr__',
                                                                'zipzi.modeling.parameters.ParameterRangeEdit.summary'),
-                                                  'documentation': 'Immutable owned ParameterRangeEdit value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('parameter_id',
                                                               'Stable document parameter ID, not its exported runtime '
@@ -75,13 +71,16 @@ DATA: dict[str, Entry] = {'zipzi.modeling.parameters': {'children': ('zipzi.mode
                                                               'removal or remapping is requested.')],
                                                   'kind': 'type',
                                                   'signature': '(*, parameter_id: str, minimum: float, maximum: float, '
-                                                               'default_value: float, policy: ParameterRangePolicy)'},
+                                                               'default_value: float, policy: ParameterRangePolicy)',
+                                                  'type_refs': ('zipzi.modeling.parameters.ParameterRangePolicy',)},
  'zipzi.modeling.parameters.ParameterRangeEdit.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.parameters.ParameterRangeEdit.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.parameters.ParameterRangePolicy': {'children': (),
-                                                    'documentation': 'Immutable typed value. See field semantics and '
-                                                                     'the linked workflow.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
-                                                    'fields': [],
-                                                    'kind': 'type',
-                                                    'signature': '()'}}
+                                                    'fields': [('KEEP_KEY_VALUES', "'KeepKeyValues'"),
+                                                               ('MAP_KEY_VALUES',
+                                                                "'MapKeyValues' — Map every dependent key by the same "
+                                                                'increasing affine change of domain.')],
+                                                    'kind': 'enum',
+                                                    'signature': ''}}

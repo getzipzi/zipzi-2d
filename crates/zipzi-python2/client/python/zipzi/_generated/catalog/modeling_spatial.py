@@ -20,9 +20,11 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                             'signature': ''},
  'zipzi.modeling.spatial.GeometryHit': {'children': ('zipzi.modeling.spatial.GeometryHit.__repr__',
                                                      'zipzi.modeling.spatial.GeometryHit.summary'),
-                                        'documentation': 'Immutable owned GeometryHit value. Construction owns '
-                                                         'declared collections; reading fields, repr and summary '
-                                                         'performs no IO.',
+                                        'documentation': 'One mesh whose evaluated geometry contains the query point.\n'
+                                                         '\n'
+                                                         'A hit is a geometric candidate, not proof that the mesh '
+                                                         'painted a visible\n'
+                                                         'pixel. `part_path` and `part_names` run from root to leaf.',
                                         'example': 'docs/recipes.py',
                                         'fields': [('mesh_id', 'Stable authoring mesh ID.'),
                                                    ('name', 'Authoring mesh display name.'),
@@ -44,14 +46,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                         'signature': '(*, mesh_id: str, name: str, part_path: tuple[str, ...], '
                                                      'part_names: tuple[str, ...], enabled: bool, visible: bool, '
                                                      'opacity: float, render_order: int, triangles: tuple[TriangleHit, '
-                                                     '...])'},
+                                                     '...])',
+                                        'type_refs': ('zipzi.modeling.spatial.TriangleHit',)},
  'zipzi.modeling.spatial.GeometryHit.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.spatial.GeometryHit.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.GeometryQuery': {'children': ('zipzi.modeling.spatial.GeometryQuery.__repr__',
                                                        'zipzi.modeling.spatial.GeometryQuery.summary'),
-                                          'documentation': 'Immutable owned GeometryQuery value. Construction owns '
-                                                           'declared collections; reading fields, repr and summary '
-                                                           'performs no IO.',
+                                          'documentation': 'Mesh candidates for a model-space point, ordered by '
+                                                           'descending draw order.',
                                           'example': 'docs/recipes.py',
                                           'fields': [('hits', 'Candidates retained after applying `max_candidates`.'),
                                                      ('total', 'Number of candidates before applying the limit.'),
@@ -59,14 +61,17 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                       'Whether any candidates were omitted by the limit.')],
                                           'kind': 'type',
                                           'signature': '(*, hits: tuple[GeometryHit, ...], total: int, truncated: '
-                                                       'bool)'},
+                                                       'bool)',
+                                          'type_refs': ('zipzi.modeling.spatial.GeometryHit',)},
  'zipzi.modeling.spatial.GeometryQuery.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.spatial.GeometryQuery.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.ObjectBounds': {'children': ('zipzi.modeling.spatial.ObjectBounds.__repr__',
                                                       'zipzi.modeling.spatial.ObjectBounds.summary'),
-                                         'documentation': 'Immutable owned ObjectBounds value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': 'Bounds of evaluated target vertices in model coordinates.\n'
+                                                          '\n'
+                                                          'These geometric bounds can extend outside the canvas and do '
+                                                          'not account for\n'
+                                                          'textures, masks, or occlusion.',
                                          'example': 'docs/recipes.py',
                                          'fields': [('mesh_ids',
                                                      'Resolved mesh IDs in authoring order, including meshes filtered '
@@ -89,16 +94,19 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.ObjectBounds.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.spatial.ObjectBounds.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.ObjectTarget': {'children': (),
-                                         'documentation': 'Typed public API entry.',
+                                         'documentation': 'A mesh or Part selected by its stable authoring ID.\n'
+                                                          '\n'
+                                                          'A Part selects every descendant mesh, including meshes in '
+                                                          'nested Parts.',
                                          'example': 'docs/recipes.py',
                                          'fields': [],
-                                         'kind': 'value',
-                                         'signature': ''},
+                                         'kind': 'alias',
+                                         'signature': 'ObjectTargetMesh | ObjectTargetPart',
+                                         'type_refs': ('zipzi.modeling.spatial.ObjectTargetMesh',
+                                                       'zipzi.modeling.spatial.ObjectTargetPart')},
  'zipzi.modeling.spatial.ObjectTargetMesh': {'children': ('zipzi.modeling.spatial.ObjectTargetMesh.__repr__',
                                                           'zipzi.modeling.spatial.ObjectTargetMesh.summary'),
-                                             'documentation': 'Immutable owned ObjectTargetMesh value. Construction '
-                                                              'owns declared collections; reading fields, repr and '
-                                                              'summary performs no IO.',
+                                             'documentation': 'Select exactly one mesh.',
                                              'example': 'docs/recipes.py',
                                              'fields': [('value', 'Persistent authoring mesh UUID.')],
                                              'kind': 'type',
@@ -107,9 +115,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.ObjectTargetMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.ObjectTargetPart': {'children': ('zipzi.modeling.spatial.ObjectTargetPart.__repr__',
                                                           'zipzi.modeling.spatial.ObjectTargetPart.summary'),
-                                             'documentation': 'Immutable owned ObjectTargetPart value. Construction '
-                                                              'owns declared collections; reading fields, repr and '
-                                                              'summary performs no IO.',
+                                             'documentation': 'Select all descendant meshes of a Part.',
                                              'example': 'docs/recipes.py',
                                              'fields': [('value', 'Persistent Part UUID selecting descendant meshes.')],
                                              'kind': 'type',
@@ -118,9 +124,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.ObjectTargetPart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.SpatialFrame': {'children': ('zipzi.modeling.spatial.SpatialFrame.__repr__',
                                                       'zipzi.modeling.spatial.SpatialFrame.summary'),
-                                         'documentation': 'Immutable owned SpatialFrame value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('parameters',
                                                      'Effective evaluated parameter values keyed by document UUID, '
@@ -130,20 +134,22 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                      'empty results.')],
                                          'kind': 'type',
                                          'signature': '(*, parameters: _Mapping[str, float], results: '
-                                                      'tuple[SpatialResult, ...])'},
+                                                      'tuple[SpatialResult, ...])',
+                                         'type_refs': ('zipzi.modeling.spatial.SpatialResult',)},
  'zipzi.modeling.spatial.SpatialFrame.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.spatial.SpatialFrame.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.SpatialQuery': {'children': (),
-                                         'documentation': 'Typed public API entry.',
+                                         'documentation': 'CPU geometric queries; masks, textures and occlusion are '
+                                                          'not pixel-tested.',
                                          'example': 'docs/recipes.py',
                                          'fields': [],
-                                         'kind': 'value',
-                                         'signature': ''},
+                                         'kind': 'alias',
+                                         'signature': 'SpatialQueryBounds | SpatialQueryHits',
+                                         'type_refs': ('zipzi.modeling.spatial.SpatialQueryBounds',
+                                                       'zipzi.modeling.spatial.SpatialQueryHits')},
  'zipzi.modeling.spatial.SpatialQueryBounds': {'children': ('zipzi.modeling.spatial.SpatialQueryBounds.__repr__',
                                                             'zipzi.modeling.spatial.SpatialQueryBounds.summary'),
-                                               'documentation': 'Immutable owned SpatialQueryBounds value. '
-                                                                'Construction owns declared collections; reading '
-                                                                'fields, repr and summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('targets',
                                                            'Mesh/Part UUID selectors; an empty selection selects no '
@@ -153,14 +159,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                            'union.')],
                                                'kind': 'type',
                                                'signature': '(*, targets: tuple[ObjectTarget, ...], include_hidden: '
-                                                            'bool = False)'},
+                                                            'bool = False)',
+                                               'type_refs': ('zipzi.modeling.spatial.ObjectTarget',)},
  'zipzi.modeling.spatial.SpatialQueryBounds.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.spatial.SpatialQueryBounds.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.SpatialQueryHits': {'children': ('zipzi.modeling.spatial.SpatialQueryHits.__repr__',
                                                           'zipzi.modeling.spatial.SpatialQueryHits.summary'),
-                                             'documentation': 'Immutable owned SpatialQueryHits value. Construction '
-                                                              'owns declared collections; reading fields, repr and '
-                                                              'summary performs no IO.',
+                                             'documentation': '',
                                              'example': 'docs/recipes.py',
                                              'fields': [('point',
                                                          'Finite XY point in evaluated Y-up model coordinates, not '
@@ -180,42 +185,40 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.SpatialQueryHits.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.spatial.SpatialQueryHits.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.SpatialResult': {'children': (),
-                                          'documentation': 'Typed public API entry.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
                                           'fields': [],
-                                          'kind': 'value',
-                                          'signature': ''},
+                                          'kind': 'alias',
+                                          'signature': 'SpatialResultBounds | SpatialResultHits',
+                                          'type_refs': ('zipzi.modeling.spatial.SpatialResultBounds',
+                                                        'zipzi.modeling.spatial.SpatialResultHits')},
  'zipzi.modeling.spatial.SpatialResultBounds': {'children': ('zipzi.modeling.spatial.SpatialResultBounds.__repr__',
                                                              'zipzi.modeling.spatial.SpatialResultBounds.summary'),
-                                                'documentation': 'Immutable owned SpatialResultBounds value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('value',
                                                             'Bounds and resolved mesh IDs for the corresponding '
                                                             'selector request.')],
                                                 'kind': 'type',
-                                                'signature': '(*, value: ObjectBounds)'},
+                                                'signature': '(*, value: ObjectBounds)',
+                                                'type_refs': ('zipzi.modeling.spatial.ObjectBounds',)},
  'zipzi.modeling.spatial.SpatialResultBounds.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.spatial.SpatialResultBounds.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.SpatialResultHits': {'children': ('zipzi.modeling.spatial.SpatialResultHits.__repr__',
                                                            'zipzi.modeling.spatial.SpatialResultHits.summary'),
-                                              'documentation': 'Immutable owned SpatialResultHits value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('value',
                                                           'Geometric candidates in SDK order, including total and '
                                                           'truncation metadata.')],
                                               'kind': 'type',
-                                              'signature': '(*, value: GeometryQuery)'},
+                                              'signature': '(*, value: GeometryQuery)',
+                                              'type_refs': ('zipzi.modeling.spatial.GeometryQuery',)},
  'zipzi.modeling.spatial.SpatialResultHits.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.spatial.SpatialResultHits.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.SpatialSamples': {'children': ('zipzi.modeling.spatial.SpatialSamples.__repr__',
                                                         'zipzi.modeling.spatial.SpatialSamples.summary'),
-                                           'documentation': 'Immutable owned SpatialSamples value. Construction owns '
-                                                            'declared collections; reading fields, repr and summary '
-                                                            'performs no IO.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [('version',
                                                        'Exact SDK version of the immutable formal or candidate '
@@ -231,14 +234,15 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                            'kind': 'type',
                                            'signature': '(*, version: _Version, requested: tuple[_Mapping[str, float], '
                                                         '...], queries: tuple[SpatialQuery, ...], frames: '
-                                                        'tuple[SpatialFrame, ...])'},
+                                                        'tuple[SpatialFrame, ...])',
+                                           'type_refs': ('zipzi.Version',
+                                                         'zipzi.modeling.spatial.SpatialFrame',
+                                                         'zipzi.modeling.spatial.SpatialQuery')},
  'zipzi.modeling.spatial.SpatialSamples.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.spatial.SpatialSamples.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.TriangleHit': {'children': ('zipzi.modeling.spatial.TriangleHit.__repr__',
                                                      'zipzi.modeling.spatial.TriangleHit.summary'),
-                                        'documentation': 'Immutable owned TriangleHit value. Construction owns '
-                                                         'declared collections; reading fields, repr and summary '
-                                                         'performs no IO.',
+                                        'documentation': 'One evaluated triangle containing the query point.',
                                         'example': 'docs/recipes.py',
                                         'fields': [('triangle_index',
                                                     "The triangle's zero-based position in the drawable's index "

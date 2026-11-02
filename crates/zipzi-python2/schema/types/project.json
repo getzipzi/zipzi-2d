@@ -1076,6 +1076,7 @@
       "tuple": false
     },
     "zipzi_contract::model::ExportSettings": {
+      "doc": "Cubism output policy. A model unit corresponds to one canvas pixel; PPU\nconverts those lengths into Cubism runtime units only at the file boundary.",
       "fields": [
         {
           "doc": "Positive model-length to Cubism-runtime-unit conversion scale at the file boundary;\nmodel units themselves remain canvas-pixel lengths.",

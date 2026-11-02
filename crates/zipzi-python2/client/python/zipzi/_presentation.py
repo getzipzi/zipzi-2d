@@ -32,7 +32,26 @@ def _short(value: object, depth: int = 0) -> str:
 
 
 class CompactValue:
-    """Owned-value display capped at 1,024 characters, without IO or full scans."""
+    """Generated owned values are immutable document inputs or captured results.
+
+    Constructors normalize declared collections into owned immutable containers,
+    usually tuples or read-only mappings. Mutating an input list afterwards does
+    not change the value. Immutable nested values may be shared; ownership does
+    not promise a deep copy of every object. Construction performs no host IO;
+    document admission and validation happen through explicit authoring calls.
+
+    Reading fields, repr and summary performs no host IO and creates no host
+    resource. Results retain their captured data; field access does not refresh
+    them from the document. Use an explicit query for current host state.
+    For CompactValue records, repr and summary are bounded previews, capped at
+    1,024 characters. Tuple projections retain normal Python tuple display.
+    Explicit field access exposes the owned data; ApiDescription.format() exposes
+    the complete help text.
+
+    These conventions apply to owned data values. Runtime, Session, Edit, Jobs
+    and resource leases have their own lifecycle and explicit IO methods; follow
+    their entry documentation for waiting, recovery and close requirements.
+    """
     def __repr__(self)->str:
         """Return a local summary capped at 1,024 characters, with no RPC/full scan.
 

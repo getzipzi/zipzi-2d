@@ -27,7 +27,7 @@ def read_TopologyThresholds(value: object) -> TopologyThresholds:
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class TextureCoverage(CompactValue):
-    'Immutable owned TextureCoverage value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nalpha_threshold: Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.\npixel_step: Top-down source-pixel grid spacing. Values above 1 mean an approximate report.\nsampled_pixels: Number of source pixel centers tested on the regular grid.\ncovered_pixels: Tested pixel centers covered by the union of UV triangles inside [0,1].\ntransparent_covered_pixels: Covered centers whose source alpha is below the threshold.\nopaque_pixels: Tested centers whose source alpha is at least the threshold.\nuncovered_opaque_pixels: Opaque centers outside the UV triangle union: a contour coverage error, not a distance.\ntransparent_coverage_fraction: Transparent covered / covered; None if no tested center is covered.\nuncovered_opaque_fraction: Uncovered opaque / opaque; None for an entirely transparent sampled image.\nout_of_bounds_triangles: Number of UV triangles with vertices outside [0,1]; repeat-sampled coverage is not measured.'
+    '\n\nFields:\nalpha_threshold: Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.\npixel_step: Top-down source-pixel grid spacing. Values above 1 mean an approximate report.\nsampled_pixels: Number of source pixel centers tested on the regular grid.\ncovered_pixels: Tested pixel centers covered by the union of UV triangles inside [0,1].\ntransparent_covered_pixels: Covered centers whose source alpha is below the threshold.\nopaque_pixels: Tested centers whose source alpha is at least the threshold.\nuncovered_opaque_pixels: Opaque centers outside the UV triangle union: a contour coverage error, not a distance.\ntransparent_coverage_fraction: Transparent covered / covered; None if no tested center is covered.\nuncovered_opaque_fraction: Uncovered opaque / opaque; None for an entirely transparent sampled image.\nout_of_bounds_triangles: Number of UV triangles with vertices outside [0,1]; repeat-sampled coverage is not measured.'
     alpha_threshold: int
     pixel_step: int
     sampled_pixels: int
@@ -43,7 +43,7 @@ TextureCoverage.__module__ = "zipzi.modeling.observation"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationTextureReport(CompactValue):
-    'Immutable owned ObservationTextureReport value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npolicy: Requested texture policy; not part of rendering-content digests.\neffective_max_rgba_bytes: Effective host or caller base RGBA bound, in logical bytes.\nlongest_edge_limit: Common planned integer longest-edge bound; None for an empty set.\nsource_rgba_bytes: Logical RGBA source bytes of the referenced asset set.\nrender_rgba_bytes: Actual logical base RGBA bytes; excludes mipmaps.\nestimated_mipmap_bytes: Exact logical non-base mip bytes, not driver allocation measurements.\nresized_count: Number of assets whose base dimensions changed.\nfilter: Fixed straight RGBA alpha-weighted area-average filter name.\nalgorithm_version: Area filter and rounding version.\nplanning_version: Reference collection and integer planning version.\nmipmap_version: Mipmap dimension and filtering version.\ntextures: Verified source and derived content, in asset ID order, once per batch.'
+    '\n\nFields:\npolicy: Requested texture policy; not part of rendering-content digests.\neffective_max_rgba_bytes: Effective host or caller base RGBA bound, in logical bytes.\nlongest_edge_limit: Common planned integer longest-edge bound; None for an empty set.\nsource_rgba_bytes: Logical RGBA source bytes of the referenced asset set.\nrender_rgba_bytes: Actual logical base RGBA bytes; excludes mipmaps.\nestimated_mipmap_bytes: Exact logical non-base mip bytes, not driver allocation measurements.\nresized_count: Number of assets whose base dimensions changed.\nfilter: Fixed straight RGBA alpha-weighted area-average filter name.\nalgorithm_version: Area filter and rounding version.\nplanning_version: Reference collection and integer planning version.\nmipmap_version: Mipmap dimension and filtering version.\ntextures: Verified source and derived content, in asset ID order, once per batch.'
     policy: ObservationTexturePolicy
     effective_max_rgba_bytes: int
     longest_edge_limit: (int | None) = None
@@ -64,14 +64,14 @@ ObservationTextureReport.__module__ = "zipzi.modeling.observation"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationTexturePolicyOriginal(CompactValue):
-    'Immutable owned ObservationTexturePolicyOriginal value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Preserve the source dimensions and every source byte.'
     _variant: _ClassVar[str] = 'original'
 
 ObservationTexturePolicyOriginal.__module__ = "zipzi.modeling.observation"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationTexturePolicyFitBudget(CompactValue):
-    "Immutable owned ObservationTexturePolicyFitBudget value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmax_rgba_bytes: Positive integer no greater than the host's base RGBA limit."
+    "\n\nFields:\nmax_rgba_bytes: Positive integer no greater than the host's base RGBA limit."
     _variant: _ClassVar[str] = 'fit_budget'
     max_rgba_bytes: int
 
@@ -81,7 +81,7 @@ ObservationTexturePolicy: TypeAlias = ObservationTexturePolicyOriginal | Observa
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationTextureReportEntry(CompactValue):
-    'Immutable owned ObservationTextureReportEntry value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nasset_id: Stable image asset ID; distinct IDs count separately even for equal pixels.\nsource_size: Verified source pixel dimensions before any observation downsampling.\nrender_size: Actual straight RGBA8 rendering base dimensions.\nsource_content_identity: Verified PNG-byte or domain-separated source-pixel identity.\nrender_rgba_hash: Domain-separated hash of actual top-left row-major straight RGBA8 base pixels.'
+    '\n\nFields:\nasset_id: Stable image asset ID; distinct IDs count separately even for equal pixels.\nsource_size: Verified source pixel dimensions before any observation downsampling.\nrender_size: Actual straight RGBA8 rendering base dimensions.\nsource_content_identity: Verified PNG-byte or domain-separated source-pixel identity.\nrender_rgba_hash: Domain-separated hash of actual top-left row-major straight RGBA8 base pixels.'
     asset_id: str
     source_size: ObservationTextureSize
     render_size: ObservationTextureSize
@@ -92,7 +92,7 @@ ObservationTextureReportEntry.__module__ = "zipzi.modeling.observation"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationTextureSize(CompactValue):
-    'Immutable owned ObservationTextureSize value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nwidth: Width in pixels.\nheight: Height in pixels.'
+    'Pixel dimensions; zero axes are invalid resource metadata.\n\nFields:\nwidth: Width in pixels.\nheight: Height in pixels.'
     width: int
     height: int
 
@@ -100,7 +100,7 @@ ObservationTextureSize.__module__ = "zipzi.modeling.observation"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationContentIdentityPngSha256(CompactValue):
-    'Immutable owned ObservationContentIdentityPngSha256 value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nhash: SHA256 of encoded source PNG bytes; verification is a separate state.'
+    '\n\nFields:\nhash: SHA256 of encoded source PNG bytes; verification is a separate state.'
     _variant: _ClassVar[str] = 'png_sha256'
     hash: str
 
@@ -108,7 +108,7 @@ ObservationContentIdentityPngSha256.__module__ = "zipzi.modeling.observation"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationContentIdentityRgba8Sha256(CompactValue):
-    'Immutable owned ObservationContentIdentityRgba8Sha256 value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nhash: Domain-separated hash including dimensions and pixel conventions.'
+    '\n\nFields:\nhash: Domain-separated hash including dimensions and pixel conventions.'
     _variant: _ClassVar[str] = 'rgba8_sha256'
     hash: str
 
@@ -118,7 +118,7 @@ ObservationContentIdentity: TypeAlias = ObservationContentIdentityPngSha256 | Ob
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationView(CompactValue):
-    'Immutable owned ObservationView value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntexture_policy: Explicit texture policy; Original preserves source pixels and dimensions.\nwidth: Output width in pixels, positive and subject to host/device limits (host default 4096).\nheight: Output height in pixels, positive and subject to host/device limits (host default 4096).\nroi: Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.\npadding_model: Nonnegative padding around the ROI in model units; aspect ratio is preserved.\ntopology: Optional topology overlay in the same frozen Source and ROI mapping. It ignores\nmasks and occlusion; None preserves the ordinary GPU image.\nquality: Include per-mesh evaluated quality and approximate source-alpha coverage.\nUses default parameters of the same source as reference; checks requested frames only.'
+    '\n\nFields:\ntexture_policy: Explicit texture policy; Original preserves source pixels and dimensions.\nwidth: Output width in pixels, positive and subject to host/device limits (host default 4096).\nheight: Output height in pixels, positive and subject to host/device limits (host default 4096).\nroi: Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.\npadding_model: Nonnegative padding around the ROI in model units; aspect ratio is preserved.\ntopology: Optional topology overlay in the same frozen Source and ROI mapping. It ignores\nmasks and occlusion; None preserves the ordinary GPU image.\nquality: Include per-mesh evaluated quality and approximate source-alpha coverage.\nUses default parameters of the same source as reference; checks requested frames only.'
     texture_policy: ObservationTexturePolicy = field(default_factory=lambda: read_ObservationTexturePolicy({'kind': 'original'}))
     width: int
     height: int
@@ -134,7 +134,7 @@ ObservationView.__module__ = "zipzi.modeling.observation"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class TopologyOverlay(CompactValue):
-    'Immutable owned TopologyOverlay value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntargets: Diagnostic selection only; the textured context image is unchanged. None selects all\nmeshes, Some([]) selects none. Mesh/Part targets are unioned and deduplicated;\nParts include nested Parts. Missing targets fail explicitly. Maximum 256 selectors.\nwireframe: Draw triangle edges in cyan, in final evaluated model coordinates.\nvertices: Draw vertex positions as yellow dots.\nvertex_ids: Draw stable authoring vertex IDs in yellow, rather than transient array offsets.\nconstraints: Draw meshing boundary edges in green and internal constraints in magenta.\nstrain: Fill triangles by symmetric edge stretch relative to the default pose: blue=1,\norange=2, red>=4; flipped or collapsed triangles are magenta.\ninclude_hidden: Include disabled, hidden and zero-opacity meshes. Default draws visible meshes only.\ntopology_only: Clear the textured image before diagnostic drawing, retaining the exact same view.\nheat_opacity: Heat fill opacity in [0,1]. Applied once per pixel using the most severe overlapping\ntriangle, so overlapping layers cannot accumulate opacity. Lines and labels stay opaque.\nanomalies_only: Restrict every diagnostic layer to anomalous triangles and their incident vertices/edges.\nDegenerate, flipped and undefined-reference triangles always count as anomalies.\nthresholds: Thresholds used by anomalies_only; reports themselves are never threshold-filtered.\nlabel_scale: Decimal glyph scale in output pixels, 1..4. Labels avoid other labels globally;\nan ID is omitted when no nearby in-view position has enough space.\nlabel_spacing: Minimum clear gap between label rectangles in pixels, 0..32.\nmax_labels: Maximum labels per image, 0..4096. Vertex dots remain independent of this limit.'
+    'Explicit diagnostic drawing options; overlays ignore masks and occlusion.\n\nFields:\ntargets: Diagnostic selection only; the textured context image is unchanged. None selects all\nmeshes, Some([]) selects none. Mesh/Part targets are unioned and deduplicated;\nParts include nested Parts. Missing targets fail explicitly. Maximum 256 selectors.\nwireframe: Draw triangle edges in cyan, in final evaluated model coordinates.\nvertices: Draw vertex positions as yellow dots.\nvertex_ids: Draw stable authoring vertex IDs in yellow, rather than transient array offsets.\nconstraints: Draw meshing boundary edges in green and internal constraints in magenta.\nstrain: Fill triangles by symmetric edge stretch relative to the default pose: blue=1,\norange=2, red>=4; flipped or collapsed triangles are magenta.\ninclude_hidden: Include disabled, hidden and zero-opacity meshes. Default draws visible meshes only.\ntopology_only: Clear the textured image before diagnostic drawing, retaining the exact same view.\nheat_opacity: Heat fill opacity in [0,1]. Applied once per pixel using the most severe overlapping\ntriangle, so overlapping layers cannot accumulate opacity. Lines and labels stay opaque.\nanomalies_only: Restrict every diagnostic layer to anomalous triangles and their incident vertices/edges.\nDegenerate, flipped and undefined-reference triangles always count as anomalies.\nthresholds: Thresholds used by anomalies_only; reports themselves are never threshold-filtered.\nlabel_scale: Decimal glyph scale in output pixels, 1..4. Labels avoid other labels globally;\nan ID is omitted when no nearby in-view position has enough space.\nlabel_spacing: Minimum clear gap between label rectangles in pixels, 0..32.\nmax_labels: Maximum labels per image, 0..4096. Vertex dots remain independent of this limit.'
     targets: (tuple[ObjectTarget, ...] | None) = None
     wireframe: bool = field(default_factory=lambda: _boolean(True))
     vertices: bool = field(default_factory=lambda: _boolean(False))
@@ -157,7 +157,7 @@ TopologyOverlay.__module__ = "zipzi.modeling.observation"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class TopologyThresholds(CompactValue):
-    'Immutable owned TopologyThresholds value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmin_angle_degrees: An angle below this value is anomalous; finite degrees in [0,60]. Default 10.\nmax_aspect_ratio: A longest-edge/altitude ratio above this is anomalous; finite and >= 1. Default 20.\nmax_edge_stretch: A symmetric edge-length ratio above this is anomalous; finite and >= 1. Default 2.'
+    'Advisory anomaly thresholds in evaluated model space, relative to the default pose.\n\nFields:\nmin_angle_degrees: An angle below this value is anomalous; finite degrees in [0,60]. Default 10.\nmax_aspect_ratio: A longest-edge/altitude ratio above this is anomalous; finite and >= 1. Default 20.\nmax_edge_stretch: A symmetric edge-length ratio above this is anomalous; finite and >= 1. Default 2.'
     min_angle_degrees: float = field(default_factory=lambda: number(10.0))
     max_aspect_ratio: float = field(default_factory=lambda: number(20.0))
     max_edge_stretch: float = field(default_factory=lambda: number(2.0))
@@ -166,7 +166,7 @@ TopologyThresholds.__module__ = "zipzi.modeling.observation"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationImage(CompactValue):
-    "Immutable owned ObservationImage value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nwidth: Output image width in pixels.\nheight: Output image height in pixels.\nrgba: Raw renderer RGBA8, row-major, top-left image origin. Renderer alpha convention is preserved.\npng: PNG encoding of exactly the returned RGBA8; encoded by Rust, never by Python.\ndocument_id: Captured authoring document UUID.\nevaluation_revision: Captured geometry evaluation revision, distinct from the outer formal/candidate Source.\ncapture_id: Shared acquisition UUID for this batch's once-resolved immutable texture set.\nscene_digest: Digest of captured evaluated geometry, authoring records and resolved texture content.\nrender_digest: Digest of the exact source scene and explicit rendering settings.\ninput_sha256: Renderer hash of evaluated input, texture content and output view.\nadapter_name: Actual GPU adapter name, obtained only when a render executes.\nadapter_backend: Actual renderer backend, Metal on macOS or the selected WGPU backend elsewhere.\nparameters: Effective evaluated parameters keyed by stable document UUID.\nvisible_roi: Actual viewport model extent [min_x,min_y,max_x,max_y], including aspect-ratio expansion.\nscale: Model-to-image scale. Image X=x*scale+offset[0], Y=-y*scale+offset[1].\noffset: Translation in top-left image pixels, parallel to the documented scale formula.\ndrawable_bounds: Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.\nquality: Mesh quality in evaluated drawable order when View.quality is true; empty otherwise.\nTexture coverage uses alpha >= 8, pixel centers, at most a 256x256 grid, ignoring masks,\nfiltering and UV repeat outside [0,1]. A step above 1 denotes approximate coverage."
+    "\n\nFields:\nwidth: Output image width in pixels.\nheight: Output image height in pixels.\nrgba: Raw renderer RGBA8, row-major, top-left image origin. Renderer alpha convention is preserved.\npng: PNG encoding of exactly the returned RGBA8; encoded by Rust, never by Python.\ndocument_id: Captured authoring document UUID.\nevaluation_revision: Captured geometry evaluation revision, distinct from the outer formal/candidate Source.\ncapture_id: Shared acquisition UUID for this batch's once-resolved immutable texture set.\nscene_digest: Digest of captured evaluated geometry, authoring records and resolved texture content.\nrender_digest: Digest of the exact source scene and explicit rendering settings.\ninput_sha256: Renderer hash of evaluated input, texture content and output view.\nadapter_name: Actual GPU adapter name, obtained only when a render executes.\nadapter_backend: Actual renderer backend, Metal on macOS or the selected WGPU backend elsewhere.\nparameters: Effective evaluated parameters keyed by stable document UUID.\nvisible_roi: Actual viewport model extent [min_x,min_y,max_x,max_y], including aspect-ratio expansion.\nscale: Model-to-image scale. Image X=x*scale+offset[0], Y=-y*scale+offset[1].\noffset: Translation in top-left image pixels, parallel to the documented scale formula.\ndrawable_bounds: Drawable geometric image bounds in evaluated order; masks/occlusion are not pixel-tested here.\nquality: Mesh quality in evaluated drawable order when View.quality is true; empty otherwise.\nTexture coverage uses alpha >= 8, pixel centers, at most a 256x256 grid, ignoring masks,\nfiltering and UV repeat outside [0,1]. A step above 1 denotes approximate coverage."
     width: int
     height: int
     rgba: _Bytes
@@ -197,7 +197,7 @@ ObservationImage.__module__ = "zipzi.modeling.observation"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservedBounds(CompactValue):
-    'Immutable owned ObservedBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable authoring drawable UUID.\nvisible: Evaluated visibility; geometric bounds do not prove unoccluded painted pixels.\nbounds: Clipped image bounds [min_x,min_y,max_x,max_y], exclusive maximum; None if empty.'
+    '\n\nFields:\nid: Stable authoring drawable UUID.\nvisible: Evaluated visibility; geometric bounds do not prove unoccluded painted pixels.\nbounds: Clipped image bounds [min_x,min_y,max_x,max_y], exclusive maximum; None if empty.'
     id: str
     visible: bool
     bounds: (tuple[int, int, int, int] | None) = None
@@ -209,7 +209,7 @@ ObservedBounds.__module__ = "zipzi.modeling.observation"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationBatch(CompactValue):
-    'Immutable owned ObservationBatch value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntexture_report: Verified once-per-batch source and rendering texture content.\nview: Owned explicit view shared by these ordered frames.\nrequested: Owned requested parameter maps in input order, including duplicates.\nframes: Rendered frames in requested pose order, sharing one resolved texture acquisition.'
+    '\n\nFields:\ntexture_report: Verified once-per-batch source and rendering texture content.\nview: Owned explicit view shared by these ordered frames.\nrequested: Owned requested parameter maps in input order, including duplicates.\nframes: Rendered frames in requested pose order, sharing one resolved texture acquisition.'
     texture_report: ObservationTextureReport
     view: ObservationView
     requested: tuple[_Mapping[str, float], ...]
@@ -223,7 +223,7 @@ ObservationBatch.__module__ = "zipzi.modeling.observation"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationEstimate(CompactValue):
-    'Immutable owned ObservationEstimate value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsource: Formal/candidate snapshot identity; external file bytes are not frozen.\npreview_id: Preview serial when estimated through a Preview, otherwise None.\nsequence: Preview operation ordinal observed without advancing playback.\ntexture_planning: Deterministic metadata plan or an insufficient-base-budget diagnostic.\ntexture_workspace_bytes: Conservative peak for one bounded decode/downsample phase, in bytes.\ngpu_working_set_bytes: Conservative logical GPU texture, mipmap and rendering working set.\noutput_bytes: Conservative RGBA plus PNG result bytes for all frames.\ntask_bytes: Conservative total task reservation, not measured RSS or GPU allocation.\nstatic_feasible: Whether metadata and host policy permit execution, excluding current availability.\nruntime_available: Whether current Runtime byte, frozen-source and Job capacity can admit this request.\ngpu_supported: Whether this host was compiled with GPU observation support.\ndevice_max_texture_dimension: None until the executing worker has a device; querying never initializes one.\ndevice_verified: Whether actual device checks were performed for this estimate; currently false.\nsource_identities_verified: Declared identities in texture_planning are not verified against image bytes.\nissues: Static or availability causes; a successful estimate is not a reservation.'
+    'Synchronous metadata estimate; it does not pin a plan, reserve a task, decode\nresources, evaluate poses, replay animation or initialize a GPU.\n\nFields:\nsource: Formal/candidate snapshot identity; external file bytes are not frozen.\npreview_id: Preview serial when estimated through a Preview, otherwise None.\nsequence: Preview operation ordinal observed without advancing playback.\ntexture_planning: Deterministic metadata plan or an insufficient-base-budget diagnostic.\ntexture_workspace_bytes: Conservative peak for one bounded decode/downsample phase, in bytes.\ngpu_working_set_bytes: Conservative logical GPU texture, mipmap and rendering working set.\noutput_bytes: Conservative RGBA plus PNG result bytes for all frames.\ntask_bytes: Conservative total task reservation, not measured RSS or GPU allocation.\nstatic_feasible: Whether metadata and host policy permit execution, excluding current availability.\nruntime_available: Whether current Runtime byte, frozen-source and Job capacity can admit this request.\ngpu_supported: Whether this host was compiled with GPU observation support.\ndevice_max_texture_dimension: None until the executing worker has a device; querying never initializes one.\ndevice_verified: Whether actual device checks were performed for this estimate; currently false.\nsource_identities_verified: Declared identities in texture_planning are not verified against image bytes.\nissues: Static or availability causes; a successful estimate is not a reservation.'
     source: _Source
     preview_id: (int | None) = None
     sequence: (int | None) = None
@@ -247,7 +247,7 @@ ObservationEstimate.__module__ = "zipzi.modeling.observation"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationTexturePlanningReady(CompactValue):
-    'Immutable owned ObservationTexturePlanningReady value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nplan: Feasible CPU dimensions; device limits remain unverified.'
+    '\n\nFields:\nplan: Feasible CPU dimensions; device limits remain unverified.'
     _variant: _ClassVar[str] = 'ready'
     plan: ObservationTexturePlan
 
@@ -255,7 +255,7 @@ ObservationTexturePlanningReady.__module__ = "zipzi.modeling.observation"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationTexturePlanningInsufficientBudget(CompactValue):
-    'Immutable owned ObservationTexturePlanningInsufficientBudget value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npolicy: Requested policy.\neffective_max_rgba_bytes: Effective base RGBA bound.\nsource_rgba_bytes: Total logical source bytes, without decoding.\nminimum_required_rgba_bytes: Source bytes for Original, or four bytes per texture for FitBudget.\ntextures: Source metadata in asset ID order; no target plan exists.'
+    '\n\nFields:\npolicy: Requested policy.\neffective_max_rgba_bytes: Effective base RGBA bound.\nsource_rgba_bytes: Total logical source bytes, without decoding.\nminimum_required_rgba_bytes: Source bytes for Original, or four bytes per texture for FitBudget.\ntextures: Source metadata in asset ID order; no target plan exists.'
     _variant: _ClassVar[str] = 'insufficient_budget'
     policy: ObservationTexturePolicy
     effective_max_rgba_bytes: int
@@ -272,7 +272,7 @@ ObservationTexturePlanning: TypeAlias = ObservationTexturePlanningReady | Observ
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationTexturePlan(CompactValue):
-    'Immutable owned ObservationTexturePlan value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npolicy: Requested policy; equivalent actual pixels may have different policies.\neffective_max_rgba_bytes: Requested FitBudget bound or the host base RGBA limit for Original.\nlongest_edge_limit: Maximum permitted longest edge; None only for an empty reference set.\nsource_rgba_bytes: Logical RGBA bytes of referenced source images, excluding unused assets.\nrender_rgba_bytes: Logical RGBA bytes of planned base levels.\nestimated_mipmap_bytes: Sum of every non-base mip level, halving each axis down to 1x1.\nresized_count: Number of assets with changed base dimensions.\nplanning_version: Version of reference collection, integer scaling and search semantics.\nmipmap_version: Version of mip dimensions and byte-count semantics.\ntextures: Complete reference set and targets sorted by asset ID.'
+    'Feasible deterministic CPU plan. Clients cannot submit this as a trusted\nexecution plan. Mipmap bytes exclude the base level and are logical bytes,\nnot GPU allocation measurements.\n\nFields:\npolicy: Requested policy; equivalent actual pixels may have different policies.\neffective_max_rgba_bytes: Requested FitBudget bound or the host base RGBA limit for Original.\nlongest_edge_limit: Maximum permitted longest edge; None only for an empty reference set.\nsource_rgba_bytes: Logical RGBA bytes of referenced source images, excluding unused assets.\nrender_rgba_bytes: Logical RGBA bytes of planned base levels.\nestimated_mipmap_bytes: Sum of every non-base mip level, halving each axis down to 1x1.\nresized_count: Number of assets with changed base dimensions.\nplanning_version: Version of reference collection, integer scaling and search semantics.\nmipmap_version: Version of mip dimensions and byte-count semantics.\ntextures: Complete reference set and targets sorted by asset ID.'
     policy: ObservationTexturePolicy
     effective_max_rgba_bytes: int
     longest_edge_limit: (int | None) = None
@@ -291,7 +291,7 @@ ObservationTexturePlan.__module__ = "zipzi.modeling.observation"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationTextureTarget(CompactValue):
-    'Immutable owned ObservationTextureTarget value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsource: Declared source metadata; the executor must validate it again.\nrender_size: Planned base-level rendering dimensions.'
+    '\n\nFields:\nsource: Declared source metadata; the executor must validate it again.\nrender_size: Planned base-level rendering dimensions.'
     source: ObservationTextureSource
     render_size: ObservationTextureSize
 
@@ -299,7 +299,7 @@ ObservationTextureTarget.__module__ = "zipzi.modeling.observation"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationTextureSource(CompactValue):
-    'Immutable owned ObservationTextureSource value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nasset_id: Stable image asset ID, counted once across all batch frames.\nsource_size: Declared source dimensions, without opening or decoding the image.\nsource_content_identity: Declared representation-specific identity, if available in metadata.'
+    'Metadata-only source description. A declared identity has not been verified\nby estimation; Source freezes the document, not external file bytes.\n\nFields:\nasset_id: Stable image asset ID, counted once across all batch frames.\nsource_size: Declared source dimensions, without opening or decoding the image.\nsource_content_identity: Declared representation-specific identity, if available in metadata.'
     asset_id: str
     source_size: ObservationTextureSize
     source_content_identity: (ObservationContentIdentity | None) = None
@@ -308,7 +308,7 @@ ObservationTextureSource.__module__ = "zipzi.modeling.observation"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObservationEstimateIssue(CompactValue):
-    'Immutable owned ObservationEstimateIssue value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncode: Structured feasibility category, using observation execution error codes.\nmessage: Human-readable cause; estimates do not silently change the request.\nasset_id: Asset responsible for this diagnostic, if applicable.\nrequested: Requested or minimally necessary logical byte/count value, if known.\nlimit: Applicable host or Runtime bound, if any.'
+    '\n\nFields:\ncode: Structured feasibility category, using observation execution error codes.\nmessage: Human-readable cause; estimates do not silently change the request.\nasset_id: Asset responsible for this diagnostic, if applicable.\nrequested: Requested or minimally necessary logical byte/count value, if known.\nlimit: Applicable host or Runtime bound, if any.'
     code: str
     message: str
     asset_id: (str | None) = None

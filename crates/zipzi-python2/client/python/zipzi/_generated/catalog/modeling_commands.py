@@ -63,9 +63,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                              'signature': ''},
  'zipzi.modeling.commands.ConversionCost': {'children': ('zipzi.modeling.commands.ConversionCost.__repr__',
                                                          'zipzi.modeling.commands.ConversionCost.summary'),
-                                            'documentation': 'Immutable owned ConversionCost value. Construction owns '
-                                                             'declared collections; reading fields, repr and summary '
-                                                             'performs no IO.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
                                             'fields': [('sample_combinations',
                                                         'Number of shape-sample combinations the conversion must '
@@ -86,9 +84,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ConversionCost.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ConversionDomain': {'children': ('zipzi.modeling.commands.ConversionDomain.__repr__',
                                                            'zipzi.modeling.commands.ConversionDomain.summary'),
-                                              'documentation': 'Immutable owned ConversionDomain value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('parameter_id',
                                                           'Stable document parameter ID, not its exported runtime '
@@ -104,17 +100,108 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ConversionDomain.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ConversionDomain.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommand': {'children': (),
-                                             'documentation': 'Typed public API entry.',
+                                             'documentation': '',
                                              'example': 'docs/recipes.py',
                                              'fields': [],
-                                             'kind': 'value',
-                                             'signature': ''},
+                                             'kind': 'alias',
+                                             'signature': 'ModelingCommandCreateAsset | ModelingCommandReplaceAsset | '
+                                                          'ModelingCommandCreateMesh | ModelingCommandReplaceMesh | '
+                                                          'ModelingCommandCreateParameter | '
+                                                          'ModelingCommandReplaceParameter | ModelingCommandCreatePart '
+                                                          '| ModelingCommandReplacePart | '
+                                                          'ModelingCommandCreateTransform | '
+                                                          'ModelingCommandReplaceTransform | '
+                                                          'ModelingCommandCreateBinding | '
+                                                          'ModelingCommandReplaceBinding | '
+                                                          'ModelingCommandCreateSceneBinding | '
+                                                          'ModelingCommandReplaceSceneBinding | '
+                                                          'ModelingCommandCreateBlendKeyTable | '
+                                                          'ModelingCommandReplaceBlendKeyTable | '
+                                                          'ModelingCommandCreateBlendConstraint | '
+                                                          'ModelingCommandReplaceBlendConstraint | '
+                                                          'ModelingCommandCreateBlendBinding | '
+                                                          'ModelingCommandReplaceBlendBinding | '
+                                                          'ModelingCommandCreateGlue | ModelingCommandReplaceGlue | '
+                                                          'ModelingCommandCreateOffscreen | '
+                                                          'ModelingCommandReplaceOffscreen | ModelingCommandDeletion | '
+                                                          'ModelingCommandScene | ModelingCommandOrganization | '
+                                                          'ModelingCommandBinding | ModelingCommandContent | '
+                                                          'ModelingCommandReferences | ModelingCommandResource | '
+                                                          'ModelingCommandDocument | ModelingCommandAttachment | '
+                                                          'ModelingCommandMotion | ModelingCommandExpression | '
+                                                          'ModelingCommandPhysics | ModelingCommandPose | '
+                                                          'ModelingCommandCreateMotion | ModelingCommandReplaceMotion '
+                                                          '| ModelingCommandCreateExpression | '
+                                                          'ModelingCommandReplaceExpression | '
+                                                          'ModelingCommandSetPhysics | ModelingCommandSetPose | '
+                                                          'ModelingCommandReplaceModelSetup | '
+                                                          'ModelingCommandReplaceHierarchyOrder | '
+                                                          'ModelingCommandReplaceEditorState | '
+                                                          'ModelingCommandReplaceDrawOrderGroups | '
+                                                          'ModelingCommandEraseObject | ModelingCommandRenameMesh | '
+                                                          'ModelingCommandUpdatePositions | '
+                                                          'ModelingCommandSetMeshKeyform | '
+                                                          'ModelingCommandSetSceneKeyform | '
+                                                          'ModelingCommandRemeshRectangleGrid | '
+                                                          'ModelingCommandReplaceTopology | ModelingCommandManualMesh',
+                                             'type_refs': ('zipzi.modeling.commands.ModelingCommandAttachment',
+                                                           'zipzi.modeling.commands.ModelingCommandBinding',
+                                                           'zipzi.modeling.commands.ModelingCommandContent',
+                                                           'zipzi.modeling.commands.ModelingCommandCreateAsset',
+                                                           'zipzi.modeling.commands.ModelingCommandCreateBinding',
+                                                           'zipzi.modeling.commands.ModelingCommandCreateBlendBinding',
+                                                           'zipzi.modeling.commands.ModelingCommandCreateBlendConstraint',
+                                                           'zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable',
+                                                           'zipzi.modeling.commands.ModelingCommandCreateExpression',
+                                                           'zipzi.modeling.commands.ModelingCommandCreateGlue',
+                                                           'zipzi.modeling.commands.ModelingCommandCreateMesh',
+                                                           'zipzi.modeling.commands.ModelingCommandCreateMotion',
+                                                           'zipzi.modeling.commands.ModelingCommandCreateOffscreen',
+                                                           'zipzi.modeling.commands.ModelingCommandCreateParameter',
+                                                           'zipzi.modeling.commands.ModelingCommandCreatePart',
+                                                           'zipzi.modeling.commands.ModelingCommandCreateSceneBinding',
+                                                           'zipzi.modeling.commands.ModelingCommandCreateTransform',
+                                                           'zipzi.modeling.commands.ModelingCommandDeletion',
+                                                           'zipzi.modeling.commands.ModelingCommandDocument',
+                                                           'zipzi.modeling.commands.ModelingCommandEraseObject',
+                                                           'zipzi.modeling.commands.ModelingCommandExpression',
+                                                           'zipzi.modeling.commands.ModelingCommandManualMesh',
+                                                           'zipzi.modeling.commands.ModelingCommandMotion',
+                                                           'zipzi.modeling.commands.ModelingCommandOrganization',
+                                                           'zipzi.modeling.commands.ModelingCommandPhysics',
+                                                           'zipzi.modeling.commands.ModelingCommandPose',
+                                                           'zipzi.modeling.commands.ModelingCommandReferences',
+                                                           'zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid',
+                                                           'zipzi.modeling.commands.ModelingCommandRenameMesh',
+                                                           'zipzi.modeling.commands.ModelingCommandReplaceAsset',
+                                                           'zipzi.modeling.commands.ModelingCommandReplaceBinding',
+                                                           'zipzi.modeling.commands.ModelingCommandReplaceBlendBinding',
+                                                           'zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint',
+                                                           'zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable',
+                                                           'zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups',
+                                                           'zipzi.modeling.commands.ModelingCommandReplaceEditorState',
+                                                           'zipzi.modeling.commands.ModelingCommandReplaceExpression',
+                                                           'zipzi.modeling.commands.ModelingCommandReplaceGlue',
+                                                           'zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder',
+                                                           'zipzi.modeling.commands.ModelingCommandReplaceMesh',
+                                                           'zipzi.modeling.commands.ModelingCommandReplaceModelSetup',
+                                                           'zipzi.modeling.commands.ModelingCommandReplaceMotion',
+                                                           'zipzi.modeling.commands.ModelingCommandReplaceOffscreen',
+                                                           'zipzi.modeling.commands.ModelingCommandReplaceParameter',
+                                                           'zipzi.modeling.commands.ModelingCommandReplacePart',
+                                                           'zipzi.modeling.commands.ModelingCommandReplaceSceneBinding',
+                                                           'zipzi.modeling.commands.ModelingCommandReplaceTopology',
+                                                           'zipzi.modeling.commands.ModelingCommandReplaceTransform',
+                                                           'zipzi.modeling.commands.ModelingCommandResource',
+                                                           'zipzi.modeling.commands.ModelingCommandScene',
+                                                           'zipzi.modeling.commands.ModelingCommandSetMeshKeyform',
+                                                           'zipzi.modeling.commands.ModelingCommandSetPhysics',
+                                                           'zipzi.modeling.commands.ModelingCommandSetPose',
+                                                           'zipzi.modeling.commands.ModelingCommandSetSceneKeyform',
+                                                           'zipzi.modeling.commands.ModelingCommandUpdatePositions')},
  'zipzi.modeling.commands.ModelingCommandAttachment': {'children': ('zipzi.modeling.commands.ModelingCommandAttachment.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandAttachment.summary'),
-                                                       'documentation': 'Immutable owned ModelingCommandAttachment '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('intent',
                                                                    'Typed domain edit executed against the candidate; '
@@ -125,14 +212,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                    'value type; not a constructor argument or a '
                                                                    'mutable object field.')],
                                                        'kind': 'type',
-                                                       'signature': '(*, intent: AttachmentEdit)'},
+                                                       'signature': '(*, intent: AttachmentEdit)',
+                                                       'type_refs': ('zipzi.modeling.scene.AttachmentEdit',)},
  'zipzi.modeling.commands.ModelingCommandAttachment.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandAttachment.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandBinding': {'children': ('zipzi.modeling.commands.ModelingCommandBinding.__repr__',
                                                                  'zipzi.modeling.commands.ModelingCommandBinding.summary'),
-                                                    'documentation': 'Immutable owned ModelingCommandBinding value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('intent',
                                                                 'Typed domain edit executed against the candidate; '
@@ -143,14 +229,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                 'type; not a constructor argument or a mutable object '
                                                                 'field.')],
                                                     'kind': 'type',
-                                                    'signature': '(*, intent: BindingAuthoringEdit)'},
+                                                    'signature': '(*, intent: BindingAuthoringEdit)',
+                                                    'type_refs': ('zipzi.modeling.bindings.BindingAuthoringEdit',)},
  'zipzi.modeling.commands.ModelingCommandBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandContent': {'children': ('zipzi.modeling.commands.ModelingCommandContent.__repr__',
                                                                  'zipzi.modeling.commands.ModelingCommandContent.summary'),
-                                                    'documentation': 'Immutable owned ModelingCommandContent value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('intent',
                                                                 'Typed domain edit executed against the candidate; '
@@ -161,15 +246,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                 'type; not a constructor argument or a mutable object '
                                                                 'field.')],
                                                     'kind': 'type',
-                                                    'signature': '(*, intent: SceneContentEdit)'},
+                                                    'signature': '(*, intent: SceneContentEdit)',
+                                                    'type_refs': ('zipzi.modeling.scene.SceneContentEdit',)},
  'zipzi.modeling.commands.ModelingCommandContent.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandContent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateAsset': {'children': ('zipzi.modeling.commands.ModelingCommandCreateAsset.__repr__',
                                                                      'zipzi.modeling.commands.ModelingCommandCreateAsset.summary'),
-                                                        'documentation': 'Immutable owned ModelingCommandCreateAsset '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('asset',
                                                                     'Complete asset record to create with native '
@@ -180,16 +263,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                     'value type; not a constructor argument or a '
                                                                     'mutable object field.')],
                                                         'kind': 'type',
-                                                        'signature': '(*, asset: ImageAsset)'},
+                                                        'signature': '(*, asset: ImageAsset)',
+                                                        'type_refs': ('zipzi.modeling.resources.ImageAsset',)},
  'zipzi.modeling.commands.ModelingCommandCreateAsset.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateAsset.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateBinding': {'children': ('zipzi.modeling.commands.ModelingCommandCreateBinding.__repr__',
                                                                        'zipzi.modeling.commands.ModelingCommandCreateBinding.summary'),
-                                                          'documentation': 'Immutable owned '
-                                                                           'ModelingCommandCreateBinding value. '
-                                                                           'Construction owns declared collections; '
-                                                                           'reading fields, repr and summary performs '
-                                                                           'no IO.',
+                                                          'documentation': '',
                                                           'example': 'docs/recipes.py',
                                                           'fields': [('binding',
                                                                       'Complete binding record to create with native '
@@ -200,16 +280,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                       'value type; not a constructor argument or a '
                                                                       'mutable object field.')],
                                                           'kind': 'type',
-                                                          'signature': '(*, binding: MeshBinding)'},
+                                                          'signature': '(*, binding: MeshBinding)',
+                                                          'type_refs': ('zipzi.modeling.bindings.MeshBinding',)},
  'zipzi.modeling.commands.ModelingCommandCreateBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateBlendBinding': {'children': ('zipzi.modeling.commands.ModelingCommandCreateBlendBinding.__repr__',
                                                                             'zipzi.modeling.commands.ModelingCommandCreateBlendBinding.summary'),
-                                                               'documentation': 'Immutable owned '
-                                                                                'ModelingCommandCreateBlendBinding '
-                                                                                'value. Construction owns declared '
-                                                                                'collections; reading fields, repr and '
-                                                                                'summary performs no IO.',
+                                                               'documentation': '',
                                                                'example': 'docs/recipes.py',
                                                                'fields': [('binding',
                                                                            'Complete blend binding record to create '
@@ -220,16 +297,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                            'this value type; not a constructor '
                                                                            'argument or a mutable object field.')],
                                                                'kind': 'type',
-                                                               'signature': '(*, binding: BlendShapeBinding)'},
+                                                               'signature': '(*, binding: BlendShapeBinding)',
+                                                               'type_refs': ('zipzi.modeling.bindings.BlendShapeBinding',)},
  'zipzi.modeling.commands.ModelingCommandCreateBlendBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateBlendBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateBlendConstraint': {'children': ('zipzi.modeling.commands.ModelingCommandCreateBlendConstraint.__repr__',
                                                                                'zipzi.modeling.commands.ModelingCommandCreateBlendConstraint.summary'),
-                                                                  'documentation': 'Immutable owned '
-                                                                                   'ModelingCommandCreateBlendConstraint '
-                                                                                   'value. Construction owns declared '
-                                                                                   'collections; reading fields, repr '
-                                                                                   'and summary performs no IO.',
+                                                                  'documentation': '',
                                                                   'example': 'docs/recipes.py',
                                                                   'fields': [('constraint',
                                                                               'Complete blend constraint record to '
@@ -241,16 +315,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                               'by this value type; not a constructor '
                                                                               'argument or a mutable object field.')],
                                                                   'kind': 'type',
-                                                                  'signature': '(*, constraint: BlendShapeConstraint)'},
+                                                                  'signature': '(*, constraint: BlendShapeConstraint)',
+                                                                  'type_refs': ('zipzi.modeling.bindings.BlendShapeConstraint',)},
  'zipzi.modeling.commands.ModelingCommandCreateBlendConstraint.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateBlendConstraint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable': {'children': ('zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable.__repr__',
                                                                              'zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable.summary'),
-                                                                'documentation': 'Immutable owned '
-                                                                                 'ModelingCommandCreateBlendKeyTable '
-                                                                                 'value. Construction owns declared '
-                                                                                 'collections; reading fields, repr '
-                                                                                 'and summary performs no IO.',
+                                                                'documentation': '',
                                                                 'example': 'docs/recipes.py',
                                                                 'fields': [('table',
                                                                             'Complete blend key table record to create '
@@ -262,16 +333,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                             'this value type; not a constructor '
                                                                             'argument or a mutable object field.')],
                                                                 'kind': 'type',
-                                                                'signature': '(*, table: BlendShapeKeyTable)'},
+                                                                'signature': '(*, table: BlendShapeKeyTable)',
+                                                                'type_refs': ('zipzi.modeling.bindings.BlendShapeKeyTable',)},
  'zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateExpression': {'children': ('zipzi.modeling.commands.ModelingCommandCreateExpression.__repr__',
                                                                           'zipzi.modeling.commands.ModelingCommandCreateExpression.summary'),
-                                                             'documentation': 'Immutable owned '
-                                                                              'ModelingCommandCreateExpression value. '
-                                                                              'Construction owns declared collections; '
-                                                                              'reading fields, repr and summary '
-                                                                              'performs no IO.',
+                                                             'documentation': '',
                                                              'example': 'docs/recipes.py',
                                                              'fields': [('expression',
                                                                          'Complete expression asset with ordered owned '
@@ -281,15 +349,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                          'this value type; not a constructor argument '
                                                                          'or a mutable object field.')],
                                                              'kind': 'type',
-                                                             'signature': '(*, expression: ExpressionAsset)'},
+                                                             'signature': '(*, expression: ExpressionAsset)',
+                                                             'type_refs': ('zipzi.modeling.expression.ExpressionAsset',)},
  'zipzi.modeling.commands.ModelingCommandCreateExpression.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateExpression.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateGlue': {'children': ('zipzi.modeling.commands.ModelingCommandCreateGlue.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandCreateGlue.summary'),
-                                                       'documentation': 'Immutable owned ModelingCommandCreateGlue '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('glue',
                                                                    'Complete glue record to create with native '
@@ -300,15 +366,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                    'value type; not a constructor argument or a '
                                                                    'mutable object field.')],
                                                        'kind': 'type',
-                                                       'signature': '(*, glue: Glue)'},
+                                                       'signature': '(*, glue: Glue)',
+                                                       'type_refs': ('zipzi.modeling.scene.Glue',)},
  'zipzi.modeling.commands.ModelingCommandCreateGlue.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateGlue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateMesh': {'children': ('zipzi.modeling.commands.ModelingCommandCreateMesh.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandCreateMesh.summary'),
-                                                       'documentation': 'Immutable owned ModelingCommandCreateMesh '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('mesh',
                                                                    'Complete mesh record to create with native '
@@ -319,15 +383,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                    'value type; not a constructor argument or a '
                                                                    'mutable object field.')],
                                                        'kind': 'type',
-                                                       'signature': '(*, mesh: Mesh)'},
+                                                       'signature': '(*, mesh: Mesh)',
+                                                       'type_refs': ('zipzi.modeling.mesh.Mesh',)},
  'zipzi.modeling.commands.ModelingCommandCreateMesh.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateMotion': {'children': ('zipzi.modeling.commands.ModelingCommandCreateMotion.__repr__',
                                                                       'zipzi.modeling.commands.ModelingCommandCreateMotion.summary'),
-                                                         'documentation': 'Immutable owned ModelingCommandCreateMotion '
-                                                                          'value. Construction owns declared '
-                                                                          'collections; reading fields, repr and '
-                                                                          'summary performs no IO.',
+                                                         'documentation': '',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [('clip',
                                                                      'Complete owned clip with stable track/key/event '
@@ -337,16 +399,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                      'value type; not a constructor argument or a '
                                                                      'mutable object field.')],
                                                          'kind': 'type',
-                                                         'signature': '(*, clip: MotionClip)'},
+                                                         'signature': '(*, clip: MotionClip)',
+                                                         'type_refs': ('zipzi.modeling.motion.MotionClip',)},
  'zipzi.modeling.commands.ModelingCommandCreateMotion.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateOffscreen': {'children': ('zipzi.modeling.commands.ModelingCommandCreateOffscreen.__repr__',
                                                                          'zipzi.modeling.commands.ModelingCommandCreateOffscreen.summary'),
-                                                            'documentation': 'Immutable owned '
-                                                                             'ModelingCommandCreateOffscreen value. '
-                                                                             'Construction owns declared collections; '
-                                                                             'reading fields, repr and summary '
-                                                                             'performs no IO.',
+                                                            'documentation': '',
                                                             'example': 'docs/recipes.py',
                                                             'fields': [('offscreen',
                                                                         'Complete offscreen record to create with '
@@ -357,16 +416,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                         'this value type; not a constructor argument '
                                                                         'or a mutable object field.')],
                                                             'kind': 'type',
-                                                            'signature': '(*, offscreen: Offscreen)'},
+                                                            'signature': '(*, offscreen: Offscreen)',
+                                                            'type_refs': ('zipzi.modeling.scene.Offscreen',)},
  'zipzi.modeling.commands.ModelingCommandCreateOffscreen.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateParameter': {'children': ('zipzi.modeling.commands.ModelingCommandCreateParameter.__repr__',
                                                                          'zipzi.modeling.commands.ModelingCommandCreateParameter.summary'),
-                                                            'documentation': 'Immutable owned '
-                                                                             'ModelingCommandCreateParameter value. '
-                                                                             'Construction owns declared collections; '
-                                                                             'reading fields, repr and summary '
-                                                                             'performs no IO.',
+                                                            'documentation': '',
                                                             'example': 'docs/recipes.py',
                                                             'fields': [('parameter',
                                                                         'Complete parameter record to create with '
@@ -377,15 +433,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                         'this value type; not a constructor argument '
                                                                         'or a mutable object field.')],
                                                             'kind': 'type',
-                                                            'signature': '(*, parameter: Parameter)'},
+                                                            'signature': '(*, parameter: Parameter)',
+                                                            'type_refs': ('zipzi.modeling.parameters.Parameter',)},
  'zipzi.modeling.commands.ModelingCommandCreateParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreatePart': {'children': ('zipzi.modeling.commands.ModelingCommandCreatePart.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandCreatePart.summary'),
-                                                       'documentation': 'Immutable owned ModelingCommandCreatePart '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('part',
                                                                    'Complete part record to create with native '
@@ -396,16 +450,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                    'value type; not a constructor argument or a '
                                                                    'mutable object field.')],
                                                        'kind': 'type',
-                                                       'signature': '(*, part: Part)'},
+                                                       'signature': '(*, part: Part)',
+                                                       'type_refs': ('zipzi.modeling.scene.Part',)},
  'zipzi.modeling.commands.ModelingCommandCreatePart.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreatePart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateSceneBinding': {'children': ('zipzi.modeling.commands.ModelingCommandCreateSceneBinding.__repr__',
                                                                             'zipzi.modeling.commands.ModelingCommandCreateSceneBinding.summary'),
-                                                               'documentation': 'Immutable owned '
-                                                                                'ModelingCommandCreateSceneBinding '
-                                                                                'value. Construction owns declared '
-                                                                                'collections; reading fields, repr and '
-                                                                                'summary performs no IO.',
+                                                               'documentation': '',
                                                                'example': 'docs/recipes.py',
                                                                'fields': [('binding',
                                                                            'Complete scene binding record to create '
@@ -416,16 +467,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                            'this value type; not a constructor '
                                                                            'argument or a mutable object field.')],
                                                                'kind': 'type',
-                                                               'signature': '(*, binding: SceneBinding)'},
+                                                               'signature': '(*, binding: SceneBinding)',
+                                                               'type_refs': ('zipzi.modeling.bindings.SceneBinding',)},
  'zipzi.modeling.commands.ModelingCommandCreateSceneBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateSceneBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateTransform': {'children': ('zipzi.modeling.commands.ModelingCommandCreateTransform.__repr__',
                                                                          'zipzi.modeling.commands.ModelingCommandCreateTransform.summary'),
-                                                            'documentation': 'Immutable owned '
-                                                                             'ModelingCommandCreateTransform value. '
-                                                                             'Construction owns declared collections; '
-                                                                             'reading fields, repr and summary '
-                                                                             'performs no IO.',
+                                                            'documentation': '',
                                                             'example': 'docs/recipes.py',
                                                             'fields': [('transform',
                                                                         'Complete transform record to create with '
@@ -436,14 +484,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                         'this value type; not a constructor argument '
                                                                         'or a mutable object field.')],
                                                             'kind': 'type',
-                                                            'signature': '(*, transform: Transform)'},
+                                                            'signature': '(*, transform: Transform)',
+                                                            'type_refs': ('zipzi.modeling.scene.Transform',)},
  'zipzi.modeling.commands.ModelingCommandCreateTransform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandCreateTransform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandDeletion': {'children': ('zipzi.modeling.commands.ModelingCommandDeletion.__repr__',
                                                                   'zipzi.modeling.commands.ModelingCommandDeletion.summary'),
-                                                     'documentation': 'Immutable owned ModelingCommandDeletion value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('intent',
                                                                  'Dependency-cleaning deletion request; plan first to '
@@ -453,14 +500,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                  'type; not a constructor argument or a mutable object '
                                                                  'field.')],
                                                      'kind': 'type',
-                                                     'signature': '(*, intent: DeletionIntent)'},
+                                                     'signature': '(*, intent: DeletionIntent)',
+                                                     'type_refs': ('zipzi.modeling.deletion.DeletionIntent',)},
  'zipzi.modeling.commands.ModelingCommandDeletion.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandDeletion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandDocument': {'children': ('zipzi.modeling.commands.ModelingCommandDocument.__repr__',
                                                                   'zipzi.modeling.commands.ModelingCommandDocument.summary'),
-                                                     'documentation': 'Immutable owned ModelingCommandDocument value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('intent',
                                                                  'Typed domain edit executed against the candidate; '
@@ -471,15 +517,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                  'type; not a constructor argument or a mutable object '
                                                                  'field.')],
                                                      'kind': 'type',
-                                                     'signature': '(*, intent: DocumentAuthoringEdit)'},
+                                                     'signature': '(*, intent: DocumentAuthoringEdit)',
+                                                     'type_refs': ('zipzi.modeling.project.DocumentAuthoringEdit',)},
  'zipzi.modeling.commands.ModelingCommandDocument.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandDocument.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandEraseObject': {'children': ('zipzi.modeling.commands.ModelingCommandEraseObject.__repr__',
                                                                      'zipzi.modeling.commands.ModelingCommandEraseObject.summary'),
-                                                        'documentation': 'Immutable owned ModelingCommandEraseObject '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('id',
                                                                     'Stable document object ID used by references; it '
@@ -495,10 +539,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandEraseObject.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandExpression': {'children': ('zipzi.modeling.commands.ModelingCommandExpression.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandExpression.summary'),
-                                                       'documentation': 'Immutable owned ModelingCommandExpression '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('intent',
                                                                    'Expression asset/entry intent, validated by the '
@@ -508,15 +549,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                    'value type; not a constructor argument or a '
                                                                    'mutable object field.')],
                                                        'kind': 'type',
-                                                       'signature': '(*, intent: ExpressionEdit)'},
+                                                       'signature': '(*, intent: ExpressionEdit)',
+                                                       'type_refs': ('zipzi.modeling.expression.ExpressionEdit',)},
  'zipzi.modeling.commands.ModelingCommandExpression.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandExpression.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandManualMesh': {'children': ('zipzi.modeling.commands.ModelingCommandManualMesh.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandManualMesh.summary'),
-                                                       'documentation': 'Immutable owned ModelingCommandManualMesh '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('mesh_id',
                                                                    'Stable mesh UUID whose editable UV triangulation '
@@ -533,14 +572,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                    'mutable object field.')],
                                                        'kind': 'type',
                                                        'signature': '(*, mesh_id: str, expected: _Source, operation: '
-                                                                    'ManualMeshOperation)'},
+                                                                    'ManualMeshOperation)',
+                                                       'type_refs': ('zipzi.Source',
+                                                                     'zipzi.modeling.mesh.ManualMeshOperation')},
  'zipzi.modeling.commands.ModelingCommandManualMesh.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandManualMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandMotion': {'children': ('zipzi.modeling.commands.ModelingCommandMotion.__repr__',
                                                                 'zipzi.modeling.commands.ModelingCommandMotion.summary'),
-                                                   'documentation': 'Immutable owned ModelingCommandMotion value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('intent',
                                                                'Motion library/track/key/event intent; use a Plan or '
@@ -550,15 +589,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                'type; not a constructor argument or a mutable object '
                                                                'field.')],
                                                    'kind': 'type',
-                                                   'signature': '(*, intent: MotionEdit)'},
+                                                   'signature': '(*, intent: MotionEdit)',
+                                                   'type_refs': ('zipzi.modeling.motion.MotionEdit',)},
  'zipzi.modeling.commands.ModelingCommandMotion.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandOrganization': {'children': ('zipzi.modeling.commands.ModelingCommandOrganization.__repr__',
                                                                       'zipzi.modeling.commands.ModelingCommandOrganization.summary'),
-                                                         'documentation': 'Immutable owned ModelingCommandOrganization '
-                                                                          'value. Construction owns declared '
-                                                                          'collections; reading fields, repr and '
-                                                                          'summary performs no IO.',
+                                                         'documentation': '',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [('intent',
                                                                      'Typed domain edit executed against the '
@@ -569,14 +606,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                      'value type; not a constructor argument or a '
                                                                      'mutable object field.')],
                                                          'kind': 'type',
-                                                         'signature': '(*, intent: OrganizationEdit)'},
+                                                         'signature': '(*, intent: OrganizationEdit)',
+                                                         'type_refs': ('zipzi.modeling.scene.OrganizationEdit',)},
  'zipzi.modeling.commands.ModelingCommandOrganization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandOrganization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandPhysics': {'children': ('zipzi.modeling.commands.ModelingCommandPhysics.__repr__',
                                                                  'zipzi.modeling.commands.ModelingCommandPhysics.summary'),
-                                                    'documentation': 'Immutable owned ModelingCommandPhysics value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('intent',
                                                                 'Physics rig/row/node intent with native ownership and '
@@ -586,14 +622,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                 'type; not a constructor argument or a mutable object '
                                                                 'field.')],
                                                     'kind': 'type',
-                                                    'signature': '(*, intent: PhysicsEdit)'},
+                                                    'signature': '(*, intent: PhysicsEdit)',
+                                                    'type_refs': ('zipzi.modeling.physics.PhysicsEdit',)},
  'zipzi.modeling.commands.ModelingCommandPhysics.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandPhysics.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandPose': {'children': ('zipzi.modeling.commands.ModelingCommandPose.__repr__',
                                                               'zipzi.modeling.commands.ModelingCommandPose.summary'),
-                                                 'documentation': 'Immutable owned ModelingCommandPose value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('intent',
                                                              'Pose singleton/group/entry/link intent, independent of '
@@ -603,15 +638,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                              'type; not a constructor argument or a mutable object '
                                                              'field.')],
                                                  'kind': 'type',
-                                                 'signature': '(*, intent: PoseEdit)'},
+                                                 'signature': '(*, intent: PoseEdit)',
+                                                 'type_refs': ('zipzi.modeling.pose.PoseEdit',)},
  'zipzi.modeling.commands.ModelingCommandPose.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandPose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReferences': {'children': ('zipzi.modeling.commands.ModelingCommandReferences.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandReferences.summary'),
-                                                       'documentation': 'Immutable owned ModelingCommandReferences '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('intent',
                                                                    'Typed domain edit executed against the candidate; '
@@ -622,16 +655,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                    'value type; not a constructor argument or a '
                                                                    'mutable object field.')],
                                                        'kind': 'type',
-                                                       'signature': '(*, intent: ReferenceEdit)'},
+                                                       'signature': '(*, intent: ReferenceEdit)',
+                                                       'type_refs': ('zipzi.modeling.addressing.ReferenceEdit',)},
  'zipzi.modeling.commands.ModelingCommandReferences.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReferences.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid': {'children': ('zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid.__repr__',
                                                                              'zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid.summary'),
-                                                                'documentation': 'Immutable owned '
-                                                                                 'ModelingCommandRemeshRectangleGrid '
-                                                                                 'value. Construction owns declared '
-                                                                                 'collections; reading fields, repr '
-                                                                                 'and summary performs no IO.',
+                                                                'documentation': '',
                                                                 'example': 'docs/recipes.py',
                                                                 'fields': [('id',
                                                                             'Stable document object ID used by '
@@ -658,10 +688,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandRenameMesh': {'children': ('zipzi.modeling.commands.ModelingCommandRenameMesh.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandRenameMesh.summary'),
-                                                       'documentation': 'Immutable owned ModelingCommandRenameMesh '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('id',
                                                                    'Stable document object ID used by references; it '
@@ -680,10 +707,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandRenameMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceAsset': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceAsset.__repr__',
                                                                       'zipzi.modeling.commands.ModelingCommandReplaceAsset.summary'),
-                                                         'documentation': 'Immutable owned ModelingCommandReplaceAsset '
-                                                                          'value. Construction owns declared '
-                                                                          'collections; reading fields, repr and '
-                                                                          'summary performs no IO.',
+                                                         'documentation': '',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [('asset',
                                                                      'Complete asset record to replace the existing '
@@ -694,16 +718,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                      'value type; not a constructor argument or a '
                                                                      'mutable object field.')],
                                                          'kind': 'type',
-                                                         'signature': '(*, asset: ImageAsset)'},
+                                                         'signature': '(*, asset: ImageAsset)',
+                                                         'type_refs': ('zipzi.modeling.resources.ImageAsset',)},
  'zipzi.modeling.commands.ModelingCommandReplaceAsset.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceAsset.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceBinding': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceBinding.__repr__',
                                                                         'zipzi.modeling.commands.ModelingCommandReplaceBinding.summary'),
-                                                           'documentation': 'Immutable owned '
-                                                                            'ModelingCommandReplaceBinding value. '
-                                                                            'Construction owns declared collections; '
-                                                                            'reading fields, repr and summary performs '
-                                                                            'no IO.',
+                                                           'documentation': '',
                                                            'example': 'docs/recipes.py',
                                                            'fields': [('binding',
                                                                        'Complete binding record to replace the '
@@ -714,16 +735,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                        'value type; not a constructor argument or a '
                                                                        'mutable object field.')],
                                                            'kind': 'type',
-                                                           'signature': '(*, binding: MeshBinding)'},
+                                                           'signature': '(*, binding: MeshBinding)',
+                                                           'type_refs': ('zipzi.modeling.bindings.MeshBinding',)},
  'zipzi.modeling.commands.ModelingCommandReplaceBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendBinding': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceBlendBinding.__repr__',
                                                                              'zipzi.modeling.commands.ModelingCommandReplaceBlendBinding.summary'),
-                                                                'documentation': 'Immutable owned '
-                                                                                 'ModelingCommandReplaceBlendBinding '
-                                                                                 'value. Construction owns declared '
-                                                                                 'collections; reading fields, repr '
-                                                                                 'and summary performs no IO.',
+                                                                'documentation': '',
                                                                 'example': 'docs/recipes.py',
                                                                 'fields': [('binding',
                                                                             'Complete blend binding record to replace '
@@ -735,16 +753,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                             'this value type; not a constructor '
                                                                             'argument or a mutable object field.')],
                                                                 'kind': 'type',
-                                                                'signature': '(*, binding: BlendShapeBinding)'},
+                                                                'signature': '(*, binding: BlendShapeBinding)',
+                                                                'type_refs': ('zipzi.modeling.bindings.BlendShapeBinding',)},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint.__repr__',
                                                                                 'zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint.summary'),
-                                                                   'documentation': 'Immutable owned '
-                                                                                    'ModelingCommandReplaceBlendConstraint '
-                                                                                    'value. Construction owns declared '
-                                                                                    'collections; reading fields, repr '
-                                                                                    'and summary performs no IO.',
+                                                                   'documentation': '',
                                                                    'example': 'docs/recipes.py',
                                                                    'fields': [('constraint',
                                                                                'Complete blend constraint record to '
@@ -757,17 +772,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                                'by this value type; not a constructor '
                                                                                'argument or a mutable object field.')],
                                                                    'kind': 'type',
-                                                                   'signature': '(*, constraint: '
-                                                                                'BlendShapeConstraint)'},
+                                                                   'signature': '(*, constraint: BlendShapeConstraint)',
+                                                                   'type_refs': ('zipzi.modeling.bindings.BlendShapeConstraint',)},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable.__repr__',
                                                                               'zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable.summary'),
-                                                                 'documentation': 'Immutable owned '
-                                                                                  'ModelingCommandReplaceBlendKeyTable '
-                                                                                  'value. Construction owns declared '
-                                                                                  'collections; reading fields, repr '
-                                                                                  'and summary performs no IO.',
+                                                                 'documentation': '',
                                                                  'example': 'docs/recipes.py',
                                                                  'fields': [('table',
                                                                              'Complete blend key table record to '
@@ -780,16 +791,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                              'by this value type; not a constructor '
                                                                              'argument or a mutable object field.')],
                                                                  'kind': 'type',
-                                                                 'signature': '(*, table: BlendShapeKeyTable)'},
+                                                                 'signature': '(*, table: BlendShapeKeyTable)',
+                                                                 'type_refs': ('zipzi.modeling.bindings.BlendShapeKeyTable',)},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups.__repr__',
                                                                                 'zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups.summary'),
-                                                                   'documentation': 'Immutable owned '
-                                                                                    'ModelingCommandReplaceDrawOrderGroups '
-                                                                                    'value. Construction owns declared '
-                                                                                    'collections; reading fields, repr '
-                                                                                    'and summary performs no IO.',
+                                                                   'documentation': '',
                                                                    'example': 'docs/recipes.py',
                                                                    'fields': [('groups',
                                                                                'Complete drawing-order group list; '
@@ -803,16 +811,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                                'argument or a mutable object field.')],
                                                                    'kind': 'type',
                                                                    'signature': '(*, groups: tuple[DrawOrderGroup, '
-                                                                                '...])'},
+                                                                                '...])',
+                                                                   'type_refs': ('zipzi.modeling.scene.DrawOrderGroup',)},
  'zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceEditorState': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceEditorState.__repr__',
                                                                             'zipzi.modeling.commands.ModelingCommandReplaceEditorState.summary'),
-                                                               'documentation': 'Immutable owned '
-                                                                                'ModelingCommandReplaceEditorState '
-                                                                                'value. Construction owns declared '
-                                                                                'collections; reading fields, repr and '
-                                                                                'summary performs no IO.',
+                                                               'documentation': '',
                                                                'example': 'docs/recipes.py',
                                                                'fields': [('state',
                                                                            'Complete Editor visibility/lock metadata '
@@ -822,16 +827,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                            'this value type; not a constructor '
                                                                            'argument or a mutable object field.')],
                                                                'kind': 'type',
-                                                               'signature': '(*, state: EditorState)'},
+                                                               'signature': '(*, state: EditorState)',
+                                                               'type_refs': ('zipzi.modeling.project.EditorState',)},
  'zipzi.modeling.commands.ModelingCommandReplaceEditorState.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceEditorState.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceExpression': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceExpression.__repr__',
                                                                            'zipzi.modeling.commands.ModelingCommandReplaceExpression.summary'),
-                                                              'documentation': 'Immutable owned '
-                                                                               'ModelingCommandReplaceExpression '
-                                                                               'value. Construction owns declared '
-                                                                               'collections; reading fields, repr and '
-                                                                               'summary performs no IO.',
+                                                              'documentation': '',
                                                               'example': 'docs/recipes.py',
                                                               'fields': [('expression',
                                                                           'Complete replacement expression preserving '
@@ -841,15 +843,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                           'this value type; not a constructor argument '
                                                                           'or a mutable object field.')],
                                                               'kind': 'type',
-                                                              'signature': '(*, expression: ExpressionAsset)'},
+                                                              'signature': '(*, expression: ExpressionAsset)',
+                                                              'type_refs': ('zipzi.modeling.expression.ExpressionAsset',)},
  'zipzi.modeling.commands.ModelingCommandReplaceExpression.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceExpression.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceGlue': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceGlue.__repr__',
                                                                      'zipzi.modeling.commands.ModelingCommandReplaceGlue.summary'),
-                                                        'documentation': 'Immutable owned ModelingCommandReplaceGlue '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('glue',
                                                                     'Complete glue record to replace the existing '
@@ -860,16 +860,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                     'value type; not a constructor argument or a '
                                                                     'mutable object field.')],
                                                         'kind': 'type',
-                                                        'signature': '(*, glue: Glue)'},
+                                                        'signature': '(*, glue: Glue)',
+                                                        'type_refs': ('zipzi.modeling.scene.Glue',)},
  'zipzi.modeling.commands.ModelingCommandReplaceGlue.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceGlue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder.__repr__',
                                                                                'zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder.summary'),
-                                                                  'documentation': 'Immutable owned '
-                                                                                   'ModelingCommandReplaceHierarchyOrder '
-                                                                                   'value. Construction owns declared '
-                                                                                   'collections; reading fields, repr '
-                                                                                   'and summary performs no IO.',
+                                                                  'documentation': '',
                                                                   'example': 'docs/recipes.py',
                                                                   'fields': [('order',
                                                                               'Replacement organization/deformation '
@@ -879,15 +876,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                               'by this value type; not a constructor '
                                                                               'argument or a mutable object field.')],
                                                                   'kind': 'type',
-                                                                  'signature': '(*, order: HierarchyOrder)'},
+                                                                  'signature': '(*, order: HierarchyOrder)',
+                                                                  'type_refs': ('zipzi.modeling.scene.HierarchyOrder',)},
  'zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceMesh': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceMesh.__repr__',
                                                                      'zipzi.modeling.commands.ModelingCommandReplaceMesh.summary'),
-                                                        'documentation': 'Immutable owned ModelingCommandReplaceMesh '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('mesh',
                                                                     'Complete mesh record to replace the existing '
@@ -898,16 +893,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                     'value type; not a constructor argument or a '
                                                                     'mutable object field.')],
                                                         'kind': 'type',
-                                                        'signature': '(*, mesh: Mesh)'},
+                                                        'signature': '(*, mesh: Mesh)',
+                                                        'type_refs': ('zipzi.modeling.mesh.Mesh',)},
  'zipzi.modeling.commands.ModelingCommandReplaceMesh.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceModelSetup': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceModelSetup.__repr__',
                                                                            'zipzi.modeling.commands.ModelingCommandReplaceModelSetup.summary'),
-                                                              'documentation': 'Immutable owned '
-                                                                               'ModelingCommandReplaceModelSetup '
-                                                                               'value. Construction owns declared '
-                                                                               'collections; reading fields, repr and '
-                                                                               'summary performs no IO.',
+                                                              'documentation': '',
                                                               'example': 'docs/recipes.py',
                                                               'fields': [('setup',
                                                                           'Model source-canvas and export-frame '
@@ -917,16 +909,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                           'this value type; not a constructor argument '
                                                                           'or a mutable object field.')],
                                                               'kind': 'type',
-                                                              'signature': '(*, setup: ModelSetup)'},
+                                                              'signature': '(*, setup: ModelSetup)',
+                                                              'type_refs': ('zipzi.modeling.scene.ModelSetup',)},
  'zipzi.modeling.commands.ModelingCommandReplaceModelSetup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceModelSetup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceMotion': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceMotion.__repr__',
                                                                        'zipzi.modeling.commands.ModelingCommandReplaceMotion.summary'),
-                                                          'documentation': 'Immutable owned '
-                                                                           'ModelingCommandReplaceMotion value. '
-                                                                           'Construction owns declared collections; '
-                                                                           'reading fields, repr and summary performs '
-                                                                           'no IO.',
+                                                          'documentation': '',
                                                           'example': 'docs/recipes.py',
                                                           'fields': [('clip',
                                                                       'Complete replacement clip preserving its stable '
@@ -936,16 +925,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                       'value type; not a constructor argument or a '
                                                                       'mutable object field.')],
                                                           'kind': 'type',
-                                                          'signature': '(*, clip: MotionClip)'},
+                                                          'signature': '(*, clip: MotionClip)',
+                                                          'type_refs': ('zipzi.modeling.motion.MotionClip',)},
  'zipzi.modeling.commands.ModelingCommandReplaceMotion.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceOffscreen': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceOffscreen.__repr__',
                                                                           'zipzi.modeling.commands.ModelingCommandReplaceOffscreen.summary'),
-                                                             'documentation': 'Immutable owned '
-                                                                              'ModelingCommandReplaceOffscreen value. '
-                                                                              'Construction owns declared collections; '
-                                                                              'reading fields, repr and summary '
-                                                                              'performs no IO.',
+                                                             'documentation': '',
                                                              'example': 'docs/recipes.py',
                                                              'fields': [('offscreen',
                                                                          'Complete offscreen record to replace the '
@@ -956,16 +942,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                          'this value type; not a constructor argument '
                                                                          'or a mutable object field.')],
                                                              'kind': 'type',
-                                                             'signature': '(*, offscreen: Offscreen)'},
+                                                             'signature': '(*, offscreen: Offscreen)',
+                                                             'type_refs': ('zipzi.modeling.scene.Offscreen',)},
  'zipzi.modeling.commands.ModelingCommandReplaceOffscreen.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceParameter': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceParameter.__repr__',
                                                                           'zipzi.modeling.commands.ModelingCommandReplaceParameter.summary'),
-                                                             'documentation': 'Immutable owned '
-                                                                              'ModelingCommandReplaceParameter value. '
-                                                                              'Construction owns declared collections; '
-                                                                              'reading fields, repr and summary '
-                                                                              'performs no IO.',
+                                                             'documentation': '',
                                                              'example': 'docs/recipes.py',
                                                              'fields': [('parameter',
                                                                          'Complete parameter record to replace the '
@@ -976,15 +959,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                          'this value type; not a constructor argument '
                                                                          'or a mutable object field.')],
                                                              'kind': 'type',
-                                                             'signature': '(*, parameter: Parameter)'},
+                                                             'signature': '(*, parameter: Parameter)',
+                                                             'type_refs': ('zipzi.modeling.parameters.Parameter',)},
  'zipzi.modeling.commands.ModelingCommandReplaceParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplacePart': {'children': ('zipzi.modeling.commands.ModelingCommandReplacePart.__repr__',
                                                                      'zipzi.modeling.commands.ModelingCommandReplacePart.summary'),
-                                                        'documentation': 'Immutable owned ModelingCommandReplacePart '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('part',
                                                                     'Complete part record to replace the existing '
@@ -995,16 +976,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                     'value type; not a constructor argument or a '
                                                                     'mutable object field.')],
                                                         'kind': 'type',
-                                                        'signature': '(*, part: Part)'},
+                                                        'signature': '(*, part: Part)',
+                                                        'type_refs': ('zipzi.modeling.scene.Part',)},
  'zipzi.modeling.commands.ModelingCommandReplacePart.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplacePart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceSceneBinding': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceSceneBinding.__repr__',
                                                                              'zipzi.modeling.commands.ModelingCommandReplaceSceneBinding.summary'),
-                                                                'documentation': 'Immutable owned '
-                                                                                 'ModelingCommandReplaceSceneBinding '
-                                                                                 'value. Construction owns declared '
-                                                                                 'collections; reading fields, repr '
-                                                                                 'and summary performs no IO.',
+                                                                'documentation': '',
                                                                 'example': 'docs/recipes.py',
                                                                 'fields': [('binding',
                                                                             'Complete scene binding record to replace '
@@ -1016,16 +994,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                             'this value type; not a constructor '
                                                                             'argument or a mutable object field.')],
                                                                 'kind': 'type',
-                                                                'signature': '(*, binding: SceneBinding)'},
+                                                                'signature': '(*, binding: SceneBinding)',
+                                                                'type_refs': ('zipzi.modeling.bindings.SceneBinding',)},
  'zipzi.modeling.commands.ModelingCommandReplaceSceneBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceSceneBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceTopology': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceTopology.__repr__',
                                                                          'zipzi.modeling.commands.ModelingCommandReplaceTopology.summary'),
-                                                            'documentation': 'Immutable owned '
-                                                                             'ModelingCommandReplaceTopology value. '
-                                                                             'Construction owns declared collections; '
-                                                                             'reading fields, repr and summary '
-                                                                             'performs no IO.',
+                                                            'documentation': '',
                                                             'example': 'docs/recipes.py',
                                                             'fields': [('source',
                                                                         'Exact geometry snapshot the topology '
@@ -1042,16 +1017,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                         'or a mutable object field.')],
                                                             'kind': 'type',
                                                             'signature': '(*, source: GeometrySnapshot, replacement: '
-                                                                         'TopologyReplacement)'},
+                                                                         'TopologyReplacement)',
+                                                            'type_refs': ('zipzi.modeling.mesh.TopologyReplacement',
+                                                                          'zipzi.modeling.sampling.GeometrySnapshot')},
  'zipzi.modeling.commands.ModelingCommandReplaceTopology.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceTopology.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceTransform': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceTransform.__repr__',
                                                                           'zipzi.modeling.commands.ModelingCommandReplaceTransform.summary'),
-                                                             'documentation': 'Immutable owned '
-                                                                              'ModelingCommandReplaceTransform value. '
-                                                                              'Construction owns declared collections; '
-                                                                              'reading fields, repr and summary '
-                                                                              'performs no IO.',
+                                                             'documentation': '',
                                                              'example': 'docs/recipes.py',
                                                              'fields': [('transform',
                                                                          'Complete transform record to replace the '
@@ -1062,14 +1035,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                          'this value type; not a constructor argument '
                                                                          'or a mutable object field.')],
                                                              'kind': 'type',
-                                                             'signature': '(*, transform: Transform)'},
+                                                             'signature': '(*, transform: Transform)',
+                                                             'type_refs': ('zipzi.modeling.scene.Transform',)},
  'zipzi.modeling.commands.ModelingCommandReplaceTransform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandReplaceTransform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandResource': {'children': ('zipzi.modeling.commands.ModelingCommandResource.__repr__',
                                                                   'zipzi.modeling.commands.ModelingCommandResource.summary'),
-                                                     'documentation': 'Immutable owned ModelingCommandResource value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('intent',
                                                                  'Typed domain edit executed against the candidate; '
@@ -1080,14 +1052,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                  'type; not a constructor argument or a mutable object '
                                                                  'field.')],
                                                      'kind': 'type',
-                                                     'signature': '(*, intent: ResourceEdit)'},
+                                                     'signature': '(*, intent: ResourceEdit)',
+                                                     'type_refs': ('zipzi.modeling.resources.ResourceEdit',)},
  'zipzi.modeling.commands.ModelingCommandResource.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandResource.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandScene': {'children': ('zipzi.modeling.commands.ModelingCommandScene.__repr__',
                                                                'zipzi.modeling.commands.ModelingCommandScene.summary'),
-                                                  'documentation': 'Immutable owned ModelingCommandScene value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('intent',
                                                               'Typed domain edit executed against the candidate; '
@@ -1098,16 +1069,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                               'type; not a constructor argument or a mutable object '
                                                               'field.')],
                                                   'kind': 'type',
-                                                  'signature': '(*, intent: SceneEdit)'},
+                                                  'signature': '(*, intent: SceneEdit)',
+                                                  'type_refs': ('zipzi.modeling.scene.SceneEdit',)},
  'zipzi.modeling.commands.ModelingCommandScene.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandScene.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandSetMeshKeyform': {'children': ('zipzi.modeling.commands.ModelingCommandSetMeshKeyform.__repr__',
                                                                         'zipzi.modeling.commands.ModelingCommandSetMeshKeyform.summary'),
-                                                           'documentation': 'Immutable owned '
-                                                                            'ModelingCommandSetMeshKeyform value. '
-                                                                            'Construction owns declared collections; '
-                                                                            'reading fields, repr and summary performs '
-                                                                            'no IO.',
+                                                           'documentation': '',
                                                            'example': 'docs/recipes.py',
                                                            'fields': [('id',
                                                                        'Stable document object ID used by references; '
@@ -1121,15 +1089,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                        'value type; not a constructor argument or a '
                                                                        'mutable object field.')],
                                                            'kind': 'type',
-                                                           'signature': '(*, id: str, keyform: MeshKeyform)'},
+                                                           'signature': '(*, id: str, keyform: MeshKeyform)',
+                                                           'type_refs': ('zipzi.modeling.bindings.MeshKeyform',)},
  'zipzi.modeling.commands.ModelingCommandSetMeshKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandSetMeshKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandSetPhysics': {'children': ('zipzi.modeling.commands.ModelingCommandSetPhysics.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandSetPhysics.summary'),
-                                                       'documentation': 'Immutable owned ModelingCommandSetPhysics '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('physics',
                                                                    'Complete Physics singleton and ordered rig data.'),
@@ -1138,14 +1104,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                    'value type; not a constructor argument or a '
                                                                    'mutable object field.')],
                                                        'kind': 'type',
-                                                       'signature': '(*, physics: PhysicsAsset)'},
+                                                       'signature': '(*, physics: PhysicsAsset)',
+                                                       'type_refs': ('zipzi.modeling.physics.PhysicsAsset',)},
  'zipzi.modeling.commands.ModelingCommandSetPhysics.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandSetPhysics.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandSetPose': {'children': ('zipzi.modeling.commands.ModelingCommandSetPose.__repr__',
                                                                  'zipzi.modeling.commands.ModelingCommandSetPose.summary'),
-                                                    'documentation': 'Immutable owned ModelingCommandSetPose value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('pose',
                                                                 'Complete Pose singleton and owned part/link '
@@ -1155,16 +1120,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                 'type; not a constructor argument or a mutable object '
                                                                 'field.')],
                                                     'kind': 'type',
-                                                    'signature': '(*, pose: PoseAsset)'},
+                                                    'signature': '(*, pose: PoseAsset)',
+                                                    'type_refs': ('zipzi.modeling.pose.PoseAsset',)},
  'zipzi.modeling.commands.ModelingCommandSetPose.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandSetPose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandSetSceneKeyform': {'children': ('zipzi.modeling.commands.ModelingCommandSetSceneKeyform.__repr__',
                                                                          'zipzi.modeling.commands.ModelingCommandSetSceneKeyform.summary'),
-                                                            'documentation': 'Immutable owned '
-                                                                             'ModelingCommandSetSceneKeyform value. '
-                                                                             'Construction owns declared collections; '
-                                                                             'reading fields, repr and summary '
-                                                                             'performs no IO.',
+                                                            'documentation': '',
                                                             'example': 'docs/recipes.py',
                                                             'fields': [('id',
                                                                         'Stable document object ID used by references; '
@@ -1178,16 +1140,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                         'this value type; not a constructor argument '
                                                                         'or a mutable object field.')],
                                                             'kind': 'type',
-                                                            'signature': '(*, id: str, keyform: SceneKeyform)'},
+                                                            'signature': '(*, id: str, keyform: SceneKeyform)',
+                                                            'type_refs': ('zipzi.modeling.bindings.SceneKeyform',)},
  'zipzi.modeling.commands.ModelingCommandSetSceneKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandSetSceneKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandUpdatePositions': {'children': ('zipzi.modeling.commands.ModelingCommandUpdatePositions.__repr__',
                                                                          'zipzi.modeling.commands.ModelingCommandUpdatePositions.summary'),
-                                                            'documentation': 'Immutable owned '
-                                                                             'ModelingCommandUpdatePositions value. '
-                                                                             'Construction owns declared collections; '
-                                                                             'reading fields, repr and summary '
-                                                                             'performs no IO.',
+                                                            'documentation': '',
                                                             'example': 'docs/recipes.py',
                                                             'fields': [('id',
                                                                         'Stable document object ID used by references; '
@@ -1206,6 +1165,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                         'or a mutable object field.')],
                                                             'kind': 'type',
                                                             'signature': '(*, id: str, vertex_ids: tuple[int, ...], '
-                                                                         'positions: tuple[Vec2, ...])'},
+                                                                         'positions: tuple[Vec2, ...])',
+                                                            'type_refs': ('zipzi.modeling.common.Vec2',)},
  'zipzi.modeling.commands.ModelingCommandUpdatePositions.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ModelingCommandUpdatePositions.summary': {'alias': 'zipzi.ApiDescription.summary'}}

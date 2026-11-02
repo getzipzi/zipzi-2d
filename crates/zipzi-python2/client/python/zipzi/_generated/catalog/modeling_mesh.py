@@ -27,18 +27,29 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                          'kind': 'module',
                          'signature': ''},
  'zipzi.modeling.mesh.ManualMeshOperation': {'children': (),
-                                             'documentation': 'Typed public API entry.',
+                                             'documentation': '',
                                              'example': 'docs/recipes.py',
                                              'fields': [],
-                                             'kind': 'value',
-                                             'signature': ''},
+                                             'kind': 'alias',
+                                             'signature': 'ManualMeshOperationInsertVertex | '
+                                                          'ManualMeshOperationInsertConnectedVertex | '
+                                                          'ManualMeshOperationDeleteEdge | '
+                                                          'ManualMeshOperationMoveVertices | '
+                                                          'ManualMeshOperationDeleteVertices | '
+                                                          'ManualMeshOperationConstrainEdge | '
+                                                          'ManualMeshOperationReleaseConstraint | '
+                                                          'ManualMeshOperationReconnect',
+                                             'type_refs': ('zipzi.modeling.mesh.ManualMeshOperationConstrainEdge',
+                                                           'zipzi.modeling.mesh.ManualMeshOperationDeleteEdge',
+                                                           'zipzi.modeling.mesh.ManualMeshOperationDeleteVertices',
+                                                           'zipzi.modeling.mesh.ManualMeshOperationInsertConnectedVertex',
+                                                           'zipzi.modeling.mesh.ManualMeshOperationInsertVertex',
+                                                           'zipzi.modeling.mesh.ManualMeshOperationMoveVertices',
+                                                           'zipzi.modeling.mesh.ManualMeshOperationReconnect',
+                                                           'zipzi.modeling.mesh.ManualMeshOperationReleaseConstraint')},
  'zipzi.modeling.mesh.ManualMeshOperationConstrainEdge': {'children': ('zipzi.modeling.mesh.ManualMeshOperationConstrainEdge.__repr__',
                                                                        'zipzi.modeling.mesh.ManualMeshOperationConstrainEdge.summary'),
-                                                          'documentation': 'Immutable owned '
-                                                                           'ManualMeshOperationConstrainEdge value. '
-                                                                           'Construction owns declared collections; '
-                                                                           'reading fields, repr and summary performs '
-                                                                           'no IO.',
+                                                          'documentation': '',
                                                           'example': 'docs/recipes.py',
                                                           'fields': [('a',
                                                                       'First endpoint identity of the fixed edge.'),
@@ -50,10 +61,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.ManualMeshOperationConstrainEdge.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.ManualMeshOperationDeleteEdge': {'children': ('zipzi.modeling.mesh.ManualMeshOperationDeleteEdge.__repr__',
                                                                     'zipzi.modeling.mesh.ManualMeshOperationDeleteEdge.summary'),
-                                                       'documentation': 'Immutable owned ManualMeshOperationDeleteEdge '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': "Remove an outer edge's incident face and "
+                                                                        'recover the remaining outline.\n'
+                                                                        'Internal fixed edges become automatic edges.',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('a',
                                                                    'First endpoint identity of the edge to remove.'),
@@ -65,11 +75,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.ManualMeshOperationDeleteEdge.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.ManualMeshOperationDeleteVertices': {'children': ('zipzi.modeling.mesh.ManualMeshOperationDeleteVertices.__repr__',
                                                                         'zipzi.modeling.mesh.ManualMeshOperationDeleteVertices.summary'),
-                                                           'documentation': 'Immutable owned '
-                                                                            'ManualMeshOperationDeleteVertices value. '
-                                                                            'Construction owns declared collections; '
-                                                                            'reading fields, repr and summary performs '
-                                                                            'no IO.',
+                                                           'documentation': '',
                                                            'example': 'docs/recipes.py',
                                                            'fields': [('ids',
                                                                        'Persistent vertex identities to remove '
@@ -80,11 +86,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.ManualMeshOperationDeleteVertices.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.ManualMeshOperationInsertConnectedVertex': {'children': ('zipzi.modeling.mesh.ManualMeshOperationInsertConnectedVertex.__repr__',
                                                                                'zipzi.modeling.mesh.ManualMeshOperationInsertConnectedVertex.summary'),
-                                                                  'documentation': 'Immutable owned '
-                                                                                   'ManualMeshOperationInsertConnectedVertex '
-                                                                                   'value. Construction owns declared '
-                                                                                   'collections; reading fields, repr '
-                                                                                   'and summary performs no IO.',
+                                                                  'documentation': 'Insert and connect in a single '
+                                                                                   'atomic operation/history step.',
                                                                   'example': 'docs/recipes.py',
                                                                   'fields': [('from_',
                                                                               'Existing vertex identity to connect to '
@@ -96,32 +99,29 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                                               'Absolute UV position of the new '
                                                                               'vertex.')],
                                                                   'kind': 'type',
-                                                                  'signature': '(*, from_: int, id: int, uv: Vec2)'},
+                                                                  'signature': '(*, from_: int, id: int, uv: Vec2)',
+                                                                  'type_refs': ('zipzi.modeling.common.Vec2',)},
  'zipzi.modeling.mesh.ManualMeshOperationInsertConnectedVertex.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.ManualMeshOperationInsertConnectedVertex.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.ManualMeshOperationInsertVertex': {'children': ('zipzi.modeling.mesh.ManualMeshOperationInsertVertex.__repr__',
                                                                       'zipzi.modeling.mesh.ManualMeshOperationInsertVertex.summary'),
-                                                         'documentation': 'Immutable owned '
-                                                                          'ManualMeshOperationInsertVertex value. '
-                                                                          'Construction owns declared collections; '
-                                                                          'reading fields, repr and summary performs '
-                                                                          'no IO.',
+                                                         'documentation': 'The caller supplies a fresh ID; its '
+                                                                          'allocator must not reuse canceled candidate '
+                                                                          'IDs.',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [('id',
                                                                      'Fresh vertex identity that has not been used by '
                                                                      'a cancelled candidate.'),
                                                                     ('uv', 'Absolute UV position of the new vertex.')],
                                                          'kind': 'type',
-                                                         'signature': '(*, id: int, uv: Vec2)'},
+                                                         'signature': '(*, id: int, uv: Vec2)',
+                                                         'type_refs': ('zipzi.modeling.common.Vec2',)},
  'zipzi.modeling.mesh.ManualMeshOperationInsertVertex.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.ManualMeshOperationInsertVertex.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.ManualMeshOperationMoveVertices': {'children': ('zipzi.modeling.mesh.ManualMeshOperationMoveVertices.__repr__',
                                                                       'zipzi.modeling.mesh.ManualMeshOperationMoveVertices.summary'),
-                                                         'documentation': 'Immutable owned '
-                                                                          'ManualMeshOperationMoveVertices value. '
-                                                                          'Construction owns declared collections; '
-                                                                          'reading fields, repr and summary performs '
-                                                                          'no IO.',
+                                                         'documentation': 'Absolute UV targets; motion_from is the '
+                                                                          'last accepted preview when supplied.',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [('targets',
                                                                      'Absolute UV targets keyed by persistent mesh '
@@ -132,15 +132,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                          'kind': 'type',
                                                          'signature': '(*, targets: tuple[ManualVertexTarget, ...], '
                                                                       'motion_from: tuple[ManualVertexTarget, ...] | '
-                                                                      'None = None)'},
+                                                                      'None = None)',
+                                                         'type_refs': ('zipzi.modeling.mesh.ManualVertexTarget',)},
  'zipzi.modeling.mesh.ManualMeshOperationMoveVertices.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.ManualMeshOperationMoveVertices.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.ManualMeshOperationReconnect': {'children': ('zipzi.modeling.mesh.ManualMeshOperationReconnect.__repr__',
                                                                    'zipzi.modeling.mesh.ManualMeshOperationReconnect.summary'),
-                                                      'documentation': 'Immutable owned ManualMeshOperationReconnect '
-                                                                       'value. Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [],
                                                       'kind': 'type',
@@ -149,11 +147,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.ManualMeshOperationReconnect.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.ManualMeshOperationReleaseConstraint': {'children': ('zipzi.modeling.mesh.ManualMeshOperationReleaseConstraint.__repr__',
                                                                            'zipzi.modeling.mesh.ManualMeshOperationReleaseConstraint.summary'),
-                                                              'documentation': 'Immutable owned '
-                                                                               'ManualMeshOperationReleaseConstraint '
-                                                                               'value. Construction owns declared '
-                                                                               'collections; reading fields, repr and '
-                                                                               'summary performs no IO.',
+                                                              'documentation': '',
                                                               'example': 'docs/recipes.py',
                                                               'fields': [('a',
                                                                           'First endpoint identity of the constraint '
@@ -167,9 +161,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.ManualMeshOperationReleaseConstraint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.ManualMeshTransferReport': {'children': ('zipzi.modeling.mesh.ManualMeshTransferReport.__repr__',
                                                                'zipzi.modeling.mesh.ManualMeshTransferReport.summary'),
-                                                  'documentation': 'Immutable owned ManualMeshTransferReport value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('added', 'Number of newly allocated vertices.'),
                                                              ('moved',
@@ -200,14 +192,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                                'int, reconnected: bool, glue_endpoints: bool, '
                                                                'non_affine_parent: bool, affine_extension: bool, '
                                                                'appearance_limits: tuple[str, ...], cost: '
-                                                               'ConversionCost)'},
+                                                               'ConversionCost)',
+                                                  'type_refs': ('zipzi.modeling.commands.ConversionCost',)},
  'zipzi.modeling.mesh.ManualMeshTransferReport.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.ManualMeshTransferReport.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.ManualVertexTarget': {'children': ('zipzi.modeling.mesh.ManualVertexTarget.__repr__',
                                                          'zipzi.modeling.mesh.ManualVertexTarget.summary'),
-                                            'documentation': 'Immutable owned ManualVertexTarget value. Construction '
-                                                             'owns declared collections; reading fields, repr and '
-                                                             'summary performs no IO.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
                                             'fields': [('id',
                                                         'Stable vertex identity in the edited mesh, not its array '
@@ -215,12 +206,12 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                        ('uv',
                                                         'Absolute target UV coordinate in the mesh texture domain.')],
                                             'kind': 'type',
-                                            'signature': '(*, id: int, uv: Vec2)'},
+                                            'signature': '(*, id: int, uv: Vec2)',
+                                            'type_refs': ('zipzi.modeling.common.Vec2',)},
  'zipzi.modeling.mesh.ManualVertexTarget.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.ManualVertexTarget.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.Mesh': {'children': ('zipzi.modeling.mesh.Mesh.__repr__', 'zipzi.modeling.mesh.Mesh.summary'),
-                              'documentation': 'Immutable owned Mesh value. Construction owns declared collections; '
-                                               'reading fields, repr and summary performs no IO.',
+                              'documentation': '',
                               'example': 'docs/recipes.py',
                               'fields': [('id',
                                           'Stable document object ID used by references; it is distinct from the '
@@ -281,14 +272,20 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                            'None, runtime_id: str, part_id: str, deformer_id: str, appearance: '
                                            'Appearance, draw_order: float | None = None, blend_mode: BlendMode, '
                                            'enabled: bool, double_sided: bool, inverted_mask: bool, masks: tuple[str, '
-                                           '...], raw_blend_mode: int | None = None)'},
+                                           '...], raw_blend_mode: int | None = None)',
+                              'type_refs': ('zipzi.modeling.common.Vec2',
+                                            'zipzi.modeling.mesh.MeshMeshing',
+                                            'zipzi.modeling.scene.Appearance',
+                                            'zipzi.modeling.scene.BlendMode',
+                                            'zipzi.modeling.scene.SceneReference')},
  'zipzi.modeling.mesh.Mesh.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.Mesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.MeshConstraint': {'children': ('zipzi.modeling.mesh.MeshConstraint.__repr__',
                                                      'zipzi.modeling.mesh.MeshConstraint.summary'),
-                                        'documentation': 'Immutable owned MeshConstraint value. Construction owns '
-                                                         'declared collections; reading fields, repr and summary '
-                                                         'performs no IO.',
+                                        'documentation': 'An internal mesh edge identified by two stable vertex IDs '
+                                                         'and its origin.\n'
+                                                         'The edge must exist in the triangulation; boundary edges '
+                                                         'belong to MeshMeshing.boundary.',
                                         'example': 'docs/recipes.py',
                                         'fields': [('endpoints',
                                                     'Two distinct vertex IDs in increasing order; the segment is an '
@@ -297,20 +294,22 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                     'Whether this edge was fixed by the user or supplied by the '
                                                     'edge-layout generator.')],
                                         'kind': 'type',
-                                        'signature': '(*, endpoints: tuple[int, int], kind: MeshConstraintKind)'},
+                                        'signature': '(*, endpoints: tuple[int, int], kind: MeshConstraintKind)',
+                                        'type_refs': ('zipzi.modeling.mesh.MeshConstraintKind',)},
  'zipzi.modeling.mesh.MeshConstraint.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.MeshConstraint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.MeshConstraintKind': {'children': (),
-                                            'documentation': 'Immutable typed value. See field semantics and the '
-                                                             'linked workflow.',
+                                            'documentation': 'The origin of a retained internal mesh constraint edge.',
                                             'example': 'docs/recipes.py',
-                                            'fields': [],
-                                            'kind': 'type',
-                                            'signature': '()'},
+                                            'fields': [('USER', "'user' — Fixed by the user."),
+                                                       ('EDGE_SUPPORT',
+                                                        "'edge_support' — Supplied by the edge-layout generator.")],
+                                            'kind': 'enum',
+                                            'signature': ''},
  'zipzi.modeling.mesh.MeshMeshing': {'children': ('zipzi.modeling.mesh.MeshMeshing.__repr__',
                                                   'zipzi.modeling.mesh.MeshMeshing.summary'),
-                                     'documentation': 'Immutable owned MeshMeshing value. Construction owns declared '
-                                                      'collections; reading fields, repr and summary performs no IO.',
+                                     'documentation': 'A canonical counterclockwise outer boundary and the internal '
+                                                      'edges retained by remeshing.',
                                      'example': 'docs/recipes.py',
                                      'fields': [('boundary',
                                                  'Closed UV boundary without a repeated endpoint, starting at its '
@@ -320,14 +319,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                  'excludes boundary edges.')],
                                      'kind': 'type',
                                      'signature': '(*, boundary: tuple[int, ...], constraints: tuple[MeshConstraint, '
-                                                  '...])'},
+                                                  '...])',
+                                     'type_refs': ('zipzi.modeling.mesh.MeshConstraint',)},
  'zipzi.modeling.mesh.MeshMeshing.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.MeshMeshing.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.NewMeshVertex': {'children': ('zipzi.modeling.mesh.NewMeshVertex.__repr__',
                                                     'zipzi.modeling.mesh.NewMeshVertex.summary'),
-                                       'documentation': 'Immutable owned NewMeshVertex value. Construction owns '
-                                                        'declared collections; reading fields, repr and summary '
-                                                        'performs no IO.',
+                                       'documentation': '',
                                        'example': 'docs/recipes.py',
                                        'fields': [('vertex_id',
                                                    'Stable u32 vertex ID within the mesh, not an offset into its '
@@ -341,14 +339,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                    'Explicit policy for initializing this new vertex in dependent '
                                                    'ordinary/BlendShape keyforms.')],
                                        'kind': 'type',
-                                       'signature': '(*, vertex_id: int, position: Vec2, uv: Vec2, seed: VertexSeed)'},
+                                       'signature': '(*, vertex_id: int, position: Vec2, uv: Vec2, seed: VertexSeed)',
+                                       'type_refs': ('zipzi.modeling.common.Vec2', 'zipzi.modeling.mesh.VertexSeed')},
  'zipzi.modeling.mesh.NewMeshVertex.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.NewMeshVertex.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.TopologyReplacement': {'children': ('zipzi.modeling.mesh.TopologyReplacement.__repr__',
                                                           'zipzi.modeling.mesh.TopologyReplacement.summary'),
-                                             'documentation': 'Immutable owned TopologyReplacement value. Construction '
-                                                              'owns declared collections; reading fields, repr and '
-                                                              'summary performs no IO.',
+                                             'documentation': '',
                                              'example': 'docs/recipes.py',
                                              'fields': [('mesh',
                                                          'Complete replacement mesh geometry and metadata. Setting '
@@ -371,14 +368,16 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                              'signature': '(*, mesh: Mesh, binding: MeshBinding | None = None, '
                                                           'blend_bindings: tuple[BlendShapeBinding, ...], glues: '
                                                           'tuple[Glue, ...], vertex_mapping: _Mapping[int, int | '
-                                                          'None])'},
+                                                          'None])',
+                                             'type_refs': ('zipzi.modeling.bindings.BlendShapeBinding',
+                                                           'zipzi.modeling.bindings.MeshBinding',
+                                                           'zipzi.modeling.mesh.Mesh',
+                                                           'zipzi.modeling.scene.Glue')},
  'zipzi.modeling.mesh.TopologyReplacement.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.TopologyReplacement.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.VertexContentPatch': {'children': ('zipzi.modeling.mesh.VertexContentPatch.__repr__',
                                                          'zipzi.modeling.mesh.VertexContentPatch.summary'),
-                                            'documentation': 'Immutable owned VertexContentPatch value. Construction '
-                                                             'owns declared collections; reading fields, repr and '
-                                                             'summary performs no IO.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
                                             'fields': [('vertex_id',
                                                         'Stable u32 vertex ID within the mesh, not an offset into its '
@@ -391,27 +390,28 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                         'Optional texture UV pair; None preserves the current UV.')],
                                             'kind': 'type',
                                             'signature': '(*, vertex_id: int, position: Vec2 | None = None, uv: Vec2 | '
-                                                         'None = None)'},
+                                                         'None = None)',
+                                            'type_refs': ('zipzi.modeling.common.Vec2',)},
  'zipzi.modeling.mesh.VertexContentPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.VertexContentPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.VertexDeletePolicy': {'children': (),
-                                            'documentation': 'Immutable typed value. See field semantics and the '
-                                                             'linked workflow.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
-                                            'fields': [],
-                                            'kind': 'type',
-                                            'signature': '()'},
+                                            'fields': [('REJECT_REFERENCES', "'reject_references'"),
+                                                       ('REMOVE_DEPENDENT_CONTENT', "'remove_dependent_content'")],
+                                            'kind': 'enum',
+                                            'signature': ''},
  'zipzi.modeling.mesh.VertexSeed': {'children': (),
-                                    'documentation': 'Typed public API entry.',
+                                    'documentation': '',
                                     'example': 'docs/recipes.py',
                                     'fields': [],
-                                    'kind': 'value',
-                                    'signature': ''},
+                                    'kind': 'alias',
+                                    'signature': 'VertexSeedBase | VertexSeedInterpolate',
+                                    'type_refs': ('zipzi.modeling.mesh.VertexSeedBase',
+                                                  'zipzi.modeling.mesh.VertexSeedInterpolate')},
  'zipzi.modeling.mesh.VertexSeedBase': {'children': ('zipzi.modeling.mesh.VertexSeedBase.__repr__',
                                                      'zipzi.modeling.mesh.VertexSeedBase.summary'),
-                                        'documentation': 'Immutable owned VertexSeedBase value. Construction owns '
-                                                         'declared collections; reading fields, repr and summary '
-                                                         'performs no IO.',
+                                        'documentation': '',
                                         'example': 'docs/recipes.py',
                                         'fields': [],
                                         'kind': 'type',
@@ -420,21 +420,19 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.VertexSeedBase.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.VertexSeedInterpolate': {'children': ('zipzi.modeling.mesh.VertexSeedInterpolate.__repr__',
                                                             'zipzi.modeling.mesh.VertexSeedInterpolate.summary'),
-                                               'documentation': 'Immutable owned VertexSeedInterpolate value. '
-                                                                'Construction owns declared collections; reading '
-                                                                'fields, repr and summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('weights',
                                                            'Source vertex IDs and interpolation weights used to seed '
                                                            'dependent shape content.')],
                                                'kind': 'type',
-                                               'signature': '(*, weights: tuple[VertexWeight, ...])'},
+                                               'signature': '(*, weights: tuple[VertexWeight, ...])',
+                                               'type_refs': ('zipzi.modeling.mesh.VertexWeight',)},
  'zipzi.modeling.mesh.VertexSeedInterpolate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.mesh.VertexSeedInterpolate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.VertexWeight': {'children': ('zipzi.modeling.mesh.VertexWeight.__repr__',
                                                    'zipzi.modeling.mesh.VertexWeight.summary'),
-                                      'documentation': 'Immutable owned VertexWeight value. Construction owns declared '
-                                                       'collections; reading fields, repr and summary performs no IO.',
+                                      'documentation': '',
                                       'example': 'docs/recipes.py',
                                       'fields': [('vertex_id',
                                                   'Stable u32 vertex ID within the mesh, not an offset into its '

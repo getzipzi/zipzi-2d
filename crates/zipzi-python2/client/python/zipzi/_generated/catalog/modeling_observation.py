@@ -29,9 +29,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                 'signature': ''},
  'zipzi.modeling.observation.ObservationBatch': {'children': ('zipzi.modeling.observation.ObservationBatch.__repr__',
                                                               'zipzi.modeling.observation.ObservationBatch.summary'),
-                                                 'documentation': 'Immutable owned ObservationBatch value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('texture_report',
                                                              'Verified once-per-batch source and rendering texture '
@@ -47,23 +45,27 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                  'kind': 'type',
                                                  'signature': '(*, texture_report: ObservationTextureReport, view: '
                                                               'ObservationView, requested: tuple[_Mapping[str, float], '
-                                                              '...], frames: tuple[ObservationImage, ...])'},
+                                                              '...], frames: tuple[ObservationImage, ...])',
+                                                 'type_refs': ('zipzi.modeling.observation.ObservationImage',
+                                                               'zipzi.modeling.observation.ObservationTextureReport',
+                                                               'zipzi.modeling.observation.ObservationView')},
  'zipzi.modeling.observation.ObservationBatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.observation.ObservationBatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.ObservationContentIdentity': {'children': (),
-                                                           'documentation': 'Typed public API entry.',
+                                                           'documentation': 'A source content identity includes its '
+                                                                            'representation. A PNG byte digest\n'
+                                                                            'and a domain-separated straight RGBA8 '
+                                                                            'pixel digest are not interchangeable.',
                                                            'example': 'docs/recipes.py',
                                                            'fields': [],
-                                                           'kind': 'value',
-                                                           'signature': ''},
+                                                           'kind': 'alias',
+                                                           'signature': 'ObservationContentIdentityPngSha256 | '
+                                                                        'ObservationContentIdentityRgba8Sha256',
+                                                           'type_refs': ('zipzi.modeling.observation.ObservationContentIdentityPngSha256',
+                                                                         'zipzi.modeling.observation.ObservationContentIdentityRgba8Sha256')},
  'zipzi.modeling.observation.ObservationContentIdentityPngSha256': {'children': ('zipzi.modeling.observation.ObservationContentIdentityPngSha256.__repr__',
                                                                                  'zipzi.modeling.observation.ObservationContentIdentityPngSha256.summary'),
-                                                                    'documentation': 'Immutable owned '
-                                                                                     'ObservationContentIdentityPngSha256 '
-                                                                                     'value. Construction owns '
-                                                                                     'declared collections; reading '
-                                                                                     'fields, repr and summary '
-                                                                                     'performs no IO.',
+                                                                    'documentation': '',
                                                                     'example': 'docs/recipes.py',
                                                                     'fields': [('hash',
                                                                                 'SHA256 of encoded source PNG bytes; '
@@ -74,12 +76,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservationContentIdentityPngSha256.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.ObservationContentIdentityRgba8Sha256': {'children': ('zipzi.modeling.observation.ObservationContentIdentityRgba8Sha256.__repr__',
                                                                                    'zipzi.modeling.observation.ObservationContentIdentityRgba8Sha256.summary'),
-                                                                      'documentation': 'Immutable owned '
-                                                                                       'ObservationContentIdentityRgba8Sha256 '
-                                                                                       'value. Construction owns '
-                                                                                       'declared collections; reading '
-                                                                                       'fields, repr and summary '
-                                                                                       'performs no IO.',
+                                                                      'documentation': '',
                                                                       'example': 'docs/recipes.py',
                                                                       'fields': [('hash',
                                                                                   'Domain-separated hash including '
@@ -90,9 +87,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservationContentIdentityRgba8Sha256.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.ObservationEstimate': {'children': ('zipzi.modeling.observation.ObservationEstimate.__repr__',
                                                                  'zipzi.modeling.observation.ObservationEstimate.summary'),
-                                                    'documentation': 'Immutable owned ObservationEstimate value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': 'Synchronous metadata estimate; it does not pin a '
+                                                                     'plan, reserve a task, decode\n'
+                                                                     'resources, evaluate poses, replay animation or '
+                                                                     'initialize a GPU.',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('source',
                                                                 'Formal/candidate snapshot identity; external file '
@@ -148,15 +146,15 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                                  'runtime_available: bool, gpu_supported: bool, '
                                                                  'device_max_texture_dimension: int | None = None, '
                                                                  'device_verified: bool, source_identities_verified: '
-                                                                 'bool, issues: tuple[ObservationEstimateIssue, ...])'},
+                                                                 'bool, issues: tuple[ObservationEstimateIssue, ...])',
+                                                    'type_refs': ('zipzi.Source',
+                                                                  'zipzi.modeling.observation.ObservationEstimateIssue',
+                                                                  'zipzi.modeling.observation.ObservationTexturePlanning')},
  'zipzi.modeling.observation.ObservationEstimate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.observation.ObservationEstimate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.ObservationEstimateIssue': {'children': ('zipzi.modeling.observation.ObservationEstimateIssue.__repr__',
                                                                       'zipzi.modeling.observation.ObservationEstimateIssue.summary'),
-                                                         'documentation': 'Immutable owned ObservationEstimateIssue '
-                                                                          'value. Construction owns declared '
-                                                                          'collections; reading fields, repr and '
-                                                                          'summary performs no IO.',
+                                                         'documentation': '',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [('code',
                                                                      'Structured feasibility category, using '
@@ -180,9 +178,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservationEstimateIssue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.ObservationImage': {'children': ('zipzi.modeling.observation.ObservationImage.__repr__',
                                                               'zipzi.modeling.observation.ObservationImage.summary'),
-                                                 'documentation': 'Immutable owned ObservationImage value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('width', 'Output image width in pixels.'),
                                                             ('height', 'Output image height in pixels.'),
@@ -245,15 +241,18 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                               'tuple[float, float, float, float], scale: float, '
                                                               'offset: tuple[float, float], drawable_bounds: '
                                                               'tuple[ObservedBounds, ...], quality: tuple[MeshQuality, '
-                                                              '...])'},
+                                                              '...])',
+                                                 'type_refs': ('zipzi.modeling.observation.ObservedBounds',
+                                                               'zipzi.modeling.sampling.MeshQuality')},
  'zipzi.modeling.observation.ObservationImage.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.observation.ObservationImage.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.ObservationTexturePlan': {'children': ('zipzi.modeling.observation.ObservationTexturePlan.__repr__',
                                                                     'zipzi.modeling.observation.ObservationTexturePlan.summary'),
-                                                       'documentation': 'Immutable owned ObservationTexturePlan value. '
-                                                                        'Construction owns declared collections; '
-                                                                        'reading fields, repr and summary performs no '
-                                                                        'IO.',
+                                                       'documentation': 'Feasible deterministic CPU plan. Clients '
+                                                                        'cannot submit this as a trusted\n'
+                                                                        'execution plan. Mipmap bytes exclude the base '
+                                                                        'level and are logical bytes,\n'
+                                                                        'not GPU allocation measurements.',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('policy',
                                                                    'Requested policy; equivalent actual pixels may '
@@ -290,24 +289,26 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                                     'source_rgba_bytes: int, render_rgba_bytes: int, '
                                                                     'estimated_mipmap_bytes: int, resized_count: int, '
                                                                     'planning_version: int, mipmap_version: int, '
-                                                                    'textures: tuple[ObservationTextureTarget, ...])'},
+                                                                    'textures: tuple[ObservationTextureTarget, ...])',
+                                                       'type_refs': ('zipzi.modeling.observation.ObservationTexturePolicy',
+                                                                     'zipzi.modeling.observation.ObservationTextureTarget')},
  'zipzi.modeling.observation.ObservationTexturePlan.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.observation.ObservationTexturePlan.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.ObservationTexturePlanning': {'children': (),
-                                                           'documentation': 'Typed public API entry.',
+                                                           'documentation': 'A valid policy can be statically '
+                                                                            'infeasible. Retain source dimensions for\n'
+                                                                            'diagnosis instead of treating a budget '
+                                                                            'shortfall as malformed input.',
                                                            'example': 'docs/recipes.py',
                                                            'fields': [],
-                                                           'kind': 'value',
-                                                           'signature': ''},
+                                                           'kind': 'alias',
+                                                           'signature': 'ObservationTexturePlanningReady | '
+                                                                        'ObservationTexturePlanningInsufficientBudget',
+                                                           'type_refs': ('zipzi.modeling.observation.ObservationTexturePlanningInsufficientBudget',
+                                                                         'zipzi.modeling.observation.ObservationTexturePlanningReady')},
  'zipzi.modeling.observation.ObservationTexturePlanningInsufficientBudget': {'children': ('zipzi.modeling.observation.ObservationTexturePlanningInsufficientBudget.__repr__',
                                                                                           'zipzi.modeling.observation.ObservationTexturePlanningInsufficientBudget.summary'),
-                                                                             'documentation': 'Immutable owned '
-                                                                                              'ObservationTexturePlanningInsufficientBudget '
-                                                                                              'value. Construction '
-                                                                                              'owns declared '
-                                                                                              'collections; reading '
-                                                                                              'fields, repr and '
-                                                                                              'summary performs no IO.',
+                                                                             'documentation': '',
                                                                              'example': 'docs/recipes.py',
                                                                              'fields': [('policy', 'Requested policy.'),
                                                                                         ('effective_max_rgba_bytes',
@@ -332,37 +333,38 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                                                           'minimum_required_rgba_bytes: '
                                                                                           'int, textures: '
                                                                                           'tuple[ObservationTextureSource, '
-                                                                                          '...])'},
+                                                                                          '...])',
+                                                                             'type_refs': ('zipzi.modeling.observation.ObservationTexturePolicy',
+                                                                                           'zipzi.modeling.observation.ObservationTextureSource')},
  'zipzi.modeling.observation.ObservationTexturePlanningInsufficientBudget.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.observation.ObservationTexturePlanningInsufficientBudget.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.ObservationTexturePlanningReady': {'children': ('zipzi.modeling.observation.ObservationTexturePlanningReady.__repr__',
                                                                              'zipzi.modeling.observation.ObservationTexturePlanningReady.summary'),
-                                                                'documentation': 'Immutable owned '
-                                                                                 'ObservationTexturePlanningReady '
-                                                                                 'value. Construction owns declared '
-                                                                                 'collections; reading fields, repr '
-                                                                                 'and summary performs no IO.',
+                                                                'documentation': '',
                                                                 'example': 'docs/recipes.py',
                                                                 'fields': [('plan',
                                                                             'Feasible CPU dimensions; device limits '
                                                                             'remain unverified.')],
                                                                 'kind': 'type',
-                                                                'signature': '(*, plan: ObservationTexturePlan)'},
+                                                                'signature': '(*, plan: ObservationTexturePlan)',
+                                                                'type_refs': ('zipzi.modeling.observation.ObservationTexturePlan',)},
  'zipzi.modeling.observation.ObservationTexturePlanningReady.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.observation.ObservationTexturePlanningReady.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.ObservationTexturePolicy': {'children': (),
-                                                         'documentation': 'Typed public API entry.',
+                                                         'documentation': 'Explicit base-level texture policy. Budgets '
+                                                                          'count logical straight RGBA8\n'
+                                                                          'bytes per referenced asset ID, '
+                                                                          'independently of physical buffer sharing.',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [],
-                                                         'kind': 'value',
-                                                         'signature': ''},
+                                                         'kind': 'alias',
+                                                         'signature': 'ObservationTexturePolicyOriginal | '
+                                                                      'ObservationTexturePolicyFitBudget',
+                                                         'type_refs': ('zipzi.modeling.observation.ObservationTexturePolicyFitBudget',
+                                                                       'zipzi.modeling.observation.ObservationTexturePolicyOriginal')},
  'zipzi.modeling.observation.ObservationTexturePolicyFitBudget': {'children': ('zipzi.modeling.observation.ObservationTexturePolicyFitBudget.__repr__',
                                                                                'zipzi.modeling.observation.ObservationTexturePolicyFitBudget.summary'),
-                                                                  'documentation': 'Immutable owned '
-                                                                                   'ObservationTexturePolicyFitBudget '
-                                                                                   'value. Construction owns declared '
-                                                                                   'collections; reading fields, repr '
-                                                                                   'and summary performs no IO.',
+                                                                  'documentation': '',
                                                                   'example': 'docs/recipes.py',
                                                                   'fields': [('max_rgba_bytes',
                                                                               'Positive integer no greater than the '
@@ -373,11 +375,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservationTexturePolicyFitBudget.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.ObservationTexturePolicyOriginal': {'children': ('zipzi.modeling.observation.ObservationTexturePolicyOriginal.__repr__',
                                                                               'zipzi.modeling.observation.ObservationTexturePolicyOriginal.summary'),
-                                                                 'documentation': 'Immutable owned '
-                                                                                  'ObservationTexturePolicyOriginal '
-                                                                                  'value. Construction owns declared '
-                                                                                  'collections; reading fields, repr '
-                                                                                  'and summary performs no IO.',
+                                                                 'documentation': 'Preserve the source dimensions and '
+                                                                                  'every source byte.',
                                                                  'example': 'docs/recipes.py',
                                                                  'fields': [],
                                                                  'kind': 'type',
@@ -386,10 +385,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservationTexturePolicyOriginal.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.ObservationTextureReport': {'children': ('zipzi.modeling.observation.ObservationTextureReport.__repr__',
                                                                       'zipzi.modeling.observation.ObservationTextureReport.summary'),
-                                                         'documentation': 'Immutable owned ObservationTextureReport '
-                                                                          'value. Construction owns declared '
-                                                                          'collections; reading fields, repr and '
-                                                                          'summary performs no IO.',
+                                                         'documentation': '',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [('policy',
                                                                      'Requested texture policy; not part of '
@@ -433,16 +429,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                                       'int, filter: str, algorithm_version: int, '
                                                                       'planning_version: int, mipmap_version: int, '
                                                                       'textures: tuple[ObservationTextureReportEntry, '
-                                                                      '...])'},
+                                                                      '...])',
+                                                         'type_refs': ('zipzi.modeling.observation.ObservationTexturePolicy',
+                                                                       'zipzi.modeling.observation.ObservationTextureReportEntry')},
  'zipzi.modeling.observation.ObservationTextureReport.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.observation.ObservationTextureReport.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.ObservationTextureReportEntry': {'children': ('zipzi.modeling.observation.ObservationTextureReportEntry.__repr__',
                                                                            'zipzi.modeling.observation.ObservationTextureReportEntry.summary'),
-                                                              'documentation': 'Immutable owned '
-                                                                               'ObservationTextureReportEntry value. '
-                                                                               'Construction owns declared '
-                                                                               'collections; reading fields, repr and '
-                                                                               'summary performs no IO.',
+                                                              'documentation': '',
                                                               'example': 'docs/recipes.py',
                                                               'fields': [('asset_id',
                                                                           'Stable image asset ID; distinct IDs count '
@@ -465,15 +459,15 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                                            'ObservationTextureSize, '
                                                                            'source_content_identity: '
                                                                            'ObservationContentIdentity, '
-                                                                           'render_rgba_hash: str)'},
+                                                                           'render_rgba_hash: str)',
+                                                              'type_refs': ('zipzi.modeling.observation.ObservationContentIdentity',
+                                                                            'zipzi.modeling.observation.ObservationTextureSize')},
  'zipzi.modeling.observation.ObservationTextureReportEntry.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.observation.ObservationTextureReportEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.ObservationTextureSize': {'children': ('zipzi.modeling.observation.ObservationTextureSize.__repr__',
                                                                     'zipzi.modeling.observation.ObservationTextureSize.summary'),
-                                                       'documentation': 'Immutable owned ObservationTextureSize value. '
-                                                                        'Construction owns declared collections; '
-                                                                        'reading fields, repr and summary performs no '
-                                                                        'IO.',
+                                                       'documentation': 'Pixel dimensions; zero axes are invalid '
+                                                                        'resource metadata.',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('width', 'Width in pixels.'),
                                                                   ('height', 'Height in pixels.')],
@@ -483,10 +477,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservationTextureSize.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.ObservationTextureSource': {'children': ('zipzi.modeling.observation.ObservationTextureSource.__repr__',
                                                                       'zipzi.modeling.observation.ObservationTextureSource.summary'),
-                                                         'documentation': 'Immutable owned ObservationTextureSource '
-                                                                          'value. Construction owns declared '
-                                                                          'collections; reading fields, repr and '
-                                                                          'summary performs no IO.',
+                                                         'documentation': 'Metadata-only source description. A '
+                                                                          'declared identity has not been verified\n'
+                                                                          'by estimation; Source freezes the document, '
+                                                                          'not external file bytes.',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [('asset_id',
                                                                      'Stable image asset ID, counted once across all '
@@ -501,15 +495,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                          'signature': '(*, asset_id: str, source_size: '
                                                                       'ObservationTextureSize, '
                                                                       'source_content_identity: '
-                                                                      'ObservationContentIdentity | None = None)'},
+                                                                      'ObservationContentIdentity | None = None)',
+                                                         'type_refs': ('zipzi.modeling.observation.ObservationContentIdentity',
+                                                                       'zipzi.modeling.observation.ObservationTextureSize')},
  'zipzi.modeling.observation.ObservationTextureSource.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.observation.ObservationTextureSource.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.ObservationTextureTarget': {'children': ('zipzi.modeling.observation.ObservationTextureTarget.__repr__',
                                                                       'zipzi.modeling.observation.ObservationTextureTarget.summary'),
-                                                         'documentation': 'Immutable owned ObservationTextureTarget '
-                                                                          'value. Construction owns declared '
-                                                                          'collections; reading fields, repr and '
-                                                                          'summary performs no IO.',
+                                                         'documentation': '',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [('source',
                                                                      'Declared source metadata; the executor must '
@@ -518,14 +511,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                                      'Planned base-level rendering dimensions.')],
                                                          'kind': 'type',
                                                          'signature': '(*, source: ObservationTextureSource, '
-                                                                      'render_size: ObservationTextureSize)'},
+                                                                      'render_size: ObservationTextureSize)',
+                                                         'type_refs': ('zipzi.modeling.observation.ObservationTextureSize',
+                                                                       'zipzi.modeling.observation.ObservationTextureSource')},
  'zipzi.modeling.observation.ObservationTextureTarget.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.observation.ObservationTextureTarget.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.ObservationView': {'children': ('zipzi.modeling.observation.ObservationView.__repr__',
                                                              'zipzi.modeling.observation.ObservationView.summary'),
-                                                'documentation': 'Immutable owned ObservationView value. Construction '
-                                                                 'owns declared collections; reading fields, repr and '
-                                                                 'summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('texture_policy',
                                                             'Explicit texture policy; Original preserves source pixels '
@@ -557,14 +550,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                              '<factory>, width: int, height: int, roi: tuple[float, '
                                                              'float, float, float], padding_model: float = 0.0, '
                                                              'topology: TopologyOverlay | None = None, quality: bool = '
-                                                             'False)'},
+                                                             'False)',
+                                                'type_refs': ('zipzi.modeling.observation.ObservationTexturePolicy',
+                                                              'zipzi.modeling.observation.TopologyOverlay')},
  'zipzi.modeling.observation.ObservationView.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.observation.ObservationView.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.ObservedBounds': {'children': ('zipzi.modeling.observation.ObservedBounds.__repr__',
                                                             'zipzi.modeling.observation.ObservedBounds.summary'),
-                                               'documentation': 'Immutable owned ObservedBounds value. Construction '
-                                                                'owns declared collections; reading fields, repr and '
-                                                                'summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('id', 'Stable authoring drawable UUID.'),
                                                           ('visible',
@@ -580,9 +573,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservedBounds.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.TextureCoverage': {'children': ('zipzi.modeling.observation.TextureCoverage.__repr__',
                                                              'zipzi.modeling.observation.TextureCoverage.summary'),
-                                                'documentation': 'Immutable owned TextureCoverage value. Construction '
-                                                                 'owns declared collections; reading fields, repr and '
-                                                                 'summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('alpha_threshold',
                                                             'Alpha >= this value counts as painted. Coverage ignores '
@@ -626,9 +617,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.TextureCoverage.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.TopologyOverlay': {'children': ('zipzi.modeling.observation.TopologyOverlay.__repr__',
                                                              'zipzi.modeling.observation.TopologyOverlay.summary'),
-                                                'documentation': 'Immutable owned TopologyOverlay value. Construction '
-                                                                 'owns declared collections; reading fields, repr and '
-                                                                 'summary performs no IO.',
+                                                'documentation': 'Explicit diagnostic drawing options; overlays ignore '
+                                                                 'masks and occlusion.',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('targets',
                                                             'Diagnostic selection only; the textured context image is '
@@ -690,14 +680,15 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                              'topology_only: bool = False, heat_opacity: float = 0.25, '
                                                              'anomalies_only: bool = False, thresholds: '
                                                              'TopologyThresholds = <factory>, label_scale: int = 2, '
-                                                             'label_spacing: int = 3, max_labels: int = 256)'},
+                                                             'label_spacing: int = 3, max_labels: int = 256)',
+                                                'type_refs': ('zipzi.modeling.observation.TopologyThresholds',
+                                                              'zipzi.modeling.spatial.ObjectTarget')},
  'zipzi.modeling.observation.TopologyOverlay.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.observation.TopologyOverlay.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.TopologyThresholds': {'children': ('zipzi.modeling.observation.TopologyThresholds.__repr__',
                                                                 'zipzi.modeling.observation.TopologyThresholds.summary'),
-                                                   'documentation': 'Immutable owned TopologyThresholds value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': 'Advisory anomaly thresholds in evaluated model '
+                                                                    'space, relative to the default pose.',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('min_angle_degrees',
                                                                'An angle below this value is anomalous; finite degrees '

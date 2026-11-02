@@ -10,7 +10,7 @@ SPLITS = {
 }
 
 
-def render(entries, contract, contract_hash, domains, common, package_version, source_sha, prefix, header, projections=()):
+def render(entries, contract, contract_hash, domains, common, package_version, source_sha, prefix, header, projections=(), introductions=None):
     entry_index = {entry.path: entry for entry in entries}
     catalog = {entry.path: entry.row() for entry in entries}
     catalog['zipzi']['documentation'] += ' Package '+package_version+'; protocol '+contract['protocol']+'; client source SHA-256 '+source_sha+'.'
@@ -35,10 +35,13 @@ def render(entries, contract, contract_hash, domains, common, package_version, s
                       and entry.path.count('.')==2}
     groups = sorted({group(path) for path in catalog})
     pages = {name: [header.rstrip(), '# '+name.title()+' API', '',
-                    'See [common behavior](common.md) for inherited owned-value methods.', '']
+                    'See [common behavior](common.md) for owned-value conventions and inherited methods.', '']
              for name in groups}
+    for name,intro in (introductions or {}).items():
+        if name in pages:pages[name].extend([intro,''])
     reference = [header.rstrip(), '# Installed Python API reference', '',
                  'Browse the [workflow guide](guide.md) and [common behavior](reference/common.md).', '',
+                 'Start with [Session](reference/runtime_session.md), [Edit](reference/runtime_edit.md) and [meshes](reference/meshes.md).', '',
                  '## API domains', '']
     reference.extend('- ['+name.title()+'](reference/'+name+'.md)' for name in groups)
     reference.append('')
@@ -74,16 +77,54 @@ def render(entries, contract, contract_hash, domains, common, package_version, s
         page = pages[group(path)]
         value = shards[group(path)][path]
         page.extend(['## '+path, ''])
-        if 'alias' in value:
+        if 'alias' in value and not (path.startswith(('zipzi.Session.', 'zipzi.Edit.')) and row['kind']=='callable'):
             target = value['alias']
             page.extend(['Alias of ['+target+']('+group(target)+'.md#'+target.lower().replace('.', '')+').', ''])
             continue
-        page.extend(['`'+row.get('signature', '')+'`', '', row.get('documentation', ''), ''])
+        page.extend(['**'+row['kind'].capitalize()+'**', ''])
+        if row.get('signature'):page.extend(['`'+row['signature']+'`',''])
+        if row.get('documentation'):page.extend([row['documentation'], ''])
+        if row.get('fields'):page.extend(['**'+('Members' if row['kind']=='enum' else 'Fields')+'**',''])
         page.extend('- `'+field+'`: '+text for field, text in row.get('fields', ()))
         page.append('')
+        if row.get('example') and row['example']!='docs/recipes.py':
+            page.extend(['Example: [example](../'+row['example'].removeprefix('docs/')+').',''])
+
+    for name,page in pages.items():
+        refs=sorted({ref for path,row in catalog.items() if group(path)==name for ref in row.get('type_refs',()) if group(ref)!=name})
+        if refs:
+            # Markdown IDs are page-local; choose the shortest unambiguous suffix.
+            labels={}
+            for ref in refs:
+                parts=ref.split('.')
+                for size in range(1,len(parts)+1):
+                    label='.'.join(parts[-size:])
+                    if sum(other.lower().endswith('.'+label.lower()) or other.lower()==label.lower() for other in refs)==1:break
+                labels[ref]=label
+            declaration=['## Type references','',', '.join('['+labels[ref]+']' for ref in refs), '']
+            page[3:3]=declaration
+            page.extend('['+labels[ref]+']: '+group(ref)+'.md#'+ref.lower().replace('.','') for ref in refs)
+            page.append('')
+
+    # Audit unique type definitions, grouping reexports under one source. An empty
+    # summary is an explicit gap even when the type's fields are documented.
+    type_groups={}
+    for entry in entries:
+        if entry.kind in {'type','enum','alias'} or (entry.kind=='property' and entry.documentation_source):
+            type_groups.setdefault(entry.identity if entry.identity is not None else entry.path,[]).append(entry)
+    missing=[]
+    for definitions in type_groups.values():
+        if any(entry.summary.strip() for entry in definitions):continue
+        paths=sorted(entry.path for entry in definitions)
+        source=next((entry.documentation_source for entry in definitions if entry.documentation_source),'')
+        missing.append({'paths':paths,'source':source})
+    coverage={'_generated_by':'zipzi-python2/tools/generate.py', 'type_count':len(type_groups),
+              'documented_type_count':len(type_groups)-len(missing),
+              'missing_type_count':len(missing),'missing':sorted(missing,key=lambda item:item['paths'])}
 
     catalog_prefix = prefix+'_generated/catalog/'
     result = {
+        prefix+'docs/type-documentation.json': json.dumps(coverage,indent=2,ensure_ascii=False)+'\n',
         prefix+'_generated/metadata.py': header+'"""Protocol and build metadata without help data."""\n'
             +'CONTRACT = '+repr(contract['protocol'])+'\nPACKAGE_VERSION = '+repr(package_version)
             +'\nCLIENT_SOURCE_SHA256 = '+repr(source_sha)+'\nCONTRACT_SHA256 = '
@@ -107,6 +148,7 @@ class Entry(TypedDict, total=False):
     documentation: str
     fields: Sequence[tuple[str, str]]
     children: tuple[str, ...]
+    type_refs: tuple[str, ...]
     example: str
     alias: str
     common: str
@@ -117,6 +159,7 @@ class Resolved(TypedDict, total=False):
     documentation: str
     fields: Sequence[tuple[str, str]]
     children: tuple[str, ...]
+    type_refs: tuple[str, ...]
     example: str
     common: str
 

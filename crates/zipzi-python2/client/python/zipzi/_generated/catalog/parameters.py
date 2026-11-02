@@ -22,7 +22,8 @@ DATA: dict[str, Entry] = {'zipzi.parameters': {'children': ('zipzi.parameters.Cr
                                          'Fixed operation discriminator supplied by this value type; not a constructor '
                                          'argument or a mutable object field.')],
                              'kind': 'type',
-                             'signature': '(spec: ParameterSpec) -> None'},
+                             'signature': '(spec: ParameterSpec) -> None',
+                             'type_refs': ('zipzi.parameters.ParameterSpec',)},
  'zipzi.parameters.Create.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.parameters.Create.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.parameters.Kind': {'alias': 'zipzi.modeling.parameters.ParameterKind'},
@@ -58,7 +59,8 @@ DATA: dict[str, Entry] = {'zipzi.parameters': {'children': ('zipzi.parameters.Cr
                                 'kind': 'type',
                                 'signature': '(id: str, runtime_id: str, name: str, minimum: float, maximum: float, '
                                              'default_value: float, decimal_places: int, kind: Kind, repeat: bool) -> '
-                                             'None'},
+                                             'None',
+                                'type_refs': ('zipzi.modeling.parameters.ParameterKind',)},
  'zipzi.parameters.Parameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.parameters.Parameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.parameters.ParameterPatch': {'children': ('zipzi.parameters.ParameterPatch.__repr__',
@@ -106,7 +108,8 @@ DATA: dict[str, Entry] = {'zipzi.parameters': {'children': ('zipzi.parameters.Cr
                                      'signature': '(name: str | None=None, minimum: float | None=None, maximum: float '
                                                   '| None=None, default_value: float | None=None, runtime_id: str | '
                                                   'None=None, kind: Kind | None=None, decimal_places: int | None=None, '
-                                                  'repeat: bool | None=None) -> None'},
+                                                  'repeat: bool | None=None) -> None',
+                                     'type_refs': ('zipzi.modeling.parameters.ParameterKind',)},
  'zipzi.parameters.ParameterPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.parameters.ParameterPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.parameters.ParameterSpec': {'children': ('zipzi.parameters.ParameterSpec.__repr__',
@@ -144,7 +147,8 @@ DATA: dict[str, Entry] = {'zipzi.parameters': {'children': ('zipzi.parameters.Cr
                                     'signature': '(name: str, minimum: float, maximum: float, default_value: float, '
                                                  'id: str | None=None, runtime_id: str | None=None, kind: Kind | '
                                                  'None=None, decimal_places: int | None=None, repeat: bool | '
-                                                 'None=None) -> None'},
+                                                 'None=None) -> None',
+                                    'type_refs': ('zipzi.modeling.parameters.ParameterKind',)},
  'zipzi.parameters.ParameterSpec.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.parameters.ParameterSpec.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.parameters.Patch': {'children': ('zipzi.parameters.Patch.__repr__', 'zipzi.parameters.Patch.summary'),
@@ -162,7 +166,8 @@ DATA: dict[str, Entry] = {'zipzi.parameters': {'children': ('zipzi.parameters.Cr
                                         'Fixed operation discriminator supplied by this value type; not a constructor '
                                         'argument or a mutable object field.')],
                             'kind': 'type',
-                            'signature': '(id: str, patch: ParameterPatch) -> None'},
+                            'signature': '(id: str, patch: ParameterPatch) -> None',
+                            'type_refs': ('zipzi.parameters.ParameterPatch',)},
  'zipzi.parameters.Patch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.parameters.Patch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.parameters.Summary': {'alias': 'zipzi.ObjectSummary'},

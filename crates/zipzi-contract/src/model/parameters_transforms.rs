@@ -56,6 +56,7 @@ macro_rules! scene_id {
         impl crate::api_shape::ApiShape for $name {
             fn api_shape() -> crate::api_shape::Shape {
                 crate::api_shape::Shape::SerdeRecord {
+                    doc: "Persistent scene object identifier.".into(),
                     name: concat!(module_path!(), "::", stringify!($name)).into(),
                     transparent: true,
                     tuple: true,
@@ -80,7 +81,11 @@ macro_rules! scene_id {
             }
             pub fn optional(id: impl Into<String>) -> Option<Self> {
                 let id = id.into();
-                if id.is_empty() { None } else { Some(Self(id)) }
+                if id.is_empty() {
+                    None
+                } else {
+                    Some(Self(id))
+                }
             }
         }
         impl From<String> for $name {

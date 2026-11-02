@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from .._values import integer, number, record, sequence, string
 
 Point = tuple[float, float]
+'A pair of float coordinates (x, y); Geometry uses it for positions and UVs. The containing field determines the coordinate space.'
 
 def _point(value: object) -> Point:
     r = record(value)
@@ -27,7 +28,7 @@ from .values.mesh import MeshConstraintKind as ConstraintKind
 
 @dataclass(frozen=True, init=False, repr=False)
 class Constraint(CompactValue):
-    'Immutable owned Constraint value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nendpoints: Two distinct vertex IDs in increasing order; the segment is an actual triangle edge.\nkind: Whether this edge was fixed by the user or supplied by the edge-layout generator.'
+    'An internal mesh edge identified by two stable vertex IDs and its origin.\nThe edge must exist in the triangulation; boundary edges belong to MeshMeshing.boundary.\n\nFields:\nendpoints: Two distinct vertex IDs in increasing order; the segment is an actual triangle edge.\nkind: Whether this edge was fixed by the user or supplied by the edge-layout generator.'
     __module__ = "zipzi.meshes"
     endpoints: tuple[int, int]
     kind: ConstraintKind
@@ -49,7 +50,7 @@ class Constraint(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class Meshing(CompactValue):
-    'Immutable owned Meshing value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nboundary: Closed UV boundary without a repeated endpoint, starting at its smallest vertex ID.\nconstraints: Internal constraints sorted by their canonical endpoint pairs; excludes boundary edges.'
+    'A canonical counterclockwise outer boundary and the internal edges retained by remeshing.\n\nFields:\nboundary: Closed UV boundary without a repeated endpoint, starting at its smallest vertex ID.\nconstraints: Internal constraints sorted by their canonical endpoint pairs; excludes boundary edges.'
     __module__ = "zipzi.meshes"
     boundary: tuple[int, ...]
     constraints: tuple[Constraint, ...]
@@ -73,7 +74,7 @@ class Meshing(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class Geometry(CompactValue):
-    "Immutable owned Geometry value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvertex_ids: Stable vertex IDs in the same order as positions and UVs; IDs need not be contiguous.\npositions: Absolute XY coordinates in the mesh authoring space (model space without a deformation\nparent, otherwise the parent's local/parameter space), ordered by vertex_ids.\nuvs: Texture UV coordinates ordered by vertex_ids.\ntriangles: Triangle entries reference vertex_ids values, never offsets into positions.\nmeshing: Optional canonical UV boundary and retained internal structure edges."
+    "Vertex IDs, authoring-space positions, texture UVs and triangle connectivity for a mesh.\nPositions and UVs follow vertex_ids order; triangles contain vertex IDs.\nPositions use model space without a deformation parent, otherwise the parent's\nlocal/parameter space.\n\nFields:\nvertex_ids: Stable vertex IDs in the same order as positions and UVs; IDs need not be contiguous.\npositions: Absolute XY coordinates in the mesh authoring space (model space without a deformation\nparent, otherwise the parent's local/parameter space), ordered by vertex_ids.\nuvs: Texture UV coordinates ordered by vertex_ids.\ntriangles: Triangle entries reference vertex_ids values, never offsets into positions.\nmeshing: Optional canonical UV boundary and retained internal structure edges."
     __module__ = "zipzi.meshes"
     vertex_ids: tuple[int, ...]
     positions: tuple[Point, ...]
@@ -113,7 +114,7 @@ class Geometry(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class MeshSpec(CompactValue):
-    'Immutable owned MeshSpec value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can change.\ngeometry: Owned vertex IDs, positions, UVs and triangles; triangles contain vertex IDs, not\nposition offsets.\ntexture_asset_id: Image-asset ID used by this mesh; the default empty string leaves its texture\nreference unassigned.\nid: Optional new mesh UUID; None allocates a fresh UUID in the SDK when the create\noperation executes.'
+    'Specification for creating a mesh. An omitted ID allocates a fresh UUID when\ncreation executes; an empty texture_asset_id leaves the texture unassigned.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can change.\ngeometry: Owned vertex IDs, positions, UVs and triangles; triangles contain vertex IDs, not\nposition offsets.\ntexture_asset_id: Image-asset ID used by this mesh; the default empty string leaves its texture\nreference unassigned.\nid: Optional new mesh UUID; None allocates a fresh UUID in the SDK when the create\noperation executes.'
     __module__ = "zipzi.meshes"
     name: str
     geometry: Geometry
@@ -128,7 +129,7 @@ class MeshSpec(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class Mesh(CompactValue):
-    'Immutable owned Mesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\ngeometry: Owned vertex IDs, positions, UVs and triangles; triangles contain vertex IDs, not\nposition offsets.'
+    'A mesh read at one captured formal or candidate source. Later document changes\ndo not rewrite its ID, name or geometry.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\ngeometry: Owned vertex IDs, positions, UVs and triangles; triangles contain vertex IDs, not\nposition offsets.'
     __module__ = "zipzi.meshes"
     id: str
     name: str

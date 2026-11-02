@@ -5,7 +5,7 @@ from typing import Literal
 
 @dataclass(frozen=True, repr=False)
 class MeshRename(CompactValue):
-    'Immutable owned MeshRename value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    ''
     __module__ = "zipzi._generated.plan_intents"
     id: str
     expected_name: str | None
@@ -14,7 +14,7 @@ class MeshRename(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class ImageRename(CompactValue):
-    'Immutable owned ImageRename value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    ''
     __module__ = "zipzi._generated.plan_intents"
     id: str
     expected_name: str | None

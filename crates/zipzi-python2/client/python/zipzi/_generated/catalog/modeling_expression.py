@@ -23,9 +23,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                'signature': ''},
  'zipzi.modeling.expression.ExpressionAsset': {'children': ('zipzi.modeling.expression.ExpressionAsset.__repr__',
                                                             'zipzi.modeling.expression.ExpressionAsset.summary'),
-                                               'documentation': 'Immutable owned ExpressionAsset value. Construction '
-                                                                'owns declared collections; reading fields, repr and '
-                                                                'summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('id',
                                                            'Stable identity in the owning authoring domain; exported '
@@ -61,27 +59,41 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                             'None, entries: tuple[ExpressionEntry, ...], extensions: '
                                                             '_Mapping[str, ExtensionValue], opaque_source_ids: '
                                                             '_Mapping[str, str] | None = None, '
-                                                            'opaque_source_content_hash: str | None = None)'},
+                                                            'opaque_source_content_hash: str | None = None)',
+                                               'type_refs': ('zipzi.modeling.expression.ExpressionEntry',)},
  'zipzi.modeling.expression.ExpressionAsset.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionAsset.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionBlend': {'children': (),
-                                               'documentation': 'Immutable typed value. See field semantics and the '
-                                                                'linked workflow.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
-                                               'fields': [],
-                                               'kind': 'type',
-                                               'signature': '()'},
+                                               'fields': [('ADD', "'add'"),
+                                                          ('MULTIPLY', "'multiply'"),
+                                                          ('OVERWRITE', "'overwrite'")],
+                                               'kind': 'enum',
+                                               'signature': ''},
  'zipzi.modeling.expression.ExpressionEdit': {'children': (),
-                                              'documentation': 'Typed public API entry.',
+                                              'documentation': 'All positions use stable entry IDs; None appends to '
+                                                               'the destination.',
                                               'example': 'docs/recipes.py',
                                               'fields': [],
-                                              'kind': 'value',
-                                              'signature': ''},
+                                              'kind': 'alias',
+                                              'signature': 'ExpressionEditCreate | ExpressionEditCreateEntry | '
+                                                           'ExpressionEditPatchEntry | ExpressionEditMoveEntries | '
+                                                           'ExpressionEditDuplicateEntries | '
+                                                           'ExpressionEditDeleteEntries | ExpressionEditDuplicate | '
+                                                           'ExpressionEditDelete | ExpressionEditReorder',
+                                              'type_refs': ('zipzi.modeling.expression.ExpressionEditCreate',
+                                                            'zipzi.modeling.expression.ExpressionEditCreateEntry',
+                                                            'zipzi.modeling.expression.ExpressionEditDelete',
+                                                            'zipzi.modeling.expression.ExpressionEditDeleteEntries',
+                                                            'zipzi.modeling.expression.ExpressionEditDuplicate',
+                                                            'zipzi.modeling.expression.ExpressionEditDuplicateEntries',
+                                                            'zipzi.modeling.expression.ExpressionEditMoveEntries',
+                                                            'zipzi.modeling.expression.ExpressionEditPatchEntry',
+                                                            'zipzi.modeling.expression.ExpressionEditReorder')},
  'zipzi.modeling.expression.ExpressionEditCreate': {'children': ('zipzi.modeling.expression.ExpressionEditCreate.__repr__',
                                                                  'zipzi.modeling.expression.ExpressionEditCreate.summary'),
-                                                    'documentation': 'Immutable owned ExpressionEditCreate value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('id',
                                                                 'Stable identity in the owning authoring domain; '
@@ -95,10 +107,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditCreate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditCreateEntry': {'children': ('zipzi.modeling.expression.ExpressionEditCreateEntry.__repr__',
                                                                       'zipzi.modeling.expression.ExpressionEditCreateEntry.summary'),
-                                                         'documentation': 'Immutable owned ExpressionEditCreateEntry '
-                                                                          'value. Construction owns declared '
-                                                                          'collections; reading fields, repr and '
-                                                                          'summary performs no IO.',
+                                                         'documentation': '',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [('owner',
                                                                      'Stable expression asset ID owning the selected '
@@ -116,9 +125,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditCreateEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditDelete': {'children': ('zipzi.modeling.expression.ExpressionEditDelete.__repr__',
                                                                  'zipzi.modeling.expression.ExpressionEditDelete.summary'),
-                                                    'documentation': 'Immutable owned ExpressionEditDelete value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('id',
                                                                 'Stable identity in the owning authoring domain; '
@@ -129,11 +136,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditDelete.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditDeleteEntries': {'children': ('zipzi.modeling.expression.ExpressionEditDeleteEntries.__repr__',
                                                                         'zipzi.modeling.expression.ExpressionEditDeleteEntries.summary'),
-                                                           'documentation': 'Immutable owned '
-                                                                            'ExpressionEditDeleteEntries value. '
-                                                                            'Construction owns declared collections; '
-                                                                            'reading fields, repr and summary performs '
-                                                                            'no IO.',
+                                                           'documentation': '',
                                                            'example': 'docs/recipes.py',
                                                            'fields': [('ids',
                                                                        'Ordered stable IDs selected by this operation; '
@@ -144,10 +147,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditDeleteEntries.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditDuplicate': {'children': ('zipzi.modeling.expression.ExpressionEditDuplicate.__repr__',
                                                                     'zipzi.modeling.expression.ExpressionEditDuplicate.summary'),
-                                                       'documentation': 'Immutable owned ExpressionEditDuplicate '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('source',
                                                                    'Typed parameter reference or stable source object '
@@ -168,11 +168,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditDuplicate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditDuplicateEntries': {'children': ('zipzi.modeling.expression.ExpressionEditDuplicateEntries.__repr__',
                                                                            'zipzi.modeling.expression.ExpressionEditDuplicateEntries.summary'),
-                                                              'documentation': 'Immutable owned '
-                                                                               'ExpressionEditDuplicateEntries value. '
-                                                                               'Construction owns declared '
-                                                                               'collections; reading fields, repr and '
-                                                                               'summary performs no IO.',
+                                                              'documentation': '',
                                                               'example': 'docs/recipes.py',
                                                               'fields': [('ids',
                                                                           'Ordered stable IDs selected by this '
@@ -195,10 +191,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditDuplicateEntries.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditMoveEntries': {'children': ('zipzi.modeling.expression.ExpressionEditMoveEntries.__repr__',
                                                                       'zipzi.modeling.expression.ExpressionEditMoveEntries.summary'),
-                                                         'documentation': 'Immutable owned ExpressionEditMoveEntries '
-                                                                          'value. Construction owns declared '
-                                                                          'collections; reading fields, repr and '
-                                                                          'summary performs no IO.',
+                                                         'documentation': '',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [('ids',
                                                                      'Ordered stable IDs selected by this operation; '
@@ -216,10 +209,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditMoveEntries.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditPatchEntry': {'children': ('zipzi.modeling.expression.ExpressionEditPatchEntry.__repr__',
                                                                      'zipzi.modeling.expression.ExpressionEditPatchEntry.summary'),
-                                                        'documentation': 'Immutable owned ExpressionEditPatchEntry '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('id',
                                                                     'Stable identity in the owning authoring domain; '
@@ -232,14 +222,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                                     'object, applied atomically.')],
                                                         'kind': 'type',
                                                         'signature': '(*, id: str, expected: ExpressionEntryFields, '
-                                                                     'fields: ExpressionEntryFields)'},
+                                                                     'fields: ExpressionEntryFields)',
+                                                        'type_refs': ('zipzi.modeling.expression.ExpressionEntryFields',)},
  'zipzi.modeling.expression.ExpressionEditPatchEntry.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionEditPatchEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditReorder': {'children': ('zipzi.modeling.expression.ExpressionEditReorder.__repr__',
                                                                   'zipzi.modeling.expression.ExpressionEditReorder.summary'),
-                                                     'documentation': 'Immutable owned ExpressionEditReorder value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('ids',
                                                                  'Ordered stable IDs selected by this operation; names '
@@ -250,9 +239,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditReorder.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEntry': {'children': ('zipzi.modeling.expression.ExpressionEntry.__repr__',
                                                             'zipzi.modeling.expression.ExpressionEntry.summary'),
-                                               'documentation': 'Immutable owned ExpressionEntry value. Construction '
-                                                                'owns declared collections; reading fields, repr and '
-                                                                'summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('id',
                                                            'Stable identity in the owning authoring domain; exported '
@@ -270,14 +257,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                'kind': 'type',
                                                'signature': '(*, id: str, target: ExpressionTarget, value: float, '
                                                             'blend: ExpressionBlend | None = None, extensions: '
-                                                            '_Mapping[str, ExtensionValue])'},
+                                                            '_Mapping[str, ExtensionValue])',
+                                               'type_refs': ('zipzi.modeling.expression.ExpressionBlend',
+                                                             'zipzi.modeling.expression.ExpressionTarget')},
  'zipzi.modeling.expression.ExpressionEntry.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEntryFields': {'children': ('zipzi.modeling.expression.ExpressionEntryFields.__repr__',
                                                                   'zipzi.modeling.expression.ExpressionEntryFields.summary'),
-                                                     'documentation': 'Immutable owned ExpressionEntryFields value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('target',
                                                                  'Typed target reference; unresolved imported runtime '
@@ -290,21 +277,24 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                                  'Add default.')],
                                                      'kind': 'type',
                                                      'signature': '(*, target: ExpressionTarget, value: float, blend: '
-                                                                  'ExpressionBlend | None = None)'},
+                                                                  'ExpressionBlend | None = None)',
+                                                     'type_refs': ('zipzi.modeling.expression.ExpressionBlend',
+                                                                   'zipzi.modeling.expression.ExpressionTarget')},
  'zipzi.modeling.expression.ExpressionEntryFields.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionEntryFields.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionTarget': {'children': (),
-                                                'documentation': 'Typed public API entry.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [],
-                                                'kind': 'value',
-                                                'signature': ''},
+                                                'kind': 'alias',
+                                                'signature': 'ExpressionTargetUnspecified | ExpressionTargetResolved | '
+                                                             'ExpressionTargetUnresolved',
+                                                'type_refs': ('zipzi.modeling.expression.ExpressionTargetResolved',
+                                                              'zipzi.modeling.expression.ExpressionTargetUnresolved',
+                                                              'zipzi.modeling.expression.ExpressionTargetUnspecified')},
  'zipzi.modeling.expression.ExpressionTargetResolved': {'children': ('zipzi.modeling.expression.ExpressionTargetResolved.__repr__',
                                                                      'zipzi.modeling.expression.ExpressionTargetResolved.summary'),
-                                                        'documentation': 'Immutable owned ExpressionTargetResolved '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('parameter_id',
                                                                     'Stable document parameter UUID; evaluation uses '
@@ -315,10 +305,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionTargetResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionTargetUnresolved': {'children': ('zipzi.modeling.expression.ExpressionTargetUnresolved.__repr__',
                                                                        'zipzi.modeling.expression.ExpressionTargetUnresolved.summary'),
-                                                          'documentation': 'Immutable owned ExpressionTargetUnresolved '
-                                                                           'value. Construction owns declared '
-                                                                           'collections; reading fields, repr and '
-                                                                           'summary performs no IO.',
+                                                          'documentation': '',
                                                           'example': 'docs/recipes.py',
                                                           'fields': [('runtime_id',
                                                                       'Imported/exported runtime label, distinct from '
@@ -329,11 +316,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionTargetUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionTargetUnspecified': {'children': ('zipzi.modeling.expression.ExpressionTargetUnspecified.__repr__',
                                                                         'zipzi.modeling.expression.ExpressionTargetUnspecified.summary'),
-                                                           'documentation': 'Immutable owned '
-                                                                            'ExpressionTargetUnspecified value. '
-                                                                            'Construction owns declared collections; '
-                                                                            'reading fields, repr and summary performs '
-                                                                            'no IO.',
+                                                           'documentation': '',
                                                            'example': 'docs/recipes.py',
                                                            'fields': [],
                                                            'kind': 'type',

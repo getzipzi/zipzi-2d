@@ -43,8 +43,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                  'signature': ''},
  'zipzi.scene.CreateBlendTable': {'children': ('zipzi.scene.CreateBlendTable.__repr__',
                                                'zipzi.scene.CreateBlendTable.summary'),
-                                  'documentation': 'Immutable owned CreateBlendTable value. Construction owns declared '
-                                                   'collections; reading fields, repr and summary performs no IO.',
+                                  'documentation': '',
                                   'example': 'docs/recipes.py',
                                   'fields': [('parameter_id',
                                               'Stable document parameter ID, not its exported runtime identifier.'),
@@ -61,13 +60,12 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                               'constructor argument or a mutable object field.')],
                                   'kind': 'type',
                                   'signature': '(parameter_id: str, samples: tuple[Sample, ...], base_sample_id: str, '
-                                               "id: str | None = None, kind: Literal['scene_create_blend_table'] = "
-                                               '<factory>)'},
+                                               'id: str | None = None)',
+                                  'type_refs': ('zipzi.scene.Sample',)},
  'zipzi.scene.CreateBlendTable.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.CreateBlendTable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreateGlue': {'children': ('zipzi.scene.CreateGlue.__repr__', 'zipzi.scene.CreateGlue.summary'),
-                            'documentation': 'Immutable owned CreateGlue value. Construction owns declared '
-                                             'collections; reading fields, repr and summary performs no IO.',
+                            'documentation': '',
                             'example': 'docs/recipes.py',
                             'fields': [('name',
                                         'Human-readable display name; use the stable ID for identity because names '
@@ -88,13 +86,12 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                         'argument or a mutable object field.')],
                             'kind': 'type',
                             'signature': '(name: str, a: str, b: str, part_id: str | None = None, id: str | None = '
-                                         "None, kind: Literal['scene_create_glue'] = <factory>)"},
+                                         'None)'},
  'zipzi.scene.CreateGlue.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.CreateGlue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreateMeshBlend': {'children': ('zipzi.scene.CreateMeshBlend.__repr__',
                                               'zipzi.scene.CreateMeshBlend.summary'),
-                                 'documentation': 'Immutable owned CreateMeshBlend value. Construction owns declared '
-                                                  'collections; reading fields, repr and summary performs no IO.',
+                                 'documentation': '',
                                  'example': 'docs/recipes.py',
                                  'fields': [('mesh_id', 'Stable ID of the target mesh in this document.'),
                                             ('table_id', 'Stable BlendShape key-table ID in this document.'),
@@ -104,14 +101,12 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                              'Fixed operation discriminator supplied by this value type; not a '
                                              'constructor argument or a mutable object field.')],
                                  'kind': 'type',
-                                 'signature': '(mesh_id: str, table_id: str, id: str | None = None, kind: '
-                                              "Literal['scene_create_mesh_blend'] = <factory>)"},
+                                 'signature': '(mesh_id: str, table_id: str, id: str | None = None)'},
  'zipzi.scene.CreateMeshBlend.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.CreateMeshBlend.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreateOffscreen': {'children': ('zipzi.scene.CreateOffscreen.__repr__',
                                               'zipzi.scene.CreateOffscreen.summary'),
-                                 'documentation': 'Immutable owned CreateOffscreen value. Construction owns declared '
-                                                  'collections; reading fields, repr and summary performs no IO.',
+                                 'documentation': '',
                                  'example': 'docs/recipes.py',
                                  'fields': [('name',
                                              'Human-readable display name; use the stable ID for identity because '
@@ -124,15 +119,12 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                              'Fixed operation discriminator supplied by this value type; not a '
                                              'constructor argument or a mutable object field.')],
                                  'kind': 'type',
-                                 'signature': '(name: str, part_id: str, id: str | None = None, kind: '
-                                              "Literal['scene_create_offscreen'] = <factory>)"},
+                                 'signature': '(name: str, part_id: str, id: str | None = None)'},
  'zipzi.scene.CreateOffscreen.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.CreateOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreateParameterGroup': {'children': ('zipzi.scene.CreateParameterGroup.__repr__',
                                                    'zipzi.scene.CreateParameterGroup.summary'),
-                                      'documentation': 'Immutable owned CreateParameterGroup value. Construction owns '
-                                                       'declared collections; reading fields, repr and summary '
-                                                       'performs no IO.',
+                                      'documentation': '',
                                       'example': 'docs/recipes.py',
                                       'fields': [('spec',
                                                   'Creation specification; native admission supplies '
@@ -142,13 +134,12 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                                   'Fixed operation discriminator supplied by this value type; not a '
                                                   'constructor argument or a mutable object field.')],
                                       'kind': 'type',
-                                      'signature': '(spec: ParameterGroupSpec, kind: '
-                                                   "Literal['scene_create_parameter_group'] = <factory>)"},
+                                      'signature': '(spec: ParameterGroupSpec)',
+                                      'type_refs': ('zipzi.scene.ParameterGroupSpec',)},
  'zipzi.scene.CreateParameterGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.CreateParameterGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreatePart': {'children': ('zipzi.scene.CreatePart.__repr__', 'zipzi.scene.CreatePart.summary'),
-                            'documentation': 'Immutable owned CreatePart value. Construction owns declared '
-                                             'collections; reading fields, repr and summary performs no IO.',
+                            'documentation': '',
                             'example': 'docs/recipes.py',
                             'fields': [('spec',
                                         'Creation specification; native admission supplies identities/defaults and\n'
@@ -157,13 +148,13 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                         'Fixed operation discriminator supplied by this value type; not a constructor '
                                         'argument or a mutable object field.')],
                             'kind': 'type',
-                            'signature': "(spec: PartSpec, kind: Literal['scene_create_part'] = <factory>)"},
+                            'signature': '(spec: PartSpec)',
+                            'type_refs': ('zipzi.scene.PartSpec',)},
  'zipzi.scene.CreatePart.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.CreatePart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreateRotation': {'children': ('zipzi.scene.CreateRotation.__repr__',
                                              'zipzi.scene.CreateRotation.summary'),
-                                'documentation': 'Immutable owned CreateRotation value. Construction owns declared '
-                                                 'collections; reading fields, repr and summary performs no IO.',
+                                'documentation': '',
                                 'example': 'docs/recipes.py',
                                 'fields': [('name',
                                             'Human-readable display name; use the stable ID for identity because names '
@@ -179,13 +170,12 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                             'Fixed operation discriminator supplied by this value type; not a '
                                             'constructor argument or a mutable object field.')],
                                 'kind': 'type',
-                                'signature': '(name: str, placement: Placement, id: str | None = None, kind: '
-                                             "Literal['scene_create_rotation'] = <factory>)"},
+                                'signature': '(name: str, placement: Placement, id: str | None = None)',
+                                'type_refs': ('zipzi.scene.Placement',)},
  'zipzi.scene.CreateRotation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.CreateRotation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreateWarp': {'children': ('zipzi.scene.CreateWarp.__repr__', 'zipzi.scene.CreateWarp.summary'),
-                            'documentation': 'Immutable owned CreateWarp value. Construction owns declared '
-                                             'collections; reading fields, repr and summary performs no IO.',
+                            'documentation': '',
                             'example': 'docs/recipes.py',
                             'fields': [('name',
                                         'Human-readable display name; use the stable ID for identity because names '
@@ -203,14 +193,13 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                         'argument or a mutable object field.')],
                             'kind': 'type',
                             'signature': '(name: str, placement: Placement, bounds: tuple[float, float, float, float] '
-                                         "| None = None, id: str | None = None, kind: Literal['scene_create_warp'] = "
-                                         '<factory>)'},
+                                         '| None = None, id: str | None = None)',
+                            'type_refs': ('zipzi.scene.Placement',)},
  'zipzi.scene.CreateWarp.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.CreateWarp.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.DeleteGluePairs': {'children': ('zipzi.scene.DeleteGluePairs.__repr__',
                                               'zipzi.scene.DeleteGluePairs.summary'),
-                                 'documentation': 'Immutable owned DeleteGluePairs value. Construction owns declared '
-                                                  'collections; reading fields, repr and summary performs no IO.',
+                                 'documentation': '',
                                  'example': 'docs/recipes.py',
                                  'fields': [('glue_id', 'Stable Glue object ID owning the affected vertex pairs.'),
                                             ('ids',
@@ -221,15 +210,12 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                              'Fixed operation discriminator supplied by this value type; not a '
                                              'constructor argument or a mutable object field.')],
                                  'kind': 'type',
-                                 'signature': '(glue_id: str, ids: tuple[str, ...], kind: '
-                                              "Literal['scene_delete_glue_pairs'] = <factory>)"},
+                                 'signature': '(glue_id: str, ids: tuple[str, ...])'},
  'zipzi.scene.DeleteGluePairs.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.DeleteGluePairs.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.DeleteMeshVertices': {'children': ('zipzi.scene.DeleteMeshVertices.__repr__',
                                                  'zipzi.scene.DeleteMeshVertices.summary'),
-                                    'documentation': 'Immutable owned DeleteMeshVertices value. Construction owns '
-                                                     'declared collections; reading fields, repr and summary performs '
-                                                     'no IO.',
+                                    'documentation': '',
                                     'example': 'docs/recipes.py',
                                     'fields': [('mesh_id', 'Stable ID of the target mesh in this document.'),
                                                ('vertices',
@@ -242,15 +228,12 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                                 'Fixed operation discriminator supplied by this value type; not a '
                                                 'constructor argument or a mutable object field.')],
                                     'kind': 'type',
-                                    'signature': '(mesh_id: str, vertices: tuple[int, ...], remove_dependents: bool, '
-                                                 "kind: Literal['scene_delete_mesh_vertices'] = <factory>)"},
+                                    'signature': '(mesh_id: str, vertices: tuple[int, ...], remove_dependents: bool)'},
  'zipzi.scene.DeleteMeshVertices.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.DeleteMeshVertices.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.DeleteOrganization': {'children': ('zipzi.scene.DeleteOrganization.__repr__',
                                                  'zipzi.scene.DeleteOrganization.summary'),
-                                    'documentation': 'Immutable owned DeleteOrganization value. Construction owns '
-                                                     'declared collections; reading fields, repr and summary performs '
-                                                     'no IO.',
+                                    'documentation': '',
                                     'example': 'docs/recipes.py',
                                     'fields': [('ids',
                                                 'Ordered stable object IDs selected for this operation; visible names '
@@ -264,13 +247,11 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                                 'Fixed operation discriminator supplied by this value type; not a '
                                                 'constructor argument or a mutable object field.')],
                                     'kind': 'type',
-                                    'signature': '(ids: tuple[str, ...], dissolve: bool, kind: '
-                                                 "Literal['scene_delete_organization'] = <factory>)"},
+                                    'signature': '(ids: tuple[str, ...], dissolve: bool)'},
  'zipzi.scene.DeleteOrganization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.DeleteOrganization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.DeleteScene': {'children': ('zipzi.scene.DeleteScene.__repr__', 'zipzi.scene.DeleteScene.summary'),
-                             'documentation': 'Immutable owned DeleteScene value. Construction owns declared '
-                                              'collections; reading fields, repr and summary performs no IO.',
+                             'documentation': '',
                              'example': 'docs/recipes.py',
                              'fields': [('ids',
                                          'Ordered stable object IDs selected for this operation; visible names and '
@@ -283,14 +264,12 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                          'Fixed operation discriminator supplied by this value type; not a constructor '
                                          'argument or a mutable object field.')],
                              'kind': 'type',
-                             'signature': "(ids: tuple[str, ...], subtree: bool, kind: Literal['scene_delete_scene'] = "
-                                          '<factory>)'},
+                             'signature': '(ids: tuple[str, ...], subtree: bool)'},
  'zipzi.scene.DeleteScene.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.DeleteScene.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.DuplicateScene': {'children': ('zipzi.scene.DuplicateScene.__repr__',
                                              'zipzi.scene.DuplicateScene.summary'),
-                                'documentation': 'Immutable owned DuplicateScene value. Construction owns declared '
-                                                 'collections; reading fields, repr and summary performs no IO.',
+                                'documentation': '',
                                 'example': 'docs/recipes.py',
                                 'fields': [('ids',
                                             'Ordered stable object IDs selected for this operation; visible names and '
@@ -312,13 +291,11 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                             'constructor argument or a mutable object field.')],
                                 'kind': 'type',
                                 'signature': '(ids: tuple[str, ...], subtree: bool, part_id: str | None = None, '
-                                             "before: str | None = None, kind: Literal['scene_duplicate_scene'] = "
-                                             '<factory>)'},
+                                             'before: str | None = None)'},
  'zipzi.scene.DuplicateScene.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.DuplicateScene.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.GluePair': {'children': ('zipzi.scene.GluePair.__repr__', 'zipzi.scene.GluePair.summary'),
-                          'documentation': 'Immutable owned GluePair value. Construction owns declared collections; '
-                                           'reading fields, repr and summary performs no IO.',
+                          'documentation': '',
                           'example': 'docs/recipes.py',
                           'fields': [('weight_a',
                                       'Dimensionless contribution of endpoint A; default Glue pair weight is 0.5.'),
@@ -338,8 +315,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.GluePair.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.InsertGluePair': {'children': ('zipzi.scene.InsertGluePair.__repr__',
                                              'zipzi.scene.InsertGluePair.summary'),
-                                'documentation': 'Immutable owned InsertGluePair value. Construction owns declared '
-                                                 'collections; reading fields, repr and summary performs no IO.',
+                                'documentation': '',
                                 'example': 'docs/recipes.py',
                                 'fields': [('glue_id', 'Stable Glue object ID owning the affected vertex pairs.'),
                                            ('pair',
@@ -353,14 +329,13 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                             'Fixed operation discriminator supplied by this value type; not a '
                                             'constructor argument or a mutable object field.')],
                                 'kind': 'type',
-                                'signature': '(glue_id: str, pair: GluePair, before: str | None = None, kind: '
-                                             "Literal['scene_insert_glue_pair'] = <factory>)"},
+                                'signature': '(glue_id: str, pair: GluePair, before: str | None = None)',
+                                'type_refs': ('zipzi.scene.GluePair',)},
  'zipzi.scene.InsertGluePair.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.InsertGluePair.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.InsertMeshVertex': {'children': ('zipzi.scene.InsertMeshVertex.__repr__',
                                                'zipzi.scene.InsertMeshVertex.summary'),
-                                  'documentation': 'Immutable owned InsertMeshVertex value. Construction owns declared '
-                                                   'collections; reading fields, repr and summary performs no IO.',
+                                  'documentation': '',
                                   'example': 'docs/recipes.py',
                                   'fields': [('mesh_id', 'Stable ID of the target mesh in this document.'),
                                              ('vertex_id',
@@ -382,14 +357,13 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                   'kind': 'type',
                                   'signature': '(mesh_id: str, vertex_id: int, position: tuple[float, float], uv: '
                                                'tuple[float, float], weights: tuple[VertexWeight, ...], before: int | '
-                                               "None = None, kind: Literal['scene_insert_mesh_vertex'] = <factory>)"},
+                                               'None = None)',
+                                  'type_refs': ('zipzi.scene.VertexWeight',)},
  'zipzi.scene.InsertMeshVertex.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.InsertMeshVertex.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.InsertOffscreenKeyform': {'children': ('zipzi.scene.InsertOffscreenKeyform.__repr__',
                                                      'zipzi.scene.InsertOffscreenKeyform.summary'),
-                                        'documentation': 'Immutable owned InsertOffscreenKeyform value. Construction '
-                                                         'owns declared collections; reading fields, repr and summary '
-                                                         'performs no IO.',
+                                        'documentation': '',
                                         'example': 'docs/recipes.py',
                                         'fields': [('offscreen_id',
                                                     'Stable Offscreen object ID; not a texture asset ID.'),
@@ -403,14 +377,13 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                                     'constructor argument or a mutable object field.')],
                                         'kind': 'type',
                                         'signature': '(offscreen_id: str, value: OffscreenForm, before: int | None = '
-                                                     "None, kind: Literal['scene_insert_offscreen_keyform'] = "
-                                                     '<factory>)'},
+                                                     'None)',
+                                        'type_refs': ('zipzi.scene.OffscreenForm',)},
  'zipzi.scene.InsertOffscreenKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.InsertOffscreenKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.MoveDeformation': {'children': ('zipzi.scene.MoveDeformation.__repr__',
                                               'zipzi.scene.MoveDeformation.summary'),
-                                 'documentation': 'Immutable owned MoveDeformation value. Construction owns declared '
-                                                  'collections; reading fields, repr and summary performs no IO.',
+                                 'documentation': '',
                                  'example': 'docs/recipes.py',
                                  'fields': [('ids',
                                              'Ordered stable object IDs selected for this operation; visible names and '
@@ -429,14 +402,12 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                              'constructor argument or a mutable object field.')],
                                  'kind': 'type',
                                  'signature': '(ids: tuple[str, ...], parent_id: str | None = None, before: str | None '
-                                              "= None, kind: Literal['scene_move_deformation'] = <factory>)"},
+                                              '= None)'},
  'zipzi.scene.MoveDeformation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.MoveDeformation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.MoveParameterGroups': {'children': ('zipzi.scene.MoveParameterGroups.__repr__',
                                                   'zipzi.scene.MoveParameterGroups.summary'),
-                                     'documentation': 'Immutable owned MoveParameterGroups value. Construction owns '
-                                                      'declared collections; reading fields, repr and summary performs '
-                                                      'no IO.',
+                                     'documentation': '',
                                      'example': 'docs/recipes.py',
                                      'fields': [('ids',
                                                  'Ordered stable object IDs selected for this operation; visible names '
@@ -455,14 +426,12 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                                  'constructor argument or a mutable object field.')],
                                      'kind': 'type',
                                      'signature': '(ids: tuple[str, ...], parent_id: str | None = None, before: str | '
-                                                  "None = None, kind: Literal['scene_move_parameter_groups'] = "
-                                                  '<factory>)'},
+                                                  'None = None)'},
  'zipzi.scene.MoveParameterGroups.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.MoveParameterGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.MoveParameters': {'children': ('zipzi.scene.MoveParameters.__repr__',
                                              'zipzi.scene.MoveParameters.summary'),
-                                'documentation': 'Immutable owned MoveParameters value. Construction owns declared '
-                                                 'collections; reading fields, repr and summary performs no IO.',
+                                'documentation': '',
                                 'example': 'docs/recipes.py',
                                 'fields': [('ids',
                                             'Ordered stable object IDs selected for this operation; visible names and '
@@ -480,12 +449,11 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                             'constructor argument or a mutable object field.')],
                                 'kind': 'type',
                                 'signature': '(ids: tuple[str, ...], group_id: str | None = None, before: str | None = '
-                                             "None, kind: Literal['scene_move_parameters'] = <factory>)"},
+                                             'None)'},
  'zipzi.scene.MoveParameters.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.MoveParameters.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.MoveToPart': {'children': ('zipzi.scene.MoveToPart.__repr__', 'zipzi.scene.MoveToPart.summary'),
-                            'documentation': 'Immutable owned MoveToPart value. Construction owns declared '
-                                             'collections; reading fields, repr and summary performs no IO.',
+                            'documentation': '',
                             'example': 'docs/recipes.py',
                             'fields': [('ids',
                                         'Ordered stable object IDs selected for this operation; visible names and row\n'
@@ -502,12 +470,11 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                         'argument or a mutable object field.')],
                             'kind': 'type',
                             'signature': '(ids: tuple[str, ...], part_id: str | None = None, before: str | None = '
-                                         "None, kind: Literal['scene_move_to_part'] = <factory>)"},
+                                         'None)'},
  'zipzi.scene.MoveToPart.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.MoveToPart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.OffscreenForm': {'children': ('zipzi.scene.OffscreenForm.__repr__', 'zipzi.scene.OffscreenForm.summary'),
-                               'documentation': 'Immutable owned OffscreenForm value. Construction owns declared '
-                                                'collections; reading fields, repr and summary performs no IO.',
+                               'documentation': '',
                                'example': 'docs/recipes.py',
                                'fields': [('opacity',
                                            'Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. '
@@ -523,16 +490,49 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.OffscreenForm.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.OffscreenForm.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.Operation': {'children': (),
-                           'documentation': 'Typed public API entry.',
+                           'documentation': '',
                            'example': 'docs/recipes.py',
                            'fields': [],
-                           'kind': 'value',
-                           'signature': ''},
+                           'kind': 'alias',
+                           'signature': 'CreatePart | CreateParameterGroup | CreateWarp | CreateRotation | CreateGlue '
+                                        '| CreateOffscreen | MoveToPart | MoveDeformation | MoveParameters | '
+                                        'MoveParameterGroups | DuplicateScene | DeleteScene | DeleteOrganization | '
+                                        'SetSceneLabel | SetSceneEnabled | ReparentLocal | ReplaceTriangles | '
+                                        'ReorderMeshVertices | InsertMeshVertex | DeleteMeshVertices | '
+                                        'CreateBlendTable | CreateMeshBlend | SetMeshBlendVertices | InsertGluePair | '
+                                        'DeleteGluePairs | PatchOffscreenKeyform | InsertOffscreenKeyform | '
+                                        'SetOffscreenStaticKeyform',
+                           'type_refs': ('zipzi.scene.CreateBlendTable',
+                                         'zipzi.scene.CreateGlue',
+                                         'zipzi.scene.CreateMeshBlend',
+                                         'zipzi.scene.CreateOffscreen',
+                                         'zipzi.scene.CreateParameterGroup',
+                                         'zipzi.scene.CreatePart',
+                                         'zipzi.scene.CreateRotation',
+                                         'zipzi.scene.CreateWarp',
+                                         'zipzi.scene.DeleteGluePairs',
+                                         'zipzi.scene.DeleteMeshVertices',
+                                         'zipzi.scene.DeleteOrganization',
+                                         'zipzi.scene.DeleteScene',
+                                         'zipzi.scene.DuplicateScene',
+                                         'zipzi.scene.InsertGluePair',
+                                         'zipzi.scene.InsertMeshVertex',
+                                         'zipzi.scene.InsertOffscreenKeyform',
+                                         'zipzi.scene.MoveDeformation',
+                                         'zipzi.scene.MoveParameterGroups',
+                                         'zipzi.scene.MoveParameters',
+                                         'zipzi.scene.MoveToPart',
+                                         'zipzi.scene.PatchOffscreenKeyform',
+                                         'zipzi.scene.ReorderMeshVertices',
+                                         'zipzi.scene.ReparentLocal',
+                                         'zipzi.scene.ReplaceTriangles',
+                                         'zipzi.scene.SetMeshBlendVertices',
+                                         'zipzi.scene.SetOffscreenStaticKeyform',
+                                         'zipzi.scene.SetSceneEnabled',
+                                         'zipzi.scene.SetSceneLabel')},
  'zipzi.scene.ParameterGroupSpec': {'children': ('zipzi.scene.ParameterGroupSpec.__repr__',
                                                  'zipzi.scene.ParameterGroupSpec.summary'),
-                                    'documentation': 'Immutable owned ParameterGroupSpec value. Construction owns '
-                                                     'declared collections; reading fields, repr and summary performs '
-                                                     'no IO.',
+                                    'documentation': '',
                                     'example': 'docs/recipes.py',
                                     'fields': [('name',
                                                 'Human-readable display name; use the stable ID for identity because '
@@ -557,8 +557,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.ParameterGroupSpec.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.ParameterGroupSpec.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.PartSpec': {'children': ('zipzi.scene.PartSpec.__repr__', 'zipzi.scene.PartSpec.summary'),
-                          'documentation': 'Immutable owned PartSpec value. Construction owns declared collections; '
-                                           'reading fields, repr and summary performs no IO.',
+                          'documentation': '',
                           'example': 'docs/recipes.py',
                           'fields': [('name',
                                       'Human-readable display name; use the stable ID for identity because names can '
@@ -581,9 +580,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.PartSpec.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.PatchOffscreenKeyform': {'children': ('zipzi.scene.PatchOffscreenKeyform.__repr__',
                                                     'zipzi.scene.PatchOffscreenKeyform.summary'),
-                                       'documentation': 'Immutable owned PatchOffscreenKeyform value. Construction '
-                                                        'owns declared collections; reading fields, repr and summary '
-                                                        'performs no IO.',
+                                       'documentation': '',
                                        'example': 'docs/recipes.py',
                                        'fields': [('offscreen_id',
                                                    'Stable Offscreen object ID; not a texture asset ID.'),
@@ -596,13 +593,12 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                                    'Fixed operation discriminator supplied by this value type; not a '
                                                    'constructor argument or a mutable object field.')],
                                        'kind': 'type',
-                                       'signature': '(offscreen_id: str, slot: int, value: OffscreenForm, kind: '
-                                                    "Literal['scene_patch_offscreen_keyform'] = <factory>)"},
+                                       'signature': '(offscreen_id: str, slot: int, value: OffscreenForm)',
+                                       'type_refs': ('zipzi.scene.OffscreenForm',)},
  'zipzi.scene.PatchOffscreenKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.PatchOffscreenKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.Placement': {'children': ('zipzi.scene.Placement.__repr__', 'zipzi.scene.Placement.summary'),
-                           'documentation': 'Immutable owned Placement value. Construction owns declared collections; '
-                                            'reading fields, repr and summary performs no IO.',
+                           'documentation': '',
                            'example': 'docs/recipes.py',
                            'fields': [('part_id', 'Optional organizational Part ID; None uses the root organization.'),
                                       ('parent_id', 'Optional deformation-parent transform ID; None uses model space.'),
@@ -621,9 +617,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.Placement.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.ReorderMeshVertices': {'children': ('zipzi.scene.ReorderMeshVertices.__repr__',
                                                   'zipzi.scene.ReorderMeshVertices.summary'),
-                                     'documentation': 'Immutable owned ReorderMeshVertices value. Construction owns '
-                                                      'declared collections; reading fields, repr and summary performs '
-                                                      'no IO.',
+                                     'documentation': '',
                                      'example': 'docs/recipes.py',
                                      'fields': [('mesh_id', 'Stable ID of the target mesh in this document.'),
                                                 ('order',
@@ -634,13 +628,11 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                                  'Fixed operation discriminator supplied by this value type; not a '
                                                  'constructor argument or a mutable object field.')],
                                      'kind': 'type',
-                                     'signature': '(mesh_id: str, order: tuple[int, ...], kind: '
-                                                  "Literal['scene_reorder_mesh_vertices'] = <factory>)"},
+                                     'signature': '(mesh_id: str, order: tuple[int, ...])'},
  'zipzi.scene.ReorderMeshVertices.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.ReorderMeshVertices.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.ReparentLocal': {'children': ('zipzi.scene.ReparentLocal.__repr__', 'zipzi.scene.ReparentLocal.summary'),
-                               'documentation': 'Immutable owned ReparentLocal value. Construction owns declared '
-                                                'collections; reading fields, repr and summary performs no IO.',
+                               'documentation': '',
                                'example': 'docs/recipes.py',
                                'fields': [('ids',
                                            'Ordered stable object IDs selected for this operation; visible names and '
@@ -659,13 +651,12 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                            'constructor argument or a mutable object field.')],
                                'kind': 'type',
                                'signature': '(ids: tuple[str, ...], parent_id: str | None = None, before: str | None = '
-                                            "None, kind: Literal['scene_reparent_local'] = <factory>)"},
+                                            'None)'},
  'zipzi.scene.ReparentLocal.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.ReparentLocal.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.ReplaceTriangles': {'children': ('zipzi.scene.ReplaceTriangles.__repr__',
                                                'zipzi.scene.ReplaceTriangles.summary'),
-                                  'documentation': 'Immutable owned ReplaceTriangles value. Construction owns declared '
-                                                   'collections; reading fields, repr and summary performs no IO.',
+                                  'documentation': '',
                                   'example': 'docs/recipes.py',
                                   'fields': [('mesh_id', 'Stable ID of the target mesh in this document.'),
                                              ('triangles',
@@ -676,13 +667,11 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                               'Fixed operation discriminator supplied by this value type; not a '
                                               'constructor argument or a mutable object field.')],
                                   'kind': 'type',
-                                  'signature': '(mesh_id: str, triangles: tuple[tuple[int, int, int], ...], kind: '
-                                               "Literal['scene_replace_triangles'] = <factory>)"},
+                                  'signature': '(mesh_id: str, triangles: tuple[tuple[int, int, int], ...])'},
  'zipzi.scene.ReplaceTriangles.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.ReplaceTriangles.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.Sample': {'children': ('zipzi.scene.Sample.__repr__', 'zipzi.scene.Sample.summary'),
-                        'documentation': 'Immutable owned Sample value. Construction owns declared collections; '
-                                         'reading fields, repr and summary performs no IO.',
+                        'documentation': '',
                         'example': 'docs/recipes.py',
                         'fields': [('id', 'Stable UUID assigned to this parameter sample.'),
                                    ('value', 'Finite parameter sample coordinate in the driving parameter domain.')],
@@ -692,9 +681,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.Sample.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.SetMeshBlendVertices': {'children': ('zipzi.scene.SetMeshBlendVertices.__repr__',
                                                    'zipzi.scene.SetMeshBlendVertices.summary'),
-                                      'documentation': 'Immutable owned SetMeshBlendVertices value. Construction owns '
-                                                       'declared collections; reading fields, repr and summary '
-                                                       'performs no IO.',
+                                      'documentation': '',
                                       'example': 'docs/recipes.py',
                                       'fields': [('mesh_id', 'Stable ID of the target mesh in this document.'),
                                                  ('binding_id',
@@ -710,15 +697,13 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                                   'constructor argument or a mutable object field.')],
                                       'kind': 'type',
                                       'signature': '(mesh_id: str, binding_id: str, sample_id: str, updates: '
-                                                   'tuple[VertexPatch, ...], kind: '
-                                                   "Literal['scene_set_mesh_blend_vertices'] = <factory>)"},
+                                                   'tuple[VertexPatch, ...])',
+                                      'type_refs': ('zipzi.scene.VertexPatch',)},
  'zipzi.scene.SetMeshBlendVertices.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.SetMeshBlendVertices.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.SetOffscreenStaticKeyform': {'children': ('zipzi.scene.SetOffscreenStaticKeyform.__repr__',
                                                         'zipzi.scene.SetOffscreenStaticKeyform.summary'),
-                                           'documentation': 'Immutable owned SetOffscreenStaticKeyform value. '
-                                                            'Construction owns declared collections; reading fields, '
-                                                            'repr and summary performs no IO.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [('offscreen_id',
                                                        'Stable Offscreen object ID; not a texture asset ID.'),
@@ -729,14 +714,12 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                                        'Fixed operation discriminator supplied by this value type; not '
                                                        'a constructor argument or a mutable object field.')],
                                            'kind': 'type',
-                                           'signature': '(offscreen_id: str, keyform: int, kind: '
-                                                        "Literal['scene_set_offscreen_static_keyform'] = <factory>)"},
+                                           'signature': '(offscreen_id: str, keyform: int)'},
  'zipzi.scene.SetOffscreenStaticKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.SetOffscreenStaticKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.SetSceneEnabled': {'children': ('zipzi.scene.SetSceneEnabled.__repr__',
                                               'zipzi.scene.SetSceneEnabled.summary'),
-                                 'documentation': 'Immutable owned SetSceneEnabled value. Construction owns declared '
-                                                  'collections; reading fields, repr and summary performs no IO.',
+                                 'documentation': '',
                                  'example': 'docs/recipes.py',
                                  'fields': [('id',
                                              'Stable document object ID used by references; it is distinct from the '
@@ -753,13 +736,11 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                              'Fixed operation discriminator supplied by this value type; not a '
                                              'constructor argument or a mutable object field.')],
                                  'kind': 'type',
-                                 'signature': '(id: str, expected: bool, enabled: bool, kind: '
-                                              "Literal['scene_set_scene_enabled'] = <factory>)"},
+                                 'signature': '(id: str, expected: bool, enabled: bool)'},
  'zipzi.scene.SetSceneEnabled.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.SetSceneEnabled.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.SetSceneLabel': {'children': ('zipzi.scene.SetSceneLabel.__repr__', 'zipzi.scene.SetSceneLabel.summary'),
-                               'documentation': 'Immutable owned SetSceneLabel value. Construction owns declared '
-                                                'collections; reading fields, repr and summary performs no IO.',
+                               'documentation': '',
                                'example': 'docs/recipes.py',
                                'fields': [('id',
                                            'Stable document object ID used by references; it is distinct from the '
@@ -777,13 +758,11 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                            'Fixed operation discriminator supplied by this value type; not a '
                                            'constructor argument or a mutable object field.')],
                                'kind': 'type',
-                               'signature': '(id: str, expected: str, name: str, kind: '
-                                            "Literal['scene_set_scene_label'] = <factory>)"},
+                               'signature': '(id: str, expected: str, name: str)'},
  'zipzi.scene.SetSceneLabel.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.SetSceneLabel.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.Summary': {'children': ('zipzi.scene.Summary.__repr__', 'zipzi.scene.Summary.summary'),
-                         'documentation': 'Immutable owned Summary value. Construction owns declared collections; '
-                                          'reading fields, repr and summary performs no IO.',
+                         'documentation': 'Metadata projection; geometry remains in the explicit mesh/CPU queries.',
                          'example': 'docs/recipes.py',
                          'fields': [('id',
                                      'Stable document object ID used by references; it is distinct from the exported\n'
@@ -812,8 +791,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.Summary.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.Summary.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.VertexPatch': {'children': ('zipzi.scene.VertexPatch.__repr__', 'zipzi.scene.VertexPatch.summary'),
-                             'documentation': 'Immutable owned VertexPatch value. Construction owns declared '
-                                              'collections; reading fields, repr and summary performs no IO.',
+                             'documentation': '',
                              'example': 'docs/recipes.py',
                              'fields': [('vertex_id',
                                          'Stable u32 vertex ID within the mesh, not an offset into its position '
@@ -830,8 +808,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.VertexPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.VertexPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.VertexWeight': {'children': ('zipzi.scene.VertexWeight.__repr__', 'zipzi.scene.VertexWeight.summary'),
-                              'documentation': 'Immutable owned VertexWeight value. Construction owns declared '
-                                               'collections; reading fields, repr and summary performs no IO.',
+                              'documentation': '',
                               'example': 'docs/recipes.py',
                               'fields': [('vertex_id',
                                           'Stable u32 vertex ID within the mesh, not an offset into its position '

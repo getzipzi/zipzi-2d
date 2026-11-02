@@ -2,6 +2,10 @@ crate::api_record! {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire)]
+/// Vertex IDs, authoring-space positions, texture UVs and triangle connectivity for a mesh.
+/// Positions and UVs follow vertex_ids order; triangles contain vertex IDs.
+/// Positions use model space without a deformation parent, otherwise the parent's
+/// local/parameter space.
 pub struct MeshGeometry {
     /// Stable vertex IDs in the same order as positions and UVs; IDs need not be contiguous.
     pub vertex_ids: Vec<VertexId>,
@@ -22,6 +26,8 @@ crate::api_record! {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire)]
+    /// Specification for creating a mesh. An omitted ID allocates a fresh UUID when
+    /// creation executes; an empty texture_asset_id leaves the texture unassigned.
     pub struct MeshCreateSpec {
         /// Human-readable display name; use the stable ID for identity because names can change.
         pub name: String,
@@ -126,12 +132,16 @@ crate::api_union! {
     tag = "op";
     #[derive(Debug, Clone, Serialize, Deserialize)]
 #[derive(zipzi_api_derive::BinaryWire)]
+    /// Mesh authoring operations applied to an edit candidate; publication is separate.
     pub enum MeshOperation {
+        /// Create a mesh from its creation specification in the edit candidate.
         Create {
             /// Creation specification; native admission supplies identities/defaults and
             /// rejects invalid input.
             spec: MeshCreateSpec,
         },
+        /// Change a mesh display name by stable ID. An expected_name precondition
+        /// must match the current name; None disables that precondition.
         Rename {
             /// Stable document object ID used by references; it is distinct from the exported
             /// runtime_id.
@@ -142,6 +152,9 @@ crate::api_union! {
             /// Required current display name; None disables this name precondition.
             expected_name: Option<String>,
         },
+        /// Replace selected vertex positions, pairing vertex_ids and positions in
+        /// supplied order. Positions are absolute in the mesh authoring space,
+        /// not additive offsets.
         SetPositions {
             /// Stable document object ID used by references; it is distinct from the exported
             /// runtime_id.

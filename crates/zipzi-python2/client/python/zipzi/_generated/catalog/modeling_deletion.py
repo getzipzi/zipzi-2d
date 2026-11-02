@@ -114,25 +114,79 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                              'kind': 'module',
                              'signature': ''},
  'zipzi.modeling.deletion.DeletionChannel': {'children': (),
-                                             'documentation': 'Immutable typed value. See field semantics and the '
-                                                              'linked workflow.',
+                                             'documentation': '',
                                              'example': 'docs/recipes.py',
-                                             'fields': [],
-                                             'kind': 'type',
-                                             'signature': '()'},
+                                             'fields': [('APPEARANCE', "'Appearance'"),
+                                                        ('ENABLED', "'Enabled'"),
+                                                        ('GLUE_POSTPROCESSING', "'GluePostprocessing'"),
+                                                        ('DRAWING_ORDER', "'DrawingOrder'")],
+                                             'kind': 'enum',
+                                             'signature': ''},
  'zipzi.modeling.deletion.DeletionField': {'children': (),
-                                           'documentation': 'Typed public API entry.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [],
-                                           'kind': 'value',
-                                           'signature': ''},
+                                           'kind': 'alias',
+                                           'signature': 'DeletionFieldOwned | DeletionFieldMeshMask | '
+                                                        'DeletionFieldMeshInvertedMask | DeletionFieldOffscreenMask | '
+                                                        'DeletionFieldGlueMeshA | DeletionFieldGlueMeshB | '
+                                                        'DeletionFieldHitAreaMesh | DeletionFieldDrawingItem | '
+                                                        'DeletionFieldOrganizationParent | '
+                                                        'DeletionFieldDeformationParent | DeletionFieldConvertedData | '
+                                                        'DeletionFieldPosePart | DeletionFieldPoseLinkPart | '
+                                                        'DeletionFieldMotionPart | DeletionFieldExpressionSourcePart | '
+                                                        'DeletionFieldCdiPart | DeletionFieldRequestedScope | '
+                                                        'DeletionFieldParameterAxis | DeletionFieldBlendTableParameter '
+                                                        '| DeletionFieldBlendConstraintParameter | '
+                                                        'DeletionFieldBlendTable | DeletionFieldBlendConstraint | '
+                                                        'DeletionFieldMotionParameter | '
+                                                        'DeletionFieldExpressionParameter | '
+                                                        'DeletionFieldExpressionSourceParameter | '
+                                                        'DeletionFieldPhysicsParameter | DeletionFieldPhysicsNode | '
+                                                        'DeletionFieldTexture | DeletionFieldAttachmentSound | '
+                                                        'DeletionFieldAttachmentUserData | DeletionFieldMotionClip | '
+                                                        'DeletionFieldMotionRegistrationContainer | '
+                                                        'DeletionFieldParameterFolder | DeletionFieldModelParameter | '
+                                                        'DeletionFieldCdiParameter | DeletionFieldCdiCombinedParameter',
+                                           'type_refs': ('zipzi.modeling.deletion.DeletionFieldAttachmentSound',
+                                                         'zipzi.modeling.deletion.DeletionFieldAttachmentUserData',
+                                                         'zipzi.modeling.deletion.DeletionFieldBlendConstraint',
+                                                         'zipzi.modeling.deletion.DeletionFieldBlendConstraintParameter',
+                                                         'zipzi.modeling.deletion.DeletionFieldBlendTable',
+                                                         'zipzi.modeling.deletion.DeletionFieldBlendTableParameter',
+                                                         'zipzi.modeling.deletion.DeletionFieldCdiCombinedParameter',
+                                                         'zipzi.modeling.deletion.DeletionFieldCdiParameter',
+                                                         'zipzi.modeling.deletion.DeletionFieldCdiPart',
+                                                         'zipzi.modeling.deletion.DeletionFieldConvertedData',
+                                                         'zipzi.modeling.deletion.DeletionFieldDeformationParent',
+                                                         'zipzi.modeling.deletion.DeletionFieldDrawingItem',
+                                                         'zipzi.modeling.deletion.DeletionFieldExpressionParameter',
+                                                         'zipzi.modeling.deletion.DeletionFieldExpressionSourceParameter',
+                                                         'zipzi.modeling.deletion.DeletionFieldExpressionSourcePart',
+                                                         'zipzi.modeling.deletion.DeletionFieldGlueMeshA',
+                                                         'zipzi.modeling.deletion.DeletionFieldGlueMeshB',
+                                                         'zipzi.modeling.deletion.DeletionFieldHitAreaMesh',
+                                                         'zipzi.modeling.deletion.DeletionFieldMeshInvertedMask',
+                                                         'zipzi.modeling.deletion.DeletionFieldMeshMask',
+                                                         'zipzi.modeling.deletion.DeletionFieldModelParameter',
+                                                         'zipzi.modeling.deletion.DeletionFieldMotionClip',
+                                                         'zipzi.modeling.deletion.DeletionFieldMotionParameter',
+                                                         'zipzi.modeling.deletion.DeletionFieldMotionPart',
+                                                         'zipzi.modeling.deletion.DeletionFieldMotionRegistrationContainer',
+                                                         'zipzi.modeling.deletion.DeletionFieldOffscreenMask',
+                                                         'zipzi.modeling.deletion.DeletionFieldOrganizationParent',
+                                                         'zipzi.modeling.deletion.DeletionFieldOwned',
+                                                         'zipzi.modeling.deletion.DeletionFieldParameterAxis',
+                                                         'zipzi.modeling.deletion.DeletionFieldParameterFolder',
+                                                         'zipzi.modeling.deletion.DeletionFieldPhysicsNode',
+                                                         'zipzi.modeling.deletion.DeletionFieldPhysicsParameter',
+                                                         'zipzi.modeling.deletion.DeletionFieldPoseLinkPart',
+                                                         'zipzi.modeling.deletion.DeletionFieldPosePart',
+                                                         'zipzi.modeling.deletion.DeletionFieldRequestedScope',
+                                                         'zipzi.modeling.deletion.DeletionFieldTexture')},
  'zipzi.modeling.deletion.DeletionFieldAttachmentSound': {'children': ('zipzi.modeling.deletion.DeletionFieldAttachmentSound.__repr__',
                                                                        'zipzi.modeling.deletion.DeletionFieldAttachmentSound.summary'),
-                                                          'documentation': 'Immutable owned '
-                                                                           'DeletionFieldAttachmentSound value. '
-                                                                           'Construction owns declared collections; '
-                                                                           'reading fields, repr and summary performs '
-                                                                           'no IO.',
+                                                          'documentation': '',
                                                           'example': 'docs/recipes.py',
                                                           'fields': [],
                                                           'kind': 'type',
@@ -141,11 +195,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldAttachmentSound.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldAttachmentUserData': {'children': ('zipzi.modeling.deletion.DeletionFieldAttachmentUserData.__repr__',
                                                                           'zipzi.modeling.deletion.DeletionFieldAttachmentUserData.summary'),
-                                                             'documentation': 'Immutable owned '
-                                                                              'DeletionFieldAttachmentUserData value. '
-                                                                              'Construction owns declared collections; '
-                                                                              'reading fields, repr and summary '
-                                                                              'performs no IO.',
+                                                             'documentation': '',
                                                              'example': 'docs/recipes.py',
                                                              'fields': [],
                                                              'kind': 'type',
@@ -154,11 +204,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldAttachmentUserData.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldBlendConstraint': {'children': ('zipzi.modeling.deletion.DeletionFieldBlendConstraint.__repr__',
                                                                        'zipzi.modeling.deletion.DeletionFieldBlendConstraint.summary'),
-                                                          'documentation': 'Immutable owned '
-                                                                           'DeletionFieldBlendConstraint value. '
-                                                                           'Construction owns declared collections; '
-                                                                           'reading fields, repr and summary performs '
-                                                                           'no IO.',
+                                                          'documentation': '',
                                                           'example': 'docs/recipes.py',
                                                           'fields': [('slot',
                                                                       'Zero-based constraint address in the frozen '
@@ -169,11 +215,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldBlendConstraint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldBlendConstraintParameter': {'children': ('zipzi.modeling.deletion.DeletionFieldBlendConstraintParameter.__repr__',
                                                                                 'zipzi.modeling.deletion.DeletionFieldBlendConstraintParameter.summary'),
-                                                                   'documentation': 'Immutable owned '
-                                                                                    'DeletionFieldBlendConstraintParameter '
-                                                                                    'value. Construction owns declared '
-                                                                                    'collections; reading fields, repr '
-                                                                                    'and summary performs no IO.',
+                                                                   'documentation': '',
                                                                    'example': 'docs/recipes.py',
                                                                    'fields': [],
                                                                    'kind': 'type',
@@ -182,9 +224,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldBlendConstraintParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldBlendTable': {'children': ('zipzi.modeling.deletion.DeletionFieldBlendTable.__repr__',
                                                                   'zipzi.modeling.deletion.DeletionFieldBlendTable.summary'),
-                                                     'documentation': 'Immutable owned DeletionFieldBlendTable value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [],
                                                      'kind': 'type',
@@ -193,11 +233,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldBlendTable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldBlendTableParameter': {'children': ('zipzi.modeling.deletion.DeletionFieldBlendTableParameter.__repr__',
                                                                            'zipzi.modeling.deletion.DeletionFieldBlendTableParameter.summary'),
-                                                              'documentation': 'Immutable owned '
-                                                                               'DeletionFieldBlendTableParameter '
-                                                                               'value. Construction owns declared '
-                                                                               'collections; reading fields, repr and '
-                                                                               'summary performs no IO.',
+                                                              'documentation': '',
                                                               'example': 'docs/recipes.py',
                                                               'fields': [],
                                                               'kind': 'type',
@@ -206,11 +242,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldBlendTableParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldCdiCombinedParameter': {'children': ('zipzi.modeling.deletion.DeletionFieldCdiCombinedParameter.__repr__',
                                                                             'zipzi.modeling.deletion.DeletionFieldCdiCombinedParameter.summary'),
-                                                               'documentation': 'Immutable owned '
-                                                                                'DeletionFieldCdiCombinedParameter '
-                                                                                'value. Construction owns declared '
-                                                                                'collections; reading fields, repr and '
-                                                                                'summary performs no IO.',
+                                                               'documentation': '',
                                                                'example': 'docs/recipes.py',
                                                                'fields': [],
                                                                'kind': 'type',
@@ -219,10 +251,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldCdiCombinedParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldCdiParameter': {'children': ('zipzi.modeling.deletion.DeletionFieldCdiParameter.__repr__',
                                                                     'zipzi.modeling.deletion.DeletionFieldCdiParameter.summary'),
-                                                       'documentation': 'Immutable owned DeletionFieldCdiParameter '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('slot',
                                                                    'Frozen zero-based CDI Parameters record address; '
@@ -233,9 +262,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldCdiParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldCdiPart': {'children': ('zipzi.modeling.deletion.DeletionFieldCdiPart.__repr__',
                                                                'zipzi.modeling.deletion.DeletionFieldCdiPart.summary'),
-                                                  'documentation': 'Immutable owned DeletionFieldCdiPart value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('slot',
                                                               'Zero-based address in the frozen source list, never a '
@@ -246,10 +273,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldCdiPart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldConvertedData': {'children': ('zipzi.modeling.deletion.DeletionFieldConvertedData.__repr__',
                                                                      'zipzi.modeling.deletion.DeletionFieldConvertedData.summary'),
-                                                        'documentation': 'Immutable owned DeletionFieldConvertedData '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [],
                                                         'kind': 'type',
@@ -258,11 +282,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldConvertedData.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldDeformationParent': {'children': ('zipzi.modeling.deletion.DeletionFieldDeformationParent.__repr__',
                                                                          'zipzi.modeling.deletion.DeletionFieldDeformationParent.summary'),
-                                                            'documentation': 'Immutable owned '
-                                                                             'DeletionFieldDeformationParent value. '
-                                                                             'Construction owns declared collections; '
-                                                                             'reading fields, repr and summary '
-                                                                             'performs no IO.',
+                                                            'documentation': '',
                                                             'example': 'docs/recipes.py',
                                                             'fields': [],
                                                             'kind': 'type',
@@ -271,10 +291,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldDeformationParent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldDrawingItem': {'children': ('zipzi.modeling.deletion.DeletionFieldDrawingItem.__repr__',
                                                                    'zipzi.modeling.deletion.DeletionFieldDrawingItem.summary'),
-                                                      'documentation': 'Immutable owned DeletionFieldDrawingItem '
-                                                                       'value. Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('slot',
                                                                   'Zero-based address in the frozen source list, never '
@@ -285,11 +302,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldDrawingItem.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldExpressionParameter': {'children': ('zipzi.modeling.deletion.DeletionFieldExpressionParameter.__repr__',
                                                                            'zipzi.modeling.deletion.DeletionFieldExpressionParameter.summary'),
-                                                              'documentation': 'Immutable owned '
-                                                                               'DeletionFieldExpressionParameter '
-                                                                               'value. Construction owns declared '
-                                                                               'collections; reading fields, repr and '
-                                                                               'summary performs no IO.',
+                                                              'documentation': '',
                                                               'example': 'docs/recipes.py',
                                                               'fields': [],
                                                               'kind': 'type',
@@ -298,12 +311,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldExpressionParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldExpressionSourceParameter': {'children': ('zipzi.modeling.deletion.DeletionFieldExpressionSourceParameter.__repr__',
                                                                                  'zipzi.modeling.deletion.DeletionFieldExpressionSourceParameter.summary'),
-                                                                    'documentation': 'Immutable owned '
-                                                                                     'DeletionFieldExpressionSourceParameter '
-                                                                                     'value. Construction owns '
-                                                                                     'declared collections; reading '
-                                                                                     'fields, repr and summary '
-                                                                                     'performs no IO.',
+                                                                    'documentation': '',
                                                                     'example': 'docs/recipes.py',
                                                                     'fields': [],
                                                                     'kind': 'type',
@@ -312,11 +320,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldExpressionSourceParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldExpressionSourcePart': {'children': ('zipzi.modeling.deletion.DeletionFieldExpressionSourcePart.__repr__',
                                                                             'zipzi.modeling.deletion.DeletionFieldExpressionSourcePart.summary'),
-                                                               'documentation': 'Immutable owned '
-                                                                                'DeletionFieldExpressionSourcePart '
-                                                                                'value. Construction owns declared '
-                                                                                'collections; reading fields, repr and '
-                                                                                'summary performs no IO.',
+                                                               'documentation': '',
                                                                'example': 'docs/recipes.py',
                                                                'fields': [],
                                                                'kind': 'type',
@@ -325,9 +329,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldExpressionSourcePart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldGlueMeshA': {'children': ('zipzi.modeling.deletion.DeletionFieldGlueMeshA.__repr__',
                                                                  'zipzi.modeling.deletion.DeletionFieldGlueMeshA.summary'),
-                                                    'documentation': 'Immutable owned DeletionFieldGlueMeshA value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [],
                                                     'kind': 'type',
@@ -336,9 +338,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldGlueMeshA.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldGlueMeshB': {'children': ('zipzi.modeling.deletion.DeletionFieldGlueMeshB.__repr__',
                                                                  'zipzi.modeling.deletion.DeletionFieldGlueMeshB.summary'),
-                                                    'documentation': 'Immutable owned DeletionFieldGlueMeshB value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [],
                                                     'kind': 'type',
@@ -347,10 +347,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldGlueMeshB.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldHitAreaMesh': {'children': ('zipzi.modeling.deletion.DeletionFieldHitAreaMesh.__repr__',
                                                                    'zipzi.modeling.deletion.DeletionFieldHitAreaMesh.summary'),
-                                                      'documentation': 'Immutable owned DeletionFieldHitAreaMesh '
-                                                                       'value. Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [],
                                                       'kind': 'type',
@@ -359,11 +356,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldHitAreaMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldMeshInvertedMask': {'children': ('zipzi.modeling.deletion.DeletionFieldMeshInvertedMask.__repr__',
                                                                         'zipzi.modeling.deletion.DeletionFieldMeshInvertedMask.summary'),
-                                                           'documentation': 'Immutable owned '
-                                                                            'DeletionFieldMeshInvertedMask value. '
-                                                                            'Construction owns declared collections; '
-                                                                            'reading fields, repr and summary performs '
-                                                                            'no IO.',
+                                                           'documentation': '',
                                                            'example': 'docs/recipes.py',
                                                            'fields': [],
                                                            'kind': 'type',
@@ -372,9 +365,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldMeshInvertedMask.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldMeshMask': {'children': ('zipzi.modeling.deletion.DeletionFieldMeshMask.__repr__',
                                                                 'zipzi.modeling.deletion.DeletionFieldMeshMask.summary'),
-                                                   'documentation': 'Immutable owned DeletionFieldMeshMask value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('slot',
                                                                'Zero-based address in the frozen source list, never a '
@@ -385,10 +376,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldMeshMask.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldModelParameter': {'children': ('zipzi.modeling.deletion.DeletionFieldModelParameter.__repr__',
                                                                       'zipzi.modeling.deletion.DeletionFieldModelParameter.summary'),
-                                                         'documentation': 'Immutable owned DeletionFieldModelParameter '
-                                                                          'value. Construction owns declared '
-                                                                          'collections; reading fields, repr and '
-                                                                          'summary performs no IO.',
+                                                         'documentation': '',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [],
                                                          'kind': 'type',
@@ -397,9 +385,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldModelParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldMotionClip': {'children': ('zipzi.modeling.deletion.DeletionFieldMotionClip.__repr__',
                                                                   'zipzi.modeling.deletion.DeletionFieldMotionClip.summary'),
-                                                     'documentation': 'Immutable owned DeletionFieldMotionClip value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [],
                                                      'kind': 'type',
@@ -408,11 +394,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldMotionClip.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldMotionParameter': {'children': ('zipzi.modeling.deletion.DeletionFieldMotionParameter.__repr__',
                                                                        'zipzi.modeling.deletion.DeletionFieldMotionParameter.summary'),
-                                                          'documentation': 'Immutable owned '
-                                                                           'DeletionFieldMotionParameter value. '
-                                                                           'Construction owns declared collections; '
-                                                                           'reading fields, repr and summary performs '
-                                                                           'no IO.',
+                                                          'documentation': '',
                                                           'example': 'docs/recipes.py',
                                                           'fields': [],
                                                           'kind': 'type',
@@ -421,9 +403,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldMotionParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldMotionPart': {'children': ('zipzi.modeling.deletion.DeletionFieldMotionPart.__repr__',
                                                                   'zipzi.modeling.deletion.DeletionFieldMotionPart.summary'),
-                                                     'documentation': 'Immutable owned DeletionFieldMotionPart value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [],
                                                      'kind': 'type',
@@ -432,12 +412,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldMotionPart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldMotionRegistrationContainer': {'children': ('zipzi.modeling.deletion.DeletionFieldMotionRegistrationContainer.__repr__',
                                                                                    'zipzi.modeling.deletion.DeletionFieldMotionRegistrationContainer.summary'),
-                                                                      'documentation': 'Immutable owned '
-                                                                                       'DeletionFieldMotionRegistrationContainer '
-                                                                                       'value. Construction owns '
-                                                                                       'declared collections; reading '
-                                                                                       'fields, repr and summary '
-                                                                                       'performs no IO.',
+                                                                      'documentation': '',
                                                                       'example': 'docs/recipes.py',
                                                                       'fields': [],
                                                                       'kind': 'type',
@@ -446,10 +421,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldMotionRegistrationContainer.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldOffscreenMask': {'children': ('zipzi.modeling.deletion.DeletionFieldOffscreenMask.__repr__',
                                                                      'zipzi.modeling.deletion.DeletionFieldOffscreenMask.summary'),
-                                                        'documentation': 'Immutable owned DeletionFieldOffscreenMask '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('slot',
                                                                     'Zero-based address in the frozen source list, '
@@ -460,11 +432,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldOffscreenMask.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldOrganizationParent': {'children': ('zipzi.modeling.deletion.DeletionFieldOrganizationParent.__repr__',
                                                                           'zipzi.modeling.deletion.DeletionFieldOrganizationParent.summary'),
-                                                             'documentation': 'Immutable owned '
-                                                                              'DeletionFieldOrganizationParent value. '
-                                                                              'Construction owns declared collections; '
-                                                                              'reading fields, repr and summary '
-                                                                              'performs no IO.',
+                                                             'documentation': '',
                                                              'example': 'docs/recipes.py',
                                                              'fields': [],
                                                              'kind': 'type',
@@ -473,9 +441,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldOrganizationParent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldOwned': {'children': ('zipzi.modeling.deletion.DeletionFieldOwned.__repr__',
                                                              'zipzi.modeling.deletion.DeletionFieldOwned.summary'),
-                                                'documentation': 'Immutable owned DeletionFieldOwned value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [],
                                                 'kind': 'type',
@@ -484,10 +450,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldOwned.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldParameterAxis': {'children': ('zipzi.modeling.deletion.DeletionFieldParameterAxis.__repr__',
                                                                      'zipzi.modeling.deletion.DeletionFieldParameterAxis.summary'),
-                                                        'documentation': 'Immutable owned DeletionFieldParameterAxis '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [],
                                                         'kind': 'type',
@@ -496,11 +459,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldParameterAxis.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldParameterFolder': {'children': ('zipzi.modeling.deletion.DeletionFieldParameterFolder.__repr__',
                                                                        'zipzi.modeling.deletion.DeletionFieldParameterFolder.summary'),
-                                                          'documentation': 'Immutable owned '
-                                                                           'DeletionFieldParameterFolder value. '
-                                                                           'Construction owns declared collections; '
-                                                                           'reading fields, repr and summary performs '
-                                                                           'no IO.',
+                                                          'documentation': '',
                                                           'example': 'docs/recipes.py',
                                                           'fields': [],
                                                           'kind': 'type',
@@ -509,10 +468,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldParameterFolder.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldPhysicsNode': {'children': ('zipzi.modeling.deletion.DeletionFieldPhysicsNode.__repr__',
                                                                    'zipzi.modeling.deletion.DeletionFieldPhysicsNode.summary'),
-                                                      'documentation': 'Immutable owned DeletionFieldPhysicsNode '
-                                                                       'value. Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [],
                                                       'kind': 'type',
@@ -521,11 +477,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldPhysicsNode.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldPhysicsParameter': {'children': ('zipzi.modeling.deletion.DeletionFieldPhysicsParameter.__repr__',
                                                                         'zipzi.modeling.deletion.DeletionFieldPhysicsParameter.summary'),
-                                                           'documentation': 'Immutable owned '
-                                                                            'DeletionFieldPhysicsParameter value. '
-                                                                            'Construction owns declared collections; '
-                                                                            'reading fields, repr and summary performs '
-                                                                            'no IO.',
+                                                           'documentation': '',
                                                            'example': 'docs/recipes.py',
                                                            'fields': [],
                                                            'kind': 'type',
@@ -534,10 +486,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldPhysicsParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldPoseLinkPart': {'children': ('zipzi.modeling.deletion.DeletionFieldPoseLinkPart.__repr__',
                                                                     'zipzi.modeling.deletion.DeletionFieldPoseLinkPart.summary'),
-                                                       'documentation': 'Immutable owned DeletionFieldPoseLinkPart '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [],
                                                        'kind': 'type',
@@ -546,9 +495,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldPoseLinkPart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldPosePart': {'children': ('zipzi.modeling.deletion.DeletionFieldPosePart.__repr__',
                                                                 'zipzi.modeling.deletion.DeletionFieldPosePart.summary'),
-                                                   'documentation': 'Immutable owned DeletionFieldPosePart value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [],
                                                    'kind': 'type',
@@ -557,10 +504,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldPosePart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldRequestedScope': {'children': ('zipzi.modeling.deletion.DeletionFieldRequestedScope.__repr__',
                                                                       'zipzi.modeling.deletion.DeletionFieldRequestedScope.summary'),
-                                                         'documentation': 'Immutable owned DeletionFieldRequestedScope '
-                                                                          'value. Construction owns declared '
-                                                                          'collections; reading fields, repr and '
-                                                                          'summary performs no IO.',
+                                                         'documentation': '',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [],
                                                          'kind': 'type',
@@ -569,9 +513,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldRequestedScope.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionFieldTexture': {'children': ('zipzi.modeling.deletion.DeletionFieldTexture.__repr__',
                                                                'zipzi.modeling.deletion.DeletionFieldTexture.summary'),
-                                                  'documentation': 'Immutable owned DeletionFieldTexture value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [],
                                                   'kind': 'type',
@@ -580,9 +522,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionFieldTexture.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionIntent': {'children': ('zipzi.modeling.deletion.DeletionIntent.__repr__',
                                                          'zipzi.modeling.deletion.DeletionIntent.summary'),
-                                            'documentation': 'Immutable owned DeletionIntent value. Construction owns '
-                                                             'declared collections; reading fields, repr and summary '
-                                                             'performs no IO.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
                                             'fields': [('request',
                                                         'Exact typed roots, scope options and conversion resolutions '
@@ -592,21 +532,65 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                         'source.')],
                                             'kind': 'type',
                                             'signature': '(*, request: DeletionRequest, accepted_export_failures: '
-                                                         'tuple[OpaqueExportIssue, ...] = ())'},
+                                                         'tuple[OpaqueExportIssue, ...] = ())',
+                                            'type_refs': ('zipzi.modeling.deletion.DeletionRequest',
+                                                          'zipzi.modeling.project.OpaqueExportIssue')},
  'zipzi.modeling.deletion.DeletionIntent.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionIntent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionKind': {'children': (),
-                                          'documentation': 'Immutable typed value. See field semantics and the linked '
-                                                           'workflow.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
-                                          'fields': [],
-                                          'kind': 'type',
-                                          'signature': '()'},
+                                          'fields': [('MESH', "'Mesh'"),
+                                                     ('GLUE', "'Glue'"),
+                                                     ('OFFSCREEN', "'Offscreen'"),
+                                                     ('MESH_BINDING', "'MeshBinding'"),
+                                                     ('GLUE_BINDING', "'GlueBinding'"),
+                                                     ('BLEND_BINDING', "'BlendBinding'"),
+                                                     ('AXIS', "'Axis'"),
+                                                     ('SAMPLE', "'Sample'"),
+                                                     ('GLUE_PAIR', "'GluePair'"),
+                                                     ('HIT_AREA', "'HitArea'"),
+                                                     ('DRAWING_GROUP', "'DrawingGroup'"),
+                                                     ('PART', "'Part'"),
+                                                     ('DEFORMER', "'Deformer'"),
+                                                     ('SCENE_BINDING', "'SceneBinding'"),
+                                                     ('MOTION', "'Motion'"),
+                                                     ('MOTION_TRACK', "'MotionTrack'"),
+                                                     ('MOTION_KEY', "'MotionKey'"),
+                                                     ('EXPRESSION', "'Expression'"),
+                                                     ('EXPRESSION_TRACK', "'ExpressionTrack'"),
+                                                     ('EXPRESSION_KEY', "'ExpressionKey'"),
+                                                     ('POSE_ENTRY', "'PoseEntry'"),
+                                                     ('POSE_LINK', "'PoseLink'"),
+                                                     ('CDI_PART', "'CdiPart'"),
+                                                     ('DISPLAY_INFO', "'DisplayInfo'"),
+                                                     ('PARAMETER', "'Parameter'"),
+                                                     ('PARAMETER_FOLDER', "'ParameterFolder'"),
+                                                     ('TEXTURE', "'Texture'"),
+                                                     ('ATTACHMENT', "'Attachment'"),
+                                                     ('BLEND_KEY_TABLE', "'BlendKeyTable'"),
+                                                     ('BLEND_CONSTRAINT', "'BlendConstraint'"),
+                                                     ('MOTION_GROUP', "'MotionGroup'"),
+                                                     ('MOTION_REGISTRATION', "'MotionRegistration'"),
+                                                     ('MOTION_EVENT', "'MotionEvent'"),
+                                                     ('EXPRESSION_ENTRY', "'ExpressionEntry'"),
+                                                     ('POSE', "'Pose'"),
+                                                     ('POSE_GROUP', "'PoseGroup'"),
+                                                     ('PHYSICS', "'Physics'"),
+                                                     ('PHYSICS_GROUP', "'PhysicsGroup'"),
+                                                     ('PHYSICS_INPUT', "'PhysicsInput'"),
+                                                     ('PHYSICS_OUTPUT', "'PhysicsOutput'"),
+                                                     ('PHYSICS_NODE', "'PhysicsNode'"),
+                                                     ('MODEL_SETTINGS', "'ModelSettings'"),
+                                                     ('MODEL_PARAMETER_GROUP', "'ModelParameterGroup'"),
+                                                     ('MODEL_PARAMETER_MEMBER', "'ModelParameterMember'"),
+                                                     ('CDI_COMBINED_SET', "'CdiCombinedSet'"),
+                                                     ('CDI_COMBINED_MEMBER', "'CdiCombinedMember'")],
+                                          'kind': 'enum',
+                                          'signature': ''},
  'zipzi.modeling.deletion.DeletionLock': {'children': ('zipzi.modeling.deletion.DeletionLock.__repr__',
                                                        'zipzi.modeling.deletion.DeletionLock.summary'),
-                                          'documentation': 'Immutable owned DeletionLock value. Construction owns '
-                                                           'declared collections; reading fields, repr and summary '
-                                                           'performs no IO.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
                                           'fields': [('object',
                                                       'Actual removed or rewritten object protected by the lock.'),
@@ -614,14 +598,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                       'Persistent ID of the direct or inherited lock source to locate '
                                                       'and unlock.')],
                                           'kind': 'type',
-                                          'signature': '(*, object: DeletionObject, source_id: str)'},
+                                          'signature': '(*, object: DeletionObject, source_id: str)',
+                                          'type_refs': ('zipzi.modeling.deletion.DeletionObject',)},
  'zipzi.modeling.deletion.DeletionLock.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionLock.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionObject': {'children': ('zipzi.modeling.deletion.DeletionObject.__repr__',
                                                          'zipzi.modeling.deletion.DeletionObject.summary'),
-                                            'documentation': 'Immutable owned DeletionObject value. Construction owns '
-                                                             'declared collections; reading fields, repr and summary '
-                                                             'performs no IO.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
                                             'fields': [('kind',
                                                         'Native identity domain; Part and its DrawingGroup role remain '
@@ -634,15 +617,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                         'track/key identities.')],
                                             'kind': 'type',
                                             'signature': '(*, kind: DeletionKind, id: str, owner_id: str | None = '
-                                                         'None)'},
+                                                         'None)',
+                                            'type_refs': ('zipzi.modeling.deletion.DeletionKind',)},
  'zipzi.modeling.deletion.DeletionObject.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionObject.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionOffscreenPlacement': {'children': ('zipzi.modeling.deletion.DeletionOffscreenPlacement.__repr__',
                                                                      'zipzi.modeling.deletion.DeletionOffscreenPlacement.summary'),
-                                                        'documentation': 'Immutable owned DeletionOffscreenPlacement '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('part_id',
                                                                     'Retained destination Part UUID; it must have an '
@@ -657,9 +638,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionOffscreenPlacement.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionPage': {'children': ('zipzi.modeling.deletion.DeletionPage.__repr__',
                                                        'zipzi.modeling.deletion.DeletionPage.summary'),
-                                          'documentation': 'Immutable owned DeletionPage value. Construction owns '
-                                                           'declared collections; reading fields, repr and summary '
-                                                           'performs no IO.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
                                           'fields': [('section', 'Report section in the frozen plan.'),
                                                      ('offset', 'Requested zero-based row offset.'),
@@ -672,15 +651,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                       'end.')],
                                           'kind': 'type',
                                           'signature': '(*, section: DeletionSection, offset: int, total: int, rows: '
-                                                       'tuple[DeletionRow, ...], next_offset: int | None = None)'},
+                                                       'tuple[DeletionRow, ...], next_offset: int | None = None)',
+                                          'type_refs': ('zipzi.modeling.deletion.DeletionRow',
+                                                        'zipzi.modeling.deletion.DeletionSection')},
  'zipzi.modeling.deletion.DeletionPage.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionPage.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionPositionGuarantee': {'children': ('zipzi.modeling.deletion.DeletionPositionGuarantee.__repr__',
                                                                     'zipzi.modeling.deletion.DeletionPositionGuarantee.summary'),
-                                                       'documentation': 'Immutable owned DeletionPositionGuarantee '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('strategy',
                                                                    'Native conversion strategy; position preservation '
@@ -707,14 +685,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                        'signature': '(*, strategy: ReparentStrategy, tolerance: float, '
                                                                     'relative_tolerance: float, measured_error: float, '
                                                                     'error_bound: float, domain_parameters: int, '
-                                                                    'edit_time_seconds: float | None = None)'},
+                                                                    'edit_time_seconds: float | None = None)',
+                                                       'type_refs': ('zipzi.modeling.scene.ReparentStrategy',)},
  'zipzi.modeling.deletion.DeletionPositionGuarantee.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionPositionGuarantee.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRelation': {'children': ('zipzi.modeling.deletion.DeletionRelation.__repr__',
                                                            'zipzi.modeling.deletion.DeletionRelation.summary'),
-                                              'documentation': 'Immutable owned DeletionRelation value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('owner',
                                                           'Native object or role containing this field in the frozen '
@@ -726,14 +703,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                           'dependency or rewrite.')],
                                               'kind': 'type',
                                               'signature': '(*, owner: DeletionObject, field: DeletionField, target: '
-                                                           'DeletionObject)'},
+                                                           'DeletionObject)',
+                                              'type_refs': ('zipzi.modeling.deletion.DeletionField',
+                                                            'zipzi.modeling.deletion.DeletionObject')},
  'zipzi.modeling.deletion.DeletionRelation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRelation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRemoval': {'children': ('zipzi.modeling.deletion.DeletionRemoval.__repr__',
                                                           'zipzi.modeling.deletion.DeletionRemoval.summary'),
-                                             'documentation': 'Immutable owned DeletionRemoval value. Construction '
-                                                              'owns declared collections; reading fields, repr and '
-                                                              'summary performs no IO.',
+                                             'documentation': '',
                                              'example': 'docs/recipes.py',
                                              'fields': [('object',
                                                          'Retired identity, including its native domain and embedded '
@@ -742,14 +719,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                          'Whether this is an explicit root, scoped descendant, owned '
                                                          'identity or dependency record.')],
                                              'kind': 'type',
-                                             'signature': '(*, object: DeletionObject, reason: DeletionReason)'},
+                                             'signature': '(*, object: DeletionObject, reason: DeletionReason)',
+                                             'type_refs': ('zipzi.modeling.deletion.DeletionObject',
+                                                           'zipzi.modeling.deletion.DeletionReason')},
  'zipzi.modeling.deletion.DeletionRemoval.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRemoval.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRequest': {'children': ('zipzi.modeling.deletion.DeletionRequest.__repr__',
                                                           'zipzi.modeling.deletion.DeletionRequest.summary'),
-                                             'documentation': 'Immutable owned DeletionRequest value. Construction '
-                                                              'owns declared collections; reading fields, repr and '
-                                                              'summary performs no IO.',
+                                             'documentation': '',
                                              'example': 'docs/recipes.py',
                                              'fields': [('roots',
                                                          'Explicit typed roots and individual scope choices; order '
@@ -789,40 +766,59 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                           '_Mapping[str, float] = <factory>, texture_replacements: '
                                                           '_Mapping[str, str | None] = <factory>, '
                                                           'physics_node_replacements: _Mapping[str, str] = <factory>, '
-                                                          'blend_base_replacements: _Mapping[str, str] = <factory>)'},
+                                                          'blend_base_replacements: _Mapping[str, str] = <factory>)',
+                                             'type_refs': ('zipzi.modeling.deletion.DeletionOffscreenPlacement',
+                                                           'zipzi.modeling.deletion.DeletionTarget',
+                                                           'zipzi.modeling.deletion.DeletionTolerance',
+                                                           'zipzi.modeling.scene.ReparentContext',
+                                                           'zipzi.modeling.scene.ReparentStrategy')},
  'zipzi.modeling.deletion.DeletionRequest.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRequest.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionReviewState': {'children': (),
-                                                 'documentation': 'Immutable typed value. See field semantics and the '
-                                                                  'linked workflow.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
-                                                 'fields': [],
-                                                 'kind': 'type',
-                                                 'signature': '()'},
+                                                 'fields': [('READY', "'Ready'"),
+                                                            ('NEEDS_CONFIRMATION', "'NeedsConfirmation'"),
+                                                            ('NEEDS_CHOICE', "'NeedsChoice'"),
+                                                            ('BLOCKED', "'Blocked'")],
+                                                 'kind': 'enum',
+                                                 'signature': ''},
  'zipzi.modeling.deletion.DeletionRow': {'children': (),
-                                         'documentation': 'Typed public API entry.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [],
-                                         'kind': 'value',
-                                         'signature': ''},
+                                         'kind': 'alias',
+                                         'signature': 'DeletionRowRemoval | DeletionRowRelation | DeletionRowEffect | '
+                                                      'DeletionRowDecision | DeletionRowLock | DeletionRowStructural | '
+                                                      'DeletionRowDeformation | DeletionRowOrganization | '
+                                                      'DeletionRowGuaranteeLimit | DeletionRowDomain | '
+                                                      'DeletionRowExport',
+                                         'type_refs': ('zipzi.modeling.deletion.DeletionRowDecision',
+                                                       'zipzi.modeling.deletion.DeletionRowDeformation',
+                                                       'zipzi.modeling.deletion.DeletionRowDomain',
+                                                       'zipzi.modeling.deletion.DeletionRowEffect',
+                                                       'zipzi.modeling.deletion.DeletionRowExport',
+                                                       'zipzi.modeling.deletion.DeletionRowGuaranteeLimit',
+                                                       'zipzi.modeling.deletion.DeletionRowLock',
+                                                       'zipzi.modeling.deletion.DeletionRowOrganization',
+                                                       'zipzi.modeling.deletion.DeletionRowRelation',
+                                                       'zipzi.modeling.deletion.DeletionRowRemoval',
+                                                       'zipzi.modeling.deletion.DeletionRowStructural')},
  'zipzi.modeling.deletion.DeletionRowDecision': {'children': ('zipzi.modeling.deletion.DeletionRowDecision.__repr__',
                                                               'zipzi.modeling.deletion.DeletionRowDecision.summary'),
-                                                 'documentation': 'Immutable owned DeletionRowDecision value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('decision',
                                                              'Outstanding native choice and actually available '
                                                              'alternatives.')],
                                                  'kind': 'type',
-                                                 'signature': '(*, decision: DeletionDecision)'},
+                                                 'signature': '(*, decision: DeletionDecision)',
+                                                 'type_refs': ('zipzi.modeling.deletion.DeletionDecision',)},
  'zipzi.modeling.deletion.DeletionRowDecision.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowDecision.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRowDeformation': {'children': ('zipzi.modeling.deletion.DeletionRowDeformation.__repr__',
                                                                  'zipzi.modeling.deletion.DeletionRowDeformation.summary'),
-                                                    'documentation': 'Immutable owned DeletionRowDeformation value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('object',
                                                                 'Surviving object whose deformation parent changes.'),
@@ -837,14 +833,15 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                     'kind': 'type',
                                                     'signature': '(*, object: DeletionObject, parent_id: str, '
                                                                  'strategy: ReparentStrategy, guarantee: '
-                                                                 'DeletionPositionGuarantee | None = None)'},
+                                                                 'DeletionPositionGuarantee | None = None)',
+                                                    'type_refs': ('zipzi.modeling.deletion.DeletionObject',
+                                                                  'zipzi.modeling.deletion.DeletionPositionGuarantee',
+                                                                  'zipzi.modeling.scene.ReparentStrategy')},
  'zipzi.modeling.deletion.DeletionRowDeformation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowDeformation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRowDomain': {'children': ('zipzi.modeling.deletion.DeletionRowDomain.__repr__',
                                                             'zipzi.modeling.deletion.DeletionRowDomain.summary'),
-                                               'documentation': 'Immutable owned DeletionRowDomain value. Construction '
-                                                                'owns declared collections; reading fields, repr and '
-                                                                'summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('object',
                                                            'Object whose preservation proof uses this parameter '
@@ -860,27 +857,25 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                            'Frozen reference value used by the conversion.')],
                                                'kind': 'type',
                                                'signature': '(*, object: DeletionObject, parameter_id: str, minimum: '
-                                                            'float, maximum: float, reference_value: float)'},
+                                                            'float, maximum: float, reference_value: float)',
+                                               'type_refs': ('zipzi.modeling.deletion.DeletionObject',)},
  'zipzi.modeling.deletion.DeletionRowDomain.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowDomain.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRowEffect': {'children': ('zipzi.modeling.deletion.DeletionRowEffect.__repr__',
                                                             'zipzi.modeling.deletion.DeletionRowEffect.summary'),
-                                               'documentation': 'Immutable owned DeletionRowEffect value. Construction '
-                                                                'owns declared collections; reading fields, repr and '
-                                                                'summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('effect',
                                                            'Typed appearance, animation, composition or export '
                                                            'consequence.')],
                                                'kind': 'type',
-                                               'signature': '(*, effect: DeletionEffect)'},
+                                               'signature': '(*, effect: DeletionEffect)',
+                                               'type_refs': ('zipzi.modeling.deletion.DeletionEffect',)},
  'zipzi.modeling.deletion.DeletionRowEffect.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowEffect.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRowExport': {'children': ('zipzi.modeling.deletion.DeletionRowExport.__repr__',
                                                             'zipzi.modeling.deletion.DeletionRowExport.summary'),
-                                               'documentation': 'Immutable owned DeletionRowExport value. Construction '
-                                                                'owns declared collections; reading fields, repr and '
-                                                                'summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('failure',
                                                            'Resource, format and exact native export regression.'),
@@ -888,15 +883,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                            'True for pre-existing export problems; false for new '
                                                            'regressions.')],
                                                'kind': 'type',
-                                               'signature': '(*, failure: OpaqueExportIssue, existing: bool)'},
+                                               'signature': '(*, failure: OpaqueExportIssue, existing: bool)',
+                                               'type_refs': ('zipzi.modeling.project.OpaqueExportIssue',)},
  'zipzi.modeling.deletion.DeletionRowExport.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowExport.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRowGuaranteeLimit': {'children': ('zipzi.modeling.deletion.DeletionRowGuaranteeLimit.__repr__',
                                                                     'zipzi.modeling.deletion.DeletionRowGuaranteeLimit.summary'),
-                                                       'documentation': 'Immutable owned DeletionRowGuaranteeLimit '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('object',
                                                                    'Object whose standalone position proof is limited '
@@ -906,26 +899,24 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                    'local-data migration.')],
                                                        'kind': 'type',
                                                        'signature': '(*, object: DeletionObject, ancestor: '
-                                                                    'DeletionObject)'},
+                                                                    'DeletionObject)',
+                                                       'type_refs': ('zipzi.modeling.deletion.DeletionObject',)},
  'zipzi.modeling.deletion.DeletionRowGuaranteeLimit.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowGuaranteeLimit.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRowLock': {'children': ('zipzi.modeling.deletion.DeletionRowLock.__repr__',
                                                           'zipzi.modeling.deletion.DeletionRowLock.summary'),
-                                             'documentation': 'Immutable owned DeletionRowLock value. Construction '
-                                                              'owns declared collections; reading fields, repr and '
-                                                              'summary performs no IO.',
+                                             'documentation': '',
                                              'example': 'docs/recipes.py',
                                              'fields': [('blocker',
                                                          'Affected identity and the inherited lock source.')],
                                              'kind': 'type',
-                                             'signature': '(*, blocker: DeletionLock)'},
+                                             'signature': '(*, blocker: DeletionLock)',
+                                             'type_refs': ('zipzi.modeling.deletion.DeletionLock',)},
  'zipzi.modeling.deletion.DeletionRowLock.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowLock.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRowOrganization': {'children': ('zipzi.modeling.deletion.DeletionRowOrganization.__repr__',
                                                                   'zipzi.modeling.deletion.DeletionRowOrganization.summary'),
-                                                     'documentation': 'Immutable owned DeletionRowOrganization value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('object', 'Surviving organization member.'),
                                                                 ('parent_id',
@@ -936,73 +927,78 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                                                  'copying its full array.')],
                                                      'kind': 'type',
                                                      'signature': '(*, object: DeletionObject, parent_id: str, '
-                                                                  'mapping_slots: int | None = None)'},
+                                                                  'mapping_slots: int | None = None)',
+                                                     'type_refs': ('zipzi.modeling.deletion.DeletionObject',)},
  'zipzi.modeling.deletion.DeletionRowOrganization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowOrganization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRowRelation': {'children': ('zipzi.modeling.deletion.DeletionRowRelation.__repr__',
                                                               'zipzi.modeling.deletion.DeletionRowRelation.summary'),
-                                                 'documentation': 'Immutable owned DeletionRowRelation value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('relation',
                                                              'Native source field and target explaining a retained '
                                                              'rewrite or dependency.')],
                                                  'kind': 'type',
-                                                 'signature': '(*, relation: DeletionRelation)'},
+                                                 'signature': '(*, relation: DeletionRelation)',
+                                                 'type_refs': ('zipzi.modeling.deletion.DeletionRelation',)},
  'zipzi.modeling.deletion.DeletionRowRelation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowRelation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRowRemoval': {'children': ('zipzi.modeling.deletion.DeletionRowRemoval.__repr__',
                                                              'zipzi.modeling.deletion.DeletionRowRemoval.summary'),
-                                                'documentation': 'Immutable owned DeletionRowRemoval value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('removal',
                                                             'Deleted identity and its ownership/scope/dependency '
                                                             'reason.')],
                                                 'kind': 'type',
-                                                'signature': '(*, removal: DeletionRemoval)'},
+                                                'signature': '(*, removal: DeletionRemoval)',
+                                                'type_refs': ('zipzi.modeling.deletion.DeletionRemoval',)},
  'zipzi.modeling.deletion.DeletionRowRemoval.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowRemoval.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionRowStructural': {'children': ('zipzi.modeling.deletion.DeletionRowStructural.__repr__',
                                                                 'zipzi.modeling.deletion.DeletionRowStructural.summary'),
-                                                   'documentation': 'Immutable owned DeletionRowStructural value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('blocker',
                                                                'Native invalid-result address and diagnostic code.')],
                                                    'kind': 'type',
-                                                   'signature': '(*, blocker: DeletionStructuralBlocker)'},
+                                                   'signature': '(*, blocker: DeletionStructuralBlocker)',
+                                                   'type_refs': ('zipzi.modeling.deletion.DeletionStructuralBlocker',)},
  'zipzi.modeling.deletion.DeletionRowStructural.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionRowStructural.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionSection': {'children': (),
-                                             'documentation': 'Immutable typed value. See field semantics and the '
-                                                              'linked workflow.',
+                                             'documentation': '',
                                              'example': 'docs/recipes.py',
-                                             'fields': [],
-                                             'kind': 'type',
-                                             'signature': '()'},
+                                             'fields': [('REMOVED', "'Removed'"),
+                                                        ('OWNED', "'Owned'"),
+                                                        ('REWRITTEN', "'Rewritten'"),
+                                                        ('EFFECTS', "'Effects'"),
+                                                        ('DECISIONS', "'Decisions'"),
+                                                        ('LOCKS', "'Locks'"),
+                                                        ('STRUCTURE', "'Structure'"),
+                                                        ('DEFORMATION', "'Deformation'"),
+                                                        ('ORGANIZATION', "'Organization'"),
+                                                        ('GUARANTEE_LIMITS', "'GuaranteeLimits'"),
+                                                        ('CONVERSION_DOMAIN', "'ConversionDomain'"),
+                                                        ('EXPORTS', "'Exports'"),
+                                                        ('RELATIONS', "'Relations'")],
+                                             'kind': 'enum',
+                                             'signature': ''},
  'zipzi.modeling.deletion.DeletionSectionCount': {'children': ('zipzi.modeling.deletion.DeletionSectionCount.__repr__',
                                                                'zipzi.modeling.deletion.DeletionSectionCount.summary'),
-                                                  'documentation': 'Immutable owned DeletionSectionCount value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('section',
                                                               'Frozen report section addressed by report_page.'),
                                                              ('count', 'Total rows in this section, before paging.')],
                                                   'kind': 'type',
-                                                  'signature': '(*, section: DeletionSection, count: int)'},
+                                                  'signature': '(*, section: DeletionSection, count: int)',
+                                                  'type_refs': ('zipzi.modeling.deletion.DeletionSection',)},
  'zipzi.modeling.deletion.DeletionSectionCount.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionSectionCount.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionStructuralBlocker': {'children': ('zipzi.modeling.deletion.DeletionStructuralBlocker.__repr__',
                                                                     'zipzi.modeling.deletion.DeletionStructuralBlocker.summary'),
-                                                       'documentation': 'Immutable owned DeletionStructuralBlocker '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('object_id',
                                                                    'Native result identity/address associated with the '
@@ -1019,9 +1015,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionStructuralBlocker.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionSummary': {'children': ('zipzi.modeling.deletion.DeletionSummary.__repr__',
                                                           'zipzi.modeling.deletion.DeletionSummary.summary'),
-                                             'documentation': 'Immutable owned DeletionSummary value. Construction '
-                                                              'owns declared collections; reading fields, repr and '
-                                                              'summary performs no IO.',
+                                             'documentation': '',
                                              'example': 'docs/recipes.py',
                                              'fields': [('state',
                                                          'Whether the plan is executable, requires '
@@ -1037,21 +1031,40 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
                                              'kind': 'type',
                                              'signature': '(*, state: DeletionReviewState, requested: int, sections: '
                                                           'tuple[DeletionSectionCount, ...], export_analysis_complete: '
-                                                          'bool)'},
+                                                          'bool)',
+                                             'type_refs': ('zipzi.modeling.deletion.DeletionReviewState',
+                                                           'zipzi.modeling.deletion.DeletionSectionCount')},
  'zipzi.modeling.deletion.DeletionSummary.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionSummary.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTarget': {'children': (),
-                                            'documentation': 'Typed public API entry.',
+                                            'documentation': 'Typed deletion scopes and native business identities.',
                                             'example': 'docs/recipes.py',
                                             'fields': [],
-                                            'kind': 'value',
-                                            'signature': ''},
+                                            'kind': 'alias',
+                                            'signature': 'DeletionTargetMesh | DeletionTargetGlue | '
+                                                         'DeletionTargetOffscreen | DeletionTargetPart | '
+                                                         'DeletionTargetDeformer | DeletionTargetDissolvePart | '
+                                                         'DeletionTargetRemoveDeformer | DeletionTargetParameter | '
+                                                         'DeletionTargetParameterFolder | '
+                                                         'DeletionTargetParameterFolderContents | '
+                                                         'DeletionTargetTexture | DeletionTargetAttachment | '
+                                                         'DeletionTargetRecord',
+                                            'type_refs': ('zipzi.modeling.deletion.DeletionTargetAttachment',
+                                                          'zipzi.modeling.deletion.DeletionTargetDeformer',
+                                                          'zipzi.modeling.deletion.DeletionTargetDissolvePart',
+                                                          'zipzi.modeling.deletion.DeletionTargetGlue',
+                                                          'zipzi.modeling.deletion.DeletionTargetMesh',
+                                                          'zipzi.modeling.deletion.DeletionTargetOffscreen',
+                                                          'zipzi.modeling.deletion.DeletionTargetParameter',
+                                                          'zipzi.modeling.deletion.DeletionTargetParameterFolder',
+                                                          'zipzi.modeling.deletion.DeletionTargetParameterFolderContents',
+                                                          'zipzi.modeling.deletion.DeletionTargetPart',
+                                                          'zipzi.modeling.deletion.DeletionTargetRecord',
+                                                          'zipzi.modeling.deletion.DeletionTargetRemoveDeformer',
+                                                          'zipzi.modeling.deletion.DeletionTargetTexture')},
  'zipzi.modeling.deletion.DeletionTargetAttachment': {'children': ('zipzi.modeling.deletion.DeletionTargetAttachment.__repr__',
                                                                    'zipzi.modeling.deletion.DeletionTargetAttachment.summary'),
-                                                      'documentation': 'Immutable owned DeletionTargetAttachment '
-                                                                       'value. Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('value',
                                                                   'Delete this owned attachment record and clear '
@@ -1062,9 +1075,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionTargetAttachment.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetDeformer': {'children': ('zipzi.modeling.deletion.DeletionTargetDeformer.__repr__',
                                                                  'zipzi.modeling.deletion.DeletionTargetDeformer.summary'),
-                                                    'documentation': 'Immutable owned DeletionTargetDeformer value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('value',
                                                                 'Delete this deformation subtree, including meshes '
@@ -1075,10 +1086,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionTargetDeformer.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetDissolvePart': {'children': ('zipzi.modeling.deletion.DeletionTargetDissolvePart.__repr__',
                                                                      'zipzi.modeling.deletion.DeletionTargetDissolvePart.summary'),
-                                                        'documentation': 'Immutable owned DeletionTargetDissolvePart '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('value',
                                                                     'Remove this Part while retaining and migrating '
@@ -1089,9 +1097,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionTargetDissolvePart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetGlue': {'children': ('zipzi.modeling.deletion.DeletionTargetGlue.__repr__',
                                                              'zipzi.modeling.deletion.DeletionTargetGlue.summary'),
-                                                'documentation': 'Immutable owned DeletionTargetGlue value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('value',
                                                             'Delete this Glue connection, pairs and owned bindings; '
@@ -1102,9 +1108,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionTargetGlue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetMesh': {'children': ('zipzi.modeling.deletion.DeletionTargetMesh.__repr__',
                                                              'zipzi.modeling.deletion.DeletionTargetMesh.summary'),
-                                                'documentation': 'Immutable owned DeletionTargetMesh value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('value',
                                                             'Delete this Mesh and its owned identities; shared '
@@ -1115,9 +1119,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionTargetMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetOffscreen': {'children': ('zipzi.modeling.deletion.DeletionTargetOffscreen.__repr__',
                                                                   'zipzi.modeling.deletion.DeletionTargetOffscreen.summary'),
-                                                     'documentation': 'Immutable owned DeletionTargetOffscreen value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('value',
                                                                  'Delete this Offscreen composite and its own '
@@ -1128,9 +1130,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionTargetOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetParameter': {'children': ('zipzi.modeling.deletion.DeletionTargetParameter.__repr__',
                                                                   'zipzi.modeling.deletion.DeletionTargetParameter.summary'),
-                                                     'documentation': 'Immutable owned DeletionTargetParameter value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('value',
                                                                  'Delete this parameter and reduce ordinary axes at '
@@ -1141,11 +1141,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionTargetParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetParameterFolder': {'children': ('zipzi.modeling.deletion.DeletionTargetParameterFolder.__repr__',
                                                                         'zipzi.modeling.deletion.DeletionTargetParameterFolder.summary'),
-                                                           'documentation': 'Immutable owned '
-                                                                            'DeletionTargetParameterFolder value. '
-                                                                            'Construction owns declared collections; '
-                                                                            'reading fields, repr and summary performs '
-                                                                            'no IO.',
+                                                           'documentation': '',
                                                            'example': 'docs/recipes.py',
                                                            'fields': [('value',
                                                                        'Dissolve this parameter folder and retain its '
@@ -1157,11 +1153,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionTargetParameterFolder.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetParameterFolderContents': {'children': ('zipzi.modeling.deletion.DeletionTargetParameterFolderContents.__repr__',
                                                                                 'zipzi.modeling.deletion.DeletionTargetParameterFolderContents.summary'),
-                                                                   'documentation': 'Immutable owned '
-                                                                                    'DeletionTargetParameterFolderContents '
-                                                                                    'value. Construction owns declared '
-                                                                                    'collections; reading fields, repr '
-                                                                                    'and summary performs no IO.',
+                                                                   'documentation': '',
                                                                    'example': 'docs/recipes.py',
                                                                    'fields': [('value',
                                                                                'Delete this parameter folder subtree '
@@ -1173,9 +1165,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionTargetParameterFolderContents.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetPart': {'children': ('zipzi.modeling.deletion.DeletionTargetPart.__repr__',
                                                              'zipzi.modeling.deletion.DeletionTargetPart.summary'),
-                                                'documentation': 'Immutable owned DeletionTargetPart value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('value',
                                                             'Delete this Part organization subtree; external '
@@ -1186,24 +1176,19 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionTargetPart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetRecord': {'children': ('zipzi.modeling.deletion.DeletionTargetRecord.__repr__',
                                                                'zipzi.modeling.deletion.DeletionTargetRecord.summary'),
-                                                  'documentation': 'Immutable owned DeletionTargetRecord value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('value',
                                                               'Typed non-scene business record; its native domain '
                                                               'validates ownership, child identities and choices.')],
                                                   'kind': 'type',
-                                                  'signature': '(*, value: DeletionObject)'},
+                                                  'signature': '(*, value: DeletionObject)',
+                                                  'type_refs': ('zipzi.modeling.deletion.DeletionObject',)},
  'zipzi.modeling.deletion.DeletionTargetRecord.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.deletion.DeletionTargetRecord.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetRemoveDeformer': {'children': ('zipzi.modeling.deletion.DeletionTargetRemoveDeformer.__repr__',
                                                                        'zipzi.modeling.deletion.DeletionTargetRemoveDeformer.summary'),
-                                                          'documentation': 'Immutable owned '
-                                                                           'DeletionTargetRemoveDeformer value. '
-                                                                           'Construction owns declared collections; '
-                                                                           'reading fields, repr and summary performs '
-                                                                           'no IO.',
+                                                          'documentation': '',
                                                           'example': 'docs/recipes.py',
                                                           'fields': [('value',
                                                                       'Remove only this Deformer and retain/migrate '
@@ -1214,9 +1199,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionTargetRemoveDeformer.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTargetTexture': {'children': ('zipzi.modeling.deletion.DeletionTargetTexture.__repr__',
                                                                 'zipzi.modeling.deletion.DeletionTargetTexture.summary'),
-                                                   'documentation': 'Immutable owned DeletionTargetTexture value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Delete this image record; retained users require an '
@@ -1227,9 +1210,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion': {'children': ('zipzi.modeli
  'zipzi.modeling.deletion.DeletionTargetTexture.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionTolerance': {'children': ('zipzi.modeling.deletion.DeletionTolerance.__repr__',
                                                             'zipzi.modeling.deletion.DeletionTolerance.summary'),
-                                               'documentation': 'Immutable owned DeletionTolerance value. Construction '
-                                                                'owns declared collections; reading fields, repr and '
-                                                                'summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('absolute',
                                                            'Finite positive absolute error tolerance in model units.'),

@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ImageAsset(CompactValue):
-    'Immutable owned ImageAsset value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nunresolved_source: Original imported path or external slot when no decoded content exists.\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\ncontent: Image content metadata; None explicitly represents an asset with no loaded image content.'
+    '\n\nFields:\nunresolved_source: Original imported path or external slot when no decoded content exists.\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\ncontent: Image content metadata; None explicitly represents an asset with no loaded image content.'
     unresolved_source: (str | None) = None
     id: str
     name: str
@@ -20,7 +20,7 @@ ImageAsset.__module__ = "zipzi.modeling.resources"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ImageContent(CompactValue):
-    'Immutable owned ImageContent value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsource: Stored resource location, normally a package-relative path or generated memory-resource\nlocator; reading metadata does not open it.\nwidth: Image width in pixels; prepared image content requires a positive dimension.\nheight: Image height in pixels; prepared image content requires a positive dimension.\nsha256: Hexadecimal SHA-256 of the stored image content; an empty string means no recorded digest.'
+    '\n\nFields:\nsource: Stored resource location, normally a package-relative path or generated memory-resource\nlocator; reading metadata does not open it.\nwidth: Image width in pixels; prepared image content requires a positive dimension.\nheight: Image height in pixels; prepared image content requires a positive dimension.\nsha256: Hexadecimal SHA-256 of the stored image content; an empty string means no recorded digest.'
     source: str
     width: int
     height: int
@@ -30,7 +30,7 @@ ImageContent.__module__ = "zipzi.modeling.resources"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ResourceEditCreate(CompactValue):
-    'Immutable owned ResourceEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\nname: Human-readable display name; use the stable ID for identity because names can change.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    '\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\nname: Human-readable display name; use the stable ID for identity because names can change.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'create'
     id: str
     name: str
@@ -40,7 +40,7 @@ ResourceEditCreate.__module__ = "zipzi.modeling.resources"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ResourceEditPatchName(CompactValue):
-    'Immutable owned ResourceEditPatchName value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nexpected: Exact current field value used as an optimistic precondition; stale values reject\nthe edit.\nname: Human-readable display name; use the stable ID for identity because names can change.'
+    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nexpected: Exact current field value used as an optimistic precondition; stale values reject\nthe edit.\nname: Human-readable display name; use the stable ID for identity because names can change.'
     _variant: _ClassVar[str] = 'patch_name'
     id: str
     expected: str
@@ -50,7 +50,7 @@ ResourceEditPatchName.__module__ = "zipzi.modeling.resources"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ResourceEditSetContent(CompactValue):
-    'Immutable owned ResourceEditSetContent value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nexpected: Exact current image-content metadata precondition; None requires the asset to have\nno loaded content.\ncontent: Image content metadata; None explicitly represents an asset with no loaded image\ncontent.'
+    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nexpected: Exact current image-content metadata precondition; None requires the asset to have\nno loaded content.\ncontent: Image content metadata; None explicitly represents an asset with no loaded image\ncontent.'
     _variant: _ClassVar[str] = 'set_content'
     id: str
     expected: (ImageContent | None) = None
@@ -60,7 +60,7 @@ ResourceEditSetContent.__module__ = "zipzi.modeling.resources"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ResourceEditReorder(CompactValue):
-    'Immutable owned ResourceEditReorder value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    '\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'reorder'
     ids: tuple[str, ...]
     before: (str | None) = None
@@ -72,7 +72,7 @@ ResourceEditReorder.__module__ = "zipzi.modeling.resources"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ResourceEditDuplicate(CompactValue):
-    'Immutable owned ResourceEditDuplicate value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsource: Stable ID of the existing source object to duplicate, not a filesystem path.\nid: New stable UUID for this object; it must not conflict with an existing identity.\nname: Human-readable display name; use the stable ID for identity because names can change.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    '\n\nFields:\nsource: Stable ID of the existing source object to duplicate, not a filesystem path.\nid: New stable UUID for this object; it must not conflict with an existing identity.\nname: Human-readable display name; use the stable ID for identity because names can change.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'duplicate'
     source: str
     id: str
@@ -83,7 +83,7 @@ ResourceEditDuplicate.__module__ = "zipzi.modeling.resources"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ResourceEditDelete(CompactValue):
-    'Immutable owned ResourceEditDelete value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nreplacement: None rejects deletion while referenced; Some explicitly redirects users to a\nresolved target or an unresolved/detached reference.'
+    'None rejects references; Some explicitly redirects or detaches every user.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nreplacement: None rejects deletion while referenced; Some explicitly redirects users to a\nresolved target or an unresolved/detached reference.'
     _variant: _ClassVar[str] = 'delete'
     id: str
     replacement: (SceneReference | None) = None

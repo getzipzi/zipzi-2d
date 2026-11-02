@@ -127,6 +127,8 @@ pub struct MeshMeshing {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// An internal mesh edge identified by two stable vertex IDs and its origin.
+/// The edge must exist in the triangulation; boundary edges belong to MeshMeshing.boundary.
 pub struct MeshConstraint {
     /// Two distinct vertex IDs in increasing order; the segment is an actual triangle edge.
     pub endpoints: [VertexId; 2],
@@ -137,8 +139,11 @@ pub struct MeshConstraint {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// The origin of a retained internal mesh constraint edge.
 pub enum MeshConstraintKind {
+    /// Fixed by the user.
     User,
+    /// Supplied by the edge-layout generator.
     EdgeSupport,
 }
 

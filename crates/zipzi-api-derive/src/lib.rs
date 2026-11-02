@@ -189,6 +189,7 @@ fn fields(
 pub fn api_fields(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
+    let doc = doc_text(&input.attrs);
     let field_rows = |fields: &Fields| {
         fields.iter().enumerate().map(|(index, field)| {
             let key = field.ident.as_ref().map(ToString::to_string)
@@ -207,6 +208,7 @@ pub fn api_fields(input: TokenStream) -> TokenStream {
         syn::Data::Struct(data) => {
             let rows = field_rows(&data.fields);
             quote!(zipzi_contract::api_shape::Shape::SerdeRecord {
+                doc: #doc.into(),
                 name: std::any::type_name::<Self>().into(),
                 fields: vec![#(#rows),*],
                 transparent: false,
@@ -216,15 +218,18 @@ pub fn api_fields(input: TokenStream) -> TokenStream {
         syn::Data::Enum(data) => {
             let rows = data.variants.iter().map(|variant| {
                 let rust_name = variant.ident.to_string();
+                let variant_doc = doc_text(&variant.attrs);
                 let rows = field_rows(&variant.fields);
                 let form = match &variant.fields {
                     Fields::Named(_) => "record", Fields::Unit => "unit", Fields::Unnamed(_) => "newtype",
                 };
                 quote!(zipzi_contract::api_shape::SerdeVariant {
+                    doc: #variant_doc.into(),
                     rust_name: #rust_name.into(), name: #rust_name.into(), form: #form.into(), fields: vec![#(#rows),*],
                 })
             });
             quote!(zipzi_contract::api_shape::Shape::SerdeEnum {
+                doc: #doc.into(),
                 name: std::any::type_name::<Self>().into(),
                 tag: None,
                 content: None,
@@ -253,6 +258,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
 }
 fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let name = &input.ident;
+    let doc = doc_text(&input.attrs);
     let a = attrs(&input.attrs)?;
 
     let mut generics = input.generics.clone();
@@ -272,12 +278,13 @@ fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
             let fs = fields(&data.fields, a.rename_all.as_deref(), a.default.as_ref())?;
             let transparent = a.transparent;
             let tuple = matches!(data.fields, Fields::Unnamed(_));
-            quote!(zipzi_contract::api_shape::Shape::SerdeRecord {name:std::any::type_name::<Self>().into(),fields:#fs,transparent:#transparent,tuple:#tuple})
+            quote!(zipzi_contract::api_shape::Shape::SerdeRecord {doc:#doc.into(),name:std::any::type_name::<Self>().into(),fields:#fs,transparent:#transparent,tuple:#tuple})
         }
         syn::Data::Enum(data) => {
             let mut vs = vec![];
             for v in data.variants {
                 let va = attrs(&v.attrs)?;
+                let variant_doc = doc_text(&v.attrs);
                 if va.skip {
                     continue;
                 }
@@ -294,7 +301,7 @@ fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                     Fields::Unnamed(_) => "tuple",
                 };
                 let fs = fields(&v.fields, None, None)?;
-                vs.push(quote!(zipzi_contract::api_shape::SerdeVariant {rust_name:#rn.into(),name:#wn.into(),form:#form.into(),fields:#fs}));
+                vs.push(quote!(zipzi_contract::api_shape::SerdeVariant {doc:#variant_doc.into(),rust_name:#rn.into(),name:#wn.into(),form:#form.into(),fields:#fs}));
             }
             let tag = a
                 .tag
@@ -304,7 +311,7 @@ fn expand(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                 .content
                 .map(|v| quote!(Some(#v.into())))
                 .unwrap_or(quote!(None));
-            quote!(zipzi_contract::api_shape::Shape::SerdeEnum {name:std::any::type_name::<Self>().into(),tag:#tag,content:#content,variants:vec![#(#vs),*]})
+            quote!(zipzi_contract::api_shape::Shape::SerdeEnum {doc:#doc.into(),name:std::any::type_name::<Self>().into(),tag:#tag,content:#content,variants:vec![#(#vs),*]})
         }
         _ => return Err(syn::Error::new_spanned(name, "Unions are not API shapes")),
     };

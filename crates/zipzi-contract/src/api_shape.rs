@@ -40,21 +40,29 @@ pub enum Shape {
         length: usize,
     },
     Record {
+        #[serde(skip_serializing_if = "String::is_empty")]
+        doc: String,
         name: String,
         fields: Vec<Field>,
     },
     Union {
+        #[serde(skip_serializing_if = "String::is_empty")]
+        doc: String,
         name: String,
         tag: String,
         variants: Vec<Variant>,
     },
     SerdeRecord {
+        #[serde(skip_serializing_if = "String::is_empty")]
+        doc: String,
         name: String,
         fields: Vec<SerdeField>,
         transparent: bool,
         tuple: bool,
     },
     SerdeEnum {
+        #[serde(skip_serializing_if = "String::is_empty")]
+        doc: String,
         name: String,
         tag: Option<String>,
         content: Option<String>,
@@ -79,6 +87,8 @@ pub enum DefaultValue {
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Variant {
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub doc: String,
     pub rust_name: String,
     pub wire_name: String,
     pub fields: Vec<Field>,
@@ -236,6 +246,15 @@ macro_rules! api_field {
     ($name:ident: $ty:ty; #[doc = $doc:literal] $($rest:tt)*) => { $crate::api_field!($name: $ty; $($rest)*).documented($doc) };
     ($name:ident: $ty:ty;) => { $crate::api_shape::Field::of::<$ty>(stringify!($name)) };
 }
+/// Collect documentation attributes without coupling API metadata to Rust source parsing.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! api_doc_text {
+    () => { "" };
+    (#[doc = $doc:literal] $($rest:tt)*) => { concat!($doc, "\n", $crate::api_doc_text!($($rest)*)) };
+    (#[$($other:tt)*] $($rest:tt)*) => { $crate::api_doc_text!($($rest)*) };
+}
+
 #[macro_export]
 macro_rules! api_record {
     ($(#[$($meta:tt)*])* pub struct $name:ident { $($(#[$($field_meta:tt)*])* pub $field:ident: $ty:ty),* $(,)? }) => {
@@ -244,6 +263,7 @@ macro_rules! api_record {
         impl $crate::api_shape::ApiShape for $name {
             fn api_shape() -> $crate::api_shape::Shape {
                 $crate::api_shape::Shape::Record {
+                    doc: $crate::api_doc_text!($(#[$($meta)*])*).lines().map(str::trim).collect::<Vec<_>>().join("\n"),
                     name: concat!(module_path!(), "::", stringify!($name)).into(),
                     fields: vec![$($crate::api_field!($field: $ty; $(#[$($field_meta)*])*)),*],
                 }
@@ -253,15 +273,18 @@ macro_rules! api_record {
 }
 #[macro_export]
 macro_rules! api_union {
-    (tag = $tag:literal; $(#[$($meta:tt)*])* pub enum $name:ident { $($variant:ident { $($(#[$($field_meta:tt)*])* $field:ident: $ty:ty),* $(,)? }),* $(,)? }) => {
+    (tag = $tag:literal; $(#[$($meta:tt)*])* pub enum $name:ident { $($(#[$($variant_meta:tt)*])* $variant:ident { $($(#[$($field_meta:tt)*])* $field:ident: $ty:ty),* $(,)? }),* $(,)? }) => {
         const _: () = $crate::api_record_attributes!($(#[$($meta)*])*);
+        $(const _: () = $crate::api_record_attributes!($(#[$($variant_meta)*])*);)*
         $(#[$($meta)*])* #[serde(tag = $tag, rename_all = "snake_case", deny_unknown_fields)]
-        pub enum $name { $($variant { $($(#[$($field_meta)*])* $field: $ty),* }),* }
+        pub enum $name { $($(#[$($variant_meta)*])* $variant { $($(#[$($field_meta)*])* $field: $ty),* }),* }
         impl $crate::api_shape::ApiShape for $name {
             fn api_shape() -> $crate::api_shape::Shape {
                 $crate::api_shape::Shape::Union {
+                    doc: $crate::api_doc_text!($(#[$($meta)*])*).lines().map(str::trim).collect::<Vec<_>>().join("\n"),
                     name: concat!(module_path!(), "::", stringify!($name)).into(), tag: $tag.into(),
                     variants: vec![$($crate::api_shape::Variant {
+                        doc: $crate::api_doc_text!($(#[$($variant_meta)*])*).lines().map(str::trim).collect::<Vec<_>>().join("\n"),
                         rust_name: stringify!($variant).into(), wire_name: $crate::api_shape::snake_case(stringify!($variant)),
                         fields: vec![$($crate::api_field!($field: $ty; $(#[$($field_meta)*])*)),*],
                     }),*],
@@ -285,6 +308,8 @@ pub struct SerdeField {
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SerdeVariant {
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub doc: String,
     pub rust_name: String,
     pub name: String,
     pub form: String,
@@ -407,5 +432,94 @@ mod default_shape_tests {
             panic!("record")
         };
         assert_eq!(fields[0].default, Some(serde_json::json!(12)));
+    }
+}
+
+#[cfg(test)]
+mod documentation_tests {
+    use super::{ApiShape, Shape};
+
+    crate::api_record! {
+        /// Record documentation.
+        /// Second line.
+        #[derive(serde::Serialize, serde::Deserialize)]
+        pub struct DocumentedRecord {
+            /// Field documentation.
+            pub value: u32,
+        }
+    }
+
+    crate::api_union! {
+        tag = "op";
+        /// Union documentation.
+        #[derive(serde::Serialize, serde::Deserialize)]
+        pub enum DocumentedUnion {
+            /// Variant documentation.
+            Set {
+                /// Variant field documentation.
+                value: u32,
+            },
+        }
+    }
+
+    /// Derived record documentation.
+    #[derive(serde::Serialize, serde::Deserialize, zipzi_api_derive::ApiShape)]
+    struct DerivedRecord {
+        value: u32,
+    }
+
+    /// Derived enum documentation.
+    #[derive(serde::Serialize, serde::Deserialize, zipzi_api_derive::ApiShape)]
+    enum DerivedEnum {
+        /// Derived variant documentation.
+        Value,
+    }
+
+    /// Lifecycle documentation.
+    #[derive(zipzi_api_derive::ApiFields)]
+    #[allow(dead_code)]
+    enum Lifecycle {
+        /// Lifecycle variant documentation.
+        Changed(u32),
+    }
+
+    #[test]
+    fn macros_export_type_variant_and_field_documentation() {
+        let record = serde_json::to_value(DocumentedRecord::api_shape()).unwrap();
+        assert!(record["doc"].as_str().unwrap().contains("Second line."));
+        assert_eq!(record["fields"][0]["doc"], "Field documentation.");
+        let union = serde_json::to_value(DocumentedUnion::api_shape()).unwrap();
+        assert_eq!(union["doc"], "Union documentation.");
+        assert_eq!(union["variants"][0]["doc"], "Variant documentation.");
+        assert_eq!(
+            union["variants"][0]["fields"][0]["doc"],
+            "Variant field documentation."
+        );
+    }
+
+    #[test]
+    fn derives_export_type_and_variant_documentation() {
+        let Shape::SerdeRecord { doc, .. } = DerivedRecord::api_shape() else {
+            panic!("record")
+        };
+        assert_eq!(doc, "Derived record documentation.");
+        for (shape, expected_type, expected_variant) in [
+            (
+                DerivedEnum::api_shape(),
+                "Derived enum documentation.",
+                "Derived variant documentation.",
+            ),
+            (
+                Lifecycle::api_fields(),
+                "Lifecycle documentation.",
+                "Lifecycle variant documentation.",
+            ),
+        ] {
+            let Shape::SerdeEnum { doc, variants, .. } = shape else {
+                panic!("enum")
+            };
+            assert_eq!(doc, expected_type);
+            assert_eq!(variants[0].doc, expected_variant);
+        }
     }
 }

@@ -96,16 +96,16 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                              'kind': 'module',
                              'signature': ''},
  'zipzi.modeling.bindings.AxisReduction': {'children': (),
-                                           'documentation': 'Typed public API entry.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [],
-                                           'kind': 'value',
-                                           'signature': ''},
+                                           'kind': 'alias',
+                                           'signature': 'AxisReductionSlice | AxisReductionResample',
+                                           'type_refs': ('zipzi.modeling.bindings.AxisReductionResample',
+                                                         'zipzi.modeling.bindings.AxisReductionSlice')},
  'zipzi.modeling.bindings.AxisReductionResample': {'children': ('zipzi.modeling.bindings.AxisReductionResample.__repr__',
                                                                 'zipzi.modeling.bindings.AxisReductionResample.summary'),
-                                                   'documentation': 'Immutable owned AxisReductionResample value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Parameter coordinate used to resample the old grid '
@@ -116,9 +116,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.AxisReductionResample.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.AxisReductionSlice': {'children': ('zipzi.modeling.bindings.AxisReductionSlice.__repr__',
                                                              'zipzi.modeling.bindings.AxisReductionSlice.summary'),
-                                                'documentation': 'Immutable owned AxisReductionSlice value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('value',
                                                             'Parameter coordinate at which to slice the old grid while '
@@ -129,9 +127,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.AxisReductionSlice.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BindingAxis': {'children': ('zipzi.modeling.bindings.BindingAxis.__repr__',
                                                       'zipzi.modeling.bindings.BindingAxis.summary'),
-                                         'documentation': 'Immutable owned BindingAxis value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('id',
                                                      'Stable axis UUID; an empty ID is allocated during native binding '
@@ -145,22 +141,24 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                      'axis.')],
                                          'kind': 'type',
                                          'signature': "(*, id: str = '', samples: tuple[BindingSample, ...] = (), "
-                                                      'parameter_id: str)'},
+                                                      'parameter_id: str)',
+                                         'type_refs': ('zipzi.modeling.bindings.BindingSample',)},
  'zipzi.modeling.bindings.BindingAxis.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BindingAxis.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BindingFieldPatch': {'children': (),
-                                               'documentation': 'Typed public API entry.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [],
-                                               'kind': 'value',
-                                               'signature': ''},
+                                               'kind': 'alias',
+                                               'signature': 'BindingFieldPatchSampleValue | '
+                                                            'BindingFieldPatchConstraintSample | '
+                                                            'BindingFieldPatchAxisParameter',
+                                               'type_refs': ('zipzi.modeling.bindings.BindingFieldPatchAxisParameter',
+                                                             'zipzi.modeling.bindings.BindingFieldPatchConstraintSample',
+                                                             'zipzi.modeling.bindings.BindingFieldPatchSampleValue')},
  'zipzi.modeling.bindings.BindingFieldPatchAxisParameter': {'children': ('zipzi.modeling.bindings.BindingFieldPatchAxisParameter.__repr__',
                                                                          'zipzi.modeling.bindings.BindingFieldPatchAxisParameter.summary'),
-                                                            'documentation': 'Immutable owned '
-                                                                             'BindingFieldPatchAxisParameter value. '
-                                                                             'Construction owns declared collections; '
-                                                                             'reading fields, repr and summary '
-                                                                             'performs no IO.',
+                                                            'documentation': '',
                                                             'example': 'docs/recipes.py',
                                                             'fields': [('parameter_id',
                                                                         'Stable document parameter ID, not its '
@@ -170,16 +168,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                                         'removing or replacing an axis.')],
                                                             'kind': 'type',
                                                             'signature': '(*, parameter_id: str, reduction: '
-                                                                         'AxisReduction | None = None)'},
+                                                                         'AxisReduction | None = None)',
+                                                            'type_refs': ('zipzi.modeling.bindings.AxisReduction',)},
  'zipzi.modeling.bindings.BindingFieldPatchAxisParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BindingFieldPatchAxisParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BindingFieldPatchConstraintSample': {'children': ('zipzi.modeling.bindings.BindingFieldPatchConstraintSample.__repr__',
                                                                             'zipzi.modeling.bindings.BindingFieldPatchConstraintSample.summary'),
-                                                               'documentation': 'Immutable owned '
-                                                                                'BindingFieldPatchConstraintSample '
-                                                                                'value. Construction owns declared '
-                                                                                'collections; reading fields, repr and '
-                                                                                'summary performs no IO.',
+                                                               'documentation': '',
                                                                'example': 'docs/recipes.py',
                                                                'fields': [('value',
                                                                            'Scalar value in the referenced parameter '
@@ -193,11 +188,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BindingFieldPatchConstraintSample.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BindingFieldPatchSampleValue': {'children': ('zipzi.modeling.bindings.BindingFieldPatchSampleValue.__repr__',
                                                                        'zipzi.modeling.bindings.BindingFieldPatchSampleValue.summary'),
-                                                          'documentation': 'Immutable owned '
-                                                                           'BindingFieldPatchSampleValue value. '
-                                                                           'Construction owns declared collections; '
-                                                                           'reading fields, repr and summary performs '
-                                                                           'no IO.',
+                                                          'documentation': '',
                                                           'example': 'docs/recipes.py',
                                                           'fields': [('value',
                                                                       'Scalar value in the referenced parameter '
@@ -207,16 +198,18 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BindingFieldPatchSampleValue.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BindingFieldPatchSampleValue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BindingGridTarget': {'children': (),
-                                               'documentation': 'Typed public API entry.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [],
-                                               'kind': 'value',
-                                               'signature': ''},
+                                               'kind': 'alias',
+                                               'signature': 'BindingGridTargetMesh | BindingGridTargetScene | '
+                                                            'BindingGridTargetGlue',
+                                               'type_refs': ('zipzi.modeling.bindings.BindingGridTargetGlue',
+                                                             'zipzi.modeling.bindings.BindingGridTargetMesh',
+                                                             'zipzi.modeling.bindings.BindingGridTargetScene')},
  'zipzi.modeling.bindings.BindingGridTargetGlue': {'children': ('zipzi.modeling.bindings.BindingGridTargetGlue.__repr__',
                                                                 'zipzi.modeling.bindings.BindingGridTargetGlue.summary'),
-                                                   'documentation': 'Immutable owned BindingGridTargetGlue value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Stable ID of the target Glue whose ordinary grid is '
@@ -227,9 +220,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BindingGridTargetGlue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BindingGridTargetMesh': {'children': ('zipzi.modeling.bindings.BindingGridTargetMesh.__repr__',
                                                                 'zipzi.modeling.bindings.BindingGridTargetMesh.summary'),
-                                                   'documentation': 'Immutable owned BindingGridTargetMesh value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Stable ID of the target mesh whose ordinary grid is '
@@ -240,9 +231,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BindingGridTargetMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BindingGridTargetScene': {'children': ('zipzi.modeling.bindings.BindingGridTargetScene.__repr__',
                                                                  'zipzi.modeling.bindings.BindingGridTargetScene.summary'),
-                                                    'documentation': 'Immutable owned BindingGridTargetScene value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('value',
                                                                 'Stable ID of the target scene transform or Part whose '
@@ -253,9 +242,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BindingGridTargetScene.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BindingSample': {'children': ('zipzi.modeling.bindings.BindingSample.__repr__',
                                                         'zipzi.modeling.bindings.BindingSample.summary'),
-                                           'documentation': 'Immutable owned BindingSample value. Construction owns '
-                                                            'declared collections; reading fields, repr and summary '
-                                                            'performs no IO.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [('id',
                                                        'Stable sample UUID within the binding axis; distinct from its '
@@ -270,9 +257,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BindingSample.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BlendShapeBinding': {'children': ('zipzi.modeling.bindings.BlendShapeBinding.__repr__',
                                                             'zipzi.modeling.bindings.BlendShapeBinding.summary'),
-                                               'documentation': 'Immutable owned BlendShapeBinding value. Construction '
-                                                                'owns declared collections; reading fields, repr and '
-                                                                'summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('id',
                                                            'Stable document object ID used by references; it is '
@@ -295,14 +280,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                'kind': 'type',
                                                'signature': '(*, id: str, target_id: str, target_kind: '
                                                             'BlendShapeTargetKind, key_table_id: str, constraint_ids: '
-                                                            'tuple[str, ...], keyforms: DeltaKeyforms)'},
+                                                            'tuple[str, ...], keyforms: DeltaKeyforms)',
+                                               'type_refs': ('zipzi.modeling.bindings.BlendShapeTargetKind',
+                                                             'zipzi.modeling.bindings.DeltaKeyforms')},
  'zipzi.modeling.bindings.BlendShapeBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BlendShapeBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BlendShapeConstraint': {'children': ('zipzi.modeling.bindings.BlendShapeConstraint.__repr__',
                                                                'zipzi.modeling.bindings.BlendShapeConstraint.summary'),
-                                                  'documentation': 'Immutable owned BlendShapeConstraint value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('samples',
                                                               'Ordered parameter samples with weights used to '
@@ -315,14 +300,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                               'identifier.')],
                                                   'kind': 'type',
                                                   'signature': '(*, samples: tuple[ConstraintSample, ...] = (), id: '
-                                                               'str, parameter_id: str)'},
+                                                               'str, parameter_id: str)',
+                                                  'type_refs': ('zipzi.modeling.bindings.ConstraintSample',)},
  'zipzi.modeling.bindings.BlendShapeConstraint.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BlendShapeConstraint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BlendShapeKeyTable': {'children': ('zipzi.modeling.bindings.BlendShapeKeyTable.__repr__',
                                                              'zipzi.modeling.bindings.BlendShapeKeyTable.summary'),
-                                                'documentation': 'Immutable owned BlendShapeKeyTable value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('samples',
                                                             'Ordered stable parameter samples with strictly increasing '
@@ -339,28 +323,39 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                             'identifier.')],
                                                 'kind': 'type',
                                                 'signature': '(*, samples: tuple[BindingSample, ...] = (), '
-                                                             "base_sample_id: str = '', id: str, parameter_id: str)"},
+                                                             "base_sample_id: str = '', id: str, parameter_id: str)",
+                                                'type_refs': ('zipzi.modeling.bindings.BindingSample',)},
  'zipzi.modeling.bindings.BlendShapeKeyTable.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BlendShapeKeyTable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BlendShapeTargetKind': {'children': (),
-                                                  'documentation': 'Immutable typed value. See field semantics and the '
-                                                                   'linked workflow.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
-                                                  'fields': [],
-                                                  'kind': 'type',
-                                                  'signature': '()'},
+                                                  'fields': [('MESH', "'mesh'"),
+                                                             ('WARP', "'warp'"),
+                                                             ('ROTATION', "'rotation'"),
+                                                             ('PART', "'part'"),
+                                                             ('GLUE', "'glue'"),
+                                                             ('OFFSCREEN', "'offscreen'")],
+                                                  'kind': 'enum',
+                                                  'signature': ''},
  'zipzi.modeling.bindings.BlendTableOperation': {'children': (),
-                                                 'documentation': 'Typed public API entry.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [],
-                                                 'kind': 'value',
-                                                 'signature': ''},
+                                                 'kind': 'alias',
+                                                 'signature': 'BlendTableOperationInsert | BlendTableOperationMove | '
+                                                              'BlendTableOperationDelete | BlendTableOperationSetBase '
+                                                              '| BlendTableOperationSetParameter | '
+                                                              'BlendTableOperationRemapParameter',
+                                                 'type_refs': ('zipzi.modeling.bindings.BlendTableOperationDelete',
+                                                               'zipzi.modeling.bindings.BlendTableOperationInsert',
+                                                               'zipzi.modeling.bindings.BlendTableOperationMove',
+                                                               'zipzi.modeling.bindings.BlendTableOperationRemapParameter',
+                                                               'zipzi.modeling.bindings.BlendTableOperationSetBase',
+                                                               'zipzi.modeling.bindings.BlendTableOperationSetParameter')},
  'zipzi.modeling.bindings.BlendTableOperationDelete': {'children': ('zipzi.modeling.bindings.BlendTableOperationDelete.__repr__',
                                                                     'zipzi.modeling.bindings.BlendTableOperationDelete.summary'),
-                                                       'documentation': 'Immutable owned BlendTableOperationDelete '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('sample_id',
                                                                    'Stable sample ID from the associated axis or '
@@ -376,23 +371,19 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BlendTableOperationDelete.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BlendTableOperationInsert': {'children': ('zipzi.modeling.bindings.BlendTableOperationInsert.__repr__',
                                                                     'zipzi.modeling.bindings.BlendTableOperationInsert.summary'),
-                                                       'documentation': 'Immutable owned BlendTableOperationInsert '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('sample',
                                                                    'New stable sample UUID and finite parameter '
                                                                    'coordinate to insert into this key table.')],
                                                        'kind': 'type',
-                                                       'signature': '(*, sample: BindingSample)'},
+                                                       'signature': '(*, sample: BindingSample)',
+                                                       'type_refs': ('zipzi.modeling.bindings.BindingSample',)},
  'zipzi.modeling.bindings.BlendTableOperationInsert.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BlendTableOperationInsert.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BlendTableOperationMove': {'children': ('zipzi.modeling.bindings.BlendTableOperationMove.__repr__',
                                                                   'zipzi.modeling.bindings.BlendTableOperationMove.summary'),
-                                                     'documentation': 'Immutable owned BlendTableOperationMove value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('sample_id',
                                                                  'Stable sample ID from the associated axis or '
@@ -406,11 +397,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BlendTableOperationMove.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BlendTableOperationRemapParameter': {'children': ('zipzi.modeling.bindings.BlendTableOperationRemapParameter.__repr__',
                                                                             'zipzi.modeling.bindings.BlendTableOperationRemapParameter.summary'),
-                                                               'documentation': 'Immutable owned '
-                                                                                'BlendTableOperationRemapParameter '
-                                                                                'value. Construction owns declared '
-                                                                                'collections; reading fields, repr and '
-                                                                                'summary performs no IO.',
+                                                               'documentation': '',
                                                                'example': 'docs/recipes.py',
                                                                'fields': [('parameter_id',
                                                                            'Stable document parameter ID, not its '
@@ -422,15 +409,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                                            'requested.')],
                                                                'kind': 'type',
                                                                'signature': '(*, parameter_id: str, policy: '
-                                                                            'ParameterRangePolicy)'},
+                                                                            'ParameterRangePolicy)',
+                                                               'type_refs': ('zipzi.modeling.parameters.ParameterRangePolicy',)},
  'zipzi.modeling.bindings.BlendTableOperationRemapParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.BlendTableOperationRemapParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BlendTableOperationSetBase': {'children': ('zipzi.modeling.bindings.BlendTableOperationSetBase.__repr__',
                                                                      'zipzi.modeling.bindings.BlendTableOperationSetBase.summary'),
-                                                        'documentation': 'Immutable owned BlendTableOperationSetBase '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('sample_id',
                                                                     'Stable sample ID from the associated axis or '
@@ -442,11 +427,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BlendTableOperationSetBase.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BlendTableOperationSetParameter': {'children': ('zipzi.modeling.bindings.BlendTableOperationSetParameter.__repr__',
                                                                           'zipzi.modeling.bindings.BlendTableOperationSetParameter.summary'),
-                                                             'documentation': 'Immutable owned '
-                                                                              'BlendTableOperationSetParameter value. '
-                                                                              'Construction owns declared collections; '
-                                                                              'reading fields, repr and summary '
-                                                                              'performs no IO.',
+                                                             'documentation': '',
                                                              'example': 'docs/recipes.py',
                                                              'fields': [('parameter_id',
                                                                          'Stable document parameter ID, not its '
@@ -457,9 +438,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BlendTableOperationSetParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.ConstraintSample': {'children': ('zipzi.modeling.bindings.ConstraintSample.__repr__',
                                                            'zipzi.modeling.bindings.ConstraintSample.summary'),
-                                              'documentation': 'Immutable owned ConstraintSample value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('id', 'Stable constraint-sample UUID.'),
                                                          ('value',
@@ -473,9 +452,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.ConstraintSample.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.DeltaGlueKeyform': {'children': ('zipzi.modeling.bindings.DeltaGlueKeyform.__repr__',
                                                            'zipzi.modeling.bindings.DeltaGlueKeyform.summary'),
-                                              'documentation': 'Immutable owned DeltaGlueKeyform value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('sample_id',
                                                           'Stable sample ID in the referenced BlendShape key table, '
@@ -487,100 +464,100 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.DeltaGlueKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.DeltaGlueKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.DeltaKeyforms': {'children': (),
-                                           'documentation': 'Typed public API entry.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [],
-                                           'kind': 'value',
-                                           'signature': ''},
+                                           'kind': 'alias',
+                                           'signature': 'DeltaKeyformsMesh | DeltaKeyformsWarp | DeltaKeyformsRotation '
+                                                        '| DeltaKeyformsPart | DeltaKeyformsGlue | '
+                                                        'DeltaKeyformsOffscreen',
+                                           'type_refs': ('zipzi.modeling.bindings.DeltaKeyformsGlue',
+                                                         'zipzi.modeling.bindings.DeltaKeyformsMesh',
+                                                         'zipzi.modeling.bindings.DeltaKeyformsOffscreen',
+                                                         'zipzi.modeling.bindings.DeltaKeyformsPart',
+                                                         'zipzi.modeling.bindings.DeltaKeyformsRotation',
+                                                         'zipzi.modeling.bindings.DeltaKeyformsWarp')},
  'zipzi.modeling.bindings.DeltaKeyformsGlue': {'children': ('zipzi.modeling.bindings.DeltaKeyformsGlue.__repr__',
                                                             'zipzi.modeling.bindings.DeltaKeyformsGlue.summary'),
-                                               'documentation': 'Immutable owned DeltaKeyformsGlue value. Construction '
-                                                                'owns declared collections; reading fields, repr and '
-                                                                'summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('value',
                                                            'Ordered Glue BlendShape displacement keyforms, each keyed '
                                                            'by stable sample_id;\n'
                                                            'channels describe deltas from the base shape.')],
                                                'kind': 'type',
-                                               'signature': '(*, value: tuple[DeltaGlueKeyform, ...])'},
+                                               'signature': '(*, value: tuple[DeltaGlueKeyform, ...])',
+                                               'type_refs': ('zipzi.modeling.bindings.DeltaGlueKeyform',)},
  'zipzi.modeling.bindings.DeltaKeyformsGlue.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.DeltaKeyformsGlue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.DeltaKeyformsMesh': {'children': ('zipzi.modeling.bindings.DeltaKeyformsMesh.__repr__',
                                                             'zipzi.modeling.bindings.DeltaKeyformsMesh.summary'),
-                                               'documentation': 'Immutable owned DeltaKeyformsMesh value. Construction '
-                                                                'owns declared collections; reading fields, repr and '
-                                                                'summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('value',
                                                            'Ordered Mesh BlendShape displacement keyforms, each keyed '
                                                            'by stable sample_id;\n'
                                                            'channels describe deltas from the base shape.')],
                                                'kind': 'type',
-                                               'signature': '(*, value: tuple[DeltaMeshKeyform, ...])'},
+                                               'signature': '(*, value: tuple[DeltaMeshKeyform, ...])',
+                                               'type_refs': ('zipzi.modeling.bindings.DeltaMeshKeyform',)},
  'zipzi.modeling.bindings.DeltaKeyformsMesh.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.DeltaKeyformsMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.DeltaKeyformsOffscreen': {'children': ('zipzi.modeling.bindings.DeltaKeyformsOffscreen.__repr__',
                                                                  'zipzi.modeling.bindings.DeltaKeyformsOffscreen.summary'),
-                                                    'documentation': 'Immutable owned DeltaKeyformsOffscreen value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('value',
                                                                 'Ordered Offscreen BlendShape displacement keyforms, '
                                                                 'each keyed by stable sample_id;\n'
                                                                 'channels describe deltas from the base shape.')],
                                                     'kind': 'type',
-                                                    'signature': '(*, value: tuple[DeltaOffscreenKeyform, ...])'},
+                                                    'signature': '(*, value: tuple[DeltaOffscreenKeyform, ...])',
+                                                    'type_refs': ('zipzi.modeling.bindings.DeltaOffscreenKeyform',)},
  'zipzi.modeling.bindings.DeltaKeyformsOffscreen.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.DeltaKeyformsOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.DeltaKeyformsPart': {'children': ('zipzi.modeling.bindings.DeltaKeyformsPart.__repr__',
                                                             'zipzi.modeling.bindings.DeltaKeyformsPart.summary'),
-                                               'documentation': 'Immutable owned DeltaKeyformsPart value. Construction '
-                                                                'owns declared collections; reading fields, repr and '
-                                                                'summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('value',
                                                            'Ordered Part BlendShape displacement keyforms, each keyed '
                                                            'by stable sample_id;\n'
                                                            'channels describe deltas from the base shape.')],
                                                'kind': 'type',
-                                               'signature': '(*, value: tuple[DeltaPartKeyform, ...])'},
+                                               'signature': '(*, value: tuple[DeltaPartKeyform, ...])',
+                                               'type_refs': ('zipzi.modeling.bindings.DeltaPartKeyform',)},
  'zipzi.modeling.bindings.DeltaKeyformsPart.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.DeltaKeyformsPart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.DeltaKeyformsRotation': {'children': ('zipzi.modeling.bindings.DeltaKeyformsRotation.__repr__',
                                                                 'zipzi.modeling.bindings.DeltaKeyformsRotation.summary'),
-                                                   'documentation': 'Immutable owned DeltaKeyformsRotation value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Ordered Rotation BlendShape displacement keyforms, '
                                                                'each keyed by stable sample_id;\n'
                                                                'channels describe deltas from the base shape.')],
                                                    'kind': 'type',
-                                                   'signature': '(*, value: tuple[DeltaRotationKeyform, ...])'},
+                                                   'signature': '(*, value: tuple[DeltaRotationKeyform, ...])',
+                                                   'type_refs': ('zipzi.modeling.bindings.DeltaRotationKeyform',)},
  'zipzi.modeling.bindings.DeltaKeyformsRotation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.DeltaKeyformsRotation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.DeltaKeyformsWarp': {'children': ('zipzi.modeling.bindings.DeltaKeyformsWarp.__repr__',
                                                             'zipzi.modeling.bindings.DeltaKeyformsWarp.summary'),
-                                               'documentation': 'Immutable owned DeltaKeyformsWarp value. Construction '
-                                                                'owns declared collections; reading fields, repr and '
-                                                                'summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('value',
                                                            'Ordered Warp BlendShape displacement keyforms, each keyed '
                                                            'by stable sample_id;\n'
                                                            'channels describe deltas from the base shape.')],
                                                'kind': 'type',
-                                               'signature': '(*, value: tuple[DeltaWarpKeyform, ...])'},
+                                               'signature': '(*, value: tuple[DeltaWarpKeyform, ...])',
+                                               'type_refs': ('zipzi.modeling.bindings.DeltaWarpKeyform',)},
  'zipzi.modeling.bindings.DeltaKeyformsWarp.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.DeltaKeyformsWarp.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.DeltaMeshKeyform': {'children': ('zipzi.modeling.bindings.DeltaMeshKeyform.__repr__',
                                                            'zipzi.modeling.bindings.DeltaMeshKeyform.summary'),
-                                              'documentation': 'Immutable owned DeltaMeshKeyform value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('sample_id',
                                                           'Stable sample ID in the referenced BlendShape key table, '
@@ -605,14 +582,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                               'signature': "(*, sample_id: str = '', positions: tuple[Vec2, ...], "
                                                            'opacity: float | None = None, draw_order: float | None = '
                                                            'None, multiply: tuple[float, float, float] | None = None, '
-                                                           'screen: tuple[float, float, float] | None = None)'},
+                                                           'screen: tuple[float, float, float] | None = None)',
+                                              'type_refs': ('zipzi.modeling.common.Vec2',)},
  'zipzi.modeling.bindings.DeltaMeshKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.DeltaMeshKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.DeltaOffscreenKeyform': {'children': ('zipzi.modeling.bindings.DeltaOffscreenKeyform.__repr__',
                                                                 'zipzi.modeling.bindings.DeltaOffscreenKeyform.summary'),
-                                                   'documentation': 'Immutable owned DeltaOffscreenKeyform value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('sample_id',
                                                                'Stable sample ID in the referenced BlendShape key '
@@ -635,9 +611,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.DeltaOffscreenKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.DeltaPartKeyform': {'children': ('zipzi.modeling.bindings.DeltaPartKeyform.__repr__',
                                                            'zipzi.modeling.bindings.DeltaPartKeyform.summary'),
-                                              'documentation': 'Immutable owned DeltaPartKeyform value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('sample_id',
                                                           'Stable sample ID in the referenced BlendShape key table, '
@@ -650,9 +624,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.DeltaPartKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.DeltaRotationKeyform': {'children': ('zipzi.modeling.bindings.DeltaRotationKeyform.__repr__',
                                                                'zipzi.modeling.bindings.DeltaRotationKeyform.summary'),
-                                                  'documentation': 'Immutable owned DeltaRotationKeyform value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('sample_id',
                                                               'Stable sample ID in the referenced BlendShape key '
@@ -683,14 +655,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                                'angle: float | None = None, scale: float | None = '
                                                                'None, opacity: float | None = None, multiply: '
                                                                'tuple[float, float, float] | None = None, screen: '
-                                                               'tuple[float, float, float] | None = None)'},
+                                                               'tuple[float, float, float] | None = None)',
+                                                  'type_refs': ('zipzi.modeling.common.Vec2',)},
  'zipzi.modeling.bindings.DeltaRotationKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.DeltaRotationKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.DeltaWarpKeyform': {'children': ('zipzi.modeling.bindings.DeltaWarpKeyform.__repr__',
                                                            'zipzi.modeling.bindings.DeltaWarpKeyform.summary'),
-                                              'documentation': 'Immutable owned DeltaWarpKeyform value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('sample_id',
                                                           'Stable sample ID in the referenced BlendShape key table, '
@@ -713,14 +684,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                               'signature': "(*, sample_id: str = '', points: tuple[Vec2, ...], "
                                                            'opacity: float | None = None, multiply: tuple[float, '
                                                            'float, float] | None = None, screen: tuple[float, float, '
-                                                           'float] | None = None)'},
+                                                           'float] | None = None)',
+                                              'type_refs': ('zipzi.modeling.common.Vec2',)},
  'zipzi.modeling.bindings.DeltaWarpKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.DeltaWarpKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.GlueBinding': {'children': ('zipzi.modeling.bindings.GlueBinding.__repr__',
                                                       'zipzi.modeling.bindings.GlueBinding.summary'),
-                                         'documentation': 'Immutable owned GlueBinding value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': 'Ordinary parameter grid for Glue intensity, owned and '
+                                                          'edited atomically with its Glue.',
                                          'example': 'docs/recipes.py',
                                          'fields': [('axes',
                                                      'Ordered parameter axes; keyform coordinates follow this order '
@@ -730,14 +701,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                      'First axis varies fastest, as in MOC3 ordinary bindings.')],
                                          'kind': 'type',
                                          'signature': '(*, axes: tuple[BindingAxis, ...], keyforms: tuple[GlueKeyform, '
-                                                      '...])'},
+                                                      '...])',
+                                         'type_refs': ('zipzi.modeling.bindings.BindingAxis',
+                                                       'zipzi.modeling.bindings.GlueKeyform')},
  'zipzi.modeling.bindings.GlueBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.GlueBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.GlueKeyform': {'children': ('zipzi.modeling.bindings.GlueKeyform.__repr__',
                                                       'zipzi.modeling.bindings.GlueKeyform.summary'),
-                                         'documentation': 'Immutable owned GlueKeyform value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('samples',
                                                      'Stable sample IDs in active binding-axis order; not numeric '
@@ -750,31 +721,38 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.GlueKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.GlueKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.GridOperation': {'children': (),
-                                           'documentation': 'Typed public API entry.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [],
-                                           'kind': 'value',
-                                           'signature': ''},
+                                           'kind': 'alias',
+                                           'signature': 'GridOperationAddAxis | GridOperationRemapParameter | '
+                                                        'GridOperationSetParameter | GridOperationReorderAxes | '
+                                                        'GridOperationInsertSample | GridOperationMoveSample | '
+                                                        'GridOperationDeleteSample | GridOperationRemoveAxis',
+                                           'type_refs': ('zipzi.modeling.bindings.GridOperationAddAxis',
+                                                         'zipzi.modeling.bindings.GridOperationDeleteSample',
+                                                         'zipzi.modeling.bindings.GridOperationInsertSample',
+                                                         'zipzi.modeling.bindings.GridOperationMoveSample',
+                                                         'zipzi.modeling.bindings.GridOperationRemapParameter',
+                                                         'zipzi.modeling.bindings.GridOperationRemoveAxis',
+                                                         'zipzi.modeling.bindings.GridOperationReorderAxes',
+                                                         'zipzi.modeling.bindings.GridOperationSetParameter')},
  'zipzi.modeling.bindings.GridOperationAddAxis': {'children': ('zipzi.modeling.bindings.GridOperationAddAxis.__repr__',
                                                                'zipzi.modeling.bindings.GridOperationAddAxis.summary'),
-                                                  'documentation': 'Immutable owned GridOperationAddAxis value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('axis',
                                                               'Axis definition with a parameter ID and ordered '
                                                               'samples; axis identity is distinct\n'
                                                               'from the parameter ID.')],
                                                   'kind': 'type',
-                                                  'signature': '(*, axis: BindingAxis)'},
+                                                  'signature': '(*, axis: BindingAxis)',
+                                                  'type_refs': ('zipzi.modeling.bindings.BindingAxis',)},
  'zipzi.modeling.bindings.GridOperationAddAxis.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.GridOperationAddAxis.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.GridOperationDeleteSample': {'children': ('zipzi.modeling.bindings.GridOperationDeleteSample.__repr__',
                                                                     'zipzi.modeling.bindings.GridOperationDeleteSample.summary'),
-                                                       'documentation': 'Immutable owned GridOperationDeleteSample '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('sample_id',
                                                                    'Stable sample ID from the associated axis or '
@@ -786,10 +764,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.GridOperationDeleteSample.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.GridOperationInsertSample': {'children': ('zipzi.modeling.bindings.GridOperationInsertSample.__repr__',
                                                                     'zipzi.modeling.bindings.GridOperationInsertSample.summary'),
-                                                       'documentation': 'Immutable owned GridOperationInsertSample '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('axis_id',
                                                                    'Stable axis ID owned by this binding, not a '
@@ -805,9 +780,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.GridOperationInsertSample.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.GridOperationMoveSample': {'children': ('zipzi.modeling.bindings.GridOperationMoveSample.__repr__',
                                                                   'zipzi.modeling.bindings.GridOperationMoveSample.summary'),
-                                                     'documentation': 'Immutable owned GridOperationMoveSample value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('sample_id',
                                                                  'Stable sample ID from the associated axis or '
@@ -821,10 +794,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.GridOperationMoveSample.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.GridOperationRemapParameter': {'children': ('zipzi.modeling.bindings.GridOperationRemapParameter.__repr__',
                                                                       'zipzi.modeling.bindings.GridOperationRemapParameter.summary'),
-                                                         'documentation': 'Immutable owned GridOperationRemapParameter '
-                                                                          'value. Construction owns declared '
-                                                                          'collections; reading fields, repr and '
-                                                                          'summary performs no IO.',
+                                                         'documentation': '',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [('axis_id',
                                                                      'Stable axis ID owned by this binding, not a '
@@ -838,14 +808,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                                      'requested.')],
                                                          'kind': 'type',
                                                          'signature': '(*, axis_id: str, parameter_id: str, policy: '
-                                                                      'ParameterRangePolicy)'},
+                                                                      'ParameterRangePolicy)',
+                                                         'type_refs': ('zipzi.modeling.parameters.ParameterRangePolicy',)},
  'zipzi.modeling.bindings.GridOperationRemapParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.GridOperationRemapParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.GridOperationRemoveAxis': {'children': ('zipzi.modeling.bindings.GridOperationRemoveAxis.__repr__',
                                                                   'zipzi.modeling.bindings.GridOperationRemoveAxis.summary'),
-                                                     'documentation': 'Immutable owned GridOperationRemoveAxis value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('axis_id',
                                                                  'Stable axis ID owned by this binding, not a '
@@ -858,15 +827,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                                  'removing it from the binding.')],
                                                      'kind': 'type',
                                                      'signature': '(*, axis_id: str, reduction: AxisReduction | None = '
-                                                                  'None, keep_pending: bool)'},
+                                                                  'None, keep_pending: bool)',
+                                                     'type_refs': ('zipzi.modeling.bindings.AxisReduction',)},
  'zipzi.modeling.bindings.GridOperationRemoveAxis.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.GridOperationRemoveAxis.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.GridOperationReorderAxes': {'children': ('zipzi.modeling.bindings.GridOperationReorderAxes.__repr__',
                                                                    'zipzi.modeling.bindings.GridOperationReorderAxes.summary'),
-                                                      'documentation': 'Immutable owned GridOperationReorderAxes '
-                                                                       'value. Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('axis_ids',
                                                                   'Axis IDs in the requested new axis order; IDs refer '
@@ -877,10 +844,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.GridOperationReorderAxes.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.GridOperationSetParameter': {'children': ('zipzi.modeling.bindings.GridOperationSetParameter.__repr__',
                                                                     'zipzi.modeling.bindings.GridOperationSetParameter.summary'),
-                                                       'documentation': 'Immutable owned GridOperationSetParameter '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('axis_id',
                                                                    'Stable axis ID owned by this binding, not a '
@@ -893,14 +857,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                                    'removing or replacing an axis.')],
                                                        'kind': 'type',
                                                        'signature': '(*, axis_id: str, parameter_id: str, reduction: '
-                                                                    'AxisReduction | None = None)'},
+                                                                    'AxisReduction | None = None)',
+                                                       'type_refs': ('zipzi.modeling.bindings.AxisReduction',)},
  'zipzi.modeling.bindings.GridOperationSetParameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.GridOperationSetParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.MeshBinding': {'children': ('zipzi.modeling.bindings.MeshBinding.__repr__',
                                                       'zipzi.modeling.bindings.MeshBinding.summary'),
-                                         'documentation': 'Immutable owned MeshBinding value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('id',
                                                      'Stable document object ID used by references; it is distinct '
@@ -916,14 +879,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                      'table.')],
                                          'kind': 'type',
                                          'signature': '(*, id: str, mesh_id: str, axes: tuple[BindingAxis, ...], '
-                                                      'keyforms: tuple[MeshKeyform, ...])'},
+                                                      'keyforms: tuple[MeshKeyform, ...])',
+                                         'type_refs': ('zipzi.modeling.bindings.BindingAxis',
+                                                       'zipzi.modeling.bindings.MeshKeyform')},
  'zipzi.modeling.bindings.MeshBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.MeshBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.MeshKeyform': {'children': ('zipzi.modeling.bindings.MeshKeyform.__repr__',
                                                       'zipzi.modeling.bindings.MeshKeyform.summary'),
-                                         'documentation': 'Immutable owned MeshKeyform value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('samples',
                                                      'Stable sample IDs, one per active binding axis in axis order; '
@@ -941,14 +904,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                      'unoverridden order.')],
                                          'kind': 'type',
                                          'signature': '(*, samples: tuple[str, ...] = (), positions: tuple[Vec2, ...], '
-                                                      'appearance: Appearance, draw_order: float | None = None)'},
+                                                      'appearance: Appearance, draw_order: float | None = None)',
+                                         'type_refs': ('zipzi.modeling.common.Vec2',
+                                                       'zipzi.modeling.scene.Appearance')},
  'zipzi.modeling.bindings.MeshKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.MeshKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.OffscreenKeyform': {'children': ('zipzi.modeling.bindings.OffscreenKeyform.__repr__',
                                                            'zipzi.modeling.bindings.OffscreenKeyform.summary'),
-                                              'documentation': 'Immutable owned OffscreenKeyform value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('opacity',
                                                           'Finite nonnegative opacity factor; 0 is transparent and 1 '
@@ -968,9 +931,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.OffscreenKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.PartKeyform': {'children': ('zipzi.modeling.bindings.PartKeyform.__repr__',
                                                       'zipzi.modeling.bindings.PartKeyform.summary'),
-                                         'documentation': 'Immutable owned PartKeyform value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('samples',
                                                      'Stable sample IDs in active binding-axis order; not numeric '
@@ -983,16 +944,16 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.PartKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.PartKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.PartKeyformSlot': {'children': (),
-                                             'documentation': 'Typed public API entry.',
+                                             'documentation': '',
                                              'example': 'docs/recipes.py',
                                              'fields': [],
-                                             'kind': 'value',
-                                             'signature': ''},
+                                             'kind': 'alias',
+                                             'signature': 'PartKeyformSlotStatic | PartKeyformSlotSamples',
+                                             'type_refs': ('zipzi.modeling.bindings.PartKeyformSlotSamples',
+                                                           'zipzi.modeling.bindings.PartKeyformSlotStatic')},
  'zipzi.modeling.bindings.PartKeyformSlotSamples': {'children': ('zipzi.modeling.bindings.PartKeyformSlotSamples.__repr__',
                                                                  'zipzi.modeling.bindings.PartKeyformSlotSamples.summary'),
-                                                    'documentation': 'Immutable owned PartKeyformSlotSamples value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('samples',
                                                                 'Stable sample IDs selecting one ordinary-binding '
@@ -1003,9 +964,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.PartKeyformSlotSamples.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.PartKeyformSlotStatic': {'children': ('zipzi.modeling.bindings.PartKeyformSlotStatic.__repr__',
                                                                 'zipzi.modeling.bindings.PartKeyformSlotStatic.summary'),
-                                                   'documentation': 'Immutable owned PartKeyformSlotStatic value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [],
                                                    'kind': 'type',
@@ -1014,9 +973,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.PartKeyformSlotStatic.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.RotationKeyform': {'children': ('zipzi.modeling.bindings.RotationKeyform.__repr__',
                                                           'zipzi.modeling.bindings.RotationKeyform.summary'),
-                                             'documentation': 'Immutable owned RotationKeyform value. Construction '
-                                                              'owns declared collections; reading fields, repr and '
-                                                              'summary performs no IO.',
+                                             'documentation': '',
                                              'example': 'docs/recipes.py',
                                              'fields': [('samples',
                                                          'Stable sample IDs in active binding-axis order; not numeric '
@@ -1029,14 +986,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                          'shape.')],
                                              'kind': 'type',
                                              'signature': '(*, samples: tuple[str, ...] = (), rotation: RotationPose, '
-                                                          'appearance: Appearance)'},
+                                                          'appearance: Appearance)',
+                                             'type_refs': ('zipzi.modeling.scene.Appearance',
+                                                           'zipzi.modeling.scene.RotationPose')},
  'zipzi.modeling.bindings.RotationKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.RotationKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.SceneBinding': {'children': ('zipzi.modeling.bindings.SceneBinding.__repr__',
                                                        'zipzi.modeling.bindings.SceneBinding.summary'),
-                                          'documentation': 'Immutable owned SceneBinding value. Construction owns '
-                                                           'declared collections; reading fields, repr and summary '
-                                                           'performs no IO.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
                                           'fields': [('id',
                                                       'Stable document object ID used by references; it is distinct '
@@ -1050,81 +1007,84 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                       'determines shape\n'
                                                       'interpretation.')],
                                           'kind': 'type',
-                                          'signature': '(*, id: str, axes: tuple[BindingAxis, ...], track: '
-                                                       'SceneTrack)'},
+                                          'signature': '(*, id: str, axes: tuple[BindingAxis, ...], track: SceneTrack)',
+                                          'type_refs': ('zipzi.modeling.bindings.BindingAxis',
+                                                        'zipzi.modeling.bindings.SceneTrack')},
  'zipzi.modeling.bindings.SceneBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.SceneBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.SceneKeyform': {'children': (),
-                                          'documentation': 'Typed public API entry.',
+                                          'documentation': 'A single typed replacement; a track only accepts its '
+                                                           'matching variant.',
                                           'example': 'docs/recipes.py',
                                           'fields': [],
-                                          'kind': 'value',
-                                          'signature': ''},
+                                          'kind': 'alias',
+                                          'signature': 'SceneKeyformWarp | SceneKeyformRotation | SceneKeyformPart',
+                                          'type_refs': ('zipzi.modeling.bindings.SceneKeyformPart',
+                                                        'zipzi.modeling.bindings.SceneKeyformRotation',
+                                                        'zipzi.modeling.bindings.SceneKeyformWarp')},
  'zipzi.modeling.bindings.SceneKeyformPart': {'children': ('zipzi.modeling.bindings.SceneKeyformPart.__repr__',
                                                            'zipzi.modeling.bindings.SceneKeyformPart.summary'),
-                                              'documentation': 'Immutable owned SceneKeyformPart value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('value',
                                                           'Complete Part ordinary-binding keyform; samples identify '
                                                           'the active axis combination.')],
                                               'kind': 'type',
-                                              'signature': '(*, value: PartKeyform)'},
+                                              'signature': '(*, value: PartKeyform)',
+                                              'type_refs': ('zipzi.modeling.bindings.PartKeyform',)},
  'zipzi.modeling.bindings.SceneKeyformPart.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.SceneKeyformPart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.SceneKeyformRotation': {'children': ('zipzi.modeling.bindings.SceneKeyformRotation.__repr__',
                                                                'zipzi.modeling.bindings.SceneKeyformRotation.summary'),
-                                                  'documentation': 'Immutable owned SceneKeyformRotation value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('value',
                                                               'Complete Rotation ordinary-binding keyform; samples '
                                                               'identify the active axis\n'
                                                               'combination.')],
                                                   'kind': 'type',
-                                                  'signature': '(*, value: RotationKeyform)'},
+                                                  'signature': '(*, value: RotationKeyform)',
+                                                  'type_refs': ('zipzi.modeling.bindings.RotationKeyform',)},
  'zipzi.modeling.bindings.SceneKeyformRotation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.SceneKeyformRotation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.SceneKeyformWarp': {'children': ('zipzi.modeling.bindings.SceneKeyformWarp.__repr__',
                                                            'zipzi.modeling.bindings.SceneKeyformWarp.summary'),
-                                              'documentation': 'Immutable owned SceneKeyformWarp value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('value',
                                                           'Complete Warp ordinary-binding keyform; samples identify '
                                                           'the active axis combination.')],
                                               'kind': 'type',
-                                              'signature': '(*, value: WarpKeyform)'},
+                                              'signature': '(*, value: WarpKeyform)',
+                                              'type_refs': ('zipzi.modeling.bindings.WarpKeyform',)},
  'zipzi.modeling.bindings.SceneKeyformWarp.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.SceneKeyformWarp.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.SceneTrack': {'children': (),
-                                        'documentation': 'Typed public API entry.',
+                                        'documentation': '',
                                         'example': 'docs/recipes.py',
                                         'fields': [],
-                                        'kind': 'value',
-                                        'signature': ''},
+                                        'kind': 'alias',
+                                        'signature': 'SceneTrackWarp | SceneTrackRotation | SceneTrackPart',
+                                        'type_refs': ('zipzi.modeling.bindings.SceneTrackPart',
+                                                      'zipzi.modeling.bindings.SceneTrackRotation',
+                                                      'zipzi.modeling.bindings.SceneTrackWarp')},
  'zipzi.modeling.bindings.SceneTrackPart': {'children': ('zipzi.modeling.bindings.SceneTrackPart.__repr__',
                                                          'zipzi.modeling.bindings.SceneTrackPart.summary'),
-                                            'documentation': 'Immutable owned SceneTrackPart value. Construction owns '
-                                                             'declared collections; reading fields, repr and summary '
-                                                             'performs no IO.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
                                             'fields': [('target_id', 'Stable Part ID driven by this ordinary binding.'),
                                                        ('keyforms',
                                                         'Ordered Part shape records whose samples refer to this '
                                                         "binding's active axes.")],
                                             'kind': 'type',
-                                            'signature': '(*, target_id: PartId, keyforms: tuple[PartKeyform, ...])'},
+                                            'signature': '(*, target_id: PartId, keyforms: tuple[PartKeyform, ...])',
+                                            'type_refs': ('zipzi.modeling.bindings.PartKeyform',
+                                                          'zipzi.modeling.scene.PartId')},
  'zipzi.modeling.bindings.SceneTrackPart.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.SceneTrackPart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.SceneTrackRotation': {'children': ('zipzi.modeling.bindings.SceneTrackRotation.__repr__',
                                                              'zipzi.modeling.bindings.SceneTrackRotation.summary'),
-                                                'documentation': 'Immutable owned SceneTrackRotation value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('target_id',
                                                             'Stable rotation transform ID driven by this ordinary '
@@ -1134,14 +1094,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                             "this binding's active axes.")],
                                                 'kind': 'type',
                                                 'signature': '(*, target_id: TransformId, keyforms: '
-                                                             'tuple[RotationKeyform, ...])'},
+                                                             'tuple[RotationKeyform, ...])',
+                                                'type_refs': ('zipzi.modeling.bindings.RotationKeyform',
+                                                              'zipzi.modeling.scene.TransformId')},
  'zipzi.modeling.bindings.SceneTrackRotation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.SceneTrackRotation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.SceneTrackWarp': {'children': ('zipzi.modeling.bindings.SceneTrackWarp.__repr__',
                                                          'zipzi.modeling.bindings.SceneTrackWarp.summary'),
-                                            'documentation': 'Immutable owned SceneTrackWarp value. Construction owns '
-                                                             'declared collections; reading fields, repr and summary '
-                                                             'performs no IO.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
                                             'fields': [('target_id',
                                                         'Stable warp transform ID driven by this ordinary binding.'),
@@ -1150,14 +1110,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                         "binding's active axes.")],
                                             'kind': 'type',
                                             'signature': '(*, target_id: TransformId, keyforms: tuple[WarpKeyform, '
-                                                         '...])'},
+                                                         '...])',
+                                            'type_refs': ('zipzi.modeling.bindings.WarpKeyform',
+                                                          'zipzi.modeling.scene.TransformId')},
  'zipzi.modeling.bindings.SceneTrackWarp.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.SceneTrackWarp.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.WarpKeyform': {'children': ('zipzi.modeling.bindings.WarpKeyform.__repr__',
                                                       'zipzi.modeling.bindings.WarpKeyform.summary'),
-                                         'documentation': 'Immutable owned WarpKeyform value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('bezier',
                                                      'Optional Bezier controller for this warp shape; None means this '
@@ -1171,6 +1131,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                      'shape.')],
                                          'kind': 'type',
                                          'signature': '(*, bezier: WarpBezier | None = None, samples: tuple[str, ...] '
-                                                      '= (), positions: tuple[Vec2, ...], appearance: Appearance)'},
+                                                      '= (), positions: tuple[Vec2, ...], appearance: Appearance)',
+                                         'type_refs': ('zipzi.modeling.common.Vec2',
+                                                       'zipzi.modeling.scene.Appearance',
+                                                       'zipzi.modeling.scene.WarpBezier')},
  'zipzi.modeling.bindings.WarpKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.bindings.WarpKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'}}

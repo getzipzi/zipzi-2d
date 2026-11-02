@@ -1184,6 +1184,7 @@
       ]
     },
     "zipzi_contract::runtime::ModelingSampleData": {
+      "doc": "Captured sampling data; the Runtime retains its separate resource reservation.",
       "fields": [
         {
           "doc": "Exact formal or candidate source captured for this result; later host changes do not\nrewrite it.",

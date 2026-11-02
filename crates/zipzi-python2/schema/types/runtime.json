@@ -247,6 +247,7 @@
       ]
     },
     "zipzi_contract::runtime::ObjectSummary": {
+      "doc": "Discovery metadata for a document object, without its full payload. Use its\nstable ID for a selected read; display names can be duplicated or changed.",
       "fields": [
         {
           "doc": "Persistent canonical UUID in the selected document.",
@@ -541,6 +542,7 @@
       "tuple": false
     },
     "zipzi_contract::runtime::RuntimeLimits": {
+      "doc": "R0 defaults for the objects enabled in R1. Estimates conservatively count\nshared document content per holder; these are not RSS or GPU limits.",
       "fields": [
         {
           "doc": "Maximum logical observation base RGBA bytes per referenced asset set.",

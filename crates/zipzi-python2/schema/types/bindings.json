@@ -471,6 +471,7 @@
       "tag": null,
       "variants": [
         {
+          "doc": "Explicitly discard owned shapes and return to the unchanged base target.",
           "fields": [
             {
               "doc": "Stable owner ID for the addressed drawing group, collection or reference selection.",
@@ -2286,6 +2287,7 @@
       "tuple": false
     },
     "zipzi_contract::model::GlueBinding": {
+      "doc": "Ordinary parameter grid for Glue intensity, owned and edited atomically with its Glue.",
       "fields": [
         {
           "doc": "Ordered parameter axes; keyform coordinates follow this order and samples retain their\nown identities.",
@@ -2652,6 +2654,7 @@
     },
     "zipzi_contract::model::SceneKeyform": {
       "content": null,
+      "doc": "A single typed replacement; a track only accepts its matching variant.",
       "kind": "serde_enum",
       "name": "zipzi_contract::model::SceneKeyform",
       "tag": null,

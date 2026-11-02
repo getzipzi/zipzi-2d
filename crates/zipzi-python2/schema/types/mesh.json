@@ -8,6 +8,7 @@
       "tag": "op",
       "variants": [
         {
+          "doc": "The caller supplies a fresh ID; its allocator must not reuse canceled candidate IDs.",
           "fields": [
             {
               "doc": "Fresh vertex identity that has not been used by a cancelled candidate.",
@@ -34,6 +35,7 @@
           "rust_name": "InsertVertex"
         },
         {
+          "doc": "Insert and connect in a single atomic operation/history step.",
           "fields": [
             {
               "doc": "Existing vertex identity to connect to the inserted vertex.",
@@ -69,6 +71,7 @@
           "rust_name": "InsertConnectedVertex"
         },
         {
+          "doc": "Remove an outer edge's incident face and recover the remaining outline.\nInternal fixed edges become automatic edges.",
           "fields": [
             {
               "doc": "First endpoint identity of the edge to remove.",
@@ -94,6 +97,7 @@
           "rust_name": "DeleteEdge"
         },
         {
+          "doc": "Absolute UV targets; motion_from is the last accepted preview when supplied.",
           "fields": [
             {
               "doc": "Absolute UV targets keyed by persistent mesh vertex identities.",
@@ -337,6 +341,7 @@
       "tuple": false
     },
     "zipzi_contract::authoring::MeshCreateSpec": {
+      "doc": "Specification for creating a mesh. An omitted ID allocates a fresh UUID when\ncreation executes; an empty texture_asset_id leaves the texture unassigned.",
       "fields": [
         {
           "default": null,
@@ -383,6 +388,7 @@
       "name": "zipzi_contract::authoring::MeshCreateSpec"
     },
     "zipzi_contract::authoring::MeshGeometry": {
+      "doc": "Vertex IDs, authoring-space positions, texture UVs and triangle connectivity for a mesh.\nPositions and UVs follow vertex_ids order; triangles contain vertex IDs.\nPositions use model space without a deformation parent, otherwise the parent's\nlocal/parameter space.",
       "fields": [
         {
           "default": null,
@@ -453,11 +459,13 @@
       "name": "zipzi_contract::authoring::MeshGeometry"
     },
     "zipzi_contract::authoring::MeshOperation": {
+      "doc": "Mesh authoring operations applied to an edit candidate; publication is separate.",
       "kind": "union",
       "name": "zipzi_contract::authoring::MeshOperation",
       "tag": "op",
       "variants": [
         {
+          "doc": "Create a mesh from its creation specification in the edit candidate.",
           "fields": [
             {
               "default": null,
@@ -473,6 +481,7 @@
           "wire_name": "create"
         },
         {
+          "doc": "Change a mesh display name by stable ID. An expected_name precondition\nmust match the current name; None disables that precondition.",
           "fields": [
             {
               "default": null,
@@ -508,6 +517,7 @@
           "wire_name": "rename"
         },
         {
+          "doc": "Replace selected vertex positions, pairing vertex_ids and positions in\nsupplied order. Positions are absolute in the mesh authoring space,\nnot additive offsets.",
           "fields": [
             {
               "default": null,
@@ -1081,6 +1091,7 @@
       "tuple": false
     },
     "zipzi_contract::model::MeshConstraint": {
+      "doc": "An internal mesh edge identified by two stable vertex IDs and its origin.\nThe edge must exist in the triangulation; boundary edges belong to MeshMeshing.boundary.",
       "fields": [
         {
           "doc": "Two distinct vertex IDs in increasing order; the segment is an actual triangle edge.",
@@ -1113,17 +1124,20 @@
     },
     "zipzi_contract::model::MeshConstraintKind": {
       "content": null,
+      "doc": "The origin of a retained internal mesh constraint edge.",
       "kind": "serde_enum",
       "name": "zipzi_contract::model::MeshConstraintKind",
       "tag": null,
       "variants": [
         {
+          "doc": "Fixed by the user.",
           "fields": [],
           "form": "unit",
           "name": "user",
           "rust_name": "User"
         },
         {
+          "doc": "Supplied by the edge-layout generator.",
           "fields": [],
           "form": "unit",
           "name": "edge_support",
@@ -1132,6 +1146,7 @@
       ]
     },
     "zipzi_contract::model::MeshMeshing": {
+      "doc": "A canonical counterclockwise outer boundary and the internal edges retained by remeshing.",
       "fields": [
         {
           "doc": "Closed UV boundary without a repeated endpoint, starting at its smallest vertex ID.",
@@ -1165,6 +1180,7 @@
       "tuple": false
     },
     "zipzi_contract::runtime::MeshSnapshot": {
+      "doc": "A mesh read at one captured formal or candidate source. Later document changes\ndo not rewrite its ID, name or geometry.",
       "fields": [
         {
           "default": null,

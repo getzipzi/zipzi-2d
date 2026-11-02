@@ -216,3 +216,47 @@ only to its exact source, including the Edit identity and sequence when captured
 inside an Edit. Its report pages remain fixed when the live source changes, and
 are readable until the Plan lease closes. Page sizes are 1–256 rows. Directly
 applying a deletion intent returns `DELETION_PLAN_REQUIRED`.
+
+### Maintaining Python reference documentation
+
+The generator derives signatures, properties, aliases and enum members from the
+Python AST. Shared type, field and enum-variant semantics come from Rust contract
+`///` comments, exported by `ApiShape`, `ApiFields`, `api_record!` and `api_union!`.
+Maintain Python-specific method usage beside its definition: docstrings for
+handwritten APIs, and the corresponding descriptor in `tools/generate_api.py`
+for generated convenience methods. For example, each mesh entry in `WRITES`
+contains its signature, execution expression and usage documentation together.
+Page introductions live in `client/python/zipzi/docs/reference-intros/*.md`;
+these fragments are included in the generated reference pages. API aliases such
+as `Point` use attribute docstrings immediately following their definitions.
+Generated reference pages and offline `zipzi.describe()` share the same records.
+
+Run `uv run --locked python tools/test_tools.py -p test_python2_codegen.py -k reference`
+for documentation structure and link checks, then regenerate and verify outputs
+with the commands above. Missing field/callable semantics and example targets
+fail generation. Shared owned-value ownership and IO conventions are documented
+once in `docs/reference/common.md`, sourced from `CompactValue`.
+
+Type summaries are never filled with generic ownership text. Missing summaries
+remain empty while their signatures and field descriptions remain available.
+Each generation and `--check` prints coverage counts; the generated
+`client/python/zipzi/docs/type-documentation.json` report groups missing summaries
+by type, lists public aliases and identifies the Rust or Python declaration.
+Field documentation alone does not count as a type summary.
+
+Run the strict semantic gate with:
+
+```sh
+uv run --locked python crates/zipzi-python2/tools/generate.py --check-docs
+```
+
+This checks without writing and returns a nonzero status while any type summary
+is missing. Existing gaps are exposed in the report; `--check` continues to
+verify reproducibility separately from semantic coverage.
+
+Type references are resolved from Python annotations and import bindings into
+public API paths in the shared `type_refs` record. Reference pages declare
+external types once using standard Markdown reference links and the shortest
+unambiguous page-local label. Types defined on the same page use their existing
+API headings. `zipzi.describe(path).type_refs` exposes the full public paths
+without recursively loading their help.

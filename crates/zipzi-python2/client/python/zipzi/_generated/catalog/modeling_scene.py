@@ -170,8 +170,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                           'signature': ''},
  'zipzi.modeling.scene.Appearance': {'children': ('zipzi.modeling.scene.Appearance.__repr__',
                                                   'zipzi.modeling.scene.Appearance.summary'),
-                                     'documentation': 'Immutable owned Appearance value. Construction owns declared '
-                                                      'collections; reading fields, repr and summary performs no IO.',
+                                     'documentation': '',
                                      'example': 'docs/recipes.py',
                                      'fields': [('opacity',
                                                  'Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. '
@@ -188,16 +187,17 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.Appearance.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.Appearance.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.AttachmentRef': {'children': (),
-                                        'documentation': 'Typed public API entry.',
+                                        'documentation': 'Imported paths remain explicitly unresolved until a matching '
+                                                         'attachment is loaded.',
                                         'example': 'docs/recipes.py',
                                         'fields': [],
-                                        'kind': 'value',
-                                        'signature': ''},
+                                        'kind': 'alias',
+                                        'signature': 'AttachmentRefResolved | AttachmentRefUnresolved',
+                                        'type_refs': ('zipzi.modeling.scene.AttachmentRefResolved',
+                                                      'zipzi.modeling.scene.AttachmentRefUnresolved')},
  'zipzi.modeling.scene.AttachmentRefResolved': {'children': ('zipzi.modeling.scene.AttachmentRefResolved.__repr__',
                                                              'zipzi.modeling.scene.AttachmentRefResolved.summary'),
-                                                'documentation': 'Immutable owned AttachmentRefResolved value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('attachment_id',
                                                             'Stable package-attachment ID, distinct from its relative '
@@ -208,9 +208,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.AttachmentRefResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.AttachmentRefUnresolved': {'children': ('zipzi.modeling.scene.AttachmentRefUnresolved.__repr__',
                                                                'zipzi.modeling.scene.AttachmentRefUnresolved.summary'),
-                                                  'documentation': 'Immutable owned AttachmentRefUnresolved value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('path',
                                                               'Normalized package-relative attachment path using '
@@ -221,16 +219,17 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.AttachmentRefUnresolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.AttachmentRefUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.BlendMode': {'children': (),
-                                    'documentation': 'Immutable typed value. See field semantics and the linked '
-                                                     'workflow.',
+                                    'documentation': '',
                                     'example': 'docs/recipes.py',
-                                    'fields': [],
-                                    'kind': 'type',
-                                    'signature': '()'},
+                                    'fields': [('NORMAL', "'normal'"),
+                                               ('ADDITIVE', "'additive'"),
+                                               ('MULTIPLICATIVE', "'multiplicative'")],
+                                    'kind': 'enum',
+                                    'signature': ''},
  'zipzi.modeling.scene.Canvas': {'children': ('zipzi.modeling.scene.Canvas.__repr__',
                                               'zipzi.modeling.scene.Canvas.summary'),
-                                 'documentation': 'Immutable owned Canvas value. Construction owns declared '
-                                                  'collections; reading fields, repr and summary performs no IO.',
+                                 'documentation': 'A finite rectangle carried by an import/export format, not the '
+                                                  'model space.',
                                  'example': 'docs/recipes.py',
                                  'fields': [('width', 'Source canvas width in pixels.'),
                                             ('height', 'Source canvas height in pixels.'),
@@ -247,14 +246,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                              'applied by this DTO.')],
                                  'kind': 'type',
                                  'signature': '(*, width: float, height: float, origin: Vec2, pixels_per_unit: float, '
-                                              'flag: int = 1)'},
+                                              'flag: int = 1)',
+                                 'type_refs': ('zipzi.modeling.common.Vec2',)},
  'zipzi.modeling.scene.Canvas.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.Canvas.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.DeformerOriginal': {'children': ('zipzi.modeling.scene.DeformerOriginal.__repr__',
                                                         'zipzi.modeling.scene.DeformerOriginal.summary'),
-                                           'documentation': 'Immutable owned DeformerOriginal value. Construction owns '
-                                                            'declared collections; reading fields, repr and summary '
-                                                            'performs no IO.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [('auto_update',
                                                        'Update once when the first ordinary keyform is created. Manual '
@@ -271,22 +269,24 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                            'kind': 'type',
                                            'signature': '(*, auto_update: bool, first_key_seen: bool, snapshot: '
                                                         'DeformerOriginalSnapshot | None = None, capture_error: str | '
-                                                        'None = None)'},
+                                                        'None = None)',
+                                           'type_refs': ('zipzi.modeling.scene.DeformerOriginalSnapshot',)},
  'zipzi.modeling.scene.DeformerOriginal.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.DeformerOriginal.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.DeformerOriginalAction': {'children': (),
-                                                 'documentation': 'Typed public API entry.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [],
-                                                 'kind': 'value',
-                                                 'signature': ''},
+                                                 'kind': 'alias',
+                                                 'signature': 'DeformerOriginalActionUpdate | '
+                                                              'DeformerOriginalActionRestore | '
+                                                              'DeformerOriginalActionAutoUpdate',
+                                                 'type_refs': ('zipzi.modeling.scene.DeformerOriginalActionAutoUpdate',
+                                                               'zipzi.modeling.scene.DeformerOriginalActionRestore',
+                                                               'zipzi.modeling.scene.DeformerOriginalActionUpdate')},
  'zipzi.modeling.scene.DeformerOriginalActionAutoUpdate': {'children': ('zipzi.modeling.scene.DeformerOriginalActionAutoUpdate.__repr__',
                                                                         'zipzi.modeling.scene.DeformerOriginalActionAutoUpdate.summary'),
-                                                           'documentation': 'Immutable owned '
-                                                                            'DeformerOriginalActionAutoUpdate value. '
-                                                                            'Construction owns declared collections; '
-                                                                            'reading fields, repr and summary performs '
-                                                                            'no IO.',
+                                                           'documentation': '',
                                                            'example': 'docs/recipes.py',
                                                            'fields': [('enabled',
                                                                        'Changes the future first-key policy without '
@@ -298,11 +298,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DeformerOriginalActionAutoUpdate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.DeformerOriginalActionRestore': {'children': ('zipzi.modeling.scene.DeformerOriginalActionRestore.__repr__',
                                                                      'zipzi.modeling.scene.DeformerOriginalActionRestore.summary'),
-                                                        'documentation': 'Immutable owned '
-                                                                         'DeformerOriginalActionRestore value. '
-                                                                         'Construction owns declared collections; '
-                                                                         'reading fields, repr and summary performs no '
-                                                                         'IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('allow_resize',
                                                                     'Explicit permission to resample every stored Warp '
@@ -314,10 +310,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DeformerOriginalActionRestore.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.DeformerOriginalActionUpdate': {'children': ('zipzi.modeling.scene.DeformerOriginalActionUpdate.__repr__',
                                                                     'zipzi.modeling.scene.DeformerOriginalActionUpdate.summary'),
-                                                       'documentation': 'Immutable owned DeformerOriginalActionUpdate '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [],
                                                        'kind': 'type',
@@ -325,32 +318,30 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DeformerOriginalActionUpdate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.DeformerOriginalActionUpdate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.DeformerOriginalShape': {'children': (),
-                                                'documentation': 'Typed public API entry.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [],
-                                                'kind': 'value',
-                                                'signature': ''},
+                                                'kind': 'alias',
+                                                'signature': 'DeformerOriginalShapeWarp | '
+                                                             'DeformerOriginalShapeRotation',
+                                                'type_refs': ('zipzi.modeling.scene.DeformerOriginalShapeRotation',
+                                                              'zipzi.modeling.scene.DeformerOriginalShapeWarp')},
  'zipzi.modeling.scene.DeformerOriginalShapeRotation': {'children': ('zipzi.modeling.scene.DeformerOriginalShapeRotation.__repr__',
                                                                      'zipzi.modeling.scene.DeformerOriginalShapeRotation.summary'),
-                                                        'documentation': 'Immutable owned '
-                                                                         'DeformerOriginalShapeRotation value. '
-                                                                         'Construction owns declared collections; '
-                                                                         'reading fields, repr and summary performs no '
-                                                                         'IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('pose',
                                                                     'Canvas origin, absolute direction (including '
                                                                     'reference angle), inherited scale and '
                                                                     'reflections.')],
                                                         'kind': 'type',
-                                                        'signature': '(*, pose: RotationPose)'},
+                                                        'signature': '(*, pose: RotationPose)',
+                                                        'type_refs': ('zipzi.modeling.scene.RotationPose',)},
  'zipzi.modeling.scene.DeformerOriginalShapeRotation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.DeformerOriginalShapeRotation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.DeformerOriginalShapeWarp': {'children': ('zipzi.modeling.scene.DeformerOriginalShapeWarp.__repr__',
                                                                  'zipzi.modeling.scene.DeformerOriginalShapeWarp.summary'),
-                                                    'documentation': 'Immutable owned DeformerOriginalShapeWarp value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('warp',
                                                                 'Baked Warp lattice and optional controller in canvas '
@@ -360,14 +351,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                                 'preserve a cubic controller as cubics.')],
                                                     'kind': 'type',
                                                     'signature': '(*, warp: WarpTransform, controller_canvas_exact: '
-                                                                 'bool)'},
+                                                                 'bool)',
+                                                    'type_refs': ('zipzi.modeling.scene.WarpTransform',)},
  'zipzi.modeling.scene.DeformerOriginalShapeWarp.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.DeformerOriginalShapeWarp.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.DeformerOriginalSnapshot': {'children': ('zipzi.modeling.scene.DeformerOriginalSnapshot.__repr__',
                                                                 'zipzi.modeling.scene.DeformerOriginalSnapshot.summary'),
-                                                   'documentation': 'Immutable owned DeformerOriginalSnapshot value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('source',
                                                                'Creation, first ordinary keyform transition, or '
@@ -377,21 +367,22 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                                'undo history or binding samples.')],
                                                    'kind': 'type',
                                                    'signature': '(*, source: DeformerOriginalSource, shape: '
-                                                                'DeformerOriginalShape)'},
+                                                                'DeformerOriginalShape)',
+                                                   'type_refs': ('zipzi.modeling.scene.DeformerOriginalShape',
+                                                                 'zipzi.modeling.scene.DeformerOriginalSource')},
  'zipzi.modeling.scene.DeformerOriginalSnapshot.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.DeformerOriginalSnapshot.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.DeformerOriginalSource': {'children': (),
-                                                 'documentation': 'Immutable typed value. See field semantics and the '
-                                                                  'linked workflow.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
-                                                 'fields': [],
-                                                 'kind': 'type',
-                                                 'signature': '()'},
+                                                 'fields': [('CREATED', "'created'"),
+                                                            ('FIRST_KEY', "'first_key'"),
+                                                            ('MANUAL', "'manual'")],
+                                                 'kind': 'enum',
+                                                 'signature': ''},
  'zipzi.modeling.scene.DrawOrderGroup': {'children': ('zipzi.modeling.scene.DrawOrderGroup.__repr__',
                                                       'zipzi.modeling.scene.DrawOrderGroup.summary'),
-                                         'documentation': 'Immutable owned DrawOrderGroup value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('owner',
                                                      'Empty for the root; otherwise the stable ID of the Part driving '
@@ -409,8 +400,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DrawOrderGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.DrawOrderGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.Glue': {'children': ('zipzi.modeling.scene.Glue.__repr__', 'zipzi.modeling.scene.Glue.summary'),
-                               'documentation': 'Immutable owned Glue value. Construction owns declared collections; '
-                                                'reading fields, repr and summary performs no IO.',
+                               'documentation': '',
                                'example': 'docs/recipes.py',
                                'fields': [('id',
                                            'Stable document object ID used by references; it is distinct from the '
@@ -435,14 +425,15 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                'kind': 'type',
                                'signature': '(*, id: str, runtime_id: str, name: str, mesh_a_id: SceneReference, '
                                             'mesh_b_id: SceneReference, pairs: tuple[GlueVertexPair, ...], intensity: '
-                                            'float, binding: GlueBinding | None = None)'},
+                                            'float, binding: GlueBinding | None = None)',
+                               'type_refs': ('zipzi.modeling.bindings.GlueBinding',
+                                             'zipzi.modeling.scene.GlueVertexPair',
+                                             'zipzi.modeling.scene.SceneReference')},
  'zipzi.modeling.scene.Glue.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.Glue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.GlueVertexPair': {'children': ('zipzi.modeling.scene.GlueVertexPair.__repr__',
                                                       'zipzi.modeling.scene.GlueVertexPair.summary'),
-                                         'documentation': 'Immutable owned GlueVertexPair value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('id',
                                                      'Stable UUID of this Glue pair; not the identity of its target.'),
@@ -465,9 +456,12 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.GlueVertexPair.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.HierarchyOrder': {'children': ('zipzi.modeling.scene.HierarchyOrder.__repr__',
                                                       'zipzi.modeling.scene.HierarchyOrder.summary'),
-                                         'documentation': 'Immutable owned HierarchyOrder value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': 'Independent palette ranks for the organization and '
+                                                          'deformation projections.\n'
+                                                          'Partial lists are allowed: consumers retain source order '
+                                                          'for unlisted objects.\n'
+                                                          'Entries use globally unique scene object IDs, never visible '
+                                                          'row indices.',
                                          'example': 'docs/recipes.py',
                                          'fields': [('organization',
                                                      'Partial organization-palette order expressed as object IDs; '
@@ -486,8 +480,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.HierarchyOrder.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.ModelSetup': {'children': ('zipzi.modeling.scene.ModelSetup.__repr__',
                                                   'zipzi.modeling.scene.ModelSetup.summary'),
-                                     'documentation': 'Immutable owned ModelSetup value. Construction owns declared '
-                                                      'collections; reading fields, repr and summary performs no IO.',
+                                     'documentation': 'Source-format provenance and independent output settings. '
+                                                      'Neither affects evaluation.',
                                      'example': 'docs/recipes.py',
                                      'fields': [('source_canvas',
                                                  'Optional imported canvas metadata; None means this model has no '
@@ -496,13 +490,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                  'Export-frame settings; padding is applied when computing an exported '
                                                  'frame.')],
                                      'kind': 'type',
-                                     'signature': '(*, source_canvas: Canvas | None = None, export: ExportSettings)'},
+                                     'signature': '(*, source_canvas: Canvas | None = None, export: ExportSettings)',
+                                     'type_refs': ('zipzi.modeling.project.ExportSettings',
+                                                   'zipzi.modeling.scene.Canvas')},
  'zipzi.modeling.scene.ModelSetup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.ModelSetup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.Offscreen': {'children': ('zipzi.modeling.scene.Offscreen.__repr__',
                                                  'zipzi.modeling.scene.Offscreen.summary'),
-                                    'documentation': 'Immutable owned Offscreen value. Construction owns declared '
-                                                     'collections; reading fields, repr and summary performs no IO.',
+                                    'documentation': '',
                                     'example': 'docs/recipes.py',
                                     'fields': [('id',
                                                 'Stable document object ID used by references; it is distinct from the '
@@ -535,21 +530,24 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                     'signature': '(*, id: str, runtime_id: str, name: str, part_id: str, enabled: bool '
                                                  '= True, blend_mode: int, flags: int, masks: tuple[str, ...], '
                                                  'part_keyform_indices: tuple[int, ...], keyforms: '
-                                                 'tuple[OffscreenKeyform, ...])'},
+                                                 'tuple[OffscreenKeyform, ...])',
+                                    'type_refs': ('zipzi.modeling.bindings.OffscreenKeyform',)},
  'zipzi.modeling.scene.Offscreen.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.Offscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OffscreenDeletePolicy': {'children': (),
-                                                'documentation': 'Typed public API entry.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [],
-                                                'kind': 'value',
-                                                'signature': ''},
+                                                'kind': 'alias',
+                                                'signature': 'OffscreenDeletePolicyRejectReferences | '
+                                                             'OffscreenDeletePolicyNeutral | '
+                                                             'OffscreenDeletePolicyRemap',
+                                                'type_refs': ('zipzi.modeling.scene.OffscreenDeletePolicyNeutral',
+                                                              'zipzi.modeling.scene.OffscreenDeletePolicyRejectReferences',
+                                                              'zipzi.modeling.scene.OffscreenDeletePolicyRemap')},
  'zipzi.modeling.scene.OffscreenDeletePolicyNeutral': {'children': ('zipzi.modeling.scene.OffscreenDeletePolicyNeutral.__repr__',
                                                                     'zipzi.modeling.scene.OffscreenDeletePolicyNeutral.summary'),
-                                                       'documentation': 'Immutable owned OffscreenDeletePolicyNeutral '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [],
                                                        'kind': 'type',
@@ -558,11 +556,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OffscreenDeletePolicyNeutral.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OffscreenDeletePolicyRejectReferences': {'children': ('zipzi.modeling.scene.OffscreenDeletePolicyRejectReferences.__repr__',
                                                                              'zipzi.modeling.scene.OffscreenDeletePolicyRejectReferences.summary'),
-                                                                'documentation': 'Immutable owned '
-                                                                                 'OffscreenDeletePolicyRejectReferences '
-                                                                                 'value. Construction owns declared '
-                                                                                 'collections; reading fields, repr '
-                                                                                 'and summary performs no IO.',
+                                                                'documentation': '',
                                                                 'example': 'docs/recipes.py',
                                                                 'fields': [],
                                                                 'kind': 'type',
@@ -571,10 +565,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OffscreenDeletePolicyRejectReferences.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OffscreenDeletePolicyRemap': {'children': ('zipzi.modeling.scene.OffscreenDeletePolicyRemap.__repr__',
                                                                   'zipzi.modeling.scene.OffscreenDeletePolicyRemap.summary'),
-                                                     'documentation': 'Immutable owned OffscreenDeletePolicyRemap '
-                                                                      'value. Construction owns declared collections; '
-                                                                      'reading fields, repr and summary performs no '
-                                                                      'IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('replacements',
                                                                  'Deleted-keyform-slot to replacement-slot map; None '
@@ -586,9 +577,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OffscreenDeletePolicyRemap.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OffscreenMappingPatch': {'children': ('zipzi.modeling.scene.OffscreenMappingPatch.__repr__',
                                                              'zipzi.modeling.scene.OffscreenMappingPatch.summary'),
-                                                'documentation': 'Immutable owned OffscreenMappingPatch value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('slot',
                                                             'Static Part slot or stable Part-binding sample '
@@ -597,22 +586,24 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                             'Offscreen keyform-array index; -1 explicitly selects the '
                                                             'neutral/unmapped state.')],
                                                 'kind': 'type',
-                                                'signature': '(*, slot: PartKeyformSlot, keyform: int)'},
+                                                'signature': '(*, slot: PartKeyformSlot, keyform: int)',
+                                                'type_refs': ('zipzi.modeling.bindings.PartKeyformSlot',)},
  'zipzi.modeling.scene.OffscreenMappingPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.OffscreenMappingPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OrganizationCollection': {'children': (),
-                                                 'documentation': 'Typed public API entry.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [],
-                                                 'kind': 'value',
-                                                 'signature': ''},
+                                                 'kind': 'alias',
+                                                 'signature': 'OrganizationCollectionParameters | '
+                                                              'OrganizationCollectionParameterGroups | '
+                                                              'OrganizationCollectionPartMembers',
+                                                 'type_refs': ('zipzi.modeling.scene.OrganizationCollectionParameterGroups',
+                                                               'zipzi.modeling.scene.OrganizationCollectionParameters',
+                                                               'zipzi.modeling.scene.OrganizationCollectionPartMembers')},
  'zipzi.modeling.scene.OrganizationCollectionParameterGroups': {'children': ('zipzi.modeling.scene.OrganizationCollectionParameterGroups.__repr__',
                                                                              'zipzi.modeling.scene.OrganizationCollectionParameterGroups.summary'),
-                                                                'documentation': 'Immutable owned '
-                                                                                 'OrganizationCollectionParameterGroups '
-                                                                                 'value. Construction owns declared '
-                                                                                 'collections; reading fields, repr '
-                                                                                 'and summary performs no IO.',
+                                                                'documentation': '',
                                                                 'example': 'docs/recipes.py',
                                                                 'fields': [('parent_id',
                                                                             'Parent object ID in this hierarchy; '
@@ -625,11 +616,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OrganizationCollectionParameterGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OrganizationCollectionParameters': {'children': ('zipzi.modeling.scene.OrganizationCollectionParameters.__repr__',
                                                                         'zipzi.modeling.scene.OrganizationCollectionParameters.summary'),
-                                                           'documentation': 'Immutable owned '
-                                                                            'OrganizationCollectionParameters value. '
-                                                                            'Construction owns declared collections; '
-                                                                            'reading fields, repr and summary performs '
-                                                                            'no IO.',
+                                                           'documentation': '',
                                                            'example': 'docs/recipes.py',
                                                            'fields': [('group_id',
                                                                        'Parameter-group ID in the document metadata '
@@ -641,11 +628,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OrganizationCollectionParameters.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OrganizationCollectionPartMembers': {'children': ('zipzi.modeling.scene.OrganizationCollectionPartMembers.__repr__',
                                                                          'zipzi.modeling.scene.OrganizationCollectionPartMembers.summary'),
-                                                            'documentation': 'Immutable owned '
-                                                                             'OrganizationCollectionPartMembers value. '
-                                                                             'Construction owns declared collections; '
-                                                                             'reading fields, repr and summary '
-                                                                             'performs no IO.',
+                                                            'documentation': '',
                                                             'example': 'docs/recipes.py',
                                                             'fields': [('part_id',
                                                                         'Organizational Part owner ID; independent of '
@@ -656,15 +639,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OrganizationCollectionPartMembers.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.OrganizationCollectionPartMembers.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OrganizationDeletePolicy': {'children': (),
-                                                   'documentation': 'Immutable typed value. See field semantics and '
-                                                                    'the linked workflow.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
-                                                   'fields': [],
-                                                   'kind': 'type',
-                                                   'signature': '()'},
+                                                   'fields': [('CONTENTS', "'contents'"), ('DISSOLVE', "'dissolve'")],
+                                                   'kind': 'enum',
+                                                   'signature': ''},
  'zipzi.modeling.scene.Part': {'children': ('zipzi.modeling.scene.Part.__repr__', 'zipzi.modeling.scene.Part.summary'),
-                               'documentation': 'Immutable owned Part value. Construction owns declared collections; '
-                                                'reading fields, repr and summary performs no IO.',
+                               'documentation': '',
                                'example': 'docs/recipes.py',
                                'fields': [('id',
                                            'Stable document object ID used by references; it is distinct from the '
@@ -692,8 +673,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.Part.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.PartId': {'children': ('zipzi.modeling.scene.PartId.__repr__',
                                               'zipzi.modeling.scene.PartId.summary'),
-                                 'documentation': 'Immutable owned PartId value. Construction owns declared '
-                                                  'collections; reading fields, repr and summary performs no IO.',
+                                 'documentation': 'Persistent scene object identifier.',
                                  'example': 'docs/recipes.py',
                                  'fields': [('value', 'Persistent scene object identifier.')],
                                  'kind': 'type',
@@ -702,9 +682,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.PartId.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.ReparentContext': {'children': ('zipzi.modeling.scene.ReparentContext.__repr__',
                                                        'zipzi.modeling.scene.ReparentContext.summary'),
-                                          'documentation': 'Immutable owned ReparentContext value. Construction owns '
-                                                           'declared collections; reading fields, repr and summary '
-                                                           'performs no IO.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
                                           'fields': [('parameter_values',
                                                       'Parameter-ID-to-value map used for the reparenting reference '
@@ -719,14 +697,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                       'reference time.')],
                                           'kind': 'type',
                                           'signature': '(*, parameter_values: _Mapping[str, float], parameter_domain: '
-                                                       'tuple[ConversionDomain, ...], edit_time_seconds: float)'},
+                                                       'tuple[ConversionDomain, ...], edit_time_seconds: float)',
+                                          'type_refs': ('zipzi.modeling.commands.ConversionDomain',)},
  'zipzi.modeling.scene.ReparentContext.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.ReparentContext.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.ReparentPlacement': {'children': ('zipzi.modeling.scene.ReparentPlacement.__repr__',
                                                          'zipzi.modeling.scene.ReparentPlacement.summary'),
-                                            'documentation': 'Immutable owned ReparentPlacement value. Construction '
-                                                             'owns declared collections; reading fields, repr and '
-                                                             'summary performs no IO.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
                                             'fields': [('before',
                                                         'None appends; Some names an unselected member of the '
@@ -736,17 +713,16 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.ReparentPlacement.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.ReparentPlacement.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.ReparentStrategy': {'children': (),
-                                           'documentation': 'Immutable typed value. See field semantics and the linked '
-                                                            'workflow.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
-                                           'fields': [],
-                                           'kind': 'type',
-                                           'signature': '()'},
+                                           'fields': [('KEEP_LOCAL_DATA', "'KeepLocalData'"),
+                                                      ('PRESERVE_EDIT_STATE', "'PreserveEditState'"),
+                                                      ('PRESERVE_PARAMETER_DOMAIN', "'PreserveParameterDomain'")],
+                                           'kind': 'enum',
+                                           'signature': ''},
  'zipzi.modeling.scene.RotationPose': {'children': ('zipzi.modeling.scene.RotationPose.__repr__',
                                                     'zipzi.modeling.scene.RotationPose.summary'),
-                                       'documentation': 'Immutable owned RotationPose value. Construction owns '
-                                                        'declared collections; reading fields, repr and summary '
-                                                        'performs no IO.',
+                                       'documentation': '',
                                        'example': 'docs/recipes.py',
                                        'fields': [('origin',
                                                    'Rotation origin in parent authoring coordinates, stored at f64 '
@@ -759,14 +735,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                    'Reflect the local Y axis about the rotation origin when true.')],
                                        'kind': 'type',
                                        'signature': '(*, origin: PreciseVec2, angle: float, scale: float, reflect_x: '
-                                                    'bool, reflect_y: bool)'},
+                                                    'bool, reflect_y: bool)',
+                                       'type_refs': ('zipzi.modeling.common.PreciseVec2',)},
  'zipzi.modeling.scene.RotationPose.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.RotationPose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.RotationTransform': {'children': ('zipzi.modeling.scene.RotationTransform.__repr__',
                                                          'zipzi.modeling.scene.RotationTransform.summary'),
-                                            'documentation': 'Immutable owned RotationTransform value. Construction '
-                                                             'owns declared collections; reading fields, repr and '
-                                                             'summary performs no IO.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
                                             'fields': [('base_angle',
                                                         'Reference angle in degrees used to orient the rotation '
@@ -775,21 +750,26 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                         'Base rotation pose; its origin is expressed in the parent '
                                                         'authoring space.')],
                                             'kind': 'type',
-                                            'signature': '(*, base_angle: float, pose: RotationPose)'},
+                                            'signature': '(*, base_angle: float, pose: RotationPose)',
+                                            'type_refs': ('zipzi.modeling.scene.RotationPose',)},
  'zipzi.modeling.scene.RotationTransform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.RotationTransform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCollection': {'children': (),
-                                          'documentation': 'Typed public API entry.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
                                           'fields': [],
-                                          'kind': 'value',
-                                          'signature': ''},
+                                          'kind': 'alias',
+                                          'signature': 'SceneCollectionOrganization | SceneCollectionDeformation | '
+                                                       'SceneCollectionGlues | SceneCollectionDrawingGroups | '
+                                                       'SceneCollectionDrawing',
+                                          'type_refs': ('zipzi.modeling.scene.SceneCollectionDeformation',
+                                                        'zipzi.modeling.scene.SceneCollectionDrawing',
+                                                        'zipzi.modeling.scene.SceneCollectionDrawingGroups',
+                                                        'zipzi.modeling.scene.SceneCollectionGlues',
+                                                        'zipzi.modeling.scene.SceneCollectionOrganization')},
  'zipzi.modeling.scene.SceneCollectionDeformation': {'children': ('zipzi.modeling.scene.SceneCollectionDeformation.__repr__',
                                                                   'zipzi.modeling.scene.SceneCollectionDeformation.summary'),
-                                                     'documentation': 'Immutable owned SceneCollectionDeformation '
-                                                                      'value. Construction owns declared collections; '
-                                                                      'reading fields, repr and summary performs no '
-                                                                      'IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('parent_id',
                                                                  'Parent object ID in this hierarchy; independent of '
@@ -801,9 +781,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCollectionDeformation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCollectionDrawing': {'children': ('zipzi.modeling.scene.SceneCollectionDrawing.__repr__',
                                                               'zipzi.modeling.scene.SceneCollectionDrawing.summary'),
-                                                 'documentation': 'Immutable owned SceneCollectionDrawing value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('owner',
                                                              'Stable owner ID for the addressed drawing group, '
@@ -814,10 +792,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCollectionDrawing.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCollectionDrawingGroups': {'children': ('zipzi.modeling.scene.SceneCollectionDrawingGroups.__repr__',
                                                                     'zipzi.modeling.scene.SceneCollectionDrawingGroups.summary'),
-                                                       'documentation': 'Immutable owned SceneCollectionDrawingGroups '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [],
                                                        'kind': 'type',
@@ -826,9 +801,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCollectionDrawingGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCollectionGlues': {'children': ('zipzi.modeling.scene.SceneCollectionGlues.__repr__',
                                                             'zipzi.modeling.scene.SceneCollectionGlues.summary'),
-                                               'documentation': 'Immutable owned SceneCollectionGlues value. '
-                                                                'Construction owns declared collections; reading '
-                                                                'fields, repr and summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [],
                                                'kind': 'type',
@@ -837,10 +810,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCollectionGlues.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCollectionOrganization': {'children': ('zipzi.modeling.scene.SceneCollectionOrganization.__repr__',
                                                                    'zipzi.modeling.scene.SceneCollectionOrganization.summary'),
-                                                      'documentation': 'Immutable owned SceneCollectionOrganization '
-                                                                       'value. Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('part_id',
                                                                   'Organizational Part owner ID; independent of the '
@@ -851,17 +821,28 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCollectionOrganization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneCollectionOrganization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentTarget': {'children': (),
-                                             'documentation': 'Typed public API entry.',
+                                             'documentation': '',
                                              'example': 'docs/recipes.py',
                                              'fields': [],
-                                             'kind': 'value',
-                                             'signature': ''},
+                                             'kind': 'alias',
+                                             'signature': 'SceneContentTargetVertexPosition | '
+                                                          'SceneContentTargetVertexUv | SceneContentTargetTriangle | '
+                                                          'SceneContentTargetWarpPoint | '
+                                                          'SceneContentTargetWarpBezierControl | '
+                                                          'SceneContentTargetGluePair | '
+                                                          'SceneContentTargetOffscreenKeyform | '
+                                                          'SceneContentTargetOffscreenMapping',
+                                             'type_refs': ('zipzi.modeling.scene.SceneContentTargetGluePair',
+                                                           'zipzi.modeling.scene.SceneContentTargetOffscreenKeyform',
+                                                           'zipzi.modeling.scene.SceneContentTargetOffscreenMapping',
+                                                           'zipzi.modeling.scene.SceneContentTargetTriangle',
+                                                           'zipzi.modeling.scene.SceneContentTargetVertexPosition',
+                                                           'zipzi.modeling.scene.SceneContentTargetVertexUv',
+                                                           'zipzi.modeling.scene.SceneContentTargetWarpBezierControl',
+                                                           'zipzi.modeling.scene.SceneContentTargetWarpPoint')},
  'zipzi.modeling.scene.SceneContentTargetGluePair': {'children': ('zipzi.modeling.scene.SceneContentTargetGluePair.__repr__',
                                                                   'zipzi.modeling.scene.SceneContentTargetGluePair.summary'),
-                                                     'documentation': 'Immutable owned SceneContentTargetGluePair '
-                                                                      'value. Construction owns declared collections; '
-                                                                      'reading fields, repr and summary performs no '
-                                                                      'IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('pair_id',
                                                                  'Stable Glue pair ID, not its offset in the pair '
@@ -872,11 +853,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentTargetGluePair.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentTargetOffscreenKeyform': {'children': ('zipzi.modeling.scene.SceneContentTargetOffscreenKeyform.__repr__',
                                                                           'zipzi.modeling.scene.SceneContentTargetOffscreenKeyform.summary'),
-                                                             'documentation': 'Immutable owned '
-                                                                              'SceneContentTargetOffscreenKeyform '
-                                                                              'value. Construction owns declared '
-                                                                              'collections; reading fields, repr and '
-                                                                              'summary performs no IO.',
+                                                             'documentation': '',
                                                              'example': 'docs/recipes.py',
                                                              'fields': [('slot',
                                                                          'Zero-based slot in the addressed triangle or '
@@ -888,26 +865,20 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentTargetOffscreenKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentTargetOffscreenMapping': {'children': ('zipzi.modeling.scene.SceneContentTargetOffscreenMapping.__repr__',
                                                                           'zipzi.modeling.scene.SceneContentTargetOffscreenMapping.summary'),
-                                                             'documentation': 'Immutable owned '
-                                                                              'SceneContentTargetOffscreenMapping '
-                                                                              'value. Construction owns declared '
-                                                                              'collections; reading fields, repr and '
-                                                                              'summary performs no IO.',
+                                                             'documentation': '',
                                                              'example': 'docs/recipes.py',
                                                              'fields': [('slot',
                                                                          'Static Part slot or stable Part-binding '
                                                                          'sample combination, not an Offscreen array\n'
                                                                          'offset.')],
                                                              'kind': 'type',
-                                                             'signature': '(*, slot: PartKeyformSlot)'},
+                                                             'signature': '(*, slot: PartKeyformSlot)',
+                                                             'type_refs': ('zipzi.modeling.bindings.PartKeyformSlot',)},
  'zipzi.modeling.scene.SceneContentTargetOffscreenMapping.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentTargetOffscreenMapping.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentTargetTriangle': {'children': ('zipzi.modeling.scene.SceneContentTargetTriangle.__repr__',
                                                                   'zipzi.modeling.scene.SceneContentTargetTriangle.summary'),
-                                                     'documentation': 'Immutable owned SceneContentTargetTriangle '
-                                                                      'value. Construction owns declared collections; '
-                                                                      'reading fields, repr and summary performs no '
-                                                                      'IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('slot',
                                                                  'Zero-based slot in the addressed triangle or '
@@ -919,11 +890,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentTargetTriangle.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentTargetVertexPosition': {'children': ('zipzi.modeling.scene.SceneContentTargetVertexPosition.__repr__',
                                                                         'zipzi.modeling.scene.SceneContentTargetVertexPosition.summary'),
-                                                           'documentation': 'Immutable owned '
-                                                                            'SceneContentTargetVertexPosition value. '
-                                                                            'Construction owns declared collections; '
-                                                                            'reading fields, repr and summary performs '
-                                                                            'no IO.',
+                                                           'documentation': '',
                                                            'example': 'docs/recipes.py',
                                                            'fields': [('vertex_id',
                                                                        'Stable u32 vertex ID within the mesh, not an '
@@ -934,15 +901,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                                        'shape.')],
                                                            'kind': 'type',
                                                            'signature': '(*, vertex_id: int, shape: ShapeTarget = '
-                                                                        '<factory>)'},
+                                                                        '<factory>)',
+                                                           'type_refs': ('zipzi.modeling.scene.ShapeTarget',)},
  'zipzi.modeling.scene.SceneContentTargetVertexPosition.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentTargetVertexPosition.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentTargetVertexUv': {'children': ('zipzi.modeling.scene.SceneContentTargetVertexUv.__repr__',
                                                                   'zipzi.modeling.scene.SceneContentTargetVertexUv.summary'),
-                                                     'documentation': 'Immutable owned SceneContentTargetVertexUv '
-                                                                      'value. Construction owns declared collections; '
-                                                                      'reading fields, repr and summary performs no '
-                                                                      'IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('vertex_id',
                                                                  'Stable u32 vertex ID within the mesh, not an offset '
@@ -953,11 +918,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentTargetVertexUv.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentTargetWarpBezierControl': {'children': ('zipzi.modeling.scene.SceneContentTargetWarpBezierControl.__repr__',
                                                                            'zipzi.modeling.scene.SceneContentTargetWarpBezierControl.summary'),
-                                                              'documentation': 'Immutable owned '
-                                                                               'SceneContentTargetWarpBezierControl '
-                                                                               'value. Construction owns declared '
-                                                                               'collections; reading fields, repr and '
-                                                                               'summary performs no IO.',
+                                                              'documentation': 'Component 0 is the anchor; 1..4 are '
+                                                                               'left, right, up, down handles.',
                                                               'example': 'docs/recipes.py',
                                                               'fields': [('node',
                                                                           'Zero-based Bezier node offset in the '
@@ -971,15 +933,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                                           'shape.')],
                                                               'kind': 'type',
                                                               'signature': '(*, node: int, component: int, shape: '
-                                                                           'ShapeTarget = <factory>)'},
+                                                                           'ShapeTarget = <factory>)',
+                                                              'type_refs': ('zipzi.modeling.scene.ShapeTarget',)},
  'zipzi.modeling.scene.SceneContentTargetWarpBezierControl.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentTargetWarpBezierControl.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentTargetWarpPoint': {'children': ('zipzi.modeling.scene.SceneContentTargetWarpPoint.__repr__',
                                                                    'zipzi.modeling.scene.SceneContentTargetWarpPoint.summary'),
-                                                      'documentation': 'Immutable owned SceneContentTargetWarpPoint '
-                                                                       'value. Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('row',
                                                                   'Zero-based lattice point row, in the inclusive '
@@ -993,33 +953,38 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                                   'shape.')],
                                                       'kind': 'type',
                                                       'signature': '(*, row: int, column: int, shape: ShapeTarget = '
-                                                                   '<factory>)'},
+                                                                   '<factory>)',
+                                                      'type_refs': ('zipzi.modeling.scene.ShapeTarget',)},
  'zipzi.modeling.scene.SceneContentTargetWarpPoint.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentTargetWarpPoint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentValue': {'children': (),
-                                            'documentation': 'Typed public API entry.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
                                             'fields': [],
-                                            'kind': 'value',
-                                            'signature': ''},
+                                            'kind': 'alias',
+                                            'signature': 'SceneContentValuePoint | SceneContentValueTriangle | '
+                                                         'SceneContentValueGluePair | '
+                                                         'SceneContentValueOffscreenKeyform | SceneContentValueMapping',
+                                            'type_refs': ('zipzi.modeling.scene.SceneContentValueGluePair',
+                                                          'zipzi.modeling.scene.SceneContentValueMapping',
+                                                          'zipzi.modeling.scene.SceneContentValueOffscreenKeyform',
+                                                          'zipzi.modeling.scene.SceneContentValuePoint',
+                                                          'zipzi.modeling.scene.SceneContentValueTriangle')},
  'zipzi.modeling.scene.SceneContentValueGluePair': {'children': ('zipzi.modeling.scene.SceneContentValueGluePair.__repr__',
                                                                  'zipzi.modeling.scene.SceneContentValueGluePair.summary'),
-                                                    'documentation': 'Immutable owned SceneContentValueGluePair value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('value',
                                                                 'Complete replacement Glue pair with its identity and '
                                                                 'endpoint vertices.')],
                                                     'kind': 'type',
-                                                    'signature': '(*, value: GlueVertexPair)'},
+                                                    'signature': '(*, value: GlueVertexPair)',
+                                                    'type_refs': ('zipzi.modeling.scene.GlueVertexPair',)},
  'zipzi.modeling.scene.SceneContentValueGluePair.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentValueGluePair.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentValueMapping': {'children': ('zipzi.modeling.scene.SceneContentValueMapping.__repr__',
                                                                 'zipzi.modeling.scene.SceneContentValueMapping.summary'),
-                                                   'documentation': 'Immutable owned SceneContentValueMapping value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Replacement Offscreen keyform-array index; -1 selects '
@@ -1030,37 +995,31 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentValueMapping.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentValueOffscreenKeyform': {'children': ('zipzi.modeling.scene.SceneContentValueOffscreenKeyform.__repr__',
                                                                          'zipzi.modeling.scene.SceneContentValueOffscreenKeyform.summary'),
-                                                            'documentation': 'Immutable owned '
-                                                                             'SceneContentValueOffscreenKeyform value. '
-                                                                             'Construction owns declared collections; '
-                                                                             'reading fields, repr and summary '
-                                                                             'performs no IO.',
+                                                            'documentation': '',
                                                             'example': 'docs/recipes.py',
                                                             'fields': [('value',
                                                                         'Complete replacement Offscreen appearance '
                                                                         'sample.')],
                                                             'kind': 'type',
-                                                            'signature': '(*, value: OffscreenKeyform)'},
+                                                            'signature': '(*, value: OffscreenKeyform)',
+                                                            'type_refs': ('zipzi.modeling.bindings.OffscreenKeyform',)},
  'zipzi.modeling.scene.SceneContentValueOffscreenKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentValueOffscreenKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentValuePoint': {'children': ('zipzi.modeling.scene.SceneContentValuePoint.__repr__',
                                                               'zipzi.modeling.scene.SceneContentValuePoint.summary'),
-                                                 'documentation': 'Immutable owned SceneContentValuePoint value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('value',
                                                              'Replacement XY value in the selected shape/UV space; '
                                                              'BlendShape targets use deltas.')],
                                                  'kind': 'type',
-                                                 'signature': '(*, value: Vec2)'},
+                                                 'signature': '(*, value: Vec2)',
+                                                 'type_refs': ('zipzi.modeling.common.Vec2',)},
  'zipzi.modeling.scene.SceneContentValuePoint.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentValuePoint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentValueTriangle': {'children': ('zipzi.modeling.scene.SceneContentValueTriangle.__repr__',
                                                                  'zipzi.modeling.scene.SceneContentValueTriangle.summary'),
-                                                    'documentation': 'Immutable owned SceneContentValueTriangle value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('value',
                                                                 'Replacement triangle as three stable vertex IDs, not '
@@ -1070,23 +1029,27 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentValueTriangle.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentValueTriangle.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCopyScope': {'children': (),
-                                         'documentation': 'Immutable typed value. See field semantics and the linked '
-                                                          'workflow.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
-                                         'fields': [],
-                                         'kind': 'type',
-                                         'signature': '()'},
+                                         'fields': [('SELECTED', "'selected'"),
+                                                    ('DEFORMATION_SUBTREE', "'deformation_subtree'")],
+                                         'kind': 'enum',
+                                         'signature': ''},
  'zipzi.modeling.scene.SceneCreate': {'children': (),
-                                      'documentation': 'Typed public API entry.',
+                                      'documentation': '',
                                       'example': 'docs/recipes.py',
                                       'fields': [],
-                                      'kind': 'value',
-                                      'signature': ''},
+                                      'kind': 'alias',
+                                      'signature': 'SceneCreateMesh | SceneCreateWarp | SceneCreateRotation | '
+                                                   'SceneCreateOffscreen | SceneCreateGlue',
+                                      'type_refs': ('zipzi.modeling.scene.SceneCreateGlue',
+                                                    'zipzi.modeling.scene.SceneCreateMesh',
+                                                    'zipzi.modeling.scene.SceneCreateOffscreen',
+                                                    'zipzi.modeling.scene.SceneCreateRotation',
+                                                    'zipzi.modeling.scene.SceneCreateWarp')},
  'zipzi.modeling.scene.SceneCreateGlue': {'children': ('zipzi.modeling.scene.SceneCreateGlue.__repr__',
                                                        'zipzi.modeling.scene.SceneCreateGlue.summary'),
-                                          'documentation': 'Immutable owned SceneCreateGlue value. Construction owns '
-                                                           'declared collections; reading fields, repr and summary '
-                                                           'performs no IO.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
                                           'fields': [('a',
                                                       'Mesh A endpoint of the Glue; resolved references use stable '
@@ -1098,28 +1061,26 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                       'references retain runtime identifiers.')],
                                           'kind': 'type',
                                           'signature': '(*, a: SceneReference = <factory>, b: SceneReference = '
-                                                       '<factory>)'},
+                                                       '<factory>)',
+                                          'type_refs': ('zipzi.modeling.scene.SceneReference',)},
  'zipzi.modeling.scene.SceneCreateGlue.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneCreateGlue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCreateMesh': {'children': ('zipzi.modeling.scene.SceneCreateMesh.__repr__',
                                                        'zipzi.modeling.scene.SceneCreateMesh.summary'),
-                                          'documentation': 'Immutable owned SceneCreateMesh value. Construction owns '
-                                                           'declared collections; reading fields, repr and summary '
-                                                           'performs no IO.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
                                           'fields': [('texture',
                                                       'Image-asset reference; resolved values use asset IDs and '
                                                       'unresolved values retain\n'
                                                       'external texture identifiers.')],
                                           'kind': 'type',
-                                          'signature': '(*, texture: SceneReference = <factory>)'},
+                                          'signature': '(*, texture: SceneReference = <factory>)',
+                                          'type_refs': ('zipzi.modeling.scene.SceneReference',)},
  'zipzi.modeling.scene.SceneCreateMesh.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneCreateMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCreateOffscreen': {'children': ('zipzi.modeling.scene.SceneCreateOffscreen.__repr__',
                                                             'zipzi.modeling.scene.SceneCreateOffscreen.summary'),
-                                               'documentation': 'Immutable owned SceneCreateOffscreen value. '
-                                                                'Construction owns declared collections; reading '
-                                                                'fields, repr and summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [],
                                                'kind': 'type',
@@ -1128,9 +1089,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCreateOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCreateRotation': {'children': ('zipzi.modeling.scene.SceneCreateRotation.__repr__',
                                                            'zipzi.modeling.scene.SceneCreateRotation.summary'),
-                                              'documentation': 'Immutable owned SceneCreateRotation value. '
-                                                               'Construction owns declared collections; reading '
-                                                               'fields, repr and summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('origin',
                                                           'Optional rotation origin in parent coordinates. None uses '
@@ -1138,14 +1097,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                           'deformer, or the current content center when grouping a '
                                                           'selection.')],
                                               'kind': 'type',
-                                              'signature': '(*, origin: PreciseVec2 | None = None)'},
+                                              'signature': '(*, origin: PreciseVec2 | None = None)',
+                                              'type_refs': ('zipzi.modeling.common.PreciseVec2',)},
  'zipzi.modeling.scene.SceneCreateRotation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneCreateRotation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCreateWarp': {'children': ('zipzi.modeling.scene.SceneCreateWarp.__repr__',
                                                        'zipzi.modeling.scene.SceneCreateWarp.summary'),
-                                          'documentation': 'Immutable owned SceneCreateWarp value. Construction owns '
-                                                           'declared collections; reading fields, repr and summary '
-                                                           'performs no IO.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
                                           'fields': [('bounds',
                                                       'Optional [left, bottom, right, top] warp bounds in parent '
@@ -1156,34 +1114,61 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCreateWarp.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneCreateWarp.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneField': {'children': (),
-                                     'documentation': 'Immutable typed value. See field semantics and the linked '
-                                                      'workflow.',
+                                     'documentation': '',
                                      'example': 'docs/recipes.py',
-                                     'fields': [],
-                                     'kind': 'type',
-                                     'signature': '()'},
+                                     'fields': [('LABEL', "'label'"),
+                                                ('RUNTIME_ID', "'runtime_id'"),
+                                                ('ENABLED', "'enabled'"),
+                                                ('APPEARANCE', "'appearance'"),
+                                                ('TEXTURE', "'texture'"),
+                                                ('MASKS', "'masks'"),
+                                                ('MESH_DRAWING', "'mesh_drawing'"),
+                                                ('WARP', "'warp'"),
+                                                ('ROTATION', "'rotation'"),
+                                                ('GLUE_ENDPOINTS', "'glue_endpoints'"),
+                                                ('GLUE_INTENSITY', "'glue_intensity'"),
+                                                ('OFFSCREEN', "'offscreen'"),
+                                                ('CONTEXT', "'context'")],
+                                     'kind': 'enum',
+                                     'signature': ''},
  'zipzi.modeling.scene.SceneFieldValue': {'children': (),
-                                          'documentation': 'Typed public API entry.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
                                           'fields': [],
-                                          'kind': 'value',
-                                          'signature': ''},
+                                          'kind': 'alias',
+                                          'signature': 'SceneFieldValueLabel | SceneFieldValueRuntimeId | '
+                                                       'SceneFieldValueEnabled | SceneFieldValueAppearance | '
+                                                       'SceneFieldValueTexture | SceneFieldValueMasks | '
+                                                       'SceneFieldValueMeshDrawing | SceneFieldValueWarp | '
+                                                       'SceneFieldValueRotation | SceneFieldValueGlueEndpoints | '
+                                                       'SceneFieldValueGlueIntensity | SceneFieldValueOffscreen | '
+                                                       'SceneFieldValueContext',
+                                          'type_refs': ('zipzi.modeling.scene.SceneFieldValueAppearance',
+                                                        'zipzi.modeling.scene.SceneFieldValueContext',
+                                                        'zipzi.modeling.scene.SceneFieldValueEnabled',
+                                                        'zipzi.modeling.scene.SceneFieldValueGlueEndpoints',
+                                                        'zipzi.modeling.scene.SceneFieldValueGlueIntensity',
+                                                        'zipzi.modeling.scene.SceneFieldValueLabel',
+                                                        'zipzi.modeling.scene.SceneFieldValueMasks',
+                                                        'zipzi.modeling.scene.SceneFieldValueMeshDrawing',
+                                                        'zipzi.modeling.scene.SceneFieldValueOffscreen',
+                                                        'zipzi.modeling.scene.SceneFieldValueRotation',
+                                                        'zipzi.modeling.scene.SceneFieldValueRuntimeId',
+                                                        'zipzi.modeling.scene.SceneFieldValueTexture',
+                                                        'zipzi.modeling.scene.SceneFieldValueWarp')},
  'zipzi.modeling.scene.SceneFieldValueAppearance': {'children': ('zipzi.modeling.scene.SceneFieldValueAppearance.__repr__',
                                                                  'zipzi.modeling.scene.SceneFieldValueAppearance.summary'),
-                                                    'documentation': 'Immutable owned SceneFieldValueAppearance value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('value', 'Replacement opacity and RGB color factors.')],
                                                     'kind': 'type',
-                                                    'signature': '(*, value: Appearance)'},
+                                                    'signature': '(*, value: Appearance)',
+                                                    'type_refs': ('zipzi.modeling.scene.Appearance',)},
  'zipzi.modeling.scene.SceneFieldValueAppearance.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneFieldValueAppearance.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueContext': {'children': ('zipzi.modeling.scene.SceneFieldValueContext.__repr__',
                                                               'zipzi.modeling.scene.SceneFieldValueContext.summary'),
-                                                 'documentation': 'Immutable owned SceneFieldValueContext value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('part_id',
                                                              'Organizational Part owner ID; independent of the '
@@ -1200,9 +1185,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueContext.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueEnabled': {'children': ('zipzi.modeling.scene.SceneFieldValueEnabled.__repr__',
                                                               'zipzi.modeling.scene.SceneFieldValueEnabled.summary'),
-                                                 'documentation': 'Immutable owned SceneFieldValueEnabled value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('value', 'Replacement model evaluation enabled flag.')],
                                                  'kind': 'type',
@@ -1211,10 +1194,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueEnabled.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueGlueEndpoints': {'children': ('zipzi.modeling.scene.SceneFieldValueGlueEndpoints.__repr__',
                                                                     'zipzi.modeling.scene.SceneFieldValueGlueEndpoints.summary'),
-                                                       'documentation': 'Immutable owned SceneFieldValueGlueEndpoints '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('a',
                                                                    'Mesh A endpoint of the Glue; resolved references '
@@ -1225,15 +1205,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                                    'use stable mesh IDs and unresolved\n'
                                                                    'references retain runtime identifiers.')],
                                                        'kind': 'type',
-                                                       'signature': '(*, a: SceneReference, b: SceneReference)'},
+                                                       'signature': '(*, a: SceneReference, b: SceneReference)',
+                                                       'type_refs': ('zipzi.modeling.scene.SceneReference',)},
  'zipzi.modeling.scene.SceneFieldValueGlueEndpoints.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneFieldValueGlueEndpoints.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueGlueIntensity': {'children': ('zipzi.modeling.scene.SceneFieldValueGlueIntensity.__repr__',
                                                                     'zipzi.modeling.scene.SceneFieldValueGlueIntensity.summary'),
-                                                       'documentation': 'Immutable owned SceneFieldValueGlueIntensity '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('value', 'Replacement Glue influence factor.')],
                                                        'kind': 'type',
@@ -1242,9 +1220,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueGlueIntensity.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueLabel': {'children': ('zipzi.modeling.scene.SceneFieldValueLabel.__repr__',
                                                             'zipzi.modeling.scene.SceneFieldValueLabel.summary'),
-                                               'documentation': 'Immutable owned SceneFieldValueLabel value. '
-                                                                'Construction owns declared collections; reading '
-                                                                'fields, repr and summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('value', 'Replacement display label.')],
                                                'kind': 'type',
@@ -1253,9 +1229,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueLabel.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueMasks': {'children': ('zipzi.modeling.scene.SceneFieldValueMasks.__repr__',
                                                             'zipzi.modeling.scene.SceneFieldValueMasks.summary'),
-                                               'documentation': 'Immutable owned SceneFieldValueMasks value. '
-                                                                'Construction owns declared collections; reading '
-                                                                'fields, repr and summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('value', 'Complete ordered clipping-mask mesh selection.')],
                                                'kind': 'type',
@@ -1264,10 +1238,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueMasks.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueMeshDrawing': {'children': ('zipzi.modeling.scene.SceneFieldValueMeshDrawing.__repr__',
                                                                   'zipzi.modeling.scene.SceneFieldValueMeshDrawing.summary'),
-                                                     'documentation': 'Immutable owned SceneFieldValueMeshDrawing '
-                                                                      'value. Construction owns declared collections; '
-                                                                      'reading fields, repr and summary performs no '
-                                                                      'IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('draw_order',
                                                                  'Drawing-order coordinate; distinct from the final '
@@ -1287,14 +1258,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                      'kind': 'type',
                                                      'signature': '(*, draw_order: float | None = None, blend_mode: '
                                                                   'BlendMode, raw_blend_mode: int | None = None, '
-                                                                  'double_sided: bool, inverted_mask: bool)'},
+                                                                  'double_sided: bool, inverted_mask: bool)',
+                                                     'type_refs': ('zipzi.modeling.scene.BlendMode',)},
  'zipzi.modeling.scene.SceneFieldValueMeshDrawing.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneFieldValueMeshDrawing.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueOffscreen': {'children': ('zipzi.modeling.scene.SceneFieldValueOffscreen.__repr__',
                                                                 'zipzi.modeling.scene.SceneFieldValueOffscreen.summary'),
-                                                   'documentation': 'Immutable owned SceneFieldValueOffscreen value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('blend_mode',
                                                                'Compositing mode used when drawing this object.'),
@@ -1311,25 +1281,23 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                    'kind': 'type',
                                                    'signature': '(*, blend_mode: int, flags: int, keyforms: '
                                                                 'tuple[OffscreenKeyform, ...], part_keyform_indices: '
-                                                                'tuple[int, ...])'},
+                                                                'tuple[int, ...])',
+                                                   'type_refs': ('zipzi.modeling.bindings.OffscreenKeyform',)},
  'zipzi.modeling.scene.SceneFieldValueOffscreen.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneFieldValueOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueRotation': {'children': ('zipzi.modeling.scene.SceneFieldValueRotation.__repr__',
                                                                'zipzi.modeling.scene.SceneFieldValueRotation.summary'),
-                                                  'documentation': 'Immutable owned SceneFieldValueRotation value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('value', 'Complete replacement rotation definition.')],
                                                   'kind': 'type',
-                                                  'signature': '(*, value: RotationTransform)'},
+                                                  'signature': '(*, value: RotationTransform)',
+                                                  'type_refs': ('zipzi.modeling.scene.RotationTransform',)},
  'zipzi.modeling.scene.SceneFieldValueRotation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneFieldValueRotation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueRuntimeId': {'children': ('zipzi.modeling.scene.SceneFieldValueRuntimeId.__repr__',
                                                                 'zipzi.modeling.scene.SceneFieldValueRuntimeId.summary'),
-                                                   'documentation': 'Immutable owned SceneFieldValueRuntimeId value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Replacement external runtime identifier; an empty '
@@ -1340,41 +1308,41 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueRuntimeId.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueTexture': {'children': ('zipzi.modeling.scene.SceneFieldValueTexture.__repr__',
                                                               'zipzi.modeling.scene.SceneFieldValueTexture.summary'),
-                                                 'documentation': 'Immutable owned SceneFieldValueTexture value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('value',
                                                              'Resolved image-asset reference or explicitly unresolved '
                                                              'texture runtime identifier.')],
                                                  'kind': 'type',
-                                                 'signature': '(*, value: SceneReference)'},
+                                                 'signature': '(*, value: SceneReference)',
+                                                 'type_refs': ('zipzi.modeling.scene.SceneReference',)},
  'zipzi.modeling.scene.SceneFieldValueTexture.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneFieldValueTexture.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueWarp': {'children': ('zipzi.modeling.scene.SceneFieldValueWarp.__repr__',
                                                            'zipzi.modeling.scene.SceneFieldValueWarp.summary'),
-                                              'documentation': 'Immutable owned SceneFieldValueWarp value. '
-                                                               'Construction owns declared collections; reading '
-                                                               'fields, repr and summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('value',
                                                           'Complete replacement warp lattice and controller '
                                                           'definition.')],
                                               'kind': 'type',
-                                              'signature': '(*, value: WarpTransform)'},
+                                              'signature': '(*, value: WarpTransform)',
+                                              'type_refs': ('zipzi.modeling.scene.WarpTransform',)},
  'zipzi.modeling.scene.SceneFieldValueWarp.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneFieldValueWarp.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneReference': {'children': (),
-                                         'documentation': 'Typed public API entry.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [],
-                                         'kind': 'value',
-                                         'signature': ''},
+                                         'kind': 'alias',
+                                         'signature': 'SceneReferenceUnspecified | SceneReferenceResolved | '
+                                                      'SceneReferenceUnresolved',
+                                         'type_refs': ('zipzi.modeling.scene.SceneReferenceResolved',
+                                                       'zipzi.modeling.scene.SceneReferenceUnresolved',
+                                                       'zipzi.modeling.scene.SceneReferenceUnspecified')},
  'zipzi.modeling.scene.SceneReferenceResolved': {'children': ('zipzi.modeling.scene.SceneReferenceResolved.__repr__',
                                                               'zipzi.modeling.scene.SceneReferenceResolved.summary'),
-                                                 'documentation': 'Immutable owned SceneReferenceResolved value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('object_id',
                                                              'Stable document ID of the object described or selected '
@@ -1385,9 +1353,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneReferenceResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneReferenceUnresolved': {'children': ('zipzi.modeling.scene.SceneReferenceUnresolved.__repr__',
                                                                 'zipzi.modeling.scene.SceneReferenceUnresolved.summary'),
-                                                   'documentation': 'Immutable owned SceneReferenceUnresolved value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('runtime_id',
                                                                'External format/runtime identifier retained for '
@@ -1399,9 +1365,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneReferenceUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneReferenceUnspecified': {'children': ('zipzi.modeling.scene.SceneReferenceUnspecified.__repr__',
                                                                  'zipzi.modeling.scene.SceneReferenceUnspecified.summary'),
-                                                    'documentation': 'Immutable owned SceneReferenceUnspecified value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [],
                                                     'kind': 'type',
@@ -1409,16 +1373,17 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneReferenceUnspecified.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneReferenceUnspecified.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.ShapeTarget': {'children': (),
-                                      'documentation': 'Typed public API entry.',
+                                      'documentation': '',
                                       'example': 'docs/recipes.py',
                                       'fields': [],
-                                      'kind': 'value',
-                                      'signature': ''},
+                                      'kind': 'alias',
+                                      'signature': 'ShapeTargetBase | ShapeTargetOrdinary | ShapeTargetBlend',
+                                      'type_refs': ('zipzi.modeling.scene.ShapeTargetBase',
+                                                    'zipzi.modeling.scene.ShapeTargetBlend',
+                                                    'zipzi.modeling.scene.ShapeTargetOrdinary')},
  'zipzi.modeling.scene.ShapeTargetBase': {'children': ('zipzi.modeling.scene.ShapeTargetBase.__repr__',
                                                        'zipzi.modeling.scene.ShapeTargetBase.summary'),
-                                          'documentation': 'Immutable owned ShapeTargetBase value. Construction owns '
-                                                           'declared collections; reading fields, repr and summary '
-                                                           'performs no IO.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
                                           'fields': [],
                                           'kind': 'type',
@@ -1427,9 +1392,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.ShapeTargetBase.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.ShapeTargetBlend': {'children': ('zipzi.modeling.scene.ShapeTargetBlend.__repr__',
                                                         'zipzi.modeling.scene.ShapeTargetBlend.summary'),
-                                           'documentation': 'Immutable owned ShapeTargetBlend value. Construction owns '
-                                                            'declared collections; reading fields, repr and summary '
-                                                            'performs no IO.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [('binding_id',
                                                        'Stable binding ID owning the addressed axes or keyforms.'),
@@ -1443,9 +1406,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.ShapeTargetBlend.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.ShapeTargetOrdinary': {'children': ('zipzi.modeling.scene.ShapeTargetOrdinary.__repr__',
                                                            'zipzi.modeling.scene.ShapeTargetOrdinary.summary'),
-                                              'documentation': 'Immutable owned ShapeTargetOrdinary value. '
-                                                               'Construction owns declared collections; reading '
-                                                               'fields, repr and summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('binding_id',
                                                           'Stable binding ID owning the addressed axes or keyforms.'),
@@ -1458,8 +1419,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.ShapeTargetOrdinary.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.Transform': {'children': ('zipzi.modeling.scene.Transform.__repr__',
                                                  'zipzi.modeling.scene.Transform.summary'),
-                                    'documentation': 'Immutable owned Transform value. Construction owns declared '
-                                                     'collections; reading fields, repr and summary performs no IO.',
+                                    'documentation': '',
                                     'example': 'docs/recipes.py',
                                     'fields': [('id',
                                                 'Stable document object ID used by references; it is distinct from the '
@@ -1498,45 +1458,50 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                  'None, parent_id: TransformId | None = None, data: TransformData, '
                                                  'enabled: bool, appearance: Appearance, warp_authoring: '
                                                  'WarpAuthoringSettings | None = None, original_shape: '
-                                                 'DeformerOriginal | None = None)'},
+                                                 'DeformerOriginal | None = None)',
+                                    'type_refs': ('zipzi.modeling.scene.Appearance',
+                                                  'zipzi.modeling.scene.DeformerOriginal',
+                                                  'zipzi.modeling.scene.PartId',
+                                                  'zipzi.modeling.scene.TransformData',
+                                                  'zipzi.modeling.scene.TransformId',
+                                                  'zipzi.modeling.scene.WarpAuthoringSettings')},
  'zipzi.modeling.scene.Transform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.Transform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.TransformData': {'children': (),
-                                        'documentation': 'Typed public API entry.',
+                                        'documentation': '',
                                         'example': 'docs/recipes.py',
                                         'fields': [],
-                                        'kind': 'value',
-                                        'signature': ''},
+                                        'kind': 'alias',
+                                        'signature': 'TransformDataWarp | TransformDataRotation',
+                                        'type_refs': ('zipzi.modeling.scene.TransformDataRotation',
+                                                      'zipzi.modeling.scene.TransformDataWarp')},
  'zipzi.modeling.scene.TransformDataRotation': {'children': ('zipzi.modeling.scene.TransformDataRotation.__repr__',
                                                              'zipzi.modeling.scene.TransformDataRotation.summary'),
-                                                'documentation': 'Immutable owned TransformDataRotation value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('value',
                                                             'Rotation deformation definition with its reference angle '
                                                             'and base pose.')],
                                                 'kind': 'type',
-                                                'signature': '(*, value: RotationTransform)'},
+                                                'signature': '(*, value: RotationTransform)',
+                                                'type_refs': ('zipzi.modeling.scene.RotationTransform',)},
  'zipzi.modeling.scene.TransformDataRotation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.TransformDataRotation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.TransformDataWarp': {'children': ('zipzi.modeling.scene.TransformDataWarp.__repr__',
                                                          'zipzi.modeling.scene.TransformDataWarp.summary'),
-                                            'documentation': 'Immutable owned TransformDataWarp value. Construction '
-                                                             'owns declared collections; reading fields, repr and '
-                                                             'summary performs no IO.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
                                             'fields': [('value',
                                                         'Warp deformation definition with its baked lattice and '
                                                         'optional authoring controller.')],
                                             'kind': 'type',
-                                            'signature': '(*, value: WarpTransform)'},
+                                            'signature': '(*, value: WarpTransform)',
+                                            'type_refs': ('zipzi.modeling.scene.WarpTransform',)},
  'zipzi.modeling.scene.TransformDataWarp.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.TransformDataWarp.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.TransformId': {'children': ('zipzi.modeling.scene.TransformId.__repr__',
                                                    'zipzi.modeling.scene.TransformId.summary'),
-                                      'documentation': 'Immutable owned TransformId value. Construction owns declared '
-                                                       'collections; reading fields, repr and summary performs no IO.',
+                                      'documentation': 'Persistent scene object identifier.',
                                       'example': 'docs/recipes.py',
                                       'fields': [('value', 'Persistent scene object identifier.')],
                                       'kind': 'type',
@@ -1545,9 +1510,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.TransformId.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.WarpAuthoringSettings': {'children': ('zipzi.modeling.scene.WarpAuthoringSettings.__repr__',
                                                              'zipzi.modeling.scene.WarpAuthoringSettings.summary'),
-                                                'documentation': 'Immutable owned WarpAuthoringSettings value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('auto_reform',
                                                             "Rebuild the edited shape's baked grid on subsequent "
@@ -1561,13 +1524,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                 'kind': 'type',
                                                 'signature': '(*, auto_reform: bool = False, edit_mode: '
                                                              'WarpBezierEditMode = WarpBezierEditMode.LOCAL, '
-                                                             'bezier_grid: WarpBezierGrid | None = None)'},
+                                                             'bezier_grid: WarpBezierGrid | None = None)',
+                                                'type_refs': ('zipzi.modeling.scene.WarpBezierEditMode',
+                                                              'zipzi.modeling.scene.WarpBezierGrid')},
  'zipzi.modeling.scene.WarpAuthoringSettings.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.WarpAuthoringSettings.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.WarpBezier': {'children': ('zipzi.modeling.scene.WarpBezier.__repr__',
                                                   'zipzi.modeling.scene.WarpBezier.summary'),
-                                     'documentation': 'Immutable owned WarpBezier value. Construction owns declared '
-                                                      'collections; reading fields, repr and summary performs no IO.',
+                                     'documentation': '',
                                      'example': 'docs/recipes.py',
                                      'fields': [('rows',
                                                  'Number of warp lattice cells vertically; a lattice has rows + 1 '
@@ -1579,14 +1543,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                  'Bezier nodes in row-major order; exactly (rows + 1) * (columns + 1) '
                                                  'nodes.')],
                                      'kind': 'type',
-                                     'signature': '(*, rows: int, columns: int, nodes: tuple[WarpBezierNode, ...])'},
+                                     'signature': '(*, rows: int, columns: int, nodes: tuple[WarpBezierNode, ...])',
+                                     'type_refs': ('zipzi.modeling.scene.WarpBezierNode',)},
  'zipzi.modeling.scene.WarpBezier.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.WarpBezier.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.WarpBezierControlPatch': {'children': ('zipzi.modeling.scene.WarpBezierControlPatch.__repr__',
                                                               'zipzi.modeling.scene.WarpBezierControlPatch.summary'),
-                                                 'documentation': 'Immutable owned WarpBezierControlPatch value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('node', 'Zero-based controller node in row-major order.'),
                                                             ('component',
@@ -1596,21 +1559,31 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                              "Absolute destination in the Warp's parent authoring "
                                                              'space.')],
                                                  'kind': 'type',
-                                                 'signature': '(*, node: int, component: int, point: Vec2)'},
+                                                 'signature': '(*, node: int, component: int, point: Vec2)',
+                                                 'type_refs': ('zipzi.modeling.common.Vec2',)},
  'zipzi.modeling.scene.WarpBezierControlPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.WarpBezierControlPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.WarpBezierEditMode': {'children': (),
-                                             'documentation': 'Immutable typed value. See field semantics and the '
-                                                              'linked workflow.',
+                                             'documentation': 'Editor influence semantics, independent of runtime Warp '
+                                                              'interpolation.',
                                              'example': 'docs/recipes.py',
-                                             'fields': [],
-                                             'kind': 'type',
-                                             'signature': '()'},
+                                             'fields': [('LOCAL',
+                                                         "'local' — Edit explicit controls; anchors carry their own "
+                                                         'handles.'),
+                                                        ('SMOOTH_LOCAL',
+                                                         "'smooth_local' — Cosine influence on nearby nodes within two "
+                                                         'controller cells.'),
+                                                        ('SMOOTH_GLOBAL',
+                                                         "'smooth_global' — Gaussian influence across normalized "
+                                                         'controller coordinates.'),
+                                                        ('PRESERVE_STRUCTURE',
+                                                         "'preserve_structure' — Couple opposite handles while "
+                                                         'preserving their length ratio; anchors stay fixed.')],
+                                             'kind': 'enum',
+                                             'signature': ''},
  'zipzi.modeling.scene.WarpBezierGrid': {'children': ('zipzi.modeling.scene.WarpBezierGrid.__repr__',
                                                       'zipzi.modeling.scene.WarpBezierGrid.summary'),
-                                         'documentation': 'Immutable owned WarpBezierGrid value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('rows', 'Vertical controller cell count, from 1 to 32.'),
                                                     ('columns', 'Horizontal controller cell count, from 1 to 32.')],
@@ -1620,9 +1593,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.WarpBezierGrid.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.WarpBezierNode': {'children': ('zipzi.modeling.scene.WarpBezierNode.__repr__',
                                                       'zipzi.modeling.scene.WarpBezierNode.summary'),
-                                         'documentation': 'Immutable owned WarpBezierNode value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('position',
                                                      'Absolute Bezier anchor position in lattice coordinates; not a '
@@ -1631,14 +1602,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                      'Absolute positions: left, right, up, down in lattice '
                                                      'coordinates.')],
                                          'kind': 'type',
-                                         'signature': '(*, position: Vec2, handles: tuple[Vec2, Vec2, Vec2, Vec2])'},
+                                         'signature': '(*, position: Vec2, handles: tuple[Vec2, Vec2, Vec2, Vec2])',
+                                         'type_refs': ('zipzi.modeling.common.Vec2',)},
  'zipzi.modeling.scene.WarpBezierNode.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.WarpBezierNode.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.WarpPointPatch': {'children': ('zipzi.modeling.scene.WarpPointPatch.__repr__',
                                                       'zipzi.modeling.scene.WarpPointPatch.summary'),
-                                         'documentation': 'Immutable owned WarpPointPatch value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('row',
                                                      'Zero-based lattice point row, in the inclusive range 0..rows.'),
@@ -1649,21 +1619,20 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                      'Replacement lattice XY value: absolute for Base/Ordinary, '
                                                      'displacement for BlendShape.')],
                                          'kind': 'type',
-                                         'signature': '(*, row: int, column: int, point: Vec2)'},
+                                         'signature': '(*, row: int, column: int, point: Vec2)',
+                                         'type_refs': ('zipzi.modeling.common.Vec2',)},
  'zipzi.modeling.scene.WarpPointPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.WarpPointPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.WarpShapeAction': {'children': (),
-                                          'documentation': 'Immutable typed value. See field semantics and the linked '
-                                                           'workflow.',
+                                          'documentation': '',
                                           'example': 'docs/recipes.py',
-                                          'fields': [],
-                                          'kind': 'type',
-                                          'signature': '()'},
+                                          'fields': [('RESET_CONTROLLER', "'reset_controller'"),
+                                                     ('REFORM', "'reform'")],
+                                          'kind': 'enum',
+                                          'signature': ''},
  'zipzi.modeling.scene.WarpTransform': {'children': ('zipzi.modeling.scene.WarpTransform.__repr__',
                                                      'zipzi.modeling.scene.WarpTransform.summary'),
-                                        'documentation': 'Immutable owned WarpTransform value. Construction owns '
-                                                         'declared collections; reading fields, repr and summary '
-                                                         'performs no IO.',
+                                        'documentation': '',
                                         'example': 'docs/recipes.py',
                                         'fields': [('bezier',
                                                     'Optional authoring Bezier controller; None leaves the baked '
@@ -1681,6 +1650,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                     '(columns + 1) + column.')],
                                         'kind': 'type',
                                         'signature': '(*, bezier: WarpBezier | None = None, rows: int, columns: int, '
-                                                     'quad: bool, points: tuple[Vec2, ...])'},
+                                                     'quad: bool, points: tuple[Vec2, ...])',
+                                        'type_refs': ('zipzi.modeling.common.Vec2', 'zipzi.modeling.scene.WarpBezier')},
  'zipzi.modeling.scene.WarpTransform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.WarpTransform.summary': {'alias': 'zipzi.ApiDescription.summary'}}

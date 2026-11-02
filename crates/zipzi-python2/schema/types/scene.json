@@ -1247,6 +1247,7 @@
       "name": "zipzi_contract::authoring::ScenePlacement"
     },
     "zipzi_contract::authoring::SceneSummary": {
+      "doc": "Metadata projection; geometry remains in the explicit mesh/CPU queries.",
       "fields": [
         {
           "default": null,
@@ -1542,6 +1543,7 @@
     },
     "zipzi_contract::document::AttachmentRef": {
       "content": null,
+      "doc": "Imported paths remain explicitly unresolved until a matching attachment is loaded.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::AttachmentRef",
       "tag": "kind",
@@ -1628,6 +1630,7 @@
       "tuple": false
     },
     "zipzi_contract::document::HierarchyOrder": {
+      "doc": "Independent palette ranks for the organization and deformation projections.\nPartial lists are allowed: consumers retain source order for unlisted objects.\nEntries use globally unique scene object IDs, never visible row indices.",
       "fields": [
         {
           "default": [],
@@ -3554,6 +3557,7 @@
           "rust_name": "WarpPoint"
         },
         {
+          "doc": "Component 0 is the anchor; 1..4 are left, right, up, down handles.",
           "fields": [
             {
               "doc": "Zero-based Bezier node offset in the row-major controller array.",
@@ -4903,6 +4907,7 @@
       ]
     },
     "zipzi_contract::model::Canvas": {
+      "doc": "A finite rectangle carried by an import/export format, not the model space.",
       "fields": [
         {
           "doc": "Source canvas width in pixels.",
@@ -5314,6 +5319,7 @@
       "tuple": false
     },
     "zipzi_contract::model::ModelSetup": {
+      "doc": "Source-format provenance and independent output settings. Neither affects evaluation.",
       "fields": [
         {
           "default": null,
@@ -5517,6 +5523,7 @@
       "tuple": false
     },
     "zipzi_contract::model::PartId": {
+      "doc": "Persistent scene object identifier.",
       "fields": [
         {
           "doc": "Persistent scene object identifier.",
@@ -5777,6 +5784,7 @@
       ]
     },
     "zipzi_contract::model::TransformId": {
+      "doc": "Persistent scene object identifier.",
       "fields": [
         {
           "doc": "Persistent scene object identifier.",
@@ -6021,29 +6029,34 @@
     },
     "zipzi_contract::warp_bezier::WarpBezierEditMode": {
       "content": null,
+      "doc": "Editor influence semantics, independent of runtime Warp interpolation.",
       "kind": "serde_enum",
       "name": "zipzi_contract::warp_bezier::WarpBezierEditMode",
       "tag": null,
       "variants": [
         {
+          "doc": "Edit explicit controls; anchors carry their own handles.",
           "fields": [],
           "form": "unit",
           "name": "local",
           "rust_name": "Local"
         },
         {
+          "doc": "Cosine influence on nearby nodes within two controller cells.",
           "fields": [],
           "form": "unit",
           "name": "smooth_local",
           "rust_name": "SmoothLocal"
         },
         {
+          "doc": "Gaussian influence across normalized controller coordinates.",
           "fields": [],
           "form": "unit",
           "name": "smooth_global",
           "rust_name": "SmoothGlobal"
         },
         {
+          "doc": "Couple opposite handles while preserving their length ratio; anchors stay fixed.",
           "fields": [],
           "form": "unit",
           "name": "preserve_structure",

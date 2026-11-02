@@ -230,6 +230,7 @@
           "rust_name": "Duplicate"
         },
         {
+          "doc": "None rejects references; Some explicitly redirects or detaches every user.",
           "fields": [
             {
               "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",

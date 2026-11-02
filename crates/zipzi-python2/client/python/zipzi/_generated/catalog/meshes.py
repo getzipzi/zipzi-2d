@@ -11,12 +11,15 @@ DATA: dict[str, Entry] = {'zipzi.meshes': {'children': ('zipzi.meshes.Constraint
                                'zipzi.meshes.Rename',
                                'zipzi.meshes.SetPositions',
                                'zipzi.meshes.Summary'),
-                  'documentation': 'Mesh values are generated; selected Plan intents are generated.',
+                  'documentation': 'Mesh geometry, creation specifications and typed operations. Read through '
+                                   'session.meshes and author through edit.meshes.',
                   'kind': 'module',
                   'signature': ''},
  'zipzi.meshes.Constraint': {'children': ('zipzi.meshes.Constraint.__repr__', 'zipzi.meshes.Constraint.summary'),
-                             'documentation': 'Immutable owned Constraint value. Construction owns declared '
-                                              'collections; reading fields, repr and summary performs no IO.',
+                             'documentation': 'An internal mesh edge identified by two stable vertex IDs and its '
+                                              'origin.\n'
+                                              'The edge must exist in the triangulation; boundary edges belong to '
+                                              'MeshMeshing.boundary.',
                              'example': 'docs/recipes.py',
                              'fields': [('endpoints',
                                          'Two distinct vertex IDs in increasing order; the segment is an actual '
@@ -25,13 +28,13 @@ DATA: dict[str, Entry] = {'zipzi.meshes': {'children': ('zipzi.meshes.Constraint
                                          'Whether this edge was fixed by the user or supplied by the edge-layout '
                                          'generator.')],
                              'kind': 'type',
-                             'signature': '(endpoints: Sequence[int], kind: ConstraintKind) -> None'},
+                             'signature': '(endpoints: Sequence[int], kind: ConstraintKind) -> None',
+                             'type_refs': ('zipzi.modeling.mesh.MeshConstraintKind',)},
  'zipzi.meshes.Constraint.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.meshes.Constraint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.meshes.ConstraintKind': {'alias': 'zipzi.modeling.mesh.MeshConstraintKind'},
  'zipzi.meshes.Create': {'children': ('zipzi.meshes.Create.__repr__', 'zipzi.meshes.Create.summary'),
-                         'documentation': 'Immutable owned Create value. Construction owns declared collections; '
-                                          'reading fields, repr and summary performs no IO.',
+                         'documentation': 'Create a mesh from its creation specification in the edit candidate.',
                          'example': 'docs/recipes.py',
                          'fields': [('spec',
                                      'Creation specification; native admission supplies identities/defaults and\n'
@@ -40,12 +43,17 @@ DATA: dict[str, Entry] = {'zipzi.meshes': {'children': ('zipzi.meshes.Constraint
                                      'Fixed operation discriminator supplied by this value type; not a constructor '
                                      'argument or a mutable object field.')],
                          'kind': 'type',
-                         'signature': "(spec: MeshSpec, kind: Literal['create'] = <factory>)"},
+                         'signature': '(spec: MeshSpec)',
+                         'type_refs': ('zipzi.meshes.MeshSpec',)},
  'zipzi.meshes.Create.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.meshes.Create.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.meshes.Geometry': {'children': ('zipzi.meshes.Geometry.__repr__', 'zipzi.meshes.Geometry.summary'),
-                           'documentation': 'Immutable owned Geometry value. Construction owns declared collections; '
-                                            'reading fields, repr and summary performs no IO.',
+                           'documentation': 'Vertex IDs, authoring-space positions, texture UVs and triangle '
+                                            'connectivity for a mesh.\n'
+                                            'Positions and UVs follow vertex_ids order; triangles contain vertex IDs.\n'
+                                            'Positions use model space without a deformation parent, otherwise the '
+                                            "parent's\n"
+                                            'local/parameter space.',
                            'example': 'docs/recipes.py',
                            'fields': [('vertex_ids',
                                        'Stable vertex IDs in the same order as positions and UVs; IDs need not be '
@@ -62,12 +70,14 @@ DATA: dict[str, Entry] = {'zipzi.meshes': {'children': ('zipzi.meshes.Constraint
                            'kind': 'type',
                            'signature': '(vertex_ids: Sequence[int], positions: Sequence[Sequence[float]], uvs: '
                                         'Sequence[Sequence[float]], triangles: Sequence[Sequence[int]], meshing: '
-                                        'Meshing | None=None) -> None'},
+                                        'Meshing | None=None) -> None',
+                           'type_refs': ('zipzi.meshes.Meshing',)},
  'zipzi.meshes.Geometry.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.meshes.Geometry.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.meshes.Mesh': {'children': ('zipzi.meshes.Mesh.__repr__', 'zipzi.meshes.Mesh.summary'),
-                       'documentation': 'Immutable owned Mesh value. Construction owns declared collections; reading '
-                                        'fields, repr and summary performs no IO.',
+                       'documentation': 'A mesh read at one captured formal or candidate source. Later document '
+                                        'changes\n'
+                                        'do not rewrite its ID, name or geometry.',
                        'example': 'docs/recipes.py',
                        'fields': [('id',
                                    'Stable document object ID used by references; it is distinct from the exported '
@@ -79,12 +89,15 @@ DATA: dict[str, Entry] = {'zipzi.meshes': {'children': ('zipzi.meshes.Constraint
                                    'Owned vertex IDs, positions, UVs and triangles; triangles contain vertex IDs, not\n'
                                    'position offsets.')],
                        'kind': 'type',
-                       'signature': '(id: str, name: str, geometry: Geometry)'},
+                       'signature': '(id: str, name: str, geometry: Geometry)',
+                       'type_refs': ('zipzi.meshes.Geometry',)},
  'zipzi.meshes.Mesh.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.meshes.Mesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.meshes.MeshSpec': {'children': ('zipzi.meshes.MeshSpec.__repr__', 'zipzi.meshes.MeshSpec.summary'),
-                           'documentation': 'Immutable owned MeshSpec value. Construction owns declared collections; '
-                                            'reading fields, repr and summary performs no IO.',
+                           'documentation': 'Specification for creating a mesh. An omitted ID allocates a fresh UUID '
+                                            'when\n'
+                                            'creation executes; an empty texture_asset_id leaves the texture '
+                                            'unassigned.',
                            'example': 'docs/recipes.py',
                            'fields': [('name',
                                        'Human-readable display name; use the stable ID for identity because names can '
@@ -102,12 +115,13 @@ DATA: dict[str, Entry] = {'zipzi.meshes': {'children': ('zipzi.meshes.Constraint
                                        'operation executes.')],
                            'kind': 'type',
                            'signature': "(name: str, geometry: Geometry, texture_asset_id: str = '', id: str | None = "
-                                        'None)'},
+                                        'None)',
+                           'type_refs': ('zipzi.meshes.Geometry',)},
  'zipzi.meshes.MeshSpec.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.meshes.MeshSpec.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.meshes.Meshing': {'children': ('zipzi.meshes.Meshing.__repr__', 'zipzi.meshes.Meshing.summary'),
-                          'documentation': 'Immutable owned Meshing value. Construction owns declared collections; '
-                                           'reading fields, repr and summary performs no IO.',
+                          'documentation': 'A canonical counterclockwise outer boundary and the internal edges '
+                                           'retained by remeshing.',
                           'example': 'docs/recipes.py',
                           'fields': [('boundary',
                                       'Closed UV boundary without a repeated endpoint, starting at its smallest vertex '
@@ -116,18 +130,20 @@ DATA: dict[str, Entry] = {'zipzi.meshes': {'children': ('zipzi.meshes.Constraint
                                       'Internal constraints sorted by their canonical endpoint pairs; excludes '
                                       'boundary edges.')],
                           'kind': 'type',
-                          'signature': '(boundary: Sequence[int], constraints: Sequence[Constraint]) -> None'},
+                          'signature': '(boundary: Sequence[int], constraints: Sequence[Constraint]) -> None',
+                          'type_refs': ('zipzi.meshes.Constraint',)},
  'zipzi.meshes.Meshing.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.meshes.Meshing.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.meshes.Point': {'children': (),
-                        'documentation': 'Typed public API entry.',
+                        'documentation': 'A pair of float coordinates (x, y); Geometry uses it for positions and UVs. '
+                                         'The containing field determines the coordinate space.',
                         'example': 'docs/recipes.py',
                         'fields': [],
-                        'kind': 'value',
-                        'signature': ''},
+                        'kind': 'alias',
+                        'signature': 'tuple[float, float]'},
  'zipzi.meshes.Rename': {'children': ('zipzi.meshes.Rename.__repr__', 'zipzi.meshes.Rename.summary'),
-                         'documentation': 'Immutable owned Rename value. Construction owns declared collections; '
-                                          'reading fields, repr and summary performs no IO.',
+                         'documentation': 'Change a mesh display name by stable ID. An expected_name precondition\n'
+                                          'must match the current name; None disables that precondition.',
                          'example': 'docs/recipes.py',
                          'fields': [('id',
                                      'Stable document object ID used by references; it is distinct from the exported\n'
@@ -141,13 +157,14 @@ DATA: dict[str, Entry] = {'zipzi.meshes': {'children': ('zipzi.meshes.Constraint
                                      'Fixed operation discriminator supplied by this value type; not a constructor '
                                      'argument or a mutable object field.')],
                          'kind': 'type',
-                         'signature': '(id: str, name: str, expected_name: str | None = <factory>, kind: '
-                                      "Literal['rename'] = <factory>)"},
+                         'signature': '(id: str, name: str, *, expected_name: str | None = None)'},
  'zipzi.meshes.Rename.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.meshes.Rename.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.meshes.SetPositions': {'children': ('zipzi.meshes.SetPositions.__repr__', 'zipzi.meshes.SetPositions.summary'),
-                               'documentation': 'Immutable owned SetPositions value. Construction owns declared '
-                                                'collections; reading fields, repr and summary performs no IO.',
+                               'documentation': 'Replace selected vertex positions, pairing vertex_ids and positions '
+                                                'in\n'
+                                                'supplied order. Positions are absolute in the mesh authoring space,\n'
+                                                'not additive offsets.',
                                'example': 'docs/recipes.py',
                                'fields': [('id',
                                            'Stable document object ID used by references; it is distinct from the '
@@ -164,7 +181,8 @@ DATA: dict[str, Entry] = {'zipzi.meshes': {'children': ('zipzi.meshes.Constraint
                                            'Fixed operation discriminator supplied by this value type; not a '
                                            'constructor argument or a mutable object field.')],
                                'kind': 'type',
-                               'signature': '(id: str, vertex_ids: Sequence[int], positions: Sequence[Point]) -> None'},
+                               'signature': '(id: str, vertex_ids: Sequence[int], positions: Sequence[Point]) -> None',
+                               'type_refs': ('zipzi.meshes.Point',)},
  'zipzi.meshes.SetPositions.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.meshes.SetPositions.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.meshes.Summary': {'alias': 'zipzi.ObjectSummary'},

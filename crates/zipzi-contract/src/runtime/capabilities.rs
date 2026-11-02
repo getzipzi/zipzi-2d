@@ -81,6 +81,8 @@ pub enum Capabilities {
 }
 
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape)]
+/// Discovery metadata for a document object, without its full payload. Use its
+/// stable ID for a selected read; display names can be duplicated or changed.
 pub struct ObjectSummary {
     /// Persistent canonical UUID in the selected document.
     pub id: String,

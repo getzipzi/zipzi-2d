@@ -7,7 +7,7 @@ from .. import _plans as plans
 
 @dataclass(frozen=True, repr=False)
 class CreateImage(CompactValue):
-    'Immutable owned CreateImage value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.\nname: Human-readable display name; use the stable ID for identity because names can change.\nimage: Client-owned prepared-image handle; creating an operation value does not transfer\nownership.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nid: Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.\nname: Human-readable display name; use the stable ID for identity because names can change.\nimage: Client-owned prepared-image handle; creating an operation value does not transfer\nownership.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.resources"
     name: str
     image: resources.PreparedImage
@@ -16,7 +16,7 @@ class CreateImage(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class ReplaceImage(CompactValue):
-    'Immutable owned ReplaceImage value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nimage: Client-owned prepared-image handle; creating an operation value does not transfer\nownership.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nimage: Client-owned prepared-image handle; creating an operation value does not transfer\nownership.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.resources"
     id: str
     image: resources.PreparedImage
@@ -24,7 +24,7 @@ class ReplaceImage(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class RenameImage(CompactValue):
-    'Immutable owned RenameImage value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\nexpected_name: Required current display name; None disables this name precondition.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\nexpected_name: Required current display name; None disables this name precondition.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.resources"
     id: str
     name: str
@@ -33,7 +33,7 @@ class RenameImage(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class ApplyPlan(CompactValue):
-    'Immutable owned ApplyPlan value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nplan: Client-owned plan handle, valid only for its captured source and owning client.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nplan: Client-owned plan handle, valid only for its captured source and owning client.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi._generated.resource_ops"
     plan: plans.Plan
     kind: Literal["apply_plan"] = field(default="apply_plan", init=False)

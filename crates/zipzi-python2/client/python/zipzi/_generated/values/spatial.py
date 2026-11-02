@@ -13,7 +13,7 @@ from typing import TypeAlias
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObjectTargetMesh(CompactValue):
-    'Immutable owned ObjectTargetMesh value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Persistent authoring mesh UUID.'
+    'Select exactly one mesh.\n\nFields:\nvalue: Persistent authoring mesh UUID.'
     _variant: _ClassVar[str] = 'mesh'
     value: str
 
@@ -21,7 +21,7 @@ ObjectTargetMesh.__module__ = "zipzi.modeling.spatial"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObjectTargetPart(CompactValue):
-    'Immutable owned ObjectTargetPart value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Persistent Part UUID selecting descendant meshes.'
+    'Select all descendant meshes of a Part.\n\nFields:\nvalue: Persistent Part UUID selecting descendant meshes.'
     _variant: _ClassVar[str] = 'part'
     value: str
 
@@ -31,7 +31,7 @@ ObjectTarget: TypeAlias = ObjectTargetMesh | ObjectTargetPart
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SpatialQueryBounds(CompactValue):
-    'Immutable owned SpatialQueryBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntargets: Mesh/Part UUID selectors; an empty selection selects no meshes.\ninclude_hidden: Include disabled, hidden and zero-opacity geometry in the union.'
+    '\n\nFields:\ntargets: Mesh/Part UUID selectors; an empty selection selects no meshes.\ninclude_hidden: Include disabled, hidden and zero-opacity geometry in the union.'
     _variant: _ClassVar[str] = 'bounds'
     targets: tuple[ObjectTarget, ...]
     include_hidden: bool = field(default_factory=lambda: _boolean(False))
@@ -43,7 +43,7 @@ SpatialQueryBounds.__module__ = "zipzi.modeling.spatial"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SpatialQueryHits(CompactValue):
-    'Immutable owned SpatialQueryHits value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npoint: Finite XY point in evaluated Y-up model coordinates, not screen pixels.\ninclude_hidden: Include disabled, hidden and zero-opacity geometric candidates.\ndetails: Include every containing triangle, stable vertex IDs, barycentric weights and UV.\nmax_candidates: Maximum mesh candidates retained in descending draw order; total remains untruncated.'
+    '\n\nFields:\npoint: Finite XY point in evaluated Y-up model coordinates, not screen pixels.\ninclude_hidden: Include disabled, hidden and zero-opacity geometric candidates.\ndetails: Include every containing triangle, stable vertex IDs, barycentric weights and UV.\nmax_candidates: Maximum mesh candidates retained in descending draw order; total remains untruncated.'
     _variant: _ClassVar[str] = 'hits'
     point: tuple[float, float]
     include_hidden: bool = field(default_factory=lambda: _boolean(False))
@@ -59,7 +59,7 @@ SpatialQuery: TypeAlias = SpatialQueryBounds | SpatialQueryHits
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SpatialResultBounds(CompactValue):
-    'Immutable owned SpatialResultBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Bounds and resolved mesh IDs for the corresponding selector request.'
+    '\n\nFields:\nvalue: Bounds and resolved mesh IDs for the corresponding selector request.'
     _variant: _ClassVar[str] = 'bounds'
     value: ObjectBounds
 
@@ -67,7 +67,7 @@ SpatialResultBounds.__module__ = "zipzi.modeling.spatial"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SpatialResultHits(CompactValue):
-    'Immutable owned SpatialResultHits value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Geometric candidates in SDK order, including total and truncation metadata.'
+    '\n\nFields:\nvalue: Geometric candidates in SDK order, including total and truncation metadata.'
     _variant: _ClassVar[str] = 'hits'
     value: GeometryQuery
 
@@ -77,7 +77,7 @@ SpatialResult: TypeAlias = SpatialResultBounds | SpatialResultHits
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObjectBounds(CompactValue):
-    'Immutable owned ObjectBounds value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmesh_ids: Resolved mesh IDs in authoring order, including meshes filtered from the bounds.\nmodel_bounds: `[min_x, min_y, max_x, max_y]`, or `None` when no vertices contribute.\nEvaluated Y-up model units, independent of source canvas or export padding.\nGeometric bounds only: textures, masks and occlusion are not applied.\nempty_reason: Why `model_bounds` is absent: `no_descendant_mesh`, `filtered_out`, or\n`no_evaluated_positions`.'
+    'Bounds of evaluated target vertices in model coordinates.\n\nThese geometric bounds can extend outside the canvas and do not account for\ntextures, masks, or occlusion.\n\nFields:\nmesh_ids: Resolved mesh IDs in authoring order, including meshes filtered from the bounds.\nmodel_bounds: `[min_x, min_y, max_x, max_y]`, or `None` when no vertices contribute.\nEvaluated Y-up model units, independent of source canvas or export padding.\nGeometric bounds only: textures, masks and occlusion are not applied.\nempty_reason: Why `model_bounds` is absent: `no_descendant_mesh`, `filtered_out`, or\n`no_evaluated_positions`.'
     mesh_ids: tuple[str, ...]
     model_bounds: (tuple[float, float, float, float] | None) = None
     empty_reason: (str | None) = None
@@ -90,7 +90,7 @@ ObjectBounds.__module__ = "zipzi.modeling.spatial"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class GeometryQuery(CompactValue):
-    'Immutable owned GeometryQuery value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nhits: Candidates retained after applying `max_candidates`.\ntotal: Number of candidates before applying the limit.\ntruncated: Whether any candidates were omitted by the limit.'
+    'Mesh candidates for a model-space point, ordered by descending draw order.\n\nFields:\nhits: Candidates retained after applying `max_candidates`.\ntotal: Number of candidates before applying the limit.\ntruncated: Whether any candidates were omitted by the limit.'
     hits: tuple[GeometryHit, ...]
     total: int
     truncated: bool
@@ -102,7 +102,7 @@ GeometryQuery.__module__ = "zipzi.modeling.spatial"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class GeometryHit(CompactValue):
-    'Immutable owned GeometryHit value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmesh_id: Stable authoring mesh ID.\nname: Authoring mesh display name.\npart_path: Ancestor Part IDs, from root to leaf.\npart_names: Ancestor Part display names, parallel to `part_path`.\nenabled: Evaluated drawable enabled state.\nvisible: Evaluated drawable visibility state.\nopacity: Evaluated drawable opacity.\nrender_order: Evaluated draw order, used for stable descending candidate ordering.\nThis is not a visibility ranking across offscreen composition groups.\ntriangles: Containing triangles; populated only when `details` was requested.'
+    'One mesh whose evaluated geometry contains the query point.\n\nA hit is a geometric candidate, not proof that the mesh painted a visible\npixel. `part_path` and `part_names` run from root to leaf.\n\nFields:\nmesh_id: Stable authoring mesh ID.\nname: Authoring mesh display name.\npart_path: Ancestor Part IDs, from root to leaf.\npart_names: Ancestor Part display names, parallel to `part_path`.\nenabled: Evaluated drawable enabled state.\nvisible: Evaluated drawable visibility state.\nopacity: Evaluated drawable opacity.\nrender_order: Evaluated draw order, used for stable descending candidate ordering.\nThis is not a visibility ranking across offscreen composition groups.\ntriangles: Containing triangles; populated only when `details` was requested.'
     mesh_id: str
     name: str
     part_path: tuple[str, ...]
@@ -122,7 +122,7 @@ GeometryHit.__module__ = "zipzi.modeling.spatial"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class TriangleHit(CompactValue):
-    "Immutable owned TriangleHit value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntriangle_index: The triangle's zero-based position in the drawable's index buffer.\nvertex_indices: Offsets into the evaluated drawable's vertex arrays.\nvertex_ids: Stable authoring vertex IDs, when present.\nbarycentric: Interpolation weights corresponding to `vertex_indices`.\nuv: UV coordinate interpolated from the triangle's evaluated UVs."
+    "One evaluated triangle containing the query point.\n\nFields:\ntriangle_index: The triangle's zero-based position in the drawable's index buffer.\nvertex_indices: Offsets into the evaluated drawable's vertex arrays.\nvertex_ids: Stable authoring vertex IDs, when present.\nbarycentric: Interpolation weights corresponding to `vertex_indices`.\nuv: UV coordinate interpolated from the triangle's evaluated UVs."
     triangle_index: int
     vertex_indices: tuple[int, int, int]
     vertex_ids: (tuple[int, int, int] | None) = None
@@ -139,7 +139,7 @@ TriangleHit.__module__ = "zipzi.modeling.spatial"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SpatialSamples(CompactValue):
-    'Immutable owned SpatialSamples value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nversion: Exact SDK version of the immutable formal or candidate snapshot.\nrequested: Owned requested parameter maps, preserving pose order and duplicates.\nqueries: Owned geometric queries shared by every returned frame.\nframes: Effective poses and query results, aligned with requested parameter maps.'
+    '\n\nFields:\nversion: Exact SDK version of the immutable formal or candidate snapshot.\nrequested: Owned requested parameter maps, preserving pose order and duplicates.\nqueries: Owned geometric queries shared by every returned frame.\nframes: Effective poses and query results, aligned with requested parameter maps.'
     version: _Version
     requested: tuple[_Mapping[str, float], ...]
     queries: tuple[SpatialQuery, ...]
@@ -154,7 +154,7 @@ SpatialSamples.__module__ = "zipzi.modeling.spatial"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SpatialFrame(CompactValue):
-    'Immutable owned SpatialFrame value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nparameters: Effective evaluated parameter values keyed by document UUID, including defaults/clamps.\nresults: Query results in input order, including repeated queries and empty results.'
+    '\n\nFields:\nparameters: Effective evaluated parameter values keyed by document UUID, including defaults/clamps.\nresults: Query results in input order, including repeated queries and empty results.'
     parameters: _Mapping[str, float]
     results: tuple[SpatialResult, ...]
 

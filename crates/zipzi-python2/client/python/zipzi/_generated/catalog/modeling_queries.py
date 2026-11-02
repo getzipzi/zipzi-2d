@@ -20,17 +20,33 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
                             'kind': 'module',
                             'signature': ''},
  'zipzi.modeling.queries.CollectionQuery': {'children': (),
-                                            'documentation': 'Typed public API entry.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
                                             'fields': [],
-                                            'kind': 'value',
-                                            'signature': ''},
+                                            'kind': 'alias',
+                                            'signature': 'CollectionQueryScene | CollectionQueryOrganization | '
+                                                         'CollectionQueryReferences | CollectionQueryResources | '
+                                                         'CollectionQueryAttachments | CollectionQueryDocument | '
+                                                         'CollectionQueryMotion | CollectionQueryMotionGroups | '
+                                                         'CollectionQueryClips | CollectionQueryExpressions | '
+                                                         'CollectionQueryExpressionEntries | CollectionQueryPhysics | '
+                                                         'CollectionQueryPose',
+                                            'type_refs': ('zipzi.modeling.queries.CollectionQueryAttachments',
+                                                          'zipzi.modeling.queries.CollectionQueryClips',
+                                                          'zipzi.modeling.queries.CollectionQueryDocument',
+                                                          'zipzi.modeling.queries.CollectionQueryExpressionEntries',
+                                                          'zipzi.modeling.queries.CollectionQueryExpressions',
+                                                          'zipzi.modeling.queries.CollectionQueryMotion',
+                                                          'zipzi.modeling.queries.CollectionQueryMotionGroups',
+                                                          'zipzi.modeling.queries.CollectionQueryOrganization',
+                                                          'zipzi.modeling.queries.CollectionQueryPhysics',
+                                                          'zipzi.modeling.queries.CollectionQueryPose',
+                                                          'zipzi.modeling.queries.CollectionQueryReferences',
+                                                          'zipzi.modeling.queries.CollectionQueryResources',
+                                                          'zipzi.modeling.queries.CollectionQueryScene')},
  'zipzi.modeling.queries.CollectionQueryAttachments': {'children': ('zipzi.modeling.queries.CollectionQueryAttachments.__repr__',
                                                                     'zipzi.modeling.queries.CollectionQueryAttachments.summary'),
-                                                       'documentation': 'Immutable owned CollectionQueryAttachments '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [],
                                                        'kind': 'type',
@@ -39,9 +55,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryAttachments.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryClips': {'children': ('zipzi.modeling.queries.CollectionQueryClips.__repr__',
                                                               'zipzi.modeling.queries.CollectionQueryClips.summary'),
-                                                 'documentation': 'Immutable owned CollectionQueryClips value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [],
                                                  'kind': 'type',
@@ -50,24 +64,19 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryClips.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryDocument': {'children': ('zipzi.modeling.queries.CollectionQueryDocument.__repr__',
                                                                  'zipzi.modeling.queries.CollectionQueryDocument.summary'),
-                                                    'documentation': 'Immutable owned CollectionQueryDocument value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('field',
                                                                 'Explicit field discriminator; must match the '
                                                                 'addressed object/domain.')],
                                                     'kind': 'type',
-                                                    'signature': '(*, field: DocumentField)'},
+                                                    'signature': '(*, field: DocumentField)',
+                                                    'type_refs': ('zipzi.modeling.project.DocumentField',)},
  'zipzi.modeling.queries.CollectionQueryDocument.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.queries.CollectionQueryDocument.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryExpressionEntries': {'children': ('zipzi.modeling.queries.CollectionQueryExpressionEntries.__repr__',
                                                                           'zipzi.modeling.queries.CollectionQueryExpressionEntries.summary'),
-                                                             'documentation': 'Immutable owned '
-                                                                              'CollectionQueryExpressionEntries value. '
-                                                                              'Construction owns declared collections; '
-                                                                              'reading fields, repr and summary '
-                                                                              'performs no IO.',
+                                                             'documentation': '',
                                                              'example': 'docs/recipes.py',
                                                              'fields': [('expression_id',
                                                                          'Stable expression asset ID owning the entry '
@@ -78,10 +87,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryExpressionEntries.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryExpressions': {'children': ('zipzi.modeling.queries.CollectionQueryExpressions.__repr__',
                                                                     'zipzi.modeling.queries.CollectionQueryExpressions.summary'),
-                                                       'documentation': 'Immutable owned CollectionQueryExpressions '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [],
                                                        'kind': 'type',
@@ -90,23 +96,19 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryExpressions.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryMotion': {'children': ('zipzi.modeling.queries.CollectionQueryMotion.__repr__',
                                                                'zipzi.modeling.queries.CollectionQueryMotion.summary'),
-                                                  'documentation': 'Immutable owned CollectionQueryMotion value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('collection',
                                                               'Root or stable motion-group container for library '
                                                               'registrations.')],
                                                   'kind': 'type',
-                                                  'signature': '(*, collection: MotionContainer)'},
+                                                  'signature': '(*, collection: MotionContainer)',
+                                                  'type_refs': ('zipzi.modeling.motion.MotionContainer',)},
  'zipzi.modeling.queries.CollectionQueryMotion.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.queries.CollectionQueryMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryMotionGroups': {'children': ('zipzi.modeling.queries.CollectionQueryMotionGroups.__repr__',
                                                                      'zipzi.modeling.queries.CollectionQueryMotionGroups.summary'),
-                                                        'documentation': 'Immutable owned CollectionQueryMotionGroups '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [],
                                                         'kind': 'type',
@@ -115,62 +117,54 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryMotionGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryOrganization': {'children': ('zipzi.modeling.queries.CollectionQueryOrganization.__repr__',
                                                                      'zipzi.modeling.queries.CollectionQueryOrganization.summary'),
-                                                        'documentation': 'Immutable owned CollectionQueryOrganization '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('collection',
                                                                     'Explicit native collection selector; it does not '
                                                                     'imply loading every object payload.')],
                                                         'kind': 'type',
-                                                        'signature': '(*, collection: OrganizationCollection)'},
+                                                        'signature': '(*, collection: OrganizationCollection)',
+                                                        'type_refs': ('zipzi.modeling.scene.OrganizationCollection',)},
  'zipzi.modeling.queries.CollectionQueryOrganization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.queries.CollectionQueryOrganization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryPhysics': {'children': ('zipzi.modeling.queries.CollectionQueryPhysics.__repr__',
                                                                 'zipzi.modeling.queries.CollectionQueryPhysics.summary'),
-                                                   'documentation': 'Immutable owned CollectionQueryPhysics value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('collection',
                                                                'Native Physics group/input/output/node collection '
                                                                'selector.')],
                                                    'kind': 'type',
-                                                   'signature': '(*, collection: PhysicsCollection)'},
+                                                   'signature': '(*, collection: PhysicsCollection)',
+                                                   'type_refs': ('zipzi.modeling.physics.PhysicsCollection',)},
  'zipzi.modeling.queries.CollectionQueryPhysics.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.queries.CollectionQueryPhysics.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryPose': {'children': ('zipzi.modeling.queries.CollectionQueryPose.__repr__',
                                                              'zipzi.modeling.queries.CollectionQueryPose.summary'),
-                                                'documentation': 'Immutable owned CollectionQueryPose value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('collection',
                                                             'Native Pose group/entry/link collection selector.')],
                                                 'kind': 'type',
-                                                'signature': '(*, collection: PoseCollection)'},
+                                                'signature': '(*, collection: PoseCollection)',
+                                                'type_refs': ('zipzi.modeling.pose.PoseCollection',)},
  'zipzi.modeling.queries.CollectionQueryPose.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.queries.CollectionQueryPose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryReferences': {'children': ('zipzi.modeling.queries.CollectionQueryReferences.__repr__',
                                                                    'zipzi.modeling.queries.CollectionQueryReferences.summary'),
-                                                      'documentation': 'Immutable owned CollectionQueryReferences '
-                                                                       'value. Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('collection',
                                                                   'Explicit native collection selector; it does not '
                                                                   'imply loading every object payload.')],
                                                       'kind': 'type',
-                                                      'signature': '(*, collection: ReferenceCollection)'},
+                                                      'signature': '(*, collection: ReferenceCollection)',
+                                                      'type_refs': ('zipzi.modeling.addressing.ReferenceCollection',)},
  'zipzi.modeling.queries.CollectionQueryReferences.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.queries.CollectionQueryReferences.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryResources': {'children': ('zipzi.modeling.queries.CollectionQueryResources.__repr__',
                                                                   'zipzi.modeling.queries.CollectionQueryResources.summary'),
-                                                     'documentation': 'Immutable owned CollectionQueryResources value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [],
                                                      'kind': 'type',
@@ -179,22 +173,20 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryResources.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryScene': {'children': ('zipzi.modeling.queries.CollectionQueryScene.__repr__',
                                                               'zipzi.modeling.queries.CollectionQueryScene.summary'),
-                                                 'documentation': 'Immutable owned CollectionQueryScene value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('collection',
                                                              'Explicit native collection selector; it does not imply '
                                                              'loading every object payload.')],
                                                  'kind': 'type',
-                                                 'signature': '(*, collection: SceneCollection)'},
+                                                 'signature': '(*, collection: SceneCollection)',
+                                                 'type_refs': ('zipzi.modeling.scene.SceneCollection',)},
  'zipzi.modeling.queries.CollectionQueryScene.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.queries.CollectionQueryScene.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.ModelingQuery': {'children': ('zipzi.modeling.queries.ModelingQuery.__repr__',
                                                        'zipzi.modeling.queries.ModelingQuery.summary'),
-                                          'documentation': 'Immutable owned ModelingQuery value. Construction owns '
-                                                           'declared collections; reading fields, repr and summary '
-                                                           'performs no IO.',
+                                          'documentation': 'Select explicit record IDs; empty lists return collection '
+                                                           'identities only.',
                                           'example': 'docs/recipes.py',
                                           'fields': [('assets',
                                                       'Explicit IDs of image assets to read, in result-slot order; an '
@@ -294,9 +286,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.ModelingQuery.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.OwnedModelingRecords': {'children': ('zipzi.modeling.queries.OwnedModelingRecords.__repr__',
                                                               'zipzi.modeling.queries.OwnedModelingRecords.summary'),
-                                                 'documentation': 'Immutable owned OwnedModelingRecords value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': 'Owned selected query results. No mutation or query '
+                                                                  'behavior lives in this DTO.',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('document_id',
                                                              'Stable document UUID; not a Runtime Session handle.'),
@@ -429,6 +420,32 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
                                                               'tuple[MotionRegistration | None, ...], expressions: '
                                                               'tuple[ExpressionAsset | None, ...], physics: '
                                                               'PhysicsAsset | None = None, pose: PoseAsset | None = '
-                                                              'None)'},
+                                                              'None)',
+                                                 'type_refs': ('zipzi.modeling.bindings.BlendShapeBinding',
+                                                               'zipzi.modeling.bindings.BlendShapeConstraint',
+                                                               'zipzi.modeling.bindings.BlendShapeKeyTable',
+                                                               'zipzi.modeling.bindings.MeshBinding',
+                                                               'zipzi.modeling.bindings.SceneBinding',
+                                                               'zipzi.modeling.expression.ExpressionAsset',
+                                                               'zipzi.modeling.mesh.Mesh',
+                                                               'zipzi.modeling.motion.MotionClip',
+                                                               'zipzi.modeling.motion.MotionGroup',
+                                                               'zipzi.modeling.motion.MotionRegistration',
+                                                               'zipzi.modeling.parameters.Parameter',
+                                                               'zipzi.modeling.physics.PhysicsAsset',
+                                                               'zipzi.modeling.pose.PoseAsset',
+                                                               'zipzi.modeling.project.CdiParameterGroup',
+                                                               'zipzi.modeling.project.DisplayInfo',
+                                                               'zipzi.modeling.project.EditorState',
+                                                               'zipzi.modeling.project.Model3Settings',
+                                                               'zipzi.modeling.project.PackageAttachment',
+                                                               'zipzi.modeling.resources.ImageAsset',
+                                                               'zipzi.modeling.scene.DrawOrderGroup',
+                                                               'zipzi.modeling.scene.Glue',
+                                                               'zipzi.modeling.scene.HierarchyOrder',
+                                                               'zipzi.modeling.scene.ModelSetup',
+                                                               'zipzi.modeling.scene.Offscreen',
+                                                               'zipzi.modeling.scene.Part',
+                                                               'zipzi.modeling.scene.Transform')},
  'zipzi.modeling.queries.OwnedModelingRecords.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.queries.OwnedModelingRecords.summary': {'alias': 'zipzi.ApiDescription.summary'}}

@@ -132,7 +132,7 @@ class Sessions:
         return job
 
 class Session:
-    'One client binding to a resident document. Use runtime.sessions factories; aliases share detach/close state. id is pure cached identity, while info queries host state.'
+    'One client binding to a resident document. Use runtime.sessions factories; aliases share detach/close state. id is pure cached identity, while info queries host state. Session queries read committed content, including while an Edit is open. Use session.edit(label) to author candidate changes; commit publishes into shared history and saving is separate.'
     def __init__(self, runtime: Runtime, token: object):
         self._runtime, self._backend = runtime, runtime._backend
         self._id = self._backend.session_id(token)
@@ -277,7 +277,7 @@ class EditState(str, Enum):
 
 
 class Edit(RecoveryOwner):
-    'One mutable candidate owned by one sequential caller. Use session.edit. Successful writes advance sequence; publication is a separate Job and ordinary failures cannot be caught into a successful commit.'
+    'One mutable candidate owned by one sequential caller. Use session.edit. Successful writes advance sequence; publication is a separate Job and ordinary failures cannot be caught into a successful commit. Reads through this Edit include its pending writes. Normal context exit commits and waits; an exceptional exit cancels ordinary candidates. Recover unknown calls before cleanup.'
     def __init__(self, session: Session, label: str):
         super().__init__(session._backend)
         self._session = session

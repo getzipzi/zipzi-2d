@@ -2,6 +2,7 @@
   "_generated_by": "zipzi-python2/tools/generate.py",
   "definitions": {
     "zipzi_contract::spatial::GeometryHit": {
+      "doc": "One mesh whose evaluated geometry contains the query point.\n\nA hit is a geometric candidate, not proof that the mesh painted a visible\npixel. `part_path` and `part_names` run from root to leaf.",
       "fields": [
         {
           "doc": "Stable authoring mesh ID.",
@@ -101,6 +102,7 @@
       "tuple": false
     },
     "zipzi_contract::spatial::GeometryQuery": {
+      "doc": "Mesh candidates for a model-space point, ordered by descending draw order.",
       "fields": [
         {
           "doc": "Candidates retained after applying `max_candidates`.",
@@ -140,6 +142,7 @@
       "tuple": false
     },
     "zipzi_contract::spatial::ObjectBounds": {
+      "doc": "Bounds of evaluated target vertices in model coordinates.\n\nThese geometric bounds can extend outside the canvas and do not account for\ntextures, masks, or occlusion.",
       "fields": [
         {
           "doc": "Resolved mesh IDs in authoring order, including meshes filtered from the bounds.",
@@ -191,11 +194,13 @@
     },
     "zipzi_contract::spatial::ObjectTarget": {
       "content": "id",
+      "doc": "A mesh or Part selected by its stable authoring ID.\n\nA Part selects every descendant mesh, including meshes in nested Parts.",
       "kind": "serde_enum",
       "name": "zipzi_contract::spatial::ObjectTarget",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Select exactly one mesh.",
           "fields": [
             {
               "doc": "Persistent authoring mesh UUID.",
@@ -212,6 +217,7 @@
           "rust_name": "Mesh"
         },
         {
+          "doc": "Select all descendant meshes of a Part.",
           "fields": [
             {
               "doc": "Persistent Part UUID selecting descendant meshes.",
@@ -264,6 +270,7 @@
     },
     "zipzi_contract::spatial::SpatialQuery": {
       "content": null,
+      "doc": "CPU geometric queries; masks, textures and occlusion are not pixel-tested.",
       "kind": "serde_enum",
       "name": "zipzi_contract::spatial::SpatialQuery",
       "tag": "kind",
@@ -453,6 +460,7 @@
       "tuple": false
     },
     "zipzi_contract::spatial::TriangleHit": {
+      "doc": "One evaluated triangle containing the query point.",
       "fields": [
         {
           "doc": "The triangle's zero-based position in the drawable's index buffer.",

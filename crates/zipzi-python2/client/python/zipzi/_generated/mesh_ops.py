@@ -8,14 +8,14 @@ from .meshes import MeshSpec, Point, ConstraintKind
 
 @dataclass(frozen=True, repr=False)
 class Create(CompactValue):
-    'Immutable owned Create value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nspec: Creation specification; native admission supplies identities/defaults and\nrejects invalid input.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    'Create a mesh from its creation specification in the edit candidate.\n\nFields:\nspec: Creation specification; native admission supplies identities/defaults and\nrejects invalid input.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.meshes"
     spec: MeshSpec
     kind: Literal["create"] = field(default="create", init=False)
 
 @dataclass(frozen=True, repr=False)
 class Rename(CompactValue):
-    'Immutable owned Rename value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nname: Human-readable display name; use the stable ID for identity because names can\nchange.\nexpected_name: Required current display name; None disables this name precondition.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    'Change a mesh display name by stable ID. An expected_name precondition\nmust match the current name; None disables that precondition.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nname: Human-readable display name; use the stable ID for identity because names can\nchange.\nexpected_name: Required current display name; None disables this name precondition.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.meshes"
     id: str
     name: str
@@ -24,7 +24,7 @@ class Rename(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class SetPositions(CompactValue):
-    'Immutable owned SetPositions value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nvertex_ids: Stable vertex IDs selecting which positions to replace; values are paired with\npositions in the supplied order.\npositions: Replacement absolute mesh-local XY positions aligned with the supplied\nvertex_ids selection.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    'Replace selected vertex positions, pairing vertex_ids and positions in\nsupplied order. Positions are absolute in the mesh authoring space,\nnot additive offsets.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nvertex_ids: Stable vertex IDs selecting which positions to replace; values are paired with\npositions in the supplied order.\npositions: Replacement absolute mesh-local XY positions aligned with the supplied\nvertex_ids selection.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
     __module__ = "zipzi.meshes"
     id: str
     vertex_ids: tuple[int, ...]

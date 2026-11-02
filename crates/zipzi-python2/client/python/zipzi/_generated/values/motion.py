@@ -21,7 +21,7 @@ def read_PhysicsRigSnapshot(value: object) -> PhysicsRigSnapshot:
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditCreate(CompactValue):
-    'Immutable owned MotionEditCreate value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nregistration_id: Stable ID allocated for the new motion library registration.\ndestination: Explicit destination owner/container; order is controlled separately by before.'
+    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nregistration_id: Stable ID allocated for the new motion library registration.\ndestination: Explicit destination owner/container; order is controlled separately by before.'
     _variant: _ClassVar[str] = 'create'
     id: str
     name: str
@@ -32,7 +32,7 @@ MotionEditCreate.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditCreateGroup(CompactValue):
-    'Immutable owned MotionEditCreateGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.'
+    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.'
     _variant: _ClassVar[str] = 'create_group'
     id: str
     name: str
@@ -41,7 +41,7 @@ MotionEditCreateGroup.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditRenameGroup(CompactValue):
-    'Immutable owned MotionEditRenameGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.'
+    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.'
     _variant: _ClassVar[str] = 'rename_group'
     id: str
     name: str
@@ -50,7 +50,7 @@ MotionEditRenameGroup.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditReorderGroups(CompactValue):
-    'Immutable owned MotionEditReorderGroups value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
+    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
     _variant: _ClassVar[str] = 'reorder_groups'
     ids: tuple[str, ...]
 
@@ -61,7 +61,7 @@ MotionEditReorderGroups.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditRegister(CompactValue):
-    'Immutable owned MotionEditRegister value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nentry: Complete replacement motion registration; its owner is selected separately.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    '\n\nFields:\nentry: Complete replacement motion registration; its owner is selected separately.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'register'
     entry: MotionRegistration
     destination: MotionContainer
@@ -71,7 +71,7 @@ MotionEditRegister.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditPatchRegistration(CompactValue):
-    'Immutable owned MotionEditPatchRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nexpected: Exact current field values required by the optimistic edit; stale values reject it.\nentry: Complete replacement motion registration; its owner is selected separately.'
+    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nexpected: Exact current field values required by the optimistic edit; stale values reject it.\nentry: Complete replacement motion registration; its owner is selected separately.'
     _variant: _ClassVar[str] = 'patch_registration'
     id: str
     expected: MotionRegistration
@@ -81,7 +81,7 @@ MotionEditPatchRegistration.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditMoveRegistrations(CompactValue):
-    'Immutable owned MotionEditMoveRegistrations value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'move_registrations'
     ids: tuple[str, ...]
     destination: MotionContainer
@@ -94,7 +94,7 @@ MotionEditMoveRegistrations.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditDuplicateRegistrations(CompactValue):
-    'Immutable owned MotionEditDuplicateRegistrations value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'duplicate_registrations'
     ids: tuple[str, ...]
     destination: MotionContainer
@@ -107,7 +107,7 @@ MotionEditDuplicateRegistrations.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditDeleteRegistrations(CompactValue):
-    'Immutable owned MotionEditDeleteRegistrations value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
+    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
     _variant: _ClassVar[str] = 'delete_registrations'
     ids: tuple[str, ...]
 
@@ -118,7 +118,7 @@ MotionEditDeleteRegistrations.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditDissolveGroup(CompactValue):
-    'Immutable owned MotionEditDissolveGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
+    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
     _variant: _ClassVar[str] = 'dissolve_group'
     id: str
 
@@ -126,7 +126,7 @@ MotionEditDissolveGroup.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditDeleteGroup(CompactValue):
-    'Immutable owned MotionEditDeleteGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
+    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
     _variant: _ClassVar[str] = 'delete_group'
     id: str
 
@@ -134,7 +134,7 @@ MotionEditDeleteGroup.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditDuplicateGroup(CompactValue):
-    'Immutable owned MotionEditDuplicateGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsource: Typed parameter reference or stable source object ID, as declared by the enclosing operation.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.'
+    '\n\nFields:\nsource: Typed parameter reference or stable source object ID, as declared by the enclosing operation.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.'
     _variant: _ClassVar[str] = 'duplicate_group'
     source: str
     id: str
@@ -144,7 +144,7 @@ MotionEditDuplicateGroup.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditDuplicateClip(CompactValue):
-    'Immutable owned MotionEditDuplicateClip value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nsource: Typed parameter reference or stable source object ID, as declared by the enclosing operation.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nregistration_id: Stable ID allocated for the new motion library registration.\ndestination: Explicit destination owner/container; order is controlled separately by before.'
+    '\n\nFields:\nsource: Typed parameter reference or stable source object ID, as declared by the enclosing operation.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nregistration_id: Stable ID allocated for the new motion library registration.\ndestination: Explicit destination owner/container; order is controlled separately by before.'
     _variant: _ClassVar[str] = 'duplicate_clip'
     source: str
     id: str
@@ -156,7 +156,7 @@ MotionEditDuplicateClip.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditDeleteClip(CompactValue):
-    'Immutable owned MotionEditDeleteClip value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
+    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
     _variant: _ClassVar[str] = 'delete_clip'
     id: str
 
@@ -164,7 +164,7 @@ MotionEditDeleteClip.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditReorderTracks(CompactValue):
-    'Immutable owned MotionEditReorderTracks value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nclip: Stable ID of the motion clip owning the affected track or event.\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
+    '\n\nFields:\nclip: Stable ID of the motion clip owning the affected track or event.\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
     _variant: _ClassVar[str] = 'reorder_tracks'
     clip: str
     ids: tuple[str, ...]
@@ -176,7 +176,7 @@ MotionEditReorderTracks.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditCreateTrack(CompactValue):
-    'Immutable owned MotionEditCreateTrack value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nclip: Stable ID of the motion clip owning the affected track or event.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nkey_id: Stable identity allocated for the initial key of a new track.\ntime: Absolute time in seconds within the owning motion clip.'
+    '\n\nFields:\nclip: Stable ID of the motion clip owning the affected track or event.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nkey_id: Stable identity allocated for the initial key of a new track.\ntime: Absolute time in seconds within the owning motion clip.'
     _variant: _ClassVar[str] = 'create_track'
     clip: str
     id: str
@@ -187,7 +187,7 @@ MotionEditCreateTrack.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditSetTrackTarget(CompactValue):
-    'Immutable owned MotionEditSetTrackTarget value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.'
+    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.'
     _variant: _ClassVar[str] = 'set_track_target'
     id: str
     target: MotionTrackTarget
@@ -196,7 +196,7 @@ MotionEditSetTrackTarget.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditMoveTracks(CompactValue):
-    'Immutable owned MotionEditMoveTracks value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.\ncopy: True allocates copied identities; false transfers the existing identities.'
+    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.\ncopy: True allocates copied identities; false transfers the existing identities.'
     _variant: _ClassVar[str] = 'move_tracks'
     ids: tuple[str, ...]
     destination: str
@@ -210,7 +210,7 @@ MotionEditMoveTracks.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditDeleteTracks(CompactValue):
-    'Immutable owned MotionEditDeleteTracks value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
+    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
     _variant: _ClassVar[str] = 'delete_tracks'
     ids: tuple[str, ...]
 
@@ -221,7 +221,7 @@ MotionEditDeleteTracks.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditTransferKeys(CompactValue):
-    'Immutable owned MotionEditTransferKeys value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination_track: Stable receiving track ID for transferred keys.\ntime_offset: Offset in seconds added when moving or copying keys/events.\ncopy: True allocates copied identities; false transfers the existing identities.'
+    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination_track: Stable receiving track ID for transferred keys.\ntime_offset: Offset in seconds added when moving or copying keys/events.\ncopy: True allocates copied identities; false transfers the existing identities.'
     _variant: _ClassVar[str] = 'transfer_keys'
     ids: tuple[str, ...]
     destination_track: str
@@ -235,7 +235,7 @@ MotionEditTransferKeys.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditSetEvent(CompactValue):
-    'Immutable owned MotionEditSetEvent value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nclip: Stable ID of the motion clip owning the affected track or event.\nevent: Owned motion event with a stable ID, time in seconds and string payload.'
+    '\n\nFields:\nclip: Stable ID of the motion clip owning the affected track or event.\nevent: Owned motion event with a stable ID, time in seconds and string payload.'
     _variant: _ClassVar[str] = 'set_event'
     clip: str
     event: MotionEvent
@@ -244,7 +244,7 @@ MotionEditSetEvent.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditDeleteEvents(CompactValue):
-    'Immutable owned MotionEditDeleteEvents value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
+    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
     _variant: _ClassVar[str] = 'delete_events'
     ids: tuple[str, ...]
 
@@ -255,7 +255,7 @@ MotionEditDeleteEvents.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditMoveEvents(CompactValue):
-    'Immutable owned MotionEditMoveEvents value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\ntime_offset: Offset in seconds added when moving or copying keys/events.\ncopy: True allocates copied identities; false transfers the existing identities.'
+    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\ntime_offset: Offset in seconds added when moving or copying keys/events.\ncopy: True allocates copied identities; false transfers the existing identities.'
     _variant: _ClassVar[str] = 'move_events'
     ids: tuple[str, ...]
     destination: str
@@ -271,14 +271,14 @@ MotionEdit: TypeAlias = MotionEditCreate | MotionEditCreateGroup | MotionEditRen
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionContainerRoot(CompactValue):
-    'Immutable owned MotionContainerRoot value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    ''
     _variant: _ClassVar[str] = 'root'
 
 MotionContainerRoot.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionContainerGroup(CompactValue):
-    'Immutable owned MotionContainerGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nvalue: Destination motion-group identity; Root selects ungrouped registrations.'
+    '\n\nFields:\nvalue: Destination motion-group identity; Root selects ungrouped registrations.'
     _variant: _ClassVar[str] = 'group'
     value: str
 
@@ -288,7 +288,7 @@ MotionContainer: TypeAlias = MotionContainerRoot | MotionContainerGroup
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionRegistration(CompactValue):
-    'Immutable owned MotionRegistration value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nclip_id: Stable motion clip ID referenced by this registration.\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.\nfade_out: Optional fade-out duration in seconds; None retains the format/runtime default.\nsound: Optional attachment reference for the registered motion sound.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    'model3 registration is separate from a clip: one file may appear in multiple groups.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nclip_id: Stable motion clip ID referenced by this registration.\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.\nfade_out: Optional fade-out duration in seconds; None retains the format/runtime default.\nsound: Optional attachment reference for the registered motion sound.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
     id: str
     clip_id: str
     fade_in: (float | None) = None
@@ -303,14 +303,14 @@ MotionRegistration.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionTrackTargetUnspecified(CompactValue):
-    'Immutable owned MotionTrackTargetUnspecified value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    ''
     _variant: _ClassVar[str] = 'unspecified'
 
 MotionTrackTargetUnspecified.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionTrackTargetModel(CompactValue):
-    'Immutable owned MotionTrackTargetModel value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nruntime_id: Imported/exported runtime label, distinct from the document object UUID.'
+    '\n\nFields:\nruntime_id: Imported/exported runtime label, distinct from the document object UUID.'
     _variant: _ClassVar[str] = 'model'
     runtime_id: str
 
@@ -318,7 +318,7 @@ MotionTrackTargetModel.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionTrackTargetParameter(CompactValue):
-    'Immutable owned MotionTrackTargetParameter value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nparameter_id: Stable document parameter UUID; evaluation uses its declared range and default.'
+    '\n\nFields:\nparameter_id: Stable document parameter UUID; evaluation uses its declared range and default.'
     _variant: _ClassVar[str] = 'parameter'
     parameter_id: str
 
@@ -326,7 +326,7 @@ MotionTrackTargetParameter.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionTrackTargetPartOpacity(CompactValue):
-    'Immutable owned MotionTrackTargetPartOpacity value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\npart_id: Stable document Part UUID for this opacity or visibility reference.'
+    '\n\nFields:\npart_id: Stable document Part UUID for this opacity or visibility reference.'
     _variant: _ClassVar[str] = 'part_opacity'
     part_id: str
 
@@ -334,7 +334,7 @@ MotionTrackTargetPartOpacity.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionTrackTargetUnresolved(CompactValue):
-    'Immutable owned MotionTrackTargetUnresolved value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncategory: Imported Physics target category retained by this wire metadata record.\nruntime_id: Imported/exported runtime label, distinct from the document object UUID.'
+    '\n\nFields:\ncategory: Imported Physics target category retained by this wire metadata record.\nruntime_id: Imported/exported runtime label, distinct from the document object UUID.'
     _variant: _ClassVar[str] = 'unresolved'
     category: str
     runtime_id: str
@@ -345,7 +345,7 @@ MotionTrackTarget: TypeAlias = MotionTrackTargetUnspecified | MotionTrackTargetM
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEvent(CompactValue):
-    'Immutable owned MotionEvent value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntime: Absolute time in seconds within the owning motion clip.\nvalue: Channel value or replacement payload in the domain declared by this field type.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntime: Absolute time in seconds within the owning motion clip.\nvalue: Channel value or replacement payload in the domain declared by this field type.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
     id: str
     time: float
     value: str
@@ -358,7 +358,7 @@ MotionEvent.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionClip(CompactValue):
-    'Immutable owned MotionClip value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nduration: Motion playback duration in seconds; authoring keys may retain source-range provenance.\nfps: Nominal motion frames per second or explicit Physics fixed-step frequency, as declared by the owner.\nlooping: Whether motion playback repeats after its duration.\nrestricted_beziers: Whether motion Bezier export follows the restricted control-time convention.\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.\nfade_out: Optional fade-out duration in seconds; None retains the format/runtime default.\ntrack_order: Display order only; tracks retain their execution order. Empty uses execution order.\ntracks: Ordered persistent motion tracks; playback state is owned separately.\nevents: Ordered owned events in the motion clip; reading them does not advance playback.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.\nmeta_extensions: Owned opaque motion metadata fields preserved for format roundtrips.\nopaque_source_ids: Original runtime-ID namespace used to validate preservation of opaque imported fields.\nopaque_source_content_hash: Original imported-content hash used to detect unsupported changes to opaque fields.'
+    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nduration: Motion playback duration in seconds; authoring keys may retain source-range provenance.\nfps: Nominal motion frames per second or explicit Physics fixed-step frequency, as declared by the owner.\nlooping: Whether motion playback repeats after its duration.\nrestricted_beziers: Whether motion Bezier export follows the restricted control-time convention.\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.\nfade_out: Optional fade-out duration in seconds; None retains the format/runtime default.\ntrack_order: Display order only; tracks retain their execution order. Empty uses execution order.\ntracks: Ordered persistent motion tracks; playback state is owned separately.\nevents: Ordered owned events in the motion clip; reading them does not advance playback.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.\nmeta_extensions: Owned opaque motion metadata fields preserved for format roundtrips.\nopaque_source_ids: Original runtime-ID namespace used to validate preservation of opaque imported fields.\nopaque_source_content_hash: Original imported-content hash used to detect unsupported changes to opaque fields.'
     id: str
     name: str
     duration: float
@@ -387,7 +387,7 @@ MotionClip.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionTrack(CompactValue):
-    'Immutable owned MotionTrack value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.\ninitial: First persistent key of the track; following segment endpoints carry their own key IDs.\nsegments: Ordered interpolation segments after the initial key, with stable endpoint identities.\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.\nfade_out: Optional fade-out duration in seconds; None retains the format/runtime default.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.\ninitial: First persistent key of the track; following segment endpoints carry their own key IDs.\nsegments: Ordered interpolation segments after the initial key, with stable endpoint identities.\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.\nfade_out: Optional fade-out duration in seconds; None retains the format/runtime default.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
     id: str
     target: MotionTrackTarget
     initial: MotionKey
@@ -404,7 +404,7 @@ MotionTrack.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionKey(CompactValue):
-    'Immutable owned MotionKey value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntime: Absolute time in seconds within the owning motion clip.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    'Persistent identity belongs to keys, never to Bezier control points.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntime: Absolute time in seconds within the owning motion clip.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
     id: str
     time: float
     value: float
@@ -413,7 +413,7 @@ MotionKey.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionSegmentLinear(CompactValue):
-    'Immutable owned MotionSegmentLinear value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nend: Segment endpoint key or source-range end time, as declared by the enclosing type.'
+    '\n\nFields:\nend: Segment endpoint key or source-range end time, as declared by the enclosing type.'
     _variant: _ClassVar[str] = 'linear'
     end: MotionKey
 
@@ -421,7 +421,7 @@ MotionSegmentLinear.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionSegmentBezier(CompactValue):
-    'Immutable owned MotionSegmentBezier value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ncontrol1: First Bezier control point in seconds/channel-value coordinates; it has no key identity.\ncontrol2: Second Bezier control point in seconds/channel-value coordinates; it has no key identity.\nend: Segment endpoint key or source-range end time, as declared by the enclosing type.'
+    '\n\nFields:\ncontrol1: First Bezier control point in seconds/channel-value coordinates; it has no key identity.\ncontrol2: Second Bezier control point in seconds/channel-value coordinates; it has no key identity.\nend: Segment endpoint key or source-range end time, as declared by the enclosing type.'
     _variant: _ClassVar[str] = 'bezier'
     control1: MotionPoint
     control2: MotionPoint
@@ -431,7 +431,7 @@ MotionSegmentBezier.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionSegmentStepped(CompactValue):
-    'Immutable owned MotionSegmentStepped value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nend: Segment endpoint key or source-range end time, as declared by the enclosing type.'
+    '\n\nFields:\nend: Segment endpoint key or source-range end time, as declared by the enclosing type.'
     _variant: _ClassVar[str] = 'stepped'
     end: MotionKey
 
@@ -439,7 +439,7 @@ MotionSegmentStepped.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionSegmentInverseStepped(CompactValue):
-    'Immutable owned MotionSegmentInverseStepped value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nend: Segment endpoint key or source-range end time, as declared by the enclosing type.'
+    '\n\nFields:\nend: Segment endpoint key or source-range end time, as declared by the enclosing type.'
     _variant: _ClassVar[str] = 'inverse_stepped'
     end: MotionKey
 
@@ -449,7 +449,7 @@ MotionSegment: TypeAlias = MotionSegmentLinear | MotionSegmentBezier | MotionSeg
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionPoint(CompactValue):
-    'Immutable owned MotionPoint value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntime: Absolute time in seconds within the owning motion clip.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    '\n\nFields:\ntime: Absolute time in seconds within the owning motion clip.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
     time: float
     value: float
 
@@ -457,7 +457,7 @@ MotionPoint.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionGroup(CompactValue):
-    'Immutable owned MotionGroup value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nentries: Ordered owned registrations or expression/Pose entries, with stable identities.'
+    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nentries: Ordered owned registrations or expression/Pose entries, with stable identities.'
     id: str
     name: str
     entries: tuple[MotionRegistration, ...]
@@ -469,7 +469,7 @@ MotionGroup.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionSnapshot(CompactValue):
-    'Immutable owned MotionSnapshot value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nphysics: Optional inspector observations. Collected explicitly by a host after\nevaluation. Advance/seek results leave this empty; populate it with\n`snapshot.physics = preview.physics_snapshot();` when displaying an inspector.\nInternal observations are retained in replay checkpoints for consistent seeks.\ntime: Absolute preview time in seconds.\nparameters: Final parameter values keyed by parameter UUID.\npart_opacity_channels: PartOpacity curves write virtual controls when no real parameter has the Part runtime ID.\npart_opacities: Pose-produced opacities keyed by Part UUID.\nmodel_opacity: Model Opacity channel, separate from the drawable geometry opacity.\nactive_motions: Active clip UUIDs in queue order; repeated activations may repeat a UUID.\nactive_expressions: Active expression UUIDs in queue order, including fading-out entries.\nfired_events: Events crossed by the last update, not accumulated across all seek steps.\ncoverage: Model EyeBlink/LipSync mappings and unsupported Model IDs are reported.\nmotion_positions: SDK sampling coordinates, including the duration + 1 / FPS loop tail.'
+    'Combined values after Motion, Expression, Physics and Pose evaluation.\n\nFields:\nphysics: Optional inspector observations. Collected explicitly by a host after\nevaluation. Advance/seek results leave this empty; populate it with\n`snapshot.physics = preview.physics_snapshot();` when displaying an inspector.\nInternal observations are retained in replay checkpoints for consistent seeks.\ntime: Absolute preview time in seconds.\nparameters: Final parameter values keyed by parameter UUID.\npart_opacity_channels: PartOpacity curves write virtual controls when no real parameter has the Part runtime ID.\npart_opacities: Pose-produced opacities keyed by Part UUID.\nmodel_opacity: Model Opacity channel, separate from the drawable geometry opacity.\nactive_motions: Active clip UUIDs in queue order; repeated activations may repeat a UUID.\nactive_expressions: Active expression UUIDs in queue order, including fading-out entries.\nfired_events: Events crossed by the last update, not accumulated across all seek steps.\ncoverage: Model EyeBlink/LipSync mappings and unsupported Model IDs are reported.\nmotion_positions: SDK sampling coordinates, including the duration + 1 / FPS loop tail.'
     physics: tuple[PhysicsRigSnapshot, ...] = field(default_factory=lambda: tuple(read_PhysicsRigSnapshot(v0) for v0 in sequence([])))
     time: float
     parameters: _Mapping[str, float]
@@ -497,7 +497,7 @@ MotionSnapshot.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEventFired(CompactValue):
-    'Immutable owned MotionEventFired value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmotion_id: Source clip UUID.\nevent_id: Source event UUID.\nvalue: User-authored event text.'
+    'A motion event crossed during the last update, returned without side effects.\n\nFields:\nmotion_id: Source clip UUID.\nevent_id: Source event UUID.\nvalue: User-authored event text.'
     motion_id: str
     event_id: str
     value: str
@@ -506,7 +506,7 @@ MotionEventFired.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionPlaybackPosition(CompactValue):
-    'Immutable owned MotionPlaybackPosition value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\nmotion_id: Source motion clip UUID for this SDK playback position.\nlocal_time: SDK local sample time in seconds, including the loop tail.\nperiod: SDK loop period in seconds, including the FPS tail.\nloop_index: Canonical SDK loop index; exact seams belong to the preceding loop.\ncycle_origin: Absolute preview-clock time at the start of this cycle.'
+    '\n\nFields:\nmotion_id: Source motion clip UUID for this SDK playback position.\nlocal_time: SDK local sample time in seconds, including the loop tail.\nperiod: SDK loop period in seconds, including the FPS tail.\nloop_index: Canonical SDK loop index; exact seams belong to the preceding loop.\ncycle_origin: Absolute preview-clock time at the start of this cycle.'
     motion_id: str
     local_time: float
     period: float

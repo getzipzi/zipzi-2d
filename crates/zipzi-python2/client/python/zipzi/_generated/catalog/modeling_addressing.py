@@ -92,10 +92,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                'signature': ''},
  'zipzi.modeling.addressing.AttachmentCapabilities': {'children': ('zipzi.modeling.addressing.AttachmentCapabilities.__repr__',
                                                                    'zipzi.modeling.addressing.AttachmentCapabilities.summary'),
-                                                      'documentation': 'Immutable owned AttachmentCapabilities value. '
-                                                                       'Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('inspect',
                                                                   'Current capability to read the current typed '
@@ -121,14 +118,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                       'signature': '(*, inspect: CapabilityState, patch: '
                                                                    'CapabilityState, duplicate: CapabilityState, '
                                                                    'delete: CapabilityState, load_content: '
-                                                                   'CapabilityState)'},
+                                                                   'CapabilityState)',
+                                                      'type_refs': ('zipzi.modeling.addressing.CapabilityState',)},
  'zipzi.modeling.addressing.AttachmentCapabilities.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.AttachmentCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.BindingCapabilities': {'children': ('zipzi.modeling.addressing.BindingCapabilities.__repr__',
                                                                 'zipzi.modeling.addressing.BindingCapabilities.summary'),
-                                                   'documentation': 'Immutable owned BindingCapabilities value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('inspect',
                                                                'Current capability to read the current typed record; '
@@ -162,217 +158,229 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                    'signature': '(*, inspect: CapabilityState, patch: CapabilityState, '
                                                                 'create_child: CapabilityState, reorder: '
                                                                 'CapabilityState, delete: CapabilityState, repair: '
-                                                                'CapabilityState, preview: CapabilityState)'},
+                                                                'CapabilityState, preview: CapabilityState)',
+                                                   'type_refs': ('zipzi.modeling.addressing.CapabilityState',)},
  'zipzi.modeling.addressing.BindingCapabilities.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.BindingCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.Capabilities': {'children': (),
-                                            'documentation': 'Typed public API entry.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
                                             'fields': [],
-                                            'kind': 'value',
-                                            'signature': ''},
+                                            'kind': 'alias',
+                                            'signature': 'CapabilitiesScene | CapabilitiesOrganization | '
+                                                         'CapabilitiesBinding | CapabilitiesContent | '
+                                                         'CapabilitiesReferences | CapabilitiesResource | '
+                                                         'CapabilitiesAttachment | CapabilitiesCollection | '
+                                                         'CapabilitiesDocument | CapabilitiesMotion | '
+                                                         'CapabilitiesExpression | CapabilitiesPhysics | '
+                                                         'CapabilitiesPose',
+                                            'type_refs': ('zipzi.modeling.addressing.CapabilitiesAttachment',
+                                                          'zipzi.modeling.addressing.CapabilitiesBinding',
+                                                          'zipzi.modeling.addressing.CapabilitiesCollection',
+                                                          'zipzi.modeling.addressing.CapabilitiesContent',
+                                                          'zipzi.modeling.addressing.CapabilitiesDocument',
+                                                          'zipzi.modeling.addressing.CapabilitiesExpression',
+                                                          'zipzi.modeling.addressing.CapabilitiesMotion',
+                                                          'zipzi.modeling.addressing.CapabilitiesOrganization',
+                                                          'zipzi.modeling.addressing.CapabilitiesPhysics',
+                                                          'zipzi.modeling.addressing.CapabilitiesPose',
+                                                          'zipzi.modeling.addressing.CapabilitiesReferences',
+                                                          'zipzi.modeling.addressing.CapabilitiesResource',
+                                                          'zipzi.modeling.addressing.CapabilitiesScene')},
  'zipzi.modeling.addressing.CapabilitiesAttachment': {'children': ('zipzi.modeling.addressing.CapabilitiesAttachment.__repr__',
                                                                    'zipzi.modeling.addressing.CapabilitiesAttachment.summary'),
-                                                      'documentation': 'Immutable owned CapabilitiesAttachment value. '
-                                                                       'Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('value',
                                                                   'Current package attachments and their references '
                                                                   'capability states and reasons; do\n'
                                                                   'not infer support from method presence.')],
                                                       'kind': 'type',
-                                                      'signature': '(*, value: AttachmentCapabilities)'},
+                                                      'signature': '(*, value: AttachmentCapabilities)',
+                                                      'type_refs': ('zipzi.modeling.addressing.AttachmentCapabilities',)},
  'zipzi.modeling.addressing.CapabilitiesAttachment.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesAttachment.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesBinding': {'children': ('zipzi.modeling.addressing.CapabilitiesBinding.__repr__',
                                                                 'zipzi.modeling.addressing.CapabilitiesBinding.summary'),
-                                                   'documentation': 'Immutable owned CapabilitiesBinding value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Current parameter bindings and grid conversions '
                                                                'capability states and reasons; do\n'
                                                                'not infer support from method presence.')],
                                                    'kind': 'type',
-                                                   'signature': '(*, value: BindingCapabilities)'},
+                                                   'signature': '(*, value: BindingCapabilities)',
+                                                   'type_refs': ('zipzi.modeling.addressing.BindingCapabilities',)},
  'zipzi.modeling.addressing.CapabilitiesBinding.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesCollection': {'children': ('zipzi.modeling.addressing.CapabilitiesCollection.__repr__',
                                                                    'zipzi.modeling.addressing.CapabilitiesCollection.summary'),
-                                                      'documentation': 'Immutable owned CapabilitiesCollection value. '
-                                                                       'Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('value',
                                                                   'Current collection capability states and reasons; '
                                                                   'do not infer support from method\n'
                                                                   'presence.')],
                                                       'kind': 'type',
-                                                      'signature': '(*, value: CollectionCapabilities)'},
+                                                      'signature': '(*, value: CollectionCapabilities)',
+                                                      'type_refs': ('zipzi.modeling.addressing.CollectionCapabilities',)},
  'zipzi.modeling.addressing.CapabilitiesCollection.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesCollection.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesContent': {'children': ('zipzi.modeling.addressing.CapabilitiesContent.__repr__',
                                                                 'zipzi.modeling.addressing.CapabilitiesContent.summary'),
-                                                   'documentation': 'Immutable owned CapabilitiesContent value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Current geometry and topology content capability '
                                                                'states and reasons; do not infer\n'
                                                                'support from method presence.')],
                                                    'kind': 'type',
-                                                   'signature': '(*, value: SceneContentCapabilities)'},
+                                                   'signature': '(*, value: SceneContentCapabilities)',
+                                                   'type_refs': ('zipzi.modeling.addressing.SceneContentCapabilities',)},
  'zipzi.modeling.addressing.CapabilitiesContent.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesContent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesDocument': {'children': ('zipzi.modeling.addressing.CapabilitiesDocument.__repr__',
                                                                  'zipzi.modeling.addressing.CapabilitiesDocument.summary'),
-                                                    'documentation': 'Immutable owned CapabilitiesDocument value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('value',
                                                                 'Current document configuration and metadata repair '
                                                                 'capability states and reasons; do\n'
                                                                 'not infer support from method presence.')],
                                                     'kind': 'type',
-                                                    'signature': '(*, value: CapabilityState)'},
+                                                    'signature': '(*, value: CapabilityState)',
+                                                    'type_refs': ('zipzi.modeling.addressing.CapabilityState',)},
  'zipzi.modeling.addressing.CapabilitiesDocument.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesDocument.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesExpression': {'children': ('zipzi.modeling.addressing.CapabilitiesExpression.__repr__',
                                                                    'zipzi.modeling.addressing.CapabilitiesExpression.summary'),
-                                                      'documentation': 'Immutable owned CapabilitiesExpression value. '
-                                                                       'Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('value',
                                                                   'Current native expression eligibility; host Preview '
                                                                   'support is advertised separately.')],
                                                       'kind': 'type',
-                                                      'signature': '(*, value: ExpressionCapabilities)'},
+                                                      'signature': '(*, value: ExpressionCapabilities)',
+                                                      'type_refs': ('zipzi.modeling.addressing.ExpressionCapabilities',)},
  'zipzi.modeling.addressing.CapabilitiesExpression.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesExpression.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesMotion': {'children': ('zipzi.modeling.addressing.CapabilitiesMotion.__repr__',
                                                                'zipzi.modeling.addressing.CapabilitiesMotion.summary'),
-                                                  'documentation': 'Immutable owned CapabilitiesMotion value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('value',
                                                               'Current native motion eligibility; host Preview support '
                                                               'is advertised separately.')],
                                                   'kind': 'type',
-                                                  'signature': '(*, value: MotionCapabilities)'},
+                                                  'signature': '(*, value: MotionCapabilities)',
+                                                  'type_refs': ('zipzi.modeling.addressing.MotionCapabilities',)},
  'zipzi.modeling.addressing.CapabilitiesMotion.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesOrganization': {'children': ('zipzi.modeling.addressing.CapabilitiesOrganization.__repr__',
                                                                      'zipzi.modeling.addressing.CapabilitiesOrganization.summary'),
-                                                        'documentation': 'Immutable owned CapabilitiesOrganization '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('value',
                                                                     'Current organization and parameter groups '
                                                                     'capability states and reasons; do not\n'
                                                                     'infer support from method presence.')],
                                                         'kind': 'type',
-                                                        'signature': '(*, value: OrganizationCapabilities)'},
+                                                        'signature': '(*, value: OrganizationCapabilities)',
+                                                        'type_refs': ('zipzi.modeling.addressing.OrganizationCapabilities',)},
  'zipzi.modeling.addressing.CapabilitiesOrganization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesOrganization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesPhysics': {'children': ('zipzi.modeling.addressing.CapabilitiesPhysics.__repr__',
                                                                 'zipzi.modeling.addressing.CapabilitiesPhysics.summary'),
-                                                   'documentation': 'Immutable owned CapabilitiesPhysics value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Current native physics eligibility; host Preview '
                                                                'support is advertised separately.')],
                                                    'kind': 'type',
-                                                   'signature': '(*, value: PhysicsCapabilities)'},
+                                                   'signature': '(*, value: PhysicsCapabilities)',
+                                                   'type_refs': ('zipzi.modeling.addressing.PhysicsCapabilities',)},
  'zipzi.modeling.addressing.CapabilitiesPhysics.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesPhysics.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesPose': {'children': ('zipzi.modeling.addressing.CapabilitiesPose.__repr__',
                                                              'zipzi.modeling.addressing.CapabilitiesPose.summary'),
-                                                'documentation': 'Immutable owned CapabilitiesPose value. Construction '
-                                                                 'owns declared collections; reading fields, repr and '
-                                                                 'summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('value',
                                                             'Current native pose eligibility; host Preview support is '
                                                             'advertised separately.')],
                                                 'kind': 'type',
-                                                'signature': '(*, value: PoseCapabilities)'},
+                                                'signature': '(*, value: PoseCapabilities)',
+                                                'type_refs': ('zipzi.modeling.addressing.PoseCapabilities',)},
  'zipzi.modeling.addressing.CapabilitiesPose.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesPose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesReferences': {'children': ('zipzi.modeling.addressing.CapabilitiesReferences.__repr__',
                                                                    'zipzi.modeling.addressing.CapabilitiesReferences.summary'),
-                                                      'documentation': 'Immutable owned CapabilitiesReferences value. '
-                                                                       'Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('value',
                                                                   'Current metadata references and selections '
                                                                   'capability states and reasons; do not\n'
                                                                   'infer support from method presence.')],
                                                       'kind': 'type',
-                                                      'signature': '(*, value: ReferenceCapabilities)'},
+                                                      'signature': '(*, value: ReferenceCapabilities)',
+                                                      'type_refs': ('zipzi.modeling.addressing.ReferenceCapabilities',)},
  'zipzi.modeling.addressing.CapabilitiesReferences.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesReferences.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesResource': {'children': ('zipzi.modeling.addressing.CapabilitiesResource.__repr__',
                                                                  'zipzi.modeling.addressing.CapabilitiesResource.summary'),
-                                                    'documentation': 'Immutable owned CapabilitiesResource value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('value',
                                                                 'Current image asset metadata and references '
                                                                 'capability states and reasons; do not\n'
                                                                 'infer support from method presence.')],
                                                     'kind': 'type',
-                                                    'signature': '(*, value: ResourceCapabilities)'},
+                                                    'signature': '(*, value: ResourceCapabilities)',
+                                                    'type_refs': ('zipzi.modeling.addressing.ResourceCapabilities',)},
  'zipzi.modeling.addressing.CapabilitiesResource.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesResource.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilitiesScene': {'children': ('zipzi.modeling.addressing.CapabilitiesScene.__repr__',
                                                               'zipzi.modeling.addressing.CapabilitiesScene.summary'),
-                                                 'documentation': 'Immutable owned CapabilitiesScene value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('value',
                                                              'Current scene lifecycle, hierarchy and drawing '
                                                              'capability states and reasons; do not\n'
                                                              'infer support from method presence.')],
                                                  'kind': 'type',
-                                                 'signature': '(*, value: SceneCapabilities)'},
+                                                 'signature': '(*, value: SceneCapabilities)',
+                                                 'type_refs': ('zipzi.modeling.addressing.SceneCapabilities',)},
  'zipzi.modeling.addressing.CapabilitiesScene.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CapabilitiesScene.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilityDomain': {'children': (),
-                                                'documentation': 'Immutable typed value. See field semantics and the '
-                                                                 'linked workflow.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
-                                                'fields': [],
-                                                'kind': 'type',
-                                                'signature': '()'},
+                                                'fields': [('SCENE', "'scene'"),
+                                                           ('ORGANIZATION', "'organization'"),
+                                                           ('BINDING', "'binding'"),
+                                                           ('CONTENT', "'content'"),
+                                                           ('REFERENCES', "'references'"),
+                                                           ('RESOURCE', "'resource'"),
+                                                           ('ATTACHMENT', "'attachment'"),
+                                                           ('MOTION', "'motion'"),
+                                                           ('EXPRESSION', "'expression'"),
+                                                           ('PHYSICS', "'physics'"),
+                                                           ('POSE', "'pose'")],
+                                                'kind': 'enum',
+                                                'signature': ''},
  'zipzi.modeling.addressing.CapabilityState': {'children': (),
-                                               'documentation': 'Typed public API entry.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [],
-                                               'kind': 'value',
-                                               'signature': ''},
+                                               'kind': 'alias',
+                                               'signature': 'CapabilityStateAvailable | CapabilityStateUnsupported | '
+                                                            'CapabilityStateUnavailable',
+                                               'type_refs': ('zipzi.modeling.addressing.CapabilityStateAvailable',
+                                                             'zipzi.modeling.addressing.CapabilityStateUnavailable',
+                                                             'zipzi.modeling.addressing.CapabilityStateUnsupported')},
  'zipzi.modeling.addressing.CapabilityStateAvailable': {'children': ('zipzi.modeling.addressing.CapabilityStateAvailable.__repr__',
                                                                      'zipzi.modeling.addressing.CapabilityStateAvailable.summary'),
-                                                        'documentation': 'Immutable owned CapabilityStateAvailable '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [],
                                                         'kind': 'type',
@@ -381,10 +389,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilityStateAvailable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilityStateUnavailable': {'children': ('zipzi.modeling.addressing.CapabilityStateUnavailable.__repr__',
                                                                        'zipzi.modeling.addressing.CapabilityStateUnavailable.summary'),
-                                                          'documentation': 'Immutable owned CapabilityStateUnavailable '
-                                                                           'value. Construction owns declared '
-                                                                           'collections; reading fields, repr and '
-                                                                           'summary performs no IO.',
+                                                          'documentation': '',
                                                           'example': 'docs/recipes.py',
                                                           'fields': [('code',
                                                                       'Stable reason code explaining why this '
@@ -395,10 +400,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilityStateUnavailable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilityStateUnsupported': {'children': ('zipzi.modeling.addressing.CapabilityStateUnsupported.__repr__',
                                                                        'zipzi.modeling.addressing.CapabilityStateUnsupported.summary'),
-                                                          'documentation': 'Immutable owned CapabilityStateUnsupported '
-                                                                           'value. Construction owns declared '
-                                                                           'collections; reading fields, repr and '
-                                                                           'summary performs no IO.',
+                                                          'documentation': '',
                                                           'example': 'docs/recipes.py',
                                                           'fields': [('code',
                                                                       'Stable reason code explaining why this '
@@ -410,10 +412,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilityStateUnsupported.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CollectionCapabilities': {'children': ('zipzi.modeling.addressing.CollectionCapabilities.__repr__',
                                                                    'zipzi.modeling.addressing.CollectionCapabilities.summary'),
-                                                      'documentation': 'Immutable owned CollectionCapabilities value. '
-                                                                       'Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('create',
                                                                   'Current capability to create objects in this '
@@ -429,15 +428,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                   'invoking the operation.')],
                                                       'kind': 'type',
                                                       'signature': '(*, create: CapabilityState, move_into: '
-                                                                   'CapabilityState, reorder: CapabilityState)'},
+                                                                   'CapabilityState, reorder: CapabilityState)',
+                                                      'type_refs': ('zipzi.modeling.addressing.CapabilityState',)},
  'zipzi.modeling.addressing.CollectionCapabilities.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.CollectionCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ExpressionCapabilities': {'children': ('zipzi.modeling.addressing.ExpressionCapabilities.__repr__',
                                                                    'zipzi.modeling.addressing.ExpressionCapabilities.summary'),
-                                                      'documentation': 'Immutable owned ExpressionCapabilities value. '
-                                                                       'Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('inspect',
                                                                   'Read this object while its identity/context remains '
@@ -465,14 +462,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                    'CapabilityState, patch: CapabilityState, '
                                                                    'move_entry: CapabilityState, duplicate: '
                                                                    'CapabilityState, delete: CapabilityState, repair: '
-                                                                   'CapabilityState, preview: CapabilityState)'},
+                                                                   'CapabilityState, preview: CapabilityState)',
+                                                      'type_refs': ('zipzi.modeling.addressing.CapabilityState',)},
  'zipzi.modeling.addressing.ExpressionCapabilities.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ExpressionCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.MotionCapabilities': {'children': ('zipzi.modeling.addressing.MotionCapabilities.__repr__',
                                                                'zipzi.modeling.addressing.MotionCapabilities.summary'),
-                                                  'documentation': 'Immutable owned MotionCapabilities value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('inspect',
                                                               'Read this object while its identity/context remains '
@@ -508,15 +504,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                'move_object: CapabilityState, preview: '
                                                                'CapabilityState, create_child: CapabilityState, '
                                                                'reorder: CapabilityState, repair: CapabilityState, '
-                                                               'edit_content: CapabilityState)'},
+                                                               'edit_content: CapabilityState)',
+                                                  'type_refs': ('zipzi.modeling.addressing.CapabilityState',)},
  'zipzi.modeling.addressing.MotionCapabilities.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.MotionCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.OrganizationCapabilities': {'children': ('zipzi.modeling.addressing.OrganizationCapabilities.__repr__',
                                                                      'zipzi.modeling.addressing.OrganizationCapabilities.summary'),
-                                                        'documentation': 'Immutable owned OrganizationCapabilities '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('inspect',
                                                                     'Current capability to read the current typed '
@@ -556,14 +550,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                      'move_object: CapabilityState, reorder: '
                                                                      'CapabilityState, duplicate: CapabilityState, '
                                                                      'delete: CapabilityState, dissolve: '
-                                                                     'CapabilityState)'},
+                                                                     'CapabilityState)',
+                                                        'type_refs': ('zipzi.modeling.addressing.CapabilityState',)},
  'zipzi.modeling.addressing.OrganizationCapabilities.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.OrganizationCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.PhysicsCapabilities': {'children': ('zipzi.modeling.addressing.PhysicsCapabilities.__repr__',
                                                                 'zipzi.modeling.addressing.PhysicsCapabilities.summary'),
-                                                   'documentation': 'Immutable owned PhysicsCapabilities value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('inspect',
                                                                'Read this object while its identity/context remains '
@@ -596,14 +589,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                 'CapabilityState, delete: CapabilityState, '
                                                                 'move_object: CapabilityState, reorder: '
                                                                 'CapabilityState, repair: CapabilityState, preview: '
-                                                                'CapabilityState)'},
+                                                                'CapabilityState)',
+                                                   'type_refs': ('zipzi.modeling.addressing.CapabilityState',)},
  'zipzi.modeling.addressing.PhysicsCapabilities.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.PhysicsCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.PoseCapabilities': {'children': ('zipzi.modeling.addressing.PoseCapabilities.__repr__',
                                                              'zipzi.modeling.addressing.PoseCapabilities.summary'),
-                                                'documentation': 'Immutable owned PoseCapabilities value. Construction '
-                                                                 'owns declared collections; reading fields, repr and '
-                                                                 'summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('inspect',
                                                             'Read this object while its identity/context remains '
@@ -638,14 +630,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                              'CapabilityState, delete: CapabilityState, move_object: '
                                                              'CapabilityState, reorder: CapabilityState, repair: '
                                                              'CapabilityState, dissolve: CapabilityState, preview: '
-                                                             'CapabilityState)'},
+                                                             'CapabilityState)',
+                                                'type_refs': ('zipzi.modeling.addressing.CapabilityState',)},
  'zipzi.modeling.addressing.PoseCapabilities.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.PoseCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceCapabilities': {'children': ('zipzi.modeling.addressing.ReferenceCapabilities.__repr__',
                                                                   'zipzi.modeling.addressing.ReferenceCapabilities.summary'),
-                                                     'documentation': 'Immutable owned ReferenceCapabilities value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('inspect',
                                                                  'Current capability to read the current typed record; '
@@ -680,23 +671,28 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                   'CapabilityState, create_child: CapabilityState, '
                                                                   'move_object: CapabilityState, duplicate: '
                                                                   'CapabilityState, delete: CapabilityState, dissolve: '
-                                                                  'CapabilityState)'},
+                                                                  'CapabilityState)',
+                                                     'type_refs': ('zipzi.modeling.addressing.CapabilityState',)},
  'zipzi.modeling.addressing.ReferenceCapabilities.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceCollection': {'children': (),
-                                                   'documentation': 'Typed public API entry.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [],
-                                                   'kind': 'value',
-                                                   'signature': ''},
+                                                   'kind': 'alias',
+                                                   'signature': 'ReferenceCollectionModelParameterGroups | '
+                                                                'ReferenceCollectionModelHitAreas | '
+                                                                'ReferenceCollectionCdiCombinedSets | '
+                                                                'ReferenceCollectionModelParameterMembers | '
+                                                                'ReferenceCollectionCdiCombinedMembers',
+                                                   'type_refs': ('zipzi.modeling.addressing.ReferenceCollectionCdiCombinedMembers',
+                                                                 'zipzi.modeling.addressing.ReferenceCollectionCdiCombinedSets',
+                                                                 'zipzi.modeling.addressing.ReferenceCollectionModelHitAreas',
+                                                                 'zipzi.modeling.addressing.ReferenceCollectionModelParameterGroups',
+                                                                 'zipzi.modeling.addressing.ReferenceCollectionModelParameterMembers')},
  'zipzi.modeling.addressing.ReferenceCollectionCdiCombinedMembers': {'children': ('zipzi.modeling.addressing.ReferenceCollectionCdiCombinedMembers.__repr__',
                                                                                   'zipzi.modeling.addressing.ReferenceCollectionCdiCombinedMembers.summary'),
-                                                                     'documentation': 'Immutable owned '
-                                                                                      'ReferenceCollectionCdiCombinedMembers '
-                                                                                      'value. Construction owns '
-                                                                                      'declared collections; reading '
-                                                                                      'fields, repr and summary '
-                                                                                      'performs no IO.',
+                                                                     'documentation': '',
                                                                      'example': 'docs/recipes.py',
                                                                      'fields': [('set_id',
                                                                                  'Stable CDI combined-parameter set ID '
@@ -707,11 +703,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceCollectionCdiCombinedMembers.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceCollectionCdiCombinedSets': {'children': ('zipzi.modeling.addressing.ReferenceCollectionCdiCombinedSets.__repr__',
                                                                                'zipzi.modeling.addressing.ReferenceCollectionCdiCombinedSets.summary'),
-                                                                  'documentation': 'Immutable owned '
-                                                                                   'ReferenceCollectionCdiCombinedSets '
-                                                                                   'value. Construction owns declared '
-                                                                                   'collections; reading fields, repr '
-                                                                                   'and summary performs no IO.',
+                                                                  'documentation': '',
                                                                   'example': 'docs/recipes.py',
                                                                   'fields': [],
                                                                   'kind': 'type',
@@ -720,11 +712,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceCollectionCdiCombinedSets.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceCollectionModelHitAreas': {'children': ('zipzi.modeling.addressing.ReferenceCollectionModelHitAreas.__repr__',
                                                                              'zipzi.modeling.addressing.ReferenceCollectionModelHitAreas.summary'),
-                                                                'documentation': 'Immutable owned '
-                                                                                 'ReferenceCollectionModelHitAreas '
-                                                                                 'value. Construction owns declared '
-                                                                                 'collections; reading fields, repr '
-                                                                                 'and summary performs no IO.',
+                                                                'documentation': '',
                                                                 'example': 'docs/recipes.py',
                                                                 'fields': [],
                                                                 'kind': 'type',
@@ -733,12 +721,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceCollectionModelHitAreas.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceCollectionModelParameterGroups': {'children': ('zipzi.modeling.addressing.ReferenceCollectionModelParameterGroups.__repr__',
                                                                                     'zipzi.modeling.addressing.ReferenceCollectionModelParameterGroups.summary'),
-                                                                       'documentation': 'Immutable owned '
-                                                                                        'ReferenceCollectionModelParameterGroups '
-                                                                                        'value. Construction owns '
-                                                                                        'declared collections; reading '
-                                                                                        'fields, repr and summary '
-                                                                                        'performs no IO.',
+                                                                       'documentation': '',
                                                                        'example': 'docs/recipes.py',
                                                                        'fields': [],
                                                                        'kind': 'type',
@@ -747,12 +730,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceCollectionModelParameterGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceCollectionModelParameterMembers': {'children': ('zipzi.modeling.addressing.ReferenceCollectionModelParameterMembers.__repr__',
                                                                                      'zipzi.modeling.addressing.ReferenceCollectionModelParameterMembers.summary'),
-                                                                        'documentation': 'Immutable owned '
-                                                                                         'ReferenceCollectionModelParameterMembers '
-                                                                                         'value. Construction owns '
-                                                                                         'declared collections; '
-                                                                                         'reading fields, repr and '
-                                                                                         'summary performs no IO.',
+                                                                        'documentation': '',
                                                                         'example': 'docs/recipes.py',
                                                                         'fields': [('group_id',
                                                                                     'Existing model3 parameter-group '
@@ -763,18 +741,30 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceCollectionModelParameterMembers.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceCollectionModelParameterMembers.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceEdit': {'children': (),
-                                             'documentation': 'Typed public API entry.',
+                                             'documentation': '',
                                              'example': 'docs/recipes.py',
                                              'fields': [],
-                                             'kind': 'value',
-                                             'signature': ''},
+                                             'kind': 'alias',
+                                             'signature': 'ReferenceEditCreateModelParameterGroup | '
+                                                          'ReferenceEditCreateModelHitArea | '
+                                                          'ReferenceEditCreateCdiCombinedSet | '
+                                                          'ReferenceEditCreateMember | ReferenceEditPatch | '
+                                                          'ReferenceEditMove | ReferenceEditDuplicate | '
+                                                          'ReferenceEditDelete | ReferenceEditDissolve | '
+                                                          'ReferenceEditReplaceSelection',
+                                             'type_refs': ('zipzi.modeling.addressing.ReferenceEditCreateCdiCombinedSet',
+                                                           'zipzi.modeling.addressing.ReferenceEditCreateMember',
+                                                           'zipzi.modeling.addressing.ReferenceEditCreateModelHitArea',
+                                                           'zipzi.modeling.addressing.ReferenceEditCreateModelParameterGroup',
+                                                           'zipzi.modeling.addressing.ReferenceEditDelete',
+                                                           'zipzi.modeling.addressing.ReferenceEditDissolve',
+                                                           'zipzi.modeling.addressing.ReferenceEditDuplicate',
+                                                           'zipzi.modeling.addressing.ReferenceEditMove',
+                                                           'zipzi.modeling.addressing.ReferenceEditPatch',
+                                                           'zipzi.modeling.addressing.ReferenceEditReplaceSelection')},
  'zipzi.modeling.addressing.ReferenceEditCreateCdiCombinedSet': {'children': ('zipzi.modeling.addressing.ReferenceEditCreateCdiCombinedSet.__repr__',
                                                                               'zipzi.modeling.addressing.ReferenceEditCreateCdiCombinedSet.summary'),
-                                                                 'documentation': 'Immutable owned '
-                                                                                  'ReferenceEditCreateCdiCombinedSet '
-                                                                                  'value. Construction owns declared '
-                                                                                  'collections; reading fields, repr '
-                                                                                  'and summary performs no IO.',
+                                                                 'documentation': '',
                                                                  'example': 'docs/recipes.py',
                                                                  'fields': [('id',
                                                                              'New stable UUID for this object; it must '
@@ -791,10 +781,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceEditCreateCdiCombinedSet.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceEditCreateMember': {'children': ('zipzi.modeling.addressing.ReferenceEditCreateMember.__repr__',
                                                                       'zipzi.modeling.addressing.ReferenceEditCreateMember.summary'),
-                                                         'documentation': 'Immutable owned ReferenceEditCreateMember '
-                                                                          'value. Construction owns declared '
-                                                                          'collections; reading fields, repr and '
-                                                                          'summary performs no IO.',
+                                                         'documentation': '',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [('id',
                                                                      'New stable UUID for this object; it must not '
@@ -808,16 +795,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                      'the selected destination.')],
                                                          'kind': 'type',
                                                          'signature': '(*, id: str, collection: ReferenceCollection, '
-                                                                      'before: str | None = None)'},
+                                                                      'before: str | None = None)',
+                                                         'type_refs': ('zipzi.modeling.addressing.ReferenceCollection',)},
  'zipzi.modeling.addressing.ReferenceEditCreateMember.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceEditCreateMember.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceEditCreateModelHitArea': {'children': ('zipzi.modeling.addressing.ReferenceEditCreateModelHitArea.__repr__',
                                                                             'zipzi.modeling.addressing.ReferenceEditCreateModelHitArea.summary'),
-                                                               'documentation': 'Immutable owned '
-                                                                                'ReferenceEditCreateModelHitArea '
-                                                                                'value. Construction owns declared '
-                                                                                'collections; reading fields, repr and '
-                                                                                'summary performs no IO.',
+                                                               'documentation': '',
                                                                'example': 'docs/recipes.py',
                                                                'fields': [('id',
                                                                            'New stable UUID for this object; it must '
@@ -838,12 +822,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceEditCreateModelHitArea.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceEditCreateModelParameterGroup': {'children': ('zipzi.modeling.addressing.ReferenceEditCreateModelParameterGroup.__repr__',
                                                                                    'zipzi.modeling.addressing.ReferenceEditCreateModelParameterGroup.summary'),
-                                                                      'documentation': 'Immutable owned '
-                                                                                       'ReferenceEditCreateModelParameterGroup '
-                                                                                       'value. Construction owns '
-                                                                                       'declared collections; reading '
-                                                                                       'fields, repr and summary '
-                                                                                       'performs no IO.',
+                                                                      'documentation': '',
                                                                       'example': 'docs/recipes.py',
                                                                       'fields': [('id',
                                                                                   'New stable UUID for this object; it '
@@ -865,9 +844,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceEditCreateModelParameterGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceEditDelete': {'children': ('zipzi.modeling.addressing.ReferenceEditDelete.__repr__',
                                                                 'zipzi.modeling.addressing.ReferenceEditDelete.summary'),
-                                                   'documentation': 'Immutable owned ReferenceEditDelete value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('ids',
                                                                'Ordered stable object IDs selected for this operation; '
@@ -879,9 +856,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceEditDelete.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceEditDissolve': {'children': ('zipzi.modeling.addressing.ReferenceEditDissolve.__repr__',
                                                                   'zipzi.modeling.addressing.ReferenceEditDissolve.summary'),
-                                                     'documentation': 'Immutable owned ReferenceEditDissolve value. '
-                                                                      'Construction owns declared collections; reading '
-                                                                      'fields, repr and summary performs no IO.',
+                                                     'documentation': '',
                                                      'example': 'docs/recipes.py',
                                                      'fields': [('id',
                                                                  'Stable document object ID used by references; it is '
@@ -902,10 +877,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceEditDissolve.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceEditDuplicate': {'children': ('zipzi.modeling.addressing.ReferenceEditDuplicate.__repr__',
                                                                    'zipzi.modeling.addressing.ReferenceEditDuplicate.summary'),
-                                                      'documentation': 'Immutable owned ReferenceEditDuplicate value. '
-                                                                       'Construction owns declared collections; '
-                                                                       'reading fields, repr and summary performs no '
-                                                                       'IO.',
+                                                      'documentation': '',
                                                       'example': 'docs/recipes.py',
                                                       'fields': [('ids',
                                                                   'Ordered stable object IDs selected for this '
@@ -921,14 +893,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                   'the selected destination.')],
                                                       'kind': 'type',
                                                       'signature': '(*, ids: tuple[str, ...], destination: '
-                                                                   'ReferenceCollection, before: str | None = None)'},
+                                                                   'ReferenceCollection, before: str | None = None)',
+                                                      'type_refs': ('zipzi.modeling.addressing.ReferenceCollection',)},
  'zipzi.modeling.addressing.ReferenceEditDuplicate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceEditDuplicate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceEditMove': {'children': ('zipzi.modeling.addressing.ReferenceEditMove.__repr__',
                                                               'zipzi.modeling.addressing.ReferenceEditMove.summary'),
-                                                 'documentation': 'Immutable owned ReferenceEditMove value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('ids',
                                                              'Ordered stable object IDs selected for this operation; '
@@ -944,14 +915,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                              'the selected destination.')],
                                                  'kind': 'type',
                                                  'signature': '(*, ids: tuple[str, ...], destination: '
-                                                              'ReferenceCollection, before: str | None = None)'},
+                                                              'ReferenceCollection, before: str | None = None)',
+                                                 'type_refs': ('zipzi.modeling.addressing.ReferenceCollection',)},
  'zipzi.modeling.addressing.ReferenceEditMove.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceEditMove.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceEditPatch': {'children': ('zipzi.modeling.addressing.ReferenceEditPatch.__repr__',
                                                                'zipzi.modeling.addressing.ReferenceEditPatch.summary'),
-                                                  'documentation': 'Immutable owned ReferenceEditPatch value. '
-                                                                   'Construction owns declared collections; reading '
-                                                                   'fields, repr and summary performs no IO.',
+                                                  'documentation': '',
                                                   'example': 'docs/recipes.py',
                                                   'fields': [('id',
                                                               'Stable document object ID used by references; it is '
@@ -967,16 +937,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                               'kind.')],
                                                   'kind': 'type',
                                                   'signature': '(*, id: str, expected: ReferenceFields, fields: '
-                                                               'ReferenceFields)'},
+                                                               'ReferenceFields)',
+                                                  'type_refs': ('zipzi.modeling.addressing.ReferenceFields',)},
  'zipzi.modeling.addressing.ReferenceEditPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceEditPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceEditReplaceSelection': {'children': ('zipzi.modeling.addressing.ReferenceEditReplaceSelection.__repr__',
                                                                           'zipzi.modeling.addressing.ReferenceEditReplaceSelection.summary'),
-                                                             'documentation': 'Immutable owned '
-                                                                              'ReferenceEditReplaceSelection value. '
-                                                                              'Construction owns declared collections; '
-                                                                              'reading fields, repr and summary '
-                                                                              'performs no IO.',
+                                                             'documentation': '',
                                                              'example': 'docs/recipes.py',
                                                              'fields': [('owner',
                                                                          'Stable owner ID for the addressed drawing '
@@ -994,16 +961,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                              'kind': 'type',
                                                              'signature': '(*, owner: str, field: '
                                                                           'ReferenceSelectionField, expected: '
-                                                                          'tuple[str, ...], targets: tuple[str, ...])'},
+                                                                          'tuple[str, ...], targets: tuple[str, ...])',
+                                                             'type_refs': ('zipzi.modeling.addressing.ReferenceSelectionField',)},
  'zipzi.modeling.addressing.ReferenceEditReplaceSelection.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceEditReplaceSelection.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceEntryCdiParameterRef': {'children': ('zipzi.modeling.addressing.ReferenceEntryCdiParameterRef.__repr__',
                                                                           'zipzi.modeling.addressing.ReferenceEntryCdiParameterRef.summary'),
-                                                             'documentation': 'Immutable owned '
-                                                                              'ReferenceEntryCdiParameterRef value. '
-                                                                              'Construction owns declared collections; '
-                                                                              'reading fields, repr and summary '
-                                                                              'performs no IO.',
+                                                             'documentation': '',
                                                              'example': 'docs/recipes.py',
                                                              'fields': [('id',
                                                                          'Stable UUID of this reference entry; not the '
@@ -1014,16 +978,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                          'identity\n'
                                                                          'remains independent of the target.')],
                                                              'kind': 'type',
-                                                             'signature': '(*, id: str, target: CdiParameterRef)'},
+                                                             'signature': '(*, id: str, target: CdiParameterRef)',
+                                                             'type_refs': ('zipzi.modeling.project.CdiParameterRef',)},
  'zipzi.modeling.addressing.ReferenceEntryCdiParameterRef.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceEntryCdiParameterRef.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceEntryModelTargetRef': {'children': ('zipzi.modeling.addressing.ReferenceEntryModelTargetRef.__repr__',
                                                                          'zipzi.modeling.addressing.ReferenceEntryModelTargetRef.summary'),
-                                                            'documentation': 'Immutable owned '
-                                                                             'ReferenceEntryModelTargetRef value. '
-                                                                             'Construction owns declared collections; '
-                                                                             'reading fields, repr and summary '
-                                                                             'performs no IO.',
+                                                            'documentation': '',
                                                             'example': 'docs/recipes.py',
                                                             'fields': [('id',
                                                                         'Stable UUID of this reference entry; not the '
@@ -1034,22 +995,26 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                         'identity\n'
                                                                         'remains independent of the target.')],
                                                             'kind': 'type',
-                                                            'signature': '(*, id: str, target: ModelTargetRef)'},
+                                                            'signature': '(*, id: str, target: ModelTargetRef)',
+                                                            'type_refs': ('zipzi.modeling.project.ModelTargetRef',)},
  'zipzi.modeling.addressing.ReferenceEntryModelTargetRef.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceEntryModelTargetRef.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceFields': {'children': (),
-                                               'documentation': 'Typed public API entry.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [],
-                                               'kind': 'value',
-                                               'signature': ''},
+                                               'kind': 'alias',
+                                               'signature': 'ReferenceFieldsModelParameterGroup | '
+                                                            'ReferenceFieldsModelHitArea | '
+                                                            'ReferenceFieldsModelParameterMember | '
+                                                            'ReferenceFieldsCdiCombinedMember',
+                                               'type_refs': ('zipzi.modeling.addressing.ReferenceFieldsCdiCombinedMember',
+                                                             'zipzi.modeling.addressing.ReferenceFieldsModelHitArea',
+                                                             'zipzi.modeling.addressing.ReferenceFieldsModelParameterGroup',
+                                                             'zipzi.modeling.addressing.ReferenceFieldsModelParameterMember')},
  'zipzi.modeling.addressing.ReferenceFieldsCdiCombinedMember': {'children': ('zipzi.modeling.addressing.ReferenceFieldsCdiCombinedMember.__repr__',
                                                                              'zipzi.modeling.addressing.ReferenceFieldsCdiCombinedMember.summary'),
-                                                                'documentation': 'Immutable owned '
-                                                                                 'ReferenceFieldsCdiCombinedMember '
-                                                                                 'value. Construction owns declared '
-                                                                                 'collections; reading fields, repr '
-                                                                                 'and summary performs no IO.',
+                                                                'documentation': '',
                                                                 'example': 'docs/recipes.py',
                                                                 'fields': [('target',
                                                                             'Resolved document target or preserved '
@@ -1057,16 +1022,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                             'identity\n'
                                                                             'remains independent of the target.')],
                                                                 'kind': 'type',
-                                                                'signature': '(*, target: CdiParameterRef)'},
+                                                                'signature': '(*, target: CdiParameterRef)',
+                                                                'type_refs': ('zipzi.modeling.project.CdiParameterRef',)},
  'zipzi.modeling.addressing.ReferenceFieldsCdiCombinedMember.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceFieldsCdiCombinedMember.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceFieldsModelHitArea': {'children': ('zipzi.modeling.addressing.ReferenceFieldsModelHitArea.__repr__',
                                                                         'zipzi.modeling.addressing.ReferenceFieldsModelHitArea.summary'),
-                                                           'documentation': 'Immutable owned '
-                                                                            'ReferenceFieldsModelHitArea value. '
-                                                                            'Construction owns declared collections; '
-                                                                            'reading fields, repr and summary performs '
-                                                                            'no IO.',
+                                                           'documentation': '',
                                                            'example': 'docs/recipes.py',
                                                            'fields': [('name',
                                                                        'Human-readable display name; use the stable ID '
@@ -1075,16 +1037,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                        'Resolved mesh target or preserved unresolved '
                                                                        'mesh runtime identifier.')],
                                                            'kind': 'type',
-                                                           'signature': '(*, name: str, mesh: ModelTargetRef)'},
+                                                           'signature': '(*, name: str, mesh: ModelTargetRef)',
+                                                           'type_refs': ('zipzi.modeling.project.ModelTargetRef',)},
  'zipzi.modeling.addressing.ReferenceFieldsModelHitArea.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceFieldsModelHitArea.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceFieldsModelParameterGroup': {'children': ('zipzi.modeling.addressing.ReferenceFieldsModelParameterGroup.__repr__',
                                                                                'zipzi.modeling.addressing.ReferenceFieldsModelParameterGroup.summary'),
-                                                                  'documentation': 'Immutable owned '
-                                                                                   'ReferenceFieldsModelParameterGroup '
-                                                                                   'value. Construction owns declared '
-                                                                                   'collections; reading fields, repr '
-                                                                                   'and summary performs no IO.',
+                                                                  'documentation': '',
                                                                   'example': 'docs/recipes.py',
                                                                   'fields': [('name',
                                                                               'Human-readable display name; use the '
@@ -1096,11 +1055,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceFieldsModelParameterGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceFieldsModelParameterMember': {'children': ('zipzi.modeling.addressing.ReferenceFieldsModelParameterMember.__repr__',
                                                                                 'zipzi.modeling.addressing.ReferenceFieldsModelParameterMember.summary'),
-                                                                   'documentation': 'Immutable owned '
-                                                                                    'ReferenceFieldsModelParameterMember '
-                                                                                    'value. Construction owns declared '
-                                                                                    'collections; reading fields, repr '
-                                                                                    'and summary performs no IO.',
+                                                                   'documentation': '',
                                                                    'example': 'docs/recipes.py',
                                                                    'fields': [('target',
                                                                                'Resolved document target or preserved '
@@ -1108,21 +1063,21 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                                'identity\n'
                                                                                'remains independent of the target.')],
                                                                    'kind': 'type',
-                                                                   'signature': '(*, target: ModelTargetRef)'},
+                                                                   'signature': '(*, target: ModelTargetRef)',
+                                                                   'type_refs': ('zipzi.modeling.project.ModelTargetRef',)},
  'zipzi.modeling.addressing.ReferenceFieldsModelParameterMember.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ReferenceFieldsModelParameterMember.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceSelectionField': {'children': (),
-                                                       'documentation': 'Immutable typed value. See field semantics '
-                                                                        'and the linked workflow.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
-                                                       'fields': [],
-                                                       'kind': 'type',
-                                                       'signature': '()'},
+                                                       'fields': [('MESH_MASKS', "'mesh_masks'"),
+                                                                  ('OFFSCREEN_MASKS', "'offscreen_masks'"),
+                                                                  ('BLEND_CONSTRAINTS', "'blend_constraints'")],
+                                                       'kind': 'enum',
+                                                       'signature': ''},
  'zipzi.modeling.addressing.ResourceCapabilities': {'children': ('zipzi.modeling.addressing.ResourceCapabilities.__repr__',
                                                                  'zipzi.modeling.addressing.ResourceCapabilities.summary'),
-                                                    'documentation': 'Immutable owned ResourceCapabilities value. '
-                                                                     'Construction owns declared collections; reading '
-                                                                     'fields, repr and summary performs no IO.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
                                                     'fields': [('inspect',
                                                                 'Current capability to read the current typed record; '
@@ -1152,14 +1107,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                     'signature': '(*, inspect: CapabilityState, patch: '
                                                                  'CapabilityState, load_content: CapabilityState, '
                                                                  'duplicate: CapabilityState, delete: CapabilityState, '
-                                                                 'reorder: CapabilityState)'},
+                                                                 'reorder: CapabilityState)',
+                                                    'type_refs': ('zipzi.modeling.addressing.CapabilityState',)},
  'zipzi.modeling.addressing.ResourceCapabilities.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.ResourceCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.SceneCapabilities': {'children': ('zipzi.modeling.addressing.SceneCapabilities.__repr__',
                                                               'zipzi.modeling.addressing.SceneCapabilities.summary'),
-                                                 'documentation': 'Immutable owned SceneCapabilities value. '
-                                                                  'Construction owns declared collections; reading '
-                                                                  'fields, repr and summary performs no IO.',
+                                                 'documentation': '',
                                                  'example': 'docs/recipes.py',
                                                  'fields': [('inspect',
                                                              'Current capability to read the current typed record; '
@@ -1198,15 +1152,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                               'move_object: CapabilityState, reparent: '
                                                               'CapabilityState, reorder: CapabilityState, duplicate: '
                                                               'CapabilityState, delete: CapabilityState, dissolve: '
-                                                              'CapabilityState)'},
+                                                              'CapabilityState)',
+                                                 'type_refs': ('zipzi.modeling.addressing.CapabilityState',)},
  'zipzi.modeling.addressing.SceneCapabilities.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.SceneCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.SceneContentCapabilities': {'children': ('zipzi.modeling.addressing.SceneContentCapabilities.__repr__',
                                                                      'zipzi.modeling.addressing.SceneContentCapabilities.summary'),
-                                                        'documentation': 'Immutable owned SceneContentCapabilities '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('inspect',
                                                                     'Current capability to read the current typed '
@@ -1223,6 +1175,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                                     'invoking the operation.')],
                                                         'kind': 'type',
                                                         'signature': '(*, inspect: CapabilityState, edit: '
-                                                                     'CapabilityState, topology: CapabilityState)'},
+                                                                     'CapabilityState, topology: CapabilityState)',
+                                                        'type_refs': ('zipzi.modeling.addressing.CapabilityState',)},
  'zipzi.modeling.addressing.SceneContentCapabilities.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.addressing.SceneContentCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'}}

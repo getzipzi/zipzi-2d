@@ -3,6 +3,8 @@
 
 Browse the [workflow guide](guide.md) and [common behavior](reference/common.md).
 
+Start with [Session](reference/runtime_session.md), [Edit](reference/runtime_edit.md) and [meshes](reference/meshes.md).
+
 ## API domains
 
 - [Animation](reference/animation.md)

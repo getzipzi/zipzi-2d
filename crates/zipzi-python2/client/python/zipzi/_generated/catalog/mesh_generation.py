@@ -37,7 +37,8 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
                                         'kind': 'type',
                                         'signature': '(poisson: FillParameters = <factory>, quadtree: FillParameters = '
                                                      '<factory>, fractal: FillParameters = <factory>, paving: '
-                                                     'FillParameters = <factory>)'},
+                                                     'FillParameters = <factory>)',
+                                        'type_refs': ('zipzi.mesh_generation.FillParameters',)},
  'zipzi.mesh_generation.GeometryQuality': {'children': (),
                                            'documentation': 'CPU quality of one geometry, independent of any document '
                                                             'or GPU.\n'
@@ -109,7 +110,11 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
                                                  'mesh.')],
                                      'kind': 'type',
                                      'signature': '(source: Source, mesh: m.mesh.Mesh, geometry: Geometry, space: '
-                                                  'm.sampling.GeometrySpace)'},
+                                                  'm.sampling.GeometrySpace)',
+                                     'type_refs': ('zipzi.Source',
+                                                   'zipzi.meshes.Geometry',
+                                                   'zipzi.modeling.mesh.Mesh',
+                                                   'zipzi.modeling.sampling.GeometrySpace')},
  'zipzi.mesh_generation.MeshDraft.apply': {'children': (),
                                            'documentation': 'Apply replacement to an existing Edit; publication '
                                                             'remains explicit.\n'
@@ -126,7 +131,12 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
                                            'signature': '(edit: Edit, *, vertex_mapping: dict[int, int | None], '
                                                         'binding: m.bindings.MeshBinding | None=None, blend_bindings: '
                                                         'tuple[m.bindings.BlendShapeBinding, ...]=(), glues: '
-                                                        'tuple[m.scene.Glue, ...]=()) -> WriteResult'},
+                                                        'tuple[m.scene.Glue, ...]=()) -> WriteResult',
+                                           'type_refs': ('zipzi.Edit',
+                                                         'zipzi.WriteResult',
+                                                         'zipzi.modeling.bindings.BlendShapeBinding',
+                                                         'zipzi.modeling.bindings.MeshBinding',
+                                                         'zipzi.modeling.scene.Glue')},
  'zipzi.mesh_generation.MeshSettings': {'children': (),
                                         'documentation': 'Editor mesh generation controls; lengths use mesh units '
                                                          'unless stated.',
@@ -166,7 +176,8 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
                                                      'fill_parameters: FillSettings = <factory>, '
                                                      'suppress_boundary_diagonals: bool = False, alpha_threshold: int '
                                                      '= 8, wrap: float = 0.0, unit_scale: float = 1.0, detail: float = '
-                                                     '1.0, clip_to_image: bool = True, max_vertices: int = 65534)'},
+                                                     '1.0, clip_to_image: bool = True, max_vertices: int = 65534)',
+                                        'type_refs': ('zipzi.mesh_generation.FillSettings',)},
  'zipzi.mesh_generation.generate': {'children': (),
                                     'documentation': 'Generate owned geometry through a connected Editor, without '
                                                      'editing a document.\n'
@@ -192,7 +203,10 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
                                     'kind': 'callable',
                                     'signature': "(runtime: Runtime, width: int, height: int, alpha: bytes=b'', *, "
                                                  "settings: MeshSettings | None=None, stage: Literal['edges', 'full', "
-                                                 "'interior']='full', geometry: Geometry | None=None) -> Geometry"},
+                                                 "'interior']='full', geometry: Geometry | None=None) -> Geometry",
+                                    'type_refs': ('zipzi.Runtime',
+                                                  'zipzi.mesh_generation.MeshSettings',
+                                                  'zipzi.meshes.Geometry')},
  'zipzi.mesh_generation.generate_for_mesh': {'children': (),
                                              'documentation': 'Read the mesh/texture on one Source and generate an '
                                                               'uncommitted draft.\n'
@@ -207,7 +221,10 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
                                              'fields': [],
                                              'kind': 'callable',
                                              'signature': '(session: Session, mesh_id: str, *, settings: MeshSettings '
-                                                          '| None=None) -> MeshDraft'},
+                                                          '| None=None) -> MeshDraft',
+                                             'type_refs': ('zipzi.Session',
+                                                           'zipzi.mesh_generation.MeshDraft',
+                                                           'zipzi.mesh_generation.MeshSettings')},
  'zipzi.mesh_generation.inspect_geometry': {'children': (),
                                             'documentation': 'Inspect generated/mapped geometry without an Edit, '
                                                              'Runtime or GPU.\n'
@@ -222,4 +239,6 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
                                             'fields': [],
                                             'kind': 'callable',
                                             'signature': '(geometry: Geometry, width: int, height: int, alpha: bytes, '
-                                                         '*, alpha_threshold: int=8) -> GeometryQuality'}}
+                                                         '*, alpha_threshold: int=8) -> GeometryQuality',
+                                            'type_refs': ('zipzi.mesh_generation.GeometryQuality',
+                                                          'zipzi.meshes.Geometry')}}

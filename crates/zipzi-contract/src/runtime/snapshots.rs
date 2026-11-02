@@ -14,6 +14,8 @@ pub struct EventCursor {
 crate::api_record! {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[derive(zipzi_api_derive::BinaryOutput)]
+/// A mesh read at one captured formal or candidate source. Later document changes
+/// do not rewrite its ID, name or geometry.
 pub struct MeshSnapshot {
     /// Exact formal or candidate source captured for this result; later host changes do not
     /// rewrite it.

@@ -24,8 +24,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                              'signature': ''},
  'zipzi.modeling.sampling.Drawable': {'children': ('zipzi.modeling.sampling.Drawable.__repr__',
                                                    'zipzi.modeling.sampling.Drawable.summary'),
-                                      'documentation': 'Immutable owned Drawable value. Construction owns declared '
-                                                       'collections; reading fields, repr and summary performs no IO.',
+                                      'documentation': '',
                                       'example': 'docs/recipes.py',
                                       'fields': [('id',
                                                   'Stable document object ID used by references; it is distinct from '
@@ -95,14 +94,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                    'opacity: float, multiply_color: tuple[float, float, float, float], '
                                                    'screen_color: tuple[float, float, float, float], blend_mode: '
                                                    'BlendMode, enabled: bool, visible: bool, double_sided: bool, '
-                                                   'inverted_mask: bool, masks: tuple[str, ...])'},
+                                                   'inverted_mask: bool, masks: tuple[str, ...])',
+                                      'type_refs': ('zipzi.modeling.common.Vec2', 'zipzi.modeling.scene.BlendMode')},
  'zipzi.modeling.sampling.Drawable.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.Drawable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.DrawableFrame': {'children': ('zipzi.modeling.sampling.DrawableFrame.__repr__',
                                                         'zipzi.modeling.sampling.DrawableFrame.summary'),
-                                           'documentation': 'Immutable owned DrawableFrame value. Construction owns '
-                                                            'declared collections; reading fields, repr and summary '
-                                                            'performs no IO.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [('source_revision',
                                                        'Revision used to evaluate this immutable snapshot; later name '
@@ -125,14 +123,17 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                         'tuple[EvaluatedParameter, ...], drawables: tuple[Drawable, '
                                                         '...], offscreens: tuple[OffscreenFrame, ...], render_plan: '
                                                         'tuple[RenderCommand, ...], deformers: '
-                                                        'tuple[EvaluatedDeformer, ...])'},
+                                                        'tuple[EvaluatedDeformer, ...])',
+                                           'type_refs': ('zipzi.modeling.sampling.Drawable',
+                                                         'zipzi.modeling.sampling.EvaluatedDeformer',
+                                                         'zipzi.modeling.sampling.EvaluatedParameter',
+                                                         'zipzi.modeling.sampling.OffscreenFrame',
+                                                         'zipzi.modeling.sampling.RenderCommand')},
  'zipzi.modeling.sampling.DrawableFrame.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.DrawableFrame.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.EvaluatedDeformer': {'children': ('zipzi.modeling.sampling.EvaluatedDeformer.__repr__',
                                                             'zipzi.modeling.sampling.EvaluatedDeformer.summary'),
-                                               'documentation': 'Immutable owned EvaluatedDeformer value. Construction '
-                                                                'owns declared collections; reading fields, repr and '
-                                                                'summary performs no IO.',
+                                               'documentation': '',
                                                'example': 'docs/recipes.py',
                                                'fields': [('id',
                                                            'Stable document object ID used by references; it is '
@@ -159,14 +160,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                'kind': 'type',
                                                'signature': '(*, id: str, enabled: bool, points: tuple[Vec2, ...], '
                                                             'rotation_axis: Vec2 | None = None, rotation_basis: '
-                                                            'tuple[Vec2, Vec2] | None = None)'},
+                                                            'tuple[Vec2, Vec2] | None = None)',
+                                               'type_refs': ('zipzi.modeling.common.Vec2',)},
  'zipzi.modeling.sampling.EvaluatedDeformer.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.EvaluatedDeformer.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.EvaluatedParameter': {'children': ('zipzi.modeling.sampling.EvaluatedParameter.__repr__',
                                                              'zipzi.modeling.sampling.EvaluatedParameter.summary'),
-                                                'documentation': 'Immutable owned EvaluatedParameter value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('id',
                                                             'Stable document object ID used by references; it is '
@@ -187,9 +187,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.EvaluatedParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.GeometryDiagnostic': {'children': ('zipzi.modeling.sampling.GeometryDiagnostic.__repr__',
                                                              'zipzi.modeling.sampling.GeometryDiagnostic.summary'),
-                                                'documentation': 'Immutable owned GeometryDiagnostic value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [('kind', 'Typed geometry diagnostic category.'),
                                                            ('mesh_id',
@@ -200,21 +198,21 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                             'triangle-specific.')],
                                                 'kind': 'type',
                                                 'signature': '(*, kind: GeometryDiagnosticKind, mesh_id: str, '
-                                                             'triangle_index: int | None = None)'},
+                                                             'triangle_index: int | None = None)',
+                                                'type_refs': ('zipzi.modeling.sampling.GeometryDiagnosticKind',)},
  'zipzi.modeling.sampling.GeometryDiagnostic.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.GeometryDiagnostic.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.GeometryDiagnosticKind': {'children': (),
-                                                    'documentation': 'Immutable typed value. See field semantics and '
-                                                                     'the linked workflow.',
+                                                    'documentation': '',
                                                     'example': 'docs/recipes.py',
-                                                    'fields': [],
-                                                    'kind': 'type',
-                                                    'signature': '()'},
+                                                    'fields': [('SMALL_TRIANGLE', "'SmallTriangle'"),
+                                                               ('INCONSISTENT_WINDING', "'InconsistentWinding'"),
+                                                               ('OUTSIDE_MODEL_BOUNDS', "'OutsideModelBounds'")],
+                                                    'kind': 'enum',
+                                                    'signature': ''},
  'zipzi.modeling.sampling.GeometrySnapshot': {'children': ('zipzi.modeling.sampling.GeometrySnapshot.__repr__',
                                                            'zipzi.modeling.sampling.GeometrySnapshot.summary'),
-                                              'documentation': 'Immutable owned GeometrySnapshot value. Construction '
-                                                               'owns declared collections; reading fields, repr and '
-                                                               'summary performs no IO.',
+                                              'documentation': '',
                                               'example': 'docs/recipes.py',
                                               'fields': [('version',
                                                           'Exact SDK version captured for this value; not a '
@@ -244,20 +242,26 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                            'tuple[int, ...], positions: tuple[Vec2, ...], uvs: '
                                                            'tuple[Vec2, ...], triangles: tuple[tuple[int, int, int], '
                                                            '...], meshing: MeshMeshing | None = None, space: '
-                                                           'GeometrySpace)'},
+                                                           'GeometrySpace)',
+                                              'type_refs': ('zipzi.Version',
+                                                            'zipzi.modeling.common.Vec2',
+                                                            'zipzi.modeling.mesh.MeshMeshing',
+                                                            'zipzi.modeling.sampling.GeometrySpace')},
  'zipzi.modeling.sampling.GeometrySnapshot.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.GeometrySnapshot.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.GeometrySpace': {'children': (),
-                                           'documentation': 'Typed public API entry.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [],
-                                           'kind': 'value',
-                                           'signature': ''},
+                                           'kind': 'alias',
+                                           'signature': 'GeometrySpaceModel | GeometrySpaceRotationLocal | '
+                                                        'GeometrySpaceWarpParameter',
+                                           'type_refs': ('zipzi.modeling.sampling.GeometrySpaceModel',
+                                                         'zipzi.modeling.sampling.GeometrySpaceRotationLocal',
+                                                         'zipzi.modeling.sampling.GeometrySpaceWarpParameter')},
  'zipzi.modeling.sampling.GeometrySpaceModel': {'children': ('zipzi.modeling.sampling.GeometrySpaceModel.__repr__',
                                                              'zipzi.modeling.sampling.GeometrySpaceModel.summary'),
-                                                'documentation': 'Immutable owned GeometrySpaceModel value. '
-                                                                 'Construction owns declared collections; reading '
-                                                                 'fields, repr and summary performs no IO.',
+                                                'documentation': '',
                                                 'example': 'docs/recipes.py',
                                                 'fields': [],
                                                 'kind': 'type',
@@ -266,10 +270,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.GeometrySpaceModel.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.GeometrySpaceRotationLocal': {'children': ('zipzi.modeling.sampling.GeometrySpaceRotationLocal.__repr__',
                                                                      'zipzi.modeling.sampling.GeometrySpaceRotationLocal.summary'),
-                                                        'documentation': 'Immutable owned GeometrySpaceRotationLocal '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('value',
                                                                     'Stable rotation-transform ID defining the local '
@@ -280,10 +281,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.GeometrySpaceRotationLocal.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.GeometrySpaceWarpParameter': {'children': ('zipzi.modeling.sampling.GeometrySpaceWarpParameter.__repr__',
                                                                      'zipzi.modeling.sampling.GeometrySpaceWarpParameter.summary'),
-                                                        'documentation': 'Immutable owned GeometrySpaceWarpParameter '
-                                                                         'value. Construction owns declared '
-                                                                         'collections; reading fields, repr and '
-                                                                         'summary performs no IO.',
+                                                        'documentation': '',
                                                         'example': 'docs/recipes.py',
                                                         'fields': [('value',
                                                                     'Stable warp-transform ID defining the '
@@ -294,9 +292,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.GeometrySpaceWarpParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.MeshQuality': {'children': ('zipzi.modeling.sampling.MeshQuality.__repr__',
                                                       'zipzi.modeling.sampling.MeshQuality.summary'),
-                                         'documentation': 'Immutable owned MeshQuality value. Construction owns '
-                                                          'declared collections; reading fields, repr and summary '
-                                                          'performs no IO.',
+                                         'documentation': '',
                                          'example': 'docs/recipes.py',
                                          'fields': [('mesh_id',
                                                      'Stable document mesh ID, in evaluated drawable order.'),
@@ -331,14 +327,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                       'None, max_aspect_ratio: float | None = None, max_edge_stretch: '
                                                       'float | None = None, degenerate_triangles: int, '
                                                       'flipped_triangles: int, texture_coverage: TextureCoverage | '
-                                                      'None = None)'},
+                                                      'None = None)',
+                                         'type_refs': ('zipzi.modeling.observation.TextureCoverage',
+                                                       'zipzi.modeling.sampling.TriangleQuality')},
  'zipzi.modeling.sampling.MeshQuality.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.MeshQuality.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.ModelingSamples': {'children': ('zipzi.modeling.sampling.ModelingSamples.__repr__',
                                                           'zipzi.modeling.sampling.ModelingSamples.summary'),
-                                             'documentation': 'Immutable owned ModelingSamples value. Construction '
-                                                              'owns declared collections; reading fields, repr and '
-                                                              'summary performs no IO.',
+                                             'documentation': '',
                                              'example': 'docs/recipes.py',
                                              'fields': [('version',
                                                          'Exact SDK version captured for this value; not a best-effort '
@@ -362,14 +358,16 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                              'signature': '(*, version: _Version, parameters: tuple[_Mapping[str, '
                                                           'float], ...], frames: tuple[DrawableFrame, ...], '
                                                           'diagnostics: tuple[GeometryDiagnostic, ...], quality: '
-                                                          'tuple[tuple[MeshQuality, ...], ...])'},
+                                                          'tuple[tuple[MeshQuality, ...], ...])',
+                                             'type_refs': ('zipzi.Version',
+                                                           'zipzi.modeling.sampling.DrawableFrame',
+                                                           'zipzi.modeling.sampling.GeometryDiagnostic',
+                                                           'zipzi.modeling.sampling.MeshQuality')},
  'zipzi.modeling.sampling.ModelingSamples.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.ModelingSamples.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.OffscreenFrame': {'children': ('zipzi.modeling.sampling.OffscreenFrame.__repr__',
                                                          'zipzi.modeling.sampling.OffscreenFrame.summary'),
-                                            'documentation': 'Immutable owned OffscreenFrame value. Construction owns '
-                                                             'declared collections; reading fields, repr and summary '
-                                                             'performs no IO.',
+                                            'documentation': '',
                                             'example': 'docs/recipes.py',
                                             'fields': [('renderable',
                                                         'Whether required content is available for rendering; '
@@ -418,17 +416,18 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.OffscreenFrame.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.OffscreenFrame.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.RenderCommand': {'children': (),
-                                           'documentation': 'Typed public API entry.',
+                                           'documentation': '',
                                            'example': 'docs/recipes.py',
                                            'fields': [],
-                                           'kind': 'value',
-                                           'signature': ''},
+                                           'kind': 'alias',
+                                           'signature': 'RenderCommandBeginOffscreen | RenderCommandDrawMesh | '
+                                                        'RenderCommandEndOffscreen',
+                                           'type_refs': ('zipzi.modeling.sampling.RenderCommandBeginOffscreen',
+                                                         'zipzi.modeling.sampling.RenderCommandDrawMesh',
+                                                         'zipzi.modeling.sampling.RenderCommandEndOffscreen')},
  'zipzi.modeling.sampling.RenderCommandBeginOffscreen': {'children': ('zipzi.modeling.sampling.RenderCommandBeginOffscreen.__repr__',
                                                                       'zipzi.modeling.sampling.RenderCommandBeginOffscreen.summary'),
-                                                         'documentation': 'Immutable owned RenderCommandBeginOffscreen '
-                                                                          'value. Construction owns declared '
-                                                                          'collections; reading fields, repr and '
-                                                                          'summary performs no IO.',
+                                                         'documentation': '',
                                                          'example': 'docs/recipes.py',
                                                          'fields': [('offscreen_id',
                                                                      'Stable Offscreen object ID; not a texture asset '
@@ -439,9 +438,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.RenderCommandBeginOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.RenderCommandDrawMesh': {'children': ('zipzi.modeling.sampling.RenderCommandDrawMesh.__repr__',
                                                                 'zipzi.modeling.sampling.RenderCommandDrawMesh.summary'),
-                                                   'documentation': 'Immutable owned RenderCommandDrawMesh value. '
-                                                                    'Construction owns declared collections; reading '
-                                                                    'fields, repr and summary performs no IO.',
+                                                   'documentation': '',
                                                    'example': 'docs/recipes.py',
                                                    'fields': [('mesh_id',
                                                                'Stable ID of the target mesh in this document.')],
@@ -451,10 +448,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.RenderCommandDrawMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.RenderCommandEndOffscreen': {'children': ('zipzi.modeling.sampling.RenderCommandEndOffscreen.__repr__',
                                                                     'zipzi.modeling.sampling.RenderCommandEndOffscreen.summary'),
-                                                       'documentation': 'Immutable owned RenderCommandEndOffscreen '
-                                                                        'value. Construction owns declared '
-                                                                        'collections; reading fields, repr and summary '
-                                                                        'performs no IO.',
+                                                       'documentation': '',
                                                        'example': 'docs/recipes.py',
                                                        'fields': [('offscreen_id',
                                                                    'Stable Offscreen object ID; not a texture asset '
@@ -465,9 +459,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.RenderCommandEndOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.TriangleQuality': {'children': ('zipzi.modeling.sampling.TriangleQuality.__repr__',
                                                           'zipzi.modeling.sampling.TriangleQuality.summary'),
-                                             'documentation': 'Immutable owned TriangleQuality value. Construction '
-                                                              'owns declared collections; reading fields, repr and '
-                                                              'summary performs no IO.',
+                                             'documentation': '',
                                              'example': 'docs/recipes.py',
                                              'fields': [('triangle_index',
                                                          "Zero-based triangle offset, in the sampled drawable's index "

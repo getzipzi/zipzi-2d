@@ -20,11 +20,14 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                              'zipzi.Edit.state'),
                 'documentation': 'One mutable candidate owned by one sequential caller. Use session.edit. Successful '
                                  'writes advance sequence; publication is a separate Job and ordinary failures cannot '
-                                 'be caught into a successful commit.',
+                                 'be caught into a successful commit. Reads through this Edit include its pending '
+                                 'writes. Normal context exit commits and waits; an exceptional exit cancels ordinary '
+                                 'candidates. Recover unknown calls before cleanup.',
                 'example': 'docs/recipes.py',
                 'fields': [],
                 'kind': 'type',
-                'signature': '(factory-owned; use the documented public entry)'},
+                'signature': '(factory-owned; use the documented public entry)',
+                'type_refs': ('zipzi.Session',)},
  'zipzi.Edit.__enter__': {'children': (),
                           'documentation': 'Return this active candidate after a local state check, without IO.\n'
                                            '\n'
@@ -33,7 +36,8 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                           'example': 'docs/recipes.py',
                           'fields': [],
                           'kind': 'callable',
-                          'signature': "() -> 'Edit'"},
+                          'signature': "() -> 'Edit'",
+                          'type_refs': ('zipzi.Edit',)},
  'zipzi.Edit.__exit__': {'children': (),
                          'documentation': 'Confirm commit/cancel on normal exit, never turn an unknown into success.\n'
                                           '\n'
@@ -55,7 +59,8 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                       'example': 'docs/recipes.py',
                       'fields': [],
                       'kind': 'callable',
-                      'signature': '(operation: ops.Operation | plans.Plan) -> WriteResult'},
+                      'signature': '(operation: ops.Operation | plans.Plan) -> WriteResult',
+                      'type_refs': ('zipzi.Plan', 'zipzi.WriteResult', 'zipzi.ops.Operation')},
  'zipzi.Edit.apply_many': {'children': (),
                            'documentation': 'Own and execute an ordered atomic candidate batch. At most one Plan is '
                                             'allowed, in the first position. Success advances sequence once; partial '
@@ -64,36 +69,45 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                            'example': 'docs/recipes.py',
                            'fields': [],
                            'kind': 'callable',
-                           'signature': '(values: Sequence[ops.Operation | plans.Plan]) -> WriteResult'},
+                           'signature': '(values: Sequence[ops.Operation | plans.Plan]) -> WriteResult',
+                           'type_refs': ('zipzi.Plan', 'zipzi.WriteResult', 'zipzi.ops.Operation')},
  'zipzi.Edit.bindings': {'children': ('zipzi.Edit.bindings.create',
                                       'zipzi.Edit.bindings.get',
                                       'zipzi.Edit.bindings.get_many',
                                       'zipzi.Edit.bindings.list',
                                       'zipzi.Edit.bindings.set_keyform'),
-                         'documentation': 'Immutable typed value. See field semantics and the linked workflow.',
+                         'documentation': 'Read and author bindings in this Edit candidate. Reads include pending '
+                                          'writes; commit publishes changes separately.',
                          'example': 'docs/recipes.py',
                          'fields': [],
-                         'kind': 'type',
-                         'signature': "(session: '_lifecycle.Session', edit: '_lifecycle.Edit | None'=None)"},
+                         'kind': 'property',
+                         'signature': 'edit.bindings',
+                         'type_refs': ('zipzi.Edit', 'zipzi.Session')},
  'zipzi.Edit.bindings.create': {'children': (),
                                 'documentation': 'Apply bindings.Create synchronously to this Edit and return the '
                                                  'stable object ID as str.\n'
                                                  '\n'
                                                  'Arguments have the semantics of bindings.Create; inspect that '
-                                                 'operation and its input DTO fields with zipzi.describe. This changes '
-                                                 'candidate state only; commit publishes separately. Ordinary write '
-                                                 'failures abort the candidate even when caught, so repair inputs and '
-                                                 'start a new Edit. Confirmed Busy or pre-execution admission refusal '
-                                                 'preserves it; act on recovery_action. OutcomeUnknown retains the '
-                                                 'original Call and exact return type: recover it instead of replaying '
-                                                 'the write. Example: result = edit.bindings.create(...), using the '
-                                                 'arguments shown in its signature.',
+                                                 'operation and its input DTO fields with zipzi.describe.\n'
+                                                 '\n'
+                                                 'This changes candidate state only; commit publishes separately. '
+                                                 'Ordinary write failures abort the candidate even when caught, so '
+                                                 'repair inputs and start a new Edit. Confirmed Busy or pre-execution '
+                                                 'admission refusal preserves it; act on recovery_action. '
+                                                 'OutcomeUnknown retains the original Call and exact return type: '
+                                                 'recover it instead of replaying the write. Example: result = '
+                                                 'edit.bindings.create(...), using the arguments shown in its '
+                                                 'signature.',
                                 'example': 'docs/recipes.py',
                                 'fields': [],
                                 'kind': 'callable',
-                                'signature': '(spec: bindings.MeshBindingSpec) -> str'},
+                                'signature': '(spec: bindings.MeshBindingSpec) -> str',
+                                'type_refs': ('zipzi.bindings.MeshBindingSpec',)},
  'zipzi.Edit.bindings.get': {'children': (),
                              'documentation': 'Read one owned value at an exact formal or candidate Source.\n'
+                                              '\n'
+                                              'Through Session, reads committed Session content. Through Edit, reads '
+                                              'this Edit candidate, including pending writes.\n'
                                               '\n'
                                               'id is the stable document object ID, not a name. expected=None reads '
                                               'current content; an explicit Source is checked atomically and stale '
@@ -108,10 +122,14 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                              'fields': [],
                              'kind': 'callable',
                              'signature': '(id: str, *, expected: Source | None=None) -> '
-                                          'Snapshot[bindings.MeshBinding]'},
+                                          'Snapshot[bindings.MeshBinding]',
+                             'type_refs': ('zipzi.Snapshot', 'zipzi.Source', 'zipzi.bindings.MeshBinding')},
  'zipzi.Edit.bindings.get_many': {'children': (),
                                   'documentation': 'Read all selected IDs atomically from one formal or candidate '
                                                    'Source.\n'
+                                                   '\n'
+                                                   'Through Session, reads committed Session content. Through Edit, '
+                                                   'reads this Edit candidate, including pending writes.\n'
                                                    '\n'
                                                    'ids is copied before execution; requested order and duplicates are '
                                                    'preserved. expected=None accepts current content; an explicit '
@@ -126,10 +144,14 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                   'fields': [],
                                   'kind': 'callable',
                                   'signature': '(ids: Sequence[str], *, expected: Source | None=None) -> '
-                                               'Batch[bindings.MeshBinding]'},
+                                               'Batch[bindings.MeshBinding]',
+                                  'type_refs': ('zipzi.Batch', 'zipzi.Source', 'zipzi.bindings.MeshBinding')},
  'zipzi.Edit.bindings.list': {'children': (),
                               'documentation': 'Read a bounded metadata Page in SDK storage order, without '
                                                'geometry/keyform/pixel payloads.\n'
+                                               '\n'
+                                               'Through Session, reads committed Session content. Through Edit, reads '
+                                               'this Edit candidate, including pending writes.\n'
                                                '\n'
                                                'name=None disables filtering; a string matches exactly and '
                                                'case-sensitively, preserving duplicate names. limit defaults to 128 '
@@ -146,14 +168,16 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                               'fields': [],
                               'kind': 'callable',
                               'signature': '(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) '
-                                           '-> Page[bindings.Summary]'},
+                                           '-> Page[bindings.Summary]',
+                              'type_refs': ('zipzi.ObjectSummary', 'zipzi.Page', 'zipzi.PageCursor')},
  'zipzi.Edit.bindings.set_keyform': {'children': (),
                                      'documentation': 'Apply bindings.SetKeyform synchronously to this Edit and return '
                                                       'WriteResult with the new candidate Source and ordered result '
                                                       'IDs.\n'
                                                       '\n'
                                                       'Arguments have the semantics of bindings.SetKeyform; inspect '
-                                                      'that operation and its input DTO fields with zipzi.describe. '
+                                                      'that operation and its input DTO fields with zipzi.describe.\n'
+                                                      '\n'
                                                       'This changes candidate state only; commit publishes separately. '
                                                       'Ordinary write failures abort the candidate even when caught, '
                                                       'so repair inputs and start a new Edit. Confirmed Busy or '
@@ -165,7 +189,8 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                      'example': 'docs/recipes.py',
                                      'fields': [],
                                      'kind': 'callable',
-                                     'signature': '(id: str, keyform: bindings.Keyform) -> WriteResult'},
+                                     'signature': '(id: str, keyform: bindings.Keyform) -> WriteResult',
+                                     'type_refs': ('zipzi.WriteResult', 'zipzi.bindings.Keyform')},
  'zipzi.Edit.cancel': {'children': (),
                        'documentation': 'Release this candidate without publishing or inventing a Receipt. '
                                         'Cancellation is idempotent after confirmation; a lost release response '
@@ -181,37 +206,44 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                        'example': 'docs/recipes.py',
                        'fields': [],
                        'kind': 'callable',
-                       'signature': '() -> Job[Receipt]'},
+                       'signature': '() -> Job[Receipt]',
+                       'type_refs': ('zipzi.Job', 'zipzi.Receipt')},
  'zipzi.Edit.meshes': {'children': ('zipzi.Edit.meshes.create',
                                     'zipzi.Edit.meshes.get',
                                     'zipzi.Edit.meshes.get_many',
                                     'zipzi.Edit.meshes.list',
                                     'zipzi.Edit.meshes.rename',
                                     'zipzi.Edit.meshes.set_positions'),
-                       'documentation': 'Immutable typed value. See field semantics and the linked workflow.',
+                       'documentation': 'Read and author meshes in this Edit candidate. Reads include pending writes; '
+                                        'commit publishes changes separately.',
                        'example': 'docs/recipes.py',
                        'fields': [],
-                       'kind': 'type',
-                       'signature': "(session: '_lifecycle.Session', edit: '_lifecycle.Edit | None'=None)"},
+                       'kind': 'property',
+                       'signature': 'edit.meshes',
+                       'type_refs': ('zipzi.Edit', 'zipzi.Session')},
  'zipzi.Edit.meshes.create': {'children': (),
-                              'documentation': 'Apply meshes.Create synchronously to this Edit and return the stable '
-                                               'object ID as str.\n'
+                              'documentation': 'Create a mesh from its creation specification in the edit candidate.\n'
                                                '\n'
-                                               'Arguments have the semantics of meshes.Create; inspect that operation '
-                                               'and its input DTO fields with zipzi.describe. This changes candidate '
-                                               'state only; commit publishes separately. Ordinary write failures abort '
-                                               'the candidate even when caught, so repair inputs and start a new Edit. '
-                                               'Confirmed Busy or pre-execution admission refusal preserves it; act on '
-                                               'recovery_action. OutcomeUnknown retains the original Call and exact '
-                                               'return type: recover it instead of replaying the write. Example: '
-                                               'result = edit.meshes.create(...), using the arguments shown in its '
-                                               'signature.',
+                                               'Apply through edit.meshes.create(spec) and return the stable mesh ID '
+                                               'as str. Example: mesh_id = '
+                                               'edit.meshes.create(meshes.MeshSpec("Triangle", geometry)).\n'
+                                               '\n'
+                                               'This changes candidate state only; commit publishes separately. '
+                                               'Ordinary write failures abort the candidate even when caught, so '
+                                               'repair inputs and start a new Edit. Confirmed Busy or pre-execution '
+                                               'admission refusal preserves it; act on recovery_action. OutcomeUnknown '
+                                               'retains the original Call and exact return type: recover it instead of '
+                                               'replaying the write.',
                               'example': 'docs/recipes.py',
                               'fields': [],
                               'kind': 'callable',
-                              'signature': '(spec: meshes.MeshSpec) -> str'},
+                              'signature': '(spec: meshes.MeshSpec) -> str',
+                              'type_refs': ('zipzi.meshes.MeshSpec',)},
  'zipzi.Edit.meshes.get': {'children': (),
                            'documentation': 'Read one owned value at an exact formal or candidate Source.\n'
+                                            '\n'
+                                            'Through Session, reads committed Session content. Through Edit, reads '
+                                            'this Edit candidate, including pending writes.\n'
                                             '\n'
                                             'id is the stable document object ID, not a name. expected=None reads '
                                             'current content; an explicit Source is checked atomically and stale '
@@ -225,10 +257,14 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                            'example': 'docs/recipes.py',
                            'fields': [],
                            'kind': 'callable',
-                           'signature': '(id: str, *, expected: Source | None=None) -> Snapshot[meshes.Mesh]'},
+                           'signature': '(id: str, *, expected: Source | None=None) -> Snapshot[meshes.Mesh]',
+                           'type_refs': ('zipzi.Snapshot', 'zipzi.Source', 'zipzi.meshes.Mesh')},
  'zipzi.Edit.meshes.get_many': {'children': (),
                                 'documentation': 'Read all selected IDs atomically from one formal or candidate '
                                                  'Source.\n'
+                                                 '\n'
+                                                 'Through Session, reads committed Session content. Through Edit, '
+                                                 'reads this Edit candidate, including pending writes.\n'
                                                  '\n'
                                                  'ids is copied before execution; requested order and duplicates are '
                                                  'preserved. expected=None accepts current content; an explicit Source '
@@ -242,10 +278,14 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                 'fields': [],
                                 'kind': 'callable',
                                 'signature': '(ids: Sequence[str], *, expected: Source | None=None) -> '
-                                             'Batch[meshes.Mesh]'},
+                                             'Batch[meshes.Mesh]',
+                                'type_refs': ('zipzi.Batch', 'zipzi.Source', 'zipzi.meshes.Mesh')},
  'zipzi.Edit.meshes.list': {'children': (),
                             'documentation': 'Read a bounded metadata Page in SDK storage order, without '
                                              'geometry/keyform/pixel payloads.\n'
+                                             '\n'
+                                             'Through Session, reads committed Session content. Through Edit, reads '
+                                             'this Edit candidate, including pending writes.\n'
                                              '\n'
                                              'name=None disables filtering; a string matches exactly and '
                                              'case-sensitively, preserving duplicate names. limit defaults to 128 and '
@@ -262,55 +302,64 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                             'fields': [],
                             'kind': 'callable',
                             'signature': '(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) '
-                                         '-> Page[meshes.Summary]'},
+                                         '-> Page[meshes.Summary]',
+                            'type_refs': ('zipzi.ObjectSummary', 'zipzi.Page', 'zipzi.PageCursor')},
  'zipzi.Edit.meshes.rename': {'children': (),
-                              'documentation': 'Apply meshes.Rename synchronously to this Edit and return WriteResult '
-                                               'with the new candidate Source and ordered result IDs.\n'
+                              'documentation': 'Change a mesh display name by stable ID. An expected_name '
+                                               'precondition\n'
+                                               'must match the current name; None disables that precondition.\n'
                                                '\n'
-                                               'Arguments have the semantics of meshes.Rename; inspect that operation '
-                                               'and its input DTO fields with zipzi.describe. This changes candidate '
-                                               'state only; commit publishes separately. Ordinary write failures abort '
-                                               'the candidate even when caught, so repair inputs and start a new Edit. '
-                                               'Confirmed Busy or pre-execution admission refusal preserves it; act on '
-                                               'recovery_action. OutcomeUnknown retains the original Call and exact '
-                                               'return type: recover it instead of replaying the write. Example: '
-                                               'result = edit.meshes.rename(...), using the arguments shown in its '
-                                               'signature.',
+                                               'Apply through edit.meshes.rename() and return WriteResult with the '
+                                               'candidate Source. Example: edit.meshes.rename(mesh_id, "Face", '
+                                               'expected_name="Triangle").\n'
+                                               '\n'
+                                               'This changes candidate state only; commit publishes separately. '
+                                               'Ordinary write failures abort the candidate even when caught, so '
+                                               'repair inputs and start a new Edit. Confirmed Busy or pre-execution '
+                                               'admission refusal preserves it; act on recovery_action. OutcomeUnknown '
+                                               'retains the original Call and exact return type: recover it instead of '
+                                               'replaying the write.',
                               'example': 'docs/recipes.py',
                               'fields': [],
                               'kind': 'callable',
-                              'signature': '(id: str, name: str, *, expected_name: str | None=None) -> WriteResult'},
+                              'signature': '(id: str, name: str, *, expected_name: str | None=None) -> WriteResult',
+                              'type_refs': ('zipzi.WriteResult',)},
  'zipzi.Edit.meshes.set_positions': {'children': (),
-                                     'documentation': 'Apply meshes.SetPositions synchronously to this Edit and return '
-                                                      'WriteResult with the new candidate Source and ordered result '
-                                                      'IDs.\n'
+                                     'documentation': 'Replace selected vertex positions, pairing vertex_ids and '
+                                                      'positions in\n'
+                                                      'supplied order. Positions are absolute in the mesh authoring '
+                                                      'space,\n'
+                                                      'not additive offsets.\n'
                                                       '\n'
-                                                      'Arguments have the semantics of meshes.SetPositions; inspect '
-                                                      'that operation and its input DTO fields with zipzi.describe. '
+                                                      'Apply through edit.meshes.set_positions() and return '
+                                                      'WriteResult with the candidate Source. Example: '
+                                                      'edit.meshes.set_positions(mesh_id, vertex_ids=(7,), '
+                                                      'positions=((2.0, 0.0),)).\n'
+                                                      '\n'
                                                       'This changes candidate state only; commit publishes separately. '
                                                       'Ordinary write failures abort the candidate even when caught, '
                                                       'so repair inputs and start a new Edit. Confirmed Busy or '
                                                       'pre-execution admission refusal preserves it; act on '
                                                       'recovery_action. OutcomeUnknown retains the original Call and '
-                                                      'exact return type: recover it instead of replaying the write. '
-                                                      'Example: result = edit.meshes.set_positions(...), using the '
-                                                      'arguments shown in its signature.',
+                                                      'exact return type: recover it instead of replaying the write.',
                                      'example': 'docs/recipes.py',
                                      'fields': [],
                                      'kind': 'callable',
                                      'signature': '(id: str, *, vertex_ids: Sequence[int], positions: '
-                                                  'Sequence[meshes.Point]) -> WriteResult'},
+                                                  'Sequence[meshes.Point]) -> WriteResult',
+                                     'type_refs': ('zipzi.WriteResult', 'zipzi.meshes.Point')},
  'zipzi.Edit.modeling': {'children': ('zipzi.Edit.modeling.estimate_observation',
                                       'zipzi.Edit.modeling.observe',
                                       'zipzi.Edit.modeling.records',
                                       'zipzi.Edit.modeling.sample',
                                       'zipzi.Edit.modeling.sample_async',
                                       'zipzi.Edit.modeling.spatial'),
-                         'documentation': 'Immutable typed value. See field semantics and the linked workflow.',
+                         'documentation': '',
                          'example': 'docs/recipes.py',
                          'fields': [],
-                         'kind': 'type',
-                         'signature': "(session: '_lifecycle.Session', edit: '_lifecycle.Edit | None'=None)"},
+                         'kind': 'property',
+                         'signature': 'edit.modeling',
+                         'type_refs': ('zipzi.Edit', 'zipzi.Session')},
  'zipzi.Edit.modeling.estimate_observation': {'children': (),
                                               'documentation': 'Estimate an observation from metadata and return its '
                                                                'exact Source, texture plan, logical bytes, workspace, '
@@ -326,7 +375,9 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                               'fields': [],
                                               'kind': 'callable',
                                               'signature': '(poses: Sequence[Mapping[str, float]], view: '
-                                                           'observation.View) -> observation.Estimate'},
+                                                           'observation.View) -> observation.Estimate',
+                                              'type_refs': ('zipzi.modeling.observation.ObservationEstimate',
+                                                            'zipzi.modeling.observation.ObservationView')},
  'zipzi.Edit.modeling.observe': {'children': (),
                                  'documentation': 'Render explicit parameter poses within host observation limits from '
                                                   'an exact frozen Source. The explicit Y-up model ROI preserves '
@@ -346,7 +397,12 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                  'kind': 'callable',
                                  'signature': '(poses: Sequence[Mapping[str, float]], view: observation.View, *, '
                                               'expected: Source | None=None) -> '
-                                              "'_lifecycle.Job[Snapshot[observation.Batch]]'"},
+                                              "'_lifecycle.Job[Snapshot[observation.Batch]]'",
+                                 'type_refs': ('zipzi.Job',
+                                               'zipzi.Snapshot',
+                                               'zipzi.Source',
+                                               'zipzi.modeling.observation.ObservationBatch',
+                                               'zipzi.modeling.observation.ObservationView')},
  'zipzi.Edit.modeling.records': {'children': (),
                                  'documentation': 'Read selected canonical records from one exact source without '
                                                   'editing. query lists stable IDs per domain; empty lists request no '
@@ -361,7 +417,10 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                  'fields': [],
                                  'kind': 'callable',
                                  'signature': '(query: modeling.ModelingQuery) -> '
-                                              'Snapshot[modeling.OwnedModelingRecords]'},
+                                              'Snapshot[modeling.OwnedModelingRecords]',
+                                 'type_refs': ('zipzi.Snapshot',
+                                               'zipzi.modeling.queries.ModelingQuery',
+                                               'zipzi.modeling.queries.OwnedModelingRecords')},
  'zipzi.Edit.modeling.sample': {'children': (),
                                 'documentation': 'Synchronously evaluate CPU poses without editing or GPU work. poses '
                                                  'is an ordered sequence of parameter-ID/value maps in each parameter '
@@ -381,7 +440,11 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                 'kind': 'callable',
                                 'signature': '(poses: Sequence[Mapping[str, float]], *, checks: '
                                              'sampling.Checks=sampling.Checks(), expected: Source | None=None) -> '
-                                             'Snapshot[sampling.Result]'},
+                                             'Snapshot[sampling.Result]',
+                                'type_refs': ('zipzi.Snapshot',
+                                              'zipzi.Source',
+                                              'zipzi.sampling.Checks',
+                                              'zipzi.sampling.Result')},
  'zipzi.Edit.modeling.sample_async': {'children': (),
                                       'documentation': 'Submit CPU evaluation of poses at the captured exact Source '
                                                        'and return Job[Snapshot[sampling.Result]]. poses, checks and '
@@ -399,7 +462,12 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                       'kind': 'callable',
                                       'signature': '(poses: Sequence[Mapping[str, float]], *, checks: '
                                                    'sampling.Checks=sampling.Checks(), expected: Source | None=None) '
-                                                   "-> '_lifecycle.Job[Snapshot[sampling.Result]]'"},
+                                                   "-> '_lifecycle.Job[Snapshot[sampling.Result]]'",
+                                      'type_refs': ('zipzi.Job',
+                                                    'zipzi.Snapshot',
+                                                    'zipzi.Source',
+                                                    'zipzi.sampling.Checks',
+                                                    'zipzi.sampling.Result')},
  'zipzi.Edit.modeling.spatial': {'children': (),
                                  'documentation': 'Submit frozen CPU geometry queries for explicit parameter poses. '
                                                   'Returns Job[Snapshot[spatial.Batch]] with effective parameters, '
@@ -414,24 +482,32 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                  'kind': 'callable',
                                  'signature': '(poses: Sequence[Mapping[str, float]], queries: '
                                               'Sequence[_spatial.Query], *, expected: Source | None=None) -> '
-                                              "'_lifecycle.Job[Snapshot[_spatial.Batch]]'"},
+                                              "'_lifecycle.Job[Snapshot[_spatial.Batch]]'",
+                                 'type_refs': ('zipzi.Job',
+                                               'zipzi.Snapshot',
+                                               'zipzi.Source',
+                                               'zipzi.modeling.spatial.SpatialQuery',
+                                               'zipzi.modeling.spatial.SpatialSamples')},
  'zipzi.Edit.parameters': {'children': ('zipzi.Edit.parameters.create',
                                         'zipzi.Edit.parameters.get',
                                         'zipzi.Edit.parameters.get_many',
                                         'zipzi.Edit.parameters.list',
                                         'zipzi.Edit.parameters.patch'),
-                           'documentation': 'Immutable typed value. See field semantics and the linked workflow.',
+                           'documentation': 'Read and author parameters in this Edit candidate. Reads include pending '
+                                            'writes; commit publishes changes separately.',
                            'example': 'docs/recipes.py',
                            'fields': [],
-                           'kind': 'type',
-                           'signature': "(session: '_lifecycle.Session', edit: '_lifecycle.Edit | None'=None)"},
+                           'kind': 'property',
+                           'signature': 'edit.parameters',
+                           'type_refs': ('zipzi.Edit', 'zipzi.Session')},
  'zipzi.Edit.parameters.create': {'children': (),
                                   'documentation': 'Apply parameters.Create synchronously to this Edit and return the '
                                                    'stable object ID as str.\n'
                                                    '\n'
                                                    'Arguments have the semantics of parameters.Create; inspect that '
-                                                   'operation and its input DTO fields with zipzi.describe. This '
-                                                   'changes candidate state only; commit publishes separately. '
+                                                   'operation and its input DTO fields with zipzi.describe.\n'
+                                                   '\n'
+                                                   'This changes candidate state only; commit publishes separately. '
                                                    'Ordinary write failures abort the candidate even when caught, so '
                                                    'repair inputs and start a new Edit. Confirmed Busy or '
                                                    'pre-execution admission refusal preserves it; act on '
@@ -442,9 +518,13 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                   'example': 'docs/recipes.py',
                                   'fields': [],
                                   'kind': 'callable',
-                                  'signature': '(spec: parameters.ParameterSpec) -> str'},
+                                  'signature': '(spec: parameters.ParameterSpec) -> str',
+                                  'type_refs': ('zipzi.parameters.ParameterSpec',)},
  'zipzi.Edit.parameters.get': {'children': (),
                                'documentation': 'Read one owned value at an exact formal or candidate Source.\n'
+                                                '\n'
+                                                'Through Session, reads committed Session content. Through Edit, reads '
+                                                'this Edit candidate, including pending writes.\n'
                                                 '\n'
                                                 'id is the stable document object ID, not a name. expected=None reads '
                                                 'current content; an explicit Source is checked atomically and stale '
@@ -459,10 +539,14 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                'fields': [],
                                'kind': 'callable',
                                'signature': '(id: str, *, expected: Source | None=None) -> '
-                                            'Snapshot[parameters.Parameter]'},
+                                            'Snapshot[parameters.Parameter]',
+                               'type_refs': ('zipzi.Snapshot', 'zipzi.Source', 'zipzi.parameters.Parameter')},
  'zipzi.Edit.parameters.get_many': {'children': (),
                                     'documentation': 'Read all selected IDs atomically from one formal or candidate '
                                                      'Source.\n'
+                                                     '\n'
+                                                     'Through Session, reads committed Session content. Through Edit, '
+                                                     'reads this Edit candidate, including pending writes.\n'
                                                      '\n'
                                                      'ids is copied before execution; requested order and duplicates '
                                                      'are preserved. expected=None accepts current content; an '
@@ -477,10 +561,14 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                     'fields': [],
                                     'kind': 'callable',
                                     'signature': '(ids: Sequence[str], *, expected: Source | None=None) -> '
-                                                 'Batch[parameters.Parameter]'},
+                                                 'Batch[parameters.Parameter]',
+                                    'type_refs': ('zipzi.Batch', 'zipzi.Source', 'zipzi.parameters.Parameter')},
  'zipzi.Edit.parameters.list': {'children': (),
                                 'documentation': 'Read a bounded metadata Page in SDK storage order, without '
                                                  'geometry/keyform/pixel payloads.\n'
+                                                 '\n'
+                                                 'Through Session, reads committed Session content. Through Edit, '
+                                                 'reads this Edit candidate, including pending writes.\n'
                                                  '\n'
                                                  'name=None disables filtering; a string matches exactly and '
                                                  'case-sensitively, preserving duplicate names. limit defaults to 128 '
@@ -497,16 +585,18 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                 'fields': [],
                                 'kind': 'callable',
                                 'signature': '(*, name: str | None=None, limit: int=128, cursor: PageCursor | '
-                                             'None=None) -> Page[parameters.Summary]'},
+                                             'None=None) -> Page[parameters.Summary]',
+                                'type_refs': ('zipzi.ObjectSummary', 'zipzi.Page', 'zipzi.PageCursor')},
  'zipzi.Edit.parameters.patch': {'children': (),
                                  'documentation': 'Apply parameters.Patch synchronously to this Edit and return '
                                                   'WriteResult with the new candidate Source and ordered result IDs.\n'
                                                   '\n'
                                                   'Arguments have the semantics of parameters.Patch; inspect that '
-                                                  'operation and its input DTO fields with zipzi.describe. This '
-                                                  'changes candidate state only; commit publishes separately. Ordinary '
-                                                  'write failures abort the candidate even when caught, so repair '
-                                                  'inputs and start a new Edit. Confirmed Busy or pre-execution '
+                                                  'operation and its input DTO fields with zipzi.describe.\n'
+                                                  '\n'
+                                                  'This changes candidate state only; commit publishes separately. '
+                                                  'Ordinary write failures abort the candidate even when caught, so '
+                                                  'repair inputs and start a new Edit. Confirmed Busy or pre-execution '
                                                   'admission refusal preserves it; act on recovery_action. '
                                                   'OutcomeUnknown retains the original Call and exact return type: '
                                                   'recover it instead of replaying the write. Example: result = '
@@ -515,7 +605,8 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                  'example': 'docs/recipes.py',
                                  'fields': [],
                                  'kind': 'callable',
-                                 'signature': '(id: str, patch: parameters.ParameterPatch) -> WriteResult'},
+                                 'signature': '(id: str, patch: parameters.ParameterPatch) -> WriteResult',
+                                 'type_refs': ('zipzi.WriteResult', 'zipzi.parameters.ParameterPatch')},
  'zipzi.Edit.pending_request': {'alias': 'zipzi.Buffer.pending_request'},
  'zipzi.Edit.plan': {'children': (),
                      'documentation': 'Plan a registered typed operation against this candidate and exact sequence. A '
@@ -524,7 +615,8 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                      'example': 'docs/recipes.py',
                      'fields': [],
                      'kind': 'callable',
-                     'signature': '(operation: ops.PlannableOperation) -> plans.Plan'},
+                     'signature': '(operation: ops.PlannableOperation) -> plans.Plan',
+                     'type_refs': ('zipzi.Plan', 'zipzi.ops.PlannableOperation')},
  'zipzi.Edit.plan_async': {'children': (),
                            'documentation': 'Submit registered modeling planning against this candidate Source. Wait '
                                             'for Plan before applying; a changed candidate makes it stale. Job timeout '
@@ -532,7 +624,8 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                            'example': 'docs/recipes.py',
                            'fields': [],
                            'kind': 'callable',
-                           'signature': '(operation: ModelingPlanOperation) -> Job[plans.Plan]'},
+                           'signature': '(operation: ModelingPlanOperation) -> Job[plans.Plan]',
+                           'type_refs': ('zipzi.Job', 'zipzi.Plan')},
  'zipzi.Edit.preview': {'children': (),
                         'documentation': 'Capture this candidate and its exact sequence as an independent Preview. '
                                          'Subsequent writes/commit/cancel do not rewrite its frozen content. Preview '
@@ -540,13 +633,15 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                         'example': 'docs/recipes.py',
                         'fields': [],
                         'kind': 'callable',
-                        'signature': '(*, expected: Source | None=None) -> Preview'},
+                        'signature': '(*, expected: Source | None=None) -> Preview',
+                        'type_refs': ('zipzi.Source', 'zipzi.animation.Preview')},
  'zipzi.Edit.receipt': {'children': (),
                         'documentation': 'Cached confirmed commit receipt, or None before success/after cancel.',
                         'example': 'docs/recipes.py',
                         'fields': [],
-                        'kind': 'callable',
-                        'signature': '() -> Receipt | None'},
+                        'kind': 'property',
+                        'signature': ': Receipt | None',
+                        'type_refs': ('zipzi.Receipt',)},
  'zipzi.Edit.resources': {'children': ('zipzi.Edit.resources.create_image',
                                        'zipzi.Edit.resources.get',
                                        'zipzi.Edit.resources.get_many',
@@ -554,11 +649,13 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                        'zipzi.Edit.resources.rename_image',
                                        'zipzi.Edit.resources.replace_image',
                                        'zipzi.Edit.resources.snapshot'),
-                          'documentation': 'Immutable typed value. See field semantics and the linked workflow.',
+                          'documentation': 'Read and author resources in this Edit candidate. Reads include pending '
+                                           'writes; commit publishes changes separately.',
                           'example': 'docs/recipes.py',
                           'fields': [],
-                          'kind': 'type',
-                          'signature': "(session: '_lifecycle.Session', edit: '_lifecycle.Edit | None'=None)"},
+                          'kind': 'property',
+                          'signature': 'edit.resources',
+                          'type_refs': ('zipzi.Edit', 'zipzi.Session')},
  'zipzi.Edit.resources.create_image': {'children': (),
                                        'documentation': 'Apply resources.CreateImage synchronously to this Edit and '
                                                         'return the stable object ID as str.\n'
@@ -567,11 +664,12 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                                         'inspect that operation and its input DTO fields with '
                                                         'zipzi.describe. image must be a live PreparedImage from this '
                                                         'Runtime; close that independent lease after acceptance, while '
-                                                        'native candidate/history owners retain the pixels. This '
-                                                        'changes candidate state only; commit publishes separately. '
-                                                        'Ordinary write failures abort the candidate even when caught, '
-                                                        'so repair inputs and start a new Edit. Confirmed Busy or '
-                                                        'pre-execution admission refusal preserves it; act on '
+                                                        'native candidate/history owners retain the pixels.\n'
+                                                        '\n'
+                                                        'This changes candidate state only; commit publishes '
+                                                        'separately. Ordinary write failures abort the candidate even '
+                                                        'when caught, so repair inputs and start a new Edit. Confirmed '
+                                                        'Busy or pre-execution admission refusal preserves it; act on '
                                                         'recovery_action. OutcomeUnknown retains the original Call and '
                                                         'exact return type: recover it instead of replaying the write. '
                                                         'Example: result = edit.resources.create_image(...), using the '
@@ -580,9 +678,13 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                        'fields': [],
                                        'kind': 'callable',
                                        'signature': '(name: str, image: resources.PreparedImage, *, id: str | '
-                                                    'None=None) -> str'},
+                                                    'None=None) -> str',
+                                       'type_refs': ('zipzi.PreparedImage',)},
  'zipzi.Edit.resources.get': {'children': (),
                               'documentation': 'Read one owned value at an exact formal or candidate Source.\n'
+                                               '\n'
+                                               'Through Session, reads committed Session content. Through Edit, reads '
+                                               'this Edit candidate, including pending writes.\n'
                                                '\n'
                                                'id is the stable document object ID, not a name. expected=None reads '
                                                'current content; an explicit Source is checked atomically and stale '
@@ -596,10 +698,14 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                               'example': 'docs/recipes.py',
                               'fields': [],
                               'kind': 'callable',
-                              'signature': '(id: str, *, expected: Source | None=None) -> Snapshot[resources.Image]'},
+                              'signature': '(id: str, *, expected: Source | None=None) -> Snapshot[resources.Image]',
+                              'type_refs': ('zipzi.Snapshot', 'zipzi.Source', 'zipzi.resources.Image')},
  'zipzi.Edit.resources.get_many': {'children': (),
                                    'documentation': 'Read all selected IDs atomically from one formal or candidate '
                                                     'Source.\n'
+                                                    '\n'
+                                                    'Through Session, reads committed Session content. Through Edit, '
+                                                    'reads this Edit candidate, including pending writes.\n'
                                                     '\n'
                                                     'ids is copied before execution; requested order and duplicates '
                                                     'are preserved. expected=None accepts current content; an explicit '
@@ -614,10 +720,14 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                    'fields': [],
                                    'kind': 'callable',
                                    'signature': '(ids: Sequence[str], *, expected: Source | None=None) -> '
-                                                'Batch[resources.Image]'},
+                                                'Batch[resources.Image]',
+                                   'type_refs': ('zipzi.Batch', 'zipzi.Source', 'zipzi.resources.Image')},
  'zipzi.Edit.resources.list': {'children': (),
                                'documentation': 'Read a bounded metadata Page in SDK storage order, without '
                                                 'geometry/keyform/pixel payloads.\n'
+                                                '\n'
+                                                'Through Session, reads committed Session content. Through Edit, reads '
+                                                'this Edit candidate, including pending writes.\n'
                                                 '\n'
                                                 'name=None disables filtering; a string matches exactly and '
                                                 'case-sensitively, preserving duplicate names. limit defaults to 128 '
@@ -634,7 +744,8 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                'fields': [],
                                'kind': 'callable',
                                'signature': '(*, name: str | None=None, limit: int=128, cursor: PageCursor | '
-                                            'None=None) -> Page[resources.Summary]'},
+                                            'None=None) -> Page[resources.Summary]',
+                               'type_refs': ('zipzi.ObjectSummary', 'zipzi.Page', 'zipzi.PageCursor')},
  'zipzi.Edit.resources.rename_image': {'children': (),
                                        'documentation': 'Apply resources.RenameImage synchronously to this Edit and '
                                                         'return WriteResult with the new candidate Source and ordered '
@@ -642,20 +753,22 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                                         '\n'
                                                         'Arguments have the semantics of resources.RenameImage; '
                                                         'inspect that operation and its input DTO fields with '
-                                                        'zipzi.describe. This changes candidate state only; commit '
-                                                        'publishes separately. Ordinary write failures abort the '
-                                                        'candidate even when caught, so repair inputs and start a new '
-                                                        'Edit. Confirmed Busy or pre-execution admission refusal '
-                                                        'preserves it; act on recovery_action. OutcomeUnknown retains '
-                                                        'the original Call and exact return type: recover it instead '
-                                                        'of replaying the write. Example: result = '
-                                                        'edit.resources.rename_image(...), using the arguments shown '
-                                                        'in its signature.',
+                                                        'zipzi.describe.\n'
+                                                        '\n'
+                                                        'This changes candidate state only; commit publishes '
+                                                        'separately. Ordinary write failures abort the candidate even '
+                                                        'when caught, so repair inputs and start a new Edit. Confirmed '
+                                                        'Busy or pre-execution admission refusal preserves it; act on '
+                                                        'recovery_action. OutcomeUnknown retains the original Call and '
+                                                        'exact return type: recover it instead of replaying the write. '
+                                                        'Example: result = edit.resources.rename_image(...), using the '
+                                                        'arguments shown in its signature.',
                                        'example': 'docs/recipes.py',
                                        'fields': [],
                                        'kind': 'callable',
                                        'signature': '(id: str, name: str, *, expected_name: str | None=None) -> '
-                                                    'WriteResult'},
+                                                    'WriteResult',
+                                       'type_refs': ('zipzi.WriteResult',)},
  'zipzi.Edit.resources.replace_image': {'children': (),
                                         'documentation': 'Apply resources.ReplaceImage synchronously to this Edit and '
                                                          'return WriteResult with the new candidate Source and ordered '
@@ -665,7 +778,8 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                                          'inspect that operation and its input DTO fields with '
                                                          'zipzi.describe. image must be a live PreparedImage from this '
                                                          'Runtime; close that independent lease after acceptance, '
-                                                         'while native candidate/history owners retain the pixels. '
+                                                         'while native candidate/history owners retain the pixels.\n'
+                                                         '\n'
                                                          'This changes candidate state only; commit publishes '
                                                          'separately. Ordinary write failures abort the candidate even '
                                                          'when caught, so repair inputs and start a new Edit. '
@@ -678,7 +792,8 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                         'example': 'docs/recipes.py',
                                         'fields': [],
                                         'kind': 'callable',
-                                        'signature': '(id: str, image: resources.PreparedImage) -> WriteResult'},
+                                        'signature': '(id: str, image: resources.PreparedImage) -> WriteResult',
+                                        'type_refs': ('zipzi.PreparedImage', 'zipzi.WriteResult')},
  'zipzi.Edit.resources.snapshot': {'children': (),
                                    'documentation': 'Capture pixels of image id at this exact formal/candidate source '
                                                     'into an independent ImageLease. This synchronous request can '
@@ -691,15 +806,21 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                    'example': 'docs/recipes.py',
                                    'fields': [],
                                    'kind': 'callable',
-                                   'signature': '(id: str) -> resources.ImageLease'},
+                                   'signature': '(id: str) -> resources.ImageLease',
+                                   'type_refs': ('zipzi.resources.ImageLease',)},
  'zipzi.Edit.scene': {'children': ('zipzi.Edit.scene.get', 'zipzi.Edit.scene.get_many', 'zipzi.Edit.scene.list'),
-                      'documentation': 'Immutable typed value. See field semantics and the linked workflow.',
+                      'documentation': 'Read scene through a Session or Edit. Session reads committed document '
+                                       'content; Edit reads include its pending writes.',
                       'example': 'docs/recipes.py',
                       'fields': [],
-                      'kind': 'type',
-                      'signature': "(session: '_lifecycle.Session', edit: '_lifecycle.Edit | None'=None)"},
+                      'kind': 'property',
+                      'signature': 'edit.scene',
+                      'type_refs': ('zipzi.Edit', 'zipzi.Session')},
  'zipzi.Edit.scene.get': {'children': (),
                           'documentation': 'Read one owned value at an exact formal or candidate Source.\n'
+                                           '\n'
+                                           'Through Session, reads committed Session content. Through Edit, reads this '
+                                           'Edit candidate, including pending writes.\n'
                                            '\n'
                                            'id is the stable document object ID, not a name. expected=None reads '
                                            'current content; an explicit Source is checked atomically and stale '
@@ -713,10 +834,14 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                           'example': 'docs/recipes.py',
                           'fields': [],
                           'kind': 'callable',
-                          'signature': '(id: str, *, expected: Source | None=None) -> Snapshot[scene.Summary]'},
+                          'signature': '(id: str, *, expected: Source | None=None) -> Snapshot[scene.Summary]',
+                          'type_refs': ('zipzi.Snapshot', 'zipzi.Source', 'zipzi.scene.Summary')},
  'zipzi.Edit.scene.get_many': {'children': (),
                                'documentation': 'Read all selected IDs atomically from one formal or candidate '
                                                 'Source.\n'
+                                                '\n'
+                                                'Through Session, reads committed Session content. Through Edit, reads '
+                                                'this Edit candidate, including pending writes.\n'
                                                 '\n'
                                                 'ids is copied before execution; requested order and duplicates are '
                                                 'preserved. expected=None accepts current content; an explicit Source '
@@ -730,10 +855,14 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                                'fields': [],
                                'kind': 'callable',
                                'signature': '(ids: Sequence[str], *, expected: Source | None=None) -> '
-                                            'Batch[scene.Summary]'},
+                                            'Batch[scene.Summary]',
+                               'type_refs': ('zipzi.Batch', 'zipzi.Source', 'zipzi.scene.Summary')},
  'zipzi.Edit.scene.list': {'children': (),
                            'documentation': 'Read a bounded metadata Page in SDK storage order, without '
                                             'geometry/keyform/pixel payloads.\n'
+                                            '\n'
+                                            'Through Session, reads committed Session content. Through Edit, reads '
+                                            'this Edit candidate, including pending writes.\n'
                                             '\n'
                                             'name=None disables filtering; a string matches exactly and '
                                             'case-sensitively, preserving duplicate names. limit defaults to 128 and '
@@ -750,10 +879,12 @@ DATA: dict[str, Entry] = {'zipzi.Edit': {'children': ('zipzi.Edit.__enter__',
                            'fields': [],
                            'kind': 'callable',
                            'signature': '(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> '
-                                        'Page[scene.Summary]'},
+                                        'Page[scene.Summary]',
+                           'type_refs': ('zipzi.Page', 'zipzi.PageCursor', 'zipzi.scene.Summary')},
  'zipzi.Edit.state': {'children': (),
                       'documentation': 'Cached confirmed or unknown client state; no request is sent.',
                       'example': 'docs/recipes.py',
                       'fields': [],
-                      'kind': 'callable',
-                      'signature': '() -> EditState'}}
+                      'kind': 'property',
+                      'signature': ': EditState',
+                      'type_refs': ('zipzi.EditState',)}}

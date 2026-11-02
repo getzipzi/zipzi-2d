@@ -408,6 +408,7 @@
           "rust_name": "KeepKeyValues"
         },
         {
+          "doc": "Map every dependent key by the same increasing affine change of domain.",
           "fields": [],
           "form": "unit",
           "name": "MapKeyValues",

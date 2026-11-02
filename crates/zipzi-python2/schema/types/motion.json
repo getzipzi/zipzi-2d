@@ -2,6 +2,7 @@
   "_generated_by": "zipzi-python2/tools/generate.py",
   "definitions": {
     "zipzi_contract::animation::MotionEventFired": {
+      "doc": "A motion event crossed during the last update, returned without side effects.",
       "fields": [
         {
           "doc": "Source clip UUID.",
@@ -90,6 +91,7 @@
       "tuple": false
     },
     "zipzi_contract::animation::MotionSnapshot": {
+      "doc": "Combined values after Motion, Expression, Physics and Pose evaluation.",
       "fields": [
         {
           "default": [],
@@ -1261,6 +1263,7 @@
       "tuple": false
     },
     "zipzi_contract::document::MotionKey": {
+      "doc": "Persistent identity belongs to keys, never to Bezier control points.",
       "fields": [
         {
           "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1322,6 +1325,7 @@
       "tuple": false
     },
     "zipzi_contract::document::MotionRegistration": {
+      "doc": "model3 registration is separate from a clip: one file may appear in multiple groups.",
       "fields": [
         {
           "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",

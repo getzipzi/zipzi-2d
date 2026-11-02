@@ -161,6 +161,7 @@
           "rust_name": "Attachment"
         },
         {
+          "doc": "Typed motion intent evaluated against the exact formal/candidate source.",
           "fields": [
             {
               "doc": "Typed native motion operation against this captured source.",
@@ -178,6 +179,7 @@
           "rust_name": "Motion"
         },
         {
+          "doc": "Typed expression intent evaluated against the exact formal/candidate source.",
           "fields": [
             {
               "doc": "Typed native expression operation against this captured source.",
@@ -195,6 +197,7 @@
           "rust_name": "Expression"
         },
         {
+          "doc": "Typed physics intent evaluated against the exact formal/candidate source.",
           "fields": [
             {
               "doc": "Typed native physics operation against this captured source.",
@@ -212,6 +215,7 @@
           "rust_name": "Physics"
         },
         {
+          "doc": "Typed pose intent evaluated against the exact formal/candidate source.",
           "fields": [
             {
               "doc": "Typed native pose operation against this captured source.",

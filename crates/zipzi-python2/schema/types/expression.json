@@ -148,6 +148,7 @@
     },
     "zipzi_contract::document::ExpressionEdit": {
       "content": null,
+      "doc": "All positions use stable entry IDs; None appends to the destination.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::ExpressionEdit",
       "tag": "op",

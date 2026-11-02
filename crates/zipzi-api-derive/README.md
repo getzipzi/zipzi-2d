@@ -5,6 +5,10 @@ The derive emits `zipzi_contract::api_shape::ApiShape`; the Python exporter choo
 its finite input/output roots. It neither validates documents nor implements
 SDK behavior. Selected serde defaults are evaluated in Rust during export.
 
+`ApiShape` and `ApiFields` preserve type, variant and field `///` documentation
+in the exported metadata. Maintain shared business semantics at those Rust
+declarations; downstream generators consume the documentation with the shape.
+
 Unreviewed serde representations fail compilation. The client and its native
 adapter are generated before packaging; installs perform no reflection or code
 generation. SDK components use the workspace MIT license.

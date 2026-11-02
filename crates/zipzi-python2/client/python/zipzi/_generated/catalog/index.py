@@ -15,6 +15,7 @@ class Entry(TypedDict, total=False):
     documentation: str
     fields: Sequence[tuple[str, str]]
     children: tuple[str, ...]
+    type_refs: tuple[str, ...]
     example: str
     alias: str
     common: str
@@ -25,6 +26,7 @@ class Resolved(TypedDict, total=False):
     documentation: str
     fields: Sequence[tuple[str, str]]
     children: tuple[str, ...]
+    type_refs: tuple[str, ...]
     example: str
     common: str
 

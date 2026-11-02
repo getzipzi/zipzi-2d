@@ -74,7 +74,8 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
                                            'diagnostic is not\n'
                                            'triangle-specific.')],
                                'kind': 'type',
-                               'signature': '(kind: DiagnosticKind, mesh_id: str, triangle_index: int | None) -> None'},
+                               'signature': '(kind: DiagnosticKind, mesh_id: str, triangle_index: int | None) -> None',
+                               'type_refs': ('zipzi.modeling.sampling.GeometryDiagnosticKind',)},
  'zipzi.sampling.Diagnostic.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.sampling.Diagnostic.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.DiagnosticKind': {'alias': 'zipzi.modeling.sampling.GeometryDiagnosticKind'},
@@ -141,7 +142,8 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
                                           'int, render_order: int, opacity: float, multiply_color: Sequence[float], '
                                           'screen_color: Sequence[float], blend_mode: BlendMode, enabled: bool, '
                                           'visible: bool, double_sided: bool, inverted_mask: bool, masks: '
-                                          'Sequence[str]) -> None'},
+                                          'Sequence[str]) -> None',
+                             'type_refs': ('zipzi.modeling.scene.BlendMode',)},
  'zipzi.sampling.Drawable.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.sampling.Drawable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.Frame': {'children': ('zipzi.sampling.Frame.__repr__', 'zipzi.sampling.Frame.summary'),
@@ -163,7 +165,12 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
                           'kind': 'type',
                           'signature': '(source_revision: int, parameters: Sequence[Parameter], drawables: '
                                        'Sequence[Drawable], offscreens: Sequence[Offscreen], render_plan: '
-                                       'Sequence[RenderCommand], deformers: Sequence[Deformer]) -> None'},
+                                       'Sequence[RenderCommand], deformers: Sequence[Deformer]) -> None',
+                          'type_refs': ('zipzi.sampling.Deformer',
+                                        'zipzi.sampling.Drawable',
+                                        'zipzi.sampling.Offscreen',
+                                        'zipzi.sampling.Parameter',
+                                        'zipzi.sampling.RenderCommand')},
  'zipzi.sampling.Frame.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.sampling.Frame.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.MeshQuality': {'alias': 'zipzi.modeling.sampling.MeshQuality'},
@@ -250,15 +257,18 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
                                              ('id',
                                               'Stable mesh ID for DrawMesh, or Offscreen ID for begin/end commands.')],
                                   'kind': 'type',
-                                  'signature': '(kind: RenderKind, id: str)'},
+                                  'signature': '(kind: RenderKind, id: str)',
+                                  'type_refs': ('zipzi.sampling.RenderKind',)},
  'zipzi.sampling.RenderCommand.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.sampling.RenderCommand.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.RenderKind': {'children': (),
-                               'documentation': 'Immutable typed value. See field semantics and the linked workflow.',
+                               'documentation': '',
                                'example': 'docs/recipes.py',
-                               'fields': [],
-                               'kind': 'type',
-                               'signature': '()'},
+                               'fields': [('BEGIN_OFFSCREEN', "'BeginOffscreen'"),
+                                          ('DRAW_MESH', "'DrawMesh'"),
+                                          ('END_OFFSCREEN', "'EndOffscreen'")],
+                               'kind': 'enum',
+                               'signature': ''},
  'zipzi.sampling.Result': {'children': ('zipzi.sampling.Result.__repr__', 'zipzi.sampling.Result.summary'),
                            'documentation': 'Owned sampling Result value; reading fields, repr and summary performs no '
                                             'IO.',
@@ -285,7 +295,12 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
                            'kind': 'type',
                            'signature': '(state: str, version: Version, parameters: tuple[Pose, ...], frames: '
                                         'Sequence[Frame], diagnostics: Sequence[Diagnostic], quality: '
-                                        'Sequence[Sequence[MeshQuality]]) -> None'},
+                                        'Sequence[Sequence[MeshQuality]]) -> None',
+                           'type_refs': ('zipzi.Version',
+                                         'zipzi.modeling.sampling.MeshQuality',
+                                         'zipzi.sampling.Diagnostic',
+                                         'zipzi.sampling.Frame',
+                                         'zipzi.sampling.Pose')},
  'zipzi.sampling.Result.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.sampling.Result.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.TextureCoverage': {'alias': 'zipzi.modeling.observation.TextureCoverage'},

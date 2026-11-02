@@ -5,8 +5,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.common': {'children': ('zipzi.modeling
                            'kind': 'module',
                            'signature': ''},
  'zipzi.modeling.common.PreciseVec2': {'children': (),
-                                       'documentation': 'Immutable owned PreciseVec2 value. Construction owns declared '
-                                                        'collections; reading fields, repr and summary performs no IO.',
+                                       'documentation': 'Authoring-space origins need f64: adding a pixel-space canvas '
+                                                        'origin to an\n'
+                                                        'imported f32 runtime position must remain reversible before '
+                                                        'evaluation.',
                                        'example': 'docs/recipes.py',
                                        'fields': [('x',
                                                    'Horizontal coordinate; its space and units are determined by the '
@@ -18,8 +20,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.common': {'children': ('zipzi.modeling
                                        'kind': 'type',
                                        'signature': '(x: float, y: float)'},
  'zipzi.modeling.common.Vec2': {'children': (),
-                                'documentation': 'Immutable owned Vec2 value. Construction owns declared collections; '
-                                                 'reading fields, repr and summary performs no IO.',
+                                'documentation': '',
                                 'example': 'docs/recipes.py',
                                 'fields': [('x',
                                             'Horizontal coordinate; its space and units are determined by the '

@@ -55,7 +55,8 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
                                        'example': 'docs/recipes.py',
                                        'fields': [],
                                        'kind': 'callable',
-                                       'signature': '() -> Preview'},
+                                       'signature': '() -> Preview',
+                                       'type_refs': ('zipzi.animation.Preview',)},
  'zipzi.animation.Preview.__exit__': {'alias': 'zipzi.Buffer.__exit__'},
  'zipzi.animation.Preview.advance_to': {'children': (),
                                         'documentation': 'Submit SDK canonical incremental playback. Cancellation may '
@@ -66,7 +67,12 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
                                         'kind': 'callable',
                                         'signature': '(time: float, *, geometry: bool=True, queries: '
                                                      'Sequence[m.SpatialQuery]=(), view: m.ObservationView | '
-                                                     'None=None) -> Job[Snapshot[m.PreviewBatch]]'},
+                                                     'None=None) -> Job[Snapshot[m.PreviewBatch]]',
+                                        'type_refs': ('zipzi.Job',
+                                                      'zipzi.Snapshot',
+                                                      'zipzi.modeling.observation.ObservationView',
+                                                      'zipzi.modeling.preview.PreviewBatch',
+                                                      'zipzi.modeling.spatial.SpatialQuery')},
  'zipzi.animation.Preview.apply': {'children': (),
                                    'documentation': 'Apply one typed animation control in this Preview. SDK validation '
                                                     'errors preserve its usable state; commands never publish model '
@@ -74,7 +80,10 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
                                    'example': 'docs/recipes.py',
                                    'fields': [],
                                    'kind': 'callable',
-                                   'signature': '(command: m.PreviewCommand) -> Snapshot[m.PreviewState]'},
+                                   'signature': '(command: m.PreviewCommand) -> Snapshot[m.PreviewState]',
+                                   'type_refs': ('zipzi.Snapshot',
+                                                 'zipzi.modeling.preview.PreviewCommand',
+                                                 'zipzi.modeling.preview.PreviewState')},
  'zipzi.animation.Preview.close': {'alias': 'zipzi.Buffer.close'},
  'zipzi.animation.Preview.estimate_observation': {'children': (),
                                                   'documentation': 'Estimate frozen-source observation using metadata '
@@ -93,21 +102,25 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
                                                   'kind': 'callable',
                                                   'signature': '(times: Sequence[float], *, view: m.ObservationView, '
                                                                'geometry: bool=True, queries: '
-                                                               'Sequence[m.SpatialQuery]=()) -> m.ObservationEstimate'},
+                                                               'Sequence[m.SpatialQuery]=()) -> m.ObservationEstimate',
+                                                  'type_refs': ('zipzi.modeling.observation.ObservationEstimate',
+                                                                'zipzi.modeling.observation.ObservationView',
+                                                                'zipzi.modeling.spatial.SpatialQuery')},
  'zipzi.animation.Preview.id': {'children': (),
                                 'documentation': 'Read the Runtime-wide serial without IO; combine with source.runtime '
                                                  'to compare returned frames across views.',
                                 'example': 'docs/recipes.py',
                                 'fields': [],
-                                'kind': 'callable',
-                                'signature': '() -> int'},
+                                'kind': 'property',
+                                'signature': ': int'},
  'zipzi.animation.Preview.info': {'children': (),
                                   'documentation': "Read this Preview's accepted ordinal and actual SDK clock. Busy "
                                                    'work refuses this read.',
                                   'example': 'docs/recipes.py',
                                   'fields': [],
                                   'kind': 'callable',
-                                  'signature': '() -> Snapshot[m.PreviewState]'},
+                                  'signature': '() -> Snapshot[m.PreviewState]',
+                                  'type_refs': ('zipzi.Snapshot', 'zipzi.modeling.preview.PreviewState')},
  'zipzi.animation.Preview.pending_request': {'alias': 'zipzi.Buffer.pending_request'},
  'zipzi.animation.Preview.sample': {'children': (),
                                     'documentation': 'Submit canonical seeks in target order; wait for a frozen-source '
@@ -139,7 +152,12 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
                                     'kind': 'callable',
                                     'signature': '(times: Sequence[float], *, geometry: bool=True, queries: '
                                                  'Sequence[m.SpatialQuery]=(), view: m.ObservationView | None=None) -> '
-                                                 'Job[Snapshot[m.PreviewBatch]]'},
+                                                 'Job[Snapshot[m.PreviewBatch]]',
+                                    'type_refs': ('zipzi.Job',
+                                                  'zipzi.Snapshot',
+                                                  'zipzi.modeling.observation.ObservationView',
+                                                  'zipzi.modeling.preview.PreviewBatch',
+                                                  'zipzi.modeling.spatial.SpatialQuery')},
  'zipzi.animation.Preview.seek': {'children': (),
                                   'documentation': 'Submit one canonical seek and return a one-frame batch Job; an '
                                                    'interrupted SDK seek preserves its prior state; late cancellation '
@@ -149,14 +167,20 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
                                   'kind': 'callable',
                                   'signature': '(time: float, *, geometry: bool=True, queries: '
                                                'Sequence[m.SpatialQuery]=(), view: m.ObservationView | None=None) -> '
-                                               'Job[Snapshot[m.PreviewBatch]]'},
+                                               'Job[Snapshot[m.PreviewBatch]]',
+                                  'type_refs': ('zipzi.Job',
+                                                'zipzi.Snapshot',
+                                                'zipzi.modeling.observation.ObservationView',
+                                                'zipzi.modeling.preview.PreviewBatch',
+                                                'zipzi.modeling.spatial.SpatialQuery')},
  'zipzi.animation.Preview.source': {'children': (),
                                     'documentation': 'Read the cached exact frozen Source without IO or refreshing the '
                                                      'model.',
                                     'example': 'docs/recipes.py',
                                     'fields': [],
-                                    'kind': 'callable',
-                                    'signature': '() -> Source'},
+                                    'kind': 'property',
+                                    'signature': ': Source',
+                                    'type_refs': ('zipzi.Source',)},
  'zipzi.animation.Reset': {'alias': 'zipzi.modeling.preview.PreviewCommandReset'},
  'zipzi.animation.Reset.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.animation.Reset.summary': {'alias': 'zipzi.ApiDescription.summary'},

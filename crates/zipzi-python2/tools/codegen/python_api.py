@@ -58,7 +58,7 @@ def build_api(contract,package,dto_names,modeling_name,resolve=lambda shape: sha
                 # Keep the reviewed ImageCreateSpec flattening used by resource_ops.
                 fields=[item for f in fields for item in (resolve(f['shape'])['fields'] if f['name']=='spec' else [f])]
             bind(file,prefix+variant['rust_name'],dict(name=shape['name']+'::'+variant['rust_name'],
-                 rust_type_id=shape['name'],variant=variant['rust_name'],fields=fields))
+                 rust_type_id=shape['name'],variant=variant['rust_name'],doc=variant.get('doc',''),fields=fields))
     for section,file in ((contract,'meshes'),(contract['resources'],'resource_values'),(contract['scene'],'scene')):
         for binding in section['bindings']:
             if binding['form']=='external':continue
@@ -171,9 +171,10 @@ def build_api(contract,package,dto_names,modeling_name,resolve=lambda shape: sha
         if '/_generated/' not in path:return content
         tree=parse(path,content);lines=content.splitlines(True);edits=[]
         for node in tree.body:
-            if not isinstance(node,ast.ClassDef) or ast.get_docstring(node) or not any(isinstance(n,ast.Name) and n.id in {'CompactValue','NamedTuple'} for n in node.bases):continue
+            if not isinstance(node,ast.ClassDef) or ast.get_docstring(node) or not any(isinstance(n,ast.Name) and n.id in {'CompactValue','NamedTuple','Enum'} for n in node.bases):continue
             fs=compiled_fields(Path(path).stem,node)
-            text='Immutable owned '+node.name+' value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+            shape=class_shapes.get((Path(path).stem,node.name),{})
+            text=shape.get('doc','').strip()
             if fs:text+='\n\nFields:\n'+'\n'.join(name+': '+doc for name,doc in fs)
             edits.append((node.body[0].lineno-1,'    '+repr(text)+'\n'))
         for index,value in reversed(edits):lines.insert(index,value)
@@ -194,8 +195,9 @@ def build_api(contract,package,dto_names,modeling_name,resolve=lambda shape: sha
             if '/_generated/values/' not in path or not path.endswith('.py') or path.endswith('/__init__.py'):continue
             domain=Path(path).stem
             for node in parse(path,content).body:
-                if isinstance(node,ast.ClassDef) and ('modeling',node.name) in class_shapes:
-                    class_shapes[(domain,node.name)]=class_shapes[('modeling',node.name)]
+                name=node.name if isinstance(node,ast.ClassDef) else node.target.id if isinstance(node,ast.AnnAssign) and isinstance(node.target,ast.Name) else None
+                if name is not None and ('modeling',name) in class_shapes:
+                    class_shapes[(domain,name)]=class_shapes[('modeling',name)]
         validate_projections(tuple(projected))
         return sources,parse,class_shapes,compiled_fields,python_fields,tuple(projected),resolve
     return render_python,prepare
@@ -213,8 +215,11 @@ def document_model(contract,prepared,package):
     packages={module_name(p) for p in sources if p.endswith('/__init__.py')}
     trees={module_name(p):parse(p,s) for p,s in sources.items() if p.startswith(prefix)}
     symbols={}
+    definition_docs={}
     def signature(node):
         if isinstance(node,ast.FunctionDef):
+            if any(isinstance(d,ast.Name) and d.id=='property' for d in node.decorator_list):
+                return ': '+(ast.unparse(node.returns) if node.returns else 'object')
             arguments=deepcopy(node.args)
             if arguments.args and arguments.args[0].arg in {'self','cls'}:arguments.args.pop(0)
             return '('+ast.unparse(arguments)+')'+(' -> '+ast.unparse(node.returns) if node.returns else '')
@@ -223,6 +228,7 @@ def document_model(contract,prepared,package):
             if any(a.arg in {'backend','token','session','edit'} for a in init.args.args[1:]) and node.name in {'Runtime','Session','Edit','Job','Plan','PreparedImage','ImageLease','Buffer','Preview','ObjectRef','LabelAddress','FieldAddress'}:return '(factory-owned; use the documented public entry)'
             return signature(init)
         fields=[n for n in node.body if isinstance(n,ast.AnnAssign) and isinstance(n.target,ast.Name) and not n.target.id.startswith('_') and not (isinstance(n.annotation,ast.Subscript) and ast.unparse(n.annotation.value) in {'ClassVar','_ClassVar'})]
+        fields=[n for n in fields if not (isinstance(n.value,ast.Call) and isinstance(n.value.func,ast.Name) and n.value.func.id=='field' and any(a.arg=='init' and isinstance(a.value,ast.Constant) and a.value.value is False for a in n.value.keywords))]
         shape=class_shapes.get((node_modules.get(id(node),'').rsplit('.',1)[-1],node.name),{})
         declared={f['name']+('_' if keyword.iskeyword(f['name']) else ''):f for f in shape.get('fields',[])}
         def default(field):
@@ -243,19 +249,36 @@ def document_model(contract,prepared,package):
                         member=re.sub(r'(?<!^)(?=[A-Z])','_',variant['rust_name']).upper()
                         return ' = '+ast.unparse(field.annotation)+'.'+member
             if isinstance(field.value,ast.Call) and isinstance(field.value.func,ast.Name) and field.value.func.id=='field':
-                return ' = <factory>'
+                explicit=next((a.value for a in field.value.keywords if a.arg=='default'),None)
+                return ' = '+ast.unparse(explicit) if explicit is not None else ' = <factory>'
             return ' = '+ast.unparse(field.value)
         kw_only=any(isinstance(decorator,ast.Call) and isinstance(decorator.func,ast.Name)
                     and decorator.func.id=='dataclass' and any(arg.arg=='kw_only' and ast.literal_eval(arg.value) is True for arg in decorator.keywords)
                     for decorator in node.decorator_list)
-        return '('+('*, ' if kw_only and fields else '')+', '.join(n.target.id+': '+ast.unparse(n.annotation)+default(n) for n in fields)+')'
+        positional=[];keywords=[]
+        for n in fields:
+            field_kw=kw_only
+            if isinstance(n.value,ast.Call) and isinstance(n.value.func,ast.Name) and n.value.func.id=='field':
+                flag=next((a.value for a in n.value.keywords if a.arg=='kw_only'),None)
+                if isinstance(flag,ast.Constant):field_kw=flag.value
+            (keywords if field_kw else positional).append(n.target.id+': '+ast.unparse(n.annotation)+default(n))
+        return '('+', '.join(positional+(['*']+keywords if keywords else []))+')'
+    def type_scope(nodes):
+        for node in nodes:
+            yield node
+            if isinstance(node,ast.If) and ast.unparse(node.test) in {'TYPE_CHECKING','typing.TYPE_CHECKING'}:
+                yield from type_scope(node.body)
     for module,tree in trees.items():
+        for left,right in zip(tree.body,tree.body[1:]):
+            if isinstance(left,(ast.Assign,ast.AnnAssign)) and isinstance(right,ast.Expr) and isinstance(right.value,ast.Constant) and isinstance(right.value.value,str):
+                definition_docs[id(left)]=right.value.value
         table={}
-        for node in tree.body:
+        for node in type_scope(tree.body):
             if isinstance(node,(ast.ClassDef,ast.FunctionDef)):table[node.name]=node
-            elif isinstance(node,ast.ImportFrom) and node.level:
+            elif isinstance(node,ast.ImportFrom) and (node.level or node.module=='zipzi' or (node.module or '').startswith('zipzi.')):
                 parent=module.split('.') if module in packages and module else module.split('.')[:-1] if module else []
                 target='.'.join(parent[:len(parent)-node.level+1]+(node.module or '').split('.')).strip('.')
+                if not node.level:target=(node.module or '').removeprefix('zipzi').lstrip('.')
                 for a in node.names:table[a.asname or a.name]=(target,a.name)
             elif isinstance(node,(ast.Assign,ast.AnnAssign)):
                 for n in getattr(node,'targets',[getattr(node,'target',None)]):
@@ -271,7 +294,7 @@ def document_model(contract,prepared,package):
             # alias needs the same field docs and inherited public methods.
             return resolve(module,node.value.id,seen)
         return node
-    node_modules={id(node):module for module,tree in trees.items() for node in tree.body if isinstance(node,ast.ClassDef)}
+    node_modules={id(node):module for module,tree in trees.items() for node in tree.body if isinstance(node,(ast.ClassDef,ast.AnnAssign,ast.Assign))}
     def public_methods(node,seen=None):
         seen=set() if seen is None else seen
         if id(node) in seen:return {}
@@ -287,9 +310,10 @@ def document_model(contract,prepared,package):
     catalog={'zipzi':dict(kind='module',signature='',documentation='Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release.',example='docs/recipes.py',children=[])}
     def add(path,node,field_docs=None):
         kind='type' if isinstance(node,ast.ClassDef) else 'callable' if isinstance(node,ast.FunctionDef) else 'value'
-        text=ast.get_docstring(node) if isinstance(node,(ast.ClassDef,ast.FunctionDef)) else ''
+        text=ast.get_docstring(node) if isinstance(node,(ast.ClassDef,ast.FunctionDef)) else definition_docs.get(id(node),'')
         if kind=='callable' and not text:
             raise ValueError('Missing semantic callable documentation: '+path)
+        if isinstance(node,ast.FunctionDef) and any(isinstance(d,ast.Name) and d.id=='property' for d in node.decorator_list):kind='property'
         fields=field_docs or []
         if isinstance(node,ast.ClassDef):
             fields=fields or compiled_fields(node_modules.get(id(node),'').rsplit('.',1)[-1],node)
@@ -300,7 +324,26 @@ def document_model(contract,prepared,package):
                           and ast.unparse(n.annotation.value) in {'ClassVar','_ClassVar'})}
                 extra=selected-set(dict(fields))
                 if extra:fields+=python_fields(node,extra)
-        catalog[path]=dict(kind=kind,signature=signature(node) if kind in {'type','callable'} else '',documentation=text or ('Immutable typed value. See field semantics and the linked workflow.' if kind=='type' else 'Typed public API entry.'),fields=fields,children=[],example='docs/recipes.py',_identity=id(node))
+        catalog[path]=dict(kind=kind,signature=signature(node) if kind in {'type','callable'} else '',documentation=text or '',fields=fields,children=[],example='docs/recipes.py',_identity=id(node))
+        if (isinstance(node,ast.AnnAssign) and 'TypeAlias' in ast.unparse(node.annotation)) or (isinstance(node,ast.Assign) and isinstance(node.value,(ast.Subscript,ast.BinOp))):
+            name=node.target.id if isinstance(node,ast.AnnAssign) else node.targets[0].id
+            shape=class_shapes.get((node_modules.get(id(node),'').rsplit('.',1)[-1],name),{})
+            catalog[path].update(kind='alias',signature=ast.unparse(node.value),documentation=text or shape.get('doc') or '')
+        if isinstance(node,ast.ClassDef) and any(isinstance(b,ast.Name) and b.id=='Enum' for b in node.bases):
+            shape=class_shapes.get((node_modules.get(id(node),'').rsplit('.',1)[-1],node.name),{})
+            variant_docs={variant.get('wire_name',variant.get('name')):variant.get('doc','').strip() for variant in shape.get('variants',())}
+            members=[]
+            for member in node.body:
+                if not isinstance(member,ast.Assign) or not isinstance(member.targets[0],ast.Name) or member.targets[0].id.startswith('_'):continue
+                meaning=variant_docs.get(ast.literal_eval(member.value),'')
+                members.append((member.targets[0].id,ast.unparse(member.value)+(' — '+meaning if meaning else '')))
+            catalog[path].update(kind='enum',signature='',fields=members,documentation=text or '')
+        if isinstance(node,(ast.ClassDef,ast.Assign,ast.AnnAssign)):
+            module=node_modules.get(id(node),'')
+            name=node.name if isinstance(node,ast.ClassDef) else node.target.id if isinstance(node,ast.AnnAssign) else node.targets[0].id
+            shape=class_shapes.get((module.rsplit('.',1)[-1],name),{})
+            catalog[path]['_documentation_source']=('rust:'+shape['name'] if shape else 'python:zipzi.'+module+'.'+name)
+        if kind=='property':catalog[path]['signature']=signature(node)
         if isinstance(node,ast.ClassDef):
             for child in public_methods(node).values():
                 add(path+'.'+child.name,child);catalog[path]['children'].append(path+'.'+child.name)
@@ -341,15 +384,19 @@ def document_model(contract,prepared,package):
             base=resolve('_generated.facades',cls)
             if base is None:continue
             path='zipzi.'+owner+'.'+domain;add(path,base)
+            catalog[path].update(kind='property',signature=owner.lower()+'.'+domain,documentation=ast.get_docstring(base) or catalog[path]['documentation'])
             if owner=='Edit':
                 edit=resolve('_generated.facades','Editable'+cls)
                 if edit:
+                    catalog[path]['documentation']=ast.get_docstring(edit) or catalog[path]['documentation']
                     for child in edit.body:
                         if isinstance(child,ast.FunctionDef) and not child.name.startswith('_'):add(path+'.'+child.name,child);catalog[path]['children'].append(path+'.'+child.name)
             if 'zipzi.'+owner in catalog:catalog['zipzi.'+owner]['children'].append(path)
     for owner,module,cls in [('Runtime.sessions','_lifecycle','Sessions'),('Session.project','_lifecycle','Project'),('Runtime.resources','resources','Resources')]:
         node=resolve(module,cls)
-        if node:add('zipzi.'+owner,node)
+        if node:
+            add('zipzi.'+owner,node)
+            catalog['zipzi.'+owner].update(kind='property',signature=owner[0].lower()+owner[1:])
     # Derive navigation from registered paths, including bound properties and
     # domain modules, so direct lookup and parent traversal cannot diverge.
     for path in catalog:
@@ -358,16 +405,82 @@ def document_model(contract,prepared,package):
     for path in (package/prefix/'docs').rglob('*.md'):
         relative=path.relative_to(package).as_posix()
         if _fingerprint.included(relative):sources[relative]=path.read_text(encoding='utf-8')
+    for path,row in catalog.items():
+        example=row.get('example')
+        if example and not (package/prefix/example).is_file():
+            raise ValueError('Missing API example: '+example)
     source_sha=_fingerprint.fingerprint(sources)
     package_version=tomllib.loads((package/'client/pyproject.toml').read_text(encoding='utf-8'))['project']['version']
     compact_class=resolve('_presentation','CompactValue')
-    common={n.name:ast.get_docstring(n) for n in compact_class.body
-            if isinstance(n,ast.FunctionDef) and n.name in {'summary','__repr__'}}
+    common={'Owned values':ast.get_docstring(compact_class)}
+    common.update({n.name:ast.get_docstring(n) for n in compact_class.body
+            if isinstance(n,ast.FunctionDef) and n.name in {'summary','__repr__'}})
+    # Resolve annotation names through source imports and public object identities.
+    # This runs before presentation: Markdown and offline help share the same refs.
+    public_types={}
+    canonical_paths={projection.canonical_path for projection in projected}
+    for path,row in sorted(catalog.items(),key=lambda item:(item[0] not in canonical_paths,item[0].count('.'),item[0])):
+        if row['kind'] in {'type','enum','alias'}:
+            public_types.setdefault(row.get('_identity'),path)
+    definitions={id(node):(module,node) for module,tree in trees.items() for node in ast.walk(tree)
+                 if isinstance(node,(ast.ClassDef,ast.FunctionDef,ast.Assign,ast.AnnAssign))}
+    imported_modules={}
+    for module,tree in trees.items():
+        aliases={}
+        for node in type_scope(tree.body):
+            if isinstance(node,ast.Import):
+                for alias in node.names:
+                    target=alias.name.removeprefix('zipzi.')
+                    aliases[alias.asname or alias.name.split('.')[0]]=target if alias.asname else alias.name.split('.')[0]
+            elif isinstance(node,ast.ImportFrom):
+                if node.level:
+                    parent=module.split('.') if module in packages else module.split('.')[:-1]
+                    target='.'.join(parent[:len(parent)-node.level+1]+(node.module or '').split('.')).strip('.')
+                elif node.module=='zipzi' or (node.module or '').startswith('zipzi.'):
+                    target=(node.module or '').removeprefix('zipzi').lstrip('.')
+                else:continue
+                for alias in node.names:
+                    candidate=(target+'.'+alias.name).strip('.')
+                    if candidate in trees:aliases[alias.asname or alias.name]=candidate
+        imported_modules[module]=aliases
+    def annotation_refs(module,annotation):
+        if annotation is None:return set()
+        if isinstance(annotation,ast.Constant) and isinstance(annotation.value,str):
+            try:return annotation_refs(module,ast.parse(annotation.value,mode='eval').body)
+            except SyntaxError:return set()
+        if isinstance(annotation,(ast.Name,ast.Attribute)):
+            parts=ast.unparse(annotation).split('.')
+            node=None
+            if len(parts)==1:node=resolve(module,parts[0])
+            else:
+                target=imported_modules.get(module,{}).get(parts[0])
+                if target is not None:node=resolve('.'.join([target,*parts[1:-1]]),parts[-1])
+                elif parts[0]=='zipzi':node=resolve('.'.join(parts[1:-1]),parts[-1])
+            path=public_types.get(id(node))
+            return {path} if path else set()
+        if isinstance(annotation,ast.Subscript) and ast.unparse(annotation.value).split('.')[-1]=='Literal':return set()
+        return set().union(*(annotation_refs(module,child) for child in ast.iter_child_nodes(annotation)))
+    for path,row in catalog.items():
+        definition=definitions.get(row.get('_identity'))
+        if definition is None:continue
+        module,node=definition
+        annotations=[]
+        if isinstance(node,ast.ClassDef):
+            init=next((child for child in node.body if isinstance(child,ast.FunctionDef) and child.name=='__init__'),None)
+            if init:node=init
+            else:annotations=[child.annotation for child in node.body if isinstance(child,ast.AnnAssign)]
+        if isinstance(node,ast.FunctionDef):
+            annotations=[arg.annotation for arg in [*node.args.posonlyargs,*node.args.args,*node.args.kwonlyargs]]+[node.returns]
+            annotations += [arg.annotation for arg in (node.args.vararg,node.args.kwarg) if arg is not None]
+        elif isinstance(node,(ast.Assign,ast.AnnAssign)):
+            annotations=[node.value]
+        refs=set().union(*(annotation_refs(module,annotation) for annotation in annotations))
+        row['type_refs']=tuple(sorted(refs-{path}))
     entries=[DocEntry.from_row(path,row,common) for path,row in sorted(catalog.items())]
     by_identity={}
     by_path={entry.path:entry for entry in entries}
     for entry in entries:
-        if entry.identity is not None and entry.kind in {'type','value'}:
+        if entry.identity is not None and entry.kind in {'type','value','enum','alias'}:
             by_identity.setdefault(entry.identity,[]).append(entry.path)
     resolved=[]
     canonical_paths={projection.canonical_path for projection in projected}
