@@ -312,7 +312,7 @@ fn pending_scene_objects_are_native_and_roundtrip_without_invented_targets() {
             .unwrap()
             .points
             .len(),
-        4
+        36
     );
     assert_eq!(
         s.document().get_transform(&rotation).unwrap().parent(),

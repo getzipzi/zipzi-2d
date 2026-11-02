@@ -67,14 +67,12 @@ pub fn workspace(cx: &App) -> Hsla {
     crate::theme::workspace(cx)
 }
 
-/// Preserve Kit's focus, disabled, pressed and selected behavior.
+/// Use Kit's native XSmall sizing and preserve its interaction behavior.
 pub fn button(button: Button) -> Button {
     let selected = button.is_selected();
     button
         .with_variant(ButtonVariant::Default)
         .xsmall()
-        .h(rem(CONTROL))
-        .min_w(rem(CONTROL))
         .rounded(gpui_kit::component::button::ButtonRounded::Medium)
         .when(selected, |button| {
             button.primary().border_color(transparent_black())

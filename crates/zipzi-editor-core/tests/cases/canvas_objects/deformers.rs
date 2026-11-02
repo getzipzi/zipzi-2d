@@ -154,7 +154,7 @@ fn warp_marquee_preserves_object_and_moves_selected_controls_only() -> anyhow::R
             .iter()
             .filter(|v| v.selected)
             .count(),
-        2
+        4
     );
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     drag(
@@ -335,87 +335,83 @@ fn warp_alt_scale_uses_the_frozen_center_under_nested_parent_spaces() -> anyhow:
 #[test]
 fn warp_shift_click_defers_toggle_and_shift_drag_locks_the_first_canvas_axis() -> anyhow::Result<()>
 {
-    for fine in [false, true] {
-        for reversed in [false, true] {
-            for horizontal in [false, true] {
-                let (mut editor, _dir, object, _) = bound_deformer_editor(false, reversed)?;
-                if fine {
-                    editor.execute(EditorCommand::ToggleWarpFine)?;
-                }
-                let before = control_points(&mut editor, &object)?;
-                let frame = shown(&mut editor)?;
-                let start = editor.overlay().vertices[0].position;
-                click(&mut editor, start, false)?;
-                let selected = |editor: &Editor| {
-                    editor
-                        .overlay()
-                        .vertices
-                        .iter()
-                        .filter(|v| v.selected)
-                        .count()
-                };
-                assert_eq!(selected(&editor), 1);
-                crate::support::pointer_input(
-                    &mut editor,
-                    CanvasInput::Down {
-                        primary: false,
-                        point: start,
-                        shift: true,
-                        alt: false,
-                    },
-                )?;
-                assert_eq!(selected(&editor), 1);
-                crate::support::pointer_input(&mut editor, CanvasInput::Up { point: start })?;
-                assert_eq!(selected(&editor), 0);
-                assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
-                click(&mut editor, start, false)?;
-                crate::support::pointer_input(
-                    &mut editor,
-                    CanvasInput::Down {
-                        primary: false,
-                        point: start,
-                        shift: true,
-                        alt: false,
-                    },
-                )?;
-                let first = ViewportPoint {
-                    x: start.x + if horizontal { 12. } else { 4. },
-                    y: start.y + if horizontal { 4. } else { 12. },
-                };
-                crate::support::pointer_input(
-                    &mut editor,
-                    CanvasInput::Move {
-                        point: first,
-                        left_down: true,
-                    },
-                )?;
-                let end = ViewportPoint {
-                    x: start.x + if horizontal { 20. } else { 45. },
-                    y: start.y + if horizontal { 45. } else { 20. },
-                };
-                crate::support::pointer_input(
-                    &mut editor,
-                    CanvasInput::Move {
-                        point: end,
-                        left_down: true,
-                    },
-                )?;
-                let constrained = ViewportPoint {
-                    x: if horizontal { end.x } else { start.x },
-                    y: if horizontal { start.y } else { end.y },
-                };
-                let expected = frame.transform.to_model(constrained);
-                let after = control_points(&mut editor, &object)?;
-                assert!((after[0].x - expected.x).abs() < 0.02);
-                assert!((after[0].y - expected.y).abs() < 0.02);
-                crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
-                assert_eq!(selected(&editor), 1);
-                assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
-                editor.execute(EditorCommand::Undo)?;
-                assert_eq!(control_points(&mut editor, &object)?, before);
-            }
+    for reversed in [false, true] {
+        for horizontal in [false, true] {
+            let (mut editor, _dir, object, _) = bound_deformer_editor(false, reversed)?;
+            let before = control_points(&mut editor, &object)?;
+            let frame = shown(&mut editor)?;
+            let start = editor.overlay().vertices[0].position;
+            click(&mut editor, start, false)?;
+            let selected = |editor: &Editor| {
+                editor
+                    .overlay()
+                    .vertices
+                    .iter()
+                    .filter(|v| v.selected)
+                    .count()
+            };
+            assert_eq!(selected(&editor), 1);
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Down {
+                    primary: false,
+                    point: start,
+                    shift: true,
+                    alt: false,
+                },
+            )?;
+            assert_eq!(selected(&editor), 1);
+            crate::support::pointer_input(&mut editor, CanvasInput::Up { point: start })?;
+            assert_eq!(selected(&editor), 0);
+            assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+            click(&mut editor, start, false)?;
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Down {
+                    primary: false,
+                    point: start,
+                    shift: true,
+                    alt: false,
+                },
+            )?;
+            let first = ViewportPoint {
+                x: start.x + if horizontal { 12. } else { 4. },
+                y: start.y + if horizontal { 4. } else { 12. },
+            };
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: first,
+                    left_down: true,
+                },
+            )?;
+            let end = ViewportPoint {
+                x: start.x + if horizontal { 20. } else { 45. },
+                y: start.y + if horizontal { 45. } else { 20. },
+            };
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: end,
+                    left_down: true,
+                },
+            )?;
+            let constrained = ViewportPoint {
+                x: if horizontal { end.x } else { start.x },
+                y: if horizontal { start.y } else { end.y },
+            };
+            let expected = frame.transform.to_model(constrained);
+            let after = control_points(&mut editor, &object)?;
+            assert!((after[0].x - expected.x).abs() < 0.02);
+            assert!((after[0].y - expected.y).abs() < 0.02);
+            crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
+            assert_eq!(selected(&editor), 1);
+            assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+            editor.execute(EditorCommand::Undo)?;
+            assert_eq!(control_points(&mut editor, &object)?, before);
         }
     }
+
     Ok(())
 }
 #[test]
@@ -821,77 +817,73 @@ fn warp_rotation_handle_crosses_angle_wraps_and_a_full_turn_is_no_history() -> a
 
 #[test]
 fn warp_selected_frame_rotates_and_scales_only_selected_points() -> anyhow::Result<()> {
-    for fine in [false, true] {
-        for rotate in [false, true] {
-            let (mut editor, _dir, object) = deformer_editor(false)?;
-            if fine {
-                editor.execute(EditorCommand::ToggleWarpFine)?;
+    for rotate in [false, true] {
+        let (mut editor, _dir, object) = deformer_editor(false)?;
+        let before = control_points(&mut editor, &object)?;
+        let first = editor.overlay().vertices[0].position;
+        let second = editor.overlay().vertices[1].position;
+        click(&mut editor, first, false)?;
+        click(&mut editor, second, true)?;
+        let frame = shown(&mut editor)?;
+        let overlay = editor.overlay();
+        // The selection frame follows its two anchors, rather than the whole lattice.
+        let center = ModelPoint {
+            x: (before[0].x + before[1].x) / 2.,
+            y: (before[0].y + before[1].y) / 2.,
+        };
+        let viewport_center = frame.transform.to_viewport(center);
+        let start = if rotate {
+            overlay.handles.last().unwrap().position
+        } else {
+            overlay.handles[overlay.handles.len() - 1 - 5].position
+        };
+        let source = frame.transform.to_model(start);
+        let end = if rotate {
+            frame.transform.to_viewport(ModelPoint {
+                x: center.x - (source.y - center.y),
+                y: center.y + (source.x - center.x),
+            })
+        } else {
+            ViewportPoint {
+                x: start.x + (frame.transform.to_viewport(before[1]).x - viewport_center.x),
+                y: start.y,
             }
-            let before = control_points(&mut editor, &object)?;
-            let first = editor.overlay().vertices[0].position;
-            let second = editor.overlay().vertices[1].position;
-            click(&mut editor, first, false)?;
-            click(&mut editor, second, true)?;
-            let frame = shown(&mut editor)?;
-            let overlay = editor.overlay();
-            // The selection frame follows its two anchors, rather than the whole lattice.
-            let center = ModelPoint {
-                x: (before[0].x + before[1].x) / 2.,
-                y: (before[0].y + before[1].y) / 2.,
-            };
-            let viewport_center = frame.transform.to_viewport(center);
-            let start = if rotate {
-                overlay.handles.last().unwrap().position
+        };
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Down {
+                primary: false,
+                point: start,
+                shift: false,
+                alt: !rotate,
+            },
+        )?;
+        crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
+        let after = control_points(&mut editor, &object)?;
+        for (a, b) in before[..2].iter().zip(&after[..2]) {
+            let expected = if rotate {
+                ModelPoint {
+                    x: center.x - (a.y - center.y),
+                    y: center.y + (a.x - center.x),
+                }
             } else {
-                overlay.handles[overlay.handles.len() - 1 - 5].position
-            };
-            let source = frame.transform.to_model(start);
-            let end = if rotate {
-                frame.transform.to_viewport(ModelPoint {
-                    x: center.x - (source.y - center.y),
-                    y: center.y + (source.x - center.x),
-                })
-            } else {
-                ViewportPoint {
-                    x: start.x + (frame.transform.to_viewport(before[1]).x - viewport_center.x),
-                    y: start.y,
+                ModelPoint {
+                    x: center.x + (a.x - center.x) * 2.,
+                    y: a.y,
                 }
             };
-            crate::support::pointer_input(
-                &mut editor,
-                CanvasInput::Down {
-                    primary: false,
-                    point: start,
-                    shift: false,
-                    alt: !rotate,
-                },
-            )?;
-            crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
-            let after = control_points(&mut editor, &object)?;
-            for (a, b) in before[..2].iter().zip(&after[..2]) {
-                let expected = if rotate {
-                    ModelPoint {
-                        x: center.x - (a.y - center.y),
-                        y: center.y + (a.x - center.x),
-                    }
-                } else {
-                    ModelPoint {
-                        x: center.x + (a.x - center.x) * 2.,
-                        y: a.y,
-                    }
-                };
-                assert!(
-                    (b.x - expected.x).abs() < 0.02,
-                    "{a:?} -> {b:?}, expected {expected:?}"
-                );
-                assert!((b.y - expected.y).abs() < 0.02);
-            }
-            assert_eq!(&after[2..], &before[2..]);
-            assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
-            editor.execute(EditorCommand::Undo)?;
-            assert_eq!(control_points(&mut editor, &object)?, before);
+            assert!(
+                (b.x - expected.x).abs() < 0.02,
+                "{a:?} -> {b:?}, expected {expected:?}"
+            );
+            assert!((b.y - expected.y).abs() < 0.02);
         }
+        assert_eq!(&after[2..], &before[2..]);
+        assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+        editor.execute(EditorCommand::Undo)?;
+        assert_eq!(control_points(&mut editor, &object)?, before);
     }
+
     Ok(())
 }
 
@@ -925,7 +917,6 @@ fn warp_numeric_selection_spans_independent_objects_and_whole_mode_keeps_selecti
         first.clone(),
         second.clone(),
     ]))?;
-    editor.execute(EditorCommand::ToggleWarpFine)?;
     let before_a = control_points(&mut editor, &first)?;
     let before_b = control_points(&mut editor, &second)?;
     let frame = shown(&mut editor)?;

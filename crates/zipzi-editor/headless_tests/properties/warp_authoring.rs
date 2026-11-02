@@ -2,170 +2,194 @@ use super::*;
 use zipzi_editor_core::{CanvasInput, EditorCommand, PropertyValue};
 
 #[gpui_kit::test]
-fn deformer_properties_keep_children_mode_applies_numeric_transform_without_model_history_for_the_toggle(
-    cx: &mut TestAppContext,
-) {
-    let (mut document, assets, object) = warp_grid_document();
-    // The general scene fixture deliberately stores canvas-sized mesh values
-    // below a normalized Warp. Use realistic child coordinates for this gate.
-    let saved = document.save(&assets.path().join("preservation")).unwrap();
-    let mut sdk = zipzi_sdk::AuthoringSession::new(
-        &uuid::Uuid::new_v4().to_string(),
-        zipzi_core::Canvas::new(256., 256., Default::default(), 1.),
-    )
-    .unwrap();
-    sdk.open_project(&saved.manifest, None).unwrap();
-    let meshes = sdk
-        .document()
-        .mesh_order()
-        .iter()
-        .filter_map(|id| sdk.document().get_mesh(id))
-        .filter(|m| m.deformer_id == object.id)
-        .cloned()
-        .collect::<Vec<_>>();
-    sdk.edit("Normalize child fixture", None, |edit| {
-        for mut mesh in meshes {
-            for p in &mut mesh.base_positions {
-                p.x /= 256.;
-                p.y /= 256.;
-            }
-            edit.replace_mesh(mesh)?;
-        }
-        Ok(())
-    })
-    .unwrap();
-    sdk.save_project(&saved.manifest, None).unwrap();
-    let mut document = zipzi_editor_core::Document::open(&saved.manifest).unwrap();
+fn new_warp_density_matches_properties_and_combined_canvas_controls(cx: &mut TestAppContext) {
+    let mut document = zipzi_editor_core::Document::new_blank().unwrap();
+    let plan = document
+        .plan_scene_object_creation(zipzi_editor_core::SceneObjectType::Warp, "Warp".into(), &[])
+        .unwrap();
+    let object = document
+        .execute_scene_object_creation(&plan)
+        .unwrap()
+        .suggested_selection[0]
+        .clone();
     document.navigate(object.clone()).unwrap();
-    let h = setup_with_document(cx, document, assets);
-    let before = h.view.update(cx, |view, cx| {
+    let h = setup_with_document(cx, document, tempfile::tempdir().unwrap());
+    show(&h, "property-input-bezier_rows", cx);
+    h.view.update(cx, |view, cx| {
         view.editor
             .execute(EditorCommand::SelectObject(object.clone()))
             .unwrap();
-        let frame = document_fixture::present_canvas(&mut view.editor).unwrap();
+        let values = view
+            .editor
+            .document()
+            .unwrap()
+            .property_values(&object)
+            .unwrap();
+        for (field, expected) in [
+            (schema::deformer::COLUMNS.key, 5),
+            (schema::deformer::ROWS.key, 5),
+            (schema::deformer::BEZIER_COLUMNS.key, 2),
+            (schema::deformer::BEZIER_ROWS.key, 2),
+        ] {
+            assert_eq!(values[&field], PropertyValue::Integer(expected));
+        }
         view.redraw(cx);
-        frame
-            .geometry
-            .meshes
-            .iter()
-            .flat_map(|m| m.vertices.iter().map(|(_, p)| *p))
-            .collect::<Vec<_>>()
     });
-    show(&h, "property-warp-keep-children", cx);
+    let history = h.view.read_with(cx, |view, _| {
+        view.editor.document().unwrap().history_lengths()
+    });
     cx.update_window(h.window, |_, window, cx| {
-        window.click("property-warp-keep-children", cx);
+        h.view.update(cx, |view, cx| {
+            let frame = view.editor.preview().unwrap().canvas.unwrap();
+            assert!(view.editor.present_frame(frame.clone()));
+            view.viewport_frames
+                .entry(view.viewport_slots[0])
+                .or_default()
+                .modeling = Some(crate::preview::Presented {
+                image: crate::preview::test_image(),
+                canvas: frame,
+            });
+            cx.notify();
+        });
         window.render_frame(cx);
+        use zipzi_editor_core::OverlayVertexKind as K;
+        assert!(window.try_find("deformer-warp-bezier").is_none());
+        assert!(window.try_find("deformer-warp-fine").is_none());
+        let overlay = h.view.read(cx).editor.overlay();
+        assert_eq!(
+            overlay
+                .vertices
+                .iter()
+                .filter(|v| v.kind == K::Warp)
+                .count(),
+            9
+        );
+        assert_eq!(
+            overlay
+                .vertices
+                .iter()
+                .filter(|v| v.kind == K::WarpGrid)
+                .count(),
+            36
+        );
+        assert!(!overlay.bezier_tangents.is_empty());
+        assert!(!overlay.bezier_lines.is_empty());
     })
     .unwrap();
     h.view.read_with(cx, |view, _| {
-        assert!(view.editor.warp_keep_children());
-        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
-    });
-    show(&h, "property-warp-transform", cx);
-    cx.update_window(h.window, |_, window, cx| {
-        window.click("property-warp-transform", cx);
-        window.render_frame(cx);
-    })
-    .unwrap();
-    warp_grid_input(&h, "warp-transform-x", "8", cx);
-    warp_grid_input(&h, "warp-transform-angle", "15", cx);
-    cx.update_window(h.window, |_, window, cx| {
-        window.click("warp-transform-apply", cx);
-        window.render_frame(cx);
-    })
-    .unwrap();
-    h.view.update(cx, |view, _| {
         assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
-        let frame = document_fixture::present_canvas(&mut view.editor).unwrap();
-        let after = frame
-            .geometry
-            .meshes
-            .iter()
-            .flat_map(|m| m.vertices.iter().map(|(_, p)| *p))
-            .collect::<Vec<_>>();
-        for (a, b) in before.iter().zip(after) {
-            assert!((a.x - b.x).hypot(a.y - b.y) < 0.001);
-        }
-        assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
+        assert_eq!(view.editor.document().unwrap().history_lengths(), history);
     });
 }
 
 #[gpui_kit::test]
-fn deformer_properties_bezier_density_preview_cancels_without_changing_baked_points(
+fn warp_density_is_inline_and_removed_actions_are_absent(cx: &mut TestAppContext) {
+    let (document, assets, _) = warp_grid_document();
+    let h = setup_with_document(cx, document, assets);
+    show(&h, "property-input-bezier_rows", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        let panel = window.find("object-properties").bounds();
+        for id in ["columns", "rows", "bezier_columns", "bezier_rows"] {
+            let bounds = window.find(format!("property-input-{id}")).bounds();
+            assert!(panel.contains(&bounds.center()) && bounds.right() <= panel.right());
+            assert!(
+                bounds.size.width >= gpui_kit::px(30.),
+                "{id} must show its value"
+            );
+        }
+        for id in [
+            "property-warp-transform",
+            "property-warp-frame",
+            "warp-grid-dialog",
+            "warp-grid-interpolation",
+            "property-warp-keep-children",
+            "deformer-keep-children",
+        ] {
+            assert!(window.try_find(id).is_none());
+        }
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn inline_density_commits_and_undoes_while_bezier_density_keeps_grid_points(
     cx: &mut TestAppContext,
 ) {
     let (document, assets, object) = warp_grid_document();
     let h = setup_with_document(cx, document, assets);
-    let original = h.view.read_with(cx, |view, _| {
-        view.editor
-            .document()
-            .unwrap()
-            .object_index()
-            .get(&object)
-            .unwrap()
-            .properties["warp"]["points"]
-            .clone()
-    });
-    for cancel in [true, false] {
-        show(&h, "property-warp-bezier-grid", cx);
+    for (field, value, key) in [
+        ("columns", "4", schema::deformer::COLUMNS.key),
+        ("bezier_columns", "3", schema::deformer::BEZIER_COLUMNS.key),
+    ] {
+        let before = h.view.read_with(cx, |view, _| {
+            view.editor
+                .document()
+                .unwrap()
+                .object_index()
+                .get(&object)
+                .unwrap()
+                .properties["warp"]["points"]
+                .clone()
+        });
+        fill(&h, &format!("property-input-{field}"), value, cx);
         cx.update_window(h.window, |_, window, cx| {
-            window.click("property-warp-bezier-grid", cx);
+            window.press("enter", cx);
             window.render_frame(cx);
-            assert!(window.try_find("warp-grid-interpolation").is_none());
         })
         .unwrap();
-        warp_grid_input(&h, "warp-grid-columns", "3", cx);
-        warp_grid_input(&h, "warp-grid-rows", "2", cx);
-        cx.update_window(h.window, |_, window, _| {
-            assert_eq!(window.find("warp-grid-columns").value(), Some("3"));
-            assert_eq!(window.find("warp-grid-rows").value(), Some("2"));
+        h.view.read_with(cx, |view, _| {
+            assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+            let doc = view.editor.document().unwrap();
+            assert_eq!(
+                doc.property_values(&object).unwrap()[&key],
+                PropertyValue::Integer(value.parse().unwrap())
+            );
+            if field == "bezier_columns" {
+                assert_eq!(
+                    doc.object_index().get(&object).unwrap().properties["warp"]["points"],
+                    before
+                );
+            }
+            assert!(!doc.has_pending_edit());
+        });
+    }
+    h.view.update(cx, |view, cx| {
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (2, 0));
+        view.editor.execute(EditorCommand::Undo).unwrap();
+        view.redraw(cx);
+    });
+    h.view.read_with(cx, |view, _| {
+        assert_eq!(
+            view.editor
+                .document()
+                .unwrap()
+                .property_values(&object)
+                .unwrap()[&schema::deformer::BEZIER_COLUMNS.key],
+            PropertyValue::Integer(1)
+        )
+    });
+}
+
+#[gpui_kit::test]
+fn inline_density_escape_and_invalid_values_leave_the_document_unchanged(cx: &mut TestAppContext) {
+    let (document, assets, object) = warp_grid_document();
+    let h = setup_with_document(cx, document, assets);
+    for value in ["6", "0", "65"] {
+        fill(&h, "property-input-columns", value, cx);
+        cx.update_window(h.window, |_, window, cx| {
+            window.press("escape", cx);
+            window.render_frame(cx);
         })
         .unwrap();
         h.view.read_with(cx, |view, _| {
             let doc = view.editor.document().unwrap();
-            let values = doc.property_values(&object).unwrap();
             assert_eq!(
-                values[&schema::deformer::BEZIER_COLUMNS.key],
+                doc.property_values(&object).unwrap()[&schema::deformer::COLUMNS.key],
                 PropertyValue::Integer(1)
-            );
-            assert_eq!(
-                doc.object_index().get(&object).unwrap().properties["warp_authoring"]["bezier_grid"]
-                    ["columns"],
-                3
-            );
-            assert_eq!(
-                doc.object_index().get(&object).unwrap().properties["warp"]["points"],
-                original
             );
             assert_eq!(doc.history_lengths(), (0, 0));
-        });
-        cx.update_window(h.window, |_, window, cx| {
-            assert!(window.try_find("warp-bezier-metrics").is_some());
-            if cancel {
-                window.press("escape", cx);
-            } else {
-                window.click("warp-grid-apply", cx);
-            }
-            window.render_frame(cx);
-        })
-        .unwrap();
-        h.view.read_with(cx, |view, _| {
-            let doc = view.editor.document().unwrap();
-            assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
-            let values = doc.property_values(&object).unwrap();
-            assert_eq!(
-                values[&schema::deformer::BEZIER_COLUMNS.key],
-                PropertyValue::Integer(if cancel { 1 } else { 3 })
-            );
-            assert_eq!(
-                values[&schema::deformer::COLUMNS.key],
-                PropertyValue::Integer(1)
-            );
-            assert_eq!(
-                doc.object_index().get(&object).unwrap().properties["warp"]["points"],
-                original
-            );
-            assert_eq!(doc.history_lengths(), (usize::from(!cancel), 0));
+            assert!(!doc.has_pending_edit());
         });
     }
 }
@@ -196,7 +220,6 @@ fn deformer_properties_reset_reform_auto_and_mode_controls_write_through_the_sha
         view.editor
             .execute(EditorCommand::SelectObject(object.clone()))
             .unwrap();
-        view.editor.execute(EditorCommand::ToggleWarpFine).unwrap();
         let frame = document_fixture::present_canvas(&mut view.editor).unwrap();
         let control = frame
             .geometry

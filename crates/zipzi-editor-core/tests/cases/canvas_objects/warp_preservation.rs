@@ -36,7 +36,6 @@ fn edge(editor: &mut Editor, object: &ObjectRef) -> anyhow::Result<ViewportPoint
 fn command_drag_freezes_policy_preserves_children_and_returns_exactly_to_the_press_snapshot()
 -> anyhow::Result<()> {
     let (mut editor, _dir, object) = deformer_editor(false)?;
-    editor.execute(EditorCommand::ToggleWarpFine)?;
     let initial = control_points(&mut editor, &object)?;
     let children = mesh_points(&mut editor)?;
     for finish in [0, 1, 2] {
@@ -83,45 +82,90 @@ fn command_drag_freezes_policy_preserves_children_and_returns_exactly_to_the_pre
     assert_eq!(control_points(&mut editor, &object)?, initial);
     editor.execute(EditorCommand::Redo)?;
     same(&children, &mesh_points(&mut editor)?);
+    assert!(!editor.overlay().warp_keep_children);
+    let start = edge(&mut editor, &object)?;
+    drag(
+        &mut editor,
+        start,
+        ViewportPoint {
+            x: start.x + 12.,
+            y: start.y,
+        },
+        false,
+    )?;
+    assert_ne!(
+        children,
+        mesh_points(&mut editor)?,
+        "the next ordinary drag must move the children"
+    );
     Ok(())
 }
 
 #[test]
-fn keep_children_mode_numeric_rotation_and_scale_use_the_same_atomic_plan_and_expire_old_targets()
--> anyhow::Result<()> {
-    let (mut editor, _dir, object) = deformer_editor(false)?;
-    let binding = editor.primary_viewport_binding().unwrap();
-    editor.change_warp_frame(binding, object.clone(), WarpFrameAction::ToggleVisible)?;
-    let frame = editor.warp_frame_info(binding, &object).unwrap();
-    let stale = editor.warp_transform_target(&object).unwrap();
-    editor.execute(EditorCommand::ToggleWarpKeepChildren)?;
-    assert_eq!(editor.warp_frame_info(binding, &object).unwrap(), frame);
-    assert!(
-        editor
-            .execute(EditorCommand::AdjustWarp {
-                target: stale,
-                adjustment: DeformerAdjustment {
-                    translation: ModelVector::default(),
-                    angle: 10.,
-                    scale: 1.
-                }
-            })
-            .is_err()
-    );
-    let initial = control_points(&mut editor, &object)?;
-    let children = mesh_points(&mut editor)?;
-    let target = editor.warp_transform_target(&object).unwrap();
-    editor.execute(EditorCommand::AdjustWarp {
-        target,
-        adjustment: DeformerAdjustment {
-            translation: ModelVector { x: 9., y: 7. },
-            angle: 23.,
-            scale: 0.8,
-        },
-    })?;
-    assert_ne!(initial, control_points(&mut editor, &object)?);
-    same(&children, &mesh_points(&mut editor)?);
-    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+fn command_rotation_and_scaling_preserve_children_without_a_persistent_mode() -> anyhow::Result<()>
+{
+    for rotate in [true, false] {
+        let (mut editor, _dir, object) = deformer_editor(false)?;
+        let initial = control_points(&mut editor, &object)?;
+        let children = mesh_points(&mut editor)?;
+        let frame = shown(&mut editor)?;
+        let control = frame
+            .geometry
+            .controls
+            .iter()
+            .find(|c| c.object == object)
+            .unwrap();
+        let gizmo = frame
+            .geometry
+            .deformer_gizmo(control, frame.transform)
+            .unwrap();
+        let handle = if rotate {
+            DeformerHandle::Rotate
+        } else {
+            DeformerHandle::Scale(4)
+        };
+        let start = gizmo.handles.iter().find(|(h, _)| *h == handle).unwrap().1;
+        let (x, y) = (start.x - gizmo.center.x, start.y - gizmo.center.y);
+        let end = if rotate {
+            let (s, c) = 23f32.to_radians().sin_cos();
+            ViewportPoint {
+                x: gizmo.center.x + x * c - y * s,
+                y: gizmo.center.y + x * s + y * c,
+            }
+        } else {
+            ViewportPoint {
+                x: gizmo.center.x + x * 0.8,
+                y: gizmo.center.y + y * 0.8,
+            }
+        };
+        pointer_input(
+            &mut editor,
+            CanvasInput::Down {
+                point: start,
+                shift: false,
+                alt: false,
+                primary: true,
+            },
+        )?;
+        pointer_input(
+            &mut editor,
+            CanvasInput::Move {
+                point: end,
+                left_down: true,
+            },
+        )?;
+        assert!(editor.overlay().warp_keep_children);
+        same(&children, &mesh_points(&mut editor)?);
+        pointer_input(&mut editor, CanvasInput::Up { point: end })?;
+        assert_ne!(initial, control_points(&mut editor, &object)?);
+        assert!(!editor.overlay().warp_keep_children);
+        same(&children, &mesh_points(&mut editor)?);
+        assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+        editor.execute(EditorCommand::Undo)?;
+        assert_eq!(initial, control_points(&mut editor, &object)?);
+        editor.execute(EditorCommand::Redo)?;
+        same(&children, &mesh_points(&mut editor)?);
+    }
     Ok(())
 }
 
@@ -129,7 +173,6 @@ fn keep_children_mode_numeric_rotation_and_scale_use_the_same_atomic_plan_and_ex
 fn nonlinear_keep_children_pointer_edit_is_refused_without_falling_back_to_an_ordinary_drag()
 -> anyhow::Result<()> {
     let (mut editor, _dir, object) = deformer_editor(false)?;
-    editor.execute(EditorCommand::ToggleWarpFine)?;
     let initial = control_points(&mut editor, &object)?;
     let frame = shown(&mut editor)?;
     let start = frame.transform.to_viewport(initial[0]);

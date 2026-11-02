@@ -11,6 +11,7 @@ mod mesh;
 mod parameter;
 pub(crate) mod physics;
 mod scene;
+mod scene_object;
 pub(crate) mod timeline;
 pub(crate) use editing::{PreviewToken, begin_edit, update_edit};
 pub(crate) use timeline::details as selection_details;
@@ -82,6 +83,7 @@ pub(crate) struct FieldSpec {
     pub live_text: bool,
     pub drag_distance: Option<f64>,
     pub section: Option<&'static str>,
+    pub reset_color: Option<u32>,
 }
 impl FieldSpec {
     fn new(binding: PropertySpec, label: &'static str, editor: FieldEditor) -> Self {
@@ -107,6 +109,7 @@ impl FieldSpec {
             live_text: false,
             drag_distance: None,
             section: None,
+            reset_color: None,
             scale: 1.,
         }
     }
@@ -123,6 +126,12 @@ impl FieldSpec {
 
     fn percent(mut self) -> Self {
         self.scale = 100.;
+        self
+    }
+
+    fn reset_color(mut self, color: u32) -> Self {
+        assert_eq!(self.editor, FieldEditor::Color);
+        self.reset_color = Some(color);
         self
     }
 
@@ -165,6 +174,7 @@ impl FormDefinition {
                     && a.scale == b.scale
                     && a.live_text == b.live_text
                     && a.drag_distance == b.drag_distance
+                    && a.reset_color == b.reset_color
             })
     }
 

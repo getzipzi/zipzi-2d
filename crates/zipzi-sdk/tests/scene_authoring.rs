@@ -7,7 +7,7 @@ use zipzi_core::{
     RotationPose, RotationTransform, SceneBinding, SceneKeyform, SceneTrack, Transform,
     TransformData, TransformId, Vec2, WarpKeyform, WarpTransform,
 };
-use zipzi_sdk::{prepare_png_asset, rectangle_mesh, AuthoringSession, GeometrySpace, ObjectKind};
+use zipzi_sdk::{AuthoringSession, GeometrySpace, ObjectKind, prepare_png_asset, rectangle_mesh};
 
 fn id(n: u32) -> String {
     format!("00000000-0000-4000-8000-{n:012x}")
@@ -57,6 +57,60 @@ fn warp() -> Transform {
         }),
         ..Default::default()
     }
+}
+
+#[test]
+fn new_warp_defaults_to_five_grid_cells_and_two_bezier_cells_and_undoes_atomically() {
+    let mut sdk = session();
+    let history = sdk.history_lengths();
+    sdk.edit("Create Warp", None, |edit| {
+        edit.edit_scene(zipzi_sdk::SceneEdit::Create {
+            id: id(6),
+            name: "Warp".into(),
+            object: zipzi_sdk::SceneCreate::Warp {
+                bounds: Some([10., 20., 110., 220.]),
+            },
+            part_id: None,
+            parent_id: None,
+            before: None,
+            deformation_before: None,
+        })
+    })
+    .unwrap();
+    let transform = sdk.transform(&id(6)).unwrap();
+    let grid = transform.warp().unwrap();
+    assert_eq!((grid.rows, grid.columns, grid.points.len()), (5, 5, 36));
+    assert_eq!(grid.points[0], Vec2::new(10., 20.));
+    assert_eq!(grid.points[35], Vec2::new(110., 220.));
+    let controller = zipzi_core::WarpBezier::from_lattice_grid(
+        grid.rows,
+        grid.columns,
+        grid.quad,
+        &grid.points,
+        transform
+            .warp_authoring
+            .as_ref()
+            .unwrap()
+            .bezier_grid
+            .unwrap(),
+    );
+    assert_eq!(
+        (controller.rows, controller.columns, controller.nodes.len()),
+        (2, 2, 9)
+    );
+    for (actual, expected) in controller
+        .lattice(grid.rows, grid.columns)
+        .iter()
+        .zip(&grid.points)
+    {
+        assert!((actual.x - expected.x).abs() < 0.001);
+        assert!((actual.y - expected.y).abs() < 0.001);
+    }
+    assert_eq!(sdk.history_lengths(), (history.0 + 1, 0));
+    sdk.undo().unwrap();
+    assert!(sdk.transform(&id(6)).is_none());
+    sdk.redo().unwrap();
+    assert_eq!(sdk.transform(&id(6)).unwrap(), transform);
 }
 
 #[test]
@@ -368,9 +422,10 @@ fn session_preview_caches_frames_and_rejects_bad_requests_without_state_change()
         })
     })
     .unwrap();
-    assert!(sdk
-        .set_preview_values(PreviewValues::from([(id(7), 0.5)]))
-        .unwrap());
+    assert!(
+        sdk.set_preview_values(PreviewValues::from([(id(7), 0.5)]))
+            .unwrap()
+    );
     let first = sdk.preview_frame().unwrap();
     assert!(Arc::ptr_eq(&first, &sdk.preview_frame().unwrap()));
     let count = sdk.preview_evaluation_count();
@@ -463,10 +518,11 @@ fn bezier_authoring_rejects_invalid_metadata_and_incomplete_grid_migration_atomi
             b.nodes[0].handles[0].x = f32::NAN;
             w.bezier = Some(b);
         }
-        assert!(sdk
-            .edit("invalid", None, |e| e
+        assert!(
+            sdk.edit("invalid", None, |e| e
                 .replace_warp_authoring(changed, Some(binding.clone())))
-            .is_err());
+                .is_err()
+        );
         assert_eq!(sdk.version(), version);
         assert_eq!(sdk.transform(&id(6)), Some(original.clone()));
         assert_eq!(sdk.scene_binding(&id(10)), Some(binding.clone()));

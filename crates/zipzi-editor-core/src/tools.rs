@@ -58,9 +58,7 @@ pub struct ToolController {
     pub active: ToolId,
     pub deformer_visibility: DeformerVisibility,
     pub deformer_grid: bool,
-    pub warp_fine: bool,
     pub warp_whole: bool,
-    pub warp_keep_children: bool,
     pub original_points: bool,
     pub(crate) components: Vec<ComponentRef>,
     pub(crate) warp_frames: std::collections::HashMap<
@@ -94,6 +92,9 @@ impl ToolController {
                 }
             }
         }
+        if let Some(frame) = self.object_selection_frame(document, frame) {
+            return Some(frame);
+        }
         let components: Vec<_> = self
             .components
             .iter()
@@ -101,21 +102,30 @@ impl ToolController {
                 document.context().selections.contains(&c.object)
                     && frame.geometry.in_isolation_scope(&c.object)
                     && frame.geometry.control(&c.object.id).is_some_and(|control| {
-                        frame.geometry.control_visible(
-                            control,
-                            &document.context().selections,
-                            self.active,
-                            self.deformer_visibility,
-                        )
+                        control.kind == crate::ControlKind::Warp
+                            && frame.geometry.control_visible(
+                                control,
+                                &document.context().selections,
+                                self.active,
+                                self.deformer_visibility,
+                            )
                     })
             })
             .cloned()
             .collect();
+        if !self.warp_whole && frame.geometry.warp_selected_points(&components).len() == 1 {
+            // A single anchor, tangent or grid point is dragged directly. An
+            // explicit empty frame also removes its transform-handle hit targets.
+            return Some(crate::deformer::WarpGizmos {
+                local: true,
+                ..Default::default()
+            });
+        }
         let selection = (!self.warp_whole)
             .then(|| {
                 frame
                     .geometry
-                    .warp_selection_gizmo(&components, self.warp_fine, frame.transform)
+                    .warp_selection_gizmo(&components, frame.transform)
             })
             .flatten();
         let local = selection.is_some();
@@ -145,7 +155,18 @@ impl ToolController {
                 .collect()
         };
         Some(crate::deformer::WarpGizmos {
+            objects: vec![],
             local,
+            adjusting: document
+                .context()
+                .selections
+                .iter()
+                .filter(|object| {
+                    self.warp_frame_info(document, frame, object)
+                        .is_some_and(|info| info.adjusting)
+                })
+                .cloned()
+                .collect(),
             items: items
                 .into_iter()
                 .filter_map(|(object, gizmo)| {

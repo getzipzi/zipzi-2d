@@ -95,15 +95,30 @@ pub(crate) struct WarpFrameState {
 }
 
 impl crate::tools::ToolController {
+    fn warp_frame_target(
+        &self,
+        document: &Document,
+        object: &ObjectRef,
+    ) -> Option<WarpTransformTarget> {
+        let mut target = self.warp_transform_target(document, object)?;
+        // A point selection spanning several Warps has one frame. Use the
+        // same representative as the canvas gizmo, regardless of which object's
+        // inspector/menu initiated the operation.
+        if let Some(component) = target.components.first() {
+            target.object = component.object.clone();
+        }
+        Some(target)
+    }
+
     pub(crate) fn warp_frame_state(
         &self,
         document: &Document,
         viewport: ViewportId,
         object: &ObjectRef,
     ) -> Option<&WarpFrameState> {
-        let state = self.warp_frames.get(&(viewport, object.clone()))?;
-        (self.warp_transform_target(document, object).as_ref() == Some(&state.target)
-            && state.selection == document.context().selections)
+        let target = self.warp_frame_target(document, object)?;
+        let state = self.warp_frames.get(&(viewport, target.object.clone()))?;
+        (target == state.target && state.selection == document.context().selections)
             .then_some(state)
     }
     pub(crate) fn prune_warp_frames(&mut self, document: &Document) {
@@ -130,7 +145,7 @@ impl crate::tools::ToolController {
             Some(
                 canvas
                     .geometry
-                    .warp_selected_points(&target.components, self.warp_fine)
+                    .warp_selected_points(&target.components)
                     .into_iter()
                     .map(|(_, p)| p)
                     .collect(),
@@ -161,9 +176,9 @@ impl crate::tools::ToolController {
         object: ObjectRef,
         info: WarpFrameInfo,
     ) {
-        if let Some(target) = self.warp_transform_target(document, &object) {
+        if let Some(target) = self.warp_frame_target(document, &object) {
             self.warp_frames.insert(
-                (viewport, object),
+                (viewport, target.object.clone()),
                 WarpFrameState {
                     target,
                     selection: document.context().selections.clone(),

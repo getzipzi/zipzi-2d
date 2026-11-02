@@ -105,6 +105,15 @@ impl Document {
                 }
             }
             SceneCreate::Rotation | SceneCreate::Warp { .. } => {
+                let warp_authoring = matches!(&object, SceneCreate::Warp { .. }).then(|| {
+                    crate::WarpAuthoringSettings {
+                        bezier_grid: Some(crate::WarpBezierGrid {
+                            rows: 2,
+                            columns: 2,
+                        }),
+                        ..Default::default()
+                    }
+                });
                 let data = if let SceneCreate::Warp { bounds } = object {
                     let canvas = self.source_canvas();
                     let [x0, y0, x1, y1] = bounds.unwrap_or([
@@ -116,17 +125,21 @@ impl Document {
                     if ![x0, y0, x1, y1].iter().all(|v| v.is_finite()) || x1 <= x0 || y1 <= y0 {
                         return Err(Status::error("INVALID_WARP_BOUNDS", &id));
                     }
+                    let (rows, columns) = (5, 5);
                     TransformData::Warp(WarpTransform {
                         bezier: None,
-                        rows: 1,
-                        columns: 1,
+                        rows,
+                        columns,
                         quad: false,
-                        points: vec![
-                            Vec2::new(x0, y0),
-                            Vec2::new(x1, y0),
-                            Vec2::new(x0, y1),
-                            Vec2::new(x1, y1),
-                        ],
+                        points: (0..=rows)
+                            .flat_map(|row| {
+                                (0..=columns).map(move |column| {
+                                    let u = column as f32 / columns as f32;
+                                    let v = row as f32 / rows as f32;
+                                    Vec2::new(x0 * (1. - u) + x1 * u, y0 * (1. - v) + y1 * v)
+                                })
+                            })
+                            .collect(),
                     })
                 } else {
                     TransformData::Rotation(RotationTransform::default())
@@ -138,6 +151,7 @@ impl Document {
                     part_id: part_id.clone().map(Into::into),
                     parent_id: parent_id.clone().map(Into::into),
                     data,
+                    warp_authoring,
                     ..Default::default()
                 };
                 check(self.validate_transform(&t))?;
@@ -302,7 +316,7 @@ impl Document {
                 return Err(Status::error(
                     "WRONG_SCENE_COLLECTION",
                     "Scene copies require a Part collection",
-                ))
+                ));
             }
             None => None,
         };

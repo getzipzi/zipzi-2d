@@ -5,23 +5,33 @@ use zipzi_editor_core::property::mesh::*;
 pub(super) fn fields() -> FormDefinition {
     use FieldEditor::*;
     let field = |binding, label, editor| FieldSpec::new(binding, label, editor);
+    let common = scene_object::Bindings {
+        name: NAME,
+        runtime_id: RUNTIME_ID,
+        part: PART,
+        deformer: DEFORMER,
+        opacity: OPACITY,
+        multiply: MULTIPLY,
+        screen: SCREEN,
+        enabled: ENABLED,
+    };
     FormDefinition {
-        fields: vec![
-            field(NAME, "properties.name", Text),
-            field(RUNTIME_ID, "properties.runtime_id", Text),
-            field(PART, "properties.part", Select).choices(true, parts),
-            field(DEFORMER, "properties.deformer", Select).choices(true, deformers),
-            field(MASKS, "properties.masks", References).choices(true, meshes),
-            field(INVERTED_MASK, "properties.inverted_mask", Toggle),
-            field(DRAW_ORDER, "properties.draw_order", OptionalNumber),
-            field(OPACITY, "properties.opacity", Number).percent(),
-            field(MULTIPLY, "properties.multiply", Color),
-            field(SCREEN, "properties.screen", Color),
-            field(COLOR_BLEND, "properties.color_blend", Select).choices(false, color_modes),
-            field(ALPHA_BLEND, "properties.alpha_blend", Select).choices(false, alpha_modes),
-            field(CULLING, "properties.culling", Toggle),
-            field(ENABLED, "properties.enabled", Toggle),
-        ],
+        fields: common
+            .identity()
+            .into_iter()
+            .chain([
+                field(MASKS, "properties.masks", References).choices(true, meshes),
+                field(INVERTED_MASK, "properties.inverted_mask", Toggle),
+                field(DRAW_ORDER, "properties.draw_order", OptionalNumber),
+            ])
+            .chain(common.appearance())
+            .chain([
+                field(COLOR_BLEND, "properties.color_blend", Select).choices(false, color_modes),
+                field(ALPHA_BLEND, "properties.alpha_blend", Select).choices(false, alpha_modes),
+                field(CULLING, "properties.culling", Toggle),
+                common.enabled(),
+            ])
+            .collect(),
         ..Default::default()
     }
 }
@@ -103,7 +113,7 @@ pub(super) fn parts(document: &Document) -> Vec<Choice> {
         Some("properties.no_part"),
     )
 }
-fn deformers(document: &Document) -> Vec<Choice> {
+pub(super) fn deformers(document: &Document) -> Vec<Choice> {
     tree_choices(
         document,
         true,

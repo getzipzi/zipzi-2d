@@ -32,6 +32,51 @@ impl EditorView {
         cx: &mut Context<Self>,
     ) {
         let snapshot = self.collect_key_facts(event, window, cx);
+        // Canvas nudges must not consume text caret movement, tree navigation,
+        // timeline stepping, modal input or an active pointer capture.
+        if !snapshot.facts.focus.blocked
+            && !snapshot.facts.focus.text_focused
+            && snapshot.facts.focus.editor_focused
+            && snapshot.capture.is_none()
+            && !event.prefer_character_input
+        {
+            let target = snapshot.facts.focused.or(snapshot.facts.hovered);
+            if let Some(LocalTarget::Viewport(binding)) = target.map(|t| t.local) {
+                let modifiers = event.keystroke.modifiers;
+                if binding.kind == zipzi_editor_core::ViewportKind::Modeling
+                    && !modifiers.control
+                    && !modifiers.platform
+                    && !self.editor.manual_for_viewport(binding.viewport)
+                {
+                    let direction = match event.keystroke.key.as_str() {
+                        "left" => Some((-1., 0.)),
+                        "right" => Some((1., 0.)),
+                        "up" => Some((0., 1.)),
+                        "down" => Some((0., -1.)),
+                        _ => None,
+                    };
+                    if let Some((x, y)) = direction {
+                        let step = if modifiers.alt {
+                            0.1
+                        } else if modifiers.shift {
+                            10.
+                        } else {
+                            1.
+                        };
+                        let result = self.editor.nudge_selection(
+                            binding,
+                            zipzi_editor_core::ModelVector {
+                                x: x * step,
+                                y: y * step,
+                            },
+                        );
+                        self.complete_edit(result, cx);
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+            }
+        }
         let decision = decide(
             &snapshot.facts,
             &cx.global::<settings::Settings>().bindings,

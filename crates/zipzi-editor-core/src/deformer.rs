@@ -6,7 +6,7 @@ pub(crate) const ROTATION_AXIS_LENGTH: f32 = 540.;
 const ROTATION_RING_RADIUS: f32 = 280.;
 const ROTATION_SCALE_DISTANCE: f32 = 400.;
 // Fixed logical-pixel gap between the Warp control grid and its outer frame.
-const WARP_FRAME_PADDING: f32 = 4.;
+const WARP_FRAME_PADDING: f32 = 12.;
 const WARP_ROTATE_OFFSET: f32 = 24.;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -35,11 +35,24 @@ pub(crate) struct WarpSelectionGizmo {
 
 #[derive(Clone, Default)]
 pub(crate) struct WarpGizmos {
+    pub objects: Vec<crate::ObjectRef>,
     pub local: bool,
     pub items: Vec<(crate::ObjectRef, DeformerGizmo)>,
+    pub adjusting: Vec<crate::ObjectRef>,
 }
 
 impl CanvasScene {
+    pub(crate) fn object_gizmo(
+        &self,
+        object: &crate::ObjectRef,
+        t: ViewportTransform,
+        selection: Option<&WarpGizmos>,
+    ) -> Option<DeformerGizmo> {
+        if let Some(g) = selection.and_then(|s| s.items.iter().find(|(o, _)| o == object)) {
+            return Some(g.1.clone());
+        }
+        self.gizmo_for_selection(self.control(&object.id)?, t, selection)
+    }
     pub fn deformer_gizmo(
         &self,
         c: &ControlGeometry,
@@ -88,7 +101,6 @@ impl CanvasScene {
     pub(crate) fn warp_selected_points(
         &self,
         components: &[crate::ComponentRef],
-        fine: bool,
     ) -> Vec<(crate::ComponentRef, crate::ModelPoint)> {
         components
             .iter()
@@ -96,10 +108,11 @@ impl CanvasScene {
                 let control = self
                     .control(&component.object.id)
                     .filter(|c| c.kind == ControlKind::Warp)?;
-                let point = if fine {
-                    *control.points.get(component.id as usize)?
-                } else if let Some(bezier) = self.bezier(&component.object.id) {
-                    bezier.points().find(|(id, _)| *id == component.id)?.1
+                let point = if crate::warp_bezier::component(component.id).is_some() {
+                    self.bezier(&component.object.id)?
+                        .points()
+                        .find(|(id, _)| *id == component.id)?
+                        .1
                 } else {
                     *control.points.get(component.id as usize)?
                 };
@@ -111,10 +124,9 @@ impl CanvasScene {
     pub(crate) fn warp_selection_gizmo(
         &self,
         components: &[crate::ComponentRef],
-        fine: bool,
         t: ViewportTransform,
     ) -> Option<WarpSelectionGizmo> {
-        let points = self.warp_selected_points(components, fine);
+        let points = self.warp_selected_points(components);
         let object = points.first()?.0.object.clone();
         let bounds = crate::picking::bounds(points.iter().map(|(_, p)| {
             let p = t.to_viewport(*p);
@@ -304,8 +316,6 @@ pub struct DeformerAdjustment {
 pub struct WarpTransformTarget {
     pub object: crate::ObjectRef,
     pub components: Vec<crate::ComponentRef>,
-    pub fine: bool,
-    pub(crate) keep_children: bool,
     revision: (u64, u64),
     pub(crate) viewport: Option<crate::ViewportId>,
     frame: Option<crate::WarpFrame>,
@@ -346,8 +356,6 @@ impl crate::tools::ToolController {
         Some(WarpTransformTarget {
             object: object.clone(),
             components,
-            fine: self.warp_fine,
-            keep_children: self.warp_keep_children,
             revision: (document.model_generation(), document.preview_revision()),
             viewport: None,
             frame: None,
@@ -419,7 +427,7 @@ impl crate::Document {
             .control(&target.object.id)
             .filter(|c| c.kind == ControlKind::Warp)
             .ok_or_else(|| anyhow::anyhow!("Warp is unavailable"))?;
-        let points = scene.warp_selected_points(&target.components, target.fine);
+        let points = scene.warp_selected_points(&target.components);
         ensure!(
             points.len() == target.components.len(),
             "Warp point selection changed"
@@ -453,15 +461,10 @@ impl crate::Document {
                 .any(|o| scene.ancestors(o).iter().any(|p| objects.contains(p))),
             "Select controls from one deformation level at a time"
         );
-        let mut edits = objects
+        let edits = objects
             .iter()
             .map(|o| ControlEdit::prepare(self, &scene, o))
             .collect::<anyhow::Result<Vec<_>>>()?;
-        if target.keep_children {
-            for edit in &mut edits {
-                edit.keep_warp_children(self)?;
-            }
-        }
         let b = bounds.ok_or_else(|| anyhow::anyhow!("Warp has no points"))?;
         self.begin_control_edit(&edits)?;
         let result = self

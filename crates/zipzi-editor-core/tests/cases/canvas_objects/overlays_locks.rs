@@ -11,7 +11,7 @@ fn bezier_tangent_bends_lattice_persists_and_undo_restores_legacy_shape() -> any
     let original = control_points(&mut editor, &object)?;
     let original_mesh = shown(&mut editor)?.geometry.meshes[0].vertices.clone();
     let overlay = editor.overlay();
-    assert_eq!(overlay.vertices.len(), 9);
+    assert_eq!(overlay.vertices.len(), 34);
     let handle = overlay.handles.iter().find(|h| h.round).unwrap().position;
     drag(
         &mut editor,
@@ -74,13 +74,23 @@ fn bezier_tangent_bends_lattice_persists_and_undo_restores_legacy_shape() -> any
     );
     editor.execute(EditorCommand::Redo)?;
     assert_eq!(control_points(&mut editor, &object)?, bent);
-    editor.execute(EditorCommand::ToggleWarpFine)?;
-    assert_eq!(editor.overlay().vertices.len(), 25);
+    assert_eq!(editor.overlay().vertices.len(), 34);
     assert_eq!(
-        editor.overlay().handles.iter().filter(|h| h.round).count(),
-        1 // The independent Warp rotation handle remains in lattice mode.
+        editor
+            .overlay()
+            .handles
+            .iter()
+            .filter(|h| h.round && !h.tangent)
+            .count(),
+        1 // The transform frame remains independent of the Bezier handles.
     );
-    let point = editor.overlay().vertices[12].position;
+    let point = editor
+        .overlay()
+        .vertices
+        .iter()
+        .find(|v| v.kind == OverlayVertexKind::WarpGrid && v.id == 6)
+        .unwrap()
+        .position;
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
@@ -164,11 +174,16 @@ fn fine_point_edits_keep_base_and_keyform_controllers_and_later_delta_retains_de
         let (before, controller) = shape(&editor, &object);
         let controller = controller.unwrap();
         let history = editor.document().unwrap().history_lengths();
-        editor.execute(EditorCommand::ToggleWarpFine)?;
         shown(&mut editor)?;
         assert_eq!(shape(&editor, &object).0, before);
         assert_eq!(editor.document().unwrap().history_lengths(), history);
-        let point = editor.overlay().vertices[12].position;
+        let point = editor
+            .overlay()
+            .vertices
+            .iter()
+            .find(|v| v.kind == OverlayVertexKind::WarpGrid && v.id == 6)
+            .unwrap()
+            .position;
         drag(
             &mut editor,
             point,
@@ -180,13 +195,12 @@ fn fine_point_edits_keep_base_and_keyform_controllers_and_later_delta_retains_de
         )?;
         let (detail, stored) = shape(&editor, &object);
         assert_eq!(stored.as_ref(), Some(&controller));
-        assert_ne!(detail[12], before[12]);
+        assert_ne!(detail[6], before[6]);
         for i in 0..detail.len() {
-            if i != 12 {
+            if i != 6 {
                 assert_eq!(detail[i], before[i]);
             }
         }
-        editor.execute(EditorCommand::ToggleWarpFine)?;
         assert_eq!(shape(&editor, &object).0, detail);
         shown(&mut editor)?;
         let handle = editor

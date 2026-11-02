@@ -60,6 +60,18 @@ fn all_scene_defaults_roundtrip_with_one_creation_history_entry_each() -> anyhow
     let reopened = Document::open(&saved.manifest)?;
     assert_eq!(reopened.part_tree(), d.part_tree());
     assert_eq!(reopened.deformer_tree(), d.deformer_tree());
+    for document in [&d, &reopened] {
+        use zipzi_editor_core::{PropertyValue, property::deformer as props};
+        let values = document.property_values(&created[2])?;
+        for (field, expected) in [
+            (props::COLUMNS.key, 5),
+            (props::ROWS.key, 5),
+            (props::BEZIER_COLUMNS.key, 2),
+            (props::BEZIER_ROWS.key, 2),
+        ] {
+            assert_eq!(values[&field], PropertyValue::Integer(expected));
+        }
+    }
     let before = d.part_tree();
     d.undo()?;
     assert!(node(&d.part_tree(), &created[4].id).is_none());

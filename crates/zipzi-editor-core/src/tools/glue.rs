@@ -27,13 +27,12 @@ impl super::ToolController {
             .cloned()
             .collect();
         let locks = document.object_state_index();
-        let hit = scene.hit_with_mode(
+        let hit = scene.hit_with_state(
             point,
             frame.transform,
             &selection,
             self.active,
             self.deformer_visibility,
-            self.warp_fine,
             &locks,
             self.warp_selection_gizmo(document, frame).as_ref(),
         );

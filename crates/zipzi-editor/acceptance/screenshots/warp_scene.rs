@@ -1,228 +1,133 @@
-//! Real Metal review of the Warp frame, selection scope and numeric dialog.
+//! Native review of inline density and shared object frames.
 use super::super::harness::Harness;
-use super::{common::save, properties_scene::show, toolbar_scene::toolbar_document};
-use gpui_kit::{
-    InputEvent as _, Modifiers, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, point,
-    px, test::TestWindowExt,
-};
-use zipzi_editor_core::{CommandId, Editor, EditorCommand, ObjectKind, ObjectRef};
-
+use super::{common::save, properties_scene::show, warp_authoring_scene::fixture_with_density};
+use gpui_kit::{point, px, test::TestWindowExt};
+use zipzi_editor_core::{Editor, EditorCommand, ObjectKind, ObjectRef, ViewportPoint};
 pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
     for locale in ["en", "zh-CN", "ja"] {
         let mut h = Harness::new()?;
         crate::i18n::activate(Some(locale));
-        let (document, _assets) = toolbar_document()?;
-        let object = ObjectRef::new(ObjectKind::Deformer, uuid::Uuid::from_u128(502).to_string());
+        let (document, _assets, object) =
+            fixture_with_density(zipzi_core::WarpBezierEditMode::Local, 5, 2)?;
         h.cx.update_window(h.window, |_, window, cx| {
             h.view.update(cx, |view, cx| {
                 view.replace_editor(Editor::from_document(document), cx);
                 view.editor
-                    .execute(EditorCommand::SelectObject(object.clone()))
+                    .execute(EditorCommand::SelectObject(object))
+                    .unwrap();
+                view.editor.reset_view();
+                view.editor.pan_by(ViewportPoint { x: -128., y: 128. });
+                view.refresh_document(window, cx);
+            });
+        })?;
+        save(
+            &h.capture()?,
+            directory,
+            &format!("warp-basic-{locale}.png"),
+        )?;
+        h.cx.update_window(h.window, |_, window, cx| {
+            show(window, "property-input-bezier_rows", cx);
+        })?;
+        save(
+            &h.capture()?,
+            directory,
+            &format!("warp-inline-{locale}.png"),
+        )?;
+        h.cx.update_window(h.window, |_, window, cx| {
+            for id in [
+                "property-warp-transform",
+                "property-warp-frame",
+                "deformer-frame",
+                "deformer-whole",
+                "deformer-keep-children",
+                "deformer-warp-bezier",
+                "deformer-warp-fine",
+                "warp-grid-interpolation",
+            ] {
+                assert!(window.try_find(id).is_none());
+            }
+        })?;
+        save(
+            &h.capture()?,
+            directory,
+            &format!("warp-combined-{locale}.png"),
+        )?;
+        h.cx.update_window(h.window, |_, window, cx| {
+            window.activate_window();
+            let tangent = h.view.read_with(cx, |view, _| {
+                view.editor
+                    .overlay()
+                    .handles
+                    .into_iter()
+                    .find(|h| h.tangent)
+                    .unwrap()
+                    .position
+            });
+            let start =
+                window.find("canvas-body").bounds().origin + point(px(tangent.x), px(tangent.y));
+            window.drag(start, start + point(px(15.), px(-24.)), cx);
+        })?;
+        h.view.read_with(&h.cx, |view, _| {
+            assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
+            let overlay = view.editor.overlay();
+            assert!(overlay.warp_frame_lines.is_empty());
+            assert!(overlay.handles.iter().all(|h| h.tangent));
+        });
+        save(
+            &h.capture()?,
+            directory,
+            &format!("warp-combined-edited-{locale}.png"),
+        )?;
+        h.cx.update_window(h.window, |_, window, cx| {
+            let grid = h.view.read_with(cx, |view, _| {
+                view.editor
+                    .overlay()
+                    .vertices
+                    .into_iter()
+                    .find(|v| {
+                        v.kind == zipzi_editor_core::OverlayVertexKind::WarpGrid && v.id == 14
+                    })
+                    .unwrap()
+                    .position
+            });
+            window.click_at("canvas-body", point(px(grid.x), px(grid.y)), cx);
+        })?;
+        h.view.read_with(&h.cx, |view, _| {
+            let overlay = view.editor.overlay();
+            assert!(overlay.warp_frame_lines.is_empty());
+            assert!(overlay.handles.iter().all(|h| h.tangent));
+            let selected: Vec<_> = overlay.vertices.iter().filter(|v| v.selected).collect();
+            assert_eq!(selected.len(), 1);
+            assert_eq!(
+                selected[0].kind,
+                zipzi_editor_core::OverlayVertexKind::WarpGrid
+            );
+        });
+        save(
+            &h.capture()?,
+            directory,
+            &format!("warp-single-grid-{locale}.png"),
+        )?;
+        h.cx.update_window(h.window, |_, window, cx| {
+            h.view.update(cx, |view, cx| {
+                view.editor
+                    .execute(EditorCommand::SelectObject(ObjectRef::new(
+                        ObjectKind::Mesh,
+                        uuid::Uuid::from_u128(3).to_string(),
+                    )))
                     .unwrap();
                 view.refresh_document(window, cx);
             });
         })?;
-        h.capture()?;
-        h.cx.update_window(h.window, |_, window, cx| {
-            h.view.update(cx, |view, cx| {
-                view.run_command(CommandId::FitView, window, cx);
-                // An empty Warp has no drawable bounds for Fit View.
-                view.editor
-                    .pan_by(zipzi_editor_core::ViewportPoint { x: -128., y: 128. });
-                view.redraw(cx);
-            })
-        })?;
         save(
             &h.capture()?,
             directory,
-            &format!("warp-whole-{locale}.png"),
+            &format!("mesh-frame-{locale}.png"),
         )?;
         h.view.read_with(&h.cx, |view, _| {
-            assert!(!view.editor.warp_fine());
-            assert_eq!(view.editor.overlay().gizmo_lines.len(), 8);
+            assert_eq!(view.editor.overlay().handles.len(), 9)
         });
-        h.cx.update_window(h.window, |_, window, cx| {
-            window.activate_window();
-            window.click("deformer-warp-fine", cx);
-        })?;
-        save(
-            &h.capture()?,
-            directory,
-            &format!("warp-division-points-{locale}.png"),
-        )?;
-        h.view.read_with(&h.cx, |view, _| {
-            assert!(view.editor.warp_fine());
-            assert!(view.editor.overlay().gizmo_lines.is_empty());
-        });
-        h.cx.update_window(h.window, |_, window, cx| {
-            window.click("deformer-warp-bezier", cx);
-        })?;
-        h.capture()?;
-        h.view.read_with(&h.cx, |view, _| {
-            assert!(!view.editor.warp_fine());
-            assert_eq!(view.editor.overlay().gizmo_lines.len(), 8);
-            assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
-        });
-        h.cx.update_window(h.window, |_, window, cx| {
-            window.click("deformer-warp-fine", cx);
-        })?;
-        h.capture()?;
-        h.cx.update_window(h.window, |_, window, cx| {
-            let points = h.view.read_with(cx, |view, _| {
-                let frame = &view
-                    .modeling_frame_for(view.viewport_slots[0])
-                    .unwrap()
-                    .canvas;
-                let control = frame
-                    .geometry
-                    .controls
-                    .iter()
-                    .find(|c| c.object == object)
-                    .unwrap();
-                [
-                    frame.transform.to_viewport(control.points[0]),
-                    frame.transform.to_viewport(control.points[1]),
-                ]
-            });
-            window.click_at("canvas-body", point(px(points[0].x), px(points[0].y)), cx);
-            let position = window.find("canvas-body").bounds().origin
-                + point(px(points[1].x), px(points[1].y));
-            window.dispatch_event(
-                MouseDownEvent {
-                    button: MouseButton::Left,
-                    position,
-                    modifiers: Modifiers {
-                        shift: true,
-                        ..Default::default()
-                    },
-                    click_count: 1,
-                    first_mouse: false,
-                }
-                .to_platform_input(),
-                cx,
-            );
-            window.dispatch_event(
-                MouseUpEvent {
-                    button: MouseButton::Left,
-                    position,
-                    modifiers: Modifiers {
-                        shift: true,
-                        ..Default::default()
-                    },
-                    click_count: 1,
-                }
-                .to_platform_input(),
-                cx,
-            );
-        })?;
-        h.view.read_with(&h.cx, |view, _| {
-            assert_eq!(
-                view.editor
-                    .warp_transform_target(&object)
-                    .unwrap()
-                    .components
-                    .len(),
-                2
-            )
-        });
-        save(
-            &h.capture()?,
-            directory,
-            &format!("warp-selection-{locale}.png"),
-        )?;
-        h.cx.update_window(h.window, |_, window, cx| {
-            show(window, "property-warp-transform", cx);
-            window.click("property-warp-transform", cx);
-        })?;
-        save(
-            &h.capture()?,
-            directory,
-            &format!("warp-transform-{locale}.png"),
-        )?;
-        h.cx.update_window(h.window, |_, window, cx| {
-            window.press("escape", cx);
-            window.render_frame(cx);
-            window.click("deformer-whole", cx);
-            window.render_frame(cx);
-            window.click("deformer-frame", cx);
-            window.render_frame(cx);
-            window.click("warp-frame-adjust", cx);
-            window.render_frame(cx);
-        })?;
-        h.capture()?;
-        h.cx.update_window(h.window, |_, window, cx| {
-            let (start, center) = h.view.read_with(cx, |view, _| {
-                let binding = view.editor.primary_viewport_binding().unwrap();
-                let center = view.modeling_frame().unwrap().canvas.transform.to_viewport(
-                    view.editor
-                        .warp_frame_info(binding, &object)
-                        .unwrap()
-                        .frame
-                        .center,
-                );
-                (
-                    view.editor.overlay().handles.last().unwrap().position,
-                    center,
-                )
-            });
-            let origin = window.find("canvas-body").bounds().origin;
-            let from = origin + point(px(start.x), px(start.y));
-            let (s, c) = (-30f32.to_radians()).sin_cos();
-            let (x, y) = (start.x - center.x, start.y - center.y);
-            let end = origin + point(px(center.x + x * c - y * s), px(center.y + x * s + y * c));
-            window.dispatch_event(
-                MouseDownEvent {
-                    button: MouseButton::Left,
-                    position: from,
-                    modifiers: Modifiers::default(),
-                    click_count: 1,
-                    first_mouse: false,
-                }
-                .to_platform_input(),
-                cx,
-            );
-            window.dispatch_event(
-                MouseMoveEvent {
-                    position: end,
-                    pressed_button: Some(MouseButton::Left),
-                    modifiers: Modifiers::default(),
-                }
-                .to_platform_input(),
-                cx,
-            );
-            window.dispatch_event(
-                MouseUpEvent {
-                    button: MouseButton::Left,
-                    position: end,
-                    modifiers: Modifiers::default(),
-                    click_count: 1,
-                }
-                .to_platform_input(),
-                cx,
-            );
-        })?;
-        h.view.read_with(&h.cx, |view, _| {
-            let info = view
-                .editor
-                .warp_frame_info(view.editor.primary_viewport_binding().unwrap(), &object)
-                .unwrap();
-            assert!((info.frame.radians.to_degrees() - 30.).abs() < 0.01);
-            assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
-        });
-        save(
-            &h.capture()?,
-            directory,
-            &format!("warp-frame-adjust-{locale}.png"),
-        )?;
-        h.cx.update_window(h.window, |_, window, cx| {
-            window.click("deformer-frame", cx);
-            window.render_frame(cx);
-        })?;
-        save(
-            &h.capture()?,
-            directory,
-            &format!("warp-frame-menu-{locale}.png"),
-        )?;
     }
     Ok(())
 }

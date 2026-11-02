@@ -13,8 +13,8 @@ impl ParentMap {
         let y = w.points[(w.rows * (w.columns + 1)) as usize];
         let x = Vec2::new(x.x - o.x, x.y - o.y);
         let y = Vec2::new(y.x - o.x, y.y - o.y);
-        // Allow only the float32 construction envelope of an affine lattice.
-        // The numeric publication budget below also accounts for this envelope.
+        // Allow the float32 construction envelope of an affine lattice. Actual
+        // native mappings and converted child outputs are checked below.
         let magnitude = w
             .points
             .iter()
@@ -146,7 +146,6 @@ impl Document {
             }
             return Ok((delta, affected, 0., 0));
         }
-        let mut magnitude = 1f64;
         let mut measured = 0f64;
         let mut samples = 0usize;
         let mut convert = |points: &mut [Vec2], delta: bool| -> Result<(), Status> {
@@ -170,22 +169,12 @@ impl Document {
                 let world = old.point(*p);
                 *p = new.inverse(world)?;
                 let after = new.point(*p);
-                measured =
-                    measured.max(f64::from(world.x - after.x).hypot(f64::from(world.y - after.y)));
-                magnitude = magnitude.max(
-                    f64::from(world.x).abs()
-                        + f64::from(world.y).abs()
-                        + f64::from(new.origin.x).abs()
-                        + f64::from(new.origin.y).abs()
-                        + f64::from(p.x).abs()
-                        + f64::from(p.y).abs(),
-                );
+                measure_error(&mut measured, world, after)?;
                 samples += 1;
             }
             Ok(())
         };
         let mut delta = Delta::default();
-        let mut rotation_magnitude = 1f64;
         let mut rotation_error = 0f64;
         delta.transforms.push(replacement);
         for child in descendants
@@ -225,7 +214,12 @@ impl Document {
                 // Native Rotation inherits direction and scalar Rotation scale,
                 // not the Warp basis lengths. Reuse the shared channel plan.
                 let changed = self.convert_rotation_parent(child, id, old_map, new_map, control)?;
-                rotation_magnitude = rotation_magnitude.max(changed.magnitude);
+                if !changed.error.is_finite() {
+                    return Err(Status::error(
+                        "WARP_PRESERVATION_TOLERANCE",
+                        "Non-finite preservation error",
+                    ));
+                }
                 rotation_error = rotation_error.max(changed.error);
                 delta.transforms.push(changed.transform);
                 delta.scene_bindings.extend(changed.binding);
@@ -253,7 +247,6 @@ impl Document {
         // Independent interior/exterior samples exercise native bilinear/triangle
         // mapping, not just the control nodes used to derive the affine basis.
         drop(convert);
-        magnitude = magnitude.max(rotation_magnitude);
         measured = measured.max(rotation_error);
         let flat = |w: &WarpTransform| w.points.iter().flat_map(|p| [p.x, p.y]).collect::<Vec<_>>();
         let old_flat = flat(old);
@@ -285,13 +278,7 @@ impl Document {
                 );
                 let a = parent.point(Vec2::new(a[0], a[1]));
                 let b = parent.point(Vec2::new(b[0], b[1]));
-                measured = measured.max(f64::from(a.x - b.x).hypot(f64::from(a.y - b.y)));
-                magnitude = magnitude.max(
-                    f64::from(a.x).abs()
-                        + f64::from(a.y).abs()
-                        + f64::from(b.x).abs()
-                        + f64::from(b.y).abs(),
-                );
+                measure_error(&mut measured, a, b)?;
                 samples += 1;
             }
         }
@@ -362,23 +349,37 @@ impl Document {
             {
                 let b = after.drawables.iter().find(|d| d.id == a.id).unwrap();
                 for (a, b) in a.positions.iter().zip(&b.positions) {
-                    measured = measured.max(f64::from(a.x - b.x).hypot(f64::from(a.y - b.y)));
-                    magnitude = magnitude.max(f64::from(a.x).abs() + f64::from(a.y).abs());
+                    measure_error(&mut measured, *a, *b)?;
                     samples += 1;
                 }
             }
         }
-        // A float32 construction envelope supplements independent verification.
-        // Absolute canvas tolerance does not depend on viewport zoom or pixels.
-        let envelope = measured + 16. * f64::from(f32::EPSILON) * magnitude;
-        if !envelope.is_finite() || envelope > 0.01 {
+        // Check the measured error of actual float32 mappings and child outputs.
+        // Absolute coordinate magnitudes, especially exterior probe locations,
+        // are not displacement errors and must not consume this tolerance.
+        // Structural affine checks above still govern the supported domain;
+        // these samples do not claim a global floating-point error bound.
+        if measured > 0.01 {
             return Err(Status::error(
                 "WARP_PRESERVATION_TOLERANCE",
-                format!("Preservation error budget {envelope:.6} exceeds 0.01 canvas units"),
+                format!("Measured preservation error {measured:.6} exceeds 0.01 canvas units"),
             ));
         }
         Ok((delta, affected, measured, samples))
     }
+}
+
+fn measure_error(maximum: &mut f64, before: Vec2, after: Vec2) -> Result<(), Status> {
+    let error =
+        (f64::from(before.x) - f64::from(after.x)).hypot(f64::from(before.y) - f64::from(after.y));
+    if !error.is_finite() {
+        return Err(Status::error(
+            "WARP_PRESERVATION_TOLERANCE",
+            "Preservation produced a non-finite canvas position",
+        ));
+    }
+    *maximum = maximum.max(error);
+    Ok(())
 }
 
 fn convert_controller(

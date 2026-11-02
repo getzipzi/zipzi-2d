@@ -73,6 +73,13 @@ fn grouping_converts_ordinary_and_blend_channels_of_selected_warp_and_rotation()
         let mut s = setup();
         s.edit("Driven deformers", None, |e| {
             e.edit_scene(creation(500, true))?;
+            let grid = e
+                .candidate_document()
+                .get_transform(&fixture::id(500))
+                .unwrap()
+                .warp()
+                .unwrap();
+            let (rows, columns, point_count) = (grid.rows, grid.columns, grid.points.len());
             e.edit_scene(SceneEdit::Reparent {
                 edit: ReparentEdit::keep_local(vec![fixture::id(4)], fixture::id(500)),
             })?;
@@ -89,12 +96,20 @@ fn grouping_converts_ordinary_and_blend_channels_of_selected_warp_and_rotation()
                         .into_iter()
                         .map(|v| WarpKeyform {
                             keys: vec![v],
-                            positions: vec![
-                                Vec2::new(10., 20. + v),
-                                Vec2::new(50. + v, 21.),
-                                Vec2::new(9., 60.),
-                                Vec2::new(48., 63. + v),
-                            ],
+                            positions: (0..=rows)
+                                .flat_map(|row| {
+                                    (0..=columns).map(move |column| {
+                                        let x = column as f32 / columns as f32;
+                                        let y = row as f32 / rows as f32;
+                                        Vec2::new(
+                                            (10. * (1. - x) + (50. + v) * x) * (1. - y)
+                                                + (9. * (1. - x) + 48. * x) * y,
+                                            ((20. + v) * (1. - x) + 21. * x) * (1. - y)
+                                                + (60. * (1. - x) + (63. + v) * x) * y,
+                                        )
+                                    })
+                                })
+                                .collect(),
                             ..Default::default()
                         })
                         .collect(),
@@ -131,11 +146,11 @@ fn grouping_converts_ordinary_and_blend_channels_of_selected_warp_and_rotation()
                     BlendShapeTargetKind::Warp,
                     DeltaKeyforms::Warp(vec![
                         DeltaWarpKeyform {
-                            points: vec![Vec2::default(); 4],
+                            points: vec![Vec2::default(); point_count],
                             ..Default::default()
                         },
                         DeltaWarpKeyform {
-                            points: vec![Vec2::new(2., -3.); 4],
+                            points: vec![Vec2::new(2., -3.); point_count],
                             ..Default::default()
                         },
                     ]),
@@ -316,12 +331,9 @@ fn grouping_rotation_under_static_affine_warp_preserves_child_coordinates() {
             .get_transform(&fixture::id(500))
             .unwrap()
             .clone();
-        parent.warp_mut().unwrap().points = vec![
-            Vec2::new(10., 20.),
-            Vec2::new(110., 20.),
-            Vec2::new(10., 220.),
-            Vec2::new(110., 220.),
-        ];
+        for p in &mut parent.warp_mut().unwrap().points {
+            *p = Vec2::new(10. + p.x, 20. + p.y * 2.);
+        }
         edit.replace_transform(parent)?;
         edit.edit_scene(SceneEdit::Reparent {
             edit: ReparentEdit::keep_local([3, 4].map(fixture::id).into(), fixture::id(500)),

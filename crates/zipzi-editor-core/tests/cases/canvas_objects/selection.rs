@@ -97,27 +97,23 @@ fn select_all_objects_respects_visibility_locks_and_viewport_isolation() -> anyh
 }
 
 #[test]
-fn select_all_warp_points_respects_fine_mode_and_rejects_stale_targets() -> anyhow::Result<()> {
-    for fine in [false, true] {
-        let (mut editor, _dir, _object, _) = bound_deformer_editor(false, false)?;
-        if fine {
-            editor.execute(EditorCommand::ToggleWarpFine)?;
-        }
-        shown(&mut editor)?;
-        editor.dispatch(editor.command(CommandId::SelectAll))?;
-        let vertices = editor.overlay().vertices;
-        assert!(!vertices.is_empty());
-        assert!(vertices.iter().all(|v| v.selected && v.editable));
-        let command = editor.command(CommandId::SelectAll);
-        editor.pan_by(ViewportPoint { x: 5., y: 0. });
-        assert!(!editor.command_available(command));
-        assert!(editor.dispatch(command).is_err());
-        shown(&mut editor)?;
-        assert!(editor.command_available(command));
-        editor.new_document()?;
-        assert!(!editor.command_available(command));
-        assert!(editor.dispatch(command).is_err());
-    }
+fn select_all_warp_controls_share_one_surface_and_rejects_stale_targets() -> anyhow::Result<()> {
+    let (mut editor, _dir, _object, _) = bound_deformer_editor(false, false)?;
+    shown(&mut editor)?;
+    editor.dispatch(editor.command(CommandId::SelectAll))?;
+    let vertices = editor.overlay().vertices;
+    assert!(!vertices.is_empty());
+    assert!(vertices.iter().all(|v| v.selected && v.editable));
+    let command = editor.command(CommandId::SelectAll);
+    editor.pan_by(ViewportPoint { x: 5., y: 0. });
+    assert!(!editor.command_available(command));
+    assert!(editor.dispatch(command).is_err());
+    shown(&mut editor)?;
+    assert!(editor.command_available(command));
+    editor.new_document()?;
+    assert!(!editor.command_available(command));
+    assert!(editor.dispatch(command).is_err());
+
     Ok(())
 }
 
@@ -135,12 +131,12 @@ fn selection_tools_share_region_modifiers_and_option_click_subtraction() -> anyh
             select_area(
                 editor,
                 ViewportPoint {
-                    x: p.x - 12.,
-                    y: p.y - 12.,
+                    x: p.x - 22.,
+                    y: p.y - 22.,
                 },
                 ViewportPoint {
-                    x: p.x + 12.,
-                    y: p.y + 12.,
+                    x: p.x + 22.,
+                    y: p.y + 22.,
                 },
                 shift,
                 alt,
@@ -751,20 +747,16 @@ fn assert_read_only_points_cannot_be_selected(editor: &mut Editor) -> anyhow::Re
 }
 
 #[test]
-fn selection_tools_skip_read_only_warp_points_in_coarse_and_fine_modes() -> anyhow::Result<()> {
-    for fine in [false, true] {
-        let (mut editor, _dir, _object, parameter) = bound_deformer_editor(false, false)?;
-        if fine {
-            editor.execute(EditorCommand::ToggleWarpFine)?;
-        }
-        editor.execute(EditorCommand::SetPreviewParameter {
-            parameter_id: parameter,
-            value: 0.5,
-        })?;
-        shown(&mut editor)?;
-        assert_read_only_points_cannot_be_selected(&mut editor)?;
-        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
-    }
+fn selection_tools_skip_read_only_warp_grid_and_bezier_points() -> anyhow::Result<()> {
+    let (mut editor, _dir, _object, parameter) = bound_deformer_editor(false, false)?;
+    editor.execute(EditorCommand::SetPreviewParameter {
+        parameter_id: parameter,
+        value: 0.5,
+    })?;
+    shown(&mut editor)?;
+    assert_read_only_points_cannot_be_selected(&mut editor)?;
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+
     Ok(())
 }
 

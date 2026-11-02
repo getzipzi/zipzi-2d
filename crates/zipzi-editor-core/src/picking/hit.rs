@@ -17,25 +17,23 @@ impl CanvasScene {
         tool: ToolId,
         visibility: DeformerVisibility,
     ) -> Option<HitTarget> {
-        self.hit_with_mode(
+        self.hit_with_state(
             point,
             t,
             selection,
             tool,
             visibility,
-            false,
             &crate::ObjectStateIndex::default(),
             None,
         )
     }
-    pub(crate) fn hit_with_mode(
+    pub(crate) fn hit_with_state(
         &self,
         point: ViewportPoint,
         t: ViewportTransform,
         selection: &[ObjectRef],
         tool: ToolId,
         visibility: DeformerVisibility,
-        fine: bool,
         locks: &crate::ObjectStateIndex,
         warp_selection: Option<&crate::deformer::WarpGizmos>,
     ) -> Option<HitTarget> {
@@ -65,6 +63,31 @@ impl CanvasScene {
                 return Some(HitTarget::Component(ComponentRef { object, id }));
             }
         }
+        if let Some(frames) = warp_selection.filter(|s| !s.objects.is_empty()) {
+            for (object, gizmo) in &frames.items {
+                if frames.objects.iter().any(|o| locks.is_locked(o)) {
+                    continue;
+                }
+                if let Some((h, _)) = gizmo
+                    .handles
+                    .iter()
+                    .find(|(_, p)| distance2(point, *p) <= CONTROL_RADIUS * CONTROL_RADIUS)
+                {
+                    return Some(HitTarget::DeformerHandle(object.clone(), *h));
+                }
+                if gizmo
+                    .outline
+                    .iter()
+                    .take(8)
+                    .any(|(a, b)| segment_distance2(point, *a, *b) <= 16.)
+                {
+                    return Some(HitTarget::DeformerHandle(
+                        object.clone(),
+                        crate::DeformerHandle::Move,
+                    ));
+                }
+            }
+        }
         let mut controls: Vec<_> = self
             .controls
             .iter()
@@ -77,22 +100,23 @@ impl CanvasScene {
         for c in controls {
             let points = self.control_points(c, t);
             let editing = c.kind != ControlKind::Glue && selection.contains(&c.object);
+            // Disabled controls must not steal a hit from an independently
+            // positioned frame, including when a frame handle overlaps a point.
+            if warp_selection.is_some_and(|g| g.adjusting.contains(&c.object)) {
+                continue;
+            }
             if editing && c.kind == ControlKind::Warp {
-                let bezier = (!fine).then(|| self.bezier(&c.object.id)).flatten();
-                let candidates: Vec<_> = if let Some(b) = bezier {
-                    b.points().map(|(id, p)| (id, t.to_viewport(p))).collect()
-                } else {
-                    points
-                        .iter()
-                        .enumerate()
-                        .map(|(i, p)| (i as u32, *p))
-                        .collect()
-                };
-                let nearest = candidates
+                let bezier = self.bezier(&c.object.id);
+                // Controls are always available together. At coincident positions
+                // the visible Bezier control wins over the subdued lattice point.
+                let candidates = bezier
                     .into_iter()
+                    .flat_map(|b| b.points().map(|(id, p)| (id, t.to_viewport(p))))
+                    .chain(points.iter().enumerate().map(|(i, p)| (i as u32, *p)));
+                let nearest = candidates
                     .map(|(id, p)| (id, distance2(point, p)))
                     .filter(|(_, d)| *d <= CONTROL_RADIUS * CONTROL_RADIUS)
-                    .min_by(|a, b| a.1.total_cmp(&b.1));
+                    .min_by(|a, b| a.1.total_cmp(&b.1).then(b.0.cmp(&a.0)));
                 let handle = self
                     .gizmo_for_selection(c, t, warp_selection)
                     .and_then(|g| {
@@ -119,7 +143,6 @@ impl CanvasScene {
                     }) {
                         object_hit.get_or_insert_with(|| HitTarget::Object(c.object.clone()));
                     }
-                    continue;
                 }
             }
             for (i, p) in points.iter().enumerate() {
@@ -152,6 +175,11 @@ impl CanvasScene {
                 .iter()
                 .filter(|c| selection.contains(&c.object) && !locks.is_locked(&c.object))
             {
+                if c.kind != ControlKind::Rotation
+                    && warp_selection.is_some_and(|s| !s.objects.is_empty())
+                {
+                    continue;
+                }
                 let Some(gizmo) = self.gizmo_for_selection(c, t, warp_selection) else {
                     continue;
                 };
@@ -211,9 +239,7 @@ impl CanvasScene {
         locks: &crate::ObjectStateIndex,
     ) -> Vec<PickCandidate> {
         let mut objects = Vec::new();
-        if let Some(hit) =
-            self.hit_with_mode(point, t, selection, tool, visibility, false, locks, None)
-        {
+        if let Some(hit) = self.hit_with_state(point, t, selection, tool, visibility, locks, None) {
             objects.push(hit.object().clone());
         }
         for id in self.mesh_hits(t.to_model(point)) {

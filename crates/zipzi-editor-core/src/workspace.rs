@@ -554,19 +554,9 @@ impl Editor {
         self.active_session()
             .is_some_and(|s| s.modeling.tools.original_points)
     }
-    pub fn warp_fine(&self) -> bool {
-        self.active
-            .and_then(|id| self.entry(id).ok())
-            .and_then(|e| e.session())
-            .is_some_and(|s| s.modeling.tools.warp_fine)
-    }
     pub fn warp_whole(&self) -> bool {
         self.active_session()
             .is_some_and(|session| session.modeling.tools.warp_whole)
-    }
-    pub fn warp_keep_children(&self) -> bool {
-        self.active_session()
-            .is_some_and(|s| s.modeling.tools.warp_keep_children)
     }
     pub fn cancel_gesture(&mut self) {
         if self

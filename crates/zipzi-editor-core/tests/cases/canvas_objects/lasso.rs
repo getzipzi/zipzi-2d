@@ -8,10 +8,10 @@ fn p(x: f32, y: f32) -> ViewportPoint {
 
 fn around(center: ViewportPoint) -> [ViewportPoint; 4] {
     [
-        p(center.x - 12., center.y - 12.),
-        p(center.x + 12., center.y - 12.),
-        p(center.x + 12., center.y + 12.),
-        p(center.x - 12., center.y + 12.),
+        p(center.x - 22., center.y - 22.),
+        p(center.x + 22., center.y - 22.),
+        p(center.x + 22., center.y + 22.),
+        p(center.x - 22., center.y + 22.),
     ]
 }
 
@@ -488,36 +488,32 @@ fn lasso_warp_anchors_and_fine_controls_are_selected_from_outside_handles() -> a
         .unwrap()
         .position;
     drag(&mut editor, handle, p(handle.x, handle.y - 40.), false)?;
-    for fine in [false, true] {
-        if fine {
-            editor.execute(EditorCommand::ToggleWarpFine)?;
-        }
-        shown(&mut editor)?;
-        let expected = editor.overlay().vertices.len();
-        assert_eq!(expected, if fine { 25 } else { 9 });
-        let positions = control_points(&mut editor, &object)?;
-        let history = editor.document().unwrap().history_lengths();
-        editor.execute(EditorCommand::SetTool(ToolId::Lasso))?;
-        lasso(
-            &mut editor,
-            &[
-                p(-500., -500.),
-                p(1000., -500.),
-                p(1000., 1000.),
-                p(-500., 1000.),
-                p(-500., -500.),
-            ],
-            false,
-            false,
-        )?;
-        assert_eq!(selected(&editor).len(), expected);
-        assert_eq!(
-            editor.document().unwrap().context().selections,
-            vec![object.clone()]
-        );
-        assert_eq!(control_points(&mut editor, &object)?, positions);
-        assert_eq!(editor.document().unwrap().history_lengths(), history);
-    }
+    shown(&mut editor)?;
+    let expected = editor.overlay().vertices.len();
+    assert_eq!(expected, 34);
+    let positions = control_points(&mut editor, &object)?;
+    let history = editor.document().unwrap().history_lengths();
+    editor.execute(EditorCommand::SetTool(ToolId::Lasso))?;
+    lasso(
+        &mut editor,
+        &[
+            p(-500., -500.),
+            p(1000., -500.),
+            p(1000., 1000.),
+            p(-500., 1000.),
+            p(-500., -500.),
+        ],
+        false,
+        false,
+    )?;
+    assert_eq!(selected(&editor).len(), expected);
+    assert_eq!(
+        editor.document().unwrap().context().selections,
+        vec![object.clone()]
+    );
+    assert_eq!(control_points(&mut editor, &object)?, positions);
+    assert_eq!(editor.document().unwrap().history_lengths(), history);
+
     Ok(())
 }
 

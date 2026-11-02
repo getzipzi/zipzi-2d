@@ -42,16 +42,8 @@ pub fn render_deformer_bar(
     );
     let visibility = state.editor.deformer_visibility();
     let grid = state.editor.deformer_grid();
-    let fine = state.editor.warp_fine();
-    let has_warp = state.editor.document().is_some_and(|d| {
-        state.modeling_frame_for(canvas.viewport).is_some_and(|f| {
-            f.canvas.geometry.controls.iter().any(|c| {
-                c.kind == zipzi_editor_core::ControlKind::Warp
-                    && d.context().selections.contains(&c.object)
-            })
-        })
-    });
-    let mut buttons = vec![
+    let mut buttons = Vec::new();
+    buttons.push(
         compact::toggle(Button::new("deformer-ancestors"), visibility.ancestors)
             .icon(IconName::Layers)
             .accessibility_label(t!("editor.show_ancestor_deformers").into_owned())
@@ -62,120 +54,7 @@ pub fn render_deformer_bar(
                     owner.update(cx, |owner, cx| owner.run_invocation(ancestors, window, cx));
                 }
             })),
-    ];
-    let mut frame_menu = None;
-    if has_warp {
-        let object = state.editor.document().and_then(|doc| {
-            doc.context()
-                .selections
-                .iter()
-                .filter_map(|o| state.editor.warp_transform_target_for(binding, o))
-                .max_by_key(|t| t.components.len())
-                .map(|t| t.object)
-        });
-        if let Some(object) = object {
-            let adjusting = state
-                .editor
-                .warp_frame_info(binding, &object)
-                .is_some_and(|i| i.adjusting);
-            let button = super::toolbar::attached_button(
-                compact::toggle(Button::new("deformer-frame"), adjusting)
-                    .icon(IconName::Scan)
-                    .accessibility_label(t!("editor.warp_frame").into_owned())
-                    .tooltip(t!("editor.warp_frame_hint")),
-                SECONDARY,
-                cx,
-            )
-            .xsmall()
-            .h(compact::rem(SECONDARY.button_size))
-            .min_w(compact::rem(SECONDARY.button_size))
-            .px(compact::rem(3.));
-            frame_menu = Some(crate::ui::warp_frame::menu(
-                button,
-                canvas.owner.clone(),
-                binding,
-                object,
-                cx,
-            ));
-        }
-        let point_count = state
-            .editor
-            .document()
-            .and_then(|doc| {
-                doc.context()
-                    .selections
-                    .iter()
-                    .filter_map(|object| state.editor.warp_transform_target_for(binding, object))
-                    .max_by_key(|t| t.components.len())
-            })
-            .map_or(0, |target| target.components.len());
-        let target_label = if point_count == 0 {
-            t!("properties.warp_target_whole").into_owned()
-        } else {
-            t!("properties.warp_target_selection", count = point_count).into_owned()
-        };
-        buttons.push(
-            compact::toggle(Button::new("deformer-whole"), state.editor.warp_whole())
-                .icon(IconName::SquareDashed)
-                .label(target_label.clone())
-                .accessibility_label(target_label)
-                .tooltip(t!("editor.warp_transform_whole_hint"))
-                .disabled(modal)
-                .on_click(cx.listener(move |this, _, window, cx| {
-                    if window.has_active_dialog(cx) {
-                        return;
-                    }
-                    if let Some(owner) = this.owner.upgrade() {
-                        owner.update(cx, |owner, cx| {
-                            if owner.modal || !owner.editor.viewport_binding_valid(binding) {
-                                return;
-                            }
-                            let result = owner.editor.execute(EditorCommand::ToggleWarpWhole);
-                            owner.complete_edit(result, cx);
-                        });
-                    }
-                })),
-        );
-        for (id, label, hint, mode_fine) in [
-            (
-                "deformer-warp-bezier",
-                "editor.warp_bezier",
-                "editor.warp_bezier_hint",
-                false,
-            ),
-            (
-                "deformer-warp-fine",
-                "editor.warp_fine",
-                "editor.warp_fine_hint",
-                true,
-            ),
-        ] {
-            buttons.push(
-                compact::toggle(Button::new(id), fine == mode_fine)
-                    .label(t!(label).into_owned())
-                    .accessibility_label(t!(label).into_owned())
-                    .tooltip(t!(hint))
-                    .disabled(modal)
-                    .on_click(cx.listener(move |this, _, window, cx| {
-                        if window.has_active_dialog(cx) {
-                            return;
-                        }
-                        if let Some(owner) = this.owner.upgrade() {
-                            owner.update(cx, |owner, cx| {
-                                if owner.modal || !owner.editor.viewport_binding_valid(binding) {
-                                    return;
-                                }
-                                if owner.editor.warp_fine() == mode_fine {
-                                    return;
-                                }
-                                let result = owner.editor.execute(EditorCommand::ToggleWarpFine);
-                                owner.complete_edit(result, cx);
-                            });
-                        }
-                    })),
-            );
-        }
-    }
+    );
     buttons.push(
         compact::toggle(Button::new("deformer-grid"), grid)
             .icon(IconName::Grid2x2)
@@ -205,18 +84,20 @@ pub fn render_deformer_bar(
     );
     let mut tools = gpui_kit::component::toolbar::ToolbarGroup::new("deformer-tools")
         .label(t!("editor.deformer_grid"))
+        .min_w_0()
+        .max_w_full()
+        .flex_wrap()
+        .justify_center()
         .gap(compact::rem(1.));
     for button in buttons {
         tools = tools.content(
             super::toolbar::attached_button(button, SECONDARY, cx)
                 .xsmall()
+                .flex_shrink_0()
                 .h(compact::rem(SECONDARY.button_size))
                 .min_w(compact::rem(SECONDARY.button_size))
                 .px(compact::rem(3.)),
         );
-    }
-    if let Some(menu) = frame_menu {
-        tools = tools.content(menu);
     }
     super::toolbar::secondary_bar("deformer-actions", tools, cx)
 }

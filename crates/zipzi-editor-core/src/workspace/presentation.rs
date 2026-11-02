@@ -1,6 +1,7 @@
 //! Modeling content is evaluated once; projections and presented geometry belong to instances.
 use super::*;
-use crate::{CanvasFrame, FrameVersion, ViewportBinding, ViewportKind};
+use crate::{CanvasFrame, CanvasScene, FrameVersion, SceneSnapshot, ViewportBinding, ViewportKind};
+use std::sync::Arc;
 
 impl Editor {
     pub fn gesture_active_for(&self, binding: ViewportBinding) -> bool {
@@ -138,30 +139,11 @@ impl Editor {
         let metrics = self.viewport_metrics(binding.viewport).unwrap();
         let session = self.active_session_mut().unwrap();
         session.fit_default_view(binding.viewport, metrics)?;
-        let (mut scene, mut geometry) = session.scene()?;
-        let uv_plane = session.modeling.tools.manual_uv_plane(binding.viewport);
-        if uv_plane {
-            let target = session.modeling.tools.manual_target().unwrap();
-            scene = scene.with_manual_reference(target);
-            geometry = std::sync::Arc::new(geometry.with_manual_uv(
-                &session.document,
-                target,
-                scene.clone(),
-            ));
-        } else if !session.modeling.tools.manual_active() && session.modeling.tools.original_points
-        {
-            geometry = std::sync::Arc::new(geometry.with_original_points(&session.document)?);
-        }
+        let (scene, geometry) = session.scene()?;
         let view_state = session.view_state(binding.viewport);
         let scene_revision = session.scene_revision;
+        let (scene, geometry) = self.project_modeling_scene(binding, scene, geometry)?;
         let presentation = self.viewport_presentation_mut(binding.viewport).unwrap();
-        if !uv_plane
-            && let Some((isolated_scene, isolated_geometry)) =
-                presentation.isolation.project(&scene, &geometry)
-        {
-            scene = isolated_scene;
-            geometry = isolated_geometry;
-        }
         let revision = presentation.next();
         presentation.requested_modeling = Some((scene_revision, view_state.revision));
         let canvas =
@@ -181,6 +163,34 @@ impl Editor {
             view: view_state.view,
             canvas,
         })
+    }
+
+    /// Use the same viewport scope and displayed point space for rendering and edits.
+    pub(crate) fn project_modeling_scene(
+        &mut self,
+        binding: ViewportBinding,
+        mut scene: SceneSnapshot,
+        mut geometry: Arc<CanvasScene>,
+    ) -> Result<(SceneSnapshot, Arc<CanvasScene>)> {
+        let session = self.active_session().unwrap();
+        let uv_plane = session.modeling.tools.manual_uv_plane(binding.viewport);
+        if uv_plane {
+            let target = session.modeling.tools.manual_target().unwrap();
+            scene = scene.with_manual_reference(target);
+            geometry = Arc::new(geometry.with_manual_uv(&session.document, target, scene.clone()));
+        } else if !session.modeling.tools.manual_active() && session.modeling.tools.original_points
+        {
+            geometry = Arc::new(geometry.with_original_points(&session.document)?);
+        }
+        let presentation = self.viewport_presentation_mut(binding.viewport).unwrap();
+        if !uv_plane
+            && let Some((isolated_scene, isolated_geometry)) =
+                presentation.isolation.project(&scene, &geometry)
+        {
+            scene = isolated_scene;
+            geometry = isolated_geometry;
+        }
+        Ok((scene, geometry))
     }
     pub fn accepts_preview(&self, revision: u64) -> bool {
         self.primary_viewport_binding()

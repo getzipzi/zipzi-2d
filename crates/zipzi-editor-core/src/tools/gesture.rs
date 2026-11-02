@@ -15,7 +15,6 @@ pub(super) struct Press {
     pub adjust_frame: bool,
     pub operation: region::SelectionOperation,
     pub access: Arc<access::EditAccess>,
-    pub warp_fine: bool,
     pub original_points: bool,
     pub keep_children: bool,
     pub selection: Vec<ObjectRef>,

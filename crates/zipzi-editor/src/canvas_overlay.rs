@@ -144,20 +144,38 @@ pub(crate) fn paint_lines(
         lines(&x_axis, 1.0, rgb(0xe05555).opacity(0.6).into());
         lines(&y_axis, 1.0, rgb(0x55b555).opacity(0.6).into());
     }
-    lines(&overlay.guide_lines, 0.75, p.deformer.opacity(0.3));
+    lines(&overlay.guide_lines, 0.5, p.mesh.opacity(0.18));
     // Hover raises contrast rather than widening the outline over the artwork.
     lines(&overlay.accent_lines, 1., p.mesh.opacity(0.8));
     lines(&overlay.hover_lines, 1., p.mesh);
     for deformer in &overlay.deformers {
-        let (width, alpha) = if deformer.hovered {
+        let (width, alpha) = if deformer.kind == zipzi_editor_core::ControlKind::Warp {
+            (
+                0.5,
+                if deformer.hovered {
+                    0.5
+                } else if deformer.selected {
+                    0.32
+                } else {
+                    0.2
+                },
+            )
+        } else if deformer.hovered {
             (1., 1.)
         } else if deformer.selected {
             (1., 0.85)
         } else {
             (0.75, 0.3)
         };
-        lines(&deformer.lines, width, p.deformer.opacity(alpha));
+        let color = if deformer.kind == zipzi_editor_core::ControlKind::Warp {
+            p.mesh
+        } else {
+            p.deformer
+        };
+        lines(&deformer.lines, width, color.opacity(alpha));
     }
+    lines(&overlay.bezier_lines, 0.75, p.deformer.opacity(0.28));
+    lines(&overlay.bezier_tangents, 1., p.deformer.opacity(0.85));
     lines(&overlay.gizmo_lines, 0.75, p.deformer.opacity(0.45));
     lines(
         &overlay.warp_frame_lines,
@@ -322,40 +340,43 @@ pub(crate) fn paint_markers(
     window: &mut impl Painter,
 ) {
     // Selected and hovered controls win when several markers overlap.
-    for emphasized in [false, true] {
-        // Rotation centers mix paths and quads. Leave them outside each quad
-        // layer so GPUI's primitive-type batching cannot reorder the crosshair.
-        for run in overlay.vertices.chunk_by(|a, b| {
-            a.kind != OverlayVertexKind::RotationCenter
-                && b.kind != OverlayVertexKind::RotationCenter
-        }) {
-            let visible = |v: &&OverlayVertex| {
-                (v.selected || v.hovered) == emphasized
-                    && (mesh_fallback || v.kind != OverlayVertexKind::Mesh)
-            };
-            let draw = |window: &mut _| {
-                for v in run.iter().filter(visible) {
-                    paint_vertex(v, origin, p, window);
+    for grid in [true, false] {
+        for emphasized in [false, true] {
+            // Rotation centers mix paths and quads. Leave them outside each quad
+            // layer so GPUI's primitive-type batching cannot reorder the crosshair.
+            for run in overlay.vertices.chunk_by(|a, b| {
+                a.kind != OverlayVertexKind::RotationCenter
+                    && b.kind != OverlayVertexKind::RotationCenter
+            }) {
+                let visible = |v: &&OverlayVertex| {
+                    (v.selected || v.hovered) == emphasized
+                        && (v.kind == OverlayVertexKind::WarpGrid) == grid
+                        && (mesh_fallback || v.kind != OverlayVertexKind::Mesh)
+                };
+                let draw = |window: &mut _| {
+                    for v in run.iter().filter(visible) {
+                        paint_vertex(v, origin, p, window);
+                    }
+                };
+                if layer_quads && run[0].kind != OverlayVertexKind::RotationCenter {
+                    let radius = px(zipzi_editor_render::OVERLAY_MARKER_RADIUS + 2.);
+                    let bounds = run
+                        .iter()
+                        .filter(visible)
+                        .map(|v| {
+                            let center = origin + point(px(v.position.x), px(v.position.y));
+                            Bounds::new(
+                                center - point(radius, radius),
+                                size(radius * 2., radius * 2.),
+                            )
+                        })
+                        .reduce(|a, b| a.union(&b));
+                    if let Some(bounds) = bounds {
+                        window.quad_layer(bounds, draw);
+                    }
+                } else {
+                    draw(window);
                 }
-            };
-            if layer_quads && run[0].kind != OverlayVertexKind::RotationCenter {
-                let radius = px(zipzi_editor_render::OVERLAY_MARKER_RADIUS + 2.);
-                let bounds = run
-                    .iter()
-                    .filter(visible)
-                    .map(|v| {
-                        let center = origin + point(px(v.position.x), px(v.position.y));
-                        Bounds::new(
-                            center - point(radius, radius),
-                            size(radius * 2., radius * 2.),
-                        )
-                    })
-                    .reduce(|a, b| a.union(&b));
-                if let Some(bounds) = bounds {
-                    window.quad_layer(bounds, draw);
-                }
-            } else {
-                draw(window);
             }
         }
     }
@@ -365,8 +386,21 @@ pub(crate) fn paint_markers(
 fn paint_vertex(v: &OverlayVertex, origin: Point<Pixels>, p: Palette, window: &mut impl Painter) {
     let center = origin + point(px(v.position.x), px(v.position.y));
     if !v.editable {
-        let radius = zipzi_editor_render::OVERLAY_MARKER_RADIUS;
-        restricted_marker(center, radius, v.kind != OverlayVertexKind::Warp, p, window);
+        let radius = if v.kind == OverlayVertexKind::WarpGrid {
+            1.5
+        } else {
+            zipzi_editor_render::OVERLAY_MARKER_RADIUS
+        };
+        restricted_marker(
+            center,
+            radius,
+            !matches!(
+                v.kind,
+                OverlayVertexKind::Warp | OverlayVertexKind::WarpGrid
+            ),
+            p,
+            window,
+        );
         if v.kind == OverlayVertexKind::RotationCenter {
             let q = |x, y| ViewportPoint {
                 x: v.position.x + x,
@@ -394,6 +428,24 @@ fn paint_vertex(v: &OverlayVertex, origin: Point<Pixels>, p: Palette, window: &m
     };
     let radius = zipzi_editor_render::OVERLAY_MARKER_RADIUS;
     match v.kind {
+        OverlayVertexKind::WarpGrid => {
+            let radius = px(if v.selected || v.hovered { 2.5 } else { 1.5 });
+            window.paint_quad(
+                fill(
+                    Bounds::new(
+                        center - point(radius, radius),
+                        size(radius * 2., radius * 2.),
+                    ),
+                    if v.selected {
+                        p.hollow
+                    } else {
+                        p.mesh.opacity(if v.hovered { 1. } else { 0.6 })
+                    },
+                )
+                .border_widths(px(if v.selected { 1. } else { 0. }))
+                .border_color(p.mesh),
+            );
+        }
         OverlayVertexKind::Mesh => {
             let r = px(radius);
             window.paint_quad(
@@ -410,7 +462,17 @@ fn paint_vertex(v: &OverlayVertex, origin: Point<Pixels>, p: Palette, window: &m
                 }),
             );
         }
-        OverlayVertexKind::Warp => marker(center, radius, false, v.selected, color, p, window),
+        OverlayVertexKind::Warp => {
+            let r = px(radius + 0.5);
+            window.paint_quad(
+                fill(
+                    Bounds::new(center - point(r, r), size(r * 2., r * 2.)),
+                    if v.selected { color } else { p.hollow },
+                )
+                .border_widths(px(1.5))
+                .border_color(color),
+            );
+        }
         OverlayVertexKind::RotationTip => {
             marker(center, radius, true, v.selected, color, p, window)
         }
@@ -441,7 +503,20 @@ fn paint_other_markers(
     for handle in &overlay.handles {
         let center = origin + point(px(handle.position.x), px(handle.position.y));
         let color = p.deformer;
-        if handle.editable {
+        if handle.editable && handle.tangent {
+            let r =
+                px(zipzi_editor_render::OVERLAY_MARKER_RADIUS
+                    + if handle.selected { 1. } else { 0.5 });
+            window.paint_quad(
+                fill(
+                    Bounds::new(center - point(r, r), size(r * 2., r * 2.)),
+                    color,
+                )
+                .corner_radii(r)
+                .border_widths(px(1.))
+                .border_color(if handle.selected { p.hollow } else { color }),
+            );
+        } else if handle.editable {
             marker(
                 center,
                 zipzi_editor_render::OVERLAY_MARKER_RADIUS,

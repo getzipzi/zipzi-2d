@@ -19,12 +19,14 @@ pub struct OverlayVertex {
 pub enum OverlayVertexKind {
     #[default]
     Mesh,
+    WarpGrid,
     Warp,
     RotationCenter,
     RotationTip,
 }
 #[derive(Clone, Debug)]
 pub struct OverlayDeformer {
+    pub kind: ControlKind,
     pub lines: Vec<(ViewportPoint, ViewportPoint)>,
     pub selected: bool,
     pub hovered: bool,
@@ -81,6 +83,9 @@ pub struct OverlaySnapshot {
     /// Context for a hovered control, separate from edit errors and parameter previews.
     pub point_unavailable: Option<String>,
     pub gizmo_lines: Vec<(ViewportPoint, ViewportPoint)>,
+    /// Bezier curves remain a backdrop to the stronger tangent controls.
+    pub bezier_lines: Vec<(ViewportPoint, ViewportPoint)>,
+    pub bezier_tangents: Vec<(ViewportPoint, ViewportPoint)>,
     /// Outer Warp transform frame, distinct from its lattice and Bezier tangents.
     pub warp_frame_lines: Vec<(ViewportPoint, ViewportPoint)>,
     /// Rotation rings and their scale-handle spokes use a stronger stroke.
@@ -95,6 +100,8 @@ pub struct OverlaySnapshot {
 }
 #[derive(Clone, Debug)]
 pub struct OverlayHandle {
+    /// A Bezier tangent endpoint, distinct from transform-frame handles.
+    pub tangent: bool,
     pub position: ViewportPoint,
     pub round: bool,
     pub hovered: bool,
@@ -197,7 +204,10 @@ impl ToolController {
         out.warp_frame_adjusting = self
             .gesture
             .as_ref()
-            .is_some_and(|g| g.press().adjust_frame);
+            .is_some_and(|g| g.press().adjust_frame)
+            || warp_selection
+                .as_ref()
+                .is_some_and(|g| !g.adjusting.is_empty());
         if self.original_points {
             out.interaction_label =
                 Some("Editing original points · Glue preview remains active".into());
@@ -243,9 +253,15 @@ impl ToolController {
             out.warp_keep_children = self
                 .gesture
                 .as_ref()
-                .map_or(self.warp_keep_children, |g| g.press().keep_children)
+                .is_some_and(|g| g.press().keep_children)
                 && !out.warp_frame_adjusting;
-            if local && !self.warp_fine {
+            if local
+                && (matches!(active_target, Some(HitTarget::Component(c))
+                    if crate::warp_bezier::component(c.id).is_some())
+                    || components
+                        .iter()
+                        .any(|c| crate::warp_bezier::component(c.id).is_some()))
+            {
                 out.warp_bezier_mode = active_target
                     .and_then(|hit| {
                         document
@@ -440,6 +456,7 @@ impl ToolController {
                 continue;
             }
             let mut deformer = OverlayDeformer {
+                kind: control.kind,
                 lines: Vec::new(),
                 selected,
                 hovered,
@@ -448,11 +465,8 @@ impl ToolController {
                 && self
                     .warp_frame_info(document, frame, &control.object)
                     .is_some_and(|i| i.adjusting);
-            if let Some(bezier) = (selected && !self.warp_fine)
-                .then(|| scene.bezier(&control.object.id))
-                .flatten()
-            {
-                deformer.lines.extend(
+            if let Some(bezier) = selected.then(|| scene.bezier(&control.object.id)).flatten() {
+                out.bezier_lines.extend(
                     bezier
                         .curves
                         .iter()
@@ -478,8 +492,10 @@ impl ToolController {
                         object: control.object.clone(),
                         id: *id,
                     };
-                    out.gizmo_lines.push((t.to_viewport(*a), t.to_viewport(*b)));
+                    out.bezier_tangents
+                        .push((t.to_viewport(*a), t.to_viewport(*b)));
                     out.handles.push(OverlayHandle {
+                        tangent: true,
                         position: t.to_viewport(*b),
                         round: true,
                         editable: !adjusting_frame && matches!(access.probe(&c), Some(Ok(()))),
@@ -487,16 +503,8 @@ impl ToolController {
                         hovered: hovered_target == Some(HitTarget::Component(c.clone())),
                     });
                 }
-                if self.deformer_grid {
-                    out.guide_lines
-                        .extend(control.edges.iter().filter_map(|&(a, b)| {
-                            Some((
-                                t.to_viewport(*control.points.get(a)?),
-                                t.to_viewport(*control.points.get(b)?),
-                            ))
-                        }));
-                }
-            } else {
+            }
+            {
                 deformer.lines.extend(
                     control
                         .edges
@@ -514,7 +522,7 @@ impl ToolController {
                             kind: match (control.kind, i) {
                                 (ControlKind::Rotation, 0) => OverlayVertexKind::RotationCenter,
                                 (ControlKind::Rotation, _) => OverlayVertexKind::RotationTip,
-                                _ => OverlayVertexKind::Warp,
+                                _ => OverlayVertexKind::WarpGrid,
                             },
                             editable: !adjusting_frame && matches!(access.probe(&c), Some(Ok(()))),
                             position: *p,
@@ -551,7 +559,12 @@ impl ToolController {
                             .extend(crate::deformer::sample_grid(control, shape, t));
                     }
                 }
-                if let Some(gizmo) = scene.gizmo_for_selection(control, t, warp_selection.as_ref())
+                if let Some(gizmo) = (control.kind == ControlKind::Rotation
+                    || !warp_selection
+                        .as_ref()
+                        .is_some_and(|s| !s.objects.is_empty()))
+                .then(|| scene.gizmo_for_selection(control, t, warp_selection.as_ref()))
+                .flatten()
                 {
                     if control.kind == ControlKind::Rotation {
                         out.rotation_lines.extend(gizmo.outline);
@@ -564,6 +577,7 @@ impl ToolController {
                                 .handles
                                 .into_iter()
                                 .map(|(kind, position)| OverlayHandle {
+                                    tangent: false,
                                     position,
                                     editable: access.object_editable(&control.object),
                                     round: matches!(kind, crate::DeformerHandle::Rotate),
@@ -582,6 +596,24 @@ impl ToolController {
                                 }),
                         );
                 }
+            }
+        }
+        if let Some(frames) = warp_selection.as_ref().filter(|s| !s.objects.is_empty()) {
+            for (object, gizmo) in &frames.items {
+                let editable = frames.objects.iter().all(|o| access.object_editable(o));
+                out.warp_frame_lines.extend(gizmo.outline.iter().copied());
+                out.handles
+                    .extend(gizmo.handles.iter().map(|(kind, position)| OverlayHandle {
+                        tangent: false,
+                        position: *position,
+                        editable,
+                        round: matches!(kind, crate::DeformerHandle::Rotate),
+                        selected: self.gesture.as_ref().is_some_and(|g| {
+                            g.target() == Some(&HitTarget::DeformerHandle(object.clone(), *kind))
+                        }),
+                        hovered: hovered_target
+                            == Some(HitTarget::DeformerHandle(object.clone(), *kind)),
+                    }));
             }
         }
         if let Some(hit) = &hovered_target {

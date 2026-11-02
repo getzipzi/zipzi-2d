@@ -76,14 +76,9 @@ impl PropertiesPanel {
         });
         ColorField::new(format!("property-color-{}", id.name()), &state)
             .input_id(format!("property-input-{}", id.name()))
-            .when(
-                id == zipzi_editor_core::property::mesh::MULTIPLY.key,
-                |field| field.reset_color(rgb(0xffffff)),
-            )
-            .when(
-                id == zipzi_editor_core::property::mesh::SCREEN.key,
-                |field| field.reset_color(rgb(0x000000)),
-            )
+            .when_some(self.field_spec(id).reset_color, |field, color| {
+                field.reset_color(rgb(color))
+            })
             .into_any_element()
     }
 
@@ -189,7 +184,9 @@ impl PropertiesPanel {
                     )))
                     .test_support()
                     .relative()
-                    .when(count > 4, |body| body.pr(compact::rem(14.)))
+                    // Both this list and the enclosing Properties viewport use
+                    // overlay scrollbars. Keep delete buttons outside their hit area.
+                    .pr(gpui_kit::base::Scrollbar::width())
                     .child(list)
                     .vertical_scrollbar(&scroll),
             );

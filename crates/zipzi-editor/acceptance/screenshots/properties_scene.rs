@@ -215,6 +215,25 @@ pub(super) fn show(window: &mut gpui_kit::Window, field: &str, cx: &mut gpui_kit
             window.render_frame(cx);
             continue;
         }
+        if bounds.is_none() {
+            let group = ["bezier", "original"]
+                .into_iter()
+                .map(|name| format!("property-group-deformer-{name}"))
+                .find(|id| {
+                    window.try_find(id.clone()).is_some_and(|element| {
+                        window
+                            .try_find(id.replace("property-group-", "property-group-state-"))
+                            .is_some_and(|state| state.expanded() == Some(false))
+                            && element.bounds().top() >= viewport.top()
+                            && element.bounds().bottom() <= viewport.bottom()
+                    })
+                });
+            if let Some(group) = group {
+                window.click(group, cx);
+                window.render_frame(cx);
+                continue;
+            }
+        }
         let delta = if bounds.is_some_and(|b| b.top() < viewport.top()) {
             32.
         } else {

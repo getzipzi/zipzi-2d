@@ -535,6 +535,38 @@ impl ControlEdit {
         }
         writable("Base shape".into(), 1.)
     }
+    /// Pointer gestures and keyboard edits share target validation and point mode.
+    pub fn prepare_targets(
+        document: &Document,
+        scene: &CanvasScene,
+        targets: &[ObjectRef],
+        original_points: bool,
+    ) -> Result<Vec<Self>> {
+        ensure!(
+            !targets.iter().any(|r| scene
+                .ancestors(r)
+                .iter()
+                .any(|parent| targets.contains(parent))),
+            "Select controls from one deformation level at a time"
+        );
+        ensure!(
+            !targets.iter().any(|r| r.kind == ObjectKind::Deformer)
+                || !targets.iter().any(|r| r.kind == ObjectKind::Mesh
+                    && !document.model().glues_for_mesh(&r.id).is_empty()),
+            "Edit Glue-connected meshes separately from deformer controls"
+        );
+        targets
+            .iter()
+            .map(|object| {
+                let mut target = Self::prepare(document, scene, object)?;
+                if let Some(mesh) = &mut target.mesh {
+                    mesh.original_points = original_points;
+                }
+                Ok(target)
+            })
+            .collect()
+    }
+
     pub fn prepare(document: &Document, scene: &CanvasScene, object: &ObjectRef) -> Result<Self> {
         document.ensure_editable(std::slice::from_ref(object))?;
         let doc = document.model();
@@ -863,6 +895,11 @@ impl ControlEdit {
         selected: &[u32],
         change: ControlChange,
     ) -> Result<()> {
+        let change = if self.rotation {
+            self.rotation_frame_change(change)?
+        } else {
+            change
+        };
         if let Some(warp) = &self.warp {
             return self.preview_warp(edit, selected, change, warp);
         }
@@ -943,6 +980,90 @@ impl ControlEdit {
         }
         Ok(())
     }
+    fn rotation_frame_change(&self, change: ControlChange) -> Result<ControlChange> {
+        let ControlChange::Transform { scale, radians, .. } = change else {
+            return Ok(change);
+        };
+        let origin = self.positions[0];
+        let world_origin = self.to_model(origin);
+        let desired_origin = change.apply_to(world_origin);
+        let translation = crate::ModelVector {
+            x: desired_origin.x - world_origin.x,
+            y: desired_origin.y - world_origin.y,
+        };
+        if scale == [1., 1.] && radians == 0. {
+            return Ok(ControlChange::MoveAll(translation));
+        }
+        if let (Some(parent), Some((rows, columns, _))) =
+            (&self.space.parent, self.space.parent_shape)
+        {
+            let p = &parent.points;
+            let a = p[0];
+            let b = p[columns];
+            let c = p[rows * (columns + 1)];
+            ensure!(
+                p.iter().enumerate().all(|(i, q)| {
+                    let u = (i % (columns + 1)) as f32 / columns as f32;
+                    let v = (i / (columns + 1)) as f32 / rows as f32;
+                    (q.x - a.x - (b.x - a.x) * u - (c.x - a.x) * v)
+                        .hypot(q.y - a.y - (b.y - a.y) * u - (c.y - a.y) * v)
+                        < 0.001
+                }),
+                "Rotation frame transforms require an affine parent space"
+            );
+        }
+        let center = self.from_model(desired_origin, origin)?;
+        let mut axes = [
+            Vec2::new(origin.x + 1., origin.y),
+            Vec2::new(origin.x, origin.y + 1.),
+        ];
+        for p in &mut axes {
+            let world = change.apply_to(self.to_model(*p));
+            let local = self.from_model(world, *p)?;
+            *p = Vec2::new(local.x - center.x, local.y - center.y);
+        }
+        let [a, b] = axes;
+        let sx = a.x.hypot(a.y);
+        let sy = b.x.hypot(b.y);
+        ensure!(
+            sx > 1e-6
+                && sy > 1e-6
+                && (sx - sy).abs() < 0.001 * sx.max(sy)
+                && (a.x * b.x + a.y * b.y).abs() < 0.001 * sx * sy
+                && a.x * b.y - a.y * b.x > 0.,
+            "This parent space cannot represent the requested Rotation transform"
+        );
+        Ok(ControlChange::Rotation {
+            translation,
+            angle: a.y.atan2(a.x).to_degrees(),
+            scale: sx,
+        })
+    }
+    /// Keep native angle increments continuous and follow reflected parent handedness.
+    pub fn rotation_pointer_angle(&self, radians: f32) -> Result<f32> {
+        if self.space.parent.is_none() {
+            return Ok(radians.to_degrees());
+        }
+        if let Some([u, v]) = self.space.rotation_basis {
+            let determinant = u.x * v.y - u.y * v.x;
+            ensure!(
+                determinant.is_finite() && determinant.abs() > 1e-8,
+                "The parent rotation direction is singular"
+            );
+            return Ok(radians.to_degrees() * determinant.signum());
+        }
+        let origin = self.positions[0];
+        let pivot = self.to_model(origin);
+        let u = self.to_model(Vec2::new(origin.x + 1., origin.y));
+        let v = self.to_model(Vec2::new(origin.x, origin.y + 1.));
+        let determinant = (u.x - pivot.x) * (v.y - pivot.y) - (u.y - pivot.y) * (v.x - pivot.x);
+        ensure!(
+            determinant.is_finite() && determinant.abs() > 1e-8,
+            "The parent rotation direction is singular"
+        );
+        Ok(radians.to_degrees() * determinant.signum())
+    }
+
     pub fn rotation_delta(&self, start: ModelPoint, end: ModelPoint) -> Result<f32> {
         let origin = self.to_model(self.positions[0]);
         let a = (start.y - origin.y).atan2(start.x - origin.x);
@@ -1140,6 +1261,9 @@ impl ControlEdit {
         let bezier = selected
             .iter()
             .any(|id| crate::warp_bezier::component(*id).is_some());
+        let lattice = selected
+            .iter()
+            .any(|id| crate::warp_bezier::component(*id).is_none());
         let mut transform = original.transform.clone();
         let mut binding = original.binding.clone();
         let old = original.transform.warp().unwrap();
@@ -1184,20 +1308,17 @@ impl ControlEdit {
             }
             controller = influenced;
         }
-        // Returning to the press position restores absent metadata and grid size too.
-        if (bezier || all) && controller == original.controller {
-            return self.write_warp(edit, transform, binding);
-        }
+        let controller_changed = controller != original.controller;
         // Controller edits never change the user's explicit runtime lattice density.
         let rows = old.rows;
         let columns = old.columns;
         let baseline = self.positions.clone();
-        let positions = if all {
+        let mut positions = if all {
             baseline
                 .into_iter()
                 .map(|p| self.changed_point(p, change))
                 .collect::<Result<Vec<_>>>()?
-        } else if bezier {
+        } else if bezier && controller_changed {
             if settings.auto_reform {
                 controller.lattice(rows, columns)
             } else {
@@ -1216,12 +1337,18 @@ impl ControlEdit {
                 })
                 .collect::<Result<Vec<_>>>()?
         };
-        if positions == self.positions
-            && rows == old.rows
-            && columns == old.columns
-            && !all
-            && !bezier
-        {
+        if bezier && lattice && !all {
+            // A selected lattice point follows its own press position exactly
+            // once, even when a selected Bezier anchor also influences it.
+            for (i, p) in positions.iter_mut().enumerate() {
+                if selected.contains(&(i as u32)) {
+                    *p = self.changed_point(self.positions[i], change)?;
+                }
+            }
+        }
+        // A return to the press shape restores absent metadata as well. In a
+        // mixed selection the controller can stay still while grid points move.
+        if positions == self.positions && !controller_changed {
             return self.write_warp(edit, transform, binding);
         }
         let stored = if bezier || all {

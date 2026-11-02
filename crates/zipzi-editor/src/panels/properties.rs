@@ -10,7 +10,6 @@ mod rich_controls;
 mod rows;
 mod selection;
 mod texture;
-mod warp_transform;
 use crate::properties;
 use crate::ui::property_details as details;
 use rows::{Row, RowProjectionKey};
@@ -145,6 +144,8 @@ impl PropertiesPanel {
                 row_builds: 0,
                 collapsed: [
                     "$details".into(),
+                    "deformer-original".into(),
+                    "deformer-bezier".into(),
                     "physics-normalization".into(),
                     "physics-global".into(),
                 ]
@@ -341,13 +342,10 @@ impl PropertiesPanel {
                 Some(SharedString::from(format!("binding-inspect-{}", object.id)).into())
             }
             Row::Navigation => Some("property-navigation".into()),
-            Row::WarpGrid => Some("property-warp-grid".into()),
-            Row::WarpBezierGrid => Some("property-warp-bezier-grid".into()),
+            Row::WarpGrid => Some("property-input-columns".into()),
+            Row::WarpBezierGrid => Some("property-input-bezier_columns".into()),
             Row::WarpShapeActions => Some("property-warp-shape".into()),
-            Row::WarpKeepChildren => Some("property-warp-keep-children".into()),
             Row::DeformerOriginal => Some("property-deformer-original".into()),
-            Row::WarpTransform => Some("property-warp-transform".into()),
-            Row::WarpFrame => Some("property-warp-frame".into()),
             Row::BusinessActions(object) => {
                 Some(SharedString::from(format!("business-action-new-{}", object.id)).into())
             }
@@ -450,13 +448,10 @@ impl PropertiesPanel {
                 cx,
             ),
             Row::Navigation => self.render_navigation(cx),
-            Row::WarpGrid => self.warp_grid_action(cx),
-            Row::WarpBezierGrid => self.warp_bezier_grid_action(cx),
+            Row::WarpGrid => self.warp_density_fields(false, window, cx),
+            Row::WarpBezierGrid => self.warp_density_fields(true, window, cx),
             Row::WarpShapeActions => self.warp_shape_actions(cx),
-            Row::WarpKeepChildren => self.warp_keep_children_action(cx),
             Row::DeformerOriginal => self.deformer_original_actions(cx),
-            Row::WarpTransform => self.warp_transform_action(cx),
-            Row::WarpFrame => self.warp_frame_action(cx),
             Row::AnimationActions(object) => self.animation_actions(object, cx),
             Row::BusinessActions(object) => self.business_actions(object, cx),
             Row::Field(id) => self.render_field(*id, window, cx),
@@ -465,8 +460,11 @@ impl PropertiesPanel {
                 key,
                 label,
                 collapsed,
-            } => self
-                .property_group(key.clone(), label.clone(), *collapsed, cx)
+            } => div()
+                .id(SharedString::from(format!("property-group-state-{key}")))
+                .test_support()
+                .aria_expanded(!collapsed)
+                .child(self.property_group(key.clone(), label.clone(), *collapsed, cx))
                 .into_any_element(),
             Row::Array {
                 key,

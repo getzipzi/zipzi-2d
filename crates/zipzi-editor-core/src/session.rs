@@ -398,23 +398,10 @@ impl DocumentSession {
                 self.invalidate_scene();
                 return Ok(());
             }
-            EditorCommand::ToggleWarpFine => {
-                self.modeling.tools.warp_fine = !self.modeling.tools.warp_fine;
-                self.modeling.tools.clear_selection();
-                return Ok(());
-            }
             EditorCommand::ToggleWarpWhole => {
                 self.modeling.tools.cancel(&mut self.document);
                 self.modeling.tools.warp_frames.clear();
                 self.modeling.tools.warp_whole = !self.modeling.tools.warp_whole;
-                return Ok(());
-            }
-            EditorCommand::ToggleWarpKeepChildren => {
-                self.modeling.tools.cancel(&mut self.document);
-                self.modeling.tools.warp_keep_children = !self.modeling.tools.warp_keep_children;
-                for state in self.modeling.tools.warp_frames.values_mut() {
-                    state.target.keep_children = self.modeling.tools.warp_keep_children;
-                }
                 return Ok(());
             }
             EditorCommand::ToggleDeformerGrid => {

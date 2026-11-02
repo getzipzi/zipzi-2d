@@ -92,7 +92,7 @@ fn draw(
     window.dispatch_event(
         MouseDownEvent {
             button: MouseButton::Left,
-            position: at(-12., -12.),
+            position: at(-22., -22.),
             modifiers,
             click_count: 1,
             first_mouse: false,
@@ -101,7 +101,7 @@ fn draw(
         cx,
     );
     window.render_frame(cx);
-    for (x, y) in [(12., -12.), (12., 12.)] {
+    for (x, y) in [(22., -22.), (22., 22.)] {
         window.dispatch_event(
             MouseMoveEvent {
                 position: at(x, y),
@@ -140,7 +140,7 @@ fn draw(
         window.dispatch_event(
             MouseUpEvent {
                 button: MouseButton::Left,
-                position: at(if is_lasso { -12. } else { 12. }, 12.),
+                position: at(if is_lasso { -22. } else { 22. }, 22.),
                 modifiers,
                 click_count: 1,
             }

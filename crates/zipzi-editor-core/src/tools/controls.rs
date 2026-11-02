@@ -112,51 +112,40 @@ impl ControlGesture {
                 Vec::new()
             } else {
                 document.ensure_editable(&document.context().selections)?;
-                let mut targets = vec![target.object().clone()];
+                let generic = press.warp_selection.as_ref().filter(|s| {
+                    !s.objects.is_empty() && s.items.iter().any(|(o, _)| o == target.object())
+                });
+                let mut targets = if matches!(target, HitTarget::DeformerHandle(..)) {
+                    generic
+                        .map(|s| s.objects.clone())
+                        .unwrap_or_else(|| vec![target.object().clone()])
+                } else {
+                    vec![target.object().clone()]
+                };
+                if local_frame {
+                    targets.retain(|o| components.iter().any(|c| c.object == *o));
+                }
                 if matches!(target, HitTarget::Component(_)) || local_frame {
                     for c in components {
-                        if (!local_frame
-                            || press
-                                .scene
-                                .control(&c.object.id)
-                                .is_some_and(|c| c.kind == crate::ControlKind::Warp))
-                            && press.scene.in_isolation_scope(&c.object)
-                            && !targets.contains(&c.object)
+                        if press.scene.in_isolation_scope(&c.object) && !targets.contains(&c.object)
                         {
                             targets.push(c.object.clone());
                         }
                     }
                 }
-                ensure!(
-                    !targets.iter().any(|r| press
-                        .scene
-                        .ancestors(r)
-                        .iter()
-                        .any(|parent| targets.contains(parent))),
-                    "Select controls from one deformation level at a time"
-                );
-                let mut edits = targets
-                    .iter()
-                    .map(|r| ControlEdit::prepare(document, &press.scene, r))
-                    .collect::<Result<Vec<_>>>()?;
+                let mut edits = ControlEdit::prepare_targets(
+                    document,
+                    &press.scene,
+                    &targets,
+                    press.original_points,
+                )?;
                 ensure!(
                     !press.keep_children
                         || !edits.iter().any(|edit| edit.warp.is_some())
                         || edits.iter().all(|edit| edit.warp.is_some()),
                     "Keep children requires a selection of Warp controls"
                 );
-                ensure!(
-                    !targets
-                        .iter()
-                        .any(|r| r.kind == crate::ObjectKind::Deformer)
-                        || !targets.iter().any(|r| r.kind == crate::ObjectKind::Mesh
-                            && !document.model().glues_for_mesh(&r.id).is_empty()),
-                    "Edit Glue-connected meshes separately from deformer controls"
-                );
                 for target in &mut edits {
-                    if let Some(mesh) = &mut target.mesh {
-                        mesh.original_points = press.original_points;
-                    }
                     if press.keep_children && target.warp.is_some() {
                         target.keep_warp_children(document)?;
                     }
@@ -169,20 +158,14 @@ impl ControlGesture {
                 last: None,
                 constrained: None,
                 rotation: match target {
-                    HitTarget::DeformerHandle(object, crate::DeformerHandle::Rotate)
-                        if press
-                            .scene
-                            .control(&object.id)
-                            .is_some_and(|c| c.kind == crate::ControlKind::Warp) =>
-                    {
-                        let control = press.scene.control(&object.id).unwrap();
+                    HitTarget::RotationHandle(object) => Some(RotationDrag::new(
+                        press.scene.control(&object.id).unwrap().points[0],
+                        press.transform.to_model(press.point),
+                    )),
+                    HitTarget::DeformerHandle(object, crate::DeformerHandle::Rotate) => {
                         let gizmo = press
                             .scene
-                            .gizmo_for_selection(
-                                control,
-                                press.transform,
-                                press.warp_selection.as_ref(),
-                            )
+                            .object_gizmo(object, press.transform, press.warp_selection.as_ref())
                             .unwrap();
                         Some(RotationDrag::new(
                             press.transform.to_model(gizmo.center),
@@ -192,8 +175,11 @@ impl ControlGesture {
                     _ => None,
                 },
                 axis: (press.shift
-                    && matches!(target, HitTarget::Component(c) if press.scene.control(&c.object.id)
-                    .is_some_and(|control| control.kind == crate::ControlKind::Warp)))
+                    && (matches!(target, HitTarget::Component(_))
+                        || matches!(
+                            target,
+                            HitTarget::DeformerHandle(_, crate::DeformerHandle::Move)
+                        )))
                 .then(|| {
                     if (point.x - press.point.x).abs() >= (point.y - press.point.y).abs() {
                         Axis::Horizontal
@@ -218,28 +204,45 @@ impl ControlGesture {
             None => point,
         };
         let end = press.transform.to_model(constrained_point);
-        let delta = crate::ModelVector {
+        let mut delta = crate::ModelVector {
             x: end.x - start.x,
             y: end.y - start.y,
+        };
+        if press.shift && press.alt {
+            delta.x = delta.x.round();
+            delta.y = delta.y.round();
+        }
+        let pointer_angle = |radians: f32| {
+            let radians = if press.shift {
+                let step = if press.alt { 1f32 } else { 15f32 }.to_radians();
+                (radians / step).round() * step
+            } else {
+                radians
+            };
+            edits[0].rotation_pointer_angle(radians)
         };
         let change = match target {
             HitTarget::RotationHandle(_) => ControlChange::Rotation {
                 translation: crate::ModelVector::default(),
-                angle: edits[0].rotation_delta(start, end)?,
+                angle: pointer_angle(edit.rotation.as_mut().unwrap().update(
+                    press.scene.control(&target.object().id).unwrap().points[0],
+                    end,
+                ))?,
                 scale: 1.,
             },
             HitTarget::DeformerHandle(object, handle) => {
                 use crate::DeformerHandle as H;
-                let control = press
-                    .scene
-                    .controls
-                    .iter()
-                    .find(|c| &c.object == object)
-                    .unwrap();
-                let gizmo = press
-                    .scene
-                    .gizmo_for_selection(control, press.transform, press.warp_selection.as_ref())
-                    .unwrap();
+                let gizmo = if *handle == H::RotationScale {
+                    press
+                        .scene
+                        .deformer_gizmo(press.scene.control(&object.id).unwrap(), press.transform)
+                        .unwrap()
+                } else {
+                    press
+                        .scene
+                        .object_gizmo(object, press.transform, press.warp_selection.as_ref())
+                        .unwrap()
+                };
                 let scope = if local_frame {
                     ControlScope::Selected
                 } else {
@@ -255,20 +258,37 @@ impl ControlGesture {
                         translation: delta,
                     },
                     H::Move => ControlChange::MoveAll(delta),
-                    H::Rotate if control.kind == crate::ControlKind::Warp => {
-                        ControlChange::Transform {
-                            scope,
-                            pivot: press.transform.to_model(gizmo.center),
-                            scale: [1.; 2],
-                            axes: -gizmo.frame_angle,
-                            radians: edit
-                                .rotation
-                                .as_mut()
-                                .unwrap()
-                                .update(press.transform.to_model(gizmo.center), end),
+                    H::Rotate
+                        if edits.len() == 1
+                            && edits[0].rotation
+                            && press
+                                .scene
+                                .control(&object.id)
+                                .is_some_and(|c| c.kind == crate::ControlKind::Rotation) =>
+                    {
+                        ControlChange::Rotation {
                             translation: crate::ModelVector::default(),
+                            angle: pointer_angle(
+                                edit.rotation
+                                    .as_mut()
+                                    .unwrap()
+                                    .update(press.transform.to_model(gizmo.center), end),
+                            )?,
+                            scale: 1.,
                         }
                     }
+                    H::Rotate if edit.rotation.is_some() => ControlChange::Transform {
+                        scope,
+                        pivot: press.transform.to_model(gizmo.center),
+                        scale: [1.; 2],
+                        axes: -gizmo.frame_angle,
+                        radians: edit
+                            .rotation
+                            .as_mut()
+                            .unwrap()
+                            .update(press.transform.to_model(gizmo.center), end),
+                        translation: crate::ModelVector::default(),
+                    },
                     H::Rotate => ControlChange::Rotation {
                         translation: crate::ModelVector::default(),
                         angle: edits[0].rotation_delta(start, end)?,
@@ -300,7 +320,9 @@ impl ControlGesture {
                         let [span_x, span_y] = gizmo.scale_span(*index, press.alt);
                         let sx = ratio(dx * cos + dy * sin, span_x);
                         let sy = ratio(-dx * sin + dy * cos, span_y);
-                        let scale = if press.shift && index % 2 == 0 {
+                        let scale = if (press.shift && index % 2 == 0)
+                            || edits.iter().any(|e| e.rotation)
+                        {
                             let s = if (sx - 1.).abs() > (sy - 1.).abs() {
                                 sx
                             } else {
@@ -322,6 +344,42 @@ impl ControlGesture {
                 }
             }
             _ => ControlChange::Translate(delta),
+        };
+        let change = if press.shift {
+            let angle_step: f32 = if press.alt { 1. } else { 15. };
+            match change {
+                ControlChange::Transform {
+                    scope,
+                    pivot,
+                    scale,
+                    radians,
+                    translation,
+                    axes,
+                } => ControlChange::Transform {
+                    scope,
+                    pivot,
+                    scale: if press.alt {
+                        scale.map(snap_scale)
+                    } else {
+                        scale
+                    },
+                    radians: (radians / angle_step.to_radians()).round() * angle_step.to_radians(),
+                    translation,
+                    axes,
+                },
+                ControlChange::Rotation {
+                    translation,
+                    angle,
+                    scale,
+                } => ControlChange::Rotation {
+                    translation,
+                    angle: (angle / angle_step).round() * angle_step,
+                    scale: if press.alt { snap_scale(scale) } else { scale },
+                },
+                other => other,
+            }
+        } else {
+            change
         };
         if edit.last == Some(change) {
             edit.constrained = None;
@@ -389,6 +447,17 @@ impl ControlGesture {
                     ControlChange::Translate(d) | ControlChange::MoveAll(d) => {
                         format!("ΔX {:.2}  ΔY {:.2}", d.x, d.y)
                     }
+                    ControlChange::Transform {
+                        scale,
+                        radians,
+                        translation,
+                        ..
+                    } if radians == 0.
+                        && scale == [1.; 2]
+                        && translation != crate::ModelVector::default() =>
+                    {
+                        format!("ΔX {:.2}  ΔY {:.2}", translation.x, translation.y)
+                    }
                     ControlChange::Transform { scale, radians, .. } if radians == 0. => {
                         format!("X {:.1}%  Y {:.1}%", scale[0] * 100., scale[1] * 100.)
                     }
@@ -412,6 +481,10 @@ impl ControlGesture {
             }
         }
     }
+}
+/// Ratios are relative to the frozen press shape, in percentage-point steps.
+fn snap_scale(scale: f32) -> f32 {
+    (1. + ((scale - 1.) * 100.).round() / 100.).max(0.01)
 }
 pub(super) const HINTS: &[InteractionHint] = &[
     InteractionHint::Drag(HintAction::Transform),

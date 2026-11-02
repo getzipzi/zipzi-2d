@@ -393,6 +393,118 @@ fn reflected_affine_maps_preserve_both_native_interpolators() {
 }
 
 #[test]
+fn canvas_sized_warp_keeps_children_during_move_rotation_and_scale() {
+    for quad in [false, true] {
+        for offset in [0., 4096.] {
+            for operation in ["move", "rotate", "scale"] {
+                let mut s = fixture();
+                let mut transform = s.document().get_transform(&id(2)).unwrap().clone();
+                let warp = transform.warp_mut().unwrap();
+                warp.rows = 5;
+                warp.columns = 5;
+                warp.quad = quad;
+                warp.points = (0..=5)
+                    .flat_map(|y| {
+                        (0..=5).map(move |x| {
+                            Vec2::new(
+                                offset - 467. + 946. * x as f32 / 5.,
+                                offset - 230. + 819. * y as f32 / 5.,
+                            )
+                        })
+                    })
+                    .collect();
+                transform.warp_authoring = Some(WarpAuthoringSettings {
+                    bezier_grid: Some(WarpBezierGrid {
+                        rows: 2,
+                        columns: 2,
+                    }),
+                    ..Default::default()
+                });
+                s.edit("Canvas-sized Warp", None, |e| {
+                    e.replace_transform(transform)
+                })
+                .unwrap();
+                let before = s.document().clone();
+                let history = s.history_state();
+                let mut warp = before
+                    .get_transform(&id(2))
+                    .unwrap()
+                    .warp()
+                    .unwrap()
+                    .clone();
+                let center = Vec2::new(offset + 6., offset + 179.5);
+                for p in &mut warp.points {
+                    let (x, y) = (p.x - center.x, p.y - center.y);
+                    *p = match operation {
+                        "move" => Vec2::new(p.x + 14., p.y - 9.),
+                        "rotate" => {
+                            let (s, c) = 2f32.to_radians().sin_cos();
+                            Vec2::new(center.x + x * c - y * s, center.y + x * s + y * c)
+                        }
+                        _ => Vec2::new(center.x + x * 1.05, center.y + y * 1.05),
+                    };
+                }
+                let plan = s
+                    .plan_scene_content(E::WarpKeepChildren {
+                        transform_id: id(2),
+                        warp,
+                    })
+                    .unwrap_or_else(|e| panic!("{operation}, quad={quad}, offset={offset}: {e:?}"));
+                assert!(plan.report().preservation_error.unwrap() <= 0.01);
+                s.execute_scene_content_plan(&plan).unwrap();
+                for x in [-1., -0.37, 0.9] {
+                    for b in [0., 0.42, 1.] {
+                        for (a, b) in
+                            positions(&before, x, b)
+                                .iter()
+                                .zip(positions(s.document(), x, b))
+                        {
+                            for (a, b) in a.iter().zip(b) {
+                                assert!(
+                                    (a.x - b.x).hypot(a.y - b.y) <= 0.01,
+                                    "{operation}, quad={quad}, offset={offset}: {a:?} != {b:?}"
+                                );
+                            }
+                        }
+                    }
+                }
+                assert_eq!(s.history_state().undo_steps, history.undo_steps + 1);
+                s.undo().unwrap();
+                assert!(s.document().same_content(&before));
+            }
+        }
+    }
+}
+
+#[test]
+fn keep_children_still_rejects_actual_float32_position_loss_atomically() {
+    let s = fixture();
+    let before = s.document().clone();
+    let history = s.history_state();
+    let version = s.version();
+    let mut warp = before
+        .get_transform(&id(2))
+        .unwrap()
+        .warp()
+        .unwrap()
+        .clone();
+    for p in &mut warp.points {
+        p.x += 10_000_000.;
+        p.y += 10_000_000.;
+    }
+    let error = s
+        .plan_scene_content(E::WarpKeepChildren {
+            transform_id: id(2),
+            warp,
+        })
+        .unwrap_err();
+    assert_eq!(error.code.as_ref(), "WARP_PRESERVATION_TOLERANCE");
+    assert!(s.document().same_content(&before));
+    assert_eq!(s.version(), version);
+    assert_eq!(s.history_state(), history);
+}
+
+#[test]
 fn preservation_noop_budget_and_cancellation_keep_history_and_missing_controller_intact() {
     let mut s = fixture();
     let old = s

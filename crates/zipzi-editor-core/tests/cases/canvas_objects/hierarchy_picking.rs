@@ -150,15 +150,11 @@ fn mesh_selection_and_tool_changes_do_not_reveal_deformer_helpers() -> anyhow::R
         let overlay = editor.overlay();
         assert!(overlay.lines.is_empty(), "unselected deformers stay hidden");
         assert_eq!(
-            overlay
-                .deformers
-                .iter()
-                .map(|d| d.lines.len())
-                .sum::<usize>(),
+            overlay.bezier_lines.len(),
             64,
             "the selected warp Bezier curves remain visible"
         );
-        assert_eq!(overlay.vertices.len(), 4);
+        assert_eq!(overlay.vertices.len(), 8);
     }
     editor.execute(EditorCommand::SelectObjects(Vec::new()))?;
     let overlay = editor.overlay();

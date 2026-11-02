@@ -108,14 +108,14 @@ in [`acceptance/screenshots.rs`](acceptance/screenshots.rs). Screenshots go to
 `target/headless-screenshots/` by default; `ZIPZI_SCREENSHOT_DIR` overrides the
 output directory.
 
-The `warp` scene captures whole and selected-point frames and the numeric
-transform dialog in English, Simplified Chinese and Japanese. Set
+The `warp` scene captures inline subdivision inputs, Warp point editing and
+Mesh transform frames in English, Simplified Chinese and Japanese. Set
 `ZIPZI_SCREENSHOT_SAVE=1` to save every image from that scene.
-It also captures independently rotated frames and the shared frame menu.
 The `warp-authoring` scene compares all four Bezier policies on a textured grid
-and captures controller-density previews in those three languages.
-The `warp-keep-children` scene exercises native Command dragging and the Properties
-mode while checking that every textured child vertex stays fixed.
+and captures direct controller-density edits in those three languages.
+The `warp-keep-children` scene exercises native Command dragging in all three
+languages, checks that every textured child vertex stays fixed, and verifies that
+the toolbar button and Properties checkbox are absent.
 The `deformer-original` scene exercises recording, density changes, restore review,
 Cancel and Apply, checks the restored Warp lattice and captures Warp/Rotation
 record states in all three languages.
@@ -165,44 +165,59 @@ from the current pose. Stored ordinary keyforms receive pose/appearance changes;
 interpolated poses and contributing Deformer BlendShapes require returning to an
 editable stored/base shape. Multiple selections currently request a single target.
 
-**Transform Warp…** applies relative canvas-space displacement, rotation in
-degrees and percentage scale in one undo step. With selected Warp points, it
-transforms that selection, including groups across independent Warps; other
-property fields still require a single object. The toolbar shows the active
-target. Its Whole Warp toggle retains point selection for later local edits.
+Mesh and Deformer use the same basic field configuration and flat property-row
+layout: name, runtime ID, Part, parent deformer, opacity, multiply/screen colors
+and enabled state. Mesh-specific fields are inserted in their existing positions.
+The shared color controls include white/black reset buttons. Deformer keeps its
+own parent-move validation, shape destination and extended opacity range.
 
-Warp frames include a separate rotation handle and eight scale handles.
-Shift-dragging a point locks the initial dominant canvas axis; Shift-click still
-toggles selection. Option/Alt on a scale handle scales around the frame center,
-and Shift makes corner scaling uniform. Bezier anchors carry their own handles;
-selecting only handles leaves anchors unchanged. Escape cancels a drag.
+Warp subdivisions or Rotation pose follow those basic fields. Grid and Bezier
+density for a new Warp defaults to 5 × 5 grid cells (36 points) and 2 × 2 Bezier
+cells (9 anchors). Nested grouping preserves a parent lattice when needed to keep
+the existing deformation. Density can be edited directly with horizontal × vertical inputs: Enter
+or blur commits, Escape cancels, and dragging a number previews one undoable
+edit. Grid density resamples all related shapes; Bezier density refits stored
+controllers while preserving grid positions. Interpolation has no editor choice;
+the stored runtime mode remains available to importers/SDK code. Bezier controls
+and original-shape recovery remain collapsible.
 
-The viewport has separate **Bezier** and **Division points** buttons, with the
-current mode highlighted. Bezier shows tangent handles; Division points hides
-them and edits the baked lattice. Clicking the current mode preserves point
-selection. A 1×1 lattice has only four corner points, which can overlap the frame.
+Mesh, Warp, Part and Offscreen selections have canvas transform frames.
+Rotation uses its native origin, axis, ring and scale controls; directly selected
+Rotations are excluded from generic frames, including mixed selections.
+Containers transform their drawable contents; selected deformation descendants
+are normalized so a parent and child are not moved twice. A point selection
+restricts the frame to those points. Drag frame edges to translate, square handles
+to scale and the round handle to rotate. A single selected grid point, Bezier
+anchor/tangent or mesh vertex is dragged directly and shows no transform frame;
+multi-point selections keep their shared frame. Shift constrains translation, preserves
+corner scaling proportions, and snaps rotation to 15-degree increments.
+Alt/Option scales around the frame center. Shift+Alt/Option enables fine steps:
+translation in one canvas-unit increments, rotation in one-degree increments,
+and scale ratios in one-percentage-point increments relative to the press shape.
+Fine translation retains axis locking; fine corner scaling is uniform and
+centered. Rotation center dragging supports the same fine translation chord;
+its axis and ring share continuous rotation across full turns. Rotation scaling
+is always uniform. Modifiers are frozen on mouse-down; changing keys during a
+drag does not change the active constraints. Snapping leaves the frozen pivot
+and parent-space conversion intact.
+Container transforms involving Rotation children scale uniformly; incompatible
+parent spaces reject unrepresentable transforms.
+Escape cancels a gesture; commit creates one undo step. Locked objects and
+noneditable parameter poses retain their normal editing restrictions.
 
-**Warp frame** in Properties and the viewport toolbar controls visibility,
-independent frame adjustment, alignment to the Warp's horizontal grid trend and
-reset. In **Adjust frame only**, dragging edges or handles changes the frame's
-position, size or direction without changing geometry or history. Control points
-are unavailable until this mode is turned off. Scaling then follows the frame's
-local axes, and numeric transforms use its center. Each viewport keeps its own
-frame; switching targets or external geometry changes rebuild it.
+Arrow keys in a focused Modeling canvas move the current selection by one canvas
+unit, Shift+arrows by ten and Alt/Option+arrows by 0.1. Text inputs, hierarchy
+navigation, timelines, modal dialogs and topology-edit mode retain their keys.
+Each key event commits one undo step and refreshes all affected viewports.
 
-**Warp subdivisions…** previews grid density and interpolation for the base,
-ordinary keyforms and BlendShape displacements together. It reports sampled
-deviation in parent-space units, rather than a global error bound. Apply commits
-one undo step; Cancel, Escape, losing window focus and changing documents retire
-the preview. Bezier controllers are retained.
-
-**Bezier subdivisions…** refits every stored base/ordinary controller, leaves
-missing controllers derived, and keeps all baked grid points unchanged. Its
-separate controller-deviation report uses 289 independent samples per shape;
-neither sampled report is a global error bound. New derived controllers default
-to 1×1, independent of conversion density. Handle drags never increase either
-density. Curved handles need a sufficiently dense conversion grid to affect the
-rendered result.
+Warp shows division points and Bezier controls together, without a display-mode
+switch. Thin gray lattice lines and small gray points sit below muted green
+Bezier curves, larger green-bordered anchors and solid green tangent handles.
+Coincident points pick the Bezier control first. Region selection can include
+both types; mixed transforms move explicitly selected grid points once while
+applying controller influence to the remaining grid. The toolbar provides ancestor
+visibility, the dense reference grid and gesture help. Numeric transform dialogs and frame-configuration
+menus have been removed. Frames follow their current targets automatically.
 
 Fine-point edits retain the controller. By default, later Bezier edits add the
 controller's change to the grid, retaining hand-edited detail. **Reset controller**
@@ -218,17 +233,21 @@ ratios. These are Zipzi policies, without a claim of Cubism equivalence. Smoothi
 can affect controls outside the selection; the viewport status names the active
 policy. Whole-Warp transforms keep their affine behavior and grid detail.
 
-**Keep children fixed** in Properties enables Warp-only adjustment for pointer
-and numeric transforms. Holding Command on macOS or Ctrl on Windows at the start
-of a drag enables the same policy for that gesture. The shared plan changes the
-Warp and compensates child base shapes, ordinary keyforms and BlendShape deltas
+Holding **Command on macOS / Ctrl on Windows** at the start of a Warp drag keeps
+children fixed for that gesture. There is no persistent mode, toolbar button or
+Properties checkbox; subsequent ordinary drags deform the children normally.
+The shared plan changes the Warp and compensates child base shapes, ordinary
+keyforms and BlendShape deltas
 in one undo step, including nested nonlinear Warp subtrees and Rotation children.
 Cancel or dragging back to the start restores the captured data exactly.
 
 The edited Warp must have reversible affine old and new maps and static ancestor
 spaces. Current support admits rectangular Warp ancestors and Rotation chains;
 driven or nonlinear edited/ancestor maps, density changes, locked dependencies
-and conversions exceeding the 0.01 canvas-unit numerical budget reject atomically.
+and conversions with measured preservation error above 0.01 canvas units reject
+atomically. Validation checks actual float32 mapping and child-position errors;
+absolute coordinate magnitudes do not consume the tolerance. Non-finite outputs
+are rejected.
 Local control edits that make the map nonlinear are rejected. Independent
 interior/exterior samples and parameter endpoints/key midpoints supplement the
 constant affine channel conversion; their measured maximum is not a global

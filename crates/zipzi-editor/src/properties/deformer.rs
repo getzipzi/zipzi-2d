@@ -6,31 +6,31 @@ pub(super) const PROVIDER: PropertyProvider = PropertyProvider {
     fields: |_| fields(false),
     choices: parent_choices,
     type_name: scene::scene_type_name,
+    show_readonly: |path| !matches!(path, "warp.quad" | "quad"),
     ..PropertyProvider::DEFAULT
 };
 
 fn fields(rotation: bool) -> FormDefinition {
     use FieldEditor::*;
-    let mut definition = FormDefinition::new(&[
-        (NAME, "properties.name", Text),
-        (RUNTIME_ID, "properties.runtime_id", Text),
-        (ENABLED, "properties.enabled", Toggle),
-    ]);
-    definition.fields.extend([
-        FieldSpec::new(PART, "properties.part", Select).choices(true, mesh::parts),
-        FieldSpec::new(PARENT, "properties.deformer_parent", Select).choices(true, |_| vec![]),
-    ]);
-    definition.fields.extend(
-        [
-            FieldSpec::new(OPACITY, "properties.opacity", Number).percent(),
-            FieldSpec::new(MULTIPLY, "properties.multiply", Color),
-            FieldSpec::new(SCREEN, "properties.screen", Color),
-        ]
-        .map(|mut field| {
-            field.section = Some("properties.deformer_appearance");
-            field
-        }),
-    );
+    let common = scene_object::Bindings {
+        name: NAME,
+        runtime_id: RUNTIME_ID,
+        part: PART,
+        deformer: PARENT,
+        opacity: OPACITY,
+        multiply: MULTIPLY,
+        screen: SCREEN,
+        enabled: ENABLED,
+    };
+    let mut definition = FormDefinition {
+        fields: common
+            .identity()
+            .into_iter()
+            .chain(common.appearance())
+            .chain([common.enabled()])
+            .collect(),
+        ..Default::default()
+    };
     let mut automatic = FieldSpec::new(ORIGINAL_AUTO, "properties.deformer_original_auto", Toggle);
     automatic.section = Some("properties.deformer_original");
     definition.fields.push(automatic);
@@ -56,12 +56,24 @@ fn fields(rotation: bool) -> FormDefinition {
     } else {
         definition.fields.extend(
             [
-                FieldSpec::new(AUTO_REFORM, "properties.warp_auto_reform", Toggle),
+                FieldSpec::new(COLUMNS, "properties.warp_columns", Number),
+                FieldSpec::new(ROWS, "properties.warp_rows", Number),
+                FieldSpec::new(BEZIER_COLUMNS, "properties.warp_bezier_columns", Number),
+                FieldSpec::new(BEZIER_ROWS, "properties.warp_bezier_rows", Number),
                 FieldSpec::new(EDIT_MODE, "properties.warp_edit_mode", Select)
                     .choices(false, edit_modes),
+                FieldSpec::new(AUTO_REFORM, "properties.warp_auto_reform", Toggle),
             ]
             .map(|mut field| {
-                field.section = Some("properties.deformer_warp_authoring");
+                field.section = Some(
+                    if [COLUMNS.key, ROWS.key, BEZIER_COLUMNS.key, BEZIER_ROWS.key]
+                        .contains(&field.binding.key)
+                    {
+                        "properties.deformer_warp"
+                    } else {
+                        "properties.deformer_warp_authoring"
+                    },
+                );
                 field
             }),
         );
@@ -191,6 +203,45 @@ mod tests {
         }
         assert_eq!(rotation.field(SCALE.key).unwrap().scale, 100.);
         assert!(!rotation.field(BASE_ANGLE.key).unwrap().binding.keyframed);
+    }
+
+    #[test]
+    fn basic_fields_share_mesh_presentation_and_retain_deformer_bindings() {
+        let mesh = mesh::fields();
+        for rotation in [false, true] {
+            let definition = fields(rotation);
+            let basic: Vec<_> = definition
+                .fields
+                .iter()
+                .filter(|f| f.section.is_none())
+                .collect();
+            assert_eq!(basic.len(), 8);
+            for (deformer, mesh) in basic.into_iter().zip(mesh.fields.iter().filter(|f| {
+                [
+                    "name",
+                    "runtime_id",
+                    "part_id",
+                    "deformer_id",
+                    "opacity",
+                    "multiply",
+                    "screen",
+                    "enabled",
+                ]
+                .contains(&f.binding.key.name())
+            })) {
+                assert_eq!(deformer.binding.key.object_kind(), ObjectKind::Deformer);
+                assert_eq!(deformer.editor, mesh.editor);
+                assert_eq!(deformer.label, mesh.label);
+                assert_eq!(deformer.scale, mesh.scale);
+                assert_eq!(deformer.searchable, mesh.searchable);
+                assert_eq!(deformer.reset_color, mesh.reset_color);
+            }
+            assert_eq!(
+                definition.field(OPACITY.key).unwrap().binding.max,
+                f32::MAX as f64
+            );
+            assert_eq!(definition.field(PARENT.key).unwrap().binding, PARENT);
+        }
     }
 
     #[test]

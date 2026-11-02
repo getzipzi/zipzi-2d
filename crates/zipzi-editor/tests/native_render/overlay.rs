@@ -348,6 +348,7 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                 })
                 .collect(),
                 deformers: vec![OverlayDeformer {
+                    kind: zipzi_editor_core::ControlKind::Rotation,
                     lines: vec![(pt(8., 50.), pt(210., 50.))],
                     selected: true,
                     hovered: false,
@@ -378,6 +379,7 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                     hovered: false,
                 }],
                 handles: std::iter::once(zipzi_editor_core::OverlayHandle {
+                    tangent: true,
                     editable: true,
                     position: pt(80., 50.),
                     round: true,
@@ -385,6 +387,7 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                     selected: true,
                 })
                 .chain(std::iter::once(zipzi_editor_core::OverlayHandle {
+                    tangent: false,
                     editable: false,
                     position: pt(70., 20.),
                     round: true,
@@ -395,6 +398,7 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                     [false, true].into_iter().flat_map(move |selected| {
                         [false, true].into_iter().map(move |hovered| {
                             zipzi_editor_core::OverlayHandle {
+                                tangent: false,
                                 editable: true,
                                 position: pt(
                                     20. + 30. * (u8::from(round) * 2 + u8::from(hovered)) as f32,
@@ -468,8 +472,8 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
             );
             assert_eq!(
                 image.get_pixel(120, 94).0,
-                [0, 0, 0, 255],
-                "the 6px warp marker has a black border in either theme"
+                rgb(palette.deformer),
+                "Bezier anchors have a visible green border in either theme"
             );
             for x in [40, 100, 160, 220] {
                 assert_eq!(

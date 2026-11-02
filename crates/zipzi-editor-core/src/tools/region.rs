@@ -164,7 +164,6 @@ pub(super) fn select_region(
         scene: &press.scene,
         selection: &press.selection,
         transform: press.transform,
-        warp_fine: press.warp_fine,
         access: &press.access,
     }
     .apply(components, document, Some(region), press.operation)
@@ -188,7 +187,6 @@ impl ToolController {
             scene: &frame.geometry,
             selection: &selection,
             transform: frame.transform,
-            warp_fine: self.warp_fine,
             access: &access,
         }
         .apply(
@@ -204,7 +202,6 @@ struct RegionSelection<'a> {
     scene: &'a CanvasScene,
     selection: &'a [ObjectRef],
     transform: ViewportTransform,
-    warp_fine: bool,
     access: &'a EditAccess,
 }
 impl RegionSelection<'_> {
@@ -240,17 +237,13 @@ impl RegionSelection<'_> {
                         hits.push(component);
                     }
                 };
-                if let Some(bezier) = (!self.warp_fine)
-                    .then(|| self.scene.bezier(&c.object.id))
-                    .flatten()
-                {
+                if let Some(bezier) = self.scene.bezier(&c.object.id) {
                     for (i, &p) in bezier.anchors.iter().enumerate() {
                         add(crate::warp_bezier::component_id(i, 0), p);
                     }
-                } else {
-                    for (i, &p) in c.points.iter().enumerate() {
-                        add(i as u32, p);
-                    }
+                }
+                for (i, &p) in c.points.iter().enumerate() {
+                    add(i as u32, p);
                 }
             }
             for r in self.selection {

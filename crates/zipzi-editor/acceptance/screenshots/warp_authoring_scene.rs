@@ -16,6 +16,14 @@ use zipzi_editor_core::{
 pub(super) fn fixture(
     mode: WarpBezierEditMode,
 ) -> anyhow::Result<(Document, tempfile::TempDir, ObjectRef)> {
+    fixture_with_density(mode, 8, 3)
+}
+
+pub(super) fn fixture_with_density(
+    mode: WarpBezierEditMode,
+    grid: u32,
+    bezier: u32,
+) -> anyhow::Result<(Document, tempfile::TempDir, ObjectRef)> {
     let assets = tempfile::tempdir()?;
     let path = assets.path().join("checker.png");
     image::RgbaImage::from_fn(256, 256, |x, y| {
@@ -42,21 +50,24 @@ pub(super) fn fixture(
             name: "Warp".into(),
             warp_authoring: Some(WarpAuthoringSettings {
                 bezier_grid: Some(WarpBezierGrid {
-                    rows: 3,
-                    columns: 3,
+                    rows: bezier,
+                    columns: bezier,
                 }),
                 edit_mode: mode,
                 ..Default::default()
             }),
             data: TransformData::Warp(WarpTransform {
-                rows: 8,
-                columns: 8,
+                rows: grid,
+                columns: grid,
                 quad: true,
                 bezier: None,
-                points: (0..=8)
+                points: (0..=grid)
                     .flat_map(|y| {
-                        (0..=8).map(move |x| {
-                            Vec2::new(32. + 192. * x as f32 / 8., 32. + 192. * y as f32 / 8.)
+                        (0..=grid).map(move |x| {
+                            Vec2::new(
+                                32. + 192. * x as f32 / grid as f32,
+                                32. + 192. * y as f32 / grid as f32,
+                            )
                         })
                     })
                     .collect(),
@@ -177,13 +188,15 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
             )?;
             if mode == WarpBezierEditMode::PreserveStructure {
                 h.cx.update_window(h.window, |_, window, cx| {
-                    show(window, "property-warp-bezier-grid", cx);
-                    window.click("property-warp-bezier-grid", cx);
                     window.render_frame(cx);
-                    for field in ["warp-grid-columns", "warp-grid-rows"] {
+                    for field in [
+                        "property-input-bezier_columns",
+                        "property-input-bezier_rows",
+                    ] {
                         window.click(field, cx);
                         window.press("cmd-a", cx);
                         window.input("2", cx);
+                        window.press("enter", cx);
                         window.render_frame(cx);
                     }
                 })?;
@@ -230,11 +243,9 @@ pub(super) fn run_keep_children(directory: &std::path::Path) -> anyhow::Result<(
         });
         h.cx.update_window(h.window, |_, window, cx| {
             window.activate_window();
-            show(window, "property-warp-keep-children", cx);
-            if locale != "en" {
-                window.click("property-warp-keep-children", cx);
-                window.render_frame(cx);
-            }
+            show(window, "property-input-bezier_rows", cx);
+            assert!(window.try_find("property-warp-keep-children").is_none());
+            assert!(window.try_find("deformer-keep-children").is_none());
             let start = h.view.read_with(cx, |view, _| {
                 let frame = &view.modeling_frame().unwrap().canvas;
                 let c = frame
@@ -253,7 +264,7 @@ pub(super) fn run_keep_children(directory: &std::path::Path) -> anyhow::Result<(
             let from = window.find("canvas-body").bounds().origin + point(px(start.x), px(start.y));
             let end = from + point(px(12.), px(18.));
             let modifiers = Modifiers {
-                platform: locale == "en",
+                platform: true,
                 ..Default::default()
             };
             window.dispatch_event(
@@ -286,10 +297,6 @@ pub(super) fn run_keep_children(directory: &std::path::Path) -> anyhow::Result<(
                 .to_platform_input(),
                 cx,
             );
-            if locale == "en" {
-                window.click("property-warp-keep-children", cx);
-                window.render_frame(cx);
-            }
         })?;
         let pixels = h.capture()?;
         h.view.read_with(&h.cx, |view, _| {

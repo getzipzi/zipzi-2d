@@ -23,6 +23,7 @@ pub use property::{
 };
 mod deformer_original;
 mod editor;
+mod selection_transform;
 mod warp_frame;
 pub use deformer_original::{DeformerOriginalInfo, DeformerOriginalTarget};
 pub use warp_frame::{WarpFrame, WarpFrameAction, WarpFrameInfo};

@@ -69,19 +69,17 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
         )?;
         let manual = canvas_points(&h, &object);
         h.cx.update_window(h.window, |_, window, cx| {
-            show(window, "property-warp-grid", cx);
-            window.click("property-warp-grid", cx);
-            window.render_frame(cx);
-            for id in ["warp-grid-columns", "warp-grid-rows"] {
+            for id in ["property-input-columns", "property-input-rows"] {
+                show(window, id, cx);
                 window.click(id, cx);
                 window.press("cmd-a", cx);
                 window.input("4", cx);
+                window.press("enter", cx);
                 window.render_frame(cx);
             }
         })?;
         h.capture()?;
         h.cx.update_window(h.window, |_, window, cx| {
-            window.click("warp-grid-apply", cx);
             window.render_frame(cx);
         })?;
         h.capture()?;
@@ -120,7 +118,7 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
         }
         h.view.read_with(&h.cx, |view, _| {
             assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
-            assert_eq!(view.editor.document().unwrap().history_lengths(), (4, 0));
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (5, 0));
         });
         save(
             &pixels,

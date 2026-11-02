@@ -221,6 +221,8 @@ pub(super) fn secondary_bar(id: &'static str, content: impl IntoElement, cx: &Ap
                 .id(id)
                 .test_support()
                 .relative()
+                .min_w_0()
+                .max_w_full()
                 .px(compact::rem(SECONDARY.end_padding()))
                 .py(compact::rem(SECONDARY.inset))
                 .occlude()

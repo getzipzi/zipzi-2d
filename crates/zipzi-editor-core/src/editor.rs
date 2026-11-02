@@ -56,9 +56,7 @@ pub enum EditorCommand {
     ToggleDeformers,
     ToggleAncestorDeformers,
     ToggleDeformerGrid,
-    ToggleWarpFine,
     ToggleWarpWhole,
-    ToggleWarpKeepChildren,
     DeformerOriginal {
         target: crate::DeformerOriginalTarget,
         action: zipzi_core::DeformerOriginalAction,
@@ -131,9 +129,7 @@ impl EditorCommand {
                 | Self::ToggleDeformers
                 | Self::ToggleAncestorDeformers
                 | Self::ToggleDeformerGrid
-                | Self::ToggleWarpFine
                 | Self::ToggleWarpWhole
-                | Self::ToggleWarpKeepChildren
                 | Self::ToggleOriginalPoints
                 | Self::FinishEdit
                 | Self::CancelEdit

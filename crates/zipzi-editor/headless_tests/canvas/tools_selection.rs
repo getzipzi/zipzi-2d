@@ -1037,7 +1037,7 @@ fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &m
         );
         harness.view.read_with(cx, |view, _| {
             assert_eq!(view.editor.active_tool(), ToolId::Select);
-            assert_eq!(view.editor.overlay().vertices.len(), 4);
+            assert_eq!(view.editor.overlay().vertices.len(), 8);
             assert_eq!(
                 view.editor
                     .overlay()
@@ -1062,22 +1062,14 @@ fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &m
         assert!((bar.center().x - viewport.center().x).abs() <= px(0.5));
         let scale = crate::ui::compact::scale(cx);
         assert!((bar.top() - viewport.top()).abs() <= px(0.5));
-        for id in [
-            "deformer-ancestors",
-            "deformer-warp-bezier",
-            "deformer-warp-fine",
-            "deformer-grid",
-            "deformer-help",
-        ] {
+        for id in ["deformer-ancestors", "deformer-grid", "deformer-help"] {
             let button = window.find(id).bounds();
-            assert!((button.size.height.as_f32() - 20. * scale).abs() <= 0.5);
+            assert!((button.size.height.as_f32() - 24. * scale).abs() <= 0.5);
+            assert!(button.left() >= viewport.left() && button.right() <= viewport.right());
         }
-        window.click("deformer-warp-fine", cx);
-        harness.view.read_with(cx, |view, _| {
-            assert!(view.editor.warp_fine());
-            assert!(view.editor.overlay().gizmo_lines.is_empty());
-        });
-        window.click("deformer-warp-bezier", cx);
+        assert!(window.try_find("deformer-keep-children").is_none());
+        assert!(window.try_find("deformer-warp-bezier").is_none());
+        assert!(window.try_find("deformer-warp-fine").is_none());
         window.click("deformer-grid", cx);
         assert!(
             harness
