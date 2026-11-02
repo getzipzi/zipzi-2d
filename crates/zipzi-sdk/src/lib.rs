@@ -61,7 +61,7 @@ pub use manual_mesh::{
     ManualMeshOperation, ManualMeshResult, ManualVertexIdAllocator, ManualVertexTarget,
 };
 pub use manual_mesh_transfer::{
-    ManualMeshPlan, ManualMeshSource, ManualMeshTransferReport, VertexProvenance,
+    ManualMeshPlan, ManualMeshSource, ManualMeshTransferReport, ManualMeshUvMap, VertexProvenance,
 };
 mod mesh_binding_edit;
 mod mesh_edit;

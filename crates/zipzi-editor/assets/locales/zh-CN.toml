@@ -1165,7 +1165,7 @@ stale_load = "这次图片加载已过期，请重新选择图片。"
 [manual_mesh]
 paused = "网格编辑已暂停：%{reason}。请恢复目标或退出网格编辑。"
 outside_image = "超出源图范围。请先点击二级工具栏的“扩展源图”增加透明出血。"
-outside_transfer_domain = "此位置超出原网格的变形采样范围。源图扩边不会外推已有变形。"
+outside_transfer_domain = "此操作超出已有变形的采样范围。请在网格编辑中移动或添加轮廓顶点来扩展范围。"
 cross_mesh_connection = "只能连接同一网格内的顶点。每个网格保留独立拓扑。"
 outside_boundary = "这次编辑无法形成单个闭合外围。"
 crossing = "这次编辑会使外围或固定边相交，或使固定面塌缩，已保留上一个有效状态。"

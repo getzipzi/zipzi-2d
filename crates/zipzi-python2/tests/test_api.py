@@ -331,8 +331,8 @@ class PythonSdk(unittest.TestCase):
                         return edit.apply(m.commands.ModelingCommandManualMesh(mesh_id=uid(2),expected=edit.meshes.get(uid(2)).source,operation=operation))
                     # Geometric rejection must not abort this candidate.
                     with self.assertRaises(zipzi.SdkFailure) as invalid:
-                        manual(m.mesh.ManualMeshOperationInsertVertex(id=100,uv=m.common.Vec2(.9,.9)))
-                    self.assertEqual(invalid.exception.code,"OUTSIDE_TRANSFER_DOMAIN")
+                        manual(m.mesh.ManualMeshOperationInsertVertex(id=100,uv=m.common.Vec2(1.1,.9)))
+                    self.assertEqual(invalid.exception.code,"INVALID_MANUAL_MESH")
                     # 6,000 vertex targets force Connected binary upload. A
                     # duplicate-ID refusal must release only the upload buffer.
                     with self.assertRaises(zipzi.SdkFailure) as binary_invalid:

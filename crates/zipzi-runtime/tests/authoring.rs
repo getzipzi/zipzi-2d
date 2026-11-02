@@ -890,7 +890,7 @@ fn manual_mesh_mixed_candidate_rejection_preserves_sequence_baseline_and_history
     let e = rt.begin_edit(c, s, "drag", None).unwrap();
     for (uv, ok) in [
         (Vec2::new(0.3, 0.4), true),
-        (Vec2::new(1., 0.5), false),
+        (Vec2::new(1.1, 0.5), false),
         (Vec2::new(0.7, 0.6), true),
     ] {
         let source = rt.edit_snapshot(c, e).unwrap().source;

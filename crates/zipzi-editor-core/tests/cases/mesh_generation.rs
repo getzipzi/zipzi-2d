@@ -1484,6 +1484,116 @@ fn manual_mesh_source_padding_retains_bound_shapes_glue_and_rejects_stale_target
 }
 
 #[test]
+fn manual_mesh_padded_bound_non_affine_outline_drags_beyond_original_image_in_both_views()
+-> anyhow::Result<()> {
+    for source_view in [false, true] {
+        let (doc, _dir) = mixed_dependency_document()?;
+        let mut editor = crate::support::editor_from_document(doc);
+        support::attach_viewports(&mut editor);
+        editor.set_canvas_metrics(ViewportMetrics {
+            width: 640.,
+            height: 480.,
+            scale_factor: 1.,
+        });
+        editor.enter_manual_mesh(editor.active_id().unwrap())?;
+        let original_texture = editor.manual_target().unwrap().texture.clone();
+        // Repeated expansion must make the newly added space editable too.
+        for _ in 0..4 {
+            editor.dispatch(editor.command(CommandId::ManualPadSource))?;
+        }
+        if source_view {
+            editor.dispatch(editor.command(CommandId::ManualSourceView))?;
+        } else {
+            editor.set_viewport_zoom(editor.primary_viewport_binding().unwrap(), 60., None)?;
+        }
+        editor.dispatch(editor.command(CommandId::ManualSelect))?;
+        let target = editor.manual_target().unwrap().clone();
+        let doc = editor.document().unwrap();
+        let host = doc.runtime_host();
+        let sid = doc.runtime_session_id();
+        let before = host.read().document(sid)?.clone();
+        let mesh_id = dependency_fixture::id(2);
+        let mesh = before.get_mesh(&mesh_id).unwrap();
+        let uv = zipzi_core::Vec2::new(
+            (16. + 0.7 * original_texture.width as f32) / target.texture.width as f32,
+            8. / target.texture.height as f32,
+        );
+        let local = zipzi_sdk::ManualMeshUvMap::new(zipzi_sdk::MeshGeometry {
+            vertex_ids: mesh.vertex_ids.clone(),
+            positions: mesh.base_positions.clone(),
+            uvs: mesh.uvs.clone(),
+            triangles: mesh.triangles.clone(),
+            meshing: mesh.meshing.clone(),
+        })?
+        .position(uv)?;
+        let frame = crate::support::present_canvas(&mut editor)?;
+        let vertex = frame.geometry.mesh(&mesh_id).unwrap().vertices[1].1;
+        let destination = if source_view {
+            let p = target.mapping.position(uv);
+            ModelPoint { x: p.x, y: p.y }
+        } else {
+            let delta = zipzi_core::Vec2::new(
+                local.x - mesh.base_positions[1].x,
+                local.y - mesh.base_positions[1].y,
+            );
+            let (sin, cos) = 27_f32.to_radians().sin_cos();
+            ModelPoint {
+                x: vertex.x + 1.3 * (cos * delta.x - sin * delta.y),
+                y: vertex.y + 1.3 * (sin * delta.x + cos * delta.y),
+            }
+        };
+        let from = frame.transform.to_viewport(vertex);
+        let to = frame.transform.to_viewport(destination);
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Down {
+                point: from,
+                primary: false,
+                shift: false,
+                alt: false,
+            },
+        )?;
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Move {
+                point: to,
+                left_down: true,
+            },
+        )?;
+        crate::support::pointer_input(&mut editor, CanvasInput::Up { point: to })?;
+        let after = host.read().document(sid)?.clone();
+        let moved = after.get_mesh(&mesh_id).unwrap();
+        assert!(
+            (moved.uvs[1].x - uv.x).hypot(moved.uvs[1].y - uv.y) < 1e-5,
+            "source view {source_view}: {:?}",
+            moved.uvs[1]
+        );
+        assert!(moved.uvs[1].y * (target.texture.height as f32) < 16.);
+        assert_eq!(editor.document().unwrap().history_lengths(), (5, 0));
+        for id in before.glue_order() {
+            assert_eq!(before.get_glue(id), after.get_glue(id));
+        }
+        editor.dispatch(editor.command(CommandId::Undo))?;
+        assert_eq!(
+            host.read().document(sid)?.get_mesh(&mesh_id),
+            before.get_mesh(&mesh_id)
+        );
+        assert_eq!(
+            host.read()
+                .document(sid)?
+                .get_binding(&dependency_fixture::id(6)),
+            before.get_binding(&dependency_fixture::id(6))
+        );
+        editor.dispatch(editor.command(CommandId::Redo))?;
+        assert_eq!(
+            host.read().document(sid)?.get_mesh(&mesh_id),
+            after.get_mesh(&mesh_id)
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn manual_mesh_isolation_keeps_reference_at_full_opacity_and_mode_active() -> anyhow::Result<()> {
     for isolate_first in [false, true] {
         let (doc, _dir) = support::alpha_document()?;

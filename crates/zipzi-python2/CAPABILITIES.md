@@ -86,8 +86,11 @@ writes, including finite costs. Base and ordinary positions and BlendShape delta
 share the same UV sample weights; sample/table/pair identities and non-position
 channels remain intact. Local and Connected use the same implementation, including
 binary upload. `GLUE_VERTEX_REFERENCED` identifies a pair that must be released
-before deleting its endpoint. `OUTSIDE_TRANSFER_DOMAIN` rejects sampling outside
-the old UV coverage, except for dependency-free affine extension.
+before deleting its endpoint. Manual moves and insertions extend beyond the old
+UV coverage using the nearest source triangle's affine extrapolation, with the
+same weights for every stored shape. UVs must stay inside the complete source
+image; expand the image to provide more editing space. Full generation still
+requires existing UV coverage or a dependency-free global affine map.
 
 A host-confirmed manual refusal with `SdkFailure.edit_state == "editing"` keeps
 the candidate available, so a pointer gesture may continue from its last valid

@@ -50,10 +50,15 @@ mesh across increments, and rejection preserves the entire last accepted batch.
 Committing the shared Edit creates one undo step for all meshes.
 
 Deleting a Glue endpoint (including an incomplete pair or an implicit orphan)
-returns `GLUE_VERTEX_REFERENCED`; a sample outside the old UV coverage returns
-`OUTSIDE_TRANSFER_DOMAIN`. Only a dependency-free mesh with a global affine map
-can extend outside that coverage. Non-affine and collapsed base positions remain
-editable inside a valid UV domain. Full generation uses fresh persistent IDs and
+returns `GLUE_VERTEX_REFERENCED`. Manual moves and insertions can extend the
+outline anywhere inside the complete source image, including transparent image
+padding. Outside the old UV coverage, the nearest source triangle supplies affine
+extrapolation weights shared by base positions, ordinary keyforms and BlendShape
+deltas. Model-space gestures reject ambiguous inverse branches; source-image
+editing remains available. Full generation outside the old coverage still returns
+`OUTSIDE_TRANSFER_DOMAIN` unless the source is dependency-free and globally affine.
+Non-affine and collapsed base positions remain editable inside a valid UV domain.
+Full generation uses fresh persistent IDs and
 is disabled when old Glue endpoints would be retired; interior fill retains them.
 
 `ManualMeshSource` supports generated UV topology through the same plan builder.

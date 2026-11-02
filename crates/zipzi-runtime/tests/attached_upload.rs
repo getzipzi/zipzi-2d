@@ -167,7 +167,7 @@ fn manual_mesh_binary_geometric_rejection_keeps_candidate_and_sequence() {
     let e = rt.begin_edit(c, s, "manual binary", None).unwrap();
     let before = rt.edit_snapshot(c, e).unwrap().source;
     for (uv, accepted) in [
-        (zipzi_core::Vec2::new(0.05, 0.3), false),
+        (zipzi_core::Vec2::new(-0.05, 0.3), false),
         (zipzi_core::Vec2::new(0.35, 0.25), true),
     ] {
         let expected = rt.edit_snapshot(c, e).unwrap().source;

@@ -1035,6 +1035,129 @@ fn transfer_mixed_shapes_parent_glues_and_identity_in_one_history_step() {
     assert_eq!(s.document().get_binding(&id(6)), after.get_binding(&id(6)));
 }
 #[test]
+fn transfer_outline_extension_extrapolates_every_shape_from_the_same_boundary_triangle() {
+    use zipzi_core::DeltaKeyforms;
+    let id = dependencies::id;
+    for insert in [false, true] {
+        let mut s = mixed();
+        let before = s.document().clone();
+        let uv = Vec2::new(0.3, 0.05);
+        let operation = |y| {
+            if insert {
+                ManualMeshOperation::InsertVertex {
+                    id: 200,
+                    uv: Vec2::new(uv.x, y),
+                }
+            } else {
+                ManualMeshOperation::MoveVertices {
+                    targets: vec![target(10, Vec2::new(uv.x, y))],
+                    motion_from: None,
+                }
+            }
+        };
+        let mut e = s.begin_owned_edit("extend outline", None).unwrap();
+        let plan = e.plan_manual_mesh(&id(2), operation(uv.y)).unwrap();
+        assert!(plan.provenance.iter().any(|p| matches!(
+            p,
+            zipzi_sdk::VertexProvenance::Extrapolated {
+                triangle: [10, 30, 120],
+                ..
+            }
+        )));
+        e.apply_manual_mesh_plan(plan).unwrap();
+        if !insert {
+            e.edit_manual_mesh(&id(2), operation(0.02)).unwrap();
+            e.edit_manual_mesh(&id(2), operation(uv.y)).unwrap();
+        }
+        e.commit_to(&mut s).unwrap();
+        let after = s.document().clone();
+        let old_mesh = before.get_mesh(&id(2)).unwrap();
+        let a = old_mesh.uvs[0];
+        let b = old_mesh.uvs[1];
+        let c = old_mesh.uvs[4];
+        let wc = (uv.y - a.y) / (c.y - a.y);
+        let wb = (uv.x - a.x - wc * (c.x - a.x)) / (b.x - a.x);
+        let wa = 1. - wb - wc;
+        assert!(wc < 0.);
+        let slot = if insert { 5 } else { 0 };
+        let check = |old: &[Vec2], new: &[Vec2]| {
+            let expected = Vec2::new(
+                old[0].x * wa + old[1].x * wb + old[4].x * wc,
+                old[0].y * wa + old[1].y * wb + old[4].y * wc,
+            );
+            assert!((new[slot].x - expected.x).hypot(new[slot].y - expected.y) < 2e-5);
+            for i in 0..old.len() {
+                if i != slot {
+                    assert_eq!(new[i], old[i]);
+                }
+            }
+        };
+        check(
+            &old_mesh.base_positions,
+            &after.get_mesh(&id(2)).unwrap().base_positions,
+        );
+        for (a, b) in before
+            .get_binding(&id(6))
+            .unwrap()
+            .keyforms
+            .iter()
+            .zip(&after.get_binding(&id(6)).unwrap().keyforms)
+        {
+            check(&a.positions, &b.positions);
+            assert_eq!(a.samples, b.samples);
+        }
+        for n in [12, 22] {
+            let (DeltaKeyforms::Mesh(a), DeltaKeyforms::Mesh(b)) = (
+                &before.get_blend_binding(&id(n)).unwrap().keyforms,
+                &after.get_blend_binding(&id(n)).unwrap().keyforms,
+            ) else {
+                panic!()
+            };
+            for (a, b) in a.iter().zip(b) {
+                check(&a.positions, &b.positions);
+            }
+        }
+        for n in [30, 32] {
+            assert_eq!(before.get_glue(&id(n)), after.get_glue(&id(n)));
+        }
+        s.undo().unwrap();
+        assert_eq!(s.document().get_mesh(&id(2)), before.get_mesh(&id(2)));
+        s.redo().unwrap();
+        assert_eq!(s.document().get_mesh(&id(2)), after.get_mesh(&id(2)));
+        assert_eq!(s.document().get_binding(&id(6)), after.get_binding(&id(6)));
+    }
+}
+
+#[test]
+fn manual_uv_map_round_trips_non_affine_extension_and_rejects_overlapping_branches() {
+    let s = mixed();
+    let source = zipzi_sdk::ManualMeshSource::new(s.document(), &dependencies::id(2)).unwrap();
+    let map = zipzi_sdk::ManualMeshUvMap::new(source.geometry().clone()).unwrap();
+    for uv in [
+        Vec2::new(0.3, 0.05),
+        Vec2::new(0.95, 0.4),
+        Vec2::new(0.4, 0.95),
+        Vec2::new(0.05, 0.3),
+        Vec2::new(0.05, 0.05),
+    ] {
+        let p = map.position(uv).unwrap();
+        let actual = map.uv(p).unwrap();
+        assert!(
+            (actual.x - uv.x).hypot(actual.y - uv.y) < 1e-5,
+            "{uv:?} => {actual:?}"
+        );
+    }
+    let mut overlapping = square_geometry();
+    overlapping.positions[3] = Vec2::new(-1.5, 0.5);
+    let map = zipzi_sdk::ManualMeshUvMap::new(overlapping).unwrap();
+    assert_eq!(
+        map.uv(Vec2::new(-1.25, 0.75)).unwrap_err().code.as_ref(),
+        "AMBIGUOUS_MESH_SURFACE"
+    );
+    assert!(map.uv(Vec2::new(f32::NAN, 0.)).is_err());
+}
+
+#[test]
 fn transfer_drag_freezes_source_and_recovers_after_invalid_increment() {
     let id = dependencies::id;
     let mut s = mixed();
@@ -1057,11 +1180,11 @@ fn transfer_drag_freezes_source_and_recovers_after_invalid_increment() {
         direct.candidate_document().get_binding(&id(6))
     );
     assert_eq!(
-        drag.plan_manual_mesh(&id(2), movement(1., 0.6))
+        drag.plan_manual_mesh(&id(2), movement(1.1, 0.6))
             .unwrap_err()
             .code
             .as_ref(),
-        "OUTSIDE_TRANSFER_DOMAIN"
+        "INVALID_MANUAL_MESH"
     );
     assert!(!drag.is_aborted());
     drag.edit_manual_mesh(&id(2), movement(0.7, 0.6)).unwrap();
@@ -1134,7 +1257,7 @@ fn transfer_batch_freezes_each_mesh_and_rejects_without_partial_publication() {
 }
 
 #[test]
-fn transfer_glue_deletion_and_outside_sampling_are_operation_rejections() {
+fn transfer_glue_deletion_and_outside_image_are_operation_rejections() {
     let id = dependencies::id;
     let s = mixed();
     let mut e = s.begin_owned_edit("check", None).unwrap();
@@ -1154,11 +1277,11 @@ fn transfer_glue_deletion_and_outside_sampling_are_operation_rejections() {
             &id(2),
             ManualMeshOperation::InsertVertex {
                 id: 200,
-                uv: Vec2::new(0.05, 0.3),
+                uv: Vec2::new(-0.05, 0.3),
             },
         )
         .unwrap_err();
-    assert_eq!(err.code.as_ref(), "OUTSIDE_TRANSFER_DOMAIN");
+    assert_eq!(err.code.as_ref(), "INVALID_MANUAL_MESH");
     e.edit_manual_mesh(
         &id(2),
         ManualMeshOperation::DeleteVertices { ids: vec![120] },

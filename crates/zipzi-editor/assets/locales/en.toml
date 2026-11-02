@@ -1166,7 +1166,7 @@ stale_load = "This image load has expired. Choose the image again."
 [manual_mesh]
 paused = "Mesh Edit paused: %{reason}. Restore the target or exit Mesh Edit."
 outside_image = "Outside the source image. Use Expand source image in the secondary toolbar to add transparent space."
-outside_transfer_domain = "This point is outside the original deformation sampling area. Expanding the image does not extend existing shapes."
+outside_transfer_domain = "This operation is outside the existing shape sampling area. Move or add outline vertices in Mesh Edit to extend it."
 cross_mesh_connection = "Connect vertices within the same mesh. Each mesh keeps its own topology."
 outside_boundary = "This edit cannot form a single closed outline."
 crossing = "This edit would cross the outline or a fixed edge, or collapse a fixed face. The last valid state is retained."
