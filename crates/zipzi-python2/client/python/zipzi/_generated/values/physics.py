@@ -120,7 +120,7 @@ PhysicsEditReorderGroups.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsEditDuplicate(CompactValue):
-    'Duplicate selected Physics identities.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    'Duplicate selected Physics identities.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ngroup_id: None when copying groups; required destination group ID when copying inputs or outputs.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'duplicate'
     ids: tuple[str, ...]
     group_id: (str | None) = None

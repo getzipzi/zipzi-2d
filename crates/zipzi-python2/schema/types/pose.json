@@ -709,7 +709,7 @@
           "doc": "Target a stable document Part.",
           "fields": [
             {
-              "doc": "Stable document Part UUID for this opacity or visibility reference.",
+              "doc": "Stable document Part UUID selected by this Pose reference.",
               "name": "part_id",
               "rust_name": "part_id",
               "shape": {

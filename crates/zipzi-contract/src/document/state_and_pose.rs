@@ -112,7 +112,7 @@ pub enum PosePartRef {
     Unspecified,
     /// Target a stable document Part.
     Resolved {
-        /// Stable document Part UUID for this opacity or visibility reference.
+        /// Stable document Part UUID selected by this Pose reference.
         part_id: String,
     },
     /// Preserve an unresolved external Part runtime ID.

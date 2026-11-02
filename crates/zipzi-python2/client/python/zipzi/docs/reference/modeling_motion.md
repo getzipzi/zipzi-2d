@@ -681,7 +681,7 @@ Target a stable Part opacity channel.
 
 **Fields**
 
-- `part_id`: Stable document Part UUID for this opacity or visibility reference.
+- `part_id`: Stable document Part UUID whose opacity channel is driven.
 
 ## zipzi.modeling.motion.MotionTrackTargetUnresolved
 

@@ -772,3 +772,8 @@ Motion/Expression 的复制源及事件目标也有过于泛化或不适用的�
 复核 Motion/Expression/Pose 字段时，继续将曲线控制点、持久端点、事件字符串、表达式参数
 贡献、组成员和接收目标从跨类型套话改为各自的真实含义。结构测试新增关键字段断言；具体
 复核仍在继续，本记录不把全领域语义审阅标记为完成。
+
+Physics 复制操作的 `group_id` 现按实现区分：复制 rig 时必须为 None，复制输入或输出时
+必须指定目标 rig；复制节点需使用链操作。Pose Part 和 Motion PartOpacity 的目标说明也已区分，
+并增加离线 catalog 字段回归。修改前的 reference 测试 30 项与 contract 测试通过；本次新增
+字段断言通过，最终完整生成/SDK gate 仍须基于后续最终源码重跑。

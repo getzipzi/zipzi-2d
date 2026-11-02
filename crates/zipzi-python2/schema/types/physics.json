@@ -1079,7 +1079,7 @@
             },
             {
               "default": null,
-              "doc": "Stable ID of the group owning the affected rows or node chain.",
+              "doc": "None when copying groups; required destination group ID when copying inputs or outputs.",
               "name": "group_id",
               "rust_name": "group_id",
               "shape": {

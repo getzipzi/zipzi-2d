@@ -227,7 +227,7 @@ Duplicate selected Physics identities.
 **Fields**
 
 - `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
-- `group_id`: Stable ID of the group owning the affected rows or node chain.
+- `group_id`: None when copying groups; required destination group ID when copying inputs or outputs.
 - `before`: Optional stable sibling ID before which to insert; None appends.
 
 ## zipzi.modeling.physics.PhysicsEditDuplicateNode

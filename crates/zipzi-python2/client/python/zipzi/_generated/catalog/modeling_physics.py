@@ -293,8 +293,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                              'Ordered stable IDs selected by this operation; names and '
                                                              'row numbers are not identities.'),
                                                             ('group_id',
-                                                             'Stable ID of the group owning the affected rows or node '
-                                                             'chain.'),
+                                                             'None when copying groups; required destination group ID '
+                                                             'when copying inputs or outputs.'),
                                                             ('before',
                                                              'Optional stable sibling ID before which to insert; None '
                                                              'appends.')],

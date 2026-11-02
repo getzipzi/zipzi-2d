@@ -350,7 +350,7 @@ Target a stable document Part.
 
 **Fields**
 
-- `part_id`: Stable document Part UUID for this opacity or visibility reference.
+- `part_id`: Stable document Part UUID selected by this Pose reference.
 
 ## zipzi.modeling.pose.PosePartRefUnresolved
 

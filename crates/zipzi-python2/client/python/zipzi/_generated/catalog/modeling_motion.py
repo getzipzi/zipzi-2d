@@ -826,8 +826,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                      'zipzi.modeling.motion.MotionTrackTargetPartOpacity.summary'),
                                                         'documentation': 'Target a stable Part opacity channel.',
                                                         'fields': [('part_id',
-                                                                    'Stable document Part UUID for this opacity or '
-                                                                    'visibility reference.')],
+                                                                    'Stable document Part UUID whose opacity channel '
+                                                                    'is driven.')],
                                                         'kind': 'type',
                                                         'signature': '(*, part_id: str)'},
  'zipzi.modeling.motion.MotionTrackTargetPartOpacity.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},

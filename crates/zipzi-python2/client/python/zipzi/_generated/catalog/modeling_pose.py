@@ -371,8 +371,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                           'zipzi.modeling.pose.PosePartRefResolved.summary'),
                                              'documentation': 'Target a stable document Part.',
                                              'fields': [('part_id',
-                                                         'Stable document Part UUID for this opacity or visibility '
-                                                         'reference.')],
+                                                         'Stable document Part UUID selected by this Pose reference.')],
                                              'kind': 'type',
                                              'signature': '(*, part_id: str)'},
  'zipzi.modeling.pose.PosePartRefResolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},

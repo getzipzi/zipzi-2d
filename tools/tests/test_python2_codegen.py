@@ -1185,6 +1185,8 @@ class PythonReference(unittest.TestCase):
             'zipzi.modeling.motion.MotionEvent': ('value', 'string payload'),
             'zipzi.modeling.expression.ExpressionEntry': ('value', 'Parameter contribution'),
             'zipzi.modeling.pose.PoseEditDissolveGroup': ('destination', 'Pose group'),
+            'zipzi.modeling.physics.PhysicsEditDuplicate': ('group_id', 'None when copying groups'),
+            'zipzi.modeling.pose.PosePartRefResolved': ('part_id', 'Pose reference'),
             'zipzi.modeling.physics.PhysicsNode': ('position', 'node position'),
         }
         for path, (field, fact) in cases.items():

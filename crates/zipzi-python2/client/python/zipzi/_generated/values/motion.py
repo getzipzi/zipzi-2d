@@ -326,7 +326,7 @@ MotionTrackTargetParameter.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionTrackTargetPartOpacity(CompactValue):
-    'Target a stable Part opacity channel.\n\nFields:\npart_id: Stable document Part UUID for this opacity or visibility reference.'
+    'Target a stable Part opacity channel.\n\nFields:\npart_id: Stable document Part UUID whose opacity channel is driven.'
     _variant: _ClassVar[str] = 'part_opacity'
     part_id: str
 

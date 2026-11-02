@@ -1680,7 +1680,7 @@
           "doc": "Target a stable Part opacity channel.",
           "fields": [
             {
-              "doc": "Stable document Part UUID for this opacity or visibility reference.",
+              "doc": "Stable document Part UUID whose opacity channel is driven.",
               "name": "part_id",
               "rust_name": "part_id",
               "shape": {

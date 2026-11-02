@@ -150,7 +150,7 @@ PosePartRefUnspecified.__module__ = "zipzi.modeling.pose"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PosePartRefResolved(CompactValue):
-    'Target a stable document Part.\n\nFields:\npart_id: Stable document Part UUID for this opacity or visibility reference.'
+    'Target a stable document Part.\n\nFields:\npart_id: Stable document Part UUID selected by this Pose reference.'
     _variant: _ClassVar[str] = 'resolved'
     part_id: str
 

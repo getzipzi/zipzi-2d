@@ -108,7 +108,7 @@ pub enum MotionTrackTarget {
     },
     /// Target a stable Part opacity channel.
     PartOpacity {
-        /// Stable document Part UUID for this opacity or visibility reference.
+        /// Stable document Part UUID whose opacity channel is driven.
         part_id: String,
     },
     /// Preserve a source category and runtime ID that did not resolve.
