@@ -231,7 +231,7 @@ impl PropertiesPanel {
         {
             self.cancel_preview(cx);
         }
-        let Some(target) = &self.target else {
+        let Some(target) = self.target.clone() else {
             self.form = PropertyForm::default();
             return;
         };
@@ -248,7 +248,7 @@ impl PropertiesPanel {
             )
         });
         if snapshot == self.snapshot {
-            if let Some(form) = state.property_forms.entries.get(target) {
+            if let Some(form) = state.property_forms.entries.get(&target) {
                 if form != &self.form {
                     self.form.clone_from(form);
                 }
@@ -257,13 +257,49 @@ impl PropertiesPanel {
             }
             return;
         }
-        self.definition = target.definition(&state.editor);
+        let definition = target.definition(&owner.read(cx).editor);
+        if !self.definition.same_controls(&definition) {
+            // Optional components can change the form without changing its
+            // target. Retire subscriptions before a hidden input can receive
+            // another key or a queued blur/drag/color event.
+            let removed: Vec<_> = self
+                .definition
+                .fields()
+                .filter_map(|field| {
+                    let key = field.binding.key;
+                    definition.field(key).is_none().then_some(key)
+                })
+                .collect();
+            let had_input_focus = self
+                .controls
+                .values()
+                .any(|control| control.input.read(cx).focus_handle(cx).is_focused(window));
+            self.cancel_preview(cx);
+            self.epoch += 1;
+            self.controls.clear();
+            self.selects.clear();
+            self.colors.clear();
+            if had_input_focus {
+                window.focus(&self.focus, cx);
+            }
+            owner.update(cx, |state, _| {
+                if let Some(form) = state.property_forms.entries.get_mut(&target) {
+                    for key in removed {
+                        form.reload_field(key);
+                    }
+                }
+            });
+            self.snapshot = None;
+            reused_controls = false;
+        }
+        self.definition = definition;
+        let state = owner.read(cx);
         let values = target.values(&state.editor).ok();
         if let Some(values) = values {
             self.form = owner.update(cx, |state, _| {
                 state
                     .property_forms
-                    .sync(target, target.definition(&state.editor), values)
+                    .sync(&target, target.definition(&state.editor), values)
                     .clone()
             });
             self.snapshot = snapshot;
@@ -1152,7 +1188,11 @@ impl PropertiesPanel {
             div()
                 .text_color(cx.theme().muted_foreground)
                 .child(t!(if self.target.as_ref().is_some_and(|target| {
-                    target.scope == zipzi_editor_core::PropertyScope::DeformerBlendShape
+                    matches!(
+                        target.scope,
+                        zipzi_editor_core::PropertyScope::DeformerBlendShape
+                            | zipzi_editor_core::PropertyScope::OffscreenBlendShape
+                    )
                 }) {
                     "properties.deformer_blend_base"
                 } else {

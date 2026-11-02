@@ -93,7 +93,7 @@ impl PropertyForm {
                 .or_insert_with(|| FieldDraft::new(value.clone(), scale));
             if field.touched {
                 field.conflict = field.baseline != *value;
-            } else if field.baseline != *value {
+            } else if field.baseline != *value || field.scale != scale {
                 let revision = field.revision + 1;
                 *field = FieldDraft::new(value.clone(), scale);
                 field.revision = revision;

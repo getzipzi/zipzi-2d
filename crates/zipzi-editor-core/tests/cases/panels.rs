@@ -458,11 +458,16 @@ fn special_content_keeps_typed_forward_reverse_and_unresolved_references() -> an
         .clone();
     assert!(index.get(&attachment).is_some());
     assert_eq!(index.incoming(&attachment).count(), 0);
-    assert!(doc.part_tree().iter().any(|p| {
-        p.children
+    assert!(
+        doc.part_tree()
             .iter()
-            .any(|n| n.reference() == Some(ObjectRef::new(K::Offscreen, &offscreen)))
-    }));
+            .any(|p| p.id == parts[0] && p.offscreen)
+    );
+    assert!(
+        index
+            .get(&ObjectRef::new(K::Offscreen, &offscreen))
+            .is_some()
+    );
     Ok(())
 }
 

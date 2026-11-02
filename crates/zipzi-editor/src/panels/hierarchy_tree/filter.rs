@@ -59,6 +59,7 @@ fn row(node: &TreeNode, depth: usize, context_only: bool) -> VisibleRow {
             diagnostic: node.diagnostic.clone(),
             triangles: node.triangles,
             visible: node.visible,
+            offscreen: node.offscreen,
             children: Vec::new(),
         },
         depth,

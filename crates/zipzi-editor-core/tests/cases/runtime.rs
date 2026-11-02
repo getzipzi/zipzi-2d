@@ -63,11 +63,13 @@ fn resize(host: &RuntimeHost, client: zipzi_runtime::ClientId, session: SessionI
 fn r2_external_publication_updates_projection_and_shares_editor_history_once() -> anyhow::Result<()>
 {
     let mut editor = Editor::new()?;
+    let inspection = editor.inspection_context_token().unwrap();
     let host = editor.runtime_host();
     let session = editor.document().unwrap().runtime_session_id();
     let agent = host.write().register_client()?;
     resize(&host, agent, session, 200.);
     assert!(editor.sync_runtime()?);
+    assert_eq!(editor.inspection_context_token(), Some(inspection));
     assert_eq!(
         editor.document().unwrap().source_canvas(),
         Some(canvas(200.))
@@ -374,6 +376,7 @@ fn external_busy_command_queries_do_not_require_a_workspace_sync() -> anyhow::Re
 #[test]
 fn r2_external_busy_operation_freezes_then_restores_the_editor_projection() -> anyhow::Result<()> {
     let mut editor = Editor::new()?;
+    let inspection = editor.inspection_context_token().unwrap();
     let host = editor.runtime_host();
     let session = editor.document().unwrap().runtime_session_id();
     let agent = host.write().register_client()?;
@@ -385,9 +388,11 @@ fn r2_external_busy_operation_freezes_then_restores_the_editor_projection() -> a
     assert!(editor.sync_runtime()?);
     assert!(editor.is_busy());
     assert!(editor.document().is_none());
+    assert_eq!(editor.inspection_context_token(), Some(inspection));
     assert!(host.write().complete(work.run()));
     assert!(editor.sync_runtime()?);
     assert!(!editor.is_busy());
+    assert_eq!(editor.inspection_context_token(), Some(inspection));
     assert_eq!(
         editor.document().unwrap().source_canvas(),
         Some(canvas(200.))
@@ -491,8 +496,31 @@ fn r2_pristine_blank_survives_detach_but_external_writes_cannot_hide_behind_it()
 }
 
 #[test]
+fn inspection_context_survives_local_save_and_runtime_notifications() -> anyhow::Result<()> {
+    let mut editor = Editor::new()?;
+    let id = editor.active_id().unwrap();
+    let inspection = editor.inspection_context_token().unwrap();
+    let directory = tempfile::tempdir()?;
+    let task = editor.prepare_save(id, directory.path(), false)?;
+    assert!(editor.document().is_none());
+    assert_eq!(editor.inspection_context_token(), Some(inspection));
+    editor.sync_runtime()?;
+    assert_eq!(editor.inspection_context_token(), Some(inspection));
+
+    let mut completion = task.run();
+    editor.finish_save(&mut completion)?;
+    assert_eq!(editor.inspection_context_token(), Some(inspection));
+    assert!(editor.sync_runtime()?);
+    assert_eq!(editor.inspection_context_token(), Some(inspection));
+    assert!(editor.document().unwrap().path().is_some());
+    assert!(!editor.sync_runtime()?);
+    Ok(())
+}
+
+#[test]
 fn r2_fast_external_save_still_requests_a_redraw_after_metadata_changes() -> anyhow::Result<()> {
     let mut editor = Editor::new()?;
+    let inspection = editor.inspection_context_token().unwrap();
     let host = editor.runtime_host();
     let session = editor.document().unwrap().runtime_session_id();
     let client = host.write().register_client()?;
@@ -505,6 +533,7 @@ fn r2_fast_external_save_still_requests_a_redraw_after_metadata_changes() -> any
     let work = host.write().take_work(job)?;
     host.write().complete(work.run()); // Busy starts and ends between UI polls.
     assert!(editor.sync_runtime()?);
+    assert_eq!(editor.inspection_context_token(), Some(inspection));
     assert!(!editor.document().unwrap().modified());
     assert!(editor.document().unwrap().path().is_some());
     assert!(!editor.sync_runtime()?);
@@ -572,6 +601,7 @@ fn r2_external_fault_before_first_poll_is_safe() -> anyhow::Result<()> {
     let session = host.write().adopt_session(host.client_id(), sdk)?;
     let mut editor = Editor::with_runtime(host.clone());
     editor.attach_resident_sessions()?;
+    let inspection = editor.inspection_context_token().unwrap();
     let agent = host.write().register_client()?;
     let dir = tempfile::tempdir()?;
     let job = host.write().request_save(agent, session, dir.path())?;
@@ -582,6 +612,7 @@ fn r2_external_fault_before_first_poll_is_safe() -> anyhow::Result<()> {
         SessionState::Faulted(_)
     ));
     assert!(editor.sync_runtime().is_err());
+    assert_ne!(editor.inspection_context_token(), Some(inspection));
     assert!(editor.document().is_none());
     assert!(!editor.sync_runtime()?);
     assert_eq!(editor.documents().len(), 1);

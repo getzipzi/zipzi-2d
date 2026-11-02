@@ -252,6 +252,15 @@ pub(crate) fn target(editor: &Editor) -> Option<PropertyTarget> {
     ) {
         object = editor.document()?.business_owner(&object)?;
     }
+    if object.kind == ObjectKind::Offscreen {
+        let index = editor.document()?.object_index();
+        let part = index
+            .outgoing(&object)
+            .find(|edge| edge.kind == zipzi_editor_core::RelationKind::PartOwner)?
+            .target
+            .clone();
+        object = part;
+    }
     let explicit_motion = if object.kind == ObjectKind::MotionRegistration {
         let (_, entry) = editor.document()?.motion_registration(&object.id)?;
         let motion = zipzi_editor_core::MotionSelection {

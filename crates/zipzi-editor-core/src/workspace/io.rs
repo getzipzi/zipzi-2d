@@ -521,6 +521,9 @@ impl Editor {
                 if entry.saving().is_some() {
                     entry.mark_faulted();
                     fault = info.fault.clone();
+                    if self.active == Some(entry.id) {
+                        self.inspection_generation += 1;
+                    }
                     changed = true;
                 }
                 continue;
@@ -548,7 +551,8 @@ impl Editor {
             }
         }
         if changed {
-            self.inspection_generation += 1;
+            // Save state, metadata and authoring receipts update the same
+            // inspection context. Pins validate their object separately.
             self.refresh_viewport_bindings();
         }
         if let Some(error) = fault {

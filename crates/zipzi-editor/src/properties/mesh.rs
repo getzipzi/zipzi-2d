@@ -111,7 +111,7 @@ fn deformers(document: &Document) -> Vec<Choice> {
         Some("properties.no_deformer"),
     )
 }
-fn meshes(document: &Document) -> Vec<Choice> {
+pub(super) fn meshes(document: &Document) -> Vec<Choice> {
     tree_choices(document, false, ObjectKind::Mesh, None)
 }
 fn modes(names: &[&str]) -> Vec<Choice> {
@@ -126,9 +126,9 @@ fn modes(names: &[&str]) -> Vec<Choice> {
         })
         .collect()
 }
-fn color_modes(_: &Document) -> Vec<Choice> {
+pub(super) fn color_modes(_: &Document) -> Vec<Choice> {
     modes(COLOR_MODES)
 }
-fn alpha_modes(_: &Document) -> Vec<Choice> {
+pub(super) fn alpha_modes(_: &Document) -> Vec<Choice> {
     modes(ALPHA_MODES)
 }

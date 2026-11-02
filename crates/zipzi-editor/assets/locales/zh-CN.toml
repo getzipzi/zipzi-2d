@@ -633,6 +633,7 @@ custom_fade = "资源默认 · 自定义"
 custom_fade_hint = "从 0 秒开始设置自定义淡入淡出"
 
 [properties]
+offscreen_drawing = "离屏合成"
 deformer_original = "原始形状"
 deformer_original_auto = "首次加键时更新"
 original_created = "创建时记录 · 画布坐标"

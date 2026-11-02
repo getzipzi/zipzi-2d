@@ -18,6 +18,7 @@ pub struct TreeNode {
     pub diagnostic: Option<String>,
     pub triangles: Option<usize>,
     pub visible: Option<bool>,
+    pub offscreen: bool,
     pub children: Vec<TreeNode>,
 }
 
@@ -30,6 +31,7 @@ impl TreeNode {
             diagnostic: None,
             triangles: None,
             visible: None,
+            offscreen: false,
             children: Vec::new(),
         }
     }

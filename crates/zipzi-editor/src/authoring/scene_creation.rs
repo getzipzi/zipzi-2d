@@ -3,12 +3,11 @@
 use super::*;
 use zipzi_editor_core::{Command, CommandId, PaletteProjection, SceneObjectType};
 
-pub(crate) const COMMANDS: [CommandId; 5] = [
+pub(crate) const COMMANDS: [CommandId; 4] = [
     CommandId::CreatePart,
     CommandId::CreateMesh,
     CommandId::CreateWarp,
     CommandId::CreateRotation,
-    CommandId::CreateOffscreen,
 ];
 
 pub(crate) const DEFORMATION_COMMANDS: [CommandId; 3] = [

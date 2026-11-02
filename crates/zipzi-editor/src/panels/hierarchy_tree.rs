@@ -168,7 +168,7 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
         if DEFORMER {
             &[Mesh, WarpDeformer, RotationDeformer]
         } else {
-            &[Part, Mesh, WarpDeformer, RotationDeformer, Offscreen]
+            &[Part, Mesh, WarpDeformer, RotationDeformer]
         }
     }
 
@@ -708,6 +708,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                     let cursor = this.focus.is_focused(window)
                                         && this.selection.cursor.as_ref() == Some(&key);
                                     let icon = match node.kind {
+                                        TreeNodeKind::Part if node.offscreen => IconName::Layers,
                                         TreeNodeKind::Group | TreeNodeKind::Part => {
                                             IconName::Folder
                                         }

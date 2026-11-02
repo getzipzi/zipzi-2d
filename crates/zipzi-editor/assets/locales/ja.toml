@@ -619,6 +619,7 @@ custom_fade = "リソースのデフォルト · カスタマイズ"
 custom_fade_hint = "0秒から始まるカスタムフェードを設定"
 
 [properties]
+offscreen_drawing = "オフスクリーン描画"
 deformer_original = "原形状"
 deformer_original_auto = "初回キー時に更新"
 original_created = "作成時に記録 · キャンバス座標"

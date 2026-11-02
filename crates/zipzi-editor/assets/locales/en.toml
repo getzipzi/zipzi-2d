@@ -634,6 +634,7 @@ custom_fade = "Resource default · Customize"
 custom_fade_hint = "Set a custom fade starting at 0 seconds"
 
 [properties]
+offscreen_drawing = "Offscreen drawing"
 deformer_original = "Original shape"
 deformer_original_auto = "Update at first key"
 original_created = "Recorded at creation · canvas coordinates"

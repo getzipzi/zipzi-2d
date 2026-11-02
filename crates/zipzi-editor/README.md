@@ -154,6 +154,28 @@ change before publication. The explicit preservation review retains its
 full-domain option, which requires fixed ancestor frames over that domain.
 Reordering deformers under the same parent remains available.
 
+## Part compositing
+
+Select a Part and enable **Offscreen drawing** in Properties to composite its
+contents as a group. The Part's layer icon indicates compositing; Offscreen is
+an internal component rather than a separate row or creation-menu item.
+Properties exposes opacity, multiply/screen colors, blend modes and clipping
+masks. Use the Part's existing visibility controls to hide its contents.
+The Part's Enabled checkbox reflects both its own flag and its Offscreen flag;
+enabling it restores a disabled composite without replacing its settings or
+keyforms, in one undo step.
+Removing compositing preserves the Part and its
+contents; Undo restores its settings and animation data.
+
+Opacity and colors edit the current stored Part keyform, or the static appearance
+when the Part has no parameter binding. Interpolated poses and contributing
+Offscreen BlendShapes require returning to an editable stored/base shape. Shared
+source keyforms are detached for the edited Part slot, preserving other samples.
+Numeric/color previews support cancellation and commit as one undo step.
+
+`ZIPZI_SCREENSHOT_SCENE=part-offscreen` captures the Chinese Part inspector with
+offscreen drawing enabled and opacity set to 60%, using the native Metal harness.
+
 ## Deformer properties
 
 Select one Warp or Rotation to edit its local appearance and organization in

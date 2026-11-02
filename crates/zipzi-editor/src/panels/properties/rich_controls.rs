@@ -77,11 +77,19 @@ impl PropertiesPanel {
         ColorField::new(format!("property-color-{}", id.name()), &state)
             .input_id(format!("property-input-{}", id.name()))
             .when(
-                id == zipzi_editor_core::property::mesh::MULTIPLY.key,
+                [
+                    zipzi_editor_core::property::mesh::MULTIPLY.key,
+                    zipzi_editor_core::property::part::MULTIPLY.key,
+                ]
+                .contains(&id),
                 |field| field.reset_color(rgb(0xffffff)),
             )
             .when(
-                id == zipzi_editor_core::property::mesh::SCREEN.key,
+                [
+                    zipzi_editor_core::property::mesh::SCREEN.key,
+                    zipzi_editor_core::property::part::SCREEN.key,
+                ]
+                .contains(&id),
                 |field| field.reset_color(rgb(0x000000)),
             )
             .into_any_element()
