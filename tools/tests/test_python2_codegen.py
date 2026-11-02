@@ -898,7 +898,7 @@ class Python2Codegen(unittest.TestCase):
 class PythonReference(unittest.TestCase):
     # Pages only enter this set after full page acceptance. Cross-page pilots
     # are exact paths; accepting modeling does not accept modeling.* domains.
-    ACCEPTED_PAGES = frozenset({'meshes', 'inspection', 'spatial', 'modeling_spatial', 'observation', 'modeling_observation'})
+    ACCEPTED_PAGES = frozenset({'meshes', 'inspection', 'spatial', 'modeling_spatial', 'observation', 'modeling_observation', 'mesh_generation'})
     # These pages have no structural gaps; cross-domain semantic acceptance remains open.
     STRUCTURAL_PAGES = frozenset(('runtime runtime_session runtime_edit modeling modeling_common modeling_runtime ops modeling_commands modeling_queries events '
                                   'parameters bindings modeling_parameters modeling_bindings modeling_bindings_edits '
@@ -1310,7 +1310,7 @@ for path, facts in (
     ('modeling.observation.ObservationImage', ('top-left image origin', 'Y=-y*scale', 'adapter')),
     ('modeling.observation.ObservationTexturePlanningReady', ('device limits', 'unverified')),
     ('inspection.save', ('client-side directory', 'partial output', 'No host write')),
-    ('mesh_generation.generate', ('top-down', 'bottom-up source', 'no history')),
+    ('mesh_generation.generate', ('top-down', 'bottom-up source', 'empty alpha', 'no history')),
 ):
     text = zipzi.describe(path).format()
     for fact in facts:

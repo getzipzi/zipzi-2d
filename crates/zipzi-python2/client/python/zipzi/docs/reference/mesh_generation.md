@@ -148,6 +148,8 @@ Generate owned geometry through a connected Editor, without editing a document.
 
 Alpha is top-down, one byte per pixel. Output positions use bottom-up source
 pixels, not model coordinates. Interior preserves the input geometry's mapping.
+For edges or full, supply width*height alpha bytes and no geometry; interior
+requires existing geometry and empty alpha.
 Initial synchronous service limit: 4194304 pixels and 65534 output vertices.
 Use ordinary Edit operations to publish the result; generation creates no history.
 Socket timeouts use the standard same-request recovery contract.

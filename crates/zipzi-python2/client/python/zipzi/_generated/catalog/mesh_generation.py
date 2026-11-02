@@ -180,6 +180,9 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
                                                      'bottom-up source\n'
                                                      'pixels, not model coordinates. Interior preserves the input '
                                                      "geometry's mapping.\n"
+                                                     'For edges or full, supply width*height alpha bytes and no '
+                                                     'geometry; interior\n'
+                                                     'requires existing geometry and empty alpha.\n'
                                                      'Initial synchronous service limit: 4194304 pixels and 65534 '
                                                      'output vertices.\n'
                                                      'Use ordinary Edit operations to publish the result; generation '

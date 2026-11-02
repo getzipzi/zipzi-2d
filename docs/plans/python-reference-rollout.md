@@ -795,3 +795,16 @@ Physics 复制操作的 `group_id` 现按实现区分：复制 rig 时必须为 
 冻结源/隐藏几何测试、两项 GPU observation/inspection 测试（含 Local/Connected）均通过；
 安装 wheel 离线审计通过。上述五页从结构通过提升为语义验收，范围不包含尚待逐项复核的
 mesh_generation 或其他批次；P8 仍未完成。
+
+## 21. P7 网格生成页面语义验收
+
+逐条复核 `mesh_generation` 的参数、质量报告、MeshDraft/apply、生成和 CPU 检查入口，
+对照现有客户端实现、Editor 自适应网格说明以及 P7 的真实 Editor/无 Editor 行为测试。
+同样用基线和当前页面及离线 `format()` 检查 capability、alpha 和输出方向、分阶段输入、
+源像素与作者坐标映射、草稿写入边界、依赖替换和 stale Source。补充 edges/full 与 interior
+对 alpha 和 geometry 的约束；原页面没有清楚说明两类输入。该页从 8,831 增至 9,478 字符，
+公开入口均为 10，重复规则正文均为零。CPU 八项测试及真实 Editor 五种算法、阶段、提交和
+拒绝验证见第 18 节；新增离线 format 断言覆盖阶段输入。
+
+至此 P7 六个分片及上述跨页入口的结构、语义和实际 CPU/GPU/Editor 行为证据已齐；
+P1–P6 的完整跨领域语义复核及 P8 最终门禁仍未完成。
