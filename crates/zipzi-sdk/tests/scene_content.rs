@@ -1452,11 +1452,11 @@ fn ordinary_and_blend_shapes_follow_topology_without_recreating_shared_tables() 
             constraint_ids: vec![],
             keyforms: DeltaKeyforms::Warp(vec![
                 DeltaWarpKeyform {
-                    points: vec![Vec2::default(); 4],
+                    points: vec![Vec2::default(); points.len()],
                     ..Default::default()
                 },
                 DeltaWarpKeyform {
-                    points: vec![Vec2::new(2., 3.); 4],
+                    points: vec![Vec2::new(2., 3.); points.len()],
                     ..Default::default()
                 },
             ]),

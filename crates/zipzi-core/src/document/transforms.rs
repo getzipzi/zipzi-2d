@@ -106,7 +106,16 @@ impl Document {
         validate_appearance(&t.appearance, &t.id)
     }
 
-    pub fn create_transform(&mut self, mut t: Transform) -> EditResult {
+    pub fn create_transform(&mut self, t: Transform) -> EditResult {
+        self.create_transform_with_original(t, true)
+    }
+
+    /// Insert imported data without inventing a creation or first-key baseline.
+    pub fn create_imported_transform(&mut self, t: Transform) -> EditResult {
+        self.create_transform_with_original(t, false)
+    }
+
+    fn create_transform_with_original(&mut self, mut t: Transform, capture: bool) -> EditResult {
         if let Err(status) = self.authoring_unlocked(t.part()) {
             return self.failed(status);
         }
@@ -131,7 +140,9 @@ impl Document {
         self.content.transform_order.push(id.clone());
         self.lookup.take();
         self.prepared.take();
-        self.initialize_deformer_original(&id);
+        if capture {
+            self.initialize_deformer_original(&id);
+        }
         let meshes = self.content.mesh_order.clone();
         self.changed(ChangeKind::Structure, meshes, vec![id])
     }

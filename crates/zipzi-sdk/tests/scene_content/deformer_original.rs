@@ -374,6 +374,28 @@ fn topology_restore_requires_review_and_resamples_every_stored_shape_and_control
     create(&mut s, 2, None);
     run(
         &mut s,
+        E::ResizeWarp {
+            transform_id: id(2),
+            rows: 1,
+            columns: 1,
+            quad: false,
+        },
+    );
+    run(
+        &mut s,
+        E::WarpAuthoring {
+            transform_id: id(2),
+            settings: WarpAuthoringSettings {
+                bezier_grid: Some(WarpBezierGrid {
+                    rows: 1,
+                    columns: 1,
+                }),
+                ..Default::default()
+            },
+        },
+    );
+    run(
+        &mut s,
         E::WarpShape {
             transform_id: id(2),
             target: ShapeTarget::Base,
@@ -688,6 +710,7 @@ fn nonlinear_or_singular_current_parent_missing_record_type_changes_and_blends_r
         }
         if case == "type" {
             t.data = TransformData::Rotation(Default::default());
+            t.warp_authoring = None;
         }
         s.edit("Context change", None, |e| e.replace_transform(t))
             .unwrap();

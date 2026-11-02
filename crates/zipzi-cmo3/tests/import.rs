@@ -1,3 +1,4 @@
+use zipzi_core::BindingAxisEditing;
 use zipzi_core::document::AllocateModelMetadata;
 mod common;
 use common::*;
@@ -658,4 +659,88 @@ fn host_workspace_refuses_model_and_animation_before_expansion() {
     assert!(target.same_content(&source));
     assert!(import_model_with_budget(&model.bytes, 512 << 20).is_ok());
     assert!(animation_model_paths_with_budget(&animation.bytes, 512 << 20).is_ok());
+}
+
+#[test]
+fn imported_deformers_do_not_invent_original_shapes() {
+    let (mut source, assets) = fixture();
+    for (id, parent, data) in [
+        (
+            uuid(900),
+            None,
+            zipzi_core::TransformData::Rotation(Default::default()),
+        ),
+        (
+            uuid(901),
+            Some(uuid(900).into()),
+            zipzi_core::TransformData::Warp(zipzi_core::WarpTransform {
+                rows: 1,
+                columns: 1,
+                quad: false,
+                bezier: None,
+                points: vec![
+                    zipzi_core::Vec2::new(0., 0.),
+                    zipzi_core::Vec2::new(1., 0.),
+                    zipzi_core::Vec2::new(0., 1.),
+                    zipzi_core::Vec2::new(1., 1.),
+                ],
+            }),
+        ),
+    ] {
+        assert!(
+            source
+                .create_transform(zipzi_core::Transform {
+                    id,
+                    parent_id: parent,
+                    data,
+                    ..Default::default()
+                })
+                .status
+                .is_ok()
+        );
+    }
+    let points = source
+        .get_transform(&uuid(901))
+        .unwrap()
+        .warp()
+        .unwrap()
+        .points
+        .clone();
+    assert!(
+        source
+            .create_scene_binding(zipzi_core::SceneBinding {
+                id: uuid(902),
+                axes: vec![zipzi_core::BindingAxis::new(PARAM, vec![-1., 1.])],
+                track: zipzi_core::SceneTrack::Warp {
+                    target_id: uuid(901).into(),
+                    keyforms: [-1., 1.]
+                        .into_iter()
+                        .map(|v| zipzi_core::WarpKeyform {
+                            keys: vec![v],
+                            positions: points.clone(),
+                            ..Default::default()
+                        })
+                        .collect()
+                },
+            })
+            .status
+            .is_ok()
+    );
+    let artifact = encode_cmo3(
+        &source,
+        &|_: &zipzi_core::ImageAsset| Ok(assets.clone()),
+        &Default::default(),
+    )
+    .unwrap();
+    let imported = import_model(&artifact.bytes).unwrap().document;
+    assert_eq!(
+        imported.transform_order().len(),
+        source.transform_order().len()
+    );
+    for id in imported.transform_order() {
+        assert!(
+            imported.get_transform(id).unwrap().original_shape.is_none(),
+            "{id}"
+        );
+    }
 }

@@ -867,3 +867,72 @@ fn rotation_steps_follow_canvas_motion_under_a_reflected_parent() -> anyhow::Res
     }
     Ok(())
 }
+
+#[test]
+fn parent_child_point_selection_keeps_local_nudge_and_frame_targets() -> anyhow::Result<()> {
+    for use_frame in [false, true] {
+        let (mut editor, _dir, mesh) = mesh_editor()?;
+        let warp = ObjectRef::new(ObjectKind::Deformer, uuid::Uuid::from_u128(4).to_string());
+        editor.execute(EditorCommand::SelectObjects(vec![
+            warp.clone(),
+            mesh.clone(),
+        ]))?;
+        let before = vertices(&mut editor, &mesh)?;
+        let parent = control_points(&mut editor, &warp)?;
+        let overlay = editor.overlay();
+        let points: Vec<_> = overlay
+            .vertices
+            .iter()
+            .filter(|v| v.kind == OverlayVertexKind::Mesh)
+            .map(|v| v.position)
+            .collect();
+        click(&mut editor, points[0], false)?;
+        assert!(editor.overlay().warp_frame_lines.is_empty());
+        if use_frame {
+            click(&mut editor, points[1], true)?;
+            let handles: Vec<_> = editor
+                .overlay()
+                .handles
+                .into_iter()
+                .filter(|h| !h.tangent)
+                .collect();
+            let start = ViewportPoint {
+                x: (handles[0].position.x + handles[1].position.x) / 2.,
+                y: handles[0].position.y,
+            };
+            gesture(
+                &mut editor,
+                start,
+                ViewportPoint {
+                    x: start.x + 10.,
+                    y: start.y,
+                },
+                false,
+                false,
+                false,
+            )?;
+        } else {
+            editor.nudge_selection(
+                editor.primary_viewport_binding().unwrap(),
+                ModelVector { x: 10., y: 0. },
+            )?;
+        }
+        let after = vertices(&mut editor, &mesh)?;
+        let count = if use_frame { 2 } else { 1 };
+        for i in 0..count {
+            assert!(
+                (after[i].x - before[i].x - 10.).abs() < 0.002,
+                "frame={use_frame}, vertex={i}, before={:?}, after={:?}",
+                before[i],
+                after[i]
+            );
+        }
+        assert_eq!(&after[count..], &before[count..]);
+        assert_eq!(control_points(&mut editor, &warp)?, parent);
+        editor.execute(EditorCommand::Undo)?;
+        assert_eq!(vertices(&mut editor, &mesh)?, before);
+        editor.execute(EditorCommand::Redo)?;
+        assert_eq!(vertices(&mut editor, &mesh)?, after);
+    }
+    Ok(())
+}

@@ -21,6 +21,10 @@ fn test_import_m1_roundtrip() {
     );
     let import_res = import_from_bare_moc3(&encoded.bytes, &tex_map).expect("Import failed");
     let doc_imported = &import_res.document;
+    assert!(!doc_imported.transform_order().is_empty());
+    for id in doc_imported.transform_order() {
+        assert!(doc_imported.get_transform(id).unwrap().original_shape.is_none(), "{id}");
+    }
 
     // Import initializes model origin/units from the exported finite rectangle.
     let inspection = inspect_moc3(&encoded.bytes).unwrap();

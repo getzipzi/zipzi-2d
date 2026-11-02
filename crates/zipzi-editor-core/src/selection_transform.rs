@@ -52,6 +52,12 @@ pub(crate) fn members(scene: &CanvasScene, selection: &[ObjectRef]) -> Vec<Objec
                 _ => false,
             }
     });
+    let mut seen = std::collections::HashSet::new();
+    targets.retain(|o| seen.insert(o.clone()));
+    targets
+}
+
+fn roots(scene: &CanvasScene, mut targets: Vec<ObjectRef>) -> Vec<ObjectRef> {
     let all = targets.clone();
     let mut seen = std::collections::HashSet::new();
     targets
@@ -105,7 +111,7 @@ impl crate::tools::ToolController {
             return None;
         }
         let scene = &frame.geometry;
-        let objects = members(scene, &selection);
+        let mut objects = members(scene, &selection);
         if objects.is_empty() {
             return None;
         }
@@ -116,6 +122,11 @@ impl crate::tools::ToolController {
             .filter_map(|c| point(scene, c))
             .collect();
         let local = !components.is_empty();
+        if local {
+            objects.retain(|o| self.components.iter().any(|c| c.object == *o));
+        } else {
+            objects = roots(scene, objects);
+        }
         if components.len() == 1 {
             // Keep the point-editing scope without falling back to an object frame.
             return Some(crate::deformer::WarpGizmos {
@@ -191,20 +202,24 @@ impl Editor {
         let document = &mut session.document;
         let selection = document.context().selections.clone();
         document.ensure_editable(&selection)?;
-        let roots = members(&scene, &selection);
+        let members = members(&scene, &selection);
         let components: Vec<_> = session
             .modeling
             .tools
             .components
             .iter()
-            .filter(|c| roots.contains(&c.object))
+            .filter(|c| members.contains(&c.object))
             .cloned()
             .collect();
         let local = !components.is_empty();
-        let objects: Vec<_> = roots
-            .into_iter()
-            .filter(|o| !local || components.iter().any(|c| c.object == *o))
-            .collect();
+        let objects = if local {
+            members
+                .into_iter()
+                .filter(|o| components.iter().any(|c| c.object == *o))
+                .collect()
+        } else {
+            roots(&scene, members)
+        };
         ensure!(!objects.is_empty(), "Select an editable canvas object");
         let edits = ControlEdit::prepare_targets(
             document,

@@ -351,7 +351,7 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
     // Transforms: Two-pass creation
     for t in &doc.transforms {
         let tmp = transform_from_wire(t, None)?;
-        let res = candidate.create_transform(tmp);
+        let res = candidate.create_imported_transform(tmp);
         if !res.status.is_ok() {
             return Err(res.status);
         }

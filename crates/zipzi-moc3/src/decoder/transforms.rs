@@ -157,7 +157,7 @@ impl<'a> Moc3DecoderContext<'a> {
                 let base = &keyforms[0];
                 check_status!(
                     self.doc
-                        .create_transform(Transform {
+                        .create_imported_transform(Transform {
                             warp_authoring: None,
                             original_shape: None,
                             id: id.clone(),
@@ -297,7 +297,7 @@ impl<'a> Moc3DecoderContext<'a> {
                 let base = &keyforms[0];
                 check_status!(
                     self.doc
-                        .create_transform(Transform {
+                        .create_imported_transform(Transform {
                             warp_authoring: None,
                             original_shape: None,
                             id: id.clone(),

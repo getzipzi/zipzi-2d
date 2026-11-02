@@ -548,7 +548,8 @@ impl Editor {
             }
         }
         if changed {
-            self.inspection_generation += 1;
+            // Runtime publications and save barriers keep the same document/context.
+            // The inspector revalidates its pinned object against the refreshed index.
             self.refresh_viewport_bindings();
         }
         if let Some(error) = fault {
