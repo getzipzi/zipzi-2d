@@ -19,6 +19,13 @@ from ._generated.reference_values import (
 )
 
 class ObjectRef(Owned):
+    """Client-owned reference to one SDK object incarnation in a Session.
+
+    Obtain it from Session.reference(); close it independently. resolve checks
+    incarnation and context against the current formal source. Undo, deletion or
+    recreation can invalidate the captured identity even when the UUID is reused;
+    capture a fresh reference instead of treating the UUID as a lease.
+    """
     def __init__(self, backend: Backend, kind: ObjectKind, id: str):
         super().__init__(backend, "reference")
         self._object_kind: ObjectKind = kind
@@ -71,6 +78,12 @@ class ObjectRef(Owned):
         return self
 
 class LabelAddress(Owned):
+    """Client-owned label field address captured from an ObjectRef.
+
+    It retains the original object incarnation, context and field epoch as well
+    as the expected label. Close it independently; a stale address must be
+    recaptured, and its Plan must be applied to the captured exact Source.
+    """
     def __init__(self, backend: Backend):
         super().__init__(backend, "address")
         self._id = ""
@@ -112,7 +125,12 @@ class LabelAddress(Owned):
         return self
 
 class FieldAddress(Owned):
-    """An SDK address with incarnation and monotonic epoch validation."""
+    """Client-owned SDK field address captured through Session.address().
+
+    Incarnation, context and monotonic field epochs bind it to the selected
+    object, not merely its persistent ID. Plan a matching patch and close both
+    leases; stale or recreated objects require a fresh address.
+    """
     @classmethod
     def _create(cls, backend: Backend, session: object, selector: modeling.addressing.AddressSelector) -> FieldAddress:
         _modeling_codec.validate_AddressSelector(selector)

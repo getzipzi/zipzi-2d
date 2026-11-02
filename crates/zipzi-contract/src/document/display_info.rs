@@ -1,6 +1,7 @@
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
+/// Stable metadata-entry identity and its independently resolved or unresolved target.
 pub struct ReferenceEntry<T> {
     /// Stable UUID of this reference entry; not the identity of its target.
     pub id: String,

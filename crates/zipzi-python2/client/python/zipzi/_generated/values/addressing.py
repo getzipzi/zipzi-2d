@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceEditCreateModelParameterGroup(CompactValue):
-    '\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\nname: Human-readable display name; use the stable ID for identity because names can change.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Create a model3 parameter group.\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\nname: Human-readable display name; use the stable ID for identity because names can change.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'create_model_parameter_group'
     id: str
     name: str
@@ -34,7 +34,7 @@ ReferenceEditCreateModelParameterGroup.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceEditCreateModelHitArea(CompactValue):
-    '\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\nname: Human-readable display name; use the stable ID for identity because names can change.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Create a model3 hit area.\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\nname: Human-readable display name; use the stable ID for identity because names can change.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'create_model_hit_area'
     id: str
     name: str
@@ -44,7 +44,7 @@ ReferenceEditCreateModelHitArea.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceEditCreateCdiCombinedSet(CompactValue):
-    '\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Create a CDI combined-parameter set.\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'create_cdi_combined_set'
     id: str
     before: (str | None) = None
@@ -53,7 +53,7 @@ ReferenceEditCreateCdiCombinedSet.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceEditCreateMember(CompactValue):
-    '\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\ncollection: Explicit native collection selector; it does not imply loading every object payload.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Create a reference member in the selected collection.\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\ncollection: Explicit native collection selector; it does not imply loading every object payload.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'create_member'
     id: str
     collection: ReferenceCollection
@@ -63,7 +63,7 @@ ReferenceEditCreateMember.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceEditPatch(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nexpected: Exact current field value used as an optimistic precondition; stale values reject\nthe edit.\nfields: Typed replacement metadata fields; their variant must match the addressed reference\nkind.'
+    'Replace matching metadata fields under an exact precondition.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nexpected: Exact current field value used as an optimistic precondition; stale values reject\nthe edit.\nfields: Typed replacement metadata fields; their variant must match the addressed reference\nkind.'
     _variant: _ClassVar[str] = 'patch'
     id: str
     expected: ReferenceFields
@@ -73,7 +73,7 @@ ReferenceEditPatch.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceEditMove(CompactValue):
-    '\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\ndestination: Explicit destination collection; organization, deformation and drawing memberships\nare independent.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Move selected entries to a compatible collection.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\ndestination: Explicit destination collection; organization, deformation and drawing memberships\nare independent.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'move'
     ids: tuple[str, ...]
     destination: ReferenceCollection
@@ -86,7 +86,7 @@ ReferenceEditMove.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceEditDuplicate(CompactValue):
-    '\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\ndestination: Explicit destination collection; organization, deformation and drawing memberships\nare independent.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Duplicate selected entries into a compatible collection.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\ndestination: Explicit destination collection; organization, deformation and drawing memberships\nare independent.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'duplicate'
     ids: tuple[str, ...]
     destination: ReferenceCollection
@@ -99,7 +99,7 @@ ReferenceEditDuplicate.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceEditDelete(CompactValue):
-    '\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.'
+    'Delete selected reference entries.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.'
     _variant: _ClassVar[str] = 'delete'
     ids: tuple[str, ...]
 
@@ -110,7 +110,7 @@ ReferenceEditDelete.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceEditDissolve(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\ndestination: Explicit destination collection; organization, deformation and drawing memberships\nare independent.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Remove a reference container and move its members to a compatible destination.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\ndestination: Stable ID of a compatible destination group or combined set; it must differ from id.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'dissolve'
     id: str
     destination: str
@@ -120,7 +120,7 @@ ReferenceEditDissolve.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceEditReplaceSelection(CompactValue):
-    '\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.\nfield: Explicit field discriminator; must match the addressed object/domain.\nexpected: Exact current ordered target-ID selection; a mismatch rejects the edit.\ntargets: Complete replacement ordered target-ID selection; an empty list explicitly clears it.'
+    'Replace an ordered target list under an exact precondition.\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.\nfield: Explicit field discriminator; must match the addressed object/domain.\nexpected: Exact current ordered target-ID selection; a mismatch rejects the edit.\ntargets: Complete replacement ordered target-ID selection; an empty list explicitly clears it.'
     _variant: _ClassVar[str] = 'replace_selection'
     owner: str
     field: ReferenceSelectionField
@@ -137,28 +137,28 @@ ReferenceEdit: TypeAlias = ReferenceEditCreateModelParameterGroup | ReferenceEdi
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceCollectionModelParameterGroups(CompactValue):
-    ''
+    'Select model3 parameter groups.'
     _variant: _ClassVar[str] = 'model_parameter_groups'
 
 ReferenceCollectionModelParameterGroups.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceCollectionModelHitAreas(CompactValue):
-    ''
+    'Select model3 hit areas.'
     _variant: _ClassVar[str] = 'model_hit_areas'
 
 ReferenceCollectionModelHitAreas.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceCollectionCdiCombinedSets(CompactValue):
-    ''
+    'Select CDI combined-parameter sets.'
     _variant: _ClassVar[str] = 'cdi_combined_sets'
 
 ReferenceCollectionCdiCombinedSets.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceCollectionModelParameterMembers(CompactValue):
-    '\n\nFields:\ngroup_id: Existing model3 parameter-group object ID; this collection has no root/unassigned group.'
+    'Select members of one model3 parameter group.\n\nFields:\ngroup_id: Existing model3 parameter-group object ID; this collection has no root/unassigned group.'
     _variant: _ClassVar[str] = 'model_parameter_members'
     group_id: str
 
@@ -166,7 +166,7 @@ ReferenceCollectionModelParameterMembers.__module__ = "zipzi.modeling.addressing
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceCollectionCdiCombinedMembers(CompactValue):
-    '\n\nFields:\nset_id: Stable CDI combined-parameter set ID owning the selected members.'
+    'Select members of one CDI combined-parameter set.\n\nFields:\nset_id: Stable CDI combined-parameter set ID owning the selected members.'
     _variant: _ClassVar[str] = 'cdi_combined_members'
     set_id: str
 
@@ -176,7 +176,7 @@ ReferenceCollection: TypeAlias = ReferenceCollectionModelParameterGroups | Refer
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceFieldsModelParameterGroup(CompactValue):
-    '\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can change.'
+    'Supply model3 parameter-group fields.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can change.'
     _variant: _ClassVar[str] = 'model_parameter_group'
     name: str
 
@@ -184,7 +184,7 @@ ReferenceFieldsModelParameterGroup.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceFieldsModelHitArea(CompactValue):
-    '\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can change.\nmesh: Resolved mesh target or preserved unresolved mesh runtime identifier.'
+    'Supply model3 hit-area fields and mesh target.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can change.\nmesh: Resolved mesh target or preserved unresolved mesh runtime identifier.'
     _variant: _ClassVar[str] = 'model_hit_area'
     name: str
     mesh: ModelTargetRef
@@ -193,7 +193,7 @@ ReferenceFieldsModelHitArea.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceFieldsModelParameterMember(CompactValue):
-    '\n\nFields:\ntarget: Resolved document target or preserved unresolved runtime identifier; entry identity\nremains independent of the target.'
+    'Supply a model3 parameter member target.\n\nFields:\ntarget: Resolved document target or preserved unresolved runtime identifier; entry identity\nremains independent of the target.'
     _variant: _ClassVar[str] = 'model_parameter_member'
     target: ModelTargetRef
 
@@ -201,7 +201,7 @@ ReferenceFieldsModelParameterMember.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceFieldsCdiCombinedMember(CompactValue):
-    '\n\nFields:\ntarget: Resolved document target or preserved unresolved runtime identifier; entry identity\nremains independent of the target.'
+    'Supply a CDI combined-parameter member target.\n\nFields:\ntarget: Resolved document target or preserved unresolved runtime identifier; entry identity\nremains independent of the target.'
     _variant: _ClassVar[str] = 'cdi_combined_member'
     target: CdiParameterRef
 
@@ -210,7 +210,7 @@ ReferenceFieldsCdiCombinedMember.__module__ = "zipzi.modeling.addressing"
 ReferenceFields: TypeAlias = ReferenceFieldsModelParameterGroup | ReferenceFieldsModelHitArea | ReferenceFieldsModelParameterMember | ReferenceFieldsCdiCombinedMember
 
 class ReferenceSelectionField(str, Enum):
-    ''
+    'Select an ordered object-reference list for replacement.'
     __module__ = "zipzi.modeling.addressing"
     MESH_MASKS = 'mesh_masks'
     OFFSCREEN_MASKS = 'offscreen_masks'
@@ -218,7 +218,7 @@ class ReferenceSelectionField(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceEntryCdiParameterRef(CompactValue):
-    '\n\nFields:\nid: Stable UUID of this reference entry; not the identity of its target.\ntarget: Resolved document target or preserved unresolved runtime identifier; entry identity\nremains independent of the target.'
+    'Stable metadata-entry identity and its independently resolved or unresolved target.\n\nFields:\nid: Stable UUID of this reference entry; not the identity of its target.\ntarget: Resolved document target or preserved unresolved runtime identifier; entry identity\nremains independent of the target.'
     id: str
     target: CdiParameterRef
 
@@ -226,7 +226,7 @@ ReferenceEntryCdiParameterRef.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceEntryModelTargetRef(CompactValue):
-    '\n\nFields:\nid: Stable UUID of this reference entry; not the identity of its target.\ntarget: Resolved document target or preserved unresolved runtime identifier; entry identity\nremains independent of the target.'
+    'Stable metadata-entry identity and its independently resolved or unresolved target.\n\nFields:\nid: Stable UUID of this reference entry; not the identity of its target.\ntarget: Resolved document target or preserved unresolved runtime identifier; entry identity\nremains independent of the target.'
     id: str
     target: ModelTargetRef
 
@@ -234,7 +234,7 @@ ReferenceEntryModelTargetRef.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressSelectorScene(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nfield: Explicit field discriminator; must match the addressed object/domain.'
+    'Select a typed scene field on a stable object.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nfield: Explicit field discriminator; must match the addressed object/domain.'
     _variant: _ClassVar[str] = 'scene'
     id: str
     field: SceneField
@@ -243,7 +243,7 @@ AddressSelectorScene.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressSelectorDrawingGroup(CompactValue):
-    '\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.'
+    'Select a drawing group by owner identity.\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.'
     _variant: _ClassVar[str] = 'drawing_group'
     owner: str
 
@@ -251,7 +251,7 @@ AddressSelectorDrawingGroup.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressSelectorBinding(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.'
+    'Select a binding-owned address.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.'
     _variant: _ClassVar[str] = 'binding'
     id: str
 
@@ -259,7 +259,7 @@ AddressSelectorBinding.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressSelectorOrganization(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.'
+    'Select an organization object.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.'
     _variant: _ClassVar[str] = 'organization'
     id: str
 
@@ -267,7 +267,7 @@ AddressSelectorOrganization.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressSelectorContent(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\ntarget: Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.'
+    'Select a mesh, Warp, Glue or Offscreen content field.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\ntarget: Typed content field selector, including its shape or slot where applicable.'
     _variant: _ClassVar[str] = 'content'
     id: str
     target: SceneContentTarget
@@ -276,7 +276,7 @@ AddressSelectorContent.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressSelectorReference(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.'
+    'Select a reference metadata entry.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.'
     _variant: _ClassVar[str] = 'reference'
     id: str
 
@@ -284,7 +284,7 @@ AddressSelectorReference.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressSelectorSelection(CompactValue):
-    '\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.\nfield: Explicit field discriminator; must match the addressed object/domain.'
+    'Select a reference selection field on an owner.\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.\nfield: Explicit field discriminator; must match the addressed object/domain.'
     _variant: _ClassVar[str] = 'selection'
     owner: str
     field: ReferenceSelectionField
@@ -293,7 +293,7 @@ AddressSelectorSelection.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressSelectorResourceName(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.'
+    'Select an image-resource name.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.'
     _variant: _ClassVar[str] = 'resource_name'
     id: str
 
@@ -301,7 +301,7 @@ AddressSelectorResourceName.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressSelectorAttachmentPath(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.'
+    'Select a package attachment path.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.'
     _variant: _ClassVar[str] = 'attachment_path'
     id: str
 
@@ -309,7 +309,7 @@ AddressSelectorAttachmentPath.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressSelectorDocument(CompactValue):
-    '\n\nFields:\nfield: Explicit field discriminator; must match the addressed object/domain.'
+    'Select a document metadata field.\n\nFields:\nfield: Explicit field discriminator; must match the addressed object/domain.'
     _variant: _ClassVar[str] = 'document'
     field: DocumentField
 
@@ -317,7 +317,7 @@ AddressSelectorDocument.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressSelectorMotionRegistration(CompactValue):
-    '\n\nFields:\nid: Stable identity of the addressed native animation object.'
+    'Select a motion registration.\n\nFields:\nid: Stable identity of the addressed native animation object.'
     _variant: _ClassVar[str] = 'motion_registration'
     id: str
 
@@ -325,7 +325,7 @@ AddressSelectorMotionRegistration.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressSelectorExpressionEntry(CompactValue):
-    '\n\nFields:\nid: Stable identity of the addressed native animation object.'
+    'Select an expression entry.\n\nFields:\nid: Stable identity of the addressed native animation object.'
     _variant: _ClassVar[str] = 'expression_entry'
     id: str
 
@@ -333,7 +333,7 @@ AddressSelectorExpressionEntry.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressSelectorPhysics(CompactValue):
-    '\n\nFields:\nid: Stable identity of the addressed native animation object.'
+    'Select a Physics entity.\n\nFields:\nid: Stable identity of the addressed native animation object.'
     _variant: _ClassVar[str] = 'physics'
     id: str
 
@@ -341,7 +341,7 @@ AddressSelectorPhysics.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressSelectorPose(CompactValue):
-    '\n\nFields:\nid: Stable identity of the addressed native animation object.'
+    'Select a Pose entity.\n\nFields:\nid: Stable identity of the addressed native animation object.'
     _variant: _ClassVar[str] = 'pose'
     id: str
 
@@ -351,7 +351,7 @@ AddressSelector: TypeAlias = AddressSelectorScene | AddressSelectorDrawingGroup 
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressPatchScene(CompactValue):
-    '\n\nFields:\nvalue: Scalar value in the referenced parameter domain.\nclear_glue_pairs: Explicitly clear existing Glue vertex pairs when changing Glue endpoints.'
+    'Replace a matching typed scene field.\n\nFields:\nvalue: Replacement scene property; its variant must match the captured field.\nclear_glue_pairs: Explicitly clear existing Glue vertex pairs when changing Glue endpoints.'
     _variant: _ClassVar[str] = 'scene'
     value: SceneFieldValue
     clear_glue_pairs: bool
@@ -360,7 +360,7 @@ AddressPatchScene.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressPatchDrawingRange(CompactValue):
-    '\n\nFields:\nrange: Inclusive lower and upper drawing-order bounds, in that order.'
+    'Replace a drawing group range.\n\nFields:\nrange: Inclusive lower and upper drawing-order bounds, in that order.'
     _variant: _ClassVar[str] = 'drawing_range'
     range: tuple[int, int]
 
@@ -371,7 +371,7 @@ AddressPatchDrawingRange.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressPatchBinding(CompactValue):
-    '\n\nFields:\npatch: Typed patch for the addressed object; apply through the Edit to mutate candidate state.'
+    'Apply a typed binding-field patch.\n\nFields:\npatch: Typed patch for the addressed object; apply through the Edit to mutate candidate state.'
     _variant: _ClassVar[str] = 'binding'
     patch: BindingFieldPatch
 
@@ -379,7 +379,7 @@ AddressPatchBinding.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressPatchOrganization(CompactValue):
-    '\n\nFields:\nintent: Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.'
+    'Apply a matching organization edit.\n\nFields:\nintent: Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.'
     _variant: _ClassVar[str] = 'organization'
     intent: OrganizationEdit
 
@@ -387,7 +387,7 @@ AddressPatchOrganization.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressPatchContent(CompactValue):
-    '\n\nFields:\nvalue: Scalar value in the referenced parameter domain.'
+    'Replace a selected scene content field.\n\nFields:\nvalue: Typed replacement content; its variant must match the captured field.'
     _variant: _ClassVar[str] = 'content'
     value: SceneContentValue
 
@@ -395,7 +395,7 @@ AddressPatchContent.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressPatchReference(CompactValue):
-    '\n\nFields:\nfields: Typed replacement metadata fields; their variant must match the addressed reference\nkind.'
+    'Replace fields of a matching reference metadata entry.\n\nFields:\nfields: Typed replacement metadata fields; their variant must match the addressed reference\nkind.'
     _variant: _ClassVar[str] = 'reference'
     fields: ReferenceFields
 
@@ -403,7 +403,7 @@ AddressPatchReference.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressPatchSelection(CompactValue):
-    '\n\nFields:\ntargets: Complete replacement ordered target-ID selection; an empty list explicitly clears it.'
+    'Replace a reference target selection.\n\nFields:\ntargets: Complete replacement ordered target-ID selection; an empty list explicitly clears it.'
     _variant: _ClassVar[str] = 'selection'
     targets: tuple[str, ...]
 
@@ -414,7 +414,7 @@ AddressPatchSelection.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressPatchResourceName(CompactValue):
-    '\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can change.'
+    'Replace an image-resource name.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can change.'
     _variant: _ClassVar[str] = 'resource_name'
     name: str
 
@@ -422,7 +422,7 @@ AddressPatchResourceName.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressPatchAttachmentPath(CompactValue):
-    '\n\nFields:\npath: Normalized package-relative attachment path using forward slashes; absolute paths\nand .. components are invalid.'
+    'Replace a package attachment path.\n\nFields:\npath: Normalized package-relative attachment path using forward slashes; absolute paths\nand .. components are invalid.'
     _variant: _ClassVar[str] = 'attachment_path'
     path: str
 
@@ -430,7 +430,7 @@ AddressPatchAttachmentPath.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressPatchDocument(CompactValue):
-    '\n\nFields:\nvalue: Scalar value in the referenced parameter domain.'
+    'Replace a typed document metadata field.\n\nFields:\nvalue: Replacement document property; its variant must match the captured field.'
     _variant: _ClassVar[str] = 'document'
     value: DocumentValue
 
@@ -438,7 +438,7 @@ AddressPatchDocument.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressPatchMotionRegistration(CompactValue):
-    '\n\nFields:\nentry: Complete replacement registration with its existing stable identity.'
+    'Replace a motion registration.\n\nFields:\nentry: Complete replacement registration with its existing stable identity.'
     _variant: _ClassVar[str] = 'motion_registration'
     entry: MotionRegistration
 
@@ -446,7 +446,7 @@ AddressPatchMotionRegistration.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressPatchExpressionEntry(CompactValue):
-    '\n\nFields:\nfields: Replacement expression target/value/blend fields, under captured owner epochs.'
+    'Replace expression entry fields.\n\nFields:\nfields: Replacement expression target/value/blend fields, under captured owner epochs.'
     _variant: _ClassVar[str] = 'expression_entry'
     fields: ExpressionEntryFields
 
@@ -454,7 +454,7 @@ AddressPatchExpressionEntry.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressPatchPhysics(CompactValue):
-    '\n\nFields:\nchanges: Atomic property changes targeting only the captured Physics entity.'
+    'Apply Physics property changes.\n\nFields:\nchanges: Atomic property changes targeting only the captured Physics entity.'
     _variant: _ClassVar[str] = 'physics'
     changes: tuple[PhysicsProperty, ...]
 
@@ -465,7 +465,7 @@ AddressPatchPhysics.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AddressPatchPose(CompactValue):
-    '\n\nFields:\nfields: Replacement fields for the captured Pose singleton/group/entry/link.'
+    'Replace Pose fields.\n\nFields:\nfields: Replacement fields for the captured Pose singleton/group/entry/link.'
     _variant: _ClassVar[str] = 'pose'
     fields: PoseFields
 
@@ -474,7 +474,7 @@ AddressPatchPose.__module__ = "zipzi.modeling.addressing"
 AddressPatch: TypeAlias = AddressPatchScene | AddressPatchDrawingRange | AddressPatchBinding | AddressPatchOrganization | AddressPatchContent | AddressPatchReference | AddressPatchSelection | AddressPatchResourceName | AddressPatchAttachmentPath | AddressPatchDocument | AddressPatchMotionRegistration | AddressPatchExpressionEntry | AddressPatchPhysics | AddressPatchPose
 
 class CapabilityDomain(str, Enum):
-    ''
+    'Select the native capability family to query for a referenced object.'
     __module__ = "zipzi.modeling.addressing"
     SCENE = 'scene'
     ORGANIZATION = 'organization'
@@ -490,7 +490,7 @@ class CapabilityDomain(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CapabilitiesScene(CompactValue):
-    '\n\nFields:\nvalue: Current scene lifecycle, hierarchy and drawing capability states and reasons; do not\ninfer support from method presence.'
+    'Scene object capabilities.\n\nFields:\nvalue: Current scene lifecycle, hierarchy and drawing capability states and reasons; do not\ninfer support from method presence.'
     _variant: _ClassVar[str] = 'scene'
     value: SceneCapabilities
 
@@ -498,7 +498,7 @@ CapabilitiesScene.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CapabilitiesOrganization(CompactValue):
-    '\n\nFields:\nvalue: Current organization and parameter groups capability states and reasons; do not\ninfer support from method presence.'
+    'Organization capabilities.\n\nFields:\nvalue: Current organization and parameter groups capability states and reasons; do not\ninfer support from method presence.'
     _variant: _ClassVar[str] = 'organization'
     value: OrganizationCapabilities
 
@@ -506,7 +506,7 @@ CapabilitiesOrganization.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CapabilitiesBinding(CompactValue):
-    '\n\nFields:\nvalue: Current parameter bindings and grid conversions capability states and reasons; do\nnot infer support from method presence.'
+    'Binding capabilities.\n\nFields:\nvalue: Current parameter bindings and grid conversions capability states and reasons; do\nnot infer support from method presence.'
     _variant: _ClassVar[str] = 'binding'
     value: BindingCapabilities
 
@@ -514,7 +514,7 @@ CapabilitiesBinding.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CapabilitiesContent(CompactValue):
-    '\n\nFields:\nvalue: Current geometry and topology content capability states and reasons; do not infer\nsupport from method presence.'
+    'Scene content capabilities.\n\nFields:\nvalue: Current geometry and topology content capability states and reasons; do not infer\nsupport from method presence.'
     _variant: _ClassVar[str] = 'content'
     value: SceneContentCapabilities
 
@@ -522,7 +522,7 @@ CapabilitiesContent.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CapabilitiesReferences(CompactValue):
-    '\n\nFields:\nvalue: Current metadata references and selections capability states and reasons; do not\ninfer support from method presence.'
+    'Reference metadata capabilities.\n\nFields:\nvalue: Current metadata references and selections capability states and reasons; do not\ninfer support from method presence.'
     _variant: _ClassVar[str] = 'references'
     value: ReferenceCapabilities
 
@@ -530,7 +530,7 @@ CapabilitiesReferences.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CapabilitiesResource(CompactValue):
-    '\n\nFields:\nvalue: Current image asset metadata and references capability states and reasons; do not\ninfer support from method presence.'
+    'Image resource capabilities.\n\nFields:\nvalue: Current image asset metadata and references capability states and reasons; do not\ninfer support from method presence.'
     _variant: _ClassVar[str] = 'resource'
     value: ResourceCapabilities
 
@@ -538,7 +538,7 @@ CapabilitiesResource.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CapabilitiesAttachment(CompactValue):
-    '\n\nFields:\nvalue: Current package attachments and their references capability states and reasons; do\nnot infer support from method presence.'
+    'Attachment capabilities.\n\nFields:\nvalue: Current package attachments and their references capability states and reasons; do\nnot infer support from method presence.'
     _variant: _ClassVar[str] = 'attachment'
     value: AttachmentCapabilities
 
@@ -546,7 +546,7 @@ CapabilitiesAttachment.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CapabilitiesCollection(CompactValue):
-    '\n\nFields:\nvalue: Current collection capability states and reasons; do not infer support from method\npresence.'
+    'Selected collection capabilities.\n\nFields:\nvalue: Current collection capability states and reasons; do not infer support from method\npresence.'
     _variant: _ClassVar[str] = 'collection'
     value: CollectionCapabilities
 
@@ -554,7 +554,7 @@ CapabilitiesCollection.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CapabilitiesDocument(CompactValue):
-    '\n\nFields:\nvalue: Current document configuration and metadata repair capability states and reasons; do\nnot infer support from method presence.'
+    'Document metadata capability state.\n\nFields:\nvalue: Current document configuration and metadata repair capability states and reasons; do\nnot infer support from method presence.'
     _variant: _ClassVar[str] = 'document'
     value: CapabilityState
 
@@ -562,7 +562,7 @@ CapabilitiesDocument.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CapabilitiesMotion(CompactValue):
-    '\n\nFields:\nvalue: Current native motion eligibility; host Preview support is advertised separately.'
+    'Native motion capabilities.\n\nFields:\nvalue: Current native motion eligibility; host Preview support is advertised separately.'
     _variant: _ClassVar[str] = 'motion'
     value: MotionCapabilities
 
@@ -570,7 +570,7 @@ CapabilitiesMotion.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CapabilitiesExpression(CompactValue):
-    '\n\nFields:\nvalue: Current native expression eligibility; host Preview support is advertised separately.'
+    'Native expression capabilities.\n\nFields:\nvalue: Current native expression eligibility; host Preview support is advertised separately.'
     _variant: _ClassVar[str] = 'expression'
     value: ExpressionCapabilities
 
@@ -578,7 +578,7 @@ CapabilitiesExpression.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CapabilitiesPhysics(CompactValue):
-    '\n\nFields:\nvalue: Current native physics eligibility; host Preview support is advertised separately.'
+    'Native Physics capabilities.\n\nFields:\nvalue: Current native physics eligibility; host Preview support is advertised separately.'
     _variant: _ClassVar[str] = 'physics'
     value: PhysicsCapabilities
 
@@ -586,7 +586,7 @@ CapabilitiesPhysics.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CapabilitiesPose(CompactValue):
-    '\n\nFields:\nvalue: Current native pose eligibility; host Preview support is advertised separately.'
+    'Native Pose capabilities.\n\nFields:\nvalue: Current native pose eligibility; host Preview support is advertised separately.'
     _variant: _ClassVar[str] = 'pose'
     value: PoseCapabilities
 
@@ -596,7 +596,7 @@ Capabilities: TypeAlias = CapabilitiesScene | CapabilitiesOrganization | Capabil
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneCapabilities(CompactValue):
-    '\n\nFields:\ninspect: Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.\npatch: Current capability to modify fields through a captured address; inspect its state/reason\nbefore invoking the operation.\nmove_object: Current capability to move this object between collections; inspect its state/reason\nbefore invoking the operation.\nreparent: Current capability to change its deformation parent; inspect its state/reason before\ninvoking the operation.\nreorder: Current capability to change its collection order; inspect its state/reason before\ninvoking the operation.\nduplicate: Current capability to duplicate this object; inspect its state/reason before invoking\nthe operation.\ndelete: Current capability to delete this object; inspect its state/reason before invoking the\noperation.\ndissolve: Current capability to remove its container while preserving contents; inspect its\nstate/reason before invoking the operation.'
+    'Current scene capability states; they do not reserve later execution.\n\nFields:\ninspect: Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.\npatch: Current capability to modify fields through a captured address; inspect its state/reason\nbefore invoking the operation.\nmove_object: Current capability to move this object between collections; inspect its state/reason\nbefore invoking the operation.\nreparent: Current capability to change its deformation parent; inspect its state/reason before\ninvoking the operation.\nreorder: Current capability to change its collection order; inspect its state/reason before\ninvoking the operation.\nduplicate: Current capability to duplicate this object; inspect its state/reason before invoking\nthe operation.\ndelete: Current capability to delete this object; inspect its state/reason before invoking the\noperation.\ndissolve: Current capability to remove its container while preserving contents; inspect its\nstate/reason before invoking the operation.'
     inspect: CapabilityState
     patch: CapabilityState
     move_object: CapabilityState
@@ -610,14 +610,14 @@ SceneCapabilities.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CapabilityStateAvailable(CompactValue):
-    ''
+    'The operation is currently available subject to later validation and admission.'
     _variant: _ClassVar[str] = 'Available'
 
 CapabilityStateAvailable.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CapabilityStateUnsupported(CompactValue):
-    '\n\nFields:\ncode: Stable reason code explaining why this operation is unsupported for this object/domain.'
+    'The operation is not supported for this object or domain.\n\nFields:\ncode: Stable reason code explaining why this operation is unsupported for this object/domain.'
     _variant: _ClassVar[str] = 'Unsupported'
     code: str
 
@@ -625,7 +625,7 @@ CapabilityStateUnsupported.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CapabilityStateUnavailable(CompactValue):
-    '\n\nFields:\ncode: Stable reason code explaining why this operation is currently unavailable.'
+    'The operation is currently unavailable for the captured state.\n\nFields:\ncode: Stable reason code explaining why this operation is currently unavailable.'
     _variant: _ClassVar[str] = 'Unavailable'
     code: str
 
@@ -635,7 +635,7 @@ CapabilityState: TypeAlias = CapabilityStateAvailable | CapabilityStateUnsupport
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OrganizationCapabilities(CompactValue):
-    '\n\nFields:\ninspect: Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.\npatch: Current capability to modify fields through a captured address; inspect its state/reason\nbefore invoking the operation.\ncreate_child: Current capability to create children in this collection; inspect its state/reason\nbefore invoking the operation.\nmove_object: Current capability to move this object between collections; inspect its state/reason\nbefore invoking the operation.\nreorder: Current capability to change its collection order; inspect its state/reason before\ninvoking the operation.\nduplicate: Current capability to duplicate this object; inspect its state/reason before invoking\nthe operation.\ndelete: Current capability to delete this object; inspect its state/reason before invoking the\noperation.\ndissolve: Current capability to remove its container while preserving contents; inspect its\nstate/reason before invoking the operation.'
+    'Current organization capability states; they do not reserve later execution.\n\nFields:\ninspect: Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.\npatch: Current capability to modify fields through a captured address; inspect its state/reason\nbefore invoking the operation.\ncreate_child: Current capability to create children in this collection; inspect its state/reason\nbefore invoking the operation.\nmove_object: Current capability to move this object between collections; inspect its state/reason\nbefore invoking the operation.\nreorder: Current capability to change its collection order; inspect its state/reason before\ninvoking the operation.\nduplicate: Current capability to duplicate this object; inspect its state/reason before invoking\nthe operation.\ndelete: Current capability to delete this object; inspect its state/reason before invoking the\noperation.\ndissolve: Current capability to remove its container while preserving contents; inspect its\nstate/reason before invoking the operation.'
     inspect: CapabilityState
     patch: CapabilityState
     create_child: CapabilityState
@@ -649,7 +649,7 @@ OrganizationCapabilities.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingCapabilities(CompactValue):
-    '\n\nFields:\ninspect: Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.\npatch: Current capability to modify fields through a captured address; inspect its state/reason\nbefore invoking the operation.\ncreate_child: Current capability to create children in this collection; inspect its state/reason\nbefore invoking the operation.\nreorder: Current capability to change its collection order; inspect its state/reason before\ninvoking the operation.\ndelete: Current capability to delete this object; inspect its state/reason before invoking the\noperation.\nrepair: Current capability to repair an unresolved or unavailable binding; inspect its\nstate/reason before invoking the operation.\npreview: Current capability to evaluate a conversion preview; inspect its state/reason before\ninvoking the operation.'
+    'Current binding capability states; they do not reserve later execution.\n\nFields:\ninspect: Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.\npatch: Current capability to modify fields through a captured address; inspect its state/reason\nbefore invoking the operation.\ncreate_child: Current capability to create children in this collection; inspect its state/reason\nbefore invoking the operation.\nreorder: Current capability to change its collection order; inspect its state/reason before\ninvoking the operation.\ndelete: Current capability to delete this object; inspect its state/reason before invoking the\noperation.\nrepair: Current capability to repair an unresolved or unavailable binding; inspect its\nstate/reason before invoking the operation.\npreview: Current capability to evaluate a conversion preview; inspect its state/reason before\ninvoking the operation.'
     inspect: CapabilityState
     patch: CapabilityState
     create_child: CapabilityState
@@ -662,7 +662,7 @@ BindingCapabilities.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentCapabilities(CompactValue):
-    '\n\nFields:\ninspect: Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.\nedit: Current capability to edit geometry/content through this address; inspect its\nstate/reason before invoking the operation.\ntopology: Current capability to change topology while preserving or explicitly resolving\ndependencies; inspect its state/reason before invoking the operation.'
+    'Current scene-content capability states; they do not reserve later execution.\n\nFields:\ninspect: Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.\nedit: Current capability to edit geometry/content through this address; inspect its\nstate/reason before invoking the operation.\ntopology: Current capability to change topology while preserving or explicitly resolving\ndependencies; inspect its state/reason before invoking the operation.'
     inspect: CapabilityState
     edit: CapabilityState
     topology: CapabilityState
@@ -671,7 +671,7 @@ SceneContentCapabilities.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReferenceCapabilities(CompactValue):
-    '\n\nFields:\ninspect: Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.\npatch: Current capability to modify fields through a captured address; inspect its state/reason\nbefore invoking the operation.\ncreate_child: Current capability to create children in this collection; inspect its state/reason\nbefore invoking the operation.\nmove_object: Current capability to move this object between collections; inspect its state/reason\nbefore invoking the operation.\nduplicate: Current capability to duplicate this object; inspect its state/reason before invoking\nthe operation.\ndelete: Current capability to delete this object; inspect its state/reason before invoking the\noperation.\ndissolve: Current capability to remove its container while preserving contents; inspect its\nstate/reason before invoking the operation.'
+    'Current reference capability states; they do not reserve later execution.\n\nFields:\ninspect: Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.\npatch: Current capability to modify fields through a captured address; inspect its state/reason\nbefore invoking the operation.\ncreate_child: Current capability to create children in this collection; inspect its state/reason\nbefore invoking the operation.\nmove_object: Current capability to move this object between collections; inspect its state/reason\nbefore invoking the operation.\nduplicate: Current capability to duplicate this object; inspect its state/reason before invoking\nthe operation.\ndelete: Current capability to delete this object; inspect its state/reason before invoking the\noperation.\ndissolve: Current capability to remove its container while preserving contents; inspect its\nstate/reason before invoking the operation.'
     inspect: CapabilityState
     patch: CapabilityState
     create_child: CapabilityState
@@ -684,7 +684,7 @@ ReferenceCapabilities.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ResourceCapabilities(CompactValue):
-    '\n\nFields:\ninspect: Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.\npatch: Current capability to modify fields through a captured address; inspect its state/reason\nbefore invoking the operation.\nload_content: Current capability to load the referenced resource contents; inspect its state/reason\nbefore invoking the operation.\nduplicate: Current capability to duplicate this object; inspect its state/reason before invoking\nthe operation.\ndelete: Current capability to delete this object; inspect its state/reason before invoking the\noperation.\nreorder: Current capability to change its collection order; inspect its state/reason before\ninvoking the operation.'
+    'Current image-resource capability states; they do not reserve later execution.\n\nFields:\ninspect: Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.\npatch: Current capability to modify fields through a captured address; inspect its state/reason\nbefore invoking the operation.\nload_content: Current capability to load the referenced resource contents; inspect its state/reason\nbefore invoking the operation.\nduplicate: Current capability to duplicate this object; inspect its state/reason before invoking\nthe operation.\ndelete: Current capability to delete this object; inspect its state/reason before invoking the\noperation.\nreorder: Current capability to change its collection order; inspect its state/reason before\ninvoking the operation.'
     inspect: CapabilityState
     patch: CapabilityState
     load_content: CapabilityState
@@ -696,7 +696,7 @@ ResourceCapabilities.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AttachmentCapabilities(CompactValue):
-    '\n\nFields:\ninspect: Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.\npatch: Current capability to modify fields through a captured address; inspect its state/reason\nbefore invoking the operation.\nduplicate: Current capability to duplicate this object; inspect its state/reason before invoking\nthe operation.\ndelete: Current capability to delete this object; inspect its state/reason before invoking the\noperation.\nload_content: Current capability to load the referenced resource contents; inspect its state/reason\nbefore invoking the operation.'
+    'Current attachment capability states; they do not reserve later execution.\n\nFields:\ninspect: Current capability to read the current typed record; inspect its state/reason before\ninvoking the operation.\npatch: Current capability to modify fields through a captured address; inspect its state/reason\nbefore invoking the operation.\nduplicate: Current capability to duplicate this object; inspect its state/reason before invoking\nthe operation.\ndelete: Current capability to delete this object; inspect its state/reason before invoking the\noperation.\nload_content: Current capability to load the referenced resource contents; inspect its state/reason\nbefore invoking the operation.'
     inspect: CapabilityState
     patch: CapabilityState
     duplicate: CapabilityState
@@ -707,7 +707,7 @@ AttachmentCapabilities.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionCapabilities(CompactValue):
-    '\n\nFields:\ncreate: Current capability to create objects in this collection; inspect its state/reason before\ninvoking the operation.\nmove_into: Current capability to move existing objects into this collection; inspect its\nstate/reason before invoking the operation.\nreorder: Current capability to change its collection order; inspect its state/reason before\ninvoking the operation.'
+    'Current collection capability states; they do not reserve later execution.\n\nFields:\ncreate: Current capability to create objects in this collection; inspect its state/reason before\ninvoking the operation.\nmove_into: Current capability to move existing objects into this collection; inspect its\nstate/reason before invoking the operation.\nreorder: Current capability to change its collection order; inspect its state/reason before\ninvoking the operation.'
     create: CapabilityState
     move_into: CapabilityState
     reorder: CapabilityState
@@ -716,7 +716,7 @@ CollectionCapabilities.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionCapabilities(CompactValue):
-    '\n\nFields:\ninspect: Read this object while its identity/context remains valid.\npatch: Modify typed fields through a validated native intent/address.\nduplicate: Duplicate the selected object while allocating fresh owned identities.\ndelete: Delete the selected object subject to native reference and lock rules.\nmove_object: Move the selected object between compatible native owners.\npreview: Native preview eligibility; host preview API availability is advertised separately.\ncreate_child: Create owned child rows in this object.\nreorder: Change ordered sibling membership without changing identity.\nrepair: Repair an explicitly unresolved native reference.\nedit_content: Edit the owning clip content, preserving stable track/key/event identities.'
+    'Current motion capability states; they do not reserve later execution.\n\nFields:\ninspect: Read this object while its identity/context remains valid.\npatch: Modify typed fields through a validated native intent/address.\nduplicate: Duplicate the selected object while allocating fresh owned identities.\ndelete: Delete the selected object subject to native reference and lock rules.\nmove_object: Move the selected object between compatible native owners.\npreview: Native preview eligibility; host preview API availability is advertised separately.\ncreate_child: Create owned child rows in this object.\nreorder: Change ordered sibling membership without changing identity.\nrepair: Repair an explicitly unresolved native reference.\nedit_content: Edit the owning clip content, preserving stable track/key/event identities.'
     inspect: CapabilityState
     patch: CapabilityState
     duplicate: CapabilityState
@@ -732,7 +732,7 @@ MotionCapabilities.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionCapabilities(CompactValue):
-    '\n\nFields:\ninspect: Read this object while its identity/context remains valid.\ncreate_entry: Create an owned expression entry.\npatch: Modify typed fields through a validated native intent/address.\nmove_entry: Transfer expression entries between compatible owners.\nduplicate: Duplicate the selected object while allocating fresh owned identities.\ndelete: Delete the selected object subject to native reference and lock rules.\nrepair: Repair an explicitly unresolved native reference.\npreview: Native preview eligibility; host preview API availability is advertised separately.'
+    'Current expression capability states; they do not reserve later execution.\n\nFields:\ninspect: Read this object while its identity/context remains valid.\ncreate_entry: Create an owned expression entry.\npatch: Modify typed fields through a validated native intent/address.\nmove_entry: Transfer expression entries between compatible owners.\nduplicate: Duplicate the selected object while allocating fresh owned identities.\ndelete: Delete the selected object subject to native reference and lock rules.\nrepair: Repair an explicitly unresolved native reference.\npreview: Native preview eligibility; host preview API availability is advertised separately.'
     inspect: CapabilityState
     create_entry: CapabilityState
     patch: CapabilityState
@@ -746,7 +746,7 @@ ExpressionCapabilities.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsCapabilities(CompactValue):
-    '\n\nFields:\ninspect: Read this object while its identity/context remains valid.\npatch: Modify typed fields through a validated native intent/address.\ncreate_child: Create owned child rows in this object.\nduplicate: Duplicate the selected object while allocating fresh owned identities.\ndelete: Delete the selected object subject to native reference and lock rules.\nmove_object: Move the selected object between compatible native owners.\nreorder: Change ordered sibling membership without changing identity.\nrepair: Repair an explicitly unresolved native reference.\npreview: Native preview eligibility; host preview API availability is advertised separately.'
+    'Current Physics capability states; they do not reserve later execution.\n\nFields:\ninspect: Read this object while its identity/context remains valid.\npatch: Modify typed fields through a validated native intent/address.\ncreate_child: Create owned child rows in this object.\nduplicate: Duplicate the selected object while allocating fresh owned identities.\ndelete: Delete the selected object subject to native reference and lock rules.\nmove_object: Move the selected object between compatible native owners.\nreorder: Change ordered sibling membership without changing identity.\nrepair: Repair an explicitly unresolved native reference.\npreview: Native preview eligibility; host preview API availability is advertised separately.'
     inspect: CapabilityState
     patch: CapabilityState
     create_child: CapabilityState
@@ -761,7 +761,7 @@ PhysicsCapabilities.__module__ = "zipzi.modeling.addressing"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PoseCapabilities(CompactValue):
-    '\n\nFields:\ninspect: Read this object while its identity/context remains valid.\npatch: Modify typed fields through a validated native intent/address.\ncreate_child: Create owned child rows in this object.\nduplicate: Duplicate the selected object while allocating fresh owned identities.\ndelete: Delete the selected object subject to native reference and lock rules.\nmove_object: Move the selected object between compatible native owners.\nreorder: Change ordered sibling membership without changing identity.\nrepair: Repair an explicitly unresolved native reference.\ndissolve: Remove this container while moving owned content to an explicit destination.\npreview: Native preview eligibility; host preview API availability is advertised separately.'
+    'Current Pose capability states; they do not reserve later execution.\n\nFields:\ninspect: Read this object while its identity/context remains valid.\npatch: Modify typed fields through a validated native intent/address.\ncreate_child: Create owned child rows in this object.\nduplicate: Duplicate the selected object while allocating fresh owned identities.\ndelete: Delete the selected object subject to native reference and lock rules.\nmove_object: Move the selected object between compatible native owners.\nreorder: Change ordered sibling membership without changing identity.\nrepair: Repair an explicitly unresolved native reference.\ndissolve: Remove this container while moving owned content to an explicit destination.\npreview: Native preview eligibility; host preview API availability is advertised separately.'
     inspect: CapabilityState
     patch: CapabilityState
     create_child: CapabilityState
@@ -776,7 +776,7 @@ class PoseCapabilities(CompactValue):
 PoseCapabilities.__module__ = "zipzi.modeling.addressing"
 
 class ObjectKind(str, Enum):
-    ''
+    'Native identity domain used when capturing a source-bound SDK object reference.'
     __module__ = "zipzi.modeling.addressing"
     ASSET = 'asset'
     MESH = 'mesh'

@@ -626,3 +626,35 @@ SceneEdit 字段原先误写成参数标量/Edit 句柄的说明；未改变执�
 图像替换后旧快照和 Undo/Redo 像素、场景组织计划，均通过 Local/Connected 及静态类型检查。
 离线 `format()` 检查资源布局、普通绑定坐标及保留局部数据的重挂载，并确认无 native/GPU 导入。
 未运行全量 SDK、GPU 或真实 Editor 服务门禁。
+
+## 15. P4 引用、地址和删除审阅结构检查（2026-11-02）
+
+状态：P4 **结构门禁与四项指定行为证据通过，完整语义审阅待复核**。仍需逐项审阅
+所有删除关系/效果、跨领域选择及 `format()`，并在 P5–P7 核对格式诊断、动画与可选服务；
+不能把类型非空及结构诊断为零解释成这些跨域行为已全部验收。
+
+范围为 `references`、`modeling_addressing` 及 kinds/patches/selectors、
+`modeling_deletion` 及 decisions，另含跨页 `Plan`、Session/Edit 的地址和规划入口。
+Rust contract 的 addressing/capabilities、reference metadata、deletion requests/outcomes/review
+是业务说明源；Python 引用与 Plan 自身维护客户端租约及分页用法。修正 AddressPatch 中将
+scene/content/document 类型值误写成参数标量、以及引用容器 dissolve 目的地误写成泛化
+collection 的字段说明。`references.ObjectKind` 的 Python 特殊投影从同一 Rust enum 获得
+说明，并注明同时接受 canonical enum 和字符串；来源变更测试覆盖生成 Python、catalog、reference。
+
+入口说明 ObjectRef、LabelAddress 和 FieldAddress 绑定客户端租约、incarnation/context/field
+epoch，UUID 复用或 Undo 不能复活旧引用；Plan 针对精确 Source，report 冻结，apply 与 close
+分离。能力结果不保留未来执行准入。删除条目区分根范围、冻结默认参数切片、资源替换、
+待选项、阻止、可执行但需确认及实际应用；报告页 offset 是同一固定 section 的行位置，
+不是业务 ID，close 后不可继续分页。
+
+本批类型摘要缺口 199 → 0、union 分支诊断 294 → 0、enum 成员诊断 135 → 0；全局类型
+缺口 455 → 256，稳定债务键移除 827 项，无新增。本批七页纳入独立结构门禁。
+比较本批七页与 runtime、runtime_session、runtime_edit、common，相同 432 个标题，正文
+194,244 → 211,594 字符，新增主要是类型、分支、字段及投影说明；公共规则正文未新增重复。
+该数量不证明全部新增语义已通过人工审阅。
+
+执行 `generate.py --check --no-cache`、reference tooling、`cargo test --locked -p zipzi-contract`，
+以及计划列出的四个 Python 用例：引用/地址 Undo 失效、全部地址域 epoch、固定删除报告分页
+及清理历史、参数删除冻结默认值。四项均通过 Local/Connected 和静态类型检查。
+离线 `format()` 检查引用失效、删除分页和三种非 Ready 状态，并确认不加载 native/GPU。
+未运行全量 SDK、GPU 或真实 Editor 服务门禁。

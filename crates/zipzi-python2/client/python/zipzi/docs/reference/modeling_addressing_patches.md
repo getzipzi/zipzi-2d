@@ -13,6 +13,8 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 
 `AddressPatchScene | AddressPatchDrawingRange | AddressPatchBinding | AddressPatchOrganization | AddressPatchContent | AddressPatchReference | AddressPatchSelection | AddressPatchResourceName | AddressPatchAttachmentPath | AddressPatchDocument | AddressPatchMotionRegistration | AddressPatchExpressionEntry | AddressPatchPhysics | AddressPatchPose`
 
+Select the typed replacement accepted by a matching captured SDK address.
+
 Types: [AddressPatchAttachmentPath](#zipzimodelingaddressingaddresspatchattachmentpath), [AddressPatchBinding](#zipzimodelingaddressingaddresspatchbinding), [AddressPatchContent](#zipzimodelingaddressingaddresspatchcontent), [AddressPatchDocument](#zipzimodelingaddressingaddresspatchdocument), [AddressPatchDrawingRange](#zipzimodelingaddressingaddresspatchdrawingrange), [AddressPatchExpressionEntry](#zipzimodelingaddressingaddresspatchexpressionentry), [AddressPatchMotionRegistration](#zipzimodelingaddressingaddresspatchmotionregistration), [AddressPatchOrganization](#zipzimodelingaddressingaddresspatchorganization), [AddressPatchPhysics](#zipzimodelingaddressingaddresspatchphysics), [AddressPatchPose](#zipzimodelingaddressingaddresspatchpose), [AddressPatchReference](#zipzimodelingaddressingaddresspatchreference), [AddressPatchResourceName](#zipzimodelingaddressingaddresspatchresourcename), [AddressPatchScene](#zipzimodelingaddressingaddresspatchscene), [AddressPatchSelection](#zipzimodelingaddressingaddresspatchselection).
 
 
@@ -21,6 +23,8 @@ Types: [AddressPatchAttachmentPath](#zipzimodelingaddressingaddresspatchattachme
 **Type**
 
 `(*, path: str)`
+
+Replace a package attachment path.
 
 **Fields**
 
@@ -32,6 +36,8 @@ and .. components are invalid.
 **Type**
 
 `(*, patch: BindingFieldPatch)`
+
+Apply a typed binding-field patch.
 
 Types: [BindingFieldPatch].
 
@@ -45,11 +51,13 @@ Types: [BindingFieldPatch].
 
 `(*, value: SceneContentValue)`
 
+Replace a selected scene content field.
+
 Types: [SceneContentValue].
 
 **Fields**
 
-- `value`: Scalar value in the referenced parameter domain.
+- `value`: Typed replacement content; its variant must match the captured field.
 
 ## zipzi.modeling.addressing.AddressPatchDocument
 
@@ -57,17 +65,21 @@ Types: [SceneContentValue].
 
 `(*, value: DocumentValue)`
 
+Replace a typed document metadata field.
+
 Types: [DocumentValue].
 
 **Fields**
 
-- `value`: Scalar value in the referenced parameter domain.
+- `value`: Replacement document property; its variant must match the captured field.
 
 ## zipzi.modeling.addressing.AddressPatchDrawingRange
 
 **Type**
 
 `(*, range: tuple[int, int])`
+
+Replace a drawing group range.
 
 **Fields**
 
@@ -78,6 +90,8 @@ Types: [DocumentValue].
 **Type**
 
 `(*, fields: ExpressionEntryFields)`
+
+Replace expression entry fields.
 
 Types: [ExpressionEntryFields].
 
@@ -91,6 +105,8 @@ Types: [ExpressionEntryFields].
 
 `(*, entry: MotionRegistration)`
 
+Replace a motion registration.
+
 Types: [MotionRegistration].
 
 **Fields**
@@ -102,6 +118,8 @@ Types: [MotionRegistration].
 **Type**
 
 `(*, intent: OrganizationEdit)`
+
+Apply a matching organization edit.
 
 Types: [OrganizationEdit].
 
@@ -116,6 +134,8 @@ mutate or publish.
 
 `(*, changes: tuple[PhysicsProperty, ...])`
 
+Apply Physics property changes.
+
 Types: [PhysicsProperty].
 
 **Fields**
@@ -128,6 +148,8 @@ Types: [PhysicsProperty].
 
 `(*, fields: PoseFields)`
 
+Replace Pose fields.
+
 Types: [PoseFields].
 
 **Fields**
@@ -139,6 +161,8 @@ Types: [PoseFields].
 **Type**
 
 `(*, fields: ReferenceFields)`
+
+Replace fields of a matching reference metadata entry.
 
 Types: [ReferenceFields].
 
@@ -153,6 +177,8 @@ kind.
 
 `(*, name: str)`
 
+Replace an image-resource name.
+
 **Fields**
 
 - `name`: Human-readable display name; use the stable ID for identity because names can change.
@@ -163,11 +189,13 @@ kind.
 
 `(*, value: SceneFieldValue, clear_glue_pairs: bool)`
 
+Replace a matching typed scene field.
+
 Types: [SceneFieldValue].
 
 **Fields**
 
-- `value`: Scalar value in the referenced parameter domain.
+- `value`: Replacement scene property; its variant must match the captured field.
 - `clear_glue_pairs`: Explicitly clear existing Glue vertex pairs when changing Glue endpoints.
 
 ## zipzi.modeling.addressing.AddressPatchSelection
@@ -175,6 +203,8 @@ Types: [SceneFieldValue].
 **Type**
 
 `(*, targets: tuple[str, ...])`
+
+Replace a reference target selection.
 
 **Fields**
 

@@ -20,6 +20,8 @@ Canonical addressing modeling values.
 
 `(*, inspect: CapabilityState, patch: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, load_content: CapabilityState)`
 
+Current attachment capability states; they do not reserve later execution.
+
 Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
 **Fields**
@@ -40,6 +42,8 @@ before invoking the operation.
 **Type**
 
 `(*, inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, reorder: CapabilityState, delete: CapabilityState, repair: CapabilityState, preview: CapabilityState)`
+
+Current binding capability states; they do not reserve later execution.
 
 Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
@@ -66,6 +70,8 @@ invoking the operation.
 
 `CapabilitiesScene | CapabilitiesOrganization | CapabilitiesBinding | CapabilitiesContent | CapabilitiesReferences | CapabilitiesResource | CapabilitiesAttachment | CapabilitiesCollection | CapabilitiesDocument | CapabilitiesMotion | CapabilitiesExpression | CapabilitiesPhysics | CapabilitiesPose`
 
+Source-bound snapshot of capability states; availability does not reserve future admission.
+
 Types: [CapabilitiesAttachment](#zipzimodelingaddressingcapabilitiesattachment), [CapabilitiesBinding](#zipzimodelingaddressingcapabilitiesbinding), [CapabilitiesCollection](#zipzimodelingaddressingcapabilitiescollection), [CapabilitiesContent](#zipzimodelingaddressingcapabilitiescontent), [CapabilitiesDocument](#zipzimodelingaddressingcapabilitiesdocument), [CapabilitiesExpression](#zipzimodelingaddressingcapabilitiesexpression), [CapabilitiesMotion](#zipzimodelingaddressingcapabilitiesmotion), [CapabilitiesOrganization](#zipzimodelingaddressingcapabilitiesorganization), [CapabilitiesPhysics](#zipzimodelingaddressingcapabilitiesphysics), [CapabilitiesPose](#zipzimodelingaddressingcapabilitiespose), [CapabilitiesReferences](#zipzimodelingaddressingcapabilitiesreferences), [CapabilitiesResource](#zipzimodelingaddressingcapabilitiesresource), [CapabilitiesScene](#zipzimodelingaddressingcapabilitiesscene).
 
 
@@ -74,6 +80,8 @@ Types: [CapabilitiesAttachment](#zipzimodelingaddressingcapabilitiesattachment),
 **Type**
 
 `(*, value: AttachmentCapabilities)`
+
+Attachment capabilities.
 
 Types: [AttachmentCapabilities](#zipzimodelingaddressingattachmentcapabilities).
 
@@ -88,6 +96,8 @@ not infer support from method presence.
 
 `(*, value: BindingCapabilities)`
 
+Binding capabilities.
+
 Types: [BindingCapabilities](#zipzimodelingaddressingbindingcapabilities).
 
 **Fields**
@@ -100,6 +110,8 @@ not infer support from method presence.
 **Type**
 
 `(*, value: CollectionCapabilities)`
+
+Selected collection capabilities.
 
 Types: [CollectionCapabilities](#zipzimodelingaddressingcollectioncapabilities).
 
@@ -114,6 +126,8 @@ presence.
 
 `(*, value: SceneContentCapabilities)`
 
+Scene content capabilities.
+
 Types: [SceneContentCapabilities](#zipzimodelingaddressingscenecontentcapabilities).
 
 **Fields**
@@ -126,6 +140,8 @@ support from method presence.
 **Type**
 
 `(*, value: CapabilityState)`
+
+Document metadata capability state.
 
 Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
@@ -140,6 +156,8 @@ not infer support from method presence.
 
 `(*, value: ExpressionCapabilities)`
 
+Native expression capabilities.
+
 Types: [ExpressionCapabilities](#zipzimodelingaddressingexpressioncapabilities).
 
 **Fields**
@@ -152,6 +170,8 @@ Types: [ExpressionCapabilities](#zipzimodelingaddressingexpressioncapabilities).
 
 `(*, value: MotionCapabilities)`
 
+Native motion capabilities.
+
 Types: [MotionCapabilities](#zipzimodelingaddressingmotioncapabilities).
 
 **Fields**
@@ -163,6 +183,8 @@ Types: [MotionCapabilities](#zipzimodelingaddressingmotioncapabilities).
 **Type**
 
 `(*, value: OrganizationCapabilities)`
+
+Organization capabilities.
 
 Types: [OrganizationCapabilities](#zipzimodelingaddressingorganizationcapabilities).
 
@@ -177,6 +199,8 @@ infer support from method presence.
 
 `(*, value: PhysicsCapabilities)`
 
+Native Physics capabilities.
+
 Types: [PhysicsCapabilities](#zipzimodelingaddressingphysicscapabilities).
 
 **Fields**
@@ -189,6 +213,8 @@ Types: [PhysicsCapabilities](#zipzimodelingaddressingphysicscapabilities).
 
 `(*, value: PoseCapabilities)`
 
+Native Pose capabilities.
+
 Types: [PoseCapabilities](#zipzimodelingaddressingposecapabilities).
 
 **Fields**
@@ -200,6 +226,8 @@ Types: [PoseCapabilities](#zipzimodelingaddressingposecapabilities).
 **Type**
 
 `(*, value: ReferenceCapabilities)`
+
+Reference metadata capabilities.
 
 Types: [ReferenceCapabilities](#zipzimodelingaddressingreferencecapabilities).
 
@@ -214,6 +242,8 @@ infer support from method presence.
 
 `(*, value: ResourceCapabilities)`
 
+Image resource capabilities.
+
 Types: [ResourceCapabilities](#zipzimodelingaddressingresourcecapabilities).
 
 **Fields**
@@ -227,6 +257,8 @@ infer support from method presence.
 
 `(*, value: SceneCapabilities)`
 
+Scene object capabilities.
+
 Types: [SceneCapabilities](#zipzimodelingaddressingscenecapabilities).
 
 **Fields**
@@ -238,25 +270,29 @@ infer support from method presence.
 
 **Enum**
 
+Select the native capability family to query for a referenced object.
+
 **Members**
 
-- `SCENE`: 'scene'
-- `ORGANIZATION`: 'organization'
-- `BINDING`: 'binding'
-- `CONTENT`: 'content'
-- `REFERENCES`: 'references'
-- `RESOURCE`: 'resource'
-- `ATTACHMENT`: 'attachment'
-- `MOTION`: 'motion'
-- `EXPRESSION`: 'expression'
-- `PHYSICS`: 'physics'
-- `POSE`: 'pose'
+- `SCENE`: 'scene' — Scene lifecycle, hierarchy and drawing capabilities.
+- `ORGANIZATION`: 'organization' — Organization and parameter-group capabilities.
+- `BINDING`: 'binding' — Binding and grid conversion capabilities.
+- `CONTENT`: 'content' — Scene content and topology capabilities.
+- `REFERENCES`: 'references' — Metadata reference and selection capabilities.
+- `RESOURCE`: 'resource' — Image resource capabilities.
+- `ATTACHMENT`: 'attachment' — Package attachment capabilities.
+- `MOTION`: 'motion' — Native motion capabilities.
+- `EXPRESSION`: 'expression' — Native expression capabilities.
+- `PHYSICS`: 'physics' — Native Physics capabilities.
+- `POSE`: 'pose' — Native Pose capabilities.
 
 ## zipzi.modeling.addressing.CapabilityState
 
 **Alias**
 
 `CapabilityStateAvailable | CapabilityStateUnsupported | CapabilityStateUnavailable`
+
+Current capability verdict with a reason when unavailable or unsupported; it does not reserve execution.
 
 Types: [CapabilityStateAvailable](#zipzimodelingaddressingcapabilitystateavailable), [CapabilityStateUnavailable](#zipzimodelingaddressingcapabilitystateunavailable), [CapabilityStateUnsupported](#zipzimodelingaddressingcapabilitystateunsupported).
 
@@ -267,12 +303,16 @@ Types: [CapabilityStateAvailable](#zipzimodelingaddressingcapabilitystateavailab
 
 `()`
 
+The operation is currently available subject to later validation and admission.
+
 
 ## zipzi.modeling.addressing.CapabilityStateUnavailable
 
 **Type**
 
 `(*, code: str)`
+
+The operation is currently unavailable for the captured state.
 
 **Fields**
 
@@ -284,6 +324,8 @@ Types: [CapabilityStateAvailable](#zipzimodelingaddressingcapabilitystateavailab
 
 `(*, code: str)`
 
+The operation is not supported for this object or domain.
+
 **Fields**
 
 - `code`: Stable reason code explaining why this operation is unsupported for this object/domain.
@@ -293,6 +335,8 @@ Types: [CapabilityStateAvailable](#zipzimodelingaddressingcapabilitystateavailab
 **Type**
 
 `(*, create: CapabilityState, move_into: CapabilityState, reorder: CapabilityState)`
+
+Current collection capability states; they do not reserve later execution.
 
 Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
@@ -310,6 +354,8 @@ invoking the operation.
 **Type**
 
 `(*, inspect: CapabilityState, create_entry: CapabilityState, patch: CapabilityState, move_entry: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, repair: CapabilityState, preview: CapabilityState)`
+
+Current expression capability states; they do not reserve later execution.
 
 Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
@@ -329,6 +375,8 @@ Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 **Type**
 
 `(*, inspect: CapabilityState, patch: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, move_object: CapabilityState, preview: CapabilityState, create_child: CapabilityState, reorder: CapabilityState, repair: CapabilityState, edit_content: CapabilityState)`
+
+Current motion capability states; they do not reserve later execution.
 
 Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
@@ -350,6 +398,8 @@ Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 **Type**
 
 `(*, inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, move_object: CapabilityState, reorder: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, dissolve: CapabilityState)`
+
+Current organization capability states; they do not reserve later execution.
 
 Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
@@ -378,6 +428,8 @@ state/reason before invoking the operation.
 
 `(*, inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, move_object: CapabilityState, reorder: CapabilityState, repair: CapabilityState, preview: CapabilityState)`
 
+Current Physics capability states; they do not reserve later execution.
+
 Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
 **Fields**
@@ -397,6 +449,8 @@ Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 **Type**
 
 `(*, inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, move_object: CapabilityState, reorder: CapabilityState, repair: CapabilityState, dissolve: CapabilityState, preview: CapabilityState)`
+
+Current Pose capability states; they do not reserve later execution.
 
 Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
@@ -418,6 +472,8 @@ Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 **Type**
 
 `(*, inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, move_object: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, dissolve: CapabilityState)`
+
+Current reference capability states; they do not reserve later execution.
 
 Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
@@ -444,6 +500,8 @@ state/reason before invoking the operation.
 
 `ReferenceCollectionModelParameterGroups | ReferenceCollectionModelHitAreas | ReferenceCollectionCdiCombinedSets | ReferenceCollectionModelParameterMembers | ReferenceCollectionCdiCombinedMembers`
 
+Select a model3 or CDI reference metadata collection.
+
 Types: [ReferenceCollectionCdiCombinedMembers](#zipzimodelingaddressingreferencecollectioncdicombinedmembers), [ReferenceCollectionCdiCombinedSets](#zipzimodelingaddressingreferencecollectioncdicombinedsets), [ReferenceCollectionModelHitAreas](#zipzimodelingaddressingreferencecollectionmodelhitareas), [ReferenceCollectionModelParameterGroups](#zipzimodelingaddressingreferencecollectionmodelparametergroups), [ReferenceCollectionModelParameterMembers](#zipzimodelingaddressingreferencecollectionmodelparametermembers).
 
 
@@ -452,6 +510,8 @@ Types: [ReferenceCollectionCdiCombinedMembers](#zipzimodelingaddressingreference
 **Type**
 
 `(*, set_id: str)`
+
+Select members of one CDI combined-parameter set.
 
 **Fields**
 
@@ -463,12 +523,16 @@ Types: [ReferenceCollectionCdiCombinedMembers](#zipzimodelingaddressingreference
 
 `()`
 
+Select CDI combined-parameter sets.
+
 
 ## zipzi.modeling.addressing.ReferenceCollectionModelHitAreas
 
 **Type**
 
 `()`
+
+Select model3 hit areas.
 
 
 ## zipzi.modeling.addressing.ReferenceCollectionModelParameterGroups
@@ -477,12 +541,16 @@ Types: [ReferenceCollectionCdiCombinedMembers](#zipzimodelingaddressingreference
 
 `()`
 
+Select model3 parameter groups.
+
 
 ## zipzi.modeling.addressing.ReferenceCollectionModelParameterMembers
 
 **Type**
 
 `(*, group_id: str)`
+
+Select members of one model3 parameter group.
 
 **Fields**
 
@@ -494,6 +562,8 @@ Types: [ReferenceCollectionCdiCombinedMembers](#zipzimodelingaddressingreference
 
 `ReferenceEditCreateModelParameterGroup | ReferenceEditCreateModelHitArea | ReferenceEditCreateCdiCombinedSet | ReferenceEditCreateMember | ReferenceEditPatch | ReferenceEditMove | ReferenceEditDuplicate | ReferenceEditDelete | ReferenceEditDissolve | ReferenceEditReplaceSelection`
 
+Create, patch, move or remove model3 and CDI reference metadata.
+
 Types: [ReferenceEditCreateCdiCombinedSet](#zipzimodelingaddressingreferenceeditcreatecdicombinedset), [ReferenceEditCreateMember](#zipzimodelingaddressingreferenceeditcreatemember), [ReferenceEditCreateModelHitArea](#zipzimodelingaddressingreferenceeditcreatemodelhitarea), [ReferenceEditCreateModelParameterGroup](#zipzimodelingaddressingreferenceeditcreatemodelparametergroup), [ReferenceEditDelete](#zipzimodelingaddressingreferenceeditdelete), [ReferenceEditDissolve](#zipzimodelingaddressingreferenceeditdissolve), [ReferenceEditDuplicate](#zipzimodelingaddressingreferenceeditduplicate), [ReferenceEditMove](#zipzimodelingaddressingreferenceeditmove), [ReferenceEditPatch](#zipzimodelingaddressingreferenceeditpatch), [ReferenceEditReplaceSelection](#zipzimodelingaddressingreferenceeditreplaceselection).
 
 
@@ -502,6 +572,8 @@ Types: [ReferenceEditCreateCdiCombinedSet](#zipzimodelingaddressingreferenceedit
 **Type**
 
 `(*, id: str, before: str | None = None)`
+
+Create a CDI combined-parameter set.
 
 **Fields**
 
@@ -514,6 +586,8 @@ the selected destination.
 **Type**
 
 `(*, id: str, collection: ReferenceCollection, before: str | None = None)`
+
+Create a reference member in the selected collection.
 
 Types: [ReferenceCollection](#zipzimodelingaddressingreferencecollection).
 
@@ -530,6 +604,8 @@ the selected destination.
 
 `(*, id: str, name: str, before: str | None = None)`
 
+Create a model3 hit area.
+
 **Fields**
 
 - `id`: New stable UUID for this object; it must not conflict with an existing identity.
@@ -542,6 +618,8 @@ the selected destination.
 **Type**
 
 `(*, id: str, name: str, before: str | None = None)`
+
+Create a model3 parameter group.
 
 **Fields**
 
@@ -556,6 +634,8 @@ the selected destination.
 
 `(*, ids: tuple[str, ...])`
 
+Delete selected reference entries.
+
 **Fields**
 
 - `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
@@ -567,12 +647,13 @@ are not identities.
 
 `(*, id: str, destination: str, before: str | None = None)`
 
+Remove a reference container and move its members to a compatible destination.
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
 runtime_id.
-- `destination`: Explicit destination collection; organization, deformation and drawing memberships
-are independent.
+- `destination`: Stable ID of a compatible destination group or combined set; it must differ from id.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
 the selected destination.
 
@@ -581,6 +662,8 @@ the selected destination.
 **Type**
 
 `(*, ids: tuple[str, ...], destination: ReferenceCollection, before: str | None = None)`
+
+Duplicate selected entries into a compatible collection.
 
 Types: [ReferenceCollection](#zipzimodelingaddressingreferencecollection).
 
@@ -599,6 +682,8 @@ the selected destination.
 
 `(*, ids: tuple[str, ...], destination: ReferenceCollection, before: str | None = None)`
 
+Move selected entries to a compatible collection.
+
 Types: [ReferenceCollection](#zipzimodelingaddressingreferencecollection).
 
 **Fields**
@@ -615,6 +700,8 @@ the selected destination.
 **Type**
 
 `(*, id: str, expected: ReferenceFields, fields: ReferenceFields)`
+
+Replace matching metadata fields under an exact precondition.
 
 Types: [ReferenceFields](#zipzimodelingaddressingreferencefields).
 
@@ -633,6 +720,8 @@ kind.
 
 `(*, owner: str, field: ReferenceSelectionField, expected: tuple[str, ...], targets: tuple[str, ...])`
 
+Replace an ordered target list under an exact precondition.
+
 Types: [ReferenceSelectionField](#zipzimodelingaddressingreferenceselectionfield).
 
 **Fields**
@@ -648,6 +737,8 @@ Types: [ReferenceSelectionField](#zipzimodelingaddressingreferenceselectionfield
 
 `(*, id: str, target: CdiParameterRef)`
 
+Stable metadata-entry identity and its independently resolved or unresolved target.
+
 Types: [CdiParameterRef].
 
 **Fields**
@@ -661,6 +752,8 @@ remains independent of the target.
 **Type**
 
 `(*, id: str, target: ModelTargetRef)`
+
+Stable metadata-entry identity and its independently resolved or unresolved target.
 
 Types: [ModelTargetRef].
 
@@ -676,6 +769,8 @@ remains independent of the target.
 
 `ReferenceFieldsModelParameterGroup | ReferenceFieldsModelHitArea | ReferenceFieldsModelParameterMember | ReferenceFieldsCdiCombinedMember`
 
+Typed metadata fields used to patch a matching reference entry.
+
 Types: [ReferenceFieldsCdiCombinedMember](#zipzimodelingaddressingreferencefieldscdicombinedmember), [ReferenceFieldsModelHitArea](#zipzimodelingaddressingreferencefieldsmodelhitarea), [ReferenceFieldsModelParameterGroup](#zipzimodelingaddressingreferencefieldsmodelparametergroup), [ReferenceFieldsModelParameterMember](#zipzimodelingaddressingreferencefieldsmodelparametermember).
 
 
@@ -684,6 +779,8 @@ Types: [ReferenceFieldsCdiCombinedMember](#zipzimodelingaddressingreferencefield
 **Type**
 
 `(*, target: CdiParameterRef)`
+
+Supply a CDI combined-parameter member target.
 
 Types: [CdiParameterRef].
 
@@ -698,6 +795,8 @@ remains independent of the target.
 
 `(*, name: str, mesh: ModelTargetRef)`
 
+Supply model3 hit-area fields and mesh target.
+
 Types: [ModelTargetRef].
 
 **Fields**
@@ -711,6 +810,8 @@ Types: [ModelTargetRef].
 
 `(*, name: str)`
 
+Supply model3 parameter-group fields.
+
 **Fields**
 
 - `name`: Human-readable display name; use the stable ID for identity because names can change.
@@ -720,6 +821,8 @@ Types: [ModelTargetRef].
 **Type**
 
 `(*, target: ModelTargetRef)`
+
+Supply a model3 parameter member target.
 
 Types: [ModelTargetRef].
 
@@ -732,17 +835,21 @@ remains independent of the target.
 
 **Enum**
 
+Select an ordered object-reference list for replacement.
+
 **Members**
 
-- `MESH_MASKS`: 'mesh_masks'
-- `OFFSCREEN_MASKS`: 'offscreen_masks'
-- `BLEND_CONSTRAINTS`: 'blend_constraints'
+- `MESH_MASKS`: 'mesh_masks' — Select a mesh clipping-mask list.
+- `OFFSCREEN_MASKS`: 'offscreen_masks' — Select an Offscreen clipping-mask list.
+- `BLEND_CONSTRAINTS`: 'blend_constraints' — Select a BlendShape binding constraint list.
 
 ## zipzi.modeling.addressing.ResourceCapabilities
 
 **Type**
 
 `(*, inspect: CapabilityState, patch: CapabilityState, load_content: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, reorder: CapabilityState)`
+
+Current image-resource capability states; they do not reserve later execution.
 
 Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
@@ -766,6 +873,8 @@ invoking the operation.
 **Type**
 
 `(*, inspect: CapabilityState, patch: CapabilityState, move_object: CapabilityState, reparent: CapabilityState, reorder: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, dissolve: CapabilityState)`
+
+Current scene capability states; they do not reserve later execution.
 
 Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
@@ -793,6 +902,8 @@ state/reason before invoking the operation.
 **Type**
 
 `(*, inspect: CapabilityState, edit: CapabilityState, topology: CapabilityState)`
+
+Current scene-content capability states; they do not reserve later execution.
 
 Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 

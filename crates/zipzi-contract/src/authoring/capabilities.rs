@@ -1,62 +1,108 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[derive(zipzi_api_derive::ApiShape)]
+/// Native identity domain used when capturing a source-bound SDK object reference.
 pub enum ObjectKind {
+    /// Identifies a document image resource.
     Asset,
+    /// Identifies a drawable mesh.
     Mesh,
+    /// Identifies an authored parameter.
     Parameter,
+    /// Identifies an ordinary mesh binding.
     MeshBinding,
+    /// Identifies a binding axis owned by a grid.
     BindingAxis,
+    /// Identifies a sample owned by a binding axis, BlendShape table or constraint.
     BindingSample,
+    /// Identifies an organizational Part.
     Part,
+    /// Identifies a deformation transform.
     Transform,
+    /// Identifies an ordinary scene binding.
     SceneBinding,
+    /// Identifies a BlendShape key table.
     BlendKeyTable,
+    /// Identifies a BlendShape constraint.
     BlendConstraint,
+    /// Identifies a BlendShape target binding.
     BlendBinding,
+    /// Identifies a connection between mesh endpoints.
     Glue,
+    /// Identifies a vertex pair owned by a Glue.
     GlueVertexPair,
+    /// Identifies a Part-owned Offscreen composite.
     Offscreen,
+    /// Identifies a drawing-group role of a Part or root.
     DrawOrderGroup,
+    /// Identifies a CDI parameter organization group.
     CdiParameterGroup,
+    /// Identifies a CDI combined-parameter set.
     CdiCombinedSet,
+    /// Identifies a member of a CDI combined-parameter set.
     CdiCombinedMember,
+    /// Identifies a model3 parameter metadata group.
     ModelParameterGroup,
+    /// Identifies a member of a model3 parameter group.
     ModelParameterMember,
+    /// Identifies a model3 hit-area registration.
     ModelHitArea,
+    /// Identifies an expression asset.
     Expression,
+    /// Identifies an entry owned by an expression.
     ExpressionEntry,
+    /// Identifies a motion clip asset.
     Motion,
+    /// Identifies a motion registration group.
     MotionGroup,
+    /// Identifies a motion registration referencing a clip.
     MotionRegistration,
+    /// Identifies a track owned by a motion clip.
     MotionTrack,
+    /// Identifies a key owned by a motion track.
     MotionKey,
+    /// Identifies an event owned by a motion clip.
     MotionEvent,
+    /// Identifies a package attachment.
     Attachment,
+    /// Identifies a Pose singleton.
     Pose,
+    /// Identifies a group owned by Pose.
     PoseGroup,
+    /// Identifies an entry owned by a Pose group.
     PoseEntry,
+    /// Identifies a link owned by a Pose entry.
     PoseLink,
+    /// Identifies a Physics singleton.
     Physics,
+    /// Identifies a Physics rig group.
     PhysicsGroup,
+    /// Identifies an input owned by a Physics rig.
     PhysicsInput,
+    /// Identifies an output owned by a Physics rig.
     PhysicsOutput,
+    /// Identifies a node owned by a Physics rig.
     PhysicsNode,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, zipzi_api_derive::ApiShape)]
+/// Current capability verdict with a reason when unavailable or unsupported; it does not reserve execution.
 pub enum CapabilityState {
+    /// The operation is currently available subject to later validation and admission.
     Available,
+    /// The operation is not supported for this object or domain.
     Unsupported {
         /// Stable reason code explaining why this operation is unsupported for this object/domain.
         code: &'static str,
     },
+    /// The operation is currently unavailable for the captured state.
     Unavailable {
         /// Stable reason code explaining why this operation is currently unavailable.
         code: &'static str,
     },
 }
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, zipzi_api_derive::ApiShape)]
+/// Current expression capability states; they do not reserve later execution.
 pub struct ExpressionCapabilities {
     /// Read this object while its identity/context remains valid.
     pub inspect: CapabilityState,
@@ -77,6 +123,7 @@ pub struct ExpressionCapabilities {
 }
 
 #[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
+/// Current Pose capability states; they do not reserve later execution.
 pub struct PoseCapabilities {
     /// Read this object while its identity/context remains valid.
     pub inspect: CapabilityState,
@@ -101,6 +148,7 @@ pub struct PoseCapabilities {
 }
 
 #[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
+/// Current image-resource capability states; they do not reserve later execution.
 pub struct ResourceCapabilities {
     /// Current capability to read the current typed record; inspect its state/reason before
     /// invoking the operation.
@@ -123,6 +171,7 @@ pub struct ResourceCapabilities {
 }
 
 #[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
+/// Current scene-content capability states; they do not reserve later execution.
 pub struct SceneContentCapabilities {
     /// Current capability to read the current typed record; inspect its state/reason before
     /// invoking the operation.
@@ -136,6 +185,7 @@ pub struct SceneContentCapabilities {
 }
 
 #[derive(Debug, Clone, zipzi_api_derive::ApiShape, serde::Serialize)]
+/// Current organization capability states; they do not reserve later execution.
 pub struct OrganizationCapabilities {
     /// Current capability to read the current typed record; inspect its state/reason before
     /// invoking the operation.
@@ -164,6 +214,7 @@ pub struct OrganizationCapabilities {
 }
 
 #[derive(Debug, Clone, zipzi_api_derive::ApiShape, serde::Serialize)]
+/// Current attachment capability states; they do not reserve later execution.
 pub struct AttachmentCapabilities {
     /// Current capability to read the current typed record; inspect its state/reason before
     /// invoking the operation.
@@ -183,6 +234,7 @@ pub struct AttachmentCapabilities {
 }
 
 #[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
+/// Current motion capability states; they do not reserve later execution.
 pub struct MotionCapabilities {
     /// Read this object while its identity/context remains valid.
     pub inspect: CapabilityState,
@@ -207,6 +259,7 @@ pub struct MotionCapabilities {
 }
 
 #[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
+/// Current Physics capability states; they do not reserve later execution.
 pub struct PhysicsCapabilities {
     /// Read this object while its identity/context remains valid.
     pub inspect: CapabilityState,
@@ -229,6 +282,7 @@ pub struct PhysicsCapabilities {
 }
 
 #[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
+/// Current scene capability states; they do not reserve later execution.
 pub struct SceneCapabilities {
     /// Current capability to read the current typed record; inspect its state/reason before
     /// invoking the operation.
@@ -257,6 +311,7 @@ pub struct SceneCapabilities {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, zipzi_api_derive::ApiShape, serde::Serialize)]
+/// Current collection capability states; they do not reserve later execution.
 pub struct CollectionCapabilities {
     /// Current capability to create objects in this collection; inspect its state/reason before
     /// invoking the operation.
@@ -270,6 +325,7 @@ pub struct CollectionCapabilities {
 }
 
 #[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
+/// Current reference capability states; they do not reserve later execution.
 pub struct ReferenceCapabilities {
     /// Current capability to read the current typed record; inspect its state/reason before
     /// invoking the operation.
@@ -295,6 +351,7 @@ pub struct ReferenceCapabilities {
 }
 
 #[derive(Debug, Clone, zipzi_api_derive::ApiShape, serde::Serialize)]
+/// Current binding capability states; they do not reserve later execution.
 pub struct BindingCapabilities {
     /// Current capability to read the current typed record; inspect its state/reason before
     /// invoking the operation.

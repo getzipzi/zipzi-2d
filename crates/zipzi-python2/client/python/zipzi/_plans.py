@@ -45,8 +45,10 @@ class Plan(Owned):
     def deletion_page(self, section: modeling.deletion.DeletionSection, *, offset: int = 0, limit: int = 64) -> modeling.deletion.DeletionPage:
         """Read a bounded section of this immutable deletion report.
 
-        Source changes do not change these rows. The live Plan lease and its
-        original recovery owner are required; each page contains 1 to 256 rows.
+        Source changes do not change these rows. offset is a zero-based row
+        position within the selected section, not an object ID; next_offset=None
+        ends that section. The live Plan lease and its original recovery owner
+        are required; limit must be 1..256, and a page may contain fewer rows.
         """
         self._check(self._backend)
         if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:

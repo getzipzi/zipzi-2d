@@ -27,7 +27,14 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                                 'zipzi.references.FieldAddress.close',
                                                 'zipzi.references.FieldAddress.pending_request',
                                                 'zipzi.references.FieldAddress.plan'),
-                                   'documentation': 'An SDK address with incarnation and monotonic epoch validation.',
+                                   'documentation': 'Client-owned SDK field address captured through '
+                                                    'Session.address().\n'
+                                                    '\n'
+                                                    'Incarnation, context and monotonic field epochs bind it to the '
+                                                    'selected\n'
+                                                    'object, not merely its persistent ID. Plan a matching patch and '
+                                                    'close both\n'
+                                                    'leases; stale or recreated objects require a fresh address.',
                                    'fields': [],
                                    'kind': 'type',
                                    'signature': '()'},
@@ -58,7 +65,14 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                                 'zipzi.references.LabelAddress.id',
                                                 'zipzi.references.LabelAddress.pending_request',
                                                 'zipzi.references.LabelAddress.plan'),
-                                   'documentation': '',
+                                   'documentation': 'Client-owned label field address captured from an ObjectRef.\n'
+                                                    '\n'
+                                                    'It retains the original object incarnation, context and field '
+                                                    'epoch as well\n'
+                                                    'as the expected label. Close it independently; a stale address '
+                                                    'must be\n'
+                                                    'recaptured, and its Plan must be applied to the captured exact '
+                                                    'Source.',
                                    'fields': [],
                                    'kind': 'type',
                                    'signature': '(factory-owned; use the documented public entry)'},
@@ -99,7 +113,9 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                         'signature': '(name: str) -> Plan',
                                         'type_refs': ('zipzi.Plan',)},
  'zipzi.references.ObjectKind': {'children': (),
-                                 'documentation': '',
+                                 'documentation': 'Native identity domain used when capturing a source-bound SDK '
+                                                  'object reference. This Python input accepts canonical ObjectKind '
+                                                  'enum members or their string values.',
                                  'fields': [],
                                  'kind': 'alias',
                                  'signature': "Literal['asset', 'mesh', 'parameter', 'mesh_binding', 'binding_axis', "
@@ -124,7 +140,15 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                              'zipzi.references.ObjectRef.pending_request',
                                              'zipzi.references.ObjectRef.resolve',
                                              'zipzi.references.ObjectRef.scene_capabilities'),
-                                'documentation': '',
+                                'documentation': 'Client-owned reference to one SDK object incarnation in a Session.\n'
+                                                 '\n'
+                                                 'Obtain it from Session.reference(); close it independently. resolve '
+                                                 'checks\n'
+                                                 'incarnation and context against the current formal source. Undo, '
+                                                 'deletion or\n'
+                                                 'recreation can invalidate the captured identity even when the UUID '
+                                                 'is reused;\n'
+                                                 'capture a fresh reference instead of treating the UUID as a lease.',
                                 'fields': [],
                                 'kind': 'type',
                                 'signature': '(factory-owned; use the documented public entry)'},
@@ -189,7 +213,8 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                                    'type_refs': ('zipzi.references.SceneCapabilities',)},
  'zipzi.references.SceneCapabilities': {'children': ('zipzi.references.SceneCapabilities.__repr__',
                                                      'zipzi.references.SceneCapabilities.summary'),
-                                        'documentation': '',
+                                        'documentation': 'Current scene capability states; they do not reserve later '
+                                                         'execution.',
                                         'fields': [('inspect',
                                                     'Current capability to read the current typed record; inspect its '
                                                     'state/reason before\n'

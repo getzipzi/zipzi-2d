@@ -198,7 +198,7 @@ def render_dtos(contract, header, resolve=lambda shape: shape):
                 continue
             if n=='ObjectKind':
                 tags=[v['name'] for v in variants(s)]
-                lines+=['from .values import ObjectKind as _ObjectKind','ObjectKind: TypeAlias = Literal['+', '.join(repr(tag) for tag in tags)+'] | _ObjectKind','OBJECT_KINDS = frozenset('+repr(tags)+')',''];continue
+                lines+=['from .values import ObjectKind as _ObjectKind','ObjectKind: TypeAlias = Literal['+', '.join(repr(tag) for tag in tags)+'] | _ObjectKind',repr(s.get('doc','')+' This Python input accepts canonical ObjectKind enum members or their string values.'),'OBJECT_KINDS = frozenset('+repr(tags)+')',''];continue
             if unit(s):
                 if s['name'] in CANONICAL_ENUM_ALIASES:
                     canonical=s['name'].rsplit('::',1)[-1]

@@ -902,7 +902,9 @@ class PythonReference(unittest.TestCase):
     # These pages have no structural gaps; cross-domain semantic acceptance remains open.
     STRUCTURAL_PAGES = frozenset(('runtime runtime_session runtime_edit modeling modeling_common modeling_runtime ops modeling_commands modeling_queries events '
                                   'parameters bindings modeling_parameters modeling_bindings modeling_bindings_edits '
-                                  'resources modeling_resources modeling_mesh scene modeling_scene modeling_scene_edits').split())
+                                  'resources modeling_resources modeling_mesh scene modeling_scene modeling_scene_edits '
+                                  'references modeling_addressing modeling_addressing_kinds modeling_addressing_patches '
+                                  'modeling_addressing_selectors modeling_deletion modeling_deletion_decisions').split())
     BATCH_PAGES = {
         'S': 'meshes',
         'P1': 'runtime runtime_session runtime_edit modeling modeling_common modeling_runtime ops modeling_commands modeling_queries events',
@@ -1107,6 +1109,34 @@ class PythonReference(unittest.TestCase):
         self.assertIn('retaining local data', self.catalog['zipzi.scene.ReparentLocal']['documentation'])
         self.assertIn('candidate operations', self.catalog['zipzi.scene.Operation']['documentation'])
 
+    def test_reference_deletion_review_and_address_semantics(self):
+        state = dict(self.catalog['zipzi.modeling.deletion.DeletionReviewState']['fields'])
+        self.assertIn('confirmation', state['NEEDS_CONFIRMATION'])
+        self.assertIn('Outstanding decisions', state['NEEDS_CHOICE'])
+        self.assertIn('blockers', state['BLOCKED'])
+        request = dict(self.catalog['zipzi.modeling.deletion.DeletionRequest']['fields'])
+        self.assertIn('frozen document defaults', request['parameter_slices'])
+        self.assertIn('None explicitly leaves users unconfigured', request['texture_replacements'])
+        page = self.catalog['zipzi.Plan.deletion_page']['documentation']
+        self.assertIn('row position', page.replace('\n', ' '))
+        self.assertIn('not an object ID', page.replace('\n', ' '))
+        ref = self.catalog['zipzi.references.ObjectRef']['documentation']
+        self.assertIn('incarnation', ref)
+        self.assertIn('recreation', ref)
+        patch = dict(self.catalog['zipzi.modeling.addressing.AddressPatchScene']['fields'])
+        self.assertIn('must match', patch['value'])
+
+    def test_reference_object_kind_projection_follows_contract(self):
+        contract = gen.schema.read(PACKAGE/'schema/authoring.json')
+        marker = 'Changed object kind source description.'
+        contract['definitions']['zipzi_contract::authoring::ObjectKind']['doc'] = marker
+        changed = gen.render(contract)
+        self.assertIn(marker, changed['client/python/zipzi/_generated/reference_values.py'])
+        row = catalog_from_output(changed)['zipzi.references.ObjectKind']
+        self.assertIn(marker, row['documentation'])
+        self.assertIn('string values', row['documentation'])
+        self.assertIn(marker, changed['client/python/zipzi/docs/reference/references.md'])
+
     def test_reference_scene_union_summary_follows_contract(self):
         contract = gen.schema.read(PACKAGE/'schema/authoring.json')
         marker = 'Changed scene union source description.'
@@ -1191,6 +1221,9 @@ for path, facts in (
     ('bindings.Keyform', ('axis order', 'vertex_ids order', 'displacement vectors')),
     ('Runtime.resources.prepare_image', ('top row first', 'straight alpha', 'Close the PreparedImage')),
     ('scene.ReparentLocal', ('local data', 'appearance may change')),
+    ('references.ObjectRef', ('incarnation', 'recreation', 'close')),
+    ('Plan.deletion_page', ('zero-based row', 'not an object ID', 'next_offset')),
+    ('modeling.deletion.DeletionReviewState', ('explicit confirmation', 'Outstanding decisions', 'blockers')),
 ):
     text = zipzi.describe(path).format()
     for fact in facts:

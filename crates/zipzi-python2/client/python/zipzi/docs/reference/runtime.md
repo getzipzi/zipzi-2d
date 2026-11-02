@@ -11,7 +11,7 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 
 **Module**
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a5; protocol zipzi-runtime-v2; client source SHA-256 50c298fb336699cacb3e3e93ed57af6c0447d6ba4be230859a276f4431aa5dbf.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a5; protocol zipzi-runtime-v2; client source SHA-256 717ac7dbc13aa7150593990c7a452328cd926f426a4fcd6d5cb3b9bdae7d9f28.
 
 
 ## zipzi.ApiDescription
@@ -445,8 +445,10 @@ Alias of [zipzi.Buffer.close](runtime.md#zipzibufferclose).
 
 Read a bounded section of this immutable deletion report.
 
-Source changes do not change these rows. The live Plan lease and its
-original recovery owner are required; each page contains 1 to 256 rows.
+Source changes do not change these rows. offset is a zero-based row
+position within the selected section, not an object ID; next_offset=None
+ends that section. The live Plan lease and its original recovery owner
+are required; limit must be 1..256, and a page may contain fewer rows.
 
 Types: [DeletionPage], [DeletionSection].
 

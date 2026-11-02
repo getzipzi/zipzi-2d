@@ -71,6 +71,7 @@ pub enum BindingFieldPatch {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Deletion request and explicitly accepted export regressions to review against one source.
 pub struct DeletionIntent {
     /// Exact typed roots, scope options and conversion resolutions to prepare.
     pub request: crate::document::DeletionRequest,
@@ -81,6 +82,7 @@ pub struct DeletionIntent {
 
 crate::api_record! {
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::BinaryOutput)]
+/// Position-preservation proof and tolerance recorded for a deletion migration.
 pub struct DeletionPositionGuarantee {
     /// Native conversion strategy; position preservation has this strategy's scope.
     pub strategy: crate::document::ReparentStrategy,
@@ -101,19 +103,27 @@ pub struct DeletionPositionGuarantee {
 crate::api_union! {
 tag = "kind";
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::BinaryOutput)]
+/// One typed row from a frozen deletion-review section.
 pub enum DeletionRow {
+    /// An identity proposed for removal.
     Removal { /// Deleted identity and its ownership/scope/dependency reason.
         removal: DeletionRemoval },
+    /// A retained reference or dependency relation.
     Relation { /// Native source field and target explaining a retained rewrite or dependency.
         relation: DeletionRelation },
+    /// A predicted semantic or presentation consequence.
     Effect { /// Typed appearance, animation, composition or export consequence.
         effect: DeletionEffect },
+    /// An outstanding choice and available alternatives.
     Decision { /// Outstanding native choice and actually available alternatives.
         decision: DeletionDecision },
+    /// A lock blocking deletion.
     Lock { /// Affected identity and the inherited lock source.
         blocker: DeletionLock },
+    /// A structural blocker of a valid result.
     Structural { /// Native invalid-result address and diagnostic code.
         blocker: DeletionStructuralBlocker },
+    /// A surviving deformation object and its migration.
     Deformation {
         /// Surviving object whose deformation parent changes.
         object: DeletionObject,
@@ -124,6 +134,7 @@ pub enum DeletionRow {
         /// Position proof only, without copying the frozen model parameter map.
         guarantee: Option<DeletionPositionGuarantee>,
     },
+    /// A surviving organization member and its migration.
     Organization {
         /// Surviving organization member.
         object: DeletionObject,
@@ -132,12 +143,14 @@ pub enum DeletionRow {
         /// Explicit Offscreen mapping slot count, without copying its full array.
         mapping_slots: Option<usize>,
     },
+    /// An ancestor limiting a standalone preservation guarantee.
     GuaranteeLimit {
         /// Object whose standalone position proof is limited by another migration.
         object: DeletionObject,
         /// Retained ancestor with an explicitly chosen local-data migration.
         ancestor: DeletionObject,
     },
+    /// A parameter interval or fixed input used by a conversion proof.
     Domain {
         /// Object whose preservation proof uses this parameter interval or fixed input.
         object: DeletionObject,
@@ -150,6 +163,7 @@ pub enum DeletionRow {
         /// Frozen reference value used by the conversion.
         reference_value: f32,
     },
+    /// An existing or newly introduced export failure.
     Export {
         /// Resource, format and exact native export regression.
         failure: crate::project::OpaqueExportIssue,
@@ -160,6 +174,7 @@ pub enum DeletionRow {
 }
 crate::api_record! {
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::BinaryOutput)]
+/// Bounded rows from one immutable deletion-review section; offsets are row positions, not IDs.
 pub struct DeletionPage {
     /// Report section in the frozen plan.
     pub section: DeletionSection,

@@ -1,79 +1,105 @@
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, zipzi_api_derive::ApiShape)]
 #[serde(rename_all = "snake_case")]
+/// Select the native capability family to query for a referenced object.
 pub enum CapabilityDomain {
+    /// Scene lifecycle, hierarchy and drawing capabilities.
     Scene,
+    /// Organization and parameter-group capabilities.
     Organization,
+    /// Binding and grid conversion capabilities.
     Binding,
+    /// Scene content and topology capabilities.
     Content,
+    /// Metadata reference and selection capabilities.
     References,
+    /// Image resource capabilities.
     Resource,
+    /// Package attachment capabilities.
     Attachment,
+    /// Native motion capabilities.
     Motion,
+    /// Native expression capabilities.
     Expression,
+    /// Native Physics capabilities.
     Physics,
+    /// Native Pose capabilities.
     Pose,
 }
 
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape)]
 #[serde(tag = "domain", content = "values", rename_all = "snake_case")]
+/// Source-bound snapshot of capability states; availability does not reserve future admission.
 pub enum Capabilities {
+    /// Scene object capabilities.
     Scene(
         /// Current scene lifecycle, hierarchy and drawing capability states and reasons; do not
         /// infer support from method presence.
         SceneCapabilities,
     ),
+    /// Organization capabilities.
     Organization(
         /// Current organization and parameter groups capability states and reasons; do not
         /// infer support from method presence.
         OrganizationCapabilities,
     ),
+    /// Binding capabilities.
     Binding(
         /// Current parameter bindings and grid conversions capability states and reasons; do
         /// not infer support from method presence.
         BindingCapabilities,
     ),
+    /// Scene content capabilities.
     Content(
         /// Current geometry and topology content capability states and reasons; do not infer
         /// support from method presence.
         SceneContentCapabilities,
     ),
+    /// Reference metadata capabilities.
     References(
         /// Current metadata references and selections capability states and reasons; do not
         /// infer support from method presence.
         ReferenceCapabilities,
     ),
+    /// Image resource capabilities.
     Resource(
         /// Current image asset metadata and references capability states and reasons; do not
         /// infer support from method presence.
         ResourceCapabilities,
     ),
+    /// Attachment capabilities.
     Attachment(
         /// Current package attachments and their references capability states and reasons; do
         /// not infer support from method presence.
         AttachmentCapabilities,
     ),
+    /// Selected collection capabilities.
     Collection(
         /// Current collection capability states and reasons; do not infer support from method
         /// presence.
         CollectionCapabilities,
     ),
+    /// Document metadata capability state.
     Document(
         /// Current document configuration and metadata repair capability states and reasons; do
         /// not infer support from method presence.
         CapabilityState,
     ),
+    /// Native motion capabilities.
     Motion(
         /// Current native motion eligibility; host Preview support is advertised separately.
         MotionCapabilities,
     ),
+    /// Native expression capabilities.
     Expression(
         /// Current native expression eligibility; host Preview support is advertised separately.
         ExpressionCapabilities,
     ),
+    /// Native Physics capabilities.
     Physics(
         /// Current native physics eligibility; host Preview support is advertised separately.
         PhysicsCapabilities,
     ),
+    /// Native Pose capabilities.
     Pose(
         /// Current native pose eligibility; host Preview support is advertised separately.
         PoseCapabilities,

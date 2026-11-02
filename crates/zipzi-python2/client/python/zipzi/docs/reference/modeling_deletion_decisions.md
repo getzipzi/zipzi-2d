@@ -11,24 +11,28 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 
 **Enum**
 
+A resolution offered for a deletion decision; selecting it requires a new review.
+
 **Members**
 
-- `PRESERVE_EDIT_STATE`: 'PreserveEditState'
-- `KEEP_LOCAL_DATA`: 'KeepLocalData'
-- `CHOOSE_PART`: 'ChoosePart'
-- `SUPPLY_OFFSCREEN_MAPPING`: 'SupplyOffscreenMapping'
-- `CHOOSE_TEXTURE`: 'ChooseTexture'
-- `CHOOSE_BLEND_BASE`: 'ChooseBlendBase'
-- `CLEAR_TEXTURE`: 'ClearTexture'
-- `CHOOSE_PHYSICS_NODE`: 'ChoosePhysicsNode'
-- `DELETE_SUBTREE`: 'DeleteSubtree'
-- `CANCEL`: 'Cancel'
+- `PRESERVE_EDIT_STATE`: 'PreserveEditState' — Attempt to preserve deformation at the frozen edit state.
+- `KEEP_LOCAL_DATA`: 'KeepLocalData' — Keep local deformation data and accept possible visual change.
+- `CHOOSE_PART`: 'ChoosePart' — Choose a retained Part destination.
+- `SUPPLY_OFFSCREEN_MAPPING`: 'SupplyOffscreenMapping' — Supply a mapping for a surviving Offscreen.
+- `CHOOSE_TEXTURE`: 'ChooseTexture' — Choose a retained replacement texture.
+- `CHOOSE_BLEND_BASE`: 'ChooseBlendBase' — Choose a retained BlendShape base sample.
+- `CLEAR_TEXTURE`: 'ClearTexture' — Explicitly leave the texture reference unconfigured.
+- `CHOOSE_PHYSICS_NODE`: 'ChoosePhysicsNode' — Choose a replacement Physics node.
+- `DELETE_SUBTREE`: 'DeleteSubtree' — Expand the deletion to the indicated subtree.
+- `CANCEL`: 'Cancel' — Cancel this deletion request.
 
 ## zipzi.modeling.deletion.DeletionDecision
 
 **Type**
 
 `(*, object: DeletionObject, reason: DeletionDecisionReason, choices: tuple[DeletionChoice, ...])`
+
+Affected object, unresolved reason and available resolutions in a frozen review.
 
 Types: [DeletionChoice](#zipzimodelingdeletiondeletionchoice), [DeletionDecisionReason](#zipzimodelingdeletiondeletiondecisionreason), [DeletionObject].
 
@@ -44,6 +48,8 @@ Types: [DeletionChoice](#zipzimodelingdeletiondeletionchoice), [DeletionDecision
 
 `DeletionDecisionReasonConversionUnproven | DeletionDecisionReasonOffscreenOwnerUnavailable | DeletionDecisionReasonOffscreenMappingRequired | DeletionDecisionReasonPartStateUnpreserved | DeletionDecisionReasonTextureReplacementRequired | DeletionDecisionReasonBlendBaseReplacementRequired | DeletionDecisionReasonPhysicsNodeReplacementRequired | DeletionDecisionReasonInvalidContainer`
 
+Native condition requiring an explicit deletion decision.
+
 Types: [DeletionDecisionReasonBlendBaseReplacementRequired](#zipzimodelingdeletiondeletiondecisionreasonblendbasereplacementrequired), [DeletionDecisionReasonConversionUnproven](#zipzimodelingdeletiondeletiondecisionreasonconversionunproven), [DeletionDecisionReasonInvalidContainer](#zipzimodelingdeletiondeletiondecisionreasoninvalidcontainer), [DeletionDecisionReasonOffscreenMappingRequired](#zipzimodelingdeletiondeletiondecisionreasonoffscreenmappingrequired), [DeletionDecisionReasonOffscreenOwnerUnavailable](#zipzimodelingdeletiondeletiondecisionreasonoffscreenownerunavailable), [DeletionDecisionReasonPartStateUnpreserved](#zipzimodelingdeletiondeletiondecisionreasonpartstateunpreserved), [DeletionDecisionReasonPhysicsNodeReplacementRequired](#zipzimodelingdeletiondeletiondecisionreasonphysicsnodereplacementrequired), [DeletionDecisionReasonTextureReplacementRequired](#zipzimodelingdeletiondeletiondecisionreasontexturereplacementrequired).
 
 
@@ -53,12 +59,16 @@ Types: [DeletionDecisionReasonBlendBaseReplacementRequired](#zipzimodelingdeleti
 
 `()`
 
+A deleted BlendShape base requires a retained replacement sample.
+
 
 ## zipzi.modeling.deletion.DeletionDecisionReasonConversionUnproven
 
 **Type**
 
 `(*, code: str)`
+
+A requested conversion could not establish its preservation proof.
 
 **Fields**
 
@@ -70,6 +80,8 @@ Types: [DeletionDecisionReasonBlendBaseReplacementRequired](#zipzimodelingdeleti
 
 `(*, code: str)`
 
+The requested result violates a native container invariant.
+
 **Fields**
 
 - `code`: Native container invariant requiring an explicit larger deletion or cancellation.
@@ -80,12 +92,16 @@ Types: [DeletionDecisionReasonBlendBaseReplacementRequired](#zipzimodelingdeleti
 
 `()`
 
+A surviving Offscreen needs an explicit destination mapping.
+
 
 ## zipzi.modeling.deletion.DeletionDecisionReasonOffscreenOwnerUnavailable
 
 **Type**
 
 `()`
+
+A surviving Offscreen needs an available retained Part owner.
 
 
 ## zipzi.modeling.deletion.DeletionDecisionReasonPartStateUnpreserved
@@ -94,12 +110,16 @@ Types: [DeletionDecisionReasonBlendBaseReplacementRequired](#zipzimodelingdeleti
 
 `()`
 
+Dissolving a Part would remove inherited state without a chosen resolution.
+
 
 ## zipzi.modeling.deletion.DeletionDecisionReasonPhysicsNodeReplacementRequired
 
 **Type**
 
 `()`
+
+A removed Physics node requires a replacement for retained users.
 
 
 ## zipzi.modeling.deletion.DeletionDecisionReasonTextureReplacementRequired
@@ -108,12 +128,16 @@ Types: [DeletionDecisionReasonBlendBaseReplacementRequired](#zipzimodelingdeleti
 
 `()`
 
+Retained texture users require an explicit replacement or clear choice.
+
 
 ## zipzi.modeling.deletion.DeletionEffect
 
 **Alias**
 
 `DeletionEffectMotionRegistrationMoved | DeletionEffectContentChanged | DeletionEffectParameterDimensionRemoved | DeletionEffectBindingContributionRemoved | DeletionEffectResourceReplaced | DeletionEffectParameterAnimationRemoved | DeletionEffectPhysicsChannelRemoved | DeletionEffectMaskChanged | DeletionEffectGlueRemoved | DeletionEffectHitAreaRemoved | DeletionEffectCompositionChanged | DeletionEffectPartAnimationRemoved | DeletionEffectDrawingGroupFlattened | DeletionEffectOrganizationChanged | DeletionEffectDeformationChanged | DeletionEffectUnpreservedChannels | DeletionEffectPartStateRemoved`
+
+Typed effect predicted by a deletion review.
 
 Types: [DeletionEffectBindingContributionRemoved](#zipzimodelingdeletiondeletioneffectbindingcontributionremoved), [DeletionEffectCompositionChanged](#zipzimodelingdeletiondeletioneffectcompositionchanged), [DeletionEffectContentChanged](#zipzimodelingdeletiondeletioneffectcontentchanged), [DeletionEffectDeformationChanged](#zipzimodelingdeletiondeletioneffectdeformationchanged), [DeletionEffectDrawingGroupFlattened](#zipzimodelingdeletiondeletioneffectdrawinggroupflattened), [DeletionEffectGlueRemoved](#zipzimodelingdeletiondeletioneffectglueremoved), [DeletionEffectHitAreaRemoved](#zipzimodelingdeletiondeletioneffecthitarearemoved), [DeletionEffectMaskChanged](#zipzimodelingdeletiondeletioneffectmaskchanged), [DeletionEffectMotionRegistrationMoved](#zipzimodelingdeletiondeletioneffectmotionregistrationmoved), [DeletionEffectOrganizationChanged](#zipzimodelingdeletiondeletioneffectorganizationchanged), [DeletionEffectParameterAnimationRemoved](#zipzimodelingdeletiondeletioneffectparameteranimationremoved), [DeletionEffectParameterDimensionRemoved](#zipzimodelingdeletiondeletioneffectparameterdimensionremoved), [DeletionEffectPartAnimationRemoved](#zipzimodelingdeletiondeletioneffectpartanimationremoved), [DeletionEffectPartStateRemoved](#zipzimodelingdeletiondeletioneffectpartstateremoved), [DeletionEffectPhysicsChannelRemoved](#zipzimodelingdeletiondeletioneffectphysicschannelremoved), [DeletionEffectResourceReplaced](#zipzimodelingdeletiondeletioneffectresourcereplaced), [DeletionEffectUnpreservedChannels](#zipzimodelingdeletiondeletioneffectunpreservedchannels).
 
@@ -123,6 +147,8 @@ Types: [DeletionEffectBindingContributionRemoved](#zipzimodelingdeletiondeletion
 **Type**
 
 `(*, object: DeletionObject, binding: DeletionObject)`
+
+A retained target loses an authored binding contribution.
 
 Types: [DeletionObject].
 
@@ -136,6 +162,8 @@ Types: [DeletionObject].
 **Type**
 
 `(*, value: DeletionObject)`
+
+Offscreen or Part composition may change.
 
 Types: [DeletionObject].
 
@@ -163,6 +191,8 @@ Types: [DeletionObject].
 
 `(*, value: DeletionObject)`
 
+A surviving object has deformation that is not fully preserved.
+
 Types: [DeletionObject].
 
 **Fields**
@@ -174,6 +204,8 @@ Types: [DeletionObject].
 **Type**
 
 `(*, group: DeletionObject, destination: DeletionObject, source_range: tuple[int, int], destination_range: tuple[int, int], dynamic_order: bool, offscreen: DeletionObject | None = None)`
+
+A drawing group is flattened into a retained destination.
 
 Types: [DeletionObject].
 
@@ -192,6 +224,8 @@ Types: [DeletionObject].
 
 `(*, value: DeletionObject)`
 
+A deleted Glue connection no longer contributes its seam.
+
 Types: [DeletionObject].
 
 **Fields**
@@ -203,6 +237,8 @@ Types: [DeletionObject].
 **Type**
 
 `(*, value: DeletionObject)`
+
+A model hit-area registration is removed.
 
 Types: [DeletionObject].
 
@@ -216,6 +252,8 @@ Types: [DeletionObject].
 
 `(*, value: DeletionObject)`
 
+A retained consumer changes clipping masks.
+
 Types: [DeletionObject].
 
 **Fields**
@@ -227,6 +265,8 @@ Types: [DeletionObject].
 **Type**
 
 `(*, registration: DeletionObject, group: DeletionObject)`
+
+A retained Clip registration moves to the ungrouped root.
 
 Types: [DeletionObject].
 
@@ -241,6 +281,8 @@ Types: [DeletionObject].
 
 `(*, value: DeletionObject)`
 
+A surviving object changes organizational owner.
+
 Types: [DeletionObject].
 
 **Fields**
@@ -253,6 +295,8 @@ Types: [DeletionObject].
 
 `(*, value: DeletionObject)`
 
+A parameter animation record is removed.
+
 Types: [DeletionObject].
 
 **Fields**
@@ -264,6 +308,8 @@ Types: [DeletionObject].
 **Type**
 
 `(*, object: DeletionObject, parameter: DeletionObject, value: float, effective_value: float, disabled: bool)`
+
+A surviving grid loses a parameter dimension at a frozen slice.
 
 Types: [DeletionObject].
 
@@ -281,6 +327,8 @@ Types: [DeletionObject].
 
 `(*, value: DeletionObject)`
 
+A Part animation or Pose record is removed.
+
 Types: [DeletionObject].
 
 **Fields**
@@ -292,6 +340,8 @@ Types: [DeletionObject].
 **Type**
 
 `(*, part: DeletionObject, enabled: bool, animated_order: bool)`
+
+A dissolved Part loses its inherited state.
 
 Types: [DeletionObject].
 
@@ -307,6 +357,8 @@ Types: [DeletionObject].
 
 `(*, object: DeletionObject, group: DeletionObject)`
 
+An input or output channel is removed from retained Physics.
+
 Types: [DeletionObject].
 
 **Fields**
@@ -319,6 +371,8 @@ Types: [DeletionObject].
 **Type**
 
 `(*, object: DeletionObject, source: DeletionObject, replacement: DeletionObject | None = None)`
+
+A retained consumer redirects or clears a resource reference.
 
 Types: [DeletionObject].
 
@@ -334,6 +388,8 @@ Types: [DeletionObject].
 
 `(*, object: DeletionObject, channels: tuple[DeletionChannel, ...])`
 
+A surviving object has channels outside the position guarantee.
+
 Types: [DeletionChannel], [DeletionObject].
 
 **Fields**
@@ -345,12 +401,14 @@ Types: [DeletionChannel], [DeletionObject].
 
 **Enum**
 
+Why an identity is included in the deletion report.
+
 **Members**
 
-- `REQUESTED`: 'Requested'
-- `OWNED`: 'Owned'
-- `DEPENDENCY`: 'Dependency'
-- `SCOPE`: 'Scope'
+- `REQUESTED`: 'Requested' — Explicitly requested root.
+- `OWNED`: 'Owned' — Identity owned by a removed object.
+- `DEPENDENCY`: 'Dependency' — Record included because of a native dependency.
+- `SCOPE`: 'Scope' — Descendant included by the requested deletion scope.
 
 [DeletionChannel]: modeling_deletion.md#zipzimodelingdeletiondeletionchannel
 [DeletionObject]: modeling_deletion.md#zipzimodelingdeletiondeletionobject

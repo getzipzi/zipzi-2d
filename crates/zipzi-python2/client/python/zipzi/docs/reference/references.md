@@ -33,7 +33,11 @@ Current native capability state; inspect it before invoking the operation.
 
 `()`
 
-An SDK address with incarnation and monotonic epoch validation.
+Client-owned SDK field address captured through Session.address().
+
+Incarnation, context and monotonic field epochs bind it to the selected
+object, not merely its persistent ID. Plan a matching patch and close both
+leases; stale or recreated objects require a fresh address.
 
 
 ## zipzi.references.FieldAddress.__enter__
@@ -75,6 +79,12 @@ Types: [Plan], [AddressPatch].
 **Type**
 
 `(factory-owned; use the documented public entry)`
+
+Client-owned label field address captured from an ObjectRef.
+
+It retains the original object incarnation, context and field epoch as well
+as the expected label. Close it independently; a stale address must be
+recaptured, and its Plan must be applied to the captured exact Source.
 
 
 ## zipzi.references.LabelAddress.__enter__
@@ -135,6 +145,8 @@ Types: [Plan].
 
 `Literal['asset', 'mesh', 'parameter', 'mesh_binding', 'binding_axis', 'binding_sample', 'part', 'transform', 'scene_binding', 'blend_key_table', 'blend_constraint', 'blend_binding', 'glue', 'glue_vertex_pair', 'offscreen', 'draw_order_group', 'cdi_parameter_group', 'cdi_combined_set', 'cdi_combined_member', 'model_parameter_group', 'model_parameter_member', 'model_hit_area', 'expression', 'expression_entry', 'motion', 'motion_group', 'motion_registration', 'motion_track', 'motion_key', 'motion_event', 'attachment', 'pose', 'pose_group', 'pose_entry', 'pose_link', 'physics', 'physics_group', 'physics_input', 'physics_output', 'physics_node'] | _ObjectKind`
 
+Native identity domain used when capturing a source-bound SDK object reference. This Python input accepts canonical ObjectKind enum members or their string values.
+
 Types: [addressing.ObjectKind].
 
 
@@ -143,6 +155,13 @@ Types: [addressing.ObjectKind].
 **Type**
 
 `(factory-owned; use the documented public entry)`
+
+Client-owned reference to one SDK object incarnation in a Session.
+
+Obtain it from Session.reference(); close it independently. resolve checks
+incarnation and context against the current formal source. Undo, deletion or
+recreation can invalidate the captured identity even when the UUID is reused;
+capture a fresh reference instead of treating the UUID as a lease.
 
 
 ## zipzi.references.ObjectRef.__enter__
@@ -237,6 +256,8 @@ Types: [SceneCapabilities](#zipzireferencesscenecapabilities).
 **Type**
 
 `(inspect: Capability, patch: Capability, move_object: Capability, reparent: Capability, reorder: Capability, duplicate: Capability, delete: Capability, dissolve: Capability) -> None`
+
+Current scene capability states; they do not reserve later execution.
 
 Types: [Capability](#zipzireferencescapability).
 

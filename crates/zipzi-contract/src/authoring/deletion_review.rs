@@ -9,10 +9,15 @@
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Readiness of a frozen deletion review; review and confirmation do not themselves apply it.
 pub enum DeletionReviewState {
+    /// A validated executable candidate is ready without additional review choices.
     Ready,
+    /// An executable candidate has consequences requiring explicit confirmation before applying.
     NeedsConfirmation,
+    /// Outstanding decisions or unaccepted export regressions require a revised request.
     NeedsChoice,
+    /// Locks or structural blockers prevent an executable candidate.
     Blocked,
 }
 #[derive(
@@ -26,24 +31,39 @@ pub enum DeletionReviewState {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Select one independently paged section of a frozen deletion review.
 pub enum DeletionSection {
+    /// Business identities proposed for removal.
     Removed,
+    /// Owned internal identities removed with their owners.
     Owned,
+    /// References proposed for rewriting.
     Rewritten,
+    /// Predicted semantic and presentation effects.
     Effects,
+    /// Outstanding choices and their available alternatives.
     Decisions,
+    /// Locks preventing the deletion.
     Locks,
+    /// Structural blockers preventing a valid result.
     Structure,
+    /// Surviving objects with deformation migration.
     Deformation,
+    /// Surviving objects with organization migration.
     Organization,
+    /// Limits on deformation-preservation guarantees.
     GuaranteeLimits,
+    /// Frozen parameter inputs and intervals used by conversions.
     ConversionDomain,
+    /// Existing and newly introduced export failures.
     Exports,
+    /// References and dependencies relevant to the review.
     Relations,
 }
 
 crate::api_record! {
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::BinaryOutput)]
+/// Row count for one section of a frozen deletion review.
 pub struct DeletionSectionCount {
     /// Frozen report section addressed by report_page.
     pub section: DeletionSection,
@@ -53,6 +73,7 @@ pub struct DeletionSectionCount {
 }
 crate::api_record! {
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::BinaryOutput)]
+/// Readiness and section counts of a frozen deletion review.
 pub struct DeletionSummary {
     /// Whether the plan is executable, requires confirmation/choices, or is blocked.
     pub state: DeletionReviewState,

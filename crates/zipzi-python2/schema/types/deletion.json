@@ -2,6 +2,7 @@
   "_generated_by": "zipzi-python2/tools/generate.py",
   "definitions": {
     "zipzi_contract::authoring::DeletionIntent": {
+      "doc": "Deletion request and explicitly accepted export regressions to review against one source.",
       "fields": [
         {
           "doc": "Exact typed roots, scope options and conversion resolutions to prepare.",
@@ -34,6 +35,7 @@
       "tuple": false
     },
     "zipzi_contract::authoring::DeletionPage": {
+      "doc": "Bounded rows from one immutable deletion-review section; offsets are row positions, not IDs.",
       "fields": [
         {
           "default": null,
@@ -90,6 +92,7 @@
       "name": "zipzi_contract::authoring::DeletionPage"
     },
     "zipzi_contract::authoring::DeletionPositionGuarantee": {
+      "doc": "Position-preservation proof and tolerance recorded for a deletion migration.",
       "fields": [
         {
           "default": null,
@@ -159,29 +162,34 @@
     },
     "zipzi_contract::authoring::DeletionReviewState": {
       "content": null,
+      "doc": "Readiness of a frozen deletion review; review and confirmation do not themselves apply it.",
       "kind": "serde_enum",
       "name": "zipzi_contract::authoring::DeletionReviewState",
       "tag": null,
       "variants": [
         {
+          "doc": "A validated executable candidate is ready without additional review choices.",
           "fields": [],
           "form": "unit",
           "name": "Ready",
           "rust_name": "Ready"
         },
         {
+          "doc": "An executable candidate has consequences requiring explicit confirmation before applying.",
           "fields": [],
           "form": "unit",
           "name": "NeedsConfirmation",
           "rust_name": "NeedsConfirmation"
         },
         {
+          "doc": "Outstanding decisions or unaccepted export regressions require a revised request.",
           "fields": [],
           "form": "unit",
           "name": "NeedsChoice",
           "rust_name": "NeedsChoice"
         },
         {
+          "doc": "Locks or structural blockers prevent an executable candidate.",
           "fields": [],
           "form": "unit",
           "name": "Blocked",
@@ -190,11 +198,13 @@
       ]
     },
     "zipzi_contract::authoring::DeletionRow": {
+      "doc": "One typed row from a frozen deletion-review section.",
       "kind": "union",
       "name": "zipzi_contract::authoring::DeletionRow",
       "tag": "kind",
       "variants": [
         {
+          "doc": "An identity proposed for removal.",
           "fields": [
             {
               "default": null,
@@ -210,6 +220,7 @@
           "wire_name": "removal"
         },
         {
+          "doc": "A retained reference or dependency relation.",
           "fields": [
             {
               "default": null,
@@ -225,6 +236,7 @@
           "wire_name": "relation"
         },
         {
+          "doc": "A predicted semantic or presentation consequence.",
           "fields": [
             {
               "default": null,
@@ -240,6 +252,7 @@
           "wire_name": "effect"
         },
         {
+          "doc": "An outstanding choice and available alternatives.",
           "fields": [
             {
               "default": null,
@@ -255,6 +268,7 @@
           "wire_name": "decision"
         },
         {
+          "doc": "A lock blocking deletion.",
           "fields": [
             {
               "default": null,
@@ -270,6 +284,7 @@
           "wire_name": "lock"
         },
         {
+          "doc": "A structural blocker of a valid result.",
           "fields": [
             {
               "default": null,
@@ -285,6 +300,7 @@
           "wire_name": "structural"
         },
         {
+          "doc": "A surviving deformation object and its migration.",
           "fields": [
             {
               "default": null,
@@ -331,6 +347,7 @@
           "wire_name": "deformation"
         },
         {
+          "doc": "A surviving organization member and its migration.",
           "fields": [
             {
               "default": null,
@@ -367,6 +384,7 @@
           "wire_name": "organization"
         },
         {
+          "doc": "An ancestor limiting a standalone preservation guarantee.",
           "fields": [
             {
               "default": null,
@@ -391,6 +409,7 @@
           "wire_name": "guarantee_limit"
         },
         {
+          "doc": "A parameter interval or fixed input used by a conversion proof.",
           "fields": [
             {
               "default": null,
@@ -438,6 +457,7 @@
           "wire_name": "domain"
         },
         {
+          "doc": "An existing or newly introduced export failure.",
           "fields": [
             {
               "default": null,
@@ -464,83 +484,97 @@
     },
     "zipzi_contract::authoring::DeletionSection": {
       "content": null,
+      "doc": "Select one independently paged section of a frozen deletion review.",
       "kind": "serde_enum",
       "name": "zipzi_contract::authoring::DeletionSection",
       "tag": null,
       "variants": [
         {
+          "doc": "Business identities proposed for removal.",
           "fields": [],
           "form": "unit",
           "name": "Removed",
           "rust_name": "Removed"
         },
         {
+          "doc": "Owned internal identities removed with their owners.",
           "fields": [],
           "form": "unit",
           "name": "Owned",
           "rust_name": "Owned"
         },
         {
+          "doc": "References proposed for rewriting.",
           "fields": [],
           "form": "unit",
           "name": "Rewritten",
           "rust_name": "Rewritten"
         },
         {
+          "doc": "Predicted semantic and presentation effects.",
           "fields": [],
           "form": "unit",
           "name": "Effects",
           "rust_name": "Effects"
         },
         {
+          "doc": "Outstanding choices and their available alternatives.",
           "fields": [],
           "form": "unit",
           "name": "Decisions",
           "rust_name": "Decisions"
         },
         {
+          "doc": "Locks preventing the deletion.",
           "fields": [],
           "form": "unit",
           "name": "Locks",
           "rust_name": "Locks"
         },
         {
+          "doc": "Structural blockers preventing a valid result.",
           "fields": [],
           "form": "unit",
           "name": "Structure",
           "rust_name": "Structure"
         },
         {
+          "doc": "Surviving objects with deformation migration.",
           "fields": [],
           "form": "unit",
           "name": "Deformation",
           "rust_name": "Deformation"
         },
         {
+          "doc": "Surviving objects with organization migration.",
           "fields": [],
           "form": "unit",
           "name": "Organization",
           "rust_name": "Organization"
         },
         {
+          "doc": "Limits on deformation-preservation guarantees.",
           "fields": [],
           "form": "unit",
           "name": "GuaranteeLimits",
           "rust_name": "GuaranteeLimits"
         },
         {
+          "doc": "Frozen parameter inputs and intervals used by conversions.",
           "fields": [],
           "form": "unit",
           "name": "ConversionDomain",
           "rust_name": "ConversionDomain"
         },
         {
+          "doc": "Existing and newly introduced export failures.",
           "fields": [],
           "form": "unit",
           "name": "Exports",
           "rust_name": "Exports"
         },
         {
+          "doc": "References and dependencies relevant to the review.",
           "fields": [],
           "form": "unit",
           "name": "Relations",
@@ -549,6 +583,7 @@
       ]
     },
     "zipzi_contract::authoring::DeletionSectionCount": {
+      "doc": "Row count for one section of a frozen deletion review.",
       "fields": [
         {
           "default": null,
@@ -572,6 +607,7 @@
       "name": "zipzi_contract::authoring::DeletionSectionCount"
     },
     "zipzi_contract::authoring::DeletionSummary": {
+      "doc": "Readiness and section counts of a frozen deletion review.",
       "fields": [
         {
           "default": null,
@@ -616,29 +652,34 @@
     },
     "zipzi_contract::document::DeletionChannel": {
       "content": null,
+      "doc": "A non-position channel that may lie outside a deletion conversion proof.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::DeletionChannel",
       "tag": null,
       "variants": [
         {
+          "doc": "Opacity or color channels.",
           "fields": [],
           "form": "unit",
           "name": "Appearance",
           "rust_name": "Appearance"
         },
         {
+          "doc": "Evaluation enabled state.",
           "fields": [],
           "form": "unit",
           "name": "Enabled",
           "rust_name": "Enabled"
         },
         {
+          "doc": "Glue seam postprocessing.",
           "fields": [],
           "form": "unit",
           "name": "GluePostprocessing",
           "rust_name": "GluePostprocessing"
         },
         {
+          "doc": "Drawing-order behavior.",
           "fields": [],
           "form": "unit",
           "name": "DrawingOrder",
@@ -648,65 +689,76 @@
     },
     "zipzi_contract::document::DeletionChoice": {
       "content": null,
+      "doc": "A resolution offered for a deletion decision; selecting it requires a new review.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::DeletionChoice",
       "tag": null,
       "variants": [
         {
+          "doc": "Attempt to preserve deformation at the frozen edit state.",
           "fields": [],
           "form": "unit",
           "name": "PreserveEditState",
           "rust_name": "PreserveEditState"
         },
         {
+          "doc": "Keep local deformation data and accept possible visual change.",
           "fields": [],
           "form": "unit",
           "name": "KeepLocalData",
           "rust_name": "KeepLocalData"
         },
         {
+          "doc": "Choose a retained Part destination.",
           "fields": [],
           "form": "unit",
           "name": "ChoosePart",
           "rust_name": "ChoosePart"
         },
         {
+          "doc": "Supply a mapping for a surviving Offscreen.",
           "fields": [],
           "form": "unit",
           "name": "SupplyOffscreenMapping",
           "rust_name": "SupplyOffscreenMapping"
         },
         {
+          "doc": "Choose a retained replacement texture.",
           "fields": [],
           "form": "unit",
           "name": "ChooseTexture",
           "rust_name": "ChooseTexture"
         },
         {
+          "doc": "Choose a retained BlendShape base sample.",
           "fields": [],
           "form": "unit",
           "name": "ChooseBlendBase",
           "rust_name": "ChooseBlendBase"
         },
         {
+          "doc": "Explicitly leave the texture reference unconfigured.",
           "fields": [],
           "form": "unit",
           "name": "ClearTexture",
           "rust_name": "ClearTexture"
         },
         {
+          "doc": "Choose a replacement Physics node.",
           "fields": [],
           "form": "unit",
           "name": "ChoosePhysicsNode",
           "rust_name": "ChoosePhysicsNode"
         },
         {
+          "doc": "Expand the deletion to the indicated subtree.",
           "fields": [],
           "form": "unit",
           "name": "DeleteSubtree",
           "rust_name": "DeleteSubtree"
         },
         {
+          "doc": "Cancel this deletion request.",
           "fields": [],
           "form": "unit",
           "name": "Cancel",
@@ -715,6 +767,7 @@
       ]
     },
     "zipzi_contract::document::DeletionDecision": {
+      "doc": "Affected object, unresolved reason and available resolutions in a frozen review.",
       "fields": [
         {
           "doc": "Affected surviving object that needs an explicit resolution.",
@@ -757,11 +810,13 @@
     },
     "zipzi_contract::document::DeletionDecisionReason": {
       "content": null,
+      "doc": "Native condition requiring an explicit deletion decision.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::DeletionDecisionReason",
       "tag": null,
       "variants": [
         {
+          "doc": "A requested conversion could not establish its preservation proof.",
           "fields": [
             {
               "doc": "Native conversion diagnostic code; available resolutions come from typed choices.",
@@ -778,42 +833,49 @@
           "rust_name": "ConversionUnproven"
         },
         {
+          "doc": "A surviving Offscreen needs an available retained Part owner.",
           "fields": [],
           "form": "unit",
           "name": "OffscreenOwnerUnavailable",
           "rust_name": "OffscreenOwnerUnavailable"
         },
         {
+          "doc": "A surviving Offscreen needs an explicit destination mapping.",
           "fields": [],
           "form": "unit",
           "name": "OffscreenMappingRequired",
           "rust_name": "OffscreenMappingRequired"
         },
         {
+          "doc": "Dissolving a Part would remove inherited state without a chosen resolution.",
           "fields": [],
           "form": "unit",
           "name": "PartStateUnpreserved",
           "rust_name": "PartStateUnpreserved"
         },
         {
+          "doc": "Retained texture users require an explicit replacement or clear choice.",
           "fields": [],
           "form": "unit",
           "name": "TextureReplacementRequired",
           "rust_name": "TextureReplacementRequired"
         },
         {
+          "doc": "A deleted BlendShape base requires a retained replacement sample.",
           "fields": [],
           "form": "unit",
           "name": "BlendBaseReplacementRequired",
           "rust_name": "BlendBaseReplacementRequired"
         },
         {
+          "doc": "A removed Physics node requires a replacement for retained users.",
           "fields": [],
           "form": "unit",
           "name": "PhysicsNodeReplacementRequired",
           "rust_name": "PhysicsNodeReplacementRequired"
         },
         {
+          "doc": "The requested result violates a native container invariant.",
           "fields": [
             {
               "doc": "Native container invariant requiring an explicit larger deletion or cancellation.",
@@ -833,11 +895,13 @@
     },
     "zipzi_contract::document::DeletionEffect": {
       "content": null,
+      "doc": "Typed effect predicted by a deletion review.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::DeletionEffect",
       "tag": null,
       "variants": [
         {
+          "doc": "A retained Clip registration moves to the ungrouped root.",
           "fields": [
             {
               "doc": "Preserved last registration of a retained Clip, moved to the ungrouped root.",
@@ -883,6 +947,7 @@
           "rust_name": "ContentChanged"
         },
         {
+          "doc": "A surviving grid loses a parameter dimension at a frozen slice.",
           "fields": [
             {
               "doc": "Surviving ordinary binding or Glue grid reduced by the native grid converter.",
@@ -937,6 +1002,7 @@
           "rust_name": "ParameterDimensionRemoved"
         },
         {
+          "doc": "A retained target loses an authored binding contribution.",
           "fields": [
             {
               "doc": "Retained target whose authored contribution disappears.",
@@ -964,6 +1030,7 @@
           "rust_name": "BindingContributionRemoved"
         },
         {
+          "doc": "A retained consumer redirects or clears a resource reference.",
           "fields": [
             {
               "doc": "Retained consumer whose texture or optional attachment reference changes.",
@@ -1005,6 +1072,7 @@
           "rust_name": "ResourceReplaced"
         },
         {
+          "doc": "A parameter animation record is removed.",
           "fields": [
             {
               "doc": "Removed Motion/Expression parameter record; other tracks, events and resource registrations remain.",
@@ -1022,6 +1090,7 @@
           "rust_name": "ParameterAnimationRemoved"
         },
         {
+          "doc": "An input or output channel is removed from retained Physics.",
           "fields": [
             {
               "doc": "Removed input or output channel, with a stable native identity.",
@@ -1049,6 +1118,7 @@
           "rust_name": "PhysicsChannelRemoved"
         },
         {
+          "doc": "A retained consumer changes clipping masks.",
           "fields": [
             {
               "doc": "Retained Mask consumer whose clipping effect changes.",
@@ -1066,6 +1136,7 @@
           "rust_name": "MaskChanged"
         },
         {
+          "doc": "A deleted Glue connection no longer contributes its seam.",
           "fields": [
             {
               "doc": "Deleted connection whose seam or postprocessing contribution disappears.",
@@ -1083,6 +1154,7 @@
           "rust_name": "GlueRemoved"
         },
         {
+          "doc": "A model hit-area registration is removed.",
           "fields": [
             {
               "doc": "Deleted model3 Hit Area registration.",
@@ -1100,6 +1172,7 @@
           "rust_name": "HitAreaRemoved"
         },
         {
+          "doc": "Offscreen or Part composition may change.",
           "fields": [
             {
               "doc": "Affected Offscreen or Part whose compositing can change.",
@@ -1117,6 +1190,7 @@
           "rust_name": "CompositionChanged"
         },
         {
+          "doc": "A Part animation or Pose record is removed.",
           "fields": [
             {
               "doc": "Removed Part animation/Pose record; its container remains.",
@@ -1134,6 +1208,7 @@
           "rust_name": "PartAnimationRemoved"
         },
         {
+          "doc": "A drawing group is flattened into a retained destination.",
           "fields": [
             {
               "doc": "Removed drawing role being flattened.",
@@ -1210,6 +1285,7 @@
           "rust_name": "DrawingGroupFlattened"
         },
         {
+          "doc": "A surviving object changes organizational owner.",
           "fields": [
             {
               "doc": "Surviving member whose organization owner changes.",
@@ -1227,6 +1303,7 @@
           "rust_name": "OrganizationChanged"
         },
         {
+          "doc": "A surviving object has deformation that is not fully preserved.",
           "fields": [
             {
               "doc": "Surviving object whose deformation is not fully preserved.",
@@ -1244,6 +1321,7 @@
           "rust_name": "DeformationChanged"
         },
         {
+          "doc": "A surviving object has channels outside the position guarantee.",
           "fields": [
             {
               "doc": "Surviving object affected by channels outside the position proof.",
@@ -1274,6 +1352,7 @@
           "rust_name": "UnpreservedChannels"
         },
         {
+          "doc": "A dissolved Part loses its inherited state.",
           "fields": [
             {
               "doc": "Dissolved Part whose inherited state is removed.",
@@ -1312,17 +1391,20 @@
     },
     "zipzi_contract::document::DeletionField": {
       "content": null,
+      "doc": "Typed frozen-source field or slot identifying a deletion relation.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::DeletionField",
       "tag": null,
       "variants": [
         {
+          "doc": "Owned identity relationship.",
           "fields": [],
           "form": "unit",
           "name": "Owned",
           "rust_name": "Owned"
         },
         {
+          "doc": "Mesh clipping-mask entry at a frozen slot.",
           "fields": [
             {
               "doc": "Zero-based address in the frozen source list, never a persistent object ID.",
@@ -1339,12 +1421,14 @@
           "rust_name": "MeshMask"
         },
         {
+          "doc": "Mesh inverted-mask state.",
           "fields": [],
           "form": "unit",
           "name": "MeshInvertedMask",
           "rust_name": "MeshInvertedMask"
         },
         {
+          "doc": "Offscreen mask entry at a frozen slot.",
           "fields": [
             {
               "doc": "Zero-based address in the frozen source list, never a persistent object ID.",
@@ -1361,24 +1445,28 @@
           "rust_name": "OffscreenMask"
         },
         {
+          "doc": "Glue endpoint A mesh reference.",
           "fields": [],
           "form": "unit",
           "name": "GlueMeshA",
           "rust_name": "GlueMeshA"
         },
         {
+          "doc": "Glue endpoint B mesh reference.",
           "fields": [],
           "form": "unit",
           "name": "GlueMeshB",
           "rust_name": "GlueMeshB"
         },
         {
+          "doc": "Hit-area mesh reference.",
           "fields": [],
           "form": "unit",
           "name": "HitAreaMesh",
           "rust_name": "HitAreaMesh"
         },
         {
+          "doc": "Drawing-group member at a frozen slot.",
           "fields": [
             {
               "doc": "Zero-based address in the frozen source list, never a persistent object ID.",
@@ -1395,48 +1483,56 @@
           "rust_name": "DrawingItem"
         },
         {
+          "doc": "Organization parent relation.",
           "fields": [],
           "form": "unit",
           "name": "OrganizationParent",
           "rust_name": "OrganizationParent"
         },
         {
+          "doc": "Deformation parent relation.",
           "fields": [],
           "form": "unit",
           "name": "DeformationParent",
           "rust_name": "DeformationParent"
         },
         {
+          "doc": "Data produced by a conversion.",
           "fields": [],
           "form": "unit",
           "name": "ConvertedData",
           "rust_name": "ConvertedData"
         },
         {
+          "doc": "Pose Part reference.",
           "fields": [],
           "form": "unit",
           "name": "PosePart",
           "rust_name": "PosePart"
         },
         {
+          "doc": "Pose link Part reference.",
           "fields": [],
           "form": "unit",
           "name": "PoseLinkPart",
           "rust_name": "PoseLinkPart"
         },
         {
+          "doc": "Motion Part reference.",
           "fields": [],
           "form": "unit",
           "name": "MotionPart",
           "rust_name": "MotionPart"
         },
         {
+          "doc": "Expression source Part reference.",
           "fields": [],
           "form": "unit",
           "name": "ExpressionSourcePart",
           "rust_name": "ExpressionSourcePart"
         },
         {
+          "doc": "CDI Part reference at a frozen slot.",
           "fields": [
             {
               "doc": "Zero-based address in the frozen source list, never a persistent object ID.",
@@ -1453,36 +1549,42 @@
           "rust_name": "CdiPart"
         },
         {
+          "doc": "Relationship included by the requested scope.",
           "fields": [],
           "form": "unit",
           "name": "RequestedScope",
           "rust_name": "RequestedScope"
         },
         {
+          "doc": "Binding axis parameter reference.",
           "fields": [],
           "form": "unit",
           "name": "ParameterAxis",
           "rust_name": "ParameterAxis"
         },
         {
+          "doc": "BlendShape key-table parameter reference.",
           "fields": [],
           "form": "unit",
           "name": "BlendTableParameter",
           "rust_name": "BlendTableParameter"
         },
         {
+          "doc": "BlendShape constraint parameter reference.",
           "fields": [],
           "form": "unit",
           "name": "BlendConstraintParameter",
           "rust_name": "BlendConstraintParameter"
         },
         {
+          "doc": "BlendShape binding key-table reference.",
           "fields": [],
           "form": "unit",
           "name": "BlendTable",
           "rust_name": "BlendTable"
         },
         {
+          "doc": "BlendShape binding constraint at a frozen slot.",
           "fields": [
             {
               "doc": "Zero-based constraint address in the frozen BlendBinding.",
@@ -1499,78 +1601,91 @@
           "rust_name": "BlendConstraint"
         },
         {
+          "doc": "Motion parameter reference.",
           "fields": [],
           "form": "unit",
           "name": "MotionParameter",
           "rust_name": "MotionParameter"
         },
         {
+          "doc": "Expression parameter target reference.",
           "fields": [],
           "form": "unit",
           "name": "ExpressionParameter",
           "rust_name": "ExpressionParameter"
         },
         {
+          "doc": "Expression source parameter reference.",
           "fields": [],
           "form": "unit",
           "name": "ExpressionSourceParameter",
           "rust_name": "ExpressionSourceParameter"
         },
         {
+          "doc": "Physics input or output parameter reference.",
           "fields": [],
           "form": "unit",
           "name": "PhysicsParameter",
           "rust_name": "PhysicsParameter"
         },
         {
+          "doc": "Physics node reference.",
           "fields": [],
           "form": "unit",
           "name": "PhysicsNode",
           "rust_name": "PhysicsNode"
         },
         {
+          "doc": "Image texture reference.",
           "fields": [],
           "form": "unit",
           "name": "Texture",
           "rust_name": "Texture"
         },
         {
+          "doc": "Motion sound attachment reference.",
           "fields": [],
           "form": "unit",
           "name": "AttachmentSound",
           "rust_name": "AttachmentSound"
         },
         {
+          "doc": "User-data attachment reference.",
           "fields": [],
           "form": "unit",
           "name": "AttachmentUserData",
           "rust_name": "AttachmentUserData"
         },
         {
+          "doc": "Motion registration clip reference.",
           "fields": [],
           "form": "unit",
           "name": "MotionClip",
           "rust_name": "MotionClip"
         },
         {
+          "doc": "Motion registration container relation.",
           "fields": [],
           "form": "unit",
           "name": "MotionRegistrationContainer",
           "rust_name": "MotionRegistrationContainer"
         },
         {
+          "doc": "Parameter organization folder relation.",
           "fields": [],
           "form": "unit",
           "name": "ParameterFolder",
           "rust_name": "ParameterFolder"
         },
         {
+          "doc": "Model parameter metadata reference.",
           "fields": [],
           "form": "unit",
           "name": "ModelParameter",
           "rust_name": "ModelParameter"
         },
         {
+          "doc": "CDI parameter reference at a frozen slot.",
           "fields": [
             {
               "doc": "Frozen zero-based CDI Parameters record address; imported unresolved records remain untouched.",
@@ -1587,6 +1702,7 @@
           "rust_name": "CdiParameter"
         },
         {
+          "doc": "CDI combined-parameter member reference.",
           "fields": [],
           "form": "unit",
           "name": "CdiCombinedParameter",
@@ -1596,281 +1712,328 @@
     },
     "zipzi_contract::document::DeletionKind": {
       "content": null,
+      "doc": "Native identity domain used in frozen deletion reports and typed roots.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::DeletionKind",
       "tag": null,
       "variants": [
         {
+          "doc": "Identifies a drawable mesh.",
           "fields": [],
           "form": "unit",
           "name": "Mesh",
           "rust_name": "Mesh"
         },
         {
+          "doc": "Identifies a connection between mesh endpoints.",
           "fields": [],
           "form": "unit",
           "name": "Glue",
           "rust_name": "Glue"
         },
         {
+          "doc": "Identifies a Part-owned Offscreen composite.",
           "fields": [],
           "form": "unit",
           "name": "Offscreen",
           "rust_name": "Offscreen"
         },
         {
+          "doc": "Identifies an ordinary mesh binding.",
           "fields": [],
           "form": "unit",
           "name": "MeshBinding",
           "rust_name": "MeshBinding"
         },
         {
+          "doc": "Identifies an ordinary Glue intensity binding.",
           "fields": [],
           "form": "unit",
           "name": "GlueBinding",
           "rust_name": "GlueBinding"
         },
         {
+          "doc": "Identifies a BlendShape target binding.",
           "fields": [],
           "form": "unit",
           "name": "BlendBinding",
           "rust_name": "BlendBinding"
         },
         {
+          "doc": "Identifies an axis owned by a binding grid.",
           "fields": [],
           "form": "unit",
           "name": "Axis",
           "rust_name": "Axis"
         },
         {
+          "doc": "Identifies a sample owned by a binding axis, BlendShape table or constraint.",
           "fields": [],
           "form": "unit",
           "name": "Sample",
           "rust_name": "Sample"
         },
         {
+          "doc": "Identifies a vertex pair owned by a Glue.",
           "fields": [],
           "form": "unit",
           "name": "GluePair",
           "rust_name": "GluePair"
         },
         {
+          "doc": "Identifies a model3 hit-area registration.",
           "fields": [],
           "form": "unit",
           "name": "HitArea",
           "rust_name": "HitArea"
         },
         {
+          "doc": "Identifies a drawing-group role of a Part or root.",
           "fields": [],
           "form": "unit",
           "name": "DrawingGroup",
           "rust_name": "DrawingGroup"
         },
         {
+          "doc": "Identifies an organizational Part.",
           "fields": [],
           "form": "unit",
           "name": "Part",
           "rust_name": "Part"
         },
         {
+          "doc": "Identifies a deformation transform.",
           "fields": [],
           "form": "unit",
           "name": "Deformer",
           "rust_name": "Deformer"
         },
         {
+          "doc": "Identifies an ordinary scene binding.",
           "fields": [],
           "form": "unit",
           "name": "SceneBinding",
           "rust_name": "SceneBinding"
         },
         {
+          "doc": "Identifies a motion clip asset.",
           "fields": [],
           "form": "unit",
           "name": "Motion",
           "rust_name": "Motion"
         },
         {
+          "doc": "Identifies a track owned by a motion clip.",
           "fields": [],
           "form": "unit",
           "name": "MotionTrack",
           "rust_name": "MotionTrack"
         },
         {
+          "doc": "Identifies a key owned by a motion track.",
           "fields": [],
           "form": "unit",
           "name": "MotionKey",
           "rust_name": "MotionKey"
         },
         {
+          "doc": "Identifies an expression asset.",
           "fields": [],
           "form": "unit",
           "name": "Expression",
           "rust_name": "Expression"
         },
         {
+          "doc": "Identifies a track in expression source data.",
           "fields": [],
           "form": "unit",
           "name": "ExpressionTrack",
           "rust_name": "ExpressionTrack"
         },
         {
+          "doc": "Identifies a key in expression source data.",
           "fields": [],
           "form": "unit",
           "name": "ExpressionKey",
           "rust_name": "ExpressionKey"
         },
         {
+          "doc": "Identifies an entry owned by a Pose group.",
           "fields": [],
           "form": "unit",
           "name": "PoseEntry",
           "rust_name": "PoseEntry"
         },
         {
+          "doc": "Identifies a link owned by a Pose entry.",
           "fields": [],
           "form": "unit",
           "name": "PoseLink",
           "rust_name": "PoseLink"
         },
         {
+          "doc": "Identifies a CDI Part metadata entry.",
           "fields": [],
           "form": "unit",
           "name": "CdiPart",
           "rust_name": "CdiPart"
         },
         {
+          "doc": "Identifies a CDI display metadata.",
           "fields": [],
           "form": "unit",
           "name": "DisplayInfo",
           "rust_name": "DisplayInfo"
         },
         {
+          "doc": "Identifies an authored parameter.",
           "fields": [],
           "form": "unit",
           "name": "Parameter",
           "rust_name": "Parameter"
         },
         {
+          "doc": "Identifies a parameter organization folder.",
           "fields": [],
           "form": "unit",
           "name": "ParameterFolder",
           "rust_name": "ParameterFolder"
         },
         {
+          "doc": "Identifies a document image resource.",
           "fields": [],
           "form": "unit",
           "name": "Texture",
           "rust_name": "Texture"
         },
         {
+          "doc": "Identifies a package attachment.",
           "fields": [],
           "form": "unit",
           "name": "Attachment",
           "rust_name": "Attachment"
         },
         {
+          "doc": "Identifies a BlendShape key table.",
           "fields": [],
           "form": "unit",
           "name": "BlendKeyTable",
           "rust_name": "BlendKeyTable"
         },
         {
+          "doc": "Identifies a BlendShape constraint.",
           "fields": [],
           "form": "unit",
           "name": "BlendConstraint",
           "rust_name": "BlendConstraint"
         },
         {
+          "doc": "Identifies a motion registration group.",
           "fields": [],
           "form": "unit",
           "name": "MotionGroup",
           "rust_name": "MotionGroup"
         },
         {
+          "doc": "Identifies a motion registration referencing a clip.",
           "fields": [],
           "form": "unit",
           "name": "MotionRegistration",
           "rust_name": "MotionRegistration"
         },
         {
+          "doc": "Identifies an event owned by a motion clip.",
           "fields": [],
           "form": "unit",
           "name": "MotionEvent",
           "rust_name": "MotionEvent"
         },
         {
+          "doc": "Identifies an entry owned by an expression.",
           "fields": [],
           "form": "unit",
           "name": "ExpressionEntry",
           "rust_name": "ExpressionEntry"
         },
         {
+          "doc": "Identifies a Pose singleton.",
           "fields": [],
           "form": "unit",
           "name": "Pose",
           "rust_name": "Pose"
         },
         {
+          "doc": "Identifies a group owned by Pose.",
           "fields": [],
           "form": "unit",
           "name": "PoseGroup",
           "rust_name": "PoseGroup"
         },
         {
+          "doc": "Identifies a Physics singleton.",
           "fields": [],
           "form": "unit",
           "name": "Physics",
           "rust_name": "Physics"
         },
         {
+          "doc": "Identifies a Physics rig group.",
           "fields": [],
           "form": "unit",
           "name": "PhysicsGroup",
           "rust_name": "PhysicsGroup"
         },
         {
+          "doc": "Identifies an input owned by a Physics rig.",
           "fields": [],
           "form": "unit",
           "name": "PhysicsInput",
           "rust_name": "PhysicsInput"
         },
         {
+          "doc": "Identifies an output owned by a Physics rig.",
           "fields": [],
           "form": "unit",
           "name": "PhysicsOutput",
           "rust_name": "PhysicsOutput"
         },
         {
+          "doc": "Identifies a node owned by a Physics rig.",
           "fields": [],
           "form": "unit",
           "name": "PhysicsNode",
           "rust_name": "PhysicsNode"
         },
         {
+          "doc": "Identifies a model3 settings metadata.",
           "fields": [],
           "form": "unit",
           "name": "ModelSettings",
           "rust_name": "ModelSettings"
         },
         {
+          "doc": "Identifies a model3 parameter metadata group.",
           "fields": [],
           "form": "unit",
           "name": "ModelParameterGroup",
           "rust_name": "ModelParameterGroup"
         },
         {
+          "doc": "Identifies a member of a model3 parameter group.",
           "fields": [],
           "form": "unit",
           "name": "ModelParameterMember",
           "rust_name": "ModelParameterMember"
         },
         {
+          "doc": "Identifies a CDI combined-parameter set.",
           "fields": [],
           "form": "unit",
           "name": "CdiCombinedSet",
           "rust_name": "CdiCombinedSet"
         },
         {
+          "doc": "Identifies a member of a CDI combined-parameter set.",
           "fields": [],
           "form": "unit",
           "name": "CdiCombinedMember",
@@ -1879,6 +2042,7 @@
       ]
     },
     "zipzi_contract::document::DeletionLock": {
+      "doc": "Direct or inherited lock blocking a removal or rewrite.",
       "fields": [
         {
           "doc": "Actual removed or rewritten object protected by the lock.",
@@ -1906,6 +2070,7 @@
       "tuple": false
     },
     "zipzi_contract::document::DeletionObject": {
+      "doc": "Typed native identity used by a deletion report; embedded identities may require an owner.",
       "fields": [
         {
           "doc": "Native identity domain; Part and its DrawingGroup role remain distinct.",
@@ -1946,6 +2111,7 @@
       "tuple": false
     },
     "zipzi_contract::document::DeletionOffscreenPlacement": {
+      "doc": "Retained Part and optional mapping for a surviving Offscreen during deletion.",
       "fields": [
         {
           "doc": "Retained destination Part UUID; it must have an available Offscreen ownership role.",
@@ -1980,29 +2146,34 @@
     },
     "zipzi_contract::document::DeletionReason": {
       "content": null,
+      "doc": "Why an identity is included in the deletion report.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::DeletionReason",
       "tag": null,
       "variants": [
         {
+          "doc": "Explicitly requested root.",
           "fields": [],
           "form": "unit",
           "name": "Requested",
           "rust_name": "Requested"
         },
         {
+          "doc": "Identity owned by a removed object.",
           "fields": [],
           "form": "unit",
           "name": "Owned",
           "rust_name": "Owned"
         },
         {
+          "doc": "Record included because of a native dependency.",
           "fields": [],
           "form": "unit",
           "name": "Dependency",
           "rust_name": "Dependency"
         },
         {
+          "doc": "Descendant included by the requested deletion scope.",
           "fields": [],
           "form": "unit",
           "name": "Scope",
@@ -2011,6 +2182,7 @@
       ]
     },
     "zipzi_contract::document::DeletionRelation": {
+      "doc": "Frozen-source owner, typed field and target explaining a dependency or rewrite.",
       "fields": [
         {
           "doc": "Native object or role containing this field in the frozen source.",
@@ -2049,6 +2221,7 @@
       "tuple": false
     },
     "zipzi_contract::document::DeletionRemoval": {
+      "doc": "Identity proposed for removal and the reason it is included.",
       "fields": [
         {
           "doc": "Retired identity, including its native domain and embedded namespace.",
@@ -2077,6 +2250,7 @@
       "tuple": false
     },
     "zipzi_contract::document::DeletionRequest": {
+      "doc": "Typed roots and explicit resolutions used to prepare an atomic deletion review.",
       "fields": [
         {
           "doc": "Explicit typed roots and individual scope choices; order does not change the result.",
@@ -2209,6 +2383,7 @@
       "tuple": false
     },
     "zipzi_contract::document::DeletionStructuralBlocker": {
+      "doc": "Native structural validation failure preventing an executable candidate.",
       "fields": [
         {
           "doc": "Native result identity/address associated with the structural failure.",
@@ -2251,6 +2426,7 @@
       "tag": null,
       "variants": [
         {
+          "doc": "Delete a Mesh and its owned identities, retaining shared resources.",
           "fields": [
             {
               "doc": "Delete this Mesh and its owned identities; shared resources remain.",
@@ -2267,6 +2443,7 @@
           "rust_name": "Mesh"
         },
         {
+          "doc": "Delete a Glue connection and owned content, retaining endpoint meshes.",
           "fields": [
             {
               "doc": "Delete this Glue connection, pairs and owned bindings; endpoint meshes remain.",
@@ -2283,6 +2460,7 @@
           "rust_name": "Glue"
         },
         {
+          "doc": "Delete an Offscreen and its content while retaining its Part.",
           "fields": [
             {
               "doc": "Delete this Offscreen composite and its own shapes/bindings; its Part remains.",
@@ -2299,6 +2477,7 @@
           "rust_name": "Offscreen"
         },
         {
+          "doc": "Delete a Part organization subtree; migrate external deformation members.",
           "fields": [
             {
               "doc": "Delete this Part organization subtree; external deformation members remain and migrate.",
@@ -2315,6 +2494,7 @@
           "rust_name": "Part"
         },
         {
+          "doc": "Delete a deformation subtree, including meshes across Parts.",
           "fields": [
             {
               "doc": "Delete this deformation subtree, including meshes across organization Parts.",
@@ -2331,6 +2511,7 @@
           "rust_name": "Deformer"
         },
         {
+          "doc": "Remove a Part and migrate its retained organization members.",
           "fields": [
             {
               "doc": "Remove this Part while retaining and migrating its organization members.",
@@ -2347,6 +2528,7 @@
           "rust_name": "DissolvePart"
         },
         {
+          "doc": "Remove only a Deformer and migrate retained deformation children.",
           "fields": [
             {
               "doc": "Remove only this Deformer and retain/migrate its deformation children.",
@@ -2363,6 +2545,7 @@
           "rust_name": "RemoveDeformer"
         },
         {
+          "doc": "Delete a parameter and reduce dependent axes at a frozen slice.",
           "fields": [
             {
               "doc": "Delete this parameter and reduce ordinary axes at its frozen default unless explicitly overridden.",
@@ -2379,6 +2562,7 @@
           "rust_name": "Parameter"
         },
         {
+          "doc": "Dissolve a parameter folder and retain its contents.",
           "fields": [
             {
               "doc": "Dissolve this parameter folder and retain its parameters and nested folders in the retained parent.",
@@ -2395,6 +2579,7 @@
           "rust_name": "ParameterFolder"
         },
         {
+          "doc": "Delete a parameter folder subtree including its parameters.",
           "fields": [
             {
               "doc": "Delete this parameter folder subtree and explicitly include its contained parameters.",
@@ -2411,6 +2596,7 @@
           "rust_name": "ParameterFolderContents"
         },
         {
+          "doc": "Delete an image resource with explicit choices for retained users.",
           "fields": [
             {
               "doc": "Delete this image record; retained users require an explicit replacement or unconfigured choice.",
@@ -2427,6 +2613,7 @@
           "rust_name": "Texture"
         },
         {
+          "doc": "Delete an attachment and clear resolved optional references.",
           "fields": [
             {
               "doc": "Delete this owned attachment record and clear resolved optional sound/UserData references.",
@@ -2443,6 +2630,7 @@
           "rust_name": "Attachment"
         },
         {
+          "doc": "Delete a typed non-scene record subject to its native ownership rules.",
           "fields": [
             {
               "doc": "Typed non-scene business record; its native domain validates ownership, child identities and choices.",
@@ -2462,6 +2650,7 @@
       ]
     },
     "zipzi_contract::document::DeletionTolerance": {
+      "doc": "Absolute and scale-relative error limits used by deletion conversion proofs.",
       "fields": [
         {
           "doc": "Finite positive absolute error tolerance in model units.",

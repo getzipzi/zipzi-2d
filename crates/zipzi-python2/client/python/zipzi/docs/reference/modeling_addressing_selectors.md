@@ -13,6 +13,8 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 
 `AddressSelectorScene | AddressSelectorDrawingGroup | AddressSelectorBinding | AddressSelectorOrganization | AddressSelectorContent | AddressSelectorReference | AddressSelectorSelection | AddressSelectorResourceName | AddressSelectorAttachmentPath | AddressSelectorDocument | AddressSelectorMotionRegistration | AddressSelectorExpressionEntry | AddressSelectorPhysics | AddressSelectorPose`
 
+Select a domain-specific object or field to capture as a source-bound SDK address.
+
 Types: [AddressSelectorAttachmentPath](#zipzimodelingaddressingaddressselectorattachmentpath), [AddressSelectorBinding](#zipzimodelingaddressingaddressselectorbinding), [AddressSelectorContent](#zipzimodelingaddressingaddressselectorcontent), [AddressSelectorDocument](#zipzimodelingaddressingaddressselectordocument), [AddressSelectorDrawingGroup](#zipzimodelingaddressingaddressselectordrawinggroup), [AddressSelectorExpressionEntry](#zipzimodelingaddressingaddressselectorexpressionentry), [AddressSelectorMotionRegistration](#zipzimodelingaddressingaddressselectormotionregistration), [AddressSelectorOrganization](#zipzimodelingaddressingaddressselectororganization), [AddressSelectorPhysics](#zipzimodelingaddressingaddressselectorphysics), [AddressSelectorPose](#zipzimodelingaddressingaddressselectorpose), [AddressSelectorReference](#zipzimodelingaddressingaddressselectorreference), [AddressSelectorResourceName](#zipzimodelingaddressingaddressselectorresourcename), [AddressSelectorScene](#zipzimodelingaddressingaddressselectorscene), [AddressSelectorSelection](#zipzimodelingaddressingaddressselectorselection).
 
 
@@ -21,6 +23,8 @@ Types: [AddressSelectorAttachmentPath](#zipzimodelingaddressingaddressselectorat
 **Type**
 
 `(*, id: str)`
+
+Select a package attachment path.
 
 **Fields**
 
@@ -33,6 +37,8 @@ runtime_id.
 
 `(*, id: str)`
 
+Select a binding-owned address.
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
@@ -44,20 +50,23 @@ runtime_id.
 
 `(*, id: str, target: SceneContentTarget)`
 
+Select a mesh, Warp, Glue or Offscreen content field.
+
 Types: [SceneContentTarget].
 
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
 runtime_id.
-- `target`: Explicit base/ordinary/BlendShape content selector; default Base edits the
-undeformed base shape.
+- `target`: Typed content field selector, including its shape or slot where applicable.
 
 ## zipzi.modeling.addressing.AddressSelectorDocument
 
 **Type**
 
 `(*, field: DocumentField)`
+
+Select a document metadata field.
 
 Types: [DocumentField].
 
@@ -71,6 +80,8 @@ Types: [DocumentField].
 
 `(*, owner: str)`
 
+Select a drawing group by owner identity.
+
 **Fields**
 
 - `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
@@ -80,6 +91,8 @@ Types: [DocumentField].
 **Type**
 
 `(*, id: str)`
+
+Select an expression entry.
 
 **Fields**
 
@@ -91,6 +104,8 @@ Types: [DocumentField].
 
 `(*, id: str)`
 
+Select a motion registration.
+
 **Fields**
 
 - `id`: Stable identity of the addressed native animation object.
@@ -100,6 +115,8 @@ Types: [DocumentField].
 **Type**
 
 `(*, id: str)`
+
+Select an organization object.
 
 **Fields**
 
@@ -112,6 +129,8 @@ runtime_id.
 
 `(*, id: str)`
 
+Select a Physics entity.
+
 **Fields**
 
 - `id`: Stable identity of the addressed native animation object.
@@ -122,6 +141,8 @@ runtime_id.
 
 `(*, id: str)`
 
+Select a Pose entity.
+
 **Fields**
 
 - `id`: Stable identity of the addressed native animation object.
@@ -131,6 +152,8 @@ runtime_id.
 **Type**
 
 `(*, id: str)`
+
+Select a reference metadata entry.
 
 **Fields**
 
@@ -143,6 +166,8 @@ runtime_id.
 
 `(*, id: str)`
 
+Select an image-resource name.
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
@@ -153,6 +178,8 @@ runtime_id.
 **Type**
 
 `(*, id: str, field: SceneField)`
+
+Select a typed scene field on a stable object.
 
 Types: [SceneField].
 
@@ -167,6 +194,8 @@ runtime_id.
 **Type**
 
 `(*, owner: str, field: ReferenceSelectionField)`
+
+Select a reference selection field on an owner.
 
 Types: [ReferenceSelectionField].
 

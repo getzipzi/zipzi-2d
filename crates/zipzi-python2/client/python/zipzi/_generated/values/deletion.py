@@ -36,7 +36,7 @@ def read_ReparentStrategy(value: object) -> ReparentStrategy:
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionIntent(CompactValue):
-    '\n\nFields:\nrequest: Exact typed roots, scope options and conversion resolutions to prepare.\naccepted_export_failures: Exact export regressions accepted after reviewing this source.'
+    'Deletion request and explicitly accepted export regressions to review against one source.\n\nFields:\nrequest: Exact typed roots, scope options and conversion resolutions to prepare.\naccepted_export_failures: Exact export regressions accepted after reviewing this source.'
     request: DeletionRequest
     accepted_export_failures: tuple[OpaqueExportIssue, ...] = field(default_factory=lambda: tuple(read_OpaqueExportIssue(v0) for v0 in sequence([])))
 
@@ -47,7 +47,7 @@ DeletionIntent.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionRequest(CompactValue):
-    '\n\nFields:\nroots: Explicit typed roots and individual scope choices; order does not change the result.\nreparent: Explicit migration strategy by surviving object ID; KeepLocalData on a dissolved Part accepts its state loss.\nconversion_context: Frozen parameter inputs, finite domains and reference time; None uses document defaults and full declared domains.\noffscreen_placements: Explicit retained Part owners and mapping resolutions for surviving Offscreens.\ntolerance: Absolute and geometry-scale-relative position error allowed by conversion proofs.\nparameter_slices: Explicit finite parameter slice coordinates; absent entries use frozen document defaults, never preview sliders.\ntexture_replacements: Resolution by deleted texture UUID; Some redirects to a retained texture and None explicitly leaves users unconfigured.\nphysics_node_replacements: Explicit replacement by removed Physics node UUID; replacement must remain in that native setting group.\nblend_base_replacements: Explicit retained base sample when deleting a Blend table base.'
+    'Typed roots and explicit resolutions used to prepare an atomic deletion review.\n\nFields:\nroots: Explicit typed roots and individual scope choices; order does not change the result.\nreparent: Explicit migration strategy by surviving object ID; KeepLocalData on a dissolved Part accepts its state loss.\nconversion_context: Frozen parameter inputs, finite domains and reference time; None uses document defaults and full declared domains.\noffscreen_placements: Explicit retained Part owners and mapping resolutions for surviving Offscreens.\ntolerance: Absolute and geometry-scale-relative position error allowed by conversion proofs.\nparameter_slices: Explicit finite parameter slice coordinates; absent entries use frozen document defaults, never preview sliders.\ntexture_replacements: Resolution by deleted texture UUID; Some redirects to a retained texture and None explicitly leaves users unconfigured.\nphysics_node_replacements: Explicit replacement by removed Physics node UUID; replacement must remain in that native setting group.\nblend_base_replacements: Explicit retained base sample when deleting a Blend table base.'
     roots: tuple[DeletionTarget, ...]
     reparent: _Mapping[str, ReparentStrategy] = field(default_factory=lambda: {key0: read_ReparentStrategy(v0) for key0, v0 in record({}).items()})
     conversion_context: (ReparentContext | None) = None
@@ -71,7 +71,7 @@ DeletionRequest.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionTargetMesh(CompactValue):
-    '\n\nFields:\nvalue: Delete this Mesh and its owned identities; shared resources remain.'
+    'Delete a Mesh and its owned identities, retaining shared resources.\n\nFields:\nvalue: Delete this Mesh and its owned identities; shared resources remain.'
     _variant: _ClassVar[str] = 'Mesh'
     value: str
 
@@ -79,7 +79,7 @@ DeletionTargetMesh.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionTargetGlue(CompactValue):
-    '\n\nFields:\nvalue: Delete this Glue connection, pairs and owned bindings; endpoint meshes remain.'
+    'Delete a Glue connection and owned content, retaining endpoint meshes.\n\nFields:\nvalue: Delete this Glue connection, pairs and owned bindings; endpoint meshes remain.'
     _variant: _ClassVar[str] = 'Glue'
     value: str
 
@@ -87,7 +87,7 @@ DeletionTargetGlue.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionTargetOffscreen(CompactValue):
-    '\n\nFields:\nvalue: Delete this Offscreen composite and its own shapes/bindings; its Part remains.'
+    'Delete an Offscreen and its content while retaining its Part.\n\nFields:\nvalue: Delete this Offscreen composite and its own shapes/bindings; its Part remains.'
     _variant: _ClassVar[str] = 'Offscreen'
     value: str
 
@@ -95,7 +95,7 @@ DeletionTargetOffscreen.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionTargetPart(CompactValue):
-    '\n\nFields:\nvalue: Delete this Part organization subtree; external deformation members remain and migrate.'
+    'Delete a Part organization subtree; migrate external deformation members.\n\nFields:\nvalue: Delete this Part organization subtree; external deformation members remain and migrate.'
     _variant: _ClassVar[str] = 'Part'
     value: str
 
@@ -103,7 +103,7 @@ DeletionTargetPart.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionTargetDeformer(CompactValue):
-    '\n\nFields:\nvalue: Delete this deformation subtree, including meshes across organization Parts.'
+    'Delete a deformation subtree, including meshes across Parts.\n\nFields:\nvalue: Delete this deformation subtree, including meshes across organization Parts.'
     _variant: _ClassVar[str] = 'Deformer'
     value: str
 
@@ -111,7 +111,7 @@ DeletionTargetDeformer.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionTargetDissolvePart(CompactValue):
-    '\n\nFields:\nvalue: Remove this Part while retaining and migrating its organization members.'
+    'Remove a Part and migrate its retained organization members.\n\nFields:\nvalue: Remove this Part while retaining and migrating its organization members.'
     _variant: _ClassVar[str] = 'DissolvePart'
     value: str
 
@@ -119,7 +119,7 @@ DeletionTargetDissolvePart.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionTargetRemoveDeformer(CompactValue):
-    '\n\nFields:\nvalue: Remove only this Deformer and retain/migrate its deformation children.'
+    'Remove only a Deformer and migrate retained deformation children.\n\nFields:\nvalue: Remove only this Deformer and retain/migrate its deformation children.'
     _variant: _ClassVar[str] = 'RemoveDeformer'
     value: str
 
@@ -127,7 +127,7 @@ DeletionTargetRemoveDeformer.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionTargetParameter(CompactValue):
-    '\n\nFields:\nvalue: Delete this parameter and reduce ordinary axes at its frozen default unless explicitly overridden.'
+    'Delete a parameter and reduce dependent axes at a frozen slice.\n\nFields:\nvalue: Delete this parameter and reduce ordinary axes at its frozen default unless explicitly overridden.'
     _variant: _ClassVar[str] = 'Parameter'
     value: str
 
@@ -135,7 +135,7 @@ DeletionTargetParameter.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionTargetParameterFolder(CompactValue):
-    '\n\nFields:\nvalue: Dissolve this parameter folder and retain its parameters and nested folders in the retained parent.'
+    'Dissolve a parameter folder and retain its contents.\n\nFields:\nvalue: Dissolve this parameter folder and retain its parameters and nested folders in the retained parent.'
     _variant: _ClassVar[str] = 'ParameterFolder'
     value: str
 
@@ -143,7 +143,7 @@ DeletionTargetParameterFolder.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionTargetParameterFolderContents(CompactValue):
-    '\n\nFields:\nvalue: Delete this parameter folder subtree and explicitly include its contained parameters.'
+    'Delete a parameter folder subtree including its parameters.\n\nFields:\nvalue: Delete this parameter folder subtree and explicitly include its contained parameters.'
     _variant: _ClassVar[str] = 'ParameterFolderContents'
     value: str
 
@@ -151,7 +151,7 @@ DeletionTargetParameterFolderContents.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionTargetTexture(CompactValue):
-    '\n\nFields:\nvalue: Delete this image record; retained users require an explicit replacement or unconfigured choice.'
+    'Delete an image resource with explicit choices for retained users.\n\nFields:\nvalue: Delete this image record; retained users require an explicit replacement or unconfigured choice.'
     _variant: _ClassVar[str] = 'Texture'
     value: str
 
@@ -159,7 +159,7 @@ DeletionTargetTexture.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionTargetAttachment(CompactValue):
-    '\n\nFields:\nvalue: Delete this owned attachment record and clear resolved optional sound/UserData references.'
+    'Delete an attachment and clear resolved optional references.\n\nFields:\nvalue: Delete this owned attachment record and clear resolved optional sound/UserData references.'
     _variant: _ClassVar[str] = 'Attachment'
     value: str
 
@@ -167,7 +167,7 @@ DeletionTargetAttachment.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionTargetRecord(CompactValue):
-    '\n\nFields:\nvalue: Typed non-scene business record; its native domain validates ownership, child identities and choices.'
+    'Delete a typed non-scene record subject to its native ownership rules.\n\nFields:\nvalue: Typed non-scene business record; its native domain validates ownership, child identities and choices.'
     _variant: _ClassVar[str] = 'Record'
     value: DeletionObject
 
@@ -177,7 +177,7 @@ DeletionTarget: TypeAlias = DeletionTargetMesh | DeletionTargetGlue | DeletionTa
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionObject(CompactValue):
-    '\n\nFields:\nkind: Native identity domain; Part and its DrawingGroup role remain distinct.\nid: Persistent native ID; embedded identities also require their owner namespace.\nowner_id: Optional owning Expression ID for embedded source-scene track/key identities.'
+    'Typed native identity used by a deletion report; embedded identities may require an owner.\n\nFields:\nkind: Native identity domain; Part and its DrawingGroup role remain distinct.\nid: Persistent native ID; embedded identities also require their owner namespace.\nowner_id: Optional owning Expression ID for embedded source-scene track/key identities.'
     kind: DeletionKind
     id: str
     owner_id: (str | None) = None
@@ -185,7 +185,7 @@ class DeletionObject(CompactValue):
 DeletionObject.__module__ = "zipzi.modeling.deletion"
 
 class DeletionKind(str, Enum):
-    ''
+    'Native identity domain used in frozen deletion reports and typed roots.'
     __module__ = "zipzi.modeling.deletion"
     MESH = 'Mesh'
     GLUE = 'Glue'
@@ -236,7 +236,7 @@ class DeletionKind(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionOffscreenPlacement(CompactValue):
-    "\n\nFields:\npart_id: Retained destination Part UUID; it must have an available Offscreen ownership role.\nmapping: Exact mapping in the destination Part's keyform order, if rebinding is required."
+    "Retained Part and optional mapping for a surviving Offscreen during deletion.\n\nFields:\npart_id: Retained destination Part UUID; it must have an available Offscreen ownership role.\nmapping: Exact mapping in the destination Part's keyform order, if rebinding is required."
     part_id: str
     mapping: (tuple[int, ...] | None) = None
 
@@ -247,7 +247,7 @@ DeletionOffscreenPlacement.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionTolerance(CompactValue):
-    '\n\nFields:\nabsolute: Finite positive absolute error tolerance in model units.\nrelative: Finite nonnegative tolerance times the original geometry scale.'
+    'Absolute and scale-relative error limits used by deletion conversion proofs.\n\nFields:\nabsolute: Finite positive absolute error tolerance in model units.\nrelative: Finite nonnegative tolerance times the original geometry scale.'
     absolute: float
     relative: float
 
@@ -255,7 +255,7 @@ DeletionTolerance.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionSummary(CompactValue):
-    '\n\nFields:\nstate: Whether the plan is executable, requires confirmation/choices, or is blocked.\nrequested: Explicit root count after typed identity deduplication.\nsections: Section counts; owned internal identities are separate from business removals.\nexport_analysis_complete: False until a valid candidate allowed complete export preflight.'
+    'Readiness and section counts of a frozen deletion review.\n\nFields:\nstate: Whether the plan is executable, requires confirmation/choices, or is blocked.\nrequested: Explicit root count after typed identity deduplication.\nsections: Section counts; owned internal identities are separate from business removals.\nexport_analysis_complete: False until a valid candidate allowed complete export preflight.'
     state: DeletionReviewState
     requested: int
     sections: tuple[DeletionSectionCount, ...]
@@ -267,7 +267,7 @@ class DeletionSummary(CompactValue):
 DeletionSummary.__module__ = "zipzi.modeling.deletion"
 
 class DeletionReviewState(str, Enum):
-    ''
+    'Readiness of a frozen deletion review; review and confirmation do not themselves apply it.'
     __module__ = "zipzi.modeling.deletion"
     READY = 'Ready'
     NEEDS_CONFIRMATION = 'NeedsConfirmation'
@@ -276,14 +276,14 @@ class DeletionReviewState(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionSectionCount(CompactValue):
-    '\n\nFields:\nsection: Frozen report section addressed by report_page.\ncount: Total rows in this section, before paging.'
+    'Row count for one section of a frozen deletion review.\n\nFields:\nsection: Frozen report section addressed by report_page.\ncount: Total rows in this section, before paging.'
     section: DeletionSection
     count: int
 
 DeletionSectionCount.__module__ = "zipzi.modeling.deletion"
 
 class DeletionSection(str, Enum):
-    ''
+    'Select one independently paged section of a frozen deletion review.'
     __module__ = "zipzi.modeling.deletion"
     REMOVED = 'Removed'
     OWNED = 'Owned'
@@ -301,7 +301,7 @@ class DeletionSection(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionPage(CompactValue):
-    '\n\nFields:\nsection: Report section in the frozen plan.\noffset: Requested zero-based row offset.\ntotal: Total rows available in this section.\nrows: Bounded owned rows from the captured source, not current live records.\nnext_offset: Next offset in the same immutable section, or None at the end.'
+    'Bounded rows from one immutable deletion-review section; offsets are row positions, not IDs.\n\nFields:\nsection: Report section in the frozen plan.\noffset: Requested zero-based row offset.\ntotal: Total rows available in this section.\nrows: Bounded owned rows from the captured source, not current live records.\nnext_offset: Next offset in the same immutable section, or None at the end.'
     section: DeletionSection
     offset: int
     total: int
@@ -315,7 +315,7 @@ DeletionPage.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionRowRemoval(CompactValue):
-    '\n\nFields:\nremoval: Deleted identity and its ownership/scope/dependency reason.'
+    'An identity proposed for removal.\n\nFields:\nremoval: Deleted identity and its ownership/scope/dependency reason.'
     _variant: _ClassVar[str] = 'removal'
     removal: DeletionRemoval
 
@@ -323,7 +323,7 @@ DeletionRowRemoval.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionRowRelation(CompactValue):
-    '\n\nFields:\nrelation: Native source field and target explaining a retained rewrite or dependency.'
+    'A retained reference or dependency relation.\n\nFields:\nrelation: Native source field and target explaining a retained rewrite or dependency.'
     _variant: _ClassVar[str] = 'relation'
     relation: DeletionRelation
 
@@ -331,7 +331,7 @@ DeletionRowRelation.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionRowEffect(CompactValue):
-    '\n\nFields:\neffect: Typed appearance, animation, composition or export consequence.'
+    'A predicted semantic or presentation consequence.\n\nFields:\neffect: Typed appearance, animation, composition or export consequence.'
     _variant: _ClassVar[str] = 'effect'
     effect: DeletionEffect
 
@@ -339,7 +339,7 @@ DeletionRowEffect.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionRowDecision(CompactValue):
-    '\n\nFields:\ndecision: Outstanding native choice and actually available alternatives.'
+    'An outstanding choice and available alternatives.\n\nFields:\ndecision: Outstanding native choice and actually available alternatives.'
     _variant: _ClassVar[str] = 'decision'
     decision: DeletionDecision
 
@@ -347,7 +347,7 @@ DeletionRowDecision.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionRowLock(CompactValue):
-    '\n\nFields:\nblocker: Affected identity and the inherited lock source.'
+    'A lock blocking deletion.\n\nFields:\nblocker: Affected identity and the inherited lock source.'
     _variant: _ClassVar[str] = 'lock'
     blocker: DeletionLock
 
@@ -355,7 +355,7 @@ DeletionRowLock.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionRowStructural(CompactValue):
-    '\n\nFields:\nblocker: Native invalid-result address and diagnostic code.'
+    'A structural blocker of a valid result.\n\nFields:\nblocker: Native invalid-result address and diagnostic code.'
     _variant: _ClassVar[str] = 'structural'
     blocker: DeletionStructuralBlocker
 
@@ -363,7 +363,7 @@ DeletionRowStructural.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionRowDeformation(CompactValue):
-    '\n\nFields:\nobject: Surviving object whose deformation parent changes.\nparent_id: Retained destination parent; empty means the model root.\nstrategy: Requested and validated conversion strategy.\nguarantee: Position proof only, without copying the frozen model parameter map.'
+    'A surviving deformation object and its migration.\n\nFields:\nobject: Surviving object whose deformation parent changes.\nparent_id: Retained destination parent; empty means the model root.\nstrategy: Requested and validated conversion strategy.\nguarantee: Position proof only, without copying the frozen model parameter map.'
     _variant: _ClassVar[str] = 'deformation'
     object: DeletionObject
     parent_id: str
@@ -374,7 +374,7 @@ DeletionRowDeformation.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionRowOrganization(CompactValue):
-    '\n\nFields:\nobject: Surviving organization member.\nparent_id: Retained Part owner, or empty for an unassigned member.\nmapping_slots: Explicit Offscreen mapping slot count, without copying its full array.'
+    'A surviving organization member and its migration.\n\nFields:\nobject: Surviving organization member.\nparent_id: Retained Part owner, or empty for an unassigned member.\nmapping_slots: Explicit Offscreen mapping slot count, without copying its full array.'
     _variant: _ClassVar[str] = 'organization'
     object: DeletionObject
     parent_id: str
@@ -384,7 +384,7 @@ DeletionRowOrganization.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionRowGuaranteeLimit(CompactValue):
-    '\n\nFields:\nobject: Object whose standalone position proof is limited by another migration.\nancestor: Retained ancestor with an explicitly chosen local-data migration.'
+    'An ancestor limiting a standalone preservation guarantee.\n\nFields:\nobject: Object whose standalone position proof is limited by another migration.\nancestor: Retained ancestor with an explicitly chosen local-data migration.'
     _variant: _ClassVar[str] = 'guarantee_limit'
     object: DeletionObject
     ancestor: DeletionObject
@@ -393,7 +393,7 @@ DeletionRowGuaranteeLimit.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionRowDomain(CompactValue):
-    '\n\nFields:\nobject: Object whose preservation proof uses this parameter interval or fixed input.\nparameter_id: Actual dependency parameter, not an unrelated model parameter.\nminimum: Lower endpoint of the proved domain; equal to maximum for a fixed input.\nmaximum: Upper endpoint of the proved domain.\nreference_value: Frozen reference value used by the conversion.'
+    'A parameter interval or fixed input used by a conversion proof.\n\nFields:\nobject: Object whose preservation proof uses this parameter interval or fixed input.\nparameter_id: Actual dependency parameter, not an unrelated model parameter.\nminimum: Lower endpoint of the proved domain; equal to maximum for a fixed input.\nmaximum: Upper endpoint of the proved domain.\nreference_value: Frozen reference value used by the conversion.'
     _variant: _ClassVar[str] = 'domain'
     object: DeletionObject
     parameter_id: str
@@ -405,7 +405,7 @@ DeletionRowDomain.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionRowExport(CompactValue):
-    '\n\nFields:\nfailure: Resource, format and exact native export regression.\nexisting: True for pre-existing export problems; false for new regressions.'
+    'An existing or newly introduced export failure.\n\nFields:\nfailure: Resource, format and exact native export regression.\nexisting: True for pre-existing export problems; false for new regressions.'
     _variant: _ClassVar[str] = 'export'
     failure: OpaqueExportIssue
     existing: bool
@@ -416,14 +416,14 @@ DeletionRow: TypeAlias = DeletionRowRemoval | DeletionRowRelation | DeletionRowE
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionRemoval(CompactValue):
-    '\n\nFields:\nobject: Retired identity, including its native domain and embedded namespace.\nreason: Whether this is an explicit root, scoped descendant, owned identity or dependency record.'
+    'Identity proposed for removal and the reason it is included.\n\nFields:\nobject: Retired identity, including its native domain and embedded namespace.\nreason: Whether this is an explicit root, scoped descendant, owned identity or dependency record.'
     object: DeletionObject
     reason: DeletionReason
 
 DeletionRemoval.__module__ = "zipzi.modeling.deletion"
 
 class DeletionReason(str, Enum):
-    ''
+    'Why an identity is included in the deletion report.'
     __module__ = "zipzi.modeling.deletion"
     REQUESTED = 'Requested'
     OWNED = 'Owned'
@@ -432,7 +432,7 @@ class DeletionReason(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionRelation(CompactValue):
-    '\n\nFields:\nowner: Native object or role containing this field in the frozen source.\nfield: Typed field/slot address valid only in the frozen source.\ntarget: Native target identity explaining this ownership, dependency or rewrite.'
+    'Frozen-source owner, typed field and target explaining a dependency or rewrite.\n\nFields:\nowner: Native object or role containing this field in the frozen source.\nfield: Typed field/slot address valid only in the frozen source.\ntarget: Native target identity explaining this ownership, dependency or rewrite.'
     owner: DeletionObject
     field: DeletionField
     target: DeletionObject
@@ -441,14 +441,14 @@ DeletionRelation.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldOwned(CompactValue):
-    ''
+    'Owned identity relationship.'
     _variant: _ClassVar[str] = 'Owned'
 
 DeletionFieldOwned.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldMeshMask(CompactValue):
-    '\n\nFields:\nslot: Zero-based address in the frozen source list, never a persistent object ID.'
+    'Mesh clipping-mask entry at a frozen slot.\n\nFields:\nslot: Zero-based address in the frozen source list, never a persistent object ID.'
     _variant: _ClassVar[str] = 'MeshMask'
     slot: int
 
@@ -456,14 +456,14 @@ DeletionFieldMeshMask.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldMeshInvertedMask(CompactValue):
-    ''
+    'Mesh inverted-mask state.'
     _variant: _ClassVar[str] = 'MeshInvertedMask'
 
 DeletionFieldMeshInvertedMask.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldOffscreenMask(CompactValue):
-    '\n\nFields:\nslot: Zero-based address in the frozen source list, never a persistent object ID.'
+    'Offscreen mask entry at a frozen slot.\n\nFields:\nslot: Zero-based address in the frozen source list, never a persistent object ID.'
     _variant: _ClassVar[str] = 'OffscreenMask'
     slot: int
 
@@ -471,28 +471,28 @@ DeletionFieldOffscreenMask.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldGlueMeshA(CompactValue):
-    ''
+    'Glue endpoint A mesh reference.'
     _variant: _ClassVar[str] = 'GlueMeshA'
 
 DeletionFieldGlueMeshA.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldGlueMeshB(CompactValue):
-    ''
+    'Glue endpoint B mesh reference.'
     _variant: _ClassVar[str] = 'GlueMeshB'
 
 DeletionFieldGlueMeshB.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldHitAreaMesh(CompactValue):
-    ''
+    'Hit-area mesh reference.'
     _variant: _ClassVar[str] = 'HitAreaMesh'
 
 DeletionFieldHitAreaMesh.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldDrawingItem(CompactValue):
-    '\n\nFields:\nslot: Zero-based address in the frozen source list, never a persistent object ID.'
+    'Drawing-group member at a frozen slot.\n\nFields:\nslot: Zero-based address in the frozen source list, never a persistent object ID.'
     _variant: _ClassVar[str] = 'DrawingItem'
     slot: int
 
@@ -500,56 +500,56 @@ DeletionFieldDrawingItem.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldOrganizationParent(CompactValue):
-    ''
+    'Organization parent relation.'
     _variant: _ClassVar[str] = 'OrganizationParent'
 
 DeletionFieldOrganizationParent.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldDeformationParent(CompactValue):
-    ''
+    'Deformation parent relation.'
     _variant: _ClassVar[str] = 'DeformationParent'
 
 DeletionFieldDeformationParent.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldConvertedData(CompactValue):
-    ''
+    'Data produced by a conversion.'
     _variant: _ClassVar[str] = 'ConvertedData'
 
 DeletionFieldConvertedData.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldPosePart(CompactValue):
-    ''
+    'Pose Part reference.'
     _variant: _ClassVar[str] = 'PosePart'
 
 DeletionFieldPosePart.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldPoseLinkPart(CompactValue):
-    ''
+    'Pose link Part reference.'
     _variant: _ClassVar[str] = 'PoseLinkPart'
 
 DeletionFieldPoseLinkPart.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldMotionPart(CompactValue):
-    ''
+    'Motion Part reference.'
     _variant: _ClassVar[str] = 'MotionPart'
 
 DeletionFieldMotionPart.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldExpressionSourcePart(CompactValue):
-    ''
+    'Expression source Part reference.'
     _variant: _ClassVar[str] = 'ExpressionSourcePart'
 
 DeletionFieldExpressionSourcePart.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldCdiPart(CompactValue):
-    '\n\nFields:\nslot: Zero-based address in the frozen source list, never a persistent object ID.'
+    'CDI Part reference at a frozen slot.\n\nFields:\nslot: Zero-based address in the frozen source list, never a persistent object ID.'
     _variant: _ClassVar[str] = 'CdiPart'
     slot: int
 
@@ -557,42 +557,42 @@ DeletionFieldCdiPart.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldRequestedScope(CompactValue):
-    ''
+    'Relationship included by the requested scope.'
     _variant: _ClassVar[str] = 'RequestedScope'
 
 DeletionFieldRequestedScope.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldParameterAxis(CompactValue):
-    ''
+    'Binding axis parameter reference.'
     _variant: _ClassVar[str] = 'ParameterAxis'
 
 DeletionFieldParameterAxis.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldBlendTableParameter(CompactValue):
-    ''
+    'BlendShape key-table parameter reference.'
     _variant: _ClassVar[str] = 'BlendTableParameter'
 
 DeletionFieldBlendTableParameter.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldBlendConstraintParameter(CompactValue):
-    ''
+    'BlendShape constraint parameter reference.'
     _variant: _ClassVar[str] = 'BlendConstraintParameter'
 
 DeletionFieldBlendConstraintParameter.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldBlendTable(CompactValue):
-    ''
+    'BlendShape binding key-table reference.'
     _variant: _ClassVar[str] = 'BlendTable'
 
 DeletionFieldBlendTable.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldBlendConstraint(CompactValue):
-    '\n\nFields:\nslot: Zero-based constraint address in the frozen BlendBinding.'
+    'BlendShape binding constraint at a frozen slot.\n\nFields:\nslot: Zero-based constraint address in the frozen BlendBinding.'
     _variant: _ClassVar[str] = 'BlendConstraint'
     slot: int
 
@@ -600,91 +600,91 @@ DeletionFieldBlendConstraint.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldMotionParameter(CompactValue):
-    ''
+    'Motion parameter reference.'
     _variant: _ClassVar[str] = 'MotionParameter'
 
 DeletionFieldMotionParameter.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldExpressionParameter(CompactValue):
-    ''
+    'Expression parameter target reference.'
     _variant: _ClassVar[str] = 'ExpressionParameter'
 
 DeletionFieldExpressionParameter.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldExpressionSourceParameter(CompactValue):
-    ''
+    'Expression source parameter reference.'
     _variant: _ClassVar[str] = 'ExpressionSourceParameter'
 
 DeletionFieldExpressionSourceParameter.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldPhysicsParameter(CompactValue):
-    ''
+    'Physics input or output parameter reference.'
     _variant: _ClassVar[str] = 'PhysicsParameter'
 
 DeletionFieldPhysicsParameter.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldPhysicsNode(CompactValue):
-    ''
+    'Physics node reference.'
     _variant: _ClassVar[str] = 'PhysicsNode'
 
 DeletionFieldPhysicsNode.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldTexture(CompactValue):
-    ''
+    'Image texture reference.'
     _variant: _ClassVar[str] = 'Texture'
 
 DeletionFieldTexture.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldAttachmentSound(CompactValue):
-    ''
+    'Motion sound attachment reference.'
     _variant: _ClassVar[str] = 'AttachmentSound'
 
 DeletionFieldAttachmentSound.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldAttachmentUserData(CompactValue):
-    ''
+    'User-data attachment reference.'
     _variant: _ClassVar[str] = 'AttachmentUserData'
 
 DeletionFieldAttachmentUserData.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldMotionClip(CompactValue):
-    ''
+    'Motion registration clip reference.'
     _variant: _ClassVar[str] = 'MotionClip'
 
 DeletionFieldMotionClip.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldMotionRegistrationContainer(CompactValue):
-    ''
+    'Motion registration container relation.'
     _variant: _ClassVar[str] = 'MotionRegistrationContainer'
 
 DeletionFieldMotionRegistrationContainer.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldParameterFolder(CompactValue):
-    ''
+    'Parameter organization folder relation.'
     _variant: _ClassVar[str] = 'ParameterFolder'
 
 DeletionFieldParameterFolder.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldModelParameter(CompactValue):
-    ''
+    'Model parameter metadata reference.'
     _variant: _ClassVar[str] = 'ModelParameter'
 
 DeletionFieldModelParameter.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldCdiParameter(CompactValue):
-    '\n\nFields:\nslot: Frozen zero-based CDI Parameters record address; imported unresolved records remain untouched.'
+    'CDI parameter reference at a frozen slot.\n\nFields:\nslot: Frozen zero-based CDI Parameters record address; imported unresolved records remain untouched.'
     _variant: _ClassVar[str] = 'CdiParameter'
     slot: int
 
@@ -692,7 +692,7 @@ DeletionFieldCdiParameter.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionFieldCdiCombinedParameter(CompactValue):
-    ''
+    'CDI combined-parameter member reference.'
     _variant: _ClassVar[str] = 'CdiCombinedParameter'
 
 DeletionFieldCdiCombinedParameter.__module__ = "zipzi.modeling.deletion"
@@ -701,7 +701,7 @@ DeletionField: TypeAlias = DeletionFieldOwned | DeletionFieldMeshMask | Deletion
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionEffectMotionRegistrationMoved(CompactValue):
-    '\n\nFields:\nregistration: Preserved last registration of a retained Clip, moved to the ungrouped root.\ngroup: Removed source group; the registration is not deleted with its other entries.'
+    'A retained Clip registration moves to the ungrouped root.\n\nFields:\nregistration: Preserved last registration of a retained Clip, moved to the ungrouped root.\ngroup: Removed source group; the registration is not deleted with its other entries.'
     _variant: _ClassVar[str] = 'MotionRegistrationMoved'
     registration: DeletionObject
     group: DeletionObject
@@ -718,7 +718,7 @@ DeletionEffectContentChanged.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionEffectParameterDimensionRemoved(CompactValue):
-    '\n\nFields:\nobject: Surviving ordinary binding or Glue grid reduced by the native grid converter.\nparameter: Driving parameter whose coordinate is frozen for this removed axis.\nvalue: Frozen document-default or explicitly selected finite slice coordinate.\neffective_value: Coordinate after native repeat normalization, key snapping and endpoint selection.\ndisabled: Whether this fixed coordinate disables the ordinary target outside the native grid.'
+    'A surviving grid loses a parameter dimension at a frozen slice.\n\nFields:\nobject: Surviving ordinary binding or Glue grid reduced by the native grid converter.\nparameter: Driving parameter whose coordinate is frozen for this removed axis.\nvalue: Frozen document-default or explicitly selected finite slice coordinate.\neffective_value: Coordinate after native repeat normalization, key snapping and endpoint selection.\ndisabled: Whether this fixed coordinate disables the ordinary target outside the native grid.'
     _variant: _ClassVar[str] = 'ParameterDimensionRemoved'
     object: DeletionObject
     parameter: DeletionObject
@@ -730,7 +730,7 @@ DeletionEffectParameterDimensionRemoved.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionEffectBindingContributionRemoved(CompactValue):
-    '\n\nFields:\nobject: Retained target whose authored contribution disappears.\nbinding: Deleted ordinary or Blend binding that previously supplied this contribution.'
+    'A retained target loses an authored binding contribution.\n\nFields:\nobject: Retained target whose authored contribution disappears.\nbinding: Deleted ordinary or Blend binding that previously supplied this contribution.'
     _variant: _ClassVar[str] = 'BindingContributionRemoved'
     object: DeletionObject
     binding: DeletionObject
@@ -739,7 +739,7 @@ DeletionEffectBindingContributionRemoved.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionEffectResourceReplaced(CompactValue):
-    '\n\nFields:\nobject: Retained consumer whose texture or optional attachment reference changes.\nsource: Deleted resource previously referenced by this consumer.\nreplacement: Retained replacement resource; None means an explicit clear/unconfigured result.'
+    'A retained consumer redirects or clears a resource reference.\n\nFields:\nobject: Retained consumer whose texture or optional attachment reference changes.\nsource: Deleted resource previously referenced by this consumer.\nreplacement: Retained replacement resource; None means an explicit clear/unconfigured result.'
     _variant: _ClassVar[str] = 'ResourceReplaced'
     object: DeletionObject
     source: DeletionObject
@@ -749,7 +749,7 @@ DeletionEffectResourceReplaced.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionEffectParameterAnimationRemoved(CompactValue):
-    '\n\nFields:\nvalue: Removed Motion/Expression parameter record; other tracks, events and resource registrations remain.'
+    'A parameter animation record is removed.\n\nFields:\nvalue: Removed Motion/Expression parameter record; other tracks, events and resource registrations remain.'
     _variant: _ClassVar[str] = 'ParameterAnimationRemoved'
     value: DeletionObject
 
@@ -757,7 +757,7 @@ DeletionEffectParameterAnimationRemoved.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionEffectPhysicsChannelRemoved(CompactValue):
-    '\n\nFields:\nobject: Removed input or output channel, with a stable native identity.\ngroup: Retained Physics setting group whose behavior changes.'
+    'An input or output channel is removed from retained Physics.\n\nFields:\nobject: Removed input or output channel, with a stable native identity.\ngroup: Retained Physics setting group whose behavior changes.'
     _variant: _ClassVar[str] = 'PhysicsChannelRemoved'
     object: DeletionObject
     group: DeletionObject
@@ -766,7 +766,7 @@ DeletionEffectPhysicsChannelRemoved.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionEffectMaskChanged(CompactValue):
-    '\n\nFields:\nvalue: Retained Mask consumer whose clipping effect changes.'
+    'A retained consumer changes clipping masks.\n\nFields:\nvalue: Retained Mask consumer whose clipping effect changes.'
     _variant: _ClassVar[str] = 'MaskChanged'
     value: DeletionObject
 
@@ -774,7 +774,7 @@ DeletionEffectMaskChanged.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionEffectGlueRemoved(CompactValue):
-    '\n\nFields:\nvalue: Deleted connection whose seam or postprocessing contribution disappears.'
+    'A deleted Glue connection no longer contributes its seam.\n\nFields:\nvalue: Deleted connection whose seam or postprocessing contribution disappears.'
     _variant: _ClassVar[str] = 'GlueRemoved'
     value: DeletionObject
 
@@ -782,7 +782,7 @@ DeletionEffectGlueRemoved.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionEffectHitAreaRemoved(CompactValue):
-    '\n\nFields:\nvalue: Deleted model3 Hit Area registration.'
+    'A model hit-area registration is removed.\n\nFields:\nvalue: Deleted model3 Hit Area registration.'
     _variant: _ClassVar[str] = 'HitAreaRemoved'
     value: DeletionObject
 
@@ -790,7 +790,7 @@ DeletionEffectHitAreaRemoved.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionEffectCompositionChanged(CompactValue):
-    '\n\nFields:\nvalue: Affected Offscreen or Part whose compositing can change.'
+    'Offscreen or Part composition may change.\n\nFields:\nvalue: Affected Offscreen or Part whose compositing can change.'
     _variant: _ClassVar[str] = 'CompositionChanged'
     value: DeletionObject
 
@@ -798,7 +798,7 @@ DeletionEffectCompositionChanged.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionEffectPartAnimationRemoved(CompactValue):
-    '\n\nFields:\nvalue: Removed Part animation/Pose record; its container remains.'
+    'A Part animation or Pose record is removed.\n\nFields:\nvalue: Removed Part animation/Pose record; its container remains.'
     _variant: _ClassVar[str] = 'PartAnimationRemoved'
     value: DeletionObject
 
@@ -806,7 +806,7 @@ DeletionEffectPartAnimationRemoved.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionEffectDrawingGroupFlattened(CompactValue):
-    '\n\nFields:\ngroup: Removed drawing role being flattened.\ndestination: Nearest retained drawing role receiving expanded members.\nsource_range: Original inclusive group order bounds.\ndestination_range: Retained destination order bounds; clipping and relative order may differ.\ndynamic_order: Whether parameter or Blend bindings drove the removed group order.\noffscreen: Original composite whose group scope is lost or migrated.'
+    'A drawing group is flattened into a retained destination.\n\nFields:\ngroup: Removed drawing role being flattened.\ndestination: Nearest retained drawing role receiving expanded members.\nsource_range: Original inclusive group order bounds.\ndestination_range: Retained destination order bounds; clipping and relative order may differ.\ndynamic_order: Whether parameter or Blend bindings drove the removed group order.\noffscreen: Original composite whose group scope is lost or migrated.'
     _variant: _ClassVar[str] = 'DrawingGroupFlattened'
     group: DeletionObject
     destination: DeletionObject
@@ -823,7 +823,7 @@ DeletionEffectDrawingGroupFlattened.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionEffectOrganizationChanged(CompactValue):
-    '\n\nFields:\nvalue: Surviving member whose organization owner changes.'
+    'A surviving object changes organizational owner.\n\nFields:\nvalue: Surviving member whose organization owner changes.'
     _variant: _ClassVar[str] = 'OrganizationChanged'
     value: DeletionObject
 
@@ -831,7 +831,7 @@ DeletionEffectOrganizationChanged.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionEffectDeformationChanged(CompactValue):
-    '\n\nFields:\nvalue: Surviving object whose deformation is not fully preserved.'
+    'A surviving object has deformation that is not fully preserved.\n\nFields:\nvalue: Surviving object whose deformation is not fully preserved.'
     _variant: _ClassVar[str] = 'DeformationChanged'
     value: DeletionObject
 
@@ -839,7 +839,7 @@ DeletionEffectDeformationChanged.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionEffectUnpreservedChannels(CompactValue):
-    '\n\nFields:\nobject: Surviving object affected by channels outside the position proof.\nchannels: Explicit channels not covered by the converter position guarantee.'
+    'A surviving object has channels outside the position guarantee.\n\nFields:\nobject: Surviving object affected by channels outside the position proof.\nchannels: Explicit channels not covered by the converter position guarantee.'
     _variant: _ClassVar[str] = 'UnpreservedChannels'
     object: DeletionObject
     channels: tuple[DeletionChannel, ...]
@@ -851,7 +851,7 @@ DeletionEffectUnpreservedChannels.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionEffectPartStateRemoved(CompactValue):
-    '\n\nFields:\npart: Dissolved Part whose inherited state is removed.\nenabled: Original Part enabled state, before dissolution.\nanimated_order: Whether the removed Part had parameter-driven drawing order.'
+    'A dissolved Part loses its inherited state.\n\nFields:\npart: Dissolved Part whose inherited state is removed.\nenabled: Original Part enabled state, before dissolution.\nanimated_order: Whether the removed Part had parameter-driven drawing order.'
     _variant: _ClassVar[str] = 'PartStateRemoved'
     part: DeletionObject
     enabled: bool
@@ -862,7 +862,7 @@ DeletionEffectPartStateRemoved.__module__ = "zipzi.modeling.deletion"
 DeletionEffect: TypeAlias = DeletionEffectMotionRegistrationMoved | DeletionEffectContentChanged | DeletionEffectParameterDimensionRemoved | DeletionEffectBindingContributionRemoved | DeletionEffectResourceReplaced | DeletionEffectParameterAnimationRemoved | DeletionEffectPhysicsChannelRemoved | DeletionEffectMaskChanged | DeletionEffectGlueRemoved | DeletionEffectHitAreaRemoved | DeletionEffectCompositionChanged | DeletionEffectPartAnimationRemoved | DeletionEffectDrawingGroupFlattened | DeletionEffectOrganizationChanged | DeletionEffectDeformationChanged | DeletionEffectUnpreservedChannels | DeletionEffectPartStateRemoved
 
 class DeletionChannel(str, Enum):
-    ''
+    'A non-position channel that may lie outside a deletion conversion proof.'
     __module__ = "zipzi.modeling.deletion"
     APPEARANCE = 'Appearance'
     ENABLED = 'Enabled'
@@ -871,7 +871,7 @@ class DeletionChannel(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionDecision(CompactValue):
-    '\n\nFields:\nobject: Affected surviving object that needs an explicit resolution.\nreason: Typed unresolved native condition; it is not an instruction to expand deletion.\nchoices: Actually available alternatives; selecting one requires a new source-bound plan.'
+    'Affected object, unresolved reason and available resolutions in a frozen review.\n\nFields:\nobject: Affected surviving object that needs an explicit resolution.\nreason: Typed unresolved native condition; it is not an instruction to expand deletion.\nchoices: Actually available alternatives; selecting one requires a new source-bound plan.'
     object: DeletionObject
     reason: DeletionDecisionReason
     choices: tuple[DeletionChoice, ...]
@@ -883,7 +883,7 @@ DeletionDecision.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionDecisionReasonConversionUnproven(CompactValue):
-    '\n\nFields:\ncode: Native conversion diagnostic code; available resolutions come from typed choices.'
+    'A requested conversion could not establish its preservation proof.\n\nFields:\ncode: Native conversion diagnostic code; available resolutions come from typed choices.'
     _variant: _ClassVar[str] = 'ConversionUnproven'
     code: str
 
@@ -891,49 +891,49 @@ DeletionDecisionReasonConversionUnproven.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionDecisionReasonOffscreenOwnerUnavailable(CompactValue):
-    ''
+    'A surviving Offscreen needs an available retained Part owner.'
     _variant: _ClassVar[str] = 'OffscreenOwnerUnavailable'
 
 DeletionDecisionReasonOffscreenOwnerUnavailable.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionDecisionReasonOffscreenMappingRequired(CompactValue):
-    ''
+    'A surviving Offscreen needs an explicit destination mapping.'
     _variant: _ClassVar[str] = 'OffscreenMappingRequired'
 
 DeletionDecisionReasonOffscreenMappingRequired.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionDecisionReasonPartStateUnpreserved(CompactValue):
-    ''
+    'Dissolving a Part would remove inherited state without a chosen resolution.'
     _variant: _ClassVar[str] = 'PartStateUnpreserved'
 
 DeletionDecisionReasonPartStateUnpreserved.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionDecisionReasonTextureReplacementRequired(CompactValue):
-    ''
+    'Retained texture users require an explicit replacement or clear choice.'
     _variant: _ClassVar[str] = 'TextureReplacementRequired'
 
 DeletionDecisionReasonTextureReplacementRequired.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionDecisionReasonBlendBaseReplacementRequired(CompactValue):
-    ''
+    'A deleted BlendShape base requires a retained replacement sample.'
     _variant: _ClassVar[str] = 'BlendBaseReplacementRequired'
 
 DeletionDecisionReasonBlendBaseReplacementRequired.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionDecisionReasonPhysicsNodeReplacementRequired(CompactValue):
-    ''
+    'A removed Physics node requires a replacement for retained users.'
     _variant: _ClassVar[str] = 'PhysicsNodeReplacementRequired'
 
 DeletionDecisionReasonPhysicsNodeReplacementRequired.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionDecisionReasonInvalidContainer(CompactValue):
-    '\n\nFields:\ncode: Native container invariant requiring an explicit larger deletion or cancellation.'
+    'The requested result violates a native container invariant.\n\nFields:\ncode: Native container invariant requiring an explicit larger deletion or cancellation.'
     _variant: _ClassVar[str] = 'InvalidContainer'
     code: str
 
@@ -942,7 +942,7 @@ DeletionDecisionReasonInvalidContainer.__module__ = "zipzi.modeling.deletion"
 DeletionDecisionReason: TypeAlias = DeletionDecisionReasonConversionUnproven | DeletionDecisionReasonOffscreenOwnerUnavailable | DeletionDecisionReasonOffscreenMappingRequired | DeletionDecisionReasonPartStateUnpreserved | DeletionDecisionReasonTextureReplacementRequired | DeletionDecisionReasonBlendBaseReplacementRequired | DeletionDecisionReasonPhysicsNodeReplacementRequired | DeletionDecisionReasonInvalidContainer
 
 class DeletionChoice(str, Enum):
-    ''
+    'A resolution offered for a deletion decision; selecting it requires a new review.'
     __module__ = "zipzi.modeling.deletion"
     PRESERVE_EDIT_STATE = 'PreserveEditState'
     KEEP_LOCAL_DATA = 'KeepLocalData'
@@ -957,7 +957,7 @@ class DeletionChoice(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionLock(CompactValue):
-    '\n\nFields:\nobject: Actual removed or rewritten object protected by the lock.\nsource_id: Persistent ID of the direct or inherited lock source to locate and unlock.'
+    'Direct or inherited lock blocking a removal or rewrite.\n\nFields:\nobject: Actual removed or rewritten object protected by the lock.\nsource_id: Persistent ID of the direct or inherited lock source to locate and unlock.'
     object: DeletionObject
     source_id: str
 
@@ -965,7 +965,7 @@ DeletionLock.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionStructuralBlocker(CompactValue):
-    '\n\nFields:\nobject_id: Native result identity/address associated with the structural failure.\ncode: Native structure-validation code; the candidate cannot be installed.\nreason: Display diagnostic describing the invalid result; never parsed to decide execution.'
+    'Native structural validation failure preventing an executable candidate.\n\nFields:\nobject_id: Native result identity/address associated with the structural failure.\ncode: Native structure-validation code; the candidate cannot be installed.\nreason: Display diagnostic describing the invalid result; never parsed to decide execution.'
     object_id: str
     code: str
     reason: str
@@ -974,7 +974,7 @@ DeletionStructuralBlocker.__module__ = "zipzi.modeling.deletion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeletionPositionGuarantee(CompactValue):
-    "\n\nFields:\nstrategy: Native conversion strategy; position preservation has this strategy's scope.\ntolerance: Absolute tolerance in model units, before Glue postprocessing.\nrelative_tolerance: Scale-relative tolerance used by the native proof.\nmeasured_error: Maximum observed conversion error in the checked reference data.\nerror_bound: Native conservative error bound; it does not certify unlisted channels.\ndomain_parameters: Number of explicitly declared parameter-domain intervals; values remain in the plan.\nedit_time_seconds: Frozen reference-pose time, if the conversion used a context."
+    "Position-preservation proof and tolerance recorded for a deletion migration.\n\nFields:\nstrategy: Native conversion strategy; position preservation has this strategy's scope.\ntolerance: Absolute tolerance in model units, before Glue postprocessing.\nrelative_tolerance: Scale-relative tolerance used by the native proof.\nmeasured_error: Maximum observed conversion error in the checked reference data.\nerror_bound: Native conservative error bound; it does not certify unlisted channels.\ndomain_parameters: Number of explicitly declared parameter-domain intervals; values remain in the plan.\nedit_time_seconds: Frozen reference-pose time, if the conversion used a context."
     strategy: ReparentStrategy
     tolerance: float
     relative_tolerance: float
