@@ -199,214 +199,6 @@
       "status": "missing"
     },
     {
-      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BindingAuthoringEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit",
-      "category": "union-branch",
-      "subject": "Blend",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BindingAuthoringEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit",
-      "category": "union-branch",
-      "subject": "Grid",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BindingAuthoringEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit",
-      "category": "union-branch",
-      "subject": "MeshGrid",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BindingAuthoringEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit",
-      "category": "union-branch",
-      "subject": "ParameterRange",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BindingAuthoringEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit",
-      "category": "union-branch",
-      "subject": "Reparent",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BindingAuthoringEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:Blend",
-      "paths": [
-        "zipzi.modeling.bindings.BindingAuthoringEditBlend"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::Blend",
-      "category": "union-branch",
-      "subject": "Blend",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:Blend",
-      "paths": [
-        "zipzi.modeling.bindings.BindingAuthoringEditBlend"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::Blend",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:Grid",
-      "paths": [
-        "zipzi.modeling.bindings.BindingAuthoringEditGrid"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::Grid",
-      "category": "union-branch",
-      "subject": "Grid",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:Grid",
-      "paths": [
-        "zipzi.modeling.bindings.BindingAuthoringEditGrid"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::Grid",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:MeshGrid",
-      "paths": [
-        "zipzi.modeling.bindings.BindingAuthoringEditMeshGrid"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::MeshGrid",
-      "category": "union-branch",
-      "subject": "MeshGrid",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:MeshGrid",
-      "paths": [
-        "zipzi.modeling.bindings.BindingAuthoringEditMeshGrid"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::MeshGrid",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:ParameterRange",
-      "paths": [
-        "zipzi.modeling.bindings.BindingAuthoringEditParameterRange"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::ParameterRange",
-      "category": "union-branch",
-      "subject": "ParameterRange",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:ParameterRange",
-      "paths": [
-        "zipzi.modeling.bindings.BindingAuthoringEditParameterRange"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::ParameterRange",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:Reparent",
-      "paths": [
-        "zipzi.modeling.bindings.BindingAuthoringEditReparent"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::Reparent",
-      "category": "union-branch",
-      "subject": "Reparent",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:Reparent",
-      "paths": [
-        "zipzi.modeling.bindings.BindingAuthoringEditReparent"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::Reparent",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
       "identity": "rust:zipzi_contract::authoring::BindingCapabilities|projection:canonical",
       "paths": [
         "zipzi.modeling.addressing.BindingCapabilities"
@@ -415,136 +207,6 @@
         "modeling_addressing"
       ],
       "source": "rust:zipzi_contract::authoring::BindingCapabilities",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingFieldPatch|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BindingFieldPatch"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingFieldPatch",
-      "category": "union-branch",
-      "subject": "AxisParameter",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingFieldPatch|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BindingFieldPatch"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingFieldPatch",
-      "category": "union-branch",
-      "subject": "ConstraintSample",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingFieldPatch|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BindingFieldPatch"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingFieldPatch",
-      "category": "union-branch",
-      "subject": "SampleValue",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingFieldPatch|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BindingFieldPatch"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingFieldPatch",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingFieldPatch|projection:variant:AxisParameter",
-      "paths": [
-        "zipzi.modeling.bindings.BindingFieldPatchAxisParameter"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingFieldPatch::AxisParameter",
-      "category": "union-branch",
-      "subject": "AxisParameter",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingFieldPatch|projection:variant:AxisParameter",
-      "paths": [
-        "zipzi.modeling.bindings.BindingFieldPatchAxisParameter"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingFieldPatch::AxisParameter",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingFieldPatch|projection:variant:ConstraintSample",
-      "paths": [
-        "zipzi.modeling.bindings.BindingFieldPatchConstraintSample"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingFieldPatch::ConstraintSample",
-      "category": "union-branch",
-      "subject": "ConstraintSample",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingFieldPatch|projection:variant:ConstraintSample",
-      "paths": [
-        "zipzi.modeling.bindings.BindingFieldPatchConstraintSample"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingFieldPatch::ConstraintSample",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingFieldPatch|projection:variant:SampleValue",
-      "paths": [
-        "zipzi.modeling.bindings.BindingFieldPatchSampleValue"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingFieldPatch::SampleValue",
-      "category": "union-branch",
-      "subject": "SampleValue",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::BindingFieldPatch|projection:variant:SampleValue",
-      "paths": [
-        "zipzi.modeling.bindings.BindingFieldPatchSampleValue"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::authoring::BindingFieldPatch::SampleValue",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -1910,97 +1572,6 @@
       "status": "missing"
     },
     {
-      "identity": "rust:zipzi_contract::authoring::MeshBindingAxisSpec|projection:binding_values.Axis",
-      "paths": [
-        "zipzi.bindings.Axis"
-      ],
-      "pages": [
-        "bindings"
-      ],
-      "source": "rust:zipzi_contract::authoring::MeshBindingAxisSpec",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::MeshBindingCreateSpec|projection:binding_values.MeshBindingSpec",
-      "paths": [
-        "zipzi.bindings.MeshBindingSpec"
-      ],
-      "pages": [
-        "bindings"
-      ],
-      "source": "rust:zipzi_contract::authoring::MeshBindingCreateSpec",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::MeshBindingOperation|projection:binding_values.Create",
-      "paths": [
-        "zipzi.bindings.Create"
-      ],
-      "pages": [
-        "bindings"
-      ],
-      "source": "rust:zipzi_contract::authoring::MeshBindingOperation::Create",
-      "category": "union-branch",
-      "subject": "Create",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::MeshBindingOperation|projection:binding_values.Create",
-      "paths": [
-        "zipzi.bindings.Create"
-      ],
-      "pages": [
-        "bindings"
-      ],
-      "source": "rust:zipzi_contract::authoring::MeshBindingOperation::Create",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::MeshBindingOperation|projection:binding_values.SetKeyform",
-      "paths": [
-        "zipzi.bindings.SetKeyform"
-      ],
-      "pages": [
-        "bindings"
-      ],
-      "source": "rust:zipzi_contract::authoring::MeshBindingOperation::SetKeyform",
-      "category": "union-branch",
-      "subject": "SetKeyform",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::MeshBindingOperation|projection:binding_values.SetKeyform",
-      "paths": [
-        "zipzi.bindings.SetKeyform"
-      ],
-      "pages": [
-        "bindings"
-      ],
-      "source": "rust:zipzi_contract::authoring::MeshBindingOperation::SetKeyform",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::MeshKeyformSpec|projection:binding_values.Keyform",
-      "paths": [
-        "zipzi.bindings.Keyform"
-      ],
-      "pages": [
-        "bindings"
-      ],
-      "source": "rust:zipzi_contract::authoring::MeshKeyformSpec",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
       "identity": "rust:zipzi_contract::authoring::MeshQuality|projection:canonical",
       "paths": [
         "zipzi.modeling.sampling.MeshQuality",
@@ -2611,19 +2182,6 @@
         "modeling_addressing"
       ],
       "source": "rust:zipzi_contract::authoring::OrganizationCapabilities",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::ParameterCreateSpec|projection:parameter_values.ParameterSpec",
-      "paths": [
-        "zipzi.parameters.ParameterSpec"
-      ],
-      "pages": [
-        "parameters"
-      ],
-      "source": "rust:zipzi_contract::authoring::ParameterCreateSpec",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -4140,812 +3698,6 @@
         "modeling_scene"
       ],
       "source": "rust:zipzi_contract::document::AttachmentRef::Unresolved",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::AxisReduction|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.AxisReduction"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::AxisReduction",
-      "category": "union-branch",
-      "subject": "Resample",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::AxisReduction|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.AxisReduction"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::AxisReduction",
-      "category": "union-branch",
-      "subject": "Slice",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::AxisReduction|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.AxisReduction"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::AxisReduction",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::AxisReduction|projection:variant:Resample",
-      "paths": [
-        "zipzi.modeling.bindings.AxisReductionResample"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::AxisReduction::Resample",
-      "category": "union-branch",
-      "subject": "Resample",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::AxisReduction|projection:variant:Resample",
-      "paths": [
-        "zipzi.modeling.bindings.AxisReductionResample"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::AxisReduction::Resample",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::AxisReduction|projection:variant:Slice",
-      "paths": [
-        "zipzi.modeling.bindings.AxisReductionSlice"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::AxisReduction::Slice",
-      "category": "union-branch",
-      "subject": "Slice",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::AxisReduction|projection:variant:Slice",
-      "paths": [
-        "zipzi.modeling.bindings.AxisReductionSlice"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::AxisReduction::Slice",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BindingGridEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BindingGridEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BindingGridEdit",
-      "category": "union-branch",
-      "subject": "Create",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BindingGridEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BindingGridEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BindingGridEdit",
-      "category": "union-branch",
-      "subject": "Edit",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BindingGridEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BindingGridEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BindingGridEdit",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BindingGridEdit|projection:variant:Create",
-      "paths": [
-        "zipzi.modeling.bindings.BindingGridEditCreate"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BindingGridEdit::Create",
-      "category": "union-branch",
-      "subject": "Create",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BindingGridEdit|projection:variant:Create",
-      "paths": [
-        "zipzi.modeling.bindings.BindingGridEditCreate"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BindingGridEdit::Create",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BindingGridEdit|projection:variant:Edit",
-      "paths": [
-        "zipzi.modeling.bindings.BindingGridEditEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BindingGridEdit::Edit",
-      "category": "union-branch",
-      "subject": "Edit",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BindingGridEdit|projection:variant:Edit",
-      "paths": [
-        "zipzi.modeling.bindings.BindingGridEditEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BindingGridEdit::Edit",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BindingGridTarget|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BindingGridTarget"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BindingGridTarget",
-      "category": "union-branch",
-      "subject": "Glue",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BindingGridTarget|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BindingGridTarget"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BindingGridTarget",
-      "category": "union-branch",
-      "subject": "Mesh",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BindingGridTarget|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BindingGridTarget"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BindingGridTarget",
-      "category": "union-branch",
-      "subject": "Scene",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BindingGridTarget|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BindingGridTarget"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BindingGridTarget",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BindingGridTarget|projection:variant:Glue",
-      "paths": [
-        "zipzi.modeling.bindings.BindingGridTargetGlue"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BindingGridTarget::Glue",
-      "category": "union-branch",
-      "subject": "Glue",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BindingGridTarget|projection:variant:Glue",
-      "paths": [
-        "zipzi.modeling.bindings.BindingGridTargetGlue"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BindingGridTarget::Glue",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BindingGridTarget|projection:variant:Mesh",
-      "paths": [
-        "zipzi.modeling.bindings.BindingGridTargetMesh"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BindingGridTarget::Mesh",
-      "category": "union-branch",
-      "subject": "Mesh",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BindingGridTarget|projection:variant:Mesh",
-      "paths": [
-        "zipzi.modeling.bindings.BindingGridTargetMesh"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BindingGridTarget::Mesh",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BindingGridTarget|projection:variant:Scene",
-      "paths": [
-        "zipzi.modeling.bindings.BindingGridTargetScene"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BindingGridTarget::Scene",
-      "category": "union-branch",
-      "subject": "Scene",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BindingGridTarget|projection:variant:Scene",
-      "paths": [
-        "zipzi.modeling.bindings.BindingGridTargetScene"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BindingGridTarget::Scene",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendAuthoringEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BlendAuthoringEdit",
-      "category": "union-branch",
-      "subject": "Constraint",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendAuthoringEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BlendAuthoringEdit",
-      "category": "union-branch",
-      "subject": "CreateBinding",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendAuthoringEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BlendAuthoringEdit",
-      "category": "union-branch",
-      "subject": "CreateConstraint",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendAuthoringEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BlendAuthoringEdit",
-      "category": "union-branch",
-      "subject": "CreateTable",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendAuthoringEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BlendAuthoringEdit",
-      "category": "union-branch",
-      "subject": "SetBindingTable",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendAuthoringEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BlendAuthoringEdit",
-      "category": "union-branch",
-      "subject": "Table",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendAuthoringEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BlendAuthoringEdit",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:Constraint",
-      "paths": [
-        "zipzi.modeling.bindings.BlendAuthoringEditConstraint"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::Constraint",
-      "category": "union-branch",
-      "subject": "Constraint",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:Constraint",
-      "paths": [
-        "zipzi.modeling.bindings.BlendAuthoringEditConstraint"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::Constraint",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:CreateBinding",
-      "paths": [
-        "zipzi.modeling.bindings.BlendAuthoringEditCreateBinding"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::CreateBinding",
-      "category": "union-branch",
-      "subject": "CreateBinding",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:CreateBinding",
-      "paths": [
-        "zipzi.modeling.bindings.BlendAuthoringEditCreateBinding"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::CreateBinding",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:CreateConstraint",
-      "paths": [
-        "zipzi.modeling.bindings.BlendAuthoringEditCreateConstraint"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::CreateConstraint",
-      "category": "union-branch",
-      "subject": "CreateConstraint",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:CreateConstraint",
-      "paths": [
-        "zipzi.modeling.bindings.BlendAuthoringEditCreateConstraint"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::CreateConstraint",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:CreateTable",
-      "paths": [
-        "zipzi.modeling.bindings.BlendAuthoringEditCreateTable"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::CreateTable",
-      "category": "union-branch",
-      "subject": "CreateTable",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:CreateTable",
-      "paths": [
-        "zipzi.modeling.bindings.BlendAuthoringEditCreateTable"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::CreateTable",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:SetBindingTable",
-      "paths": [
-        "zipzi.modeling.bindings.BlendAuthoringEditSetBindingTable"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::SetBindingTable",
-      "category": "union-branch",
-      "subject": "SetBindingTable",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:SetBindingTable",
-      "paths": [
-        "zipzi.modeling.bindings.BlendAuthoringEditSetBindingTable"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::SetBindingTable",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:Table",
-      "paths": [
-        "zipzi.modeling.bindings.BlendAuthoringEditTable"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::Table",
-      "category": "union-branch",
-      "subject": "Table",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:Table",
-      "paths": [
-        "zipzi.modeling.bindings.BlendAuthoringEditTable"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::Table",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendTableOperation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BlendTableOperation",
-      "category": "union-branch",
-      "subject": "Delete",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendTableOperation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BlendTableOperation",
-      "category": "union-branch",
-      "subject": "Insert",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendTableOperation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BlendTableOperation",
-      "category": "union-branch",
-      "subject": "Move",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendTableOperation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BlendTableOperation",
-      "category": "union-branch",
-      "subject": "RemapParameter",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendTableOperation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BlendTableOperation",
-      "category": "union-branch",
-      "subject": "SetBase",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendTableOperation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BlendTableOperation",
-      "category": "union-branch",
-      "subject": "SetParameter",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendTableOperation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BlendTableOperation",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:variant:Delete",
-      "paths": [
-        "zipzi.modeling.bindings.BlendTableOperationDelete"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BlendTableOperation::Delete",
-      "category": "union-branch",
-      "subject": "Delete",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:variant:Delete",
-      "paths": [
-        "zipzi.modeling.bindings.BlendTableOperationDelete"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BlendTableOperation::Delete",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:variant:Insert",
-      "paths": [
-        "zipzi.modeling.bindings.BlendTableOperationInsert"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BlendTableOperation::Insert",
-      "category": "union-branch",
-      "subject": "Insert",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:variant:Insert",
-      "paths": [
-        "zipzi.modeling.bindings.BlendTableOperationInsert"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BlendTableOperation::Insert",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:variant:Move",
-      "paths": [
-        "zipzi.modeling.bindings.BlendTableOperationMove"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BlendTableOperation::Move",
-      "category": "union-branch",
-      "subject": "Move",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:variant:Move",
-      "paths": [
-        "zipzi.modeling.bindings.BlendTableOperationMove"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BlendTableOperation::Move",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:variant:RemapParameter",
-      "paths": [
-        "zipzi.modeling.bindings.BlendTableOperationRemapParameter"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BlendTableOperation::RemapParameter",
-      "category": "union-branch",
-      "subject": "RemapParameter",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:variant:RemapParameter",
-      "paths": [
-        "zipzi.modeling.bindings.BlendTableOperationRemapParameter"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BlendTableOperation::RemapParameter",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:variant:SetBase",
-      "paths": [
-        "zipzi.modeling.bindings.BlendTableOperationSetBase"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BlendTableOperation::SetBase",
-      "category": "union-branch",
-      "subject": "SetBase",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:variant:SetBase",
-      "paths": [
-        "zipzi.modeling.bindings.BlendTableOperationSetBase"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BlendTableOperation::SetBase",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:variant:SetParameter",
-      "paths": [
-        "zipzi.modeling.bindings.BlendTableOperationSetParameter"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BlendTableOperation::SetParameter",
-      "category": "union-branch",
-      "subject": "SetParameter",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:variant:SetParameter",
-      "paths": [
-        "zipzi.modeling.bindings.BlendTableOperationSetParameter"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::BlendTableOperation::SetParameter",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -10333,617 +9085,6 @@
       "status": "missing"
     },
     {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation",
-      "category": "union-branch",
-      "subject": "AddAxis",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation",
-      "category": "union-branch",
-      "subject": "DeleteSample",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation",
-      "category": "union-branch",
-      "subject": "InsertSample",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation",
-      "category": "union-branch",
-      "subject": "MoveSample",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation",
-      "category": "union-branch",
-      "subject": "RemapParameter",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation",
-      "category": "union-branch",
-      "subject": "RemoveAxis",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation",
-      "category": "union-branch",
-      "subject": "ReorderAxes",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation",
-      "category": "union-branch",
-      "subject": "SetParameter",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:AddAxis",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperationAddAxis"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation::AddAxis",
-      "category": "union-branch",
-      "subject": "AddAxis",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:AddAxis",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperationAddAxis"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation::AddAxis",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:DeleteSample",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperationDeleteSample"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation::DeleteSample",
-      "category": "union-branch",
-      "subject": "DeleteSample",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:DeleteSample",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperationDeleteSample"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation::DeleteSample",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:InsertSample",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperationInsertSample"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation::InsertSample",
-      "category": "union-branch",
-      "subject": "InsertSample",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:InsertSample",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperationInsertSample"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation::InsertSample",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:MoveSample",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperationMoveSample"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation::MoveSample",
-      "category": "union-branch",
-      "subject": "MoveSample",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:MoveSample",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperationMoveSample"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation::MoveSample",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:RemapParameter",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperationRemapParameter"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation::RemapParameter",
-      "category": "union-branch",
-      "subject": "RemapParameter",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:RemapParameter",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperationRemapParameter"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation::RemapParameter",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:RemoveAxis",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperationRemoveAxis"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation::RemoveAxis",
-      "category": "union-branch",
-      "subject": "RemoveAxis",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:RemoveAxis",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperationRemoveAxis"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation::RemoveAxis",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:ReorderAxes",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperationReorderAxes"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation::ReorderAxes",
-      "category": "union-branch",
-      "subject": "ReorderAxes",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:ReorderAxes",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperationReorderAxes"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation::ReorderAxes",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:SetParameter",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperationSetParameter"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation::SetParameter",
-      "category": "union-branch",
-      "subject": "SetParameter",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:SetParameter",
-      "paths": [
-        "zipzi.modeling.bindings.GridOperationSetParameter"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::GridOperation::SetParameter",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit",
-      "category": "union-branch",
-      "subject": "AddAxis",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit",
-      "category": "union-branch",
-      "subject": "Create",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit",
-      "category": "union-branch",
-      "subject": "DeleteSample",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit",
-      "category": "union-branch",
-      "subject": "InsertSample",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit",
-      "category": "union-branch",
-      "subject": "MoveSample",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit",
-      "category": "union-branch",
-      "subject": "RemoveAxis",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit",
-      "category": "union-branch",
-      "subject": "ReorderAxes",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEdit"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:AddAxis",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEditAddAxis"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit::AddAxis",
-      "category": "union-branch",
-      "subject": "AddAxis",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:AddAxis",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEditAddAxis"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit::AddAxis",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:Create",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEditCreate"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit::Create",
-      "category": "union-branch",
-      "subject": "Create",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:Create",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEditCreate"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit::Create",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:DeleteSample",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEditDeleteSample"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit::DeleteSample",
-      "category": "union-branch",
-      "subject": "DeleteSample",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:DeleteSample",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEditDeleteSample"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit::DeleteSample",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:InsertSample",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEditInsertSample"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit::InsertSample",
-      "category": "union-branch",
-      "subject": "InsertSample",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:InsertSample",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEditInsertSample"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit::InsertSample",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:MoveSample",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEditMoveSample"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit::MoveSample",
-      "category": "union-branch",
-      "subject": "MoveSample",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:MoveSample",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEditMoveSample"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit::MoveSample",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:RemoveAxis",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEditRemoveAxis"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit::RemoveAxis",
-      "category": "union-branch",
-      "subject": "RemoveAxis",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:RemoveAxis",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEditRemoveAxis"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit::RemoveAxis",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:ReorderAxes",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEditReorderAxes"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit::ReorderAxes",
-      "category": "union-branch",
-      "subject": "ReorderAxes",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:ReorderAxes",
-      "paths": [
-        "zipzi.modeling.bindings.MeshGridEditReorderAxes"
-      ],
-      "pages": [
-        "modeling_bindings_edits"
-      ],
-      "source": "rust:zipzi_contract::document::MeshGridEdit::ReorderAxes",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
       "identity": "rust:zipzi_contract::document::Model3Settings|projection:canonical",
       "paths": [
         "zipzi.modeling.project.Model3Settings"
@@ -13318,136 +11459,6 @@
         "modeling_project"
       ],
       "source": "rust:zipzi_contract::document::PackageAttachment",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ParameterRangeEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.parameters.ParameterRangeEdit"
-      ],
-      "pages": [
-        "modeling_parameters"
-      ],
-      "source": "rust:zipzi_contract::document::ParameterRangeEdit",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ParameterRangePolicy|projection:canonical",
-      "paths": [
-        "zipzi.modeling.parameters.ParameterRangePolicy"
-      ],
-      "pages": [
-        "modeling_parameters"
-      ],
-      "source": "rust:zipzi_contract::document::ParameterRangePolicy",
-      "category": "enum-member",
-      "subject": "KEEP_KEY_VALUES",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ParameterRangePolicy|projection:canonical",
-      "paths": [
-        "zipzi.modeling.parameters.ParameterRangePolicy"
-      ],
-      "pages": [
-        "modeling_parameters"
-      ],
-      "source": "rust:zipzi_contract::document::ParameterRangePolicy",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::PartKeyformSlot|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.PartKeyformSlot"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::PartKeyformSlot",
-      "category": "union-branch",
-      "subject": "Samples",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::PartKeyformSlot|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.PartKeyformSlot"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::PartKeyformSlot",
-      "category": "union-branch",
-      "subject": "Static",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::PartKeyformSlot|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.PartKeyformSlot"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::PartKeyformSlot",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::PartKeyformSlot|projection:variant:Samples",
-      "paths": [
-        "zipzi.modeling.bindings.PartKeyformSlotSamples"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::PartKeyformSlot::Samples",
-      "category": "union-branch",
-      "subject": "Samples",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::PartKeyformSlot|projection:variant:Samples",
-      "paths": [
-        "zipzi.modeling.bindings.PartKeyformSlotSamples"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::PartKeyformSlot::Samples",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::PartKeyformSlot|projection:variant:Static",
-      "paths": [
-        "zipzi.modeling.bindings.PartKeyformSlotStatic"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::PartKeyformSlot::Static",
-      "category": "union-branch",
-      "subject": "Static",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::PartKeyformSlot|projection:variant:Static",
-      "paths": [
-        "zipzi.modeling.bindings.PartKeyformSlotStatic"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::document::PartKeyformSlot::Static",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -19199,84 +17210,6 @@
       "status": "missing"
     },
     {
-      "identity": "rust:zipzi_contract::model::Appearance|projection:binding_values.Appearance",
-      "paths": [
-        "zipzi.bindings.Appearance"
-      ],
-      "pages": [
-        "bindings"
-      ],
-      "source": "rust:zipzi_contract::model::Appearance",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::Appearance|projection:canonical",
-      "paths": [
-        "zipzi.modeling.scene.Appearance"
-      ],
-      "pages": [
-        "modeling_scene"
-      ],
-      "source": "rust:zipzi_contract::model::Appearance",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::BindingAxis|projection:binding_values.AxisSnapshot",
-      "paths": [
-        "zipzi.bindings.AxisSnapshot"
-      ],
-      "pages": [
-        "bindings"
-      ],
-      "source": "rust:zipzi_contract::model::BindingAxis",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::BindingAxis|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BindingAxis"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::BindingAxis",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::BindingSample|projection:binding_values.Sample",
-      "paths": [
-        "zipzi.bindings.Sample"
-      ],
-      "pages": [
-        "bindings"
-      ],
-      "source": "rust:zipzi_contract::model::BindingSample",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::BindingSample|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BindingSample"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::BindingSample",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
       "identity": "rust:zipzi_contract::model::BlendMode|projection:canonical",
       "paths": [
         "zipzi.modeling.scene.BlendMode",
@@ -19332,149 +17265,6 @@
         "sampling"
       ],
       "source": "rust:zipzi_contract::model::BlendMode",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::BlendShapeBinding|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendShapeBinding"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::BlendShapeBinding",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::BlendShapeConstraint|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendShapeConstraint"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::BlendShapeConstraint",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::BlendShapeKeyTable|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendShapeKeyTable"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::BlendShapeKeyTable",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendShapeTargetKind"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::BlendShapeTargetKind",
-      "category": "enum-member",
-      "subject": "GLUE",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendShapeTargetKind"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::BlendShapeTargetKind",
-      "category": "enum-member",
-      "subject": "MESH",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendShapeTargetKind"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::BlendShapeTargetKind",
-      "category": "enum-member",
-      "subject": "OFFSCREEN",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendShapeTargetKind"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::BlendShapeTargetKind",
-      "category": "enum-member",
-      "subject": "PART",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendShapeTargetKind"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::BlendShapeTargetKind",
-      "category": "enum-member",
-      "subject": "ROTATION",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendShapeTargetKind"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::BlendShapeTargetKind",
-      "category": "enum-member",
-      "subject": "WARP",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.BlendShapeTargetKind"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::BlendShapeTargetKind",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::ConstraintSample|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.ConstraintSample"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::ConstraintSample",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -19779,344 +17569,6 @@
       "status": "missing"
     },
     {
-      "identity": "rust:zipzi_contract::model::DeltaGlueKeyform|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaGlueKeyform"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaGlueKeyform",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaKeyforms"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaKeyforms",
-      "category": "union-branch",
-      "subject": "Glue",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaKeyforms"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaKeyforms",
-      "category": "union-branch",
-      "subject": "Mesh",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaKeyforms"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaKeyforms",
-      "category": "union-branch",
-      "subject": "Offscreen",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaKeyforms"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaKeyforms",
-      "category": "union-branch",
-      "subject": "Part",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaKeyforms"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaKeyforms",
-      "category": "union-branch",
-      "subject": "Rotation",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaKeyforms"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaKeyforms",
-      "category": "union-branch",
-      "subject": "Warp",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaKeyforms"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaKeyforms",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Glue",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaKeyformsGlue"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaKeyforms::Glue",
-      "category": "union-branch",
-      "subject": "Glue",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Glue",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaKeyformsGlue"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaKeyforms::Glue",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Mesh",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaKeyformsMesh"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaKeyforms::Mesh",
-      "category": "union-branch",
-      "subject": "Mesh",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Mesh",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaKeyformsMesh"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaKeyforms::Mesh",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Offscreen",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaKeyformsOffscreen"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaKeyforms::Offscreen",
-      "category": "union-branch",
-      "subject": "Offscreen",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Offscreen",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaKeyformsOffscreen"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaKeyforms::Offscreen",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Part",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaKeyformsPart"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaKeyforms::Part",
-      "category": "union-branch",
-      "subject": "Part",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Part",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaKeyformsPart"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaKeyforms::Part",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Rotation",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaKeyformsRotation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaKeyforms::Rotation",
-      "category": "union-branch",
-      "subject": "Rotation",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Rotation",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaKeyformsRotation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaKeyforms::Rotation",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Warp",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaKeyformsWarp"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaKeyforms::Warp",
-      "category": "union-branch",
-      "subject": "Warp",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Warp",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaKeyformsWarp"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaKeyforms::Warp",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaMeshKeyform|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaMeshKeyform"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaMeshKeyform",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaOffscreenKeyform|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaOffscreenKeyform"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaOffscreenKeyform",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaPartKeyform|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaPartKeyform"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaPartKeyform",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaRotationKeyform|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaRotationKeyform"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaRotationKeyform",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::DeltaWarpKeyform|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.DeltaWarpKeyform"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::DeltaWarpKeyform",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::GlueKeyform|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.GlueKeyform"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::GlueKeyform",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
       "identity": "rust:zipzi_contract::model::GlueVertexPair|projection:canonical",
       "paths": [
         "zipzi.modeling.scene.GlueVertexPair"
@@ -20169,58 +17621,6 @@
       "status": "missing"
     },
     {
-      "identity": "rust:zipzi_contract::model::MeshBinding|projection:binding_values.MeshBinding",
-      "paths": [
-        "zipzi.bindings.MeshBinding"
-      ],
-      "pages": [
-        "bindings"
-      ],
-      "source": "rust:zipzi_contract::model::MeshBinding",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::MeshBinding|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.MeshBinding"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::MeshBinding",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::MeshKeyform|projection:binding_values.KeyformSnapshot",
-      "paths": [
-        "zipzi.bindings.KeyformSnapshot"
-      ],
-      "pages": [
-        "bindings"
-      ],
-      "source": "rust:zipzi_contract::model::MeshKeyform",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::MeshKeyform|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.MeshKeyform"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::MeshKeyform",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
       "identity": "rust:zipzi_contract::model::Mesh|projection:canonical",
       "paths": [
         "zipzi.modeling.mesh.Mesh"
@@ -20229,19 +17629,6 @@
         "modeling_mesh"
       ],
       "source": "rust:zipzi_contract::model::Mesh",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::OffscreenKeyform|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.OffscreenKeyform"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::OffscreenKeyform",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -20260,90 +17647,6 @@
       "status": "missing"
     },
     {
-      "identity": "rust:zipzi_contract::model::ParameterKind|projection:canonical",
-      "paths": [
-        "zipzi.modeling.parameters.ParameterKind",
-        "zipzi.parameters.Kind"
-      ],
-      "pages": [
-        "modeling_parameters",
-        "parameters"
-      ],
-      "source": "rust:zipzi_contract::model::ParameterKind",
-      "category": "enum-member",
-      "subject": "BLEND_SHAPE",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::ParameterKind|projection:canonical",
-      "paths": [
-        "zipzi.modeling.parameters.ParameterKind",
-        "zipzi.parameters.Kind"
-      ],
-      "pages": [
-        "modeling_parameters",
-        "parameters"
-      ],
-      "source": "rust:zipzi_contract::model::ParameterKind",
-      "category": "enum-member",
-      "subject": "NORMAL",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::ParameterKind|projection:canonical",
-      "paths": [
-        "zipzi.modeling.parameters.ParameterKind",
-        "zipzi.parameters.Kind"
-      ],
-      "pages": [
-        "modeling_parameters",
-        "parameters"
-      ],
-      "source": "rust:zipzi_contract::model::ParameterKind",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::Parameter|projection:canonical",
-      "paths": [
-        "zipzi.modeling.parameters.Parameter"
-      ],
-      "pages": [
-        "modeling_parameters"
-      ],
-      "source": "rust:zipzi_contract::model::Parameter",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::Parameter|projection:parameter_values.Parameter",
-      "paths": [
-        "zipzi.parameters.Parameter"
-      ],
-      "pages": [
-        "parameters"
-      ],
-      "source": "rust:zipzi_contract::model::Parameter",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::PartKeyform|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.PartKeyform"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::PartKeyform",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
       "identity": "rust:zipzi_contract::model::Part|projection:canonical",
       "paths": [
         "zipzi.modeling.scene.Part"
@@ -20352,19 +17655,6 @@
         "modeling_scene"
       ],
       "source": "rust:zipzi_contract::model::Part",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::RotationKeyform|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.RotationKeyform"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::RotationKeyform",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -20391,266 +17681,6 @@
         "modeling_scene"
       ],
       "source": "rust:zipzi_contract::model::RotationTransform",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneBinding|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.SceneBinding"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneBinding",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneKeyform|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.SceneKeyform"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneKeyform",
-      "category": "union-branch",
-      "subject": "Part",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneKeyform|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.SceneKeyform"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneKeyform",
-      "category": "union-branch",
-      "subject": "Rotation",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneKeyform|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.SceneKeyform"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneKeyform",
-      "category": "union-branch",
-      "subject": "Warp",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneKeyform|projection:variant:Part",
-      "paths": [
-        "zipzi.modeling.bindings.SceneKeyformPart"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneKeyform::Part",
-      "category": "union-branch",
-      "subject": "Part",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneKeyform|projection:variant:Part",
-      "paths": [
-        "zipzi.modeling.bindings.SceneKeyformPart"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneKeyform::Part",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneKeyform|projection:variant:Rotation",
-      "paths": [
-        "zipzi.modeling.bindings.SceneKeyformRotation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneKeyform::Rotation",
-      "category": "union-branch",
-      "subject": "Rotation",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneKeyform|projection:variant:Rotation",
-      "paths": [
-        "zipzi.modeling.bindings.SceneKeyformRotation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneKeyform::Rotation",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneKeyform|projection:variant:Warp",
-      "paths": [
-        "zipzi.modeling.bindings.SceneKeyformWarp"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneKeyform::Warp",
-      "category": "union-branch",
-      "subject": "Warp",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneKeyform|projection:variant:Warp",
-      "paths": [
-        "zipzi.modeling.bindings.SceneKeyformWarp"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneKeyform::Warp",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneTrack|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.SceneTrack"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneTrack",
-      "category": "union-branch",
-      "subject": "Part",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneTrack|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.SceneTrack"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneTrack",
-      "category": "union-branch",
-      "subject": "Rotation",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneTrack|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.SceneTrack"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneTrack",
-      "category": "union-branch",
-      "subject": "Warp",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneTrack|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.SceneTrack"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneTrack",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneTrack|projection:variant:Part",
-      "paths": [
-        "zipzi.modeling.bindings.SceneTrackPart"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneTrack::Part",
-      "category": "union-branch",
-      "subject": "Part",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneTrack|projection:variant:Part",
-      "paths": [
-        "zipzi.modeling.bindings.SceneTrackPart"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneTrack::Part",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneTrack|projection:variant:Rotation",
-      "paths": [
-        "zipzi.modeling.bindings.SceneTrackRotation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneTrack::Rotation",
-      "category": "union-branch",
-      "subject": "Rotation",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneTrack|projection:variant:Rotation",
-      "paths": [
-        "zipzi.modeling.bindings.SceneTrackRotation"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneTrack::Rotation",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneTrack|projection:variant:Warp",
-      "paths": [
-        "zipzi.modeling.bindings.SceneTrackWarp"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneTrack::Warp",
-      "category": "union-branch",
-      "subject": "Warp",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::SceneTrack|projection:variant:Warp",
-      "paths": [
-        "zipzi.modeling.bindings.SceneTrackWarp"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::SceneTrack::Warp",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -20755,19 +17785,6 @@
         "modeling_scene"
       ],
       "source": "rust:zipzi_contract::model::Transform",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::model::WarpKeyform|projection:canonical",
-      "paths": [
-        "zipzi.modeling.bindings.WarpKeyform"
-      ],
-      "pages": [
-        "modeling_bindings"
-      ],
-      "source": "rust:zipzi_contract::model::WarpKeyform",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -33942,6 +30959,214 @@
       "status": "review_required"
     },
     {
+      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BindingAuthoringEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit",
+      "category": "union-branch",
+      "subject": "Blend",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BindingAuthoringEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit",
+      "category": "union-branch",
+      "subject": "Grid",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BindingAuthoringEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit",
+      "category": "union-branch",
+      "subject": "MeshGrid",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BindingAuthoringEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit",
+      "category": "union-branch",
+      "subject": "ParameterRange",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BindingAuthoringEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit",
+      "category": "union-branch",
+      "subject": "Reparent",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:Blend",
+      "paths": [
+        "zipzi.modeling.bindings.BindingAuthoringEditBlend"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::Blend",
+      "category": "union-branch",
+      "subject": "Blend",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:Grid",
+      "paths": [
+        "zipzi.modeling.bindings.BindingAuthoringEditGrid"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::Grid",
+      "category": "union-branch",
+      "subject": "Grid",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:MeshGrid",
+      "paths": [
+        "zipzi.modeling.bindings.BindingAuthoringEditMeshGrid"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::MeshGrid",
+      "category": "union-branch",
+      "subject": "MeshGrid",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:ParameterRange",
+      "paths": [
+        "zipzi.modeling.bindings.BindingAuthoringEditParameterRange"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::ParameterRange",
+      "category": "union-branch",
+      "subject": "ParameterRange",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:Reparent",
+      "paths": [
+        "zipzi.modeling.bindings.BindingAuthoringEditReparent"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingAuthoringEdit::Reparent",
+      "category": "union-branch",
+      "subject": "Reparent",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::authoring::BindingFieldPatch|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BindingFieldPatch"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingFieldPatch",
+      "category": "union-branch",
+      "subject": "AxisParameter",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::authoring::BindingFieldPatch|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BindingFieldPatch"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingFieldPatch",
+      "category": "union-branch",
+      "subject": "ConstraintSample",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::authoring::BindingFieldPatch|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BindingFieldPatch"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingFieldPatch",
+      "category": "union-branch",
+      "subject": "SampleValue",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::authoring::BindingFieldPatch|projection:variant:AxisParameter",
+      "paths": [
+        "zipzi.modeling.bindings.BindingFieldPatchAxisParameter"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingFieldPatch::AxisParameter",
+      "category": "union-branch",
+      "subject": "AxisParameter",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::authoring::BindingFieldPatch|projection:variant:ConstraintSample",
+      "paths": [
+        "zipzi.modeling.bindings.BindingFieldPatchConstraintSample"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingFieldPatch::ConstraintSample",
+      "category": "union-branch",
+      "subject": "ConstraintSample",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::authoring::BindingFieldPatch|projection:variant:SampleValue",
+      "paths": [
+        "zipzi.modeling.bindings.BindingFieldPatchSampleValue"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::authoring::BindingFieldPatch::SampleValue",
+      "category": "union-branch",
+      "subject": "SampleValue",
+      "status": "review_required"
+    },
+    {
       "identity": "rust:zipzi_contract::authoring::ManualMeshOperation|projection:canonical",
       "paths": [
         "zipzi.modeling.mesh.ManualMeshOperation"
@@ -34046,6 +31271,32 @@
       "status": "review_required"
     },
     {
+      "identity": "rust:zipzi_contract::authoring::MeshBindingOperation|projection:binding_values.Create",
+      "paths": [
+        "zipzi.bindings.Create"
+      ],
+      "pages": [
+        "bindings"
+      ],
+      "source": "rust:zipzi_contract::authoring::MeshBindingOperation::Create",
+      "category": "union-branch",
+      "subject": "Create",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::authoring::MeshBindingOperation|projection:binding_values.SetKeyform",
+      "paths": [
+        "zipzi.bindings.SetKeyform"
+      ],
+      "pages": [
+        "bindings"
+      ],
+      "source": "rust:zipzi_contract::authoring::MeshBindingOperation::SetKeyform",
+      "category": "union-branch",
+      "subject": "SetKeyform",
+      "status": "review_required"
+    },
+    {
       "identity": "rust:zipzi_contract::authoring::MeshOperation|projection:mesh_ops.Create",
       "paths": [
         "zipzi.meshes.Create"
@@ -34111,6 +31362,71 @@
       "status": "review_required"
     },
     {
+      "identity": "rust:zipzi_contract::document::AxisReduction|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.AxisReduction"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::AxisReduction",
+      "category": "union-branch",
+      "subject": "Resample",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::AxisReduction|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.AxisReduction"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::AxisReduction",
+      "category": "union-branch",
+      "subject": "Slice",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::AxisReduction|projection:variant:Resample",
+      "paths": [
+        "zipzi.modeling.bindings.AxisReductionResample"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::AxisReduction::Resample",
+      "category": "union-branch",
+      "subject": "Resample",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::AxisReduction|projection:variant:Slice",
+      "paths": [
+        "zipzi.modeling.bindings.AxisReductionSlice"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::AxisReduction::Slice",
+      "category": "union-branch",
+      "subject": "Slice",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BindingGridEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BindingGridEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::BindingGridEdit",
+      "category": "union-branch",
+      "subject": "Create",
+      "status": "review_required"
+    },
+    {
       "identity": "rust:zipzi_contract::document::BindingGridEdit|projection:canonical",
       "paths": [
         "zipzi.modeling.bindings.BindingGridEdit"
@@ -34124,6 +31440,32 @@
       "status": "review_required"
     },
     {
+      "identity": "rust:zipzi_contract::document::BindingGridEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BindingGridEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::BindingGridEdit",
+      "category": "union-branch",
+      "subject": "Edit",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BindingGridEdit|projection:variant:Create",
+      "paths": [
+        "zipzi.modeling.bindings.BindingGridEditCreate"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::BindingGridEdit::Create",
+      "category": "union-branch",
+      "subject": "Create",
+      "status": "review_required"
+    },
+    {
       "identity": "rust:zipzi_contract::document::BindingGridEdit|projection:variant:Delete",
       "paths": [
         "zipzi.modeling.bindings.BindingGridEditDelete"
@@ -34134,6 +31476,409 @@
       "source": "rust:zipzi_contract::document::BindingGridEdit::Delete",
       "category": "union-branch",
       "subject": "Delete",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BindingGridEdit|projection:variant:Edit",
+      "paths": [
+        "zipzi.modeling.bindings.BindingGridEditEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::BindingGridEdit::Edit",
+      "category": "union-branch",
+      "subject": "Edit",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BindingGridTarget|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BindingGridTarget"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::BindingGridTarget",
+      "category": "union-branch",
+      "subject": "Glue",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BindingGridTarget|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BindingGridTarget"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::BindingGridTarget",
+      "category": "union-branch",
+      "subject": "Mesh",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BindingGridTarget|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BindingGridTarget"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::BindingGridTarget",
+      "category": "union-branch",
+      "subject": "Scene",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BindingGridTarget|projection:variant:Glue",
+      "paths": [
+        "zipzi.modeling.bindings.BindingGridTargetGlue"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::BindingGridTarget::Glue",
+      "category": "union-branch",
+      "subject": "Glue",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BindingGridTarget|projection:variant:Mesh",
+      "paths": [
+        "zipzi.modeling.bindings.BindingGridTargetMesh"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::BindingGridTarget::Mesh",
+      "category": "union-branch",
+      "subject": "Mesh",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BindingGridTarget|projection:variant:Scene",
+      "paths": [
+        "zipzi.modeling.bindings.BindingGridTargetScene"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::BindingGridTarget::Scene",
+      "category": "union-branch",
+      "subject": "Scene",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BlendAuthoringEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::BlendAuthoringEdit",
+      "category": "union-branch",
+      "subject": "Constraint",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BlendAuthoringEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::BlendAuthoringEdit",
+      "category": "union-branch",
+      "subject": "CreateBinding",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BlendAuthoringEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::BlendAuthoringEdit",
+      "category": "union-branch",
+      "subject": "CreateConstraint",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BlendAuthoringEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::BlendAuthoringEdit",
+      "category": "union-branch",
+      "subject": "CreateTable",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BlendAuthoringEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::BlendAuthoringEdit",
+      "category": "union-branch",
+      "subject": "SetBindingTable",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BlendAuthoringEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::BlendAuthoringEdit",
+      "category": "union-branch",
+      "subject": "Table",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:Constraint",
+      "paths": [
+        "zipzi.modeling.bindings.BlendAuthoringEditConstraint"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::Constraint",
+      "category": "union-branch",
+      "subject": "Constraint",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:CreateBinding",
+      "paths": [
+        "zipzi.modeling.bindings.BlendAuthoringEditCreateBinding"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::CreateBinding",
+      "category": "union-branch",
+      "subject": "CreateBinding",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:CreateConstraint",
+      "paths": [
+        "zipzi.modeling.bindings.BlendAuthoringEditCreateConstraint"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::CreateConstraint",
+      "category": "union-branch",
+      "subject": "CreateConstraint",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:CreateTable",
+      "paths": [
+        "zipzi.modeling.bindings.BlendAuthoringEditCreateTable"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::CreateTable",
+      "category": "union-branch",
+      "subject": "CreateTable",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:SetBindingTable",
+      "paths": [
+        "zipzi.modeling.bindings.BlendAuthoringEditSetBindingTable"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::SetBindingTable",
+      "category": "union-branch",
+      "subject": "SetBindingTable",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:Table",
+      "paths": [
+        "zipzi.modeling.bindings.BlendAuthoringEditTable"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::BlendAuthoringEdit::Table",
+      "category": "union-branch",
+      "subject": "Table",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BlendTableOperation"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::BlendTableOperation",
+      "category": "union-branch",
+      "subject": "Delete",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BlendTableOperation"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::BlendTableOperation",
+      "category": "union-branch",
+      "subject": "Insert",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BlendTableOperation"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::BlendTableOperation",
+      "category": "union-branch",
+      "subject": "Move",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BlendTableOperation"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::BlendTableOperation",
+      "category": "union-branch",
+      "subject": "RemapParameter",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BlendTableOperation"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::BlendTableOperation",
+      "category": "union-branch",
+      "subject": "SetBase",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BlendTableOperation"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::BlendTableOperation",
+      "category": "union-branch",
+      "subject": "SetParameter",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:variant:Delete",
+      "paths": [
+        "zipzi.modeling.bindings.BlendTableOperationDelete"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::BlendTableOperation::Delete",
+      "category": "union-branch",
+      "subject": "Delete",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:variant:Insert",
+      "paths": [
+        "zipzi.modeling.bindings.BlendTableOperationInsert"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::BlendTableOperation::Insert",
+      "category": "union-branch",
+      "subject": "Insert",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:variant:Move",
+      "paths": [
+        "zipzi.modeling.bindings.BlendTableOperationMove"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::BlendTableOperation::Move",
+      "category": "union-branch",
+      "subject": "Move",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:variant:RemapParameter",
+      "paths": [
+        "zipzi.modeling.bindings.BlendTableOperationRemapParameter"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::BlendTableOperation::RemapParameter",
+      "category": "union-branch",
+      "subject": "RemapParameter",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:variant:SetBase",
+      "paths": [
+        "zipzi.modeling.bindings.BlendTableOperationSetBase"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::BlendTableOperation::SetBase",
+      "category": "union-branch",
+      "subject": "SetBase",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::BlendTableOperation|projection:variant:SetParameter",
+      "paths": [
+        "zipzi.modeling.bindings.BlendTableOperationSetParameter"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::BlendTableOperation::SetParameter",
+      "category": "union-branch",
+      "subject": "SetParameter",
       "status": "review_required"
     },
     {
@@ -34163,6 +31908,409 @@
       "status": "review_required"
     },
     {
+      "identity": "rust:zipzi_contract::document::GridOperation|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.GridOperation"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation",
+      "category": "union-branch",
+      "subject": "AddAxis",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::GridOperation|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.GridOperation"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation",
+      "category": "union-branch",
+      "subject": "DeleteSample",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::GridOperation|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.GridOperation"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation",
+      "category": "union-branch",
+      "subject": "InsertSample",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::GridOperation|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.GridOperation"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation",
+      "category": "union-branch",
+      "subject": "MoveSample",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::GridOperation|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.GridOperation"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation",
+      "category": "union-branch",
+      "subject": "RemapParameter",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::GridOperation|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.GridOperation"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation",
+      "category": "union-branch",
+      "subject": "RemoveAxis",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::GridOperation|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.GridOperation"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation",
+      "category": "union-branch",
+      "subject": "ReorderAxes",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::GridOperation|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.GridOperation"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation",
+      "category": "union-branch",
+      "subject": "SetParameter",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:AddAxis",
+      "paths": [
+        "zipzi.modeling.bindings.GridOperationAddAxis"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation::AddAxis",
+      "category": "union-branch",
+      "subject": "AddAxis",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:DeleteSample",
+      "paths": [
+        "zipzi.modeling.bindings.GridOperationDeleteSample"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation::DeleteSample",
+      "category": "union-branch",
+      "subject": "DeleteSample",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:InsertSample",
+      "paths": [
+        "zipzi.modeling.bindings.GridOperationInsertSample"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation::InsertSample",
+      "category": "union-branch",
+      "subject": "InsertSample",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:MoveSample",
+      "paths": [
+        "zipzi.modeling.bindings.GridOperationMoveSample"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation::MoveSample",
+      "category": "union-branch",
+      "subject": "MoveSample",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:RemapParameter",
+      "paths": [
+        "zipzi.modeling.bindings.GridOperationRemapParameter"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation::RemapParameter",
+      "category": "union-branch",
+      "subject": "RemapParameter",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:RemoveAxis",
+      "paths": [
+        "zipzi.modeling.bindings.GridOperationRemoveAxis"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation::RemoveAxis",
+      "category": "union-branch",
+      "subject": "RemoveAxis",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:ReorderAxes",
+      "paths": [
+        "zipzi.modeling.bindings.GridOperationReorderAxes"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation::ReorderAxes",
+      "category": "union-branch",
+      "subject": "ReorderAxes",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::GridOperation|projection:variant:SetParameter",
+      "paths": [
+        "zipzi.modeling.bindings.GridOperationSetParameter"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::GridOperation::SetParameter",
+      "category": "union-branch",
+      "subject": "SetParameter",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit",
+      "category": "union-branch",
+      "subject": "AddAxis",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit",
+      "category": "union-branch",
+      "subject": "Create",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit",
+      "category": "union-branch",
+      "subject": "DeleteSample",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit",
+      "category": "union-branch",
+      "subject": "InsertSample",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit",
+      "category": "union-branch",
+      "subject": "MoveSample",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit",
+      "category": "union-branch",
+      "subject": "RemoveAxis",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEdit"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit",
+      "category": "union-branch",
+      "subject": "ReorderAxes",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:AddAxis",
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEditAddAxis"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit::AddAxis",
+      "category": "union-branch",
+      "subject": "AddAxis",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:Create",
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEditCreate"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit::Create",
+      "category": "union-branch",
+      "subject": "Create",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:DeleteSample",
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEditDeleteSample"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit::DeleteSample",
+      "category": "union-branch",
+      "subject": "DeleteSample",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:InsertSample",
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEditInsertSample"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit::InsertSample",
+      "category": "union-branch",
+      "subject": "InsertSample",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:MoveSample",
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEditMoveSample"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit::MoveSample",
+      "category": "union-branch",
+      "subject": "MoveSample",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:RemoveAxis",
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEditRemoveAxis"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit::RemoveAxis",
+      "category": "union-branch",
+      "subject": "RemoveAxis",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::MeshGridEdit|projection:variant:ReorderAxes",
+      "paths": [
+        "zipzi.modeling.bindings.MeshGridEditReorderAxes"
+      ],
+      "pages": [
+        "modeling_bindings_edits"
+      ],
+      "source": "rust:zipzi_contract::document::MeshGridEdit::ReorderAxes",
+      "category": "union-branch",
+      "subject": "ReorderAxes",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::ParameterRangePolicy|projection:canonical",
+      "paths": [
+        "zipzi.modeling.parameters.ParameterRangePolicy"
+      ],
+      "pages": [
+        "modeling_parameters"
+      ],
+      "source": "rust:zipzi_contract::document::ParameterRangePolicy",
+      "category": "enum-member",
+      "subject": "KEEP_KEY_VALUES",
+      "status": "review_required"
+    },
+    {
       "identity": "rust:zipzi_contract::document::ParameterRangePolicy|projection:canonical",
       "paths": [
         "zipzi.modeling.parameters.ParameterRangePolicy"
@@ -34173,6 +32321,58 @@
       "source": "rust:zipzi_contract::document::ParameterRangePolicy",
       "category": "enum-member",
       "subject": "MAP_KEY_VALUES",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::PartKeyformSlot|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.PartKeyformSlot"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::PartKeyformSlot",
+      "category": "union-branch",
+      "subject": "Samples",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::PartKeyformSlot|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.PartKeyformSlot"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::PartKeyformSlot",
+      "category": "union-branch",
+      "subject": "Static",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::PartKeyformSlot|projection:variant:Samples",
+      "paths": [
+        "zipzi.modeling.bindings.PartKeyformSlotSamples"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::PartKeyformSlot::Samples",
+      "category": "union-branch",
+      "subject": "Samples",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::PartKeyformSlot|projection:variant:Static",
+      "paths": [
+        "zipzi.modeling.bindings.PartKeyformSlotStatic"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::document::PartKeyformSlot::Static",
+      "category": "union-branch",
+      "subject": "Static",
       "status": "review_required"
     },
     {
@@ -34280,6 +32480,240 @@
       "status": "review_required"
     },
     {
+      "identity": "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BlendShapeTargetKind"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::BlendShapeTargetKind",
+      "category": "enum-member",
+      "subject": "GLUE",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BlendShapeTargetKind"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::BlendShapeTargetKind",
+      "category": "enum-member",
+      "subject": "MESH",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BlendShapeTargetKind"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::BlendShapeTargetKind",
+      "category": "enum-member",
+      "subject": "OFFSCREEN",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BlendShapeTargetKind"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::BlendShapeTargetKind",
+      "category": "enum-member",
+      "subject": "PART",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BlendShapeTargetKind"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::BlendShapeTargetKind",
+      "category": "enum-member",
+      "subject": "ROTATION",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.BlendShapeTargetKind"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::BlendShapeTargetKind",
+      "category": "enum-member",
+      "subject": "WARP",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.DeltaKeyforms"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaKeyforms",
+      "category": "union-branch",
+      "subject": "Glue",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.DeltaKeyforms"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaKeyforms",
+      "category": "union-branch",
+      "subject": "Mesh",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.DeltaKeyforms"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaKeyforms",
+      "category": "union-branch",
+      "subject": "Offscreen",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.DeltaKeyforms"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaKeyforms",
+      "category": "union-branch",
+      "subject": "Part",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.DeltaKeyforms"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaKeyforms",
+      "category": "union-branch",
+      "subject": "Rotation",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.DeltaKeyforms"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaKeyforms",
+      "category": "union-branch",
+      "subject": "Warp",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Glue",
+      "paths": [
+        "zipzi.modeling.bindings.DeltaKeyformsGlue"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaKeyforms::Glue",
+      "category": "union-branch",
+      "subject": "Glue",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Mesh",
+      "paths": [
+        "zipzi.modeling.bindings.DeltaKeyformsMesh"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaKeyforms::Mesh",
+      "category": "union-branch",
+      "subject": "Mesh",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Offscreen",
+      "paths": [
+        "zipzi.modeling.bindings.DeltaKeyformsOffscreen"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaKeyforms::Offscreen",
+      "category": "union-branch",
+      "subject": "Offscreen",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Part",
+      "paths": [
+        "zipzi.modeling.bindings.DeltaKeyformsPart"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaKeyforms::Part",
+      "category": "union-branch",
+      "subject": "Part",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Rotation",
+      "paths": [
+        "zipzi.modeling.bindings.DeltaKeyformsRotation"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaKeyforms::Rotation",
+      "category": "union-branch",
+      "subject": "Rotation",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Warp",
+      "paths": [
+        "zipzi.modeling.bindings.DeltaKeyformsWarp"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::DeltaKeyforms::Warp",
+      "category": "union-branch",
+      "subject": "Warp",
+      "status": "review_required"
+    },
+    {
       "identity": "rust:zipzi_contract::model::MeshConstraintKind|projection:canonical",
       "paths": [
         "zipzi.meshes.ConstraintKind",
@@ -34307,6 +32741,192 @@
       "source": "rust:zipzi_contract::model::MeshConstraintKind",
       "category": "enum-member",
       "subject": "USER",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::ParameterKind|projection:canonical",
+      "paths": [
+        "zipzi.modeling.parameters.ParameterKind",
+        "zipzi.parameters.Kind"
+      ],
+      "pages": [
+        "modeling_parameters",
+        "parameters"
+      ],
+      "source": "rust:zipzi_contract::model::ParameterKind",
+      "category": "enum-member",
+      "subject": "BLEND_SHAPE",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::ParameterKind|projection:canonical",
+      "paths": [
+        "zipzi.modeling.parameters.ParameterKind",
+        "zipzi.parameters.Kind"
+      ],
+      "pages": [
+        "modeling_parameters",
+        "parameters"
+      ],
+      "source": "rust:zipzi_contract::model::ParameterKind",
+      "category": "enum-member",
+      "subject": "NORMAL",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::SceneKeyform|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.SceneKeyform"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::SceneKeyform",
+      "category": "union-branch",
+      "subject": "Part",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::SceneKeyform|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.SceneKeyform"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::SceneKeyform",
+      "category": "union-branch",
+      "subject": "Rotation",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::SceneKeyform|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.SceneKeyform"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::SceneKeyform",
+      "category": "union-branch",
+      "subject": "Warp",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::SceneKeyform|projection:variant:Part",
+      "paths": [
+        "zipzi.modeling.bindings.SceneKeyformPart"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::SceneKeyform::Part",
+      "category": "union-branch",
+      "subject": "Part",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::SceneKeyform|projection:variant:Rotation",
+      "paths": [
+        "zipzi.modeling.bindings.SceneKeyformRotation"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::SceneKeyform::Rotation",
+      "category": "union-branch",
+      "subject": "Rotation",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::SceneKeyform|projection:variant:Warp",
+      "paths": [
+        "zipzi.modeling.bindings.SceneKeyformWarp"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::SceneKeyform::Warp",
+      "category": "union-branch",
+      "subject": "Warp",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::SceneTrack|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.SceneTrack"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::SceneTrack",
+      "category": "union-branch",
+      "subject": "Part",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::SceneTrack|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.SceneTrack"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::SceneTrack",
+      "category": "union-branch",
+      "subject": "Rotation",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::SceneTrack|projection:canonical",
+      "paths": [
+        "zipzi.modeling.bindings.SceneTrack"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::SceneTrack",
+      "category": "union-branch",
+      "subject": "Warp",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::SceneTrack|projection:variant:Part",
+      "paths": [
+        "zipzi.modeling.bindings.SceneTrackPart"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::SceneTrack::Part",
+      "category": "union-branch",
+      "subject": "Part",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::SceneTrack|projection:variant:Rotation",
+      "paths": [
+        "zipzi.modeling.bindings.SceneTrackRotation"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::SceneTrack::Rotation",
+      "category": "union-branch",
+      "subject": "Rotation",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::model::SceneTrack|projection:variant:Warp",
+      "paths": [
+        "zipzi.modeling.bindings.SceneTrackWarp"
+      ],
+      "pages": [
+        "modeling_bindings"
+      ],
+      "source": "rust:zipzi_contract::model::SceneTrack::Warp",
+      "category": "union-branch",
+      "subject": "Warp",
       "status": "review_required"
     },
     {

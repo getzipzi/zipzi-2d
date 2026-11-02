@@ -8,6 +8,7 @@
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Offscreen appearance selected by a Part keyform mapping.
 pub struct OffscreenKeyform {
     /// Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
     /// above 1 are retained without clamping.
@@ -85,6 +86,7 @@ impl Default for Offscreen {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Ordinary mesh shape at a combination of binding sample identities; positions are absolute.
 pub struct MeshKeyform {
     /// Import-only numeric coordinates; canonical documents derive these from samples.
     #[serde(skip)]
@@ -112,6 +114,7 @@ pub struct MeshKeyform {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Ordinary parameter grid that drives mesh shapes and appearance.
 pub struct MeshBinding {
     /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,
@@ -120,8 +123,8 @@ pub struct MeshBinding {
     /// Ordered parameter axes; keyform coordinates follow this order and samples retain their
     /// own identities.
     pub axes: Vec<BindingAxis>,
-    /// Shape samples for this binding; coordinate/sample identities must match its axes or key
-    /// table.
+    /// One shape per Cartesian combination of active axis samples, with the first axis varying
+    /// fastest. Empty when no axis is active; the mesh base shape is then used.
     pub keyforms: Vec<MeshKeyform>,
 }
 
@@ -134,19 +137,23 @@ pub struct MeshBinding {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Target and ordinary keyforms driven by a scene binding.
 pub enum SceneTrack {
+    /// Drive a warp transform with ordinary lattice shapes.
     Warp {
         /// Stable warp transform ID driven by this ordinary binding.
         target_id: TransformId,
         /// Ordered Warp shape records whose samples refer to this binding's active axes.
         keyforms: Vec<WarpKeyform>,
     },
+    /// Drive a rotation transform with ordinary poses.
     Rotation {
         /// Stable rotation transform ID driven by this ordinary binding.
         target_id: TransformId,
         /// Ordered Rotation shape records whose samples refer to this binding's active axes.
         keyforms: Vec<RotationKeyform>,
     },
+    /// Drive a Part with ordinary drawing-order samples.
     Part {
         /// Stable Part ID driven by this ordinary binding.
         target_id: PartId,
@@ -195,6 +202,7 @@ impl SceneTrack {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Ordinary parameter grid driving a Warp, Rotation or Part track.
 pub struct SceneBinding {
     /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,

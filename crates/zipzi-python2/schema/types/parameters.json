@@ -2,6 +2,7 @@
   "_generated_by": "zipzi-python2/tools/generate.py",
   "definitions": {
     "zipzi_contract::authoring::ParameterCreateSpec": {
+      "doc": "Input for creating a document parameter; the host validates its range and supplies omitted defaults.",
       "fields": [
         {
           "doc": "Human-readable display name; use the stable ID for identity because names can change.",
@@ -346,6 +347,7 @@
       "tuple": false
     },
     "zipzi_contract::document::ParameterRangeEdit": {
+      "doc": "Proposed parameter range and default change with an explicit dependent-key policy.",
       "fields": [
         {
           "doc": "Stable document parameter ID, not its exported runtime identifier.",
@@ -401,11 +403,13 @@
     },
     "zipzi_contract::document::ParameterRangePolicy": {
       "content": null,
+      "doc": "Policy for dependent sample coordinates when changing a parameter range or mapping.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::ParameterRangePolicy",
       "tag": null,
       "variants": [
         {
+          "doc": "Keep numeric coordinates unchanged; validation rejects coordinates outside the new domain.",
           "fields": [],
           "form": "unit",
           "name": "KeepKeyValues",
@@ -421,6 +425,7 @@
       ]
     },
     "zipzi_contract::model::Parameter": {
+      "doc": "Authored document parameter whose stable ID identifies it in bindings and evaluation.",
       "fields": [
         {
           "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
@@ -515,17 +520,20 @@
     },
     "zipzi_contract::model::ParameterKind": {
       "content": null,
+      "doc": "Selects whether a parameter drives ordinary binding grids or BlendShape data.",
       "kind": "serde_enum",
       "name": "zipzi_contract::model::ParameterKind",
       "tag": null,
       "variants": [
         {
+          "doc": "Drives ordinary bindings and their sampled grids.",
           "fields": [],
           "form": "unit",
           "name": "normal",
           "rust_name": "Normal"
         },
         {
+          "doc": "Drives BlendShape key tables and constraints.",
           "fields": [],
           "form": "unit",
           "name": "blend_shape",

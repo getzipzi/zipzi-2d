@@ -28,7 +28,9 @@ pub struct ConversionDomain {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Policy for dependent sample coordinates when changing a parameter range or mapping.
 pub enum ParameterRangePolicy {
+    /// Keep numeric coordinates unchanged; validation rejects coordinates outside the new domain.
     KeepKeyValues,
     /// Map every dependent key by the same increasing affine change of domain.
     MapKeyValues,
@@ -42,6 +44,7 @@ pub enum ParameterRangePolicy {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Proposed parameter range and default change with an explicit dependent-key policy.
 pub struct ParameterRangeEdit {
     /// Stable document parameter ID, not its exported runtime identifier.
     pub parameter_id: String,
@@ -64,13 +67,16 @@ pub struct ParameterRangeEdit {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Edit an ordinary mesh binding grid using parameter IDs and sample coordinates.
 pub enum MeshGridEdit {
+    /// Create a zero-axis binding that uses the current mesh base shape until driven.
     Create {
         /// New stable UUID for this object; it must not conflict with an existing identity.
         id: String,
         /// Stable ID of the target mesh in this document.
         mesh_id: String,
     },
+    /// Add a driving parameter axis to the binding.
     AddAxis {
         /// Stable binding ID owning the addressed axes or keyforms.
         binding_id: String,
@@ -78,12 +84,14 @@ pub enum MeshGridEdit {
         /// from the parameter ID.
         axis: BindingAxis,
     },
+    /// Reorder the axes by their driving parameter IDs.
     ReorderAxes {
         /// Stable binding ID owning the addressed axes or keyforms.
         binding_id: String,
         /// Document parameter IDs in the requested axis order.
         parameter_ids: Vec<String>,
     },
+    /// Insert a parameter coordinate on an existing axis.
     InsertSample {
         /// Stable binding ID owning the addressed axes or keyforms.
         binding_id: String,
@@ -92,6 +100,7 @@ pub enum MeshGridEdit {
         /// Scalar value in the referenced parameter domain.
         value: f32,
     },
+    /// Move an existing coordinate to another value on the same axis.
     MoveSample {
         /// Stable binding ID owning the addressed axes or keyforms.
         binding_id: String,
@@ -102,6 +111,7 @@ pub enum MeshGridEdit {
         /// New sample value in the same parameter domain.
         to: f32,
     },
+    /// Delete the selected parameter coordinate.
     DeleteSample {
         /// Stable binding ID owning the addressed axes or keyforms.
         binding_id: String,
@@ -110,6 +120,7 @@ pub enum MeshGridEdit {
         /// Scalar value in the referenced parameter domain.
         value: f32,
     },
+    /// Remove a parameter axis using the specified reduction.
     RemoveAxis {
         /// Stable binding ID owning the addressed axes or keyforms.
         binding_id: String,
@@ -129,11 +140,14 @@ pub enum MeshGridEdit {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Select the coordinate retained when an ordinary binding axis is removed.
 pub enum AxisReduction {
+    /// Use an existing sample coordinate; a coordinate absent from the axis is rejected.
     Slice(
         /// Parameter coordinate at which to slice the old grid while removing an axis.
         f32,
     ),
+    /// Evaluate at a coordinate within the grid domain, including between existing samples.
     Resample(
         /// Parameter coordinate used to resample the old grid while reducing an axis.
         f32,
@@ -171,12 +185,15 @@ pub enum GridGuarantee {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Edit an ordinary binding grid using stable axis and sample identities.
 pub enum GridOperation {
+    /// Add an axis and convert the existing grid for that dimension.
     AddAxis {
         /// Axis definition with a parameter ID and ordered samples; axis identity is distinct
         /// from the parameter ID.
         axis: BindingAxis,
     },
+    /// Change the axis parameter with an explicit coordinate mapping policy.
     RemapParameter {
         /// Stable axis ID owned by this binding, not a parameter or sample ID.
         axis_id: String,
@@ -186,6 +203,7 @@ pub enum GridOperation {
         /// requested.
         policy: ParameterRangePolicy,
     },
+    /// Assign or clear the driving parameter of an existing axis.
     SetParameter {
         /// Stable axis ID owned by this binding, not a parameter or sample ID.
         axis_id: String,
@@ -194,10 +212,12 @@ pub enum GridOperation {
         /// Explicit parameter-domain reduction used when removing or replacing an axis.
         reduction: Option<AxisReduction>,
     },
+    /// Reorder the grid using stable axis IDs.
     ReorderAxes {
         /// Axis IDs in the requested new axis order; IDs refer to axes, not parameters.
         axis_ids: Vec<String>,
     },
+    /// Insert a new sample with the supplied identity and coordinate.
     InsertSample {
         /// Stable axis ID owned by this binding, not a parameter or sample ID.
         axis_id: String,
@@ -206,6 +226,7 @@ pub enum GridOperation {
         /// Scalar value in the referenced parameter domain.
         value: f32,
     },
+    /// Change the coordinate of an existing stable sample.
     MoveSample {
         /// Stable sample ID from the associated axis or BlendShape key table; not a numeric
         /// parameter value.
@@ -213,11 +234,13 @@ pub enum GridOperation {
         /// Scalar value in the referenced parameter domain.
         value: f32,
     },
+    /// Remove an existing stable sample.
     DeleteSample {
         /// Stable sample ID from the associated axis or BlendShape key table; not a numeric
         /// parameter value.
         sample_id: String,
     },
+    /// Remove the axis or keep it pending, with explicit reduction when required.
     RemoveAxis {
         /// Stable axis ID owned by this binding, not a parameter or sample ID.
         axis_id: String,
@@ -237,11 +260,14 @@ pub enum GridOperation {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Edit samples, neutral base or driving parameter of a BlendShape key table.
 pub enum BlendTableOperation {
+    /// Insert a stable sample into the key table.
     Insert {
         /// New stable sample UUID and finite parameter coordinate to insert into this key table.
         sample: BindingSample,
     },
+    /// Change an existing sample coordinate.
     Move {
         /// Stable sample ID from the associated axis or BlendShape key table; not a numeric
         /// parameter value.
@@ -249,6 +275,7 @@ pub enum BlendTableOperation {
         /// Scalar value in the referenced parameter domain.
         value: f32,
     },
+    /// Remove a sample, supplying a replacement if its base role requires one.
     Delete {
         /// Stable sample ID from the associated axis or BlendShape key table; not a numeric
         /// parameter value.
@@ -256,15 +283,18 @@ pub enum BlendTableOperation {
         /// Replacement base sample ID when deleting the current base; None supplies no replacement.
         replacement_base: Option<String>,
     },
+    /// Select an existing sample as the neutral base.
     SetBase {
         /// Stable sample ID from the associated axis or BlendShape key table; not a numeric
         /// parameter value.
         sample_id: String,
     },
+    /// Assign the table driving parameter.
     SetParameter {
         /// Stable document parameter ID, not its exported runtime identifier.
         parameter_id: String,
     },
+    /// Change the driving parameter using the chosen coordinate mapping policy.
     RemapParameter {
         /// Stable document parameter ID, not its exported runtime identifier.
         parameter_id: String,
@@ -282,15 +312,19 @@ pub enum BlendTableOperation {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Create or edit BlendShape tables, constraints and target bindings.
 pub enum BlendAuthoringEdit {
+    /// Create a key table with its samples and base.
     CreateTable {
         /// Complete BlendShape key table with stable sample IDs and an explicit base sample.
         table: BlendShapeKeyTable,
     },
+    /// Create a constraint with weighted samples.
     CreateConstraint {
         /// Complete BlendShape constraint with its driving parameter and weighted samples.
         constraint: BlendShapeConstraint,
     },
+    /// Create a target binding to a BlendShape key table.
     CreateBinding {
         /// New stable UUID for this object; it must not conflict with an existing identity.
         id: String,
@@ -301,6 +335,7 @@ pub enum BlendAuthoringEdit {
         /// Stable BlendShape key-table ID controlling the binding.
         key_table_id: String,
     },
+    /// Edit an existing key table.
     Table {
         /// Stable document object ID used by references; it is distinct from the exported
         /// runtime_id.
@@ -308,6 +343,7 @@ pub enum BlendAuthoringEdit {
         /// Typed sample/base/parameter edit to perform on this BlendShape key table.
         operation: BlendTableOperation,
     },
+    /// Replace the driving parameter and weighted samples of a constraint.
     Constraint {
         /// Stable document object ID used by references; it is distinct from the exported
         /// runtime_id.
@@ -317,6 +353,7 @@ pub enum BlendAuthoringEdit {
         /// Replacement ordered parameter samples and constraint weights.
         samples: Vec<ConstraintSample>,
     },
+    /// Switch a binding to another key table, optionally resetting its shape data.
     SetBindingTable {
         /// Stable document object ID used by references; it is distinct from the exported
         /// runtime_id.

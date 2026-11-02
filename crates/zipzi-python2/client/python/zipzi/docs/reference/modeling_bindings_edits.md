@@ -13,6 +13,8 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 
 `BindingAuthoringEditGrid | BindingAuthoringEditBlend | BindingAuthoringEditMeshGrid | BindingAuthoringEditParameterRange | BindingAuthoringEditReparent`
 
+Typed binding, parameter-range and reparenting intents for planning or editing.
+
 Types: [BindingAuthoringEditBlend](#zipzimodelingbindingsbindingauthoringeditblend), [BindingAuthoringEditGrid](#zipzimodelingbindingsbindingauthoringeditgrid), [BindingAuthoringEditMeshGrid](#zipzimodelingbindingsbindingauthoringeditmeshgrid), [BindingAuthoringEditParameterRange](#zipzimodelingbindingsbindingauthoringeditparameterrange), [BindingAuthoringEditReparent](#zipzimodelingbindingsbindingauthoringeditreparent).
 
 
@@ -21,6 +23,8 @@ Types: [BindingAuthoringEditBlend](#zipzimodelingbindingsbindingauthoringeditble
 **Type**
 
 `(*, value: BlendAuthoringEdit)`
+
+Edit BlendShape authoring data.
 
 Types: [BlendAuthoringEdit](#zipzimodelingbindingsblendauthoringedit).
 
@@ -35,6 +39,8 @@ rather than mutating this value.
 
 `(*, value: BindingGridEdit)`
 
+Edit an ordinary binding grid.
+
 Types: [BindingGridEdit](#zipzimodelingbindingsbindinggridedit).
 
 **Fields**
@@ -47,6 +53,8 @@ source rather than mutating this value.
 **Type**
 
 `(*, value: MeshGridEdit)`
+
+Edit an ordinary mesh binding grid.
 
 Types: [MeshGridEdit](#zipzimodelingbindingsmeshgridedit).
 
@@ -61,6 +69,8 @@ source rather than mutating this value.
 
 `(*, value: ParameterRangeEdit)`
 
+Change a parameter range and its dependent coordinates.
+
 Types: [ParameterRangeEdit].
 
 **Fields**
@@ -73,6 +83,8 @@ source rather than mutating this value.
 **Type**
 
 `(*, value: ReparentEdit)`
+
+Plan a deformation reparenting operation.
 
 Types: [ReparentEdit].
 
@@ -87,6 +99,8 @@ source rather than mutating this value.
 
 `BindingGridEditDelete | BindingGridEditCreate | BindingGridEditEdit`
 
+Create, edit or delete an ordinary binding grid on a selected owner.
+
 Types: [BindingGridEditCreate](#zipzimodelingbindingsbindinggrideditcreate), [BindingGridEditDelete](#zipzimodelingbindingsbindinggrideditdelete), [BindingGridEditEdit](#zipzimodelingbindingsbindinggrideditedit).
 
 
@@ -95,6 +109,8 @@ Types: [BindingGridEditCreate](#zipzimodelingbindingsbindinggrideditcreate), [Bi
 **Type**
 
 `(*, id: str, target: BindingGridTarget)`
+
+Create an ordinary grid on the selected target.
 
 Types: [BindingGridTarget].
 
@@ -122,6 +138,8 @@ Explicitly discard owned shapes and return to the unchanged base target.
 
 `(*, owner: str, operation: GridOperation)`
 
+Apply an axis or sample operation to an existing grid.
+
 Types: [GridOperation].
 
 **Fields**
@@ -135,6 +153,8 @@ Types: [GridOperation].
 
 `BlendAuthoringEditCreateTable | BlendAuthoringEditCreateConstraint | BlendAuthoringEditCreateBinding | BlendAuthoringEditTable | BlendAuthoringEditConstraint | BlendAuthoringEditSetBindingTable`
 
+Create or edit BlendShape tables, constraints and target bindings.
+
 Types: [BlendAuthoringEditConstraint](#zipzimodelingbindingsblendauthoringeditconstraint), [BlendAuthoringEditCreateBinding](#zipzimodelingbindingsblendauthoringeditcreatebinding), [BlendAuthoringEditCreateConstraint](#zipzimodelingbindingsblendauthoringeditcreateconstraint), [BlendAuthoringEditCreateTable](#zipzimodelingbindingsblendauthoringeditcreatetable), [BlendAuthoringEditSetBindingTable](#zipzimodelingbindingsblendauthoringeditsetbindingtable), [BlendAuthoringEditTable](#zipzimodelingbindingsblendauthoringedittable).
 
 
@@ -143,6 +163,8 @@ Types: [BlendAuthoringEditConstraint](#zipzimodelingbindingsblendauthoringeditco
 **Type**
 
 `(*, id: str, parameter_id: str, samples: tuple[ConstraintSample, ...])`
+
+Replace the driving parameter and weighted samples of a constraint.
 
 Types: [ConstraintSample].
 
@@ -159,6 +181,8 @@ runtime_id.
 
 `(*, id: str, target_id: str, target_kind: BlendShapeTargetKind, key_table_id: str)`
 
+Create a target binding to a BlendShape key table.
+
 Types: [BlendShapeTargetKind].
 
 **Fields**
@@ -174,6 +198,8 @@ Types: [BlendShapeTargetKind].
 
 `(*, constraint: BlendShapeConstraint)`
 
+Create a constraint with weighted samples.
+
 Types: [BlendShapeConstraint].
 
 **Fields**
@@ -185,6 +211,8 @@ Types: [BlendShapeConstraint].
 **Type**
 
 `(*, table: BlendShapeKeyTable)`
+
+Create a key table with its samples and base.
 
 Types: [BlendShapeKeyTable].
 
@@ -198,6 +226,8 @@ Types: [BlendShapeKeyTable].
 
 `(*, id: str, key_table_id: str, reset: bool)`
 
+Switch a binding to another key table, optionally resetting its shape data.
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
@@ -210,6 +240,8 @@ runtime_id.
 **Type**
 
 `(*, id: str, operation: BlendTableOperation)`
+
+Edit an existing key table.
 
 Types: [BlendTableOperation].
 
@@ -225,6 +257,8 @@ runtime_id.
 
 `MeshGridEditCreate | MeshGridEditAddAxis | MeshGridEditReorderAxes | MeshGridEditInsertSample | MeshGridEditMoveSample | MeshGridEditDeleteSample | MeshGridEditRemoveAxis`
 
+Edit an ordinary mesh binding grid using parameter IDs and sample coordinates.
+
 Types: [MeshGridEditAddAxis](#zipzimodelingbindingsmeshgrideditaddaxis), [MeshGridEditCreate](#zipzimodelingbindingsmeshgrideditcreate), [MeshGridEditDeleteSample](#zipzimodelingbindingsmeshgrideditdeletesample), [MeshGridEditInsertSample](#zipzimodelingbindingsmeshgrideditinsertsample), [MeshGridEditMoveSample](#zipzimodelingbindingsmeshgrideditmovesample), [MeshGridEditRemoveAxis](#zipzimodelingbindingsmeshgrideditremoveaxis), [MeshGridEditReorderAxes](#zipzimodelingbindingsmeshgrideditreorderaxes).
 
 
@@ -233,6 +267,8 @@ Types: [MeshGridEditAddAxis](#zipzimodelingbindingsmeshgrideditaddaxis), [MeshGr
 **Type**
 
 `(*, binding_id: str, axis: BindingAxis)`
+
+Add a driving parameter axis to the binding.
 
 Types: [BindingAxis].
 
@@ -248,6 +284,8 @@ from the parameter ID.
 
 `(*, id: str, mesh_id: str)`
 
+Create a zero-axis binding that uses the current mesh base shape until driven.
+
 **Fields**
 
 - `id`: New stable UUID for this object; it must not conflict with an existing identity.
@@ -258,6 +296,8 @@ from the parameter ID.
 **Type**
 
 `(*, binding_id: str, parameter_id: str, value: float)`
+
+Delete the selected parameter coordinate.
 
 **Fields**
 
@@ -271,6 +311,8 @@ from the parameter ID.
 
 `(*, binding_id: str, parameter_id: str, value: float)`
 
+Insert a parameter coordinate on an existing axis.
+
 **Fields**
 
 - `binding_id`: Stable binding ID owning the addressed axes or keyforms.
@@ -282,6 +324,8 @@ from the parameter ID.
 **Type**
 
 `(*, binding_id: str, parameter_id: str, from_: float, to: float)`
+
+Move an existing coordinate to another value on the same axis.
 
 **Fields**
 
@@ -296,6 +340,8 @@ from the parameter ID.
 
 `(*, binding_id: str, parameter_id: str, reduction: AxisReduction)`
 
+Remove a parameter axis using the specified reduction.
+
 Types: [AxisReduction].
 
 **Fields**
@@ -309,6 +355,8 @@ Types: [AxisReduction].
 **Type**
 
 `(*, binding_id: str, parameter_ids: tuple[str, ...])`
+
+Reorder the axes by their driving parameter IDs.
 
 **Fields**
 

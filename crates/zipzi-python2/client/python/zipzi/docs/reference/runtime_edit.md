@@ -88,6 +88,8 @@ Read and author bindings in this Edit candidate. Reads include pending writes; c
 
 `(spec: bindings.MeshBindingSpec) -> str`
 
+Create a mesh binding and allocate its identity if omitted.
+
 Apply bindings.Create synchronously to this Edit and return the stable object ID as str.
 
 Arguments have the semantics of bindings.Create; inspect that operation and its input DTO fields with zipzi.describe.
@@ -107,7 +109,7 @@ Types: [MeshBindingSpec].
 
 Reads this Edit candidate, including pending writes.
 
-Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures preserve the Edit. Recover OutcomeUnknown through the original Call.
+Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures do not abort an Edit. Recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -122,7 +124,7 @@ Types: [Snapshot], [Source], [MeshBinding].
 
 Reads this Edit candidate, including pending writes.
 
-Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -137,7 +139,7 @@ Types: [Batch], [Source], [MeshBinding].
 
 Reads this Edit candidate, including pending writes.
 
-Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection paging and recovery](common.md#collection-page).
 
@@ -149,6 +151,8 @@ Types: [ObjectSummary], [Page], [PageCursor].
 **Callable**
 
 `(id: str, keyform: bindings.Keyform) -> WriteResult`
+
+Insert or replace the shape sample at the supplied axis coordinates.
 
 Apply bindings.SetKeyform synchronously to this Edit and return WriteResult with the resulting candidate Source and ordered result IDs.
 
@@ -215,7 +219,7 @@ Types: [MeshSpec].
 
 Reads this Edit candidate, including pending writes.
 
-Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures preserve the Edit. Recover OutcomeUnknown through the original Call.
+Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures do not abort an Edit. Recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -230,7 +234,7 @@ Types: [Snapshot], [Source], [Mesh].
 
 Reads this Edit candidate, including pending writes.
 
-Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -245,7 +249,7 @@ Types: [Batch], [Source], [Mesh].
 
 Reads this Edit candidate, including pending writes.
 
-Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection paging and recovery](common.md#collection-page).
 
@@ -400,7 +404,7 @@ Types: [ParameterSpec].
 
 Reads this Edit candidate, including pending writes.
 
-Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures preserve the Edit. Recover OutcomeUnknown through the original Call.
+Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures do not abort an Edit. Recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -415,7 +419,7 @@ Types: [Snapshot], [Source], [Parameter].
 
 Reads this Edit candidate, including pending writes.
 
-Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -430,7 +434,7 @@ Types: [Batch], [Source], [Parameter].
 
 Reads this Edit candidate, including pending writes.
 
-Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection paging and recovery](common.md#collection-page).
 
@@ -536,7 +540,7 @@ Types: [PreparedImage].
 
 Reads this Edit candidate, including pending writes.
 
-Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures preserve the Edit. Recover OutcomeUnknown through the original Call.
+Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures do not abort an Edit. Recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -551,7 +555,7 @@ Types: [Snapshot], [Source], [Image].
 
 Reads this Edit candidate, including pending writes.
 
-Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -566,7 +570,7 @@ Types: [Batch], [Source], [Image].
 
 Reads this Edit candidate, including pending writes.
 
-Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection paging and recovery](common.md#collection-page).
 
@@ -635,7 +639,7 @@ Read scene through a Session or Edit. Session reads committed document content; 
 
 Reads this Edit candidate, including pending writes.
 
-Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures preserve the Edit. Recover OutcomeUnknown through the original Call.
+Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures do not abort an Edit. Recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -650,7 +654,7 @@ Types: [Snapshot], [Source], [Summary].
 
 Reads this Edit candidate, including pending writes.
 
-Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -665,7 +669,7 @@ Types: [Batch], [Source], [Summary].
 
 Reads this Edit candidate, including pending writes.
 
-Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection paging and recovery](common.md#collection-page).
 

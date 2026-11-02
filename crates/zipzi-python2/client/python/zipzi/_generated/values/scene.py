@@ -73,7 +73,7 @@ SceneReference: TypeAlias = SceneReferenceUnspecified | SceneReferenceResolved |
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class Appearance(CompactValue):
-    '\n\nFields:\nopacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.\nmultiply: RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.\nscreen: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.'
+    'Opacity and RGB color factors applied to an object or shape.\n\nFields:\nopacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.\nmultiply: RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.\nscreen: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.'
     opacity: float
     multiply: tuple[float, float, float]
     screen: tuple[float, float, float]

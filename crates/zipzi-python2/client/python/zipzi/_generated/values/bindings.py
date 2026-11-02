@@ -30,7 +30,7 @@ def read_ConstraintSample(value: object) -> ConstraintSample:
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MeshBinding(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nmesh_id: Stable ID of the target mesh in this document.\naxes: Ordered parameter axes; keyform coordinates follow this order and samples retain their\nown identities.\nkeyforms: Shape samples for this binding; coordinate/sample identities must match its axes or key\ntable.'
+    'Ordinary parameter grid that drives mesh shapes and appearance.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nmesh_id: Stable ID of the target mesh in this document.\naxes: Ordered parameter axes; keyform coordinates follow this order and samples retain their\nown identities.\nkeyforms: One shape per Cartesian combination of active axis samples, with the first axis varying\nfastest. Empty when no axis is active; the mesh base shape is then used.'
     id: str
     mesh_id: str
     axes: tuple[BindingAxis, ...]
@@ -44,7 +44,7 @@ MeshBinding.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingAxis(CompactValue):
-    '\n\nFields:\nid: Stable axis UUID; an empty ID is allocated during native binding normalization.\nsamples: Ordered stable samples with strictly increasing finite parameter values.\nparameter_id: Document parameter ID driving the axis; an empty string represents a pending/unassigned\naxis.'
+    'One ordered parameter dimension of an ordinary binding grid.\n\nFields:\nid: Stable axis UUID; an empty ID is allocated during native binding normalization.\nsamples: Ordered stable samples with strictly increasing finite parameter values.\nparameter_id: Document parameter ID driving the axis; an empty string represents a pending/unassigned\naxis.'
     id: str = field(default_factory=lambda: string(''))
     samples: tuple[BindingSample, ...] = field(default_factory=lambda: tuple(read_BindingSample(v0) for v0 in sequence([])))
     parameter_id: str
@@ -56,7 +56,7 @@ BindingAxis.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingSample(CompactValue):
-    '\n\nFields:\nid: Stable sample UUID within the binding axis; distinct from its numeric value.\nvalue: Finite sample coordinate in the driving parameter domain; axis samples are strictly\nincreasing.'
+    'Stable identity and numeric coordinate of one sample on a binding axis.\n\nFields:\nid: Stable sample UUID within the binding axis; distinct from its numeric value.\nvalue: Finite sample coordinate in the driving parameter domain; axis samples are strictly\nincreasing.'
     id: str
     value: float
 
@@ -64,7 +64,7 @@ BindingSample.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MeshKeyform(CompactValue):
-    '\n\nFields:\nsamples: Stable sample IDs, one per active binding axis in axis order; not numeric sample\ncoordinates.\npositions: Absolute mesh-local shape positions in target mesh vertex order; not displacement vectors.\nappearance: Opacity and multiply/screen color factors for this object or shape.\ndraw_order: Optional keyform drawing-order coordinate; None lets native evaluation use its\nunoverridden order.'
+    'Ordinary mesh shape at a combination of binding sample identities; positions are absolute.\n\nFields:\nsamples: Stable sample IDs, one per active binding axis in axis order; not numeric sample\ncoordinates.\npositions: Absolute mesh-local shape positions in target mesh vertex order; not displacement vectors.\nappearance: Opacity and multiply/screen color factors for this object or shape.\ndraw_order: Optional keyform drawing-order coordinate; None lets native evaluation use its\nunoverridden order.'
     samples: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     positions: tuple[Vec2, ...]
     appearance: Appearance
@@ -78,7 +78,7 @@ MeshKeyform.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneBinding(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\naxes: Ordered parameter axes; keyform coordinates follow this order and samples retain their\nown identities.\ntrack: Typed Warp, Rotation or Part keyform track; the track target determines shape\ninterpretation.'
+    'Ordinary parameter grid driving a Warp, Rotation or Part track.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\naxes: Ordered parameter axes; keyform coordinates follow this order and samples retain their\nown identities.\ntrack: Typed Warp, Rotation or Part keyform track; the track target determines shape\ninterpretation.'
     id: str
     axes: tuple[BindingAxis, ...]
     track: SceneTrack
@@ -90,7 +90,7 @@ SceneBinding.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneTrackWarp(CompactValue):
-    "\n\nFields:\ntarget_id: Stable warp transform ID driven by this ordinary binding.\nkeyforms: Ordered Warp shape records whose samples refer to this binding's active axes."
+    "Drive a warp transform with ordinary lattice shapes.\n\nFields:\ntarget_id: Stable warp transform ID driven by this ordinary binding.\nkeyforms: Ordered Warp shape records whose samples refer to this binding's active axes."
     _variant: _ClassVar[str] = 'Warp'
     target_id: TransformId
     keyforms: tuple[WarpKeyform, ...]
@@ -102,7 +102,7 @@ SceneTrackWarp.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneTrackRotation(CompactValue):
-    "\n\nFields:\ntarget_id: Stable rotation transform ID driven by this ordinary binding.\nkeyforms: Ordered Rotation shape records whose samples refer to this binding's active axes."
+    "Drive a rotation transform with ordinary poses.\n\nFields:\ntarget_id: Stable rotation transform ID driven by this ordinary binding.\nkeyforms: Ordered Rotation shape records whose samples refer to this binding's active axes."
     _variant: _ClassVar[str] = 'Rotation'
     target_id: TransformId
     keyforms: tuple[RotationKeyform, ...]
@@ -114,7 +114,7 @@ SceneTrackRotation.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneTrackPart(CompactValue):
-    "\n\nFields:\ntarget_id: Stable Part ID driven by this ordinary binding.\nkeyforms: Ordered Part shape records whose samples refer to this binding's active axes."
+    "Drive a Part with ordinary drawing-order samples.\n\nFields:\ntarget_id: Stable Part ID driven by this ordinary binding.\nkeyforms: Ordered Part shape records whose samples refer to this binding's active axes."
     _variant: _ClassVar[str] = 'Part'
     target_id: PartId
     keyforms: tuple[PartKeyform, ...]
@@ -128,7 +128,7 @@ SceneTrack: TypeAlias = SceneTrackWarp | SceneTrackRotation | SceneTrackPart
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class WarpKeyform(CompactValue):
-    '\n\nFields:\nbezier: Optional Bezier controller for this warp shape; None means this shape has no controller.\nsamples: Stable sample IDs in active binding-axis order.\npositions: Absolute warp lattice positions in row-major point order; not displacement vectors.\nappearance: Opacity and multiply/screen color factors for this object or shape.'
+    'Ordinary absolute warp lattice shape at a binding sample combination.\n\nFields:\nbezier: Optional Bezier controller for this warp shape; None means this shape has no controller.\nsamples: Stable sample IDs in active binding-axis order.\npositions: Absolute warp lattice positions in row-major point order; not displacement vectors.\nappearance: Opacity and multiply/screen color factors for this object or shape.'
     bezier: (WarpBezier | None) = None
     samples: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     positions: tuple[Vec2, ...]
@@ -142,7 +142,7 @@ WarpKeyform.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class RotationKeyform(CompactValue):
-    '\n\nFields:\nsamples: Stable sample IDs in active binding-axis order; not numeric coordinates.\nrotation: Rotation pose containing origin, angle in degrees, scale and axis reflections.\nappearance: Opacity and multiply/screen color factors for this object or shape.'
+    'Ordinary rotation pose at a binding sample combination.\n\nFields:\nsamples: Stable sample IDs in active binding-axis order; not numeric coordinates.\nrotation: Rotation pose containing origin, angle in degrees, scale and axis reflections.\nappearance: Opacity and multiply/screen color factors for this object or shape.'
     samples: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     rotation: RotationPose
     appearance: Appearance
@@ -154,7 +154,7 @@ RotationKeyform.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PartKeyform(CompactValue):
-    '\n\nFields:\nsamples: Stable sample IDs in active binding-axis order; not numeric coordinates.\ndraw_order: Drawing-order coordinate; distinct from the final evaluated render_order.'
+    'Ordinary Part drawing order at a binding sample combination.\n\nFields:\nsamples: Stable sample IDs in active binding-axis order; not numeric coordinates.\ndraw_order: Drawing-order coordinate; distinct from the final evaluated render_order.'
     samples: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     draw_order: float
 
@@ -165,7 +165,7 @@ PartKeyform.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BlendShapeKeyTable(CompactValue):
-    '\n\nFields:\nsamples: Ordered stable parameter samples with strictly increasing finite values; base_sample_id\nnames the neutral sample.\nbase_sample_id: Sample ID defining the neutral/base shape in this key table.\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.'
+    'Ordered sample identities and neutral sample for a BlendShape-driving parameter.\n\nFields:\nsamples: Ordered stable parameter samples with strictly increasing finite values; base_sample_id\nnames the neutral sample.\nbase_sample_id: Sample ID defining the neutral/base shape in this key table.\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.'
     samples: tuple[BindingSample, ...] = field(default_factory=lambda: tuple(read_BindingSample(v0) for v0 in sequence([])))
     base_sample_id: str = field(default_factory=lambda: string(''))
     id: str
@@ -178,7 +178,7 @@ BlendShapeKeyTable.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BlendShapeConstraint(CompactValue):
-    '\n\nFields:\nsamples: Ordered parameter samples with weights used to attenuate the BlendShape contribution.\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.'
+    'Parameter-driven weights that attenuate a BlendShape contribution.\n\nFields:\nsamples: Ordered parameter samples with weights used to attenuate the BlendShape contribution.\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.'
     samples: tuple[ConstraintSample, ...] = field(default_factory=lambda: tuple(read_ConstraintSample(v0) for v0 in sequence([])))
     id: str
     parameter_id: str
@@ -190,7 +190,7 @@ BlendShapeConstraint.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ConstraintSample(CompactValue):
-    '\n\nFields:\nid: Stable constraint-sample UUID.\nvalue: Finite parameter coordinate for this constraint sample.\nweight: Dimensionless BlendShape constraint weight at this parameter sample.'
+    'One stable parameter sample and weight in a BlendShape constraint.\n\nFields:\nid: Stable constraint-sample UUID.\nvalue: Finite parameter coordinate for this constraint sample.\nweight: Dimensionless BlendShape constraint weight at this parameter sample.'
     id: str
     value: float
     weight: float
@@ -199,7 +199,7 @@ ConstraintSample.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BlendShapeBinding(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\ntarget_id: Stable object ID driven by this binding; the declared target kind determines its domain.\ntarget_kind: Category of the BlendShape target; must agree with target_id and keyform payload kind.\nkey_table_id: Stable BlendShape key-table ID controlling the binding.\nconstraint_ids: Ordered IDs of BlendShape constraints applied to this binding.\nkeyforms: Shape samples for this binding; coordinate/sample identities must match its axes or key\ntable.'
+    'Binds a target to a BlendShape key table and optional constraints using typed delta shapes.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\ntarget_id: Stable object ID driven by this binding; the declared target kind determines its domain.\ntarget_kind: Category of the BlendShape target; must agree with target_id and keyform payload kind.\nkey_table_id: Stable BlendShape key-table ID controlling the binding.\nconstraint_ids: Ordered IDs of BlendShape constraints applied to this binding.\nkeyforms: Shape samples for this binding; coordinate/sample identities must match its axes or key\ntable.'
     id: str
     target_id: str
     target_kind: BlendShapeTargetKind
@@ -213,7 +213,7 @@ class BlendShapeBinding(CompactValue):
 BlendShapeBinding.__module__ = "zipzi.modeling.bindings"
 
 class BlendShapeTargetKind(str, Enum):
-    ''
+    'Selects the target domain and corresponding delta-keyform payload of a BlendShape binding.'
     __module__ = "zipzi.modeling.bindings"
     MESH = 'mesh'
     WARP = 'warp'
@@ -224,7 +224,7 @@ class BlendShapeTargetKind(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeltaKeyformsMesh(CompactValue):
-    '\n\nFields:\nvalue: Ordered Mesh BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.'
+    'Select mesh displacement samples.\n\nFields:\nvalue: Ordered Mesh BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.'
     _variant: _ClassVar[str] = 'mesh'
     value: tuple[DeltaMeshKeyform, ...]
 
@@ -235,7 +235,7 @@ DeltaKeyformsMesh.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeltaKeyformsWarp(CompactValue):
-    '\n\nFields:\nvalue: Ordered Warp BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.'
+    'Select warp lattice displacement samples.\n\nFields:\nvalue: Ordered Warp BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.'
     _variant: _ClassVar[str] = 'warp'
     value: tuple[DeltaWarpKeyform, ...]
 
@@ -246,7 +246,7 @@ DeltaKeyformsWarp.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeltaKeyformsRotation(CompactValue):
-    '\n\nFields:\nvalue: Ordered Rotation BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.'
+    'Select rotation-transform delta samples.\n\nFields:\nvalue: Ordered Rotation BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.'
     _variant: _ClassVar[str] = 'rotation'
     value: tuple[DeltaRotationKeyform, ...]
 
@@ -257,7 +257,7 @@ DeltaKeyformsRotation.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeltaKeyformsPart(CompactValue):
-    '\n\nFields:\nvalue: Ordered Part BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.'
+    'Select Part drawing-order delta samples.\n\nFields:\nvalue: Ordered Part BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.'
     _variant: _ClassVar[str] = 'part'
     value: tuple[DeltaPartKeyform, ...]
 
@@ -268,7 +268,7 @@ DeltaKeyformsPart.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeltaKeyformsGlue(CompactValue):
-    '\n\nFields:\nvalue: Ordered Glue BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.'
+    'Select Glue intensity delta samples.\n\nFields:\nvalue: Ordered Glue BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.'
     _variant: _ClassVar[str] = 'glue'
     value: tuple[DeltaGlueKeyform, ...]
 
@@ -279,7 +279,7 @@ DeltaKeyformsGlue.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeltaKeyformsOffscreen(CompactValue):
-    '\n\nFields:\nvalue: Ordered Offscreen BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.'
+    'Select Offscreen appearance samples.\n\nFields:\nvalue: Ordered Offscreen BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.'
     _variant: _ClassVar[str] = 'offscreen'
     value: tuple[DeltaOffscreenKeyform, ...]
 
@@ -292,7 +292,7 @@ DeltaKeyforms: TypeAlias = DeltaKeyformsMesh | DeltaKeyformsWarp | DeltaKeyforms
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeltaMeshKeyform(CompactValue):
-    '\n\nFields:\nsample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.\npositions: Per-vertex XY displacement vectors in mesh vertex order.\nopacity: Additive opacity delta; zero is neutral. None supplies no delta for this channel.\ndraw_order: Additive drawing-order delta; zero is neutral. None supplies no delta for this channel.\nmultiply: Additive RGB multiply-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.\nscreen: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.'
+    'Mesh displacement and optional appearance deltas at one BlendShape sample.\n\nFields:\nsample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.\npositions: Per-vertex XY displacement vectors in mesh vertex order.\nopacity: Additive opacity delta; zero is neutral. None supplies no delta for this channel.\ndraw_order: Additive drawing-order delta; zero is neutral. None supplies no delta for this channel.\nmultiply: Additive RGB multiply-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.\nscreen: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.'
     sample_id: str = field(default_factory=lambda: string(''))
     positions: tuple[Vec2, ...]
     opacity: (float | None) = None
@@ -309,7 +309,7 @@ DeltaMeshKeyform.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeltaWarpKeyform(CompactValue):
-    '\n\nFields:\nsample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.\npoints: Per-point XY displacement vectors in row-major warp point order.\nopacity: Additive opacity delta; zero is neutral. None supplies no delta for this channel.\nmultiply: Additive RGB multiply-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.\nscreen: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.'
+    'Warp lattice displacements and optional appearance deltas at one BlendShape sample.\n\nFields:\nsample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.\npoints: Per-point XY displacement vectors in row-major warp point order.\nopacity: Additive opacity delta; zero is neutral. None supplies no delta for this channel.\nmultiply: Additive RGB multiply-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.\nscreen: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.'
     sample_id: str = field(default_factory=lambda: string(''))
     points: tuple[Vec2, ...]
     opacity: (float | None) = None
@@ -325,7 +325,7 @@ DeltaWarpKeyform.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeltaRotationKeyform(CompactValue):
-    '\n\nFields:\nsample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.\norigin: Translation delta of the rotation origin in parent coordinates. None supplies no delta\nfor this channel.\nangle: Additive rotation-angle delta in degrees. None supplies no delta for this channel.\nscale: Additive scale delta; zero is neutral. None supplies no delta for this channel.\nopacity: Additive opacity delta; zero is neutral. None supplies no delta for this channel.\nmultiply: Additive RGB multiply-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.\nscreen: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.'
+    'Rotation-transform and appearance deltas at one BlendShape sample.\n\nFields:\nsample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.\norigin: Translation delta of the rotation origin in parent coordinates. None supplies no delta\nfor this channel.\nangle: Additive rotation-angle delta in degrees. None supplies no delta for this channel.\nscale: Additive scale delta; zero is neutral. None supplies no delta for this channel.\nopacity: Additive opacity delta; zero is neutral. None supplies no delta for this channel.\nmultiply: Additive RGB multiply-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.\nscreen: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.'
     sample_id: str = field(default_factory=lambda: string(''))
     origin: (Vec2 | None) = None
     angle: (float | None) = None
@@ -342,7 +342,7 @@ DeltaRotationKeyform.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeltaPartKeyform(CompactValue):
-    '\n\nFields:\nsample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.\ndraw_order: Additive drawing-order delta; zero is neutral.'
+    'Part drawing-order delta at one BlendShape sample.\n\nFields:\nsample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.\ndraw_order: Additive drawing-order delta; zero is neutral.'
     sample_id: str = field(default_factory=lambda: string(''))
     draw_order: float
 
@@ -350,7 +350,7 @@ DeltaPartKeyform.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeltaGlueKeyform(CompactValue):
-    '\n\nFields:\nsample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.\nintensity: Additive Glue intensity delta; zero is neutral.'
+    'Glue intensity delta at one BlendShape sample.\n\nFields:\nsample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.\nintensity: Additive Glue intensity delta; zero is neutral.'
     sample_id: str = field(default_factory=lambda: string(''))
     intensity: float
 
@@ -358,7 +358,7 @@ DeltaGlueKeyform.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeltaOffscreenKeyform(CompactValue):
-    '\n\nFields:\nsample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.\nopacity: Additive opacity delta; zero is neutral.\nmultiply: RGB multiply factors stored as multipliers with neutral (1, 1, 1); None supplies\nno multiply-color delta. Native conversion subtracts 1 before additive blending.\nscreen: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.'
+    'Offscreen appearance contribution at one BlendShape sample.\n\nFields:\nsample_id: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.\nopacity: Additive opacity delta; zero is neutral.\nmultiply: RGB multiply factors stored as multipliers with neutral (1, 1, 1); None supplies\nno multiply-color delta. Native conversion subtracts 1 before additive blending.\nscreen: Additive RGB screen-color delta; (0, 0, 0) is neutral. None supplies no delta for this\nchannel.'
     sample_id: str = field(default_factory=lambda: string(''))
     opacity: float
     multiply: (tuple[float, float, float] | None) = None
@@ -384,7 +384,7 @@ GlueBinding.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class GlueKeyform(CompactValue):
-    '\n\nFields:\nsamples: Stable sample IDs in active binding-axis order; not numeric coordinates.\nintensity: Glue influence factor; 0 disables the connection and 1 applies its full influence.'
+    'Ordinary Glue intensity at one combination of binding samples.\n\nFields:\nsamples: Stable sample IDs in active binding-axis order; not numeric coordinates.\nintensity: Glue influence factor; 0 disables the connection and 1 applies its full influence.'
     samples: tuple[str, ...] = field(default_factory=lambda: tuple(string(v0) for v0 in sequence([])))
     intensity: float
 
@@ -395,7 +395,7 @@ GlueKeyform.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OffscreenKeyform(CompactValue):
-    '\n\nFields:\nopacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.\nmultiply: RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.\nscreen: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.'
+    'Offscreen appearance selected by a Part keyform mapping.\n\nFields:\nopacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.\nmultiply: RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.\nscreen: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.'
     opacity: float
     multiply: (tuple[float, float, float] | None) = None
     screen: (tuple[float, float, float] | None) = None
@@ -408,7 +408,7 @@ OffscreenKeyform.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingAuthoringEditGrid(CompactValue):
-    '\n\nFields:\nvalue: Typed intent for ordinary binding-grid edits; apply/plan it against a Session/Edit\nsource rather than mutating this value.'
+    'Edit an ordinary binding grid.\n\nFields:\nvalue: Typed intent for ordinary binding-grid edits; apply/plan it against a Session/Edit\nsource rather than mutating this value.'
     _variant: _ClassVar[str] = 'Grid'
     value: BindingGridEdit
 
@@ -416,7 +416,7 @@ BindingAuthoringEditGrid.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingAuthoringEditBlend(CompactValue):
-    '\n\nFields:\nvalue: Typed intent for BlendShape authoring; apply/plan it against a Session/Edit source\nrather than mutating this value.'
+    'Edit BlendShape authoring data.\n\nFields:\nvalue: Typed intent for BlendShape authoring; apply/plan it against a Session/Edit source\nrather than mutating this value.'
     _variant: _ClassVar[str] = 'Blend'
     value: BlendAuthoringEdit
 
@@ -424,7 +424,7 @@ BindingAuthoringEditBlend.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingAuthoringEditMeshGrid(CompactValue):
-    '\n\nFields:\nvalue: Typed intent for mesh binding grid edits; apply/plan it against a Session/Edit\nsource rather than mutating this value.'
+    'Edit an ordinary mesh binding grid.\n\nFields:\nvalue: Typed intent for mesh binding grid edits; apply/plan it against a Session/Edit\nsource rather than mutating this value.'
     _variant: _ClassVar[str] = 'MeshGrid'
     value: MeshGridEdit
 
@@ -432,7 +432,7 @@ BindingAuthoringEditMeshGrid.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingAuthoringEditParameterRange(CompactValue):
-    '\n\nFields:\nvalue: Typed intent for parameter range conversion; apply/plan it against a Session/Edit\nsource rather than mutating this value.'
+    'Change a parameter range and its dependent coordinates.\n\nFields:\nvalue: Typed intent for parameter range conversion; apply/plan it against a Session/Edit\nsource rather than mutating this value.'
     _variant: _ClassVar[str] = 'ParameterRange'
     value: ParameterRangeEdit
 
@@ -440,7 +440,7 @@ BindingAuthoringEditParameterRange.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingAuthoringEditReparent(CompactValue):
-    '\n\nFields:\nvalue: Typed intent for deformation reparenting; apply/plan it against a Session/Edit\nsource rather than mutating this value.'
+    'Plan a deformation reparenting operation.\n\nFields:\nvalue: Typed intent for deformation reparenting; apply/plan it against a Session/Edit\nsource rather than mutating this value.'
     _variant: _ClassVar[str] = 'Reparent'
     value: ReparentEdit
 
@@ -458,7 +458,7 @@ BindingGridEditDelete.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingGridEditCreate(CompactValue):
-    '\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\ntarget: Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.'
+    'Create an ordinary grid on the selected target.\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\ntarget: Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.'
     _variant: _ClassVar[str] = 'Create'
     id: str
     target: BindingGridTarget
@@ -467,7 +467,7 @@ BindingGridEditCreate.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingGridEditEdit(CompactValue):
-    '\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.\noperation: Typed axis/sample grid edit to perform on this owner; not a Runtime operation ID.'
+    'Apply an axis or sample operation to an existing grid.\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.\noperation: Typed axis/sample grid edit to perform on this owner; not a Runtime operation ID.'
     _variant: _ClassVar[str] = 'Edit'
     owner: str
     operation: GridOperation
@@ -478,7 +478,7 @@ BindingGridEdit: TypeAlias = BindingGridEditDelete | BindingGridEditCreate | Bin
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingGridTargetMesh(CompactValue):
-    '\n\nFields:\nvalue: Stable ID of the target mesh whose ordinary grid is being created.'
+    'Bind a mesh.\n\nFields:\nvalue: Stable ID of the target mesh whose ordinary grid is being created.'
     _variant: _ClassVar[str] = 'Mesh'
     value: str
 
@@ -486,7 +486,7 @@ BindingGridTargetMesh.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingGridTargetScene(CompactValue):
-    '\n\nFields:\nvalue: Stable ID of the target scene transform or Part whose ordinary grid is being created.'
+    'Bind a scene transform or Part.\n\nFields:\nvalue: Stable ID of the target scene transform or Part whose ordinary grid is being created.'
     _variant: _ClassVar[str] = 'Scene'
     value: str
 
@@ -494,7 +494,7 @@ BindingGridTargetScene.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingGridTargetGlue(CompactValue):
-    '\n\nFields:\nvalue: Stable ID of the target Glue whose ordinary grid is being created.'
+    'Bind Glue intensity.\n\nFields:\nvalue: Stable ID of the target Glue whose ordinary grid is being created.'
     _variant: _ClassVar[str] = 'Glue'
     value: str
 
@@ -504,7 +504,7 @@ BindingGridTarget: TypeAlias = BindingGridTargetMesh | BindingGridTargetScene | 
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class GridOperationAddAxis(CompactValue):
-    '\n\nFields:\naxis: Axis definition with a parameter ID and ordered samples; axis identity is distinct\nfrom the parameter ID.'
+    'Add an axis and convert the existing grid for that dimension.\n\nFields:\naxis: Axis definition with a parameter ID and ordered samples; axis identity is distinct\nfrom the parameter ID.'
     _variant: _ClassVar[str] = 'AddAxis'
     axis: BindingAxis
 
@@ -512,7 +512,7 @@ GridOperationAddAxis.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class GridOperationRemapParameter(CompactValue):
-    '\n\nFields:\naxis_id: Stable axis ID owned by this binding, not a parameter or sample ID.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\npolicy: Explicit native conflict/conversion policy; no implicit removal or remapping is\nrequested.'
+    'Change the axis parameter with an explicit coordinate mapping policy.\n\nFields:\naxis_id: Stable axis ID owned by this binding, not a parameter or sample ID.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\npolicy: Explicit native conflict/conversion policy; no implicit removal or remapping is\nrequested.'
     _variant: _ClassVar[str] = 'RemapParameter'
     axis_id: str
     parameter_id: str
@@ -522,7 +522,7 @@ GridOperationRemapParameter.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class GridOperationSetParameter(CompactValue):
-    '\n\nFields:\naxis_id: Stable axis ID owned by this binding, not a parameter or sample ID.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nreduction: Explicit parameter-domain reduction used when removing or replacing an axis.'
+    'Assign or clear the driving parameter of an existing axis.\n\nFields:\naxis_id: Stable axis ID owned by this binding, not a parameter or sample ID.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nreduction: Explicit parameter-domain reduction used when removing or replacing an axis.'
     _variant: _ClassVar[str] = 'SetParameter'
     axis_id: str
     parameter_id: str
@@ -532,7 +532,7 @@ GridOperationSetParameter.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class GridOperationReorderAxes(CompactValue):
-    '\n\nFields:\naxis_ids: Axis IDs in the requested new axis order; IDs refer to axes, not parameters.'
+    'Reorder the grid using stable axis IDs.\n\nFields:\naxis_ids: Axis IDs in the requested new axis order; IDs refer to axes, not parameters.'
     _variant: _ClassVar[str] = 'ReorderAxes'
     axis_ids: tuple[str, ...]
 
@@ -543,7 +543,7 @@ GridOperationReorderAxes.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class GridOperationInsertSample(CompactValue):
-    '\n\nFields:\naxis_id: Stable axis ID owned by this binding, not a parameter or sample ID.\nid: New stable UUID for this object; it must not conflict with an existing identity.\nvalue: Scalar value in the referenced parameter domain.'
+    'Insert a new sample with the supplied identity and coordinate.\n\nFields:\naxis_id: Stable axis ID owned by this binding, not a parameter or sample ID.\nid: New stable UUID for this object; it must not conflict with an existing identity.\nvalue: Scalar value in the referenced parameter domain.'
     _variant: _ClassVar[str] = 'InsertSample'
     axis_id: str
     id: str
@@ -553,7 +553,7 @@ GridOperationInsertSample.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class GridOperationMoveSample(CompactValue):
-    '\n\nFields:\nsample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.\nvalue: Scalar value in the referenced parameter domain.'
+    'Change the coordinate of an existing stable sample.\n\nFields:\nsample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.\nvalue: Scalar value in the referenced parameter domain.'
     _variant: _ClassVar[str] = 'MoveSample'
     sample_id: str
     value: float
@@ -562,7 +562,7 @@ GridOperationMoveSample.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class GridOperationDeleteSample(CompactValue):
-    '\n\nFields:\nsample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.'
+    'Remove an existing stable sample.\n\nFields:\nsample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.'
     _variant: _ClassVar[str] = 'DeleteSample'
     sample_id: str
 
@@ -570,7 +570,7 @@ GridOperationDeleteSample.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class GridOperationRemoveAxis(CompactValue):
-    '\n\nFields:\naxis_id: Stable axis ID owned by this binding, not a parameter or sample ID.\nreduction: Explicit parameter-domain reduction used when removing or replacing an axis.\nkeep_pending: Keep an axis with no parameter as pending instead of removing it from the binding.'
+    'Remove the axis or keep it pending, with explicit reduction when required.\n\nFields:\naxis_id: Stable axis ID owned by this binding, not a parameter or sample ID.\nreduction: Explicit parameter-domain reduction used when removing or replacing an axis.\nkeep_pending: Keep an axis with no parameter as pending instead of removing it from the binding.'
     _variant: _ClassVar[str] = 'RemoveAxis'
     axis_id: str
     reduction: (AxisReduction | None) = None
@@ -582,7 +582,7 @@ GridOperation: TypeAlias = GridOperationAddAxis | GridOperationRemapParameter | 
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AxisReductionSlice(CompactValue):
-    '\n\nFields:\nvalue: Parameter coordinate at which to slice the old grid while removing an axis.'
+    'Use an existing sample coordinate; a coordinate absent from the axis is rejected.\n\nFields:\nvalue: Parameter coordinate at which to slice the old grid while removing an axis.'
     _variant: _ClassVar[str] = 'Slice'
     value: float
 
@@ -590,7 +590,7 @@ AxisReductionSlice.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AxisReductionResample(CompactValue):
-    '\n\nFields:\nvalue: Parameter coordinate used to resample the old grid while reducing an axis.'
+    'Evaluate at a coordinate within the grid domain, including between existing samples.\n\nFields:\nvalue: Parameter coordinate used to resample the old grid while reducing an axis.'
     _variant: _ClassVar[str] = 'Resample'
     value: float
 
@@ -600,7 +600,7 @@ AxisReduction: TypeAlias = AxisReductionSlice | AxisReductionResample
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BlendAuthoringEditCreateTable(CompactValue):
-    '\n\nFields:\ntable: Complete BlendShape key table with stable sample IDs and an explicit base sample.'
+    'Create a key table with its samples and base.\n\nFields:\ntable: Complete BlendShape key table with stable sample IDs and an explicit base sample.'
     _variant: _ClassVar[str] = 'CreateTable'
     table: BlendShapeKeyTable
 
@@ -608,7 +608,7 @@ BlendAuthoringEditCreateTable.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BlendAuthoringEditCreateConstraint(CompactValue):
-    '\n\nFields:\nconstraint: Complete BlendShape constraint with its driving parameter and weighted samples.'
+    'Create a constraint with weighted samples.\n\nFields:\nconstraint: Complete BlendShape constraint with its driving parameter and weighted samples.'
     _variant: _ClassVar[str] = 'CreateConstraint'
     constraint: BlendShapeConstraint
 
@@ -616,7 +616,7 @@ BlendAuthoringEditCreateConstraint.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BlendAuthoringEditCreateBinding(CompactValue):
-    '\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\ntarget_id: Stable object ID driven by this binding; the declared target kind determines its domain.\ntarget_kind: Category of the BlendShape target; must agree with target_id and keyform payload kind.\nkey_table_id: Stable BlendShape key-table ID controlling the binding.'
+    'Create a target binding to a BlendShape key table.\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\ntarget_id: Stable object ID driven by this binding; the declared target kind determines its domain.\ntarget_kind: Category of the BlendShape target; must agree with target_id and keyform payload kind.\nkey_table_id: Stable BlendShape key-table ID controlling the binding.'
     _variant: _ClassVar[str] = 'CreateBinding'
     id: str
     target_id: str
@@ -627,7 +627,7 @@ BlendAuthoringEditCreateBinding.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BlendAuthoringEditTable(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\noperation: Typed sample/base/parameter edit to perform on this BlendShape key table.'
+    'Edit an existing key table.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\noperation: Typed sample/base/parameter edit to perform on this BlendShape key table.'
     _variant: _ClassVar[str] = 'Table'
     id: str
     operation: BlendTableOperation
@@ -636,7 +636,7 @@ BlendAuthoringEditTable.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BlendAuthoringEditConstraint(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nsamples: Replacement ordered parameter samples and constraint weights.'
+    'Replace the driving parameter and weighted samples of a constraint.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nsamples: Replacement ordered parameter samples and constraint weights.'
     _variant: _ClassVar[str] = 'Constraint'
     id: str
     parameter_id: str
@@ -649,7 +649,7 @@ BlendAuthoringEditConstraint.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BlendAuthoringEditSetBindingTable(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nkey_table_id: Stable BlendShape key-table ID controlling the binding.\nreset: Whether to reset shape data when switching the binding to another key table.'
+    'Switch a binding to another key table, optionally resetting its shape data.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nkey_table_id: Stable BlendShape key-table ID controlling the binding.\nreset: Whether to reset shape data when switching the binding to another key table.'
     _variant: _ClassVar[str] = 'SetBindingTable'
     id: str
     key_table_id: str
@@ -661,7 +661,7 @@ BlendAuthoringEdit: TypeAlias = BlendAuthoringEditCreateTable | BlendAuthoringEd
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BlendTableOperationInsert(CompactValue):
-    '\n\nFields:\nsample: New stable sample UUID and finite parameter coordinate to insert into this key table.'
+    'Insert a stable sample into the key table.\n\nFields:\nsample: New stable sample UUID and finite parameter coordinate to insert into this key table.'
     _variant: _ClassVar[str] = 'Insert'
     sample: BindingSample
 
@@ -669,7 +669,7 @@ BlendTableOperationInsert.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BlendTableOperationMove(CompactValue):
-    '\n\nFields:\nsample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.\nvalue: Scalar value in the referenced parameter domain.'
+    'Change an existing sample coordinate.\n\nFields:\nsample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.\nvalue: Scalar value in the referenced parameter domain.'
     _variant: _ClassVar[str] = 'Move'
     sample_id: str
     value: float
@@ -678,7 +678,7 @@ BlendTableOperationMove.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BlendTableOperationDelete(CompactValue):
-    '\n\nFields:\nsample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.\nreplacement_base: Replacement base sample ID when deleting the current base; None supplies no replacement.'
+    'Remove a sample, supplying a replacement if its base role requires one.\n\nFields:\nsample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.\nreplacement_base: Replacement base sample ID when deleting the current base; None supplies no replacement.'
     _variant: _ClassVar[str] = 'Delete'
     sample_id: str
     replacement_base: (str | None) = None
@@ -687,7 +687,7 @@ BlendTableOperationDelete.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BlendTableOperationSetBase(CompactValue):
-    '\n\nFields:\nsample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.'
+    'Select an existing sample as the neutral base.\n\nFields:\nsample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.'
     _variant: _ClassVar[str] = 'SetBase'
     sample_id: str
 
@@ -695,7 +695,7 @@ BlendTableOperationSetBase.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BlendTableOperationSetParameter(CompactValue):
-    '\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.'
+    'Assign the table driving parameter.\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.'
     _variant: _ClassVar[str] = 'SetParameter'
     parameter_id: str
 
@@ -703,7 +703,7 @@ BlendTableOperationSetParameter.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BlendTableOperationRemapParameter(CompactValue):
-    '\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\npolicy: Explicit native conflict/conversion policy; no implicit removal or remapping is\nrequested.'
+    'Change the driving parameter using the chosen coordinate mapping policy.\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\npolicy: Explicit native conflict/conversion policy; no implicit removal or remapping is\nrequested.'
     _variant: _ClassVar[str] = 'RemapParameter'
     parameter_id: str
     policy: ParameterRangePolicy
@@ -714,7 +714,7 @@ BlendTableOperation: TypeAlias = BlendTableOperationInsert | BlendTableOperation
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MeshGridEditCreate(CompactValue):
-    '\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\nmesh_id: Stable ID of the target mesh in this document.'
+    'Create a zero-axis binding that uses the current mesh base shape until driven.\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\nmesh_id: Stable ID of the target mesh in this document.'
     _variant: _ClassVar[str] = 'Create'
     id: str
     mesh_id: str
@@ -723,7 +723,7 @@ MeshGridEditCreate.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MeshGridEditAddAxis(CompactValue):
-    '\n\nFields:\nbinding_id: Stable binding ID owning the addressed axes or keyforms.\naxis: Axis definition with a parameter ID and ordered samples; axis identity is distinct\nfrom the parameter ID.'
+    'Add a driving parameter axis to the binding.\n\nFields:\nbinding_id: Stable binding ID owning the addressed axes or keyforms.\naxis: Axis definition with a parameter ID and ordered samples; axis identity is distinct\nfrom the parameter ID.'
     _variant: _ClassVar[str] = 'AddAxis'
     binding_id: str
     axis: BindingAxis
@@ -732,7 +732,7 @@ MeshGridEditAddAxis.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MeshGridEditReorderAxes(CompactValue):
-    '\n\nFields:\nbinding_id: Stable binding ID owning the addressed axes or keyforms.\nparameter_ids: Document parameter IDs in the requested axis order.'
+    'Reorder the axes by their driving parameter IDs.\n\nFields:\nbinding_id: Stable binding ID owning the addressed axes or keyforms.\nparameter_ids: Document parameter IDs in the requested axis order.'
     _variant: _ClassVar[str] = 'ReorderAxes'
     binding_id: str
     parameter_ids: tuple[str, ...]
@@ -744,7 +744,7 @@ MeshGridEditReorderAxes.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MeshGridEditInsertSample(CompactValue):
-    '\n\nFields:\nbinding_id: Stable binding ID owning the addressed axes or keyforms.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nvalue: Scalar value in the referenced parameter domain.'
+    'Insert a parameter coordinate on an existing axis.\n\nFields:\nbinding_id: Stable binding ID owning the addressed axes or keyforms.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nvalue: Scalar value in the referenced parameter domain.'
     _variant: _ClassVar[str] = 'InsertSample'
     binding_id: str
     parameter_id: str
@@ -754,7 +754,7 @@ MeshGridEditInsertSample.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MeshGridEditMoveSample(CompactValue):
-    '\n\nFields:\nbinding_id: Stable binding ID owning the addressed axes or keyforms.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nfrom_: Existing sample value in the parameter domain, not a sample-array index.\nto: New sample value in the same parameter domain.'
+    'Move an existing coordinate to another value on the same axis.\n\nFields:\nbinding_id: Stable binding ID owning the addressed axes or keyforms.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nfrom_: Existing sample value in the parameter domain, not a sample-array index.\nto: New sample value in the same parameter domain.'
     _variant: _ClassVar[str] = 'MoveSample'
     binding_id: str
     parameter_id: str
@@ -765,7 +765,7 @@ MeshGridEditMoveSample.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MeshGridEditDeleteSample(CompactValue):
-    '\n\nFields:\nbinding_id: Stable binding ID owning the addressed axes or keyforms.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nvalue: Scalar value in the referenced parameter domain.'
+    'Delete the selected parameter coordinate.\n\nFields:\nbinding_id: Stable binding ID owning the addressed axes or keyforms.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nvalue: Scalar value in the referenced parameter domain.'
     _variant: _ClassVar[str] = 'DeleteSample'
     binding_id: str
     parameter_id: str
@@ -775,7 +775,7 @@ MeshGridEditDeleteSample.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MeshGridEditRemoveAxis(CompactValue):
-    '\n\nFields:\nbinding_id: Stable binding ID owning the addressed axes or keyforms.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nreduction: Explicit parameter-domain reduction used when removing or replacing an axis.'
+    'Remove a parameter axis using the specified reduction.\n\nFields:\nbinding_id: Stable binding ID owning the addressed axes or keyforms.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nreduction: Explicit parameter-domain reduction used when removing or replacing an axis.'
     _variant: _ClassVar[str] = 'RemoveAxis'
     binding_id: str
     parameter_id: str
@@ -787,14 +787,14 @@ MeshGridEdit: TypeAlias = MeshGridEditCreate | MeshGridEditAddAxis | MeshGridEdi
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PartKeyformSlotStatic(CompactValue):
-    ''
+    'Address the static Part slot.'
     _variant: _ClassVar[str] = 'static'
 
 PartKeyformSlotStatic.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PartKeyformSlotSamples(CompactValue):
-    '\n\nFields:\nsamples: Stable sample IDs selecting one ordinary-binding combination, in active axis order.'
+    'Address one ordinary binding sample combination.\n\nFields:\nsamples: Stable sample IDs selecting one ordinary-binding combination, in active axis order.'
     _variant: _ClassVar[str] = 'samples'
     samples: tuple[str, ...]
 
@@ -807,7 +807,7 @@ PartKeyformSlot: TypeAlias = PartKeyformSlotStatic | PartKeyformSlotSamples
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneKeyformWarp(CompactValue):
-    '\n\nFields:\nvalue: Complete Warp ordinary-binding keyform; samples identify the active axis combination.'
+    'Replace a Warp track sample.\n\nFields:\nvalue: Complete Warp ordinary-binding keyform; samples identify the active axis combination.'
     _variant: _ClassVar[str] = 'Warp'
     value: WarpKeyform
 
@@ -815,7 +815,7 @@ SceneKeyformWarp.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneKeyformRotation(CompactValue):
-    '\n\nFields:\nvalue: Complete Rotation ordinary-binding keyform; samples identify the active axis\ncombination.'
+    'Replace a Rotation track sample.\n\nFields:\nvalue: Complete Rotation ordinary-binding keyform; samples identify the active axis\ncombination.'
     _variant: _ClassVar[str] = 'Rotation'
     value: RotationKeyform
 
@@ -823,7 +823,7 @@ SceneKeyformRotation.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneKeyformPart(CompactValue):
-    '\n\nFields:\nvalue: Complete Part ordinary-binding keyform; samples identify the active axis combination.'
+    'Replace a Part track sample.\n\nFields:\nvalue: Complete Part ordinary-binding keyform; samples identify the active axis combination.'
     _variant: _ClassVar[str] = 'Part'
     value: PartKeyform
 
@@ -833,7 +833,7 @@ SceneKeyform: TypeAlias = SceneKeyformWarp | SceneKeyformRotation | SceneKeyform
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingFieldPatchSampleValue(CompactValue):
-    '\n\nFields:\nvalue: Scalar value in the referenced parameter domain.'
+    'Replace a sample coordinate.\n\nFields:\nvalue: Scalar value in the referenced parameter domain.'
     _variant: _ClassVar[str] = 'SampleValue'
     value: float
 
@@ -841,7 +841,7 @@ BindingFieldPatchSampleValue.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingFieldPatchConstraintSample(CompactValue):
-    '\n\nFields:\nvalue: Scalar value in the referenced parameter domain.\nweight: Dimensionless interpolation weight applied to the referenced source vertex.'
+    'Replace a constraint sample coordinate and weight.\n\nFields:\nvalue: Scalar value in the referenced parameter domain.\nweight: Dimensionless BlendShape constraint weight at this parameter sample.'
     _variant: _ClassVar[str] = 'ConstraintSample'
     value: float
     weight: float
@@ -850,7 +850,7 @@ BindingFieldPatchConstraintSample.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingFieldPatchAxisParameter(CompactValue):
-    '\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nreduction: Explicit parameter-domain reduction used when removing or replacing an axis.'
+    'Change the parameter assigned to an axis.\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nreduction: Explicit parameter-domain reduction used when removing or replacing an axis.'
     _variant: _ClassVar[str] = 'AxisParameter'
     parameter_id: str
     reduction: (AxisReduction | None) = None

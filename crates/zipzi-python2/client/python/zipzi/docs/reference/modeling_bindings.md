@@ -20,6 +20,8 @@ Canonical bindings modeling values.
 
 `AxisReductionSlice | AxisReductionResample`
 
+Select the coordinate retained when an ordinary binding axis is removed.
+
 Types: [AxisReductionResample](#zipzimodelingbindingsaxisreductionresample), [AxisReductionSlice](#zipzimodelingbindingsaxisreductionslice).
 
 
@@ -28,6 +30,8 @@ Types: [AxisReductionResample](#zipzimodelingbindingsaxisreductionresample), [Ax
 **Type**
 
 `(*, value: float)`
+
+Evaluate at a coordinate within the grid domain, including between existing samples.
 
 **Fields**
 
@@ -39,6 +43,8 @@ Types: [AxisReductionResample](#zipzimodelingbindingsaxisreductionresample), [Ax
 
 `(*, value: float)`
 
+Use an existing sample coordinate; a coordinate absent from the axis is rejected.
+
 **Fields**
 
 - `value`: Parameter coordinate at which to slice the old grid while removing an axis.
@@ -48,6 +54,8 @@ Types: [AxisReductionResample](#zipzimodelingbindingsaxisreductionresample), [Ax
 **Type**
 
 `(*, id: str = '', samples: tuple[BindingSample, ...] = (), parameter_id: str)`
+
+One ordered parameter dimension of an ordinary binding grid.
 
 Types: [BindingSample](#zipzimodelingbindingsbindingsample).
 
@@ -64,6 +72,8 @@ axis.
 
 `BindingFieldPatchSampleValue | BindingFieldPatchConstraintSample | BindingFieldPatchAxisParameter`
 
+Replacement value for a selected binding field address.
+
 Types: [BindingFieldPatchAxisParameter](#zipzimodelingbindingsbindingfieldpatchaxisparameter), [BindingFieldPatchConstraintSample](#zipzimodelingbindingsbindingfieldpatchconstraintsample), [BindingFieldPatchSampleValue](#zipzimodelingbindingsbindingfieldpatchsamplevalue).
 
 
@@ -72,6 +82,8 @@ Types: [BindingFieldPatchAxisParameter](#zipzimodelingbindingsbindingfieldpatcha
 **Type**
 
 `(*, parameter_id: str, reduction: AxisReduction | None = None)`
+
+Change the parameter assigned to an axis.
 
 Types: [AxisReduction](#zipzimodelingbindingsaxisreduction).
 
@@ -86,16 +98,20 @@ Types: [AxisReduction](#zipzimodelingbindingsaxisreduction).
 
 `(*, value: float, weight: float)`
 
+Replace a constraint sample coordinate and weight.
+
 **Fields**
 
 - `value`: Scalar value in the referenced parameter domain.
-- `weight`: Dimensionless interpolation weight applied to the referenced source vertex.
+- `weight`: Dimensionless BlendShape constraint weight at this parameter sample.
 
 ## zipzi.modeling.bindings.BindingFieldPatchSampleValue
 
 **Type**
 
 `(*, value: float)`
+
+Replace a sample coordinate.
 
 **Fields**
 
@@ -107,6 +123,8 @@ Types: [AxisReduction](#zipzimodelingbindingsaxisreduction).
 
 `BindingGridTargetMesh | BindingGridTargetScene | BindingGridTargetGlue`
 
+Select the target domain for an ordinary binding grid.
+
 Types: [BindingGridTargetGlue](#zipzimodelingbindingsbindinggridtargetglue), [BindingGridTargetMesh](#zipzimodelingbindingsbindinggridtargetmesh), [BindingGridTargetScene](#zipzimodelingbindingsbindinggridtargetscene).
 
 
@@ -115,6 +133,8 @@ Types: [BindingGridTargetGlue](#zipzimodelingbindingsbindinggridtargetglue), [Bi
 **Type**
 
 `(*, value: str)`
+
+Bind Glue intensity.
 
 **Fields**
 
@@ -126,6 +146,8 @@ Types: [BindingGridTargetGlue](#zipzimodelingbindingsbindinggridtargetglue), [Bi
 
 `(*, value: str)`
 
+Bind a mesh.
+
 **Fields**
 
 - `value`: Stable ID of the target mesh whose ordinary grid is being created.
@@ -136,6 +158,8 @@ Types: [BindingGridTargetGlue](#zipzimodelingbindingsbindinggridtargetglue), [Bi
 
 `(*, value: str)`
 
+Bind a scene transform or Part.
+
 **Fields**
 
 - `value`: Stable ID of the target scene transform or Part whose ordinary grid is being created.
@@ -145,6 +169,8 @@ Types: [BindingGridTargetGlue](#zipzimodelingbindingsbindinggridtargetglue), [Bi
 **Type**
 
 `(*, id: str, value: float)`
+
+Stable identity and numeric coordinate of one sample on a binding axis.
 
 **Fields**
 
@@ -157,6 +183,8 @@ increasing.
 **Type**
 
 `(*, id: str, target_id: str, target_kind: BlendShapeTargetKind, key_table_id: str, constraint_ids: tuple[str, ...], keyforms: DeltaKeyforms)`
+
+Binds a target to a BlendShape key table and optional constraints using typed delta shapes.
 
 Types: [BlendShapeTargetKind](#zipzimodelingbindingsblendshapetargetkind), [DeltaKeyforms](#zipzimodelingbindingsdeltakeyforms).
 
@@ -176,6 +204,8 @@ table.
 
 `(*, samples: tuple[ConstraintSample, ...] = (), id: str, parameter_id: str)`
 
+Parameter-driven weights that attenuate a BlendShape contribution.
+
 Types: [ConstraintSample](#zipzimodelingbindingsconstraintsample).
 
 **Fields**
@@ -189,6 +219,8 @@ Types: [ConstraintSample](#zipzimodelingbindingsconstraintsample).
 **Type**
 
 `(*, samples: tuple[BindingSample, ...] = (), base_sample_id: str = '', id: str, parameter_id: str)`
+
+Ordered sample identities and neutral sample for a BlendShape-driving parameter.
 
 Types: [BindingSample](#zipzimodelingbindingsbindingsample).
 
@@ -204,20 +236,24 @@ names the neutral sample.
 
 **Enum**
 
+Selects the target domain and corresponding delta-keyform payload of a BlendShape binding.
+
 **Members**
 
-- `MESH`: 'mesh'
-- `WARP`: 'warp'
-- `ROTATION`: 'rotation'
-- `PART`: 'part'
-- `GLUE`: 'glue'
-- `OFFSCREEN`: 'offscreen'
+- `MESH`: 'mesh' — Target a mesh.
+- `WARP`: 'warp' — Target a warp transform.
+- `ROTATION`: 'rotation' — Target a rotation transform.
+- `PART`: 'part' — Target a Part.
+- `GLUE`: 'glue' — Target a Glue connection.
+- `OFFSCREEN`: 'offscreen' — Target an Offscreen group.
 
 ## zipzi.modeling.bindings.BlendTableOperation
 
 **Alias**
 
 `BlendTableOperationInsert | BlendTableOperationMove | BlendTableOperationDelete | BlendTableOperationSetBase | BlendTableOperationSetParameter | BlendTableOperationRemapParameter`
+
+Edit samples, neutral base or driving parameter of a BlendShape key table.
 
 Types: [BlendTableOperationDelete](#zipzimodelingbindingsblendtableoperationdelete), [BlendTableOperationInsert](#zipzimodelingbindingsblendtableoperationinsert), [BlendTableOperationMove](#zipzimodelingbindingsblendtableoperationmove), [BlendTableOperationRemapParameter](#zipzimodelingbindingsblendtableoperationremapparameter), [BlendTableOperationSetBase](#zipzimodelingbindingsblendtableoperationsetbase), [BlendTableOperationSetParameter](#zipzimodelingbindingsblendtableoperationsetparameter).
 
@@ -227,6 +263,8 @@ Types: [BlendTableOperationDelete](#zipzimodelingbindingsblendtableoperationdele
 **Type**
 
 `(*, sample_id: str, replacement_base: str | None = None)`
+
+Remove a sample, supplying a replacement if its base role requires one.
 
 **Fields**
 
@@ -240,6 +278,8 @@ parameter value.
 
 `(*, sample: BindingSample)`
 
+Insert a stable sample into the key table.
+
 Types: [BindingSample](#zipzimodelingbindingsbindingsample).
 
 **Fields**
@@ -252,6 +292,8 @@ Types: [BindingSample](#zipzimodelingbindingsbindingsample).
 
 `(*, sample_id: str, value: float)`
 
+Change an existing sample coordinate.
+
 **Fields**
 
 - `sample_id`: Stable sample ID from the associated axis or BlendShape key table; not a numeric
@@ -263,6 +305,8 @@ parameter value.
 **Type**
 
 `(*, parameter_id: str, policy: ParameterRangePolicy)`
+
+Change the driving parameter using the chosen coordinate mapping policy.
 
 Types: [ParameterRangePolicy].
 
@@ -278,6 +322,8 @@ requested.
 
 `(*, sample_id: str)`
 
+Select an existing sample as the neutral base.
+
 **Fields**
 
 - `sample_id`: Stable sample ID from the associated axis or BlendShape key table; not a numeric
@@ -289,6 +335,8 @@ parameter value.
 
 `(*, parameter_id: str)`
 
+Assign the table driving parameter.
+
 **Fields**
 
 - `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
@@ -298,6 +346,8 @@ parameter value.
 **Type**
 
 `(*, id: str, value: float, weight: float)`
+
+One stable parameter sample and weight in a BlendShape constraint.
 
 **Fields**
 
@@ -311,6 +361,8 @@ parameter value.
 
 `(*, sample_id: str = '', intensity: float)`
 
+Glue intensity delta at one BlendShape sample.
+
 **Fields**
 
 - `sample_id`: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
@@ -322,6 +374,8 @@ parameter value.
 
 `DeltaKeyformsMesh | DeltaKeyformsWarp | DeltaKeyformsRotation | DeltaKeyformsPart | DeltaKeyformsGlue | DeltaKeyformsOffscreen`
 
+Typed BlendShape sample payload; choose the variant matching the binding target domain.
+
 Types: [DeltaKeyformsGlue](#zipzimodelingbindingsdeltakeyformsglue), [DeltaKeyformsMesh](#zipzimodelingbindingsdeltakeyformsmesh), [DeltaKeyformsOffscreen](#zipzimodelingbindingsdeltakeyformsoffscreen), [DeltaKeyformsPart](#zipzimodelingbindingsdeltakeyformspart), [DeltaKeyformsRotation](#zipzimodelingbindingsdeltakeyformsrotation), [DeltaKeyformsWarp](#zipzimodelingbindingsdeltakeyformswarp).
 
 
@@ -330,6 +384,8 @@ Types: [DeltaKeyformsGlue](#zipzimodelingbindingsdeltakeyformsglue), [DeltaKeyfo
 **Type**
 
 `(*, value: tuple[DeltaGlueKeyform, ...])`
+
+Select Glue intensity delta samples.
 
 Types: [DeltaGlueKeyform](#zipzimodelingbindingsdeltagluekeyform).
 
@@ -344,6 +400,8 @@ channels describe deltas from the base shape.
 
 `(*, value: tuple[DeltaMeshKeyform, ...])`
 
+Select mesh displacement samples.
+
 Types: [DeltaMeshKeyform](#zipzimodelingbindingsdeltameshkeyform).
 
 **Fields**
@@ -356,6 +414,8 @@ channels describe deltas from the base shape.
 **Type**
 
 `(*, value: tuple[DeltaOffscreenKeyform, ...])`
+
+Select Offscreen appearance samples.
 
 Types: [DeltaOffscreenKeyform](#zipzimodelingbindingsdeltaoffscreenkeyform).
 
@@ -370,6 +430,8 @@ channels describe deltas from the base shape.
 
 `(*, value: tuple[DeltaPartKeyform, ...])`
 
+Select Part drawing-order delta samples.
+
 Types: [DeltaPartKeyform](#zipzimodelingbindingsdeltapartkeyform).
 
 **Fields**
@@ -382,6 +444,8 @@ channels describe deltas from the base shape.
 **Type**
 
 `(*, value: tuple[DeltaRotationKeyform, ...])`
+
+Select rotation-transform delta samples.
 
 Types: [DeltaRotationKeyform](#zipzimodelingbindingsdeltarotationkeyform).
 
@@ -396,6 +460,8 @@ channels describe deltas from the base shape.
 
 `(*, value: tuple[DeltaWarpKeyform, ...])`
 
+Select warp lattice displacement samples.
+
 Types: [DeltaWarpKeyform](#zipzimodelingbindingsdeltawarpkeyform).
 
 **Fields**
@@ -408,6 +474,8 @@ channels describe deltas from the base shape.
 **Type**
 
 `(*, sample_id: str = '', positions: tuple[Vec2, ...], opacity: float | None = None, draw_order: float | None = None, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
+
+Mesh displacement and optional appearance deltas at one BlendShape sample.
 
 Types: [Vec2].
 
@@ -428,6 +496,8 @@ channel.
 
 `(*, sample_id: str = '', opacity: float, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
 
+Offscreen appearance contribution at one BlendShape sample.
+
 **Fields**
 
 - `sample_id`: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
@@ -443,6 +513,8 @@ channel.
 
 `(*, sample_id: str = '', draw_order: float)`
 
+Part drawing-order delta at one BlendShape sample.
+
 **Fields**
 
 - `sample_id`: Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
@@ -453,6 +525,8 @@ channel.
 **Type**
 
 `(*, sample_id: str = '', origin: Vec2 | None = None, angle: float | None = None, scale: float | None = None, opacity: float | None = None, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
+
+Rotation-transform and appearance deltas at one BlendShape sample.
 
 Types: [Vec2].
 
@@ -474,6 +548,8 @@ channel.
 **Type**
 
 `(*, sample_id: str = '', points: tuple[Vec2, ...], opacity: float | None = None, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
+
+Warp lattice displacements and optional appearance deltas at one BlendShape sample.
 
 Types: [Vec2].
 
@@ -509,6 +585,8 @@ own identities.
 
 `(*, samples: tuple[str, ...] = (), intensity: float)`
 
+Ordinary Glue intensity at one combination of binding samples.
+
 **Fields**
 
 - `samples`: Stable sample IDs in active binding-axis order; not numeric coordinates.
@@ -520,6 +598,8 @@ own identities.
 
 `GridOperationAddAxis | GridOperationRemapParameter | GridOperationSetParameter | GridOperationReorderAxes | GridOperationInsertSample | GridOperationMoveSample | GridOperationDeleteSample | GridOperationRemoveAxis`
 
+Edit an ordinary binding grid using stable axis and sample identities.
+
 Types: [GridOperationAddAxis](#zipzimodelingbindingsgridoperationaddaxis), [GridOperationDeleteSample](#zipzimodelingbindingsgridoperationdeletesample), [GridOperationInsertSample](#zipzimodelingbindingsgridoperationinsertsample), [GridOperationMoveSample](#zipzimodelingbindingsgridoperationmovesample), [GridOperationRemapParameter](#zipzimodelingbindingsgridoperationremapparameter), [GridOperationRemoveAxis](#zipzimodelingbindingsgridoperationremoveaxis), [GridOperationReorderAxes](#zipzimodelingbindingsgridoperationreorderaxes), [GridOperationSetParameter](#zipzimodelingbindingsgridoperationsetparameter).
 
 
@@ -528,6 +608,8 @@ Types: [GridOperationAddAxis](#zipzimodelingbindingsgridoperationaddaxis), [Grid
 **Type**
 
 `(*, axis: BindingAxis)`
+
+Add an axis and convert the existing grid for that dimension.
 
 Types: [BindingAxis](#zipzimodelingbindingsbindingaxis).
 
@@ -542,6 +624,8 @@ from the parameter ID.
 
 `(*, sample_id: str)`
 
+Remove an existing stable sample.
+
 **Fields**
 
 - `sample_id`: Stable sample ID from the associated axis or BlendShape key table; not a numeric
@@ -552,6 +636,8 @@ parameter value.
 **Type**
 
 `(*, axis_id: str, id: str, value: float)`
+
+Insert a new sample with the supplied identity and coordinate.
 
 **Fields**
 
@@ -565,6 +651,8 @@ parameter value.
 
 `(*, sample_id: str, value: float)`
 
+Change the coordinate of an existing stable sample.
+
 **Fields**
 
 - `sample_id`: Stable sample ID from the associated axis or BlendShape key table; not a numeric
@@ -576,6 +664,8 @@ parameter value.
 **Type**
 
 `(*, axis_id: str, parameter_id: str, policy: ParameterRangePolicy)`
+
+Change the axis parameter with an explicit coordinate mapping policy.
 
 Types: [ParameterRangePolicy].
 
@@ -592,6 +682,8 @@ requested.
 
 `(*, axis_id: str, reduction: AxisReduction | None = None, keep_pending: bool)`
 
+Remove the axis or keep it pending, with explicit reduction when required.
+
 Types: [AxisReduction](#zipzimodelingbindingsaxisreduction).
 
 **Fields**
@@ -606,6 +698,8 @@ Types: [AxisReduction](#zipzimodelingbindingsaxisreduction).
 
 `(*, axis_ids: tuple[str, ...])`
 
+Reorder the grid using stable axis IDs.
+
 **Fields**
 
 - `axis_ids`: Axis IDs in the requested new axis order; IDs refer to axes, not parameters.
@@ -615,6 +709,8 @@ Types: [AxisReduction](#zipzimodelingbindingsaxisreduction).
 **Type**
 
 `(*, axis_id: str, parameter_id: str, reduction: AxisReduction | None = None)`
+
+Assign or clear the driving parameter of an existing axis.
 
 Types: [AxisReduction](#zipzimodelingbindingsaxisreduction).
 
@@ -630,6 +726,8 @@ Types: [AxisReduction](#zipzimodelingbindingsaxisreduction).
 
 `(*, id: str, mesh_id: str, axes: tuple[BindingAxis, ...], keyforms: tuple[MeshKeyform, ...])`
 
+Ordinary parameter grid that drives mesh shapes and appearance.
+
 Types: [BindingAxis](#zipzimodelingbindingsbindingaxis), [MeshKeyform](#zipzimodelingbindingsmeshkeyform).
 
 **Fields**
@@ -638,14 +736,16 @@ Types: [BindingAxis](#zipzimodelingbindingsbindingaxis), [MeshKeyform](#zipzimod
 - `mesh_id`: Stable ID of the target mesh in this document.
 - `axes`: Ordered parameter axes; keyform coordinates follow this order and samples retain their
 own identities.
-- `keyforms`: Shape samples for this binding; coordinate/sample identities must match its axes or key
-table.
+- `keyforms`: One shape per Cartesian combination of active axis samples, with the first axis varying
+fastest. Empty when no axis is active; the mesh base shape is then used.
 
 ## zipzi.modeling.bindings.MeshKeyform
 
 **Type**
 
 `(*, samples: tuple[str, ...] = (), positions: tuple[Vec2, ...], appearance: Appearance, draw_order: float | None = None)`
+
+Ordinary mesh shape at a combination of binding sample identities; positions are absolute.
 
 Types: [Vec2], [Appearance].
 
@@ -664,6 +764,8 @@ unoverridden order.
 
 `(*, opacity: float, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
 
+Offscreen appearance selected by a Part keyform mapping.
+
 **Fields**
 
 - `opacity`: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
@@ -677,6 +779,8 @@ above 1 are retained without clamping.
 
 `(*, samples: tuple[str, ...] = (), draw_order: float)`
 
+Ordinary Part drawing order at a binding sample combination.
+
 **Fields**
 
 - `samples`: Stable sample IDs in active binding-axis order; not numeric coordinates.
@@ -688,6 +792,8 @@ above 1 are retained without clamping.
 
 `PartKeyformSlotStatic | PartKeyformSlotSamples`
 
+Select the static Part slot or an ordinary binding sample combination for an Offscreen mapping.
+
 Types: [PartKeyformSlotSamples](#zipzimodelingbindingspartkeyformslotsamples), [PartKeyformSlotStatic](#zipzimodelingbindingspartkeyformslotstatic).
 
 
@@ -696,6 +802,8 @@ Types: [PartKeyformSlotSamples](#zipzimodelingbindingspartkeyformslotsamples), [
 **Type**
 
 `(*, samples: tuple[str, ...])`
+
+Address one ordinary binding sample combination.
 
 **Fields**
 
@@ -707,12 +815,16 @@ Types: [PartKeyformSlotSamples](#zipzimodelingbindingspartkeyformslotsamples), [
 
 `()`
 
+Address the static Part slot.
+
 
 ## zipzi.modeling.bindings.RotationKeyform
 
 **Type**
 
 `(*, samples: tuple[str, ...] = (), rotation: RotationPose, appearance: Appearance)`
+
+Ordinary rotation pose at a binding sample combination.
 
 Types: [Appearance], [RotationPose].
 
@@ -727,6 +839,8 @@ Types: [Appearance], [RotationPose].
 **Type**
 
 `(*, id: str, axes: tuple[BindingAxis, ...], track: SceneTrack)`
+
+Ordinary parameter grid driving a Warp, Rotation or Part track.
 
 Types: [BindingAxis](#zipzimodelingbindingsbindingaxis), [SceneTrack](#zipzimodelingbindingsscenetrack).
 
@@ -755,6 +869,8 @@ Types: [SceneKeyformPart](#zipzimodelingbindingsscenekeyformpart), [SceneKeyform
 
 `(*, value: PartKeyform)`
 
+Replace a Part track sample.
+
 Types: [PartKeyform](#zipzimodelingbindingspartkeyform).
 
 **Fields**
@@ -766,6 +882,8 @@ Types: [PartKeyform](#zipzimodelingbindingspartkeyform).
 **Type**
 
 `(*, value: RotationKeyform)`
+
+Replace a Rotation track sample.
 
 Types: [RotationKeyform](#zipzimodelingbindingsrotationkeyform).
 
@@ -780,6 +898,8 @@ combination.
 
 `(*, value: WarpKeyform)`
 
+Replace a Warp track sample.
+
 Types: [WarpKeyform](#zipzimodelingbindingswarpkeyform).
 
 **Fields**
@@ -792,6 +912,8 @@ Types: [WarpKeyform](#zipzimodelingbindingswarpkeyform).
 
 `SceneTrackWarp | SceneTrackRotation | SceneTrackPart`
 
+Target and ordinary keyforms driven by a scene binding.
+
 Types: [SceneTrackPart](#zipzimodelingbindingsscenetrackpart), [SceneTrackRotation](#zipzimodelingbindingsscenetrackrotation), [SceneTrackWarp](#zipzimodelingbindingsscenetrackwarp).
 
 
@@ -800,6 +922,8 @@ Types: [SceneTrackPart](#zipzimodelingbindingsscenetrackpart), [SceneTrackRotati
 **Type**
 
 `(*, target_id: PartId, keyforms: tuple[PartKeyform, ...])`
+
+Drive a Part with ordinary drawing-order samples.
 
 Types: [PartKeyform](#zipzimodelingbindingspartkeyform), [PartId].
 
@@ -814,6 +938,8 @@ Types: [PartKeyform](#zipzimodelingbindingspartkeyform), [PartId].
 
 `(*, target_id: TransformId, keyforms: tuple[RotationKeyform, ...])`
 
+Drive a rotation transform with ordinary poses.
+
 Types: [RotationKeyform](#zipzimodelingbindingsrotationkeyform), [TransformId].
 
 **Fields**
@@ -827,6 +953,8 @@ Types: [RotationKeyform](#zipzimodelingbindingsrotationkeyform), [TransformId].
 
 `(*, target_id: TransformId, keyforms: tuple[WarpKeyform, ...])`
 
+Drive a warp transform with ordinary lattice shapes.
+
 Types: [WarpKeyform](#zipzimodelingbindingswarpkeyform), [TransformId].
 
 **Fields**
@@ -839,6 +967,8 @@ Types: [WarpKeyform](#zipzimodelingbindingswarpkeyform), [TransformId].
 **Type**
 
 `(*, bezier: WarpBezier | None = None, samples: tuple[str, ...] = (), positions: tuple[Vec2, ...], appearance: Appearance)`
+
+Ordinary absolute warp lattice shape at a binding sample combination.
 
 Types: [Vec2], [Appearance], [WarpBezier].
 

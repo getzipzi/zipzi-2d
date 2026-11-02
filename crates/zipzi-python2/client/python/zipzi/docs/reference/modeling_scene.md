@@ -20,6 +20,8 @@ Canonical scene modeling values.
 
 `(*, opacity: float, multiply: tuple[float, float, float], screen: tuple[float, float, float])`
 
+Opacity and RGB color factors applied to an object or shape.
+
 **Fields**
 
 - `opacity`: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values

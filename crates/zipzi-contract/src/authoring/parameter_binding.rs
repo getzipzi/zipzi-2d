@@ -18,6 +18,7 @@ impl crate::api_shape::ApiShape for Version {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
+/// Input for creating a document parameter; the host validates its range and supplies omitted defaults.
 pub struct ParameterCreateSpec {
     /// Human-readable display name; use the stable ID for identity because names can change.
     pub name: String,
@@ -99,6 +100,7 @@ pub enum ParameterOperation {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
+/// One driving parameter and its ordered sample coordinates for a new ordinary mesh binding.
 pub struct MeshBindingAxisSpec {
     /// Stable document parameter ID, not its exported runtime identifier.
     pub parameter_id: String,
@@ -109,6 +111,7 @@ pub struct MeshBindingAxisSpec {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
+/// An ordinary mesh shape at one combination of parameter coordinates, using absolute vertex positions.
 pub struct MeshKeyformSpec {
     /// One actual parameter sample value per binding axis, in axis order; each must match a
     /// declared axis sample.
@@ -130,14 +133,15 @@ pub struct MeshKeyformSpec {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
+/// Input for an ordinary mesh binding, including its target, axes and shape samples.
 pub struct MeshBindingCreateSpec {
     /// Stable ID of the target mesh in this document.
     pub mesh_id: String,
-    /// Ordered parameter axes; keyform coordinates follow this order and samples retain their
-    /// own identities.
+    /// Ordered distinct Normal-parameter axes; a driven binding supports at most 16 axes. Each has finite,
+    /// increasing keys within its parameter range. Keyform coordinates follow this order.
     pub axes: Vec<MeshBindingAxisSpec>,
-    /// Shape samples for this binding; coordinate/sample identities must match its axes or key
-    /// table.
+    /// For driven axes, supply exactly one shape per Cartesian key combination; input order
+    /// is normalized with the first axis varying fastest. With no active axes this must be empty.
     pub keyforms: Vec<MeshKeyformSpec>,
     /// Optional new binding UUID; None allocates a fresh UUID when the create operation executes.
     pub id: Option<String>,
@@ -145,12 +149,15 @@ pub struct MeshBindingCreateSpec {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
+/// Create an ordinary mesh binding or write a shape sample in an Edit candidate.
 pub enum MeshBindingOperation {
+    /// Create a mesh binding and allocate its identity if omitted.
     Create {
         /// Creation specification; native admission supplies identities/defaults and rejects
         /// invalid input.
         spec: MeshBindingCreateSpec,
     },
+    /// Insert or replace the shape sample at the supplied axis coordinates.
     SetKeyform {
         /// Stable document object ID used by references; it is distinct from the exported
         /// runtime_id.

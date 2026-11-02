@@ -52,7 +52,7 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                                  '\n'
                                                  'Read one value synchronously by stable document ID, not name. '
                                                  'Returns Snapshot[value] with the captured Source; no lease needs '
-                                                 'closing. Query failures preserve the Edit. Recover OutcomeUnknown '
+                                                 'closing. Query failures do not abort an Edit. Recover OutcomeUnknown '
                                                  'through the original Call.',
                                 'fields': [],
                                 'kind': 'callable',
@@ -66,7 +66,7 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                                       'Read selected stable IDs synchronously from one Source. Copies '
                                                       'ids and preserves requested order and duplicates. Returns '
                                                       'Batch[value], with a valid Source even for empty ids; no lease '
-                                                      'needs closing. Query failures preserve the Edit; recover '
+                                                      'needs closing. Query failures do not abort an Edit; recover '
                                                       'OutcomeUnknown through the original Call.',
                                      'fields': [],
                                      'kind': 'callable',
@@ -79,7 +79,7 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                                   '\n'
                                                   'Read a bounded metadata Page synchronously in SDK storage order, '
                                                   'without geometry/keyform/pixel payloads. The Page captures its '
-                                                  'Source and needs no close. Query failures preserve the Edit; '
+                                                  'Source and needs no close. Query failures do not abort an Edit; '
                                                   'recover OutcomeUnknown through the original Call.',
                                  'fields': [],
                                  'kind': 'callable',
@@ -164,8 +164,8 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                                '\n'
                                                'Read one value synchronously by stable document ID, not name. Returns '
                                                'Snapshot[value] with the captured Source; no lease needs closing. '
-                                               'Query failures preserve the Edit. Recover OutcomeUnknown through the '
-                                               'original Call.',
+                                               'Query failures do not abort an Edit. Recover OutcomeUnknown through '
+                                               'the original Call.',
                               'fields': [],
                               'kind': 'callable',
                               'rule_refs': ('collection-read',),
@@ -177,7 +177,7 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                                     'Read selected stable IDs synchronously from one Source. Copies '
                                                     'ids and preserves requested order and duplicates. Returns '
                                                     'Batch[value], with a valid Source even for empty ids; no lease '
-                                                    'needs closing. Query failures preserve the Edit; recover '
+                                                    'needs closing. Query failures do not abort an Edit; recover '
                                                     'OutcomeUnknown through the original Call.',
                                    'fields': [],
                                    'kind': 'callable',
@@ -190,7 +190,7 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                                 '\n'
                                                 'Read a bounded metadata Page synchronously in SDK storage order, '
                                                 'without geometry/keyform/pixel payloads. The Page captures its Source '
-                                                'and needs no close. Query failures preserve the Edit; recover '
+                                                'and needs no close. Query failures do not abort an Edit; recover '
                                                 'OutcomeUnknown through the original Call.',
                                'fields': [],
                                'kind': 'callable',
@@ -229,8 +229,8 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                                    '\n'
                                                    'Read one value synchronously by stable document ID, not name. '
                                                    'Returns Snapshot[value] with the captured Source; no lease needs '
-                                                   'closing. Query failures preserve the Edit. Recover OutcomeUnknown '
-                                                   'through the original Call.',
+                                                   'closing. Query failures do not abort an Edit. Recover '
+                                                   'OutcomeUnknown through the original Call.',
                                   'fields': [],
                                   'kind': 'callable',
                                   'rule_refs': ('collection-read',),
@@ -243,7 +243,7 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                                         'Read selected stable IDs synchronously from one Source. '
                                                         'Copies ids and preserves requested order and duplicates. '
                                                         'Returns Batch[value], with a valid Source even for empty ids; '
-                                                        'no lease needs closing. Query failures preserve the Edit; '
+                                                        'no lease needs closing. Query failures do not abort an Edit; '
                                                         'recover OutcomeUnknown through the original Call.',
                                        'fields': [],
                                        'kind': 'callable',
@@ -256,7 +256,7 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                                     '\n'
                                                     'Read a bounded metadata Page synchronously in SDK storage order, '
                                                     'without geometry/keyform/pixel payloads. The Page captures its '
-                                                    'Source and needs no close. Query failures preserve the Edit; '
+                                                    'Source and needs no close. Query failures do not abort an Edit; '
                                                     'recover OutcomeUnknown through the original Call.',
                                    'fields': [],
                                    'kind': 'callable',
@@ -409,8 +409,8 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                                   '\n'
                                                   'Read one value synchronously by stable document ID, not name. '
                                                   'Returns Snapshot[value] with the captured Source; no lease needs '
-                                                  'closing. Query failures preserve the Edit. Recover OutcomeUnknown '
-                                                  'through the original Call.',
+                                                  'closing. Query failures do not abort an Edit. Recover '
+                                                  'OutcomeUnknown through the original Call.',
                                  'fields': [],
                                  'kind': 'callable',
                                  'rule_refs': ('collection-read',),
@@ -422,7 +422,7 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                                        'Read selected stable IDs synchronously from one Source. Copies '
                                                        'ids and preserves requested order and duplicates. Returns '
                                                        'Batch[value], with a valid Source even for empty ids; no lease '
-                                                       'needs closing. Query failures preserve the Edit; recover '
+                                                       'needs closing. Query failures do not abort an Edit; recover '
                                                        'OutcomeUnknown through the original Call.',
                                       'fields': [],
                                       'kind': 'callable',
@@ -435,7 +435,7 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                                    '\n'
                                                    'Read a bounded metadata Page synchronously in SDK storage order, '
                                                    'without geometry/keyform/pixel payloads. The Page captures its '
-                                                   'Source and needs no close. Query failures preserve the Edit; '
+                                                   'Source and needs no close. Query failures do not abort an Edit; '
                                                    'recover OutcomeUnknown through the original Call.',
                                   'fields': [],
                                   'kind': 'callable',
@@ -457,8 +457,8 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                               '\n'
                                               'Read one value synchronously by stable document ID, not name. Returns '
                                               'Snapshot[value] with the captured Source; no lease needs closing. Query '
-                                              'failures preserve the Edit. Recover OutcomeUnknown through the original '
-                                              'Call.',
+                                              'failures do not abort an Edit. Recover OutcomeUnknown through the '
+                                              'original Call.',
                              'fields': [],
                              'kind': 'callable',
                              'rule_refs': ('collection-read',),
@@ -470,7 +470,7 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                                    'Read selected stable IDs synchronously from one Source. Copies ids '
                                                    'and preserves requested order and duplicates. Returns '
                                                    'Batch[value], with a valid Source even for empty ids; no lease '
-                                                   'needs closing. Query failures preserve the Edit; recover '
+                                                   'needs closing. Query failures do not abort an Edit; recover '
                                                    'OutcomeUnknown through the original Call.',
                                   'fields': [],
                                   'kind': 'callable',
@@ -483,7 +483,7 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                                '\n'
                                                'Read a bounded metadata Page synchronously in SDK storage order, '
                                                'without geometry/keyform/pixel payloads. The Page captures its Source '
-                                               'and needs no close. Query failures preserve the Edit; recover '
+                                               'and needs no close. Query failures do not abort an Edit; recover '
                                                'OutcomeUnknown through the original Call.',
                               'fields': [],
                               'kind': 'callable',

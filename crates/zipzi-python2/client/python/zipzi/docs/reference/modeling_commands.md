@@ -871,7 +871,8 @@ Types: [Vec2].
 runtime_id.
 - `vertex_ids`: Stable vertex IDs selecting which positions to replace; values are paired with
 positions in the supplied order.
-- `positions`: Absolute XY shape positions in mesh vertex order; these are positions, not vertex IDs.
+- `positions`: Absolute XY shape positions paired with vertex_ids in the supplied order; this can be
+a subset and need not follow mesh storage order.
 
 [Source]: runtime.md#zipzisource
 [ReferenceEdit]: modeling_addressing.md#zipzimodelingaddressingreferenceedit

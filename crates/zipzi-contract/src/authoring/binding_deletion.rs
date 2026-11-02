@@ -7,27 +7,33 @@
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Typed binding, parameter-range and reparenting intents for planning or editing.
 pub enum BindingAuthoringEdit {
+    /// Edit an ordinary binding grid.
     Grid(
         /// Typed intent for ordinary binding-grid edits; apply/plan it against a Session/Edit
         /// source rather than mutating this value.
         BindingGridEdit,
     ),
+    /// Edit BlendShape authoring data.
     Blend(
         /// Typed intent for BlendShape authoring; apply/plan it against a Session/Edit source
         /// rather than mutating this value.
         BlendAuthoringEdit,
     ),
+    /// Edit an ordinary mesh binding grid.
     MeshGrid(
         /// Typed intent for mesh binding grid edits; apply/plan it against a Session/Edit
         /// source rather than mutating this value.
         MeshGridEdit,
     ),
+    /// Change a parameter range and its dependent coordinates.
     ParameterRange(
         /// Typed intent for parameter range conversion; apply/plan it against a Session/Edit
         /// source rather than mutating this value.
         ParameterRangeEdit,
     ),
+    /// Plan a deformation reparenting operation.
     Reparent(
         /// Typed intent for deformation reparenting; apply/plan it against a Session/Edit
         /// source rather than mutating this value.
@@ -36,14 +42,18 @@ pub enum BindingAuthoringEdit {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, zipzi_api_derive::ApiShape)]
+/// Replacement value for a selected binding field address.
 pub enum BindingFieldPatch {
+    /// Replace a sample coordinate.
     SampleValue(#[doc = "Scalar value in the referenced parameter domain."] f32),
+    /// Replace a constraint sample coordinate and weight.
     ConstraintSample {
         /// Scalar value in the referenced parameter domain.
         value: f32,
-        /// Dimensionless interpolation weight applied to the referenced source vertex.
+        /// Dimensionless BlendShape constraint weight at this parameter sample.
         weight: f32,
     },
+    /// Change the parameter assigned to an axis.
     AxisParameter {
         /// Stable document parameter ID, not its exported runtime identifier.
         parameter_id: String,

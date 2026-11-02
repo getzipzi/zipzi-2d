@@ -16,6 +16,8 @@ Numeric binding inputs and canonical values from one Rust declaration.
 
 `(opacity: float, multiply: Sequence[float], screen: Sequence[float]) -> None`
 
+Opacity and RGB color factors applied to an object or shape.
+
 **Fields**
 
 - `opacity`: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
@@ -29,6 +31,8 @@ above 1 are retained without clamping.
 
 `(parameter_id: str, keys: Sequence[float]) -> None`
 
+One driving parameter and its ordered sample coordinates for a new ordinary mesh binding.
+
 **Fields**
 
 - `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
@@ -40,6 +44,8 @@ not sample indices.
 **Type**
 
 `(id: str, samples: Sequence[Sample], parameter_id: str) -> None`
+
+One ordered parameter dimension of an ordinary binding grid.
 
 Types: [Sample](#zipzibindingssample).
 
@@ -56,6 +62,8 @@ axis.
 
 `(spec: MeshBindingSpec) -> None`
 
+Create a mesh binding and allocate its identity if omitted.
+
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 Types: [MeshBindingSpec](#zipzibindingsmeshbindingspec).
@@ -71,6 +79,8 @@ invalid input.
 **Type**
 
 `(keys: Sequence[float], positions: Sequence[Point], opacity: float | None=None, multiply: Sequence[float] | None=None, screen: Sequence[float] | None=None, draw_order: float | None=None) -> None`
+
+An ordinary mesh shape at one combination of parameter coordinates, using absolute vertex positions.
 
 **Fields**
 
@@ -91,6 +101,8 @@ evaluation.
 
 `(samples: Sequence[str], positions: Sequence[Point], appearance: Appearance, draw_order: float | None) -> None`
 
+Ordinary mesh shape at a combination of binding sample identities; positions are absolute.
+
 Types: [Appearance](#zipzibindingsappearance).
 
 **Fields**
@@ -108,6 +120,8 @@ unoverridden order.
 
 `(id: str, mesh_id: str, axes: Sequence[AxisSnapshot], keyforms: Sequence[KeyformSnapshot]) -> None`
 
+Ordinary parameter grid that drives mesh shapes and appearance.
+
 Types: [AxisSnapshot](#zipzibindingsaxissnapshot), [KeyformSnapshot](#zipzibindingskeyformsnapshot).
 
 **Fields**
@@ -116,8 +130,8 @@ Types: [AxisSnapshot](#zipzibindingsaxissnapshot), [KeyformSnapshot](#zipzibindi
 - `mesh_id`: Stable ID of the target mesh in this document.
 - `axes`: Ordered parameter axes; keyform coordinates follow this order and samples retain their
 own identities.
-- `keyforms`: Shape samples for this binding; coordinate/sample identities must match its axes or key
-table.
+- `keyforms`: One shape per Cartesian combination of active axis samples, with the first axis varying
+fastest. Empty when no axis is active; the mesh base shape is then used.
 
 ## zipzi.bindings.MeshBindingSpec
 
@@ -125,15 +139,17 @@ table.
 
 `(mesh_id: str, axes: Sequence[Axis], keyforms: Sequence[Keyform], id: str | None=None) -> None`
 
+Input for an ordinary mesh binding, including its target, axes and shape samples.
+
 Types: [Axis](#zipzibindingsaxis), [Keyform](#zipzibindingskeyform).
 
 **Fields**
 
 - `mesh_id`: Stable ID of the target mesh in this document.
-- `axes`: Ordered parameter axes; keyform coordinates follow this order and samples retain their
-own identities.
-- `keyforms`: Shape samples for this binding; coordinate/sample identities must match its axes or key
-table.
+- `axes`: Ordered distinct Normal-parameter axes; a driven binding supports at most 16 axes. Each has finite,
+increasing keys within its parameter range. Keyform coordinates follow this order.
+- `keyforms`: For driven axes, supply exactly one shape per Cartesian key combination; input order
+is normalized with the first axis varying fastest. With no active axes this must be empty.
 - `id`: Optional new binding UUID; None allocates a fresh UUID when the create operation executes.
 
 ## zipzi.bindings.Sample
@@ -141,6 +157,8 @@ table.
 **Type**
 
 `(id: str, value: float) -> None`
+
+Stable identity and numeric coordinate of one sample on a binding axis.
 
 **Fields**
 
@@ -153,6 +171,8 @@ increasing.
 **Type**
 
 `(id: str, keyform: Keyform) -> None`
+
+Insert or replace the shape sample at the supplied axis coordinates.
 
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 

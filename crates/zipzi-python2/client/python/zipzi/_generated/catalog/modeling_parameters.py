@@ -9,7 +9,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.parameters': {'children': ('zipzi.mode
                                'signature': ''},
  'zipzi.modeling.parameters.Parameter': {'children': ('zipzi.modeling.parameters.Parameter.__repr__',
                                                       'zipzi.modeling.parameters.Parameter.summary'),
-                                         'documentation': '',
+                                         'documentation': 'Authored document parameter whose stable ID identifies it '
+                                                          'in bindings and evaluation.',
                                          'fields': [('id',
                                                      'Stable document object ID used by references; it is distinct '
                                                      'from the exported runtime_id.'),
@@ -45,13 +46,20 @@ DATA: dict[str, Entry] = {'zipzi.modeling.parameters': {'children': ('zipzi.mode
  'zipzi.modeling.parameters.Parameter.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.parameters.Parameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.parameters.ParameterKind': {'children': (),
-                                             'documentation': '',
-                                             'fields': [('NORMAL', "'normal'"), ('BLEND_SHAPE', "'blend_shape'")],
+                                             'documentation': 'Selects whether a parameter drives ordinary binding '
+                                                              'grids or BlendShape data.',
+                                             'fields': [('NORMAL',
+                                                         "'normal' — Drives ordinary bindings and their sampled "
+                                                         'grids.'),
+                                                        ('BLEND_SHAPE',
+                                                         "'blend_shape' — Drives BlendShape key tables and "
+                                                         'constraints.')],
                                              'kind': 'enum',
                                              'signature': ''},
  'zipzi.modeling.parameters.ParameterRangeEdit': {'children': ('zipzi.modeling.parameters.ParameterRangeEdit.__repr__',
                                                                'zipzi.modeling.parameters.ParameterRangeEdit.summary'),
-                                                  'documentation': '',
+                                                  'documentation': 'Proposed parameter range and default change with '
+                                                                   'an explicit dependent-key policy.',
                                                   'fields': [('parameter_id',
                                                               'Stable document parameter ID, not its exported runtime '
                                                               'identifier.'),
@@ -73,8 +81,12 @@ DATA: dict[str, Entry] = {'zipzi.modeling.parameters': {'children': ('zipzi.mode
  'zipzi.modeling.parameters.ParameterRangeEdit.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.parameters.ParameterRangeEdit.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.parameters.ParameterRangePolicy': {'children': (),
-                                                    'documentation': '',
-                                                    'fields': [('KEEP_KEY_VALUES', "'KeepKeyValues'"),
+                                                    'documentation': 'Policy for dependent sample coordinates when '
+                                                                     'changing a parameter range or mapping.',
+                                                    'fields': [('KEEP_KEY_VALUES',
+                                                                "'KeepKeyValues' — Keep numeric coordinates unchanged; "
+                                                                'validation rejects coordinates outside the new '
+                                                                'domain.'),
                                                                ('MAP_KEY_VALUES',
                                                                 "'MapKeyValues' — Map every dependent key by the same "
                                                                 'increasing affine change of domain.')],

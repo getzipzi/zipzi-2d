@@ -121,8 +121,11 @@ pub enum OffscreenDeletePolicy {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Select the static Part slot or an ordinary binding sample combination for an Offscreen mapping.
 pub enum PartKeyformSlot {
+    /// Address the static Part slot.
     Static,
+    /// Address one ordinary binding sample combination.
     Samples {
         /// Stable sample IDs selecting one ordinary-binding combination, in active axis order.
         samples: Vec<String>,

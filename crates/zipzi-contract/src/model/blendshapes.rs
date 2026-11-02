@@ -1,12 +1,19 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Selects the target domain and corresponding delta-keyform payload of a BlendShape binding.
 pub enum BlendShapeTargetKind {
+    /// Target a mesh.
     Mesh,
+    /// Target a warp transform.
     Warp,
+    /// Target a rotation transform.
     Rotation,
+    /// Target a Part.
     Part,
+    /// Target a Glue connection.
     Glue,
+    /// Target an Offscreen group.
     Offscreen,
 }
 
@@ -19,6 +26,7 @@ pub enum BlendShapeTargetKind {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Ordered sample identities and neutral sample for a BlendShape-driving parameter.
 pub struct BlendShapeKeyTable {
     #[serde(default)]
     /// Ordered stable parameter samples with strictly increasing finite values; base_sample_id
@@ -46,6 +54,7 @@ pub struct BlendShapeKeyTable {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Parameter-driven weights that attenuate a BlendShape contribution.
 pub struct BlendShapeConstraint {
     #[serde(default)]
     /// Ordered parameter samples with weights used to attenuate the BlendShape contribution.
@@ -70,6 +79,7 @@ pub struct BlendShapeConstraint {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Mesh displacement and optional appearance deltas at one BlendShape sample.
 pub struct DeltaMeshKeyform {
     #[serde(default)]
     /// Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
@@ -98,6 +108,7 @@ pub struct DeltaMeshKeyform {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Warp lattice displacements and optional appearance deltas at one BlendShape sample.
 pub struct DeltaWarpKeyform {
     #[serde(default)]
     /// Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
@@ -124,6 +135,7 @@ pub struct DeltaWarpKeyform {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Rotation-transform and appearance deltas at one BlendShape sample.
 pub struct DeltaRotationKeyform {
     #[serde(default)]
     /// Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
@@ -155,6 +167,7 @@ pub struct DeltaRotationKeyform {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Part drawing-order delta at one BlendShape sample.
 pub struct DeltaPartKeyform {
     #[serde(default)]
     /// Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
@@ -173,6 +186,7 @@ pub struct DeltaPartKeyform {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Glue intensity delta at one BlendShape sample.
 pub struct DeltaGlueKeyform {
     #[serde(default)]
     /// Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
@@ -191,6 +205,7 @@ pub struct DeltaGlueKeyform {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Offscreen appearance contribution at one BlendShape sample.
 pub struct DeltaOffscreenKeyform {
     #[serde(default)]
     /// Stable sample ID in the referenced BlendShape key table, not a numeric parameter value.
@@ -210,32 +225,39 @@ pub struct DeltaOffscreenKeyform {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "items", rename_all = "snake_case")]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Typed BlendShape sample payload; choose the variant matching the binding target domain.
 pub enum DeltaKeyforms {
+    /// Select mesh displacement samples.
     Mesh(
         /// Ordered Mesh BlendShape displacement keyforms, each keyed by stable sample_id;
         /// channels describe deltas from the base shape.
         Vec<DeltaMeshKeyform>,
     ),
+    /// Select warp lattice displacement samples.
     Warp(
         /// Ordered Warp BlendShape displacement keyforms, each keyed by stable sample_id;
         /// channels describe deltas from the base shape.
         Vec<DeltaWarpKeyform>,
     ),
+    /// Select rotation-transform delta samples.
     Rotation(
         /// Ordered Rotation BlendShape displacement keyforms, each keyed by stable sample_id;
         /// channels describe deltas from the base shape.
         Vec<DeltaRotationKeyform>,
     ),
+    /// Select Part drawing-order delta samples.
     Part(
         /// Ordered Part BlendShape displacement keyforms, each keyed by stable sample_id;
         /// channels describe deltas from the base shape.
         Vec<DeltaPartKeyform>,
     ),
+    /// Select Glue intensity delta samples.
     Glue(
         /// Ordered Glue BlendShape displacement keyforms, each keyed by stable sample_id;
         /// channels describe deltas from the base shape.
         Vec<DeltaGlueKeyform>,
     ),
+    /// Select Offscreen appearance samples.
     Offscreen(
         /// Ordered Offscreen BlendShape displacement keyforms, each keyed by stable sample_id;
         /// channels describe deltas from the base shape.
@@ -269,6 +291,7 @@ impl DeltaKeyforms {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Binds a target to a BlendShape key table and optional constraints using typed delta shapes.
 pub struct BlendShapeBinding {
     /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,

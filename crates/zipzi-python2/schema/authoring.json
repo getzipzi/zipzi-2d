@@ -1,6 +1,6 @@
 {
   "_generated_by": "zipzi-python2/tools/generate.py",
-  "contract_sha256": "d4ad04418cbe498752ad62cf238600e45d107aa01ce707e9a93e84431ed0bb38",
+  "contract_sha256": "df8ac0b4614893b84cb6af0ce2fe23f1807be257723e2512b68a2eda8f029854",
   "format_version": 2,
   "root": {
     "binary": {
@@ -741,11 +741,11 @@
     },
     {
       "path": "types/bindings.json",
-      "sha256": "4a9b477d804e2790373c29bf0c7f04464dee0cac2e4a6be4f9ce88c4f9dea068"
+      "sha256": "3998050c4d4d592f51bbafa1f15ac2d7e1f5b0d70c9b52c0ff02c125c5016f88"
     },
     {
       "path": "types/commands.json",
-      "sha256": "250a10becdf0a3e317afed34e92eaff69732e98d50da0ecb3277ea6699467a91"
+      "sha256": "43ea50aed104289ac80518af60d4ec3b6405898eeabd0285cb9c0fd8c24313af"
     },
     {
       "path": "types/common.json",
@@ -777,7 +777,7 @@
     },
     {
       "path": "types/parameters.json",
-      "sha256": "97daa35a1dc5089523029b6b5ff8d3da5b06e3a3daf3324faf02db25872680ac"
+      "sha256": "2f4844b2a6e20452f2b7d4660c39fb5e07457b388ad0b53ba1ba74c4fb2f826a"
     },
     {
       "path": "types/physics.json",
@@ -813,7 +813,7 @@
     },
     {
       "path": "types/scene.json",
-      "sha256": "e462283d292576f9a16a9ab597e5ccd111260b072bb14a59ebafb9687aabf0ff"
+      "sha256": "cc2e5580b31a19f64babcf410fcbc0602c3b596f4a051fae0efc6ff0740b5fd1"
     },
     {
       "path": "types/spatial.json",

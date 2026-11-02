@@ -42,6 +42,8 @@ Alias of [zipzi.modeling.parameters.ParameterKind](modeling_parameters.md#zipzim
 
 `(id: str, runtime_id: str, name: str, minimum: float, maximum: float, default_value: float, decimal_places: int, kind: Kind, repeat: bool) -> None`
 
+Authored document parameter whose stable ID identifies it in bindings and evaluation.
+
 Types: [ParameterKind].
 
 **Fields**
@@ -92,6 +94,8 @@ value; it does not reset the field to its default.
 **Type**
 
 `(name: str, minimum: float, maximum: float, default_value: float, id: str | None=None, runtime_id: str | None=None, kind: Kind | None=None, decimal_places: int | None=None, repeat: bool | None=None) -> None`
+
+Input for creating a document parameter; the host validates its range and supplies omitted defaults.
 
 Types: [ParameterKind].
 

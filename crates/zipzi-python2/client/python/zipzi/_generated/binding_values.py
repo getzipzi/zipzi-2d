@@ -11,7 +11,7 @@ Point = tuple[float, float]
 
 @dataclass(frozen=True, init=False, repr=False)
 class Axis(CompactValue):
-    '\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nkeys: Strictly increasing finite parameter sample values for this axis, in parameter units;\nnot sample indices.'
+    'One driving parameter and its ordered sample coordinates for a new ordinary mesh binding.\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nkeys: Strictly increasing finite parameter sample values for this axis, in parameter units;\nnot sample indices.'
     __module__ = "zipzi.bindings"
     parameter_id: str
     keys: tuple[float, ...]
@@ -37,7 +37,7 @@ def encode_Axis(value: Axis) -> dict[str, object]:
 
 @dataclass(frozen=True, init=False, repr=False)
 class Keyform(CompactValue):
-    '\n\nFields:\nkeys: One actual parameter sample value per binding axis, in axis order; each must match a\ndeclared axis sample.\npositions: Absolute mesh-local positions, one per target mesh vertex in vertex_ids order; not\ndisplacement vectors.\nopacity: Optional finite nonnegative opacity factor; None uses the native neutral default 1.\nValues above 1 are retained for import roundtrips.\nmultiply: Optional RGB multiply factors; None uses neutral (1, 1, 1).\nscreen: Optional RGB screen factors; None uses neutral (0, 0, 0).\ndraw_order: Optional keyform drawing-order coordinate; None leaves the order unspecified for native\nevaluation.'
+    'An ordinary mesh shape at one combination of parameter coordinates, using absolute vertex positions.\n\nFields:\nkeys: One actual parameter sample value per binding axis, in axis order; each must match a\ndeclared axis sample.\npositions: Absolute mesh-local positions, one per target mesh vertex in vertex_ids order; not\ndisplacement vectors.\nopacity: Optional finite nonnegative opacity factor; None uses the native neutral default 1.\nValues above 1 are retained for import roundtrips.\nmultiply: Optional RGB multiply factors; None uses neutral (1, 1, 1).\nscreen: Optional RGB screen factors; None uses neutral (0, 0, 0).\ndraw_order: Optional keyform drawing-order coordinate; None leaves the order unspecified for native\nevaluation.'
     __module__ = "zipzi.bindings"
     keys: tuple[float, ...]
     positions: tuple[Point, ...]
@@ -84,7 +84,7 @@ def encode_Keyform(value: Keyform) -> dict[str, object]:
 
 @dataclass(frozen=True, init=False, repr=False)
 class MeshBindingSpec(CompactValue):
-    '\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\naxes: Ordered parameter axes; keyform coordinates follow this order and samples retain their\nown identities.\nkeyforms: Shape samples for this binding; coordinate/sample identities must match its axes or key\ntable.\nid: Optional new binding UUID; None allocates a fresh UUID when the create operation executes.'
+    'Input for an ordinary mesh binding, including its target, axes and shape samples.\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\naxes: Ordered distinct Normal-parameter axes; a driven binding supports at most 16 axes. Each has finite,\nincreasing keys within its parameter range. Keyform coordinates follow this order.\nkeyforms: For driven axes, supply exactly one shape per Cartesian key combination; input order\nis normalized with the first axis varying fastest. With no active axes this must be empty.\nid: Optional new binding UUID; None allocates a fresh UUID when the create operation executes.'
     __module__ = "zipzi.bindings"
     mesh_id: str
     axes: tuple[Axis, ...]
@@ -118,7 +118,7 @@ def encode_MeshBindingSpec(value: MeshBindingSpec) -> dict[str, object]:
 
 @dataclass(frozen=True, init=False, repr=False)
 class Create(CompactValue):
-    "\n\nFields:\nspec: Creation specification; native admission supplies identities/defaults and rejects\ninvalid input.\nkind: Fixed value 'create_mesh_binding' (read-only).\n\nA variant constructor supplies its fixed operation discriminator automatically. The attribute is read-only and is not a constructor argument or an editable business field. Choose a variant by its documented business effect; the discriminator identifies its wire operation."
+    "Create a mesh binding and allocate its identity if omitted.\n\nFields:\nspec: Creation specification; native admission supplies identities/defaults and rejects\ninvalid input.\nkind: Fixed value 'create_mesh_binding' (read-only).\n\nA variant constructor supplies its fixed operation discriminator automatically. The attribute is read-only and is not a constructor argument or an editable business field. Choose a variant by its documented business effect; the discriminator identifies its wire operation."
     __module__ = "zipzi.bindings"
     kind: ClassVar[Literal['create_mesh_binding']] = 'create_mesh_binding'
     _variant: ClassVar[str] = 'create'
@@ -142,7 +142,7 @@ def encode_Create(value: Create) -> dict[str, object]:
 
 @dataclass(frozen=True, init=False, repr=False)
 class SetKeyform(CompactValue):
-    "\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nkeyform: Complete shape sample to insert or replace; unrelated samples are retained.\nkind: Fixed value 'set_mesh_keyform' (read-only).\n\nA variant constructor supplies its fixed operation discriminator automatically. The attribute is read-only and is not a constructor argument or an editable business field. Choose a variant by its documented business effect; the discriminator identifies its wire operation."
+    "Insert or replace the shape sample at the supplied axis coordinates.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nkeyform: Complete shape sample to insert or replace; unrelated samples are retained.\nkind: Fixed value 'set_mesh_keyform' (read-only).\n\nA variant constructor supplies its fixed operation discriminator automatically. The attribute is read-only and is not a constructor argument or an editable business field. Choose a variant by its documented business effect; the discriminator identifies its wire operation."
     __module__ = "zipzi.bindings"
     kind: ClassVar[Literal['set_mesh_keyform']] = 'set_mesh_keyform'
     _variant: ClassVar[str] = 'set_keyform'
@@ -182,7 +182,7 @@ def encode_Operation(value: Operation) -> dict[str, object]:
 
 @dataclass(frozen=True, init=False, repr=False)
 class Sample(CompactValue):
-    '\n\nFields:\nid: Stable sample UUID within the binding axis; distinct from its numeric value.\nvalue: Finite sample coordinate in the driving parameter domain; axis samples are strictly\nincreasing.'
+    'Stable identity and numeric coordinate of one sample on a binding axis.\n\nFields:\nid: Stable sample UUID within the binding axis; distinct from its numeric value.\nvalue: Finite sample coordinate in the driving parameter domain; axis samples are strictly\nincreasing.'
     __module__ = "zipzi.bindings"
     id: str
     value: float
@@ -198,7 +198,7 @@ class Sample(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class AxisSnapshot(CompactValue):
-    '\n\nFields:\nid: Stable axis UUID; an empty ID is allocated during native binding normalization.\nsamples: Ordered stable samples with strictly increasing finite parameter values.\nparameter_id: Document parameter ID driving the axis; an empty string represents a pending/unassigned\naxis.'
+    'One ordered parameter dimension of an ordinary binding grid.\n\nFields:\nid: Stable axis UUID; an empty ID is allocated during native binding normalization.\nsamples: Ordered stable samples with strictly increasing finite parameter values.\nparameter_id: Document parameter ID driving the axis; an empty string represents a pending/unassigned\naxis.'
     __module__ = "zipzi.bindings"
     id: str
     samples: tuple[Sample, ...]
@@ -216,7 +216,7 @@ class AxisSnapshot(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class Appearance(CompactValue):
-    '\n\nFields:\nopacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.\nmultiply: RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.\nscreen: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.'
+    'Opacity and RGB color factors applied to an object or shape.\n\nFields:\nopacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.\nmultiply: RGB multiply factors in channel order R, G, B; (1, 1, 1) is neutral.\nscreen: RGB screen factors in channel order R, G, B; (0, 0, 0) is neutral.'
     __module__ = "zipzi.bindings"
     opacity: float
     multiply: tuple[float, float, float]
@@ -234,7 +234,7 @@ class Appearance(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class KeyformSnapshot(CompactValue):
-    '\n\nFields:\nsamples: Stable sample IDs, one per active binding axis in axis order; not numeric sample\ncoordinates.\npositions: Absolute mesh-local shape positions in target mesh vertex order; not displacement vectors.\nappearance: Opacity and multiply/screen color factors for this object or shape.\ndraw_order: Optional keyform drawing-order coordinate; None lets native evaluation use its\nunoverridden order.'
+    'Ordinary mesh shape at a combination of binding sample identities; positions are absolute.\n\nFields:\nsamples: Stable sample IDs, one per active binding axis in axis order; not numeric sample\ncoordinates.\npositions: Absolute mesh-local shape positions in target mesh vertex order; not displacement vectors.\nappearance: Opacity and multiply/screen color factors for this object or shape.\ndraw_order: Optional keyform drawing-order coordinate; None lets native evaluation use its\nunoverridden order.'
     __module__ = "zipzi.bindings"
     samples: tuple[str, ...]
     positions: tuple[Point, ...]
@@ -254,7 +254,7 @@ class KeyformSnapshot(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class MeshBinding(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nmesh_id: Stable ID of the target mesh in this document.\naxes: Ordered parameter axes; keyform coordinates follow this order and samples retain their\nown identities.\nkeyforms: Shape samples for this binding; coordinate/sample identities must match its axes or key\ntable.'
+    'Ordinary parameter grid that drives mesh shapes and appearance.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nmesh_id: Stable ID of the target mesh in this document.\naxes: Ordered parameter axes; keyform coordinates follow this order and samples retain their\nown identities.\nkeyforms: One shape per Cartesian combination of active axis samples, with the first axis varying\nfastest. Empty when no axis is active; the mesh base shape is then used.'
     __module__ = "zipzi.bindings"
     id: str
     mesh_id: str

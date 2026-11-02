@@ -294,7 +294,8 @@ pub enum ModelingCommand {
         /// Stable vertex IDs selecting which positions to replace; values are paired with
         /// positions in the supplied order.
         vertex_ids: Vec<u32>,
-        /// Absolute XY shape positions in mesh vertex order; these are positions, not vertex IDs.
+        /// Absolute XY shape positions paired with vertex_ids in the supplied order; this can be
+        /// a subset and need not follow mesh storage order.
         positions: Vec<crate::model::Vec2>,
     },
     /// Insert or replace one mesh shape sample.

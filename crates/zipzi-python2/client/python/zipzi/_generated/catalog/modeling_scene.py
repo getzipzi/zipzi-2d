@@ -170,7 +170,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                           'signature': ''},
  'zipzi.modeling.scene.Appearance': {'children': ('zipzi.modeling.scene.Appearance.__repr__',
                                                   'zipzi.modeling.scene.Appearance.summary'),
-                                     'documentation': '',
+                                     'documentation': 'Opacity and RGB color factors applied to an object or shape.',
                                      'fields': [('opacity',
                                                  'Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. '
                                                  'Imported values\n'

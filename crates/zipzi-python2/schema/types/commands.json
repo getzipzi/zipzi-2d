@@ -1324,7 +1324,7 @@
               "skip": false
             },
             {
-              "doc": "Absolute XY shape positions in mesh vertex order; these are positions, not vertex IDs.",
+              "doc": "Absolute XY shape positions paired with vertex_ids in the supplied order; this can be\na subset and need not follow mesh storage order.",
               "name": "positions",
               "rust_name": "positions",
               "shape": {

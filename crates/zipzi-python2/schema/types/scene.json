@@ -4838,6 +4838,7 @@
       "tuple": false
     },
     "zipzi_contract::model::Appearance": {
+      "doc": "Opacity and RGB color factors applied to an object or shape.",
       "fields": [
         {
           "doc": "Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.",

@@ -102,6 +102,7 @@ pub struct GlueBinding {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Ordinary Glue intensity at one combination of binding samples.
 pub struct GlueKeyform {
     #[serde(default)]
     /// Stable sample IDs in active binding-axis order; not numeric coordinates.
@@ -119,6 +120,7 @@ pub struct GlueKeyform {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Stable identity and numeric coordinate of one sample on a binding axis.
 pub struct BindingSample {
     /// Stable sample UUID within the binding axis; distinct from its numeric value.
     pub id: String,
@@ -135,6 +137,7 @@ pub struct BindingSample {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// One stable parameter sample and weight in a BlendShape constraint.
 pub struct ConstraintSample {
     /// Stable constraint-sample UUID.
     pub id: String,
@@ -153,6 +156,7 @@ pub struct ConstraintSample {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// One ordered parameter dimension of an ordinary binding grid.
 pub struct BindingAxis {
     #[serde(default)]
     /// Stable axis UUID; an empty ID is allocated during native binding normalization.

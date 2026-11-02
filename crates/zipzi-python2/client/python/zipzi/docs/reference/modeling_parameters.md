@@ -16,6 +16,8 @@ Canonical parameters modeling values.
 
 `(*, id: str, runtime_id: str, name: str, minimum: float, maximum: float, default_value: float, decimal_places: int = 6, kind: ParameterKind = ParameterKind.NORMAL, repeat: bool = False)`
 
+Authored document parameter whose stable ID identifies it in bindings and evaluation.
+
 Types: [ParameterKind](#zipzimodelingparametersparameterkind).
 
 **Fields**
@@ -34,16 +36,20 @@ Types: [ParameterKind](#zipzimodelingparametersparameterkind).
 
 **Enum**
 
+Selects whether a parameter drives ordinary binding grids or BlendShape data.
+
 **Members**
 
-- `NORMAL`: 'normal'
-- `BLEND_SHAPE`: 'blend_shape'
+- `NORMAL`: 'normal' — Drives ordinary bindings and their sampled grids.
+- `BLEND_SHAPE`: 'blend_shape' — Drives BlendShape key tables and constraints.
 
 ## zipzi.modeling.parameters.ParameterRangeEdit
 
 **Type**
 
 `(*, parameter_id: str, minimum: float, maximum: float, default_value: float, policy: ParameterRangePolicy)`
+
+Proposed parameter range and default change with an explicit dependent-key policy.
 
 Types: [ParameterRangePolicy](#zipzimodelingparametersparameterrangepolicy).
 
@@ -59,7 +65,9 @@ Types: [ParameterRangePolicy](#zipzimodelingparametersparameterrangepolicy).
 
 **Enum**
 
+Policy for dependent sample coordinates when changing a parameter range or mapping.
+
 **Members**
 
-- `KEEP_KEY_VALUES`: 'KeepKeyValues'
+- `KEEP_KEY_VALUES`: 'KeepKeyValues' — Keep numeric coordinates unchanged; validation rejects coordinates outside the new domain.
 - `MAP_KEY_VALUES`: 'MapKeyValues' — Map every dependent key by the same increasing affine change of domain.

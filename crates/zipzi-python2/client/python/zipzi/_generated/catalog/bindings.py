@@ -15,7 +15,7 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
                     'kind': 'module',
                     'signature': ''},
  'zipzi.bindings.Appearance': {'children': ('zipzi.bindings.Appearance.__repr__', 'zipzi.bindings.Appearance.summary'),
-                               'documentation': '',
+                               'documentation': 'Opacity and RGB color factors applied to an object or shape.',
                                'fields': [('opacity',
                                            'Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. '
                                            'Imported values\n'
@@ -30,7 +30,8 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
  'zipzi.bindings.Appearance.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.bindings.Appearance.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.Axis': {'children': ('zipzi.bindings.Axis.__repr__', 'zipzi.bindings.Axis.summary'),
-                         'documentation': '',
+                         'documentation': 'One driving parameter and its ordered sample coordinates for a new ordinary '
+                                          'mesh binding.',
                          'fields': [('parameter_id',
                                      'Stable document parameter ID, not its exported runtime identifier.'),
                                     ('keys',
@@ -43,7 +44,7 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
  'zipzi.bindings.Axis.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.AxisSnapshot': {'children': ('zipzi.bindings.AxisSnapshot.__repr__',
                                               'zipzi.bindings.AxisSnapshot.summary'),
-                                 'documentation': '',
+                                 'documentation': 'One ordered parameter dimension of an ordinary binding grid.',
                                  'fields': [('id',
                                              'Stable axis UUID; an empty ID is allocated during native binding '
                                              'normalization.'),
@@ -60,7 +61,7 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
  'zipzi.bindings.AxisSnapshot.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.bindings.AxisSnapshot.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.Create': {'children': ('zipzi.bindings.Create.__repr__', 'zipzi.bindings.Create.summary'),
-                           'documentation': '',
+                           'documentation': 'Create a mesh binding and allocate its identity if omitted.',
                            'field_roles': (('kind', 'fixed-discriminator', "'create_mesh_binding'"),),
                            'fields': [('spec',
                                        'Creation specification; native admission supplies identities/defaults and '
@@ -74,7 +75,8 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
  'zipzi.bindings.Create.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.bindings.Create.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.Keyform': {'children': ('zipzi.bindings.Keyform.__repr__', 'zipzi.bindings.Keyform.summary'),
-                            'documentation': '',
+                            'documentation': 'An ordinary mesh shape at one combination of parameter coordinates, '
+                                             'using absolute vertex positions.',
                             'fields': [('keys',
                                         'One actual parameter sample value per binding axis, in axis order; each must '
                                         'match a\n'
@@ -101,7 +103,8 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
  'zipzi.bindings.Keyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.KeyformSnapshot': {'children': ('zipzi.bindings.KeyformSnapshot.__repr__',
                                                  'zipzi.bindings.KeyformSnapshot.summary'),
-                                    'documentation': '',
+                                    'documentation': 'Ordinary mesh shape at a combination of binding sample '
+                                                     'identities; positions are absolute.',
                                     'fields': [('samples',
                                                 'Stable sample IDs, one per active binding axis in axis order; not '
                                                 'numeric sample\n'
@@ -123,7 +126,7 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
  'zipzi.bindings.KeyformSnapshot.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.MeshBinding': {'children': ('zipzi.bindings.MeshBinding.__repr__',
                                              'zipzi.bindings.MeshBinding.summary'),
-                                'documentation': '',
+                                'documentation': 'Ordinary parameter grid that drives mesh shapes and appearance.',
                                 'fields': [('id',
                                             'Stable document object ID used by references; it is distinct from the '
                                             'exported runtime_id.'),
@@ -133,9 +136,10 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
                                             'retain their\n'
                                             'own identities.'),
                                            ('keyforms',
-                                            'Shape samples for this binding; coordinate/sample identities must match '
-                                            'its axes or key\n'
-                                            'table.')],
+                                            'One shape per Cartesian combination of active axis samples, with the '
+                                            'first axis varying\n'
+                                            'fastest. Empty when no axis is active; the mesh base shape is then '
+                                            'used.')],
                                 'kind': 'type',
                                 'signature': '(id: str, mesh_id: str, axes: Sequence[AxisSnapshot], keyforms: '
                                              'Sequence[KeyformSnapshot]) -> None',
@@ -144,16 +148,19 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
  'zipzi.bindings.MeshBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.MeshBindingSpec': {'children': ('zipzi.bindings.MeshBindingSpec.__repr__',
                                                  'zipzi.bindings.MeshBindingSpec.summary'),
-                                    'documentation': '',
+                                    'documentation': 'Input for an ordinary mesh binding, including its target, axes '
+                                                     'and shape samples.',
                                     'fields': [('mesh_id', 'Stable ID of the target mesh in this document.'),
                                                ('axes',
-                                                'Ordered parameter axes; keyform coordinates follow this order and '
-                                                'samples retain their\n'
-                                                'own identities.'),
+                                                'Ordered distinct Normal-parameter axes; a driven binding supports at '
+                                                'most 16 axes. Each has finite,\n'
+                                                'increasing keys within its parameter range. Keyform coordinates '
+                                                'follow this order.'),
                                                ('keyforms',
-                                                'Shape samples for this binding; coordinate/sample identities must '
-                                                'match its axes or key\n'
-                                                'table.'),
+                                                'For driven axes, supply exactly one shape per Cartesian key '
+                                                'combination; input order\n'
+                                                'is normalized with the first axis varying fastest. With no active '
+                                                'axes this must be empty.'),
                                                ('id',
                                                 'Optional new binding UUID; None allocates a fresh UUID when the '
                                                 'create operation executes.')],
@@ -164,7 +171,7 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
  'zipzi.bindings.MeshBindingSpec.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.bindings.MeshBindingSpec.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.Sample': {'children': ('zipzi.bindings.Sample.__repr__', 'zipzi.bindings.Sample.summary'),
-                           'documentation': '',
+                           'documentation': 'Stable identity and numeric coordinate of one sample on a binding axis.',
                            'fields': [('id',
                                        'Stable sample UUID within the binding axis; distinct from its numeric value.'),
                                       ('value',
@@ -176,7 +183,7 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
  'zipzi.bindings.Sample.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.bindings.Sample.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.SetKeyform': {'children': ('zipzi.bindings.SetKeyform.__repr__', 'zipzi.bindings.SetKeyform.summary'),
-                               'documentation': '',
+                               'documentation': 'Insert or replace the shape sample at the supplied axis coordinates.',
                                'field_roles': (('kind', 'fixed-discriminator', "'set_mesh_keyform'"),),
                                'fields': [('id',
                                            'Stable document object ID used by references; it is distinct from the '

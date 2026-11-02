@@ -899,8 +899,9 @@ class PythonReference(unittest.TestCase):
     # Pages only enter this set after full page acceptance. Cross-page pilots
     # are exact paths; accepting modeling does not accept modeling.* domains.
     ACCEPTED_PAGES = frozenset({'meshes'})
-    # P1 has no structural gaps; cross-domain semantic acceptance remains open.
-    STRUCTURAL_PAGES = frozenset('runtime runtime_session runtime_edit modeling modeling_common modeling_runtime ops modeling_commands modeling_queries events'.split())
+    # P1/P2 have no structural gaps; cross-domain semantic acceptance remains open.
+    STRUCTURAL_PAGES = frozenset(('runtime runtime_session runtime_edit modeling modeling_common modeling_runtime ops modeling_commands modeling_queries events '
+                                  'parameters bindings modeling_parameters modeling_bindings modeling_bindings_edits').split())
     BATCH_PAGES = {
         'S': 'meshes',
         'P1': 'runtime runtime_session runtime_edit modeling modeling_common modeling_runtime ops modeling_commands modeling_queries events',
@@ -1062,6 +1063,27 @@ class PythonReference(unittest.TestCase):
         self.assertTrue({'builtin','typing','type-variable','public-sdk'}<=self.quality['reference_classifications'].keys())
         self.assertTrue(any(row['status']=='review_required' and row['category']=='callable-return' for row in self.quality['semantic_review']))
         self.assertTrue(any(row['status']=='not_applicable' for row in self.quality['semantic_review']))
+
+    def test_reference_binding_coordinates_and_reduction_semantics(self):
+        convenience = self.catalog['zipzi.bindings.Keyform']
+        canonical = self.catalog['zipzi.modeling.bindings.MeshKeyform']
+        delta = self.catalog['zipzi.modeling.bindings.DeltaMeshKeyform']
+        self.assertIn('axis order', dict(convenience['fields'])['keys'])
+        self.assertIn('vertex_ids order', dict(convenience['fields'])['positions'])
+        self.assertIn('sample IDs', dict(canonical['fields'])['samples'])
+        self.assertIn('Absolute', dict(canonical['fields'])['positions'])
+        self.assertIn('displacement', dict(delta['fields'])['positions'])
+        spec = dict(self.catalog['zipzi.bindings.MeshBindingSpec']['fields'])
+        result = dict(self.catalog['zipzi.modeling.bindings.MeshBinding']['fields'])
+        self.assertIn('Cartesian', spec['keyforms'])
+        self.assertIn('first axis varying', spec['keyforms'])
+        self.assertIn('mesh base shape', result['keyforms'])
+        update = dict(self.catalog['zipzi.modeling.commands.ModelingCommandUpdatePositions']['fields'])
+        self.assertIn('paired with vertex_ids', update['positions'])
+        self.assertIn('existing sample', self.catalog['zipzi.modeling.bindings.AxisReductionSlice']['documentation'])
+        self.assertIn('between existing samples', self.catalog['zipzi.modeling.bindings.AxisReductionResample']['documentation'])
+        self.assertIn('sample coordinates', self.catalog['zipzi.bindings.Axis']['documentation'])
+        self.assertIn('ordinary', self.catalog['zipzi.parameters.Kind']['documentation'])
 
     def test_reference_private_union_does_not_hide_unknown_members(self):
         original = gen._api_codegen.render_api

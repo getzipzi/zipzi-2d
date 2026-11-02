@@ -48,7 +48,7 @@ Read bindings through a Session or Edit. Session reads committed document conten
 
 Reads committed Session content.
 
-Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures preserve the Edit. Recover OutcomeUnknown through the original Call.
+Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures do not abort an Edit. Recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -63,7 +63,7 @@ Types: [Snapshot], [Source], [MeshBinding].
 
 Reads committed Session content.
 
-Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -78,7 +78,7 @@ Types: [Batch], [Source], [MeshBinding].
 
 Reads committed Session content.
 
-Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection paging and recovery](common.md#collection-page).
 
@@ -186,7 +186,7 @@ Read meshes through a Session or Edit. Session reads committed document content;
 
 Reads committed Session content.
 
-Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures preserve the Edit. Recover OutcomeUnknown through the original Call.
+Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures do not abort an Edit. Recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -201,7 +201,7 @@ Types: [Snapshot], [Source], [Mesh].
 
 Reads committed Session content.
 
-Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -216,7 +216,7 @@ Types: [Batch], [Source], [Mesh].
 
 Reads committed Session content.
 
-Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection paging and recovery](common.md#collection-page).
 
@@ -315,7 +315,7 @@ Read parameters through a Session or Edit. Session reads committed document cont
 
 Reads committed Session content.
 
-Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures preserve the Edit. Recover OutcomeUnknown through the original Call.
+Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures do not abort an Edit. Recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -330,7 +330,7 @@ Types: [Snapshot], [Source], [Parameter].
 
 Reads committed Session content.
 
-Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -345,7 +345,7 @@ Types: [Batch], [Source], [Parameter].
 
 Reads committed Session content.
 
-Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection paging and recovery](common.md#collection-page).
 
@@ -499,7 +499,7 @@ Read resources through a Session or Edit. Session reads committed document conte
 
 Reads committed Session content.
 
-Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures preserve the Edit. Recover OutcomeUnknown through the original Call.
+Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures do not abort an Edit. Recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -514,7 +514,7 @@ Types: [Snapshot], [Source], [Image].
 
 Reads committed Session content.
 
-Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -529,7 +529,7 @@ Types: [Batch], [Source], [Image].
 
 Reads committed Session content.
 
-Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection paging and recovery](common.md#collection-page).
 
@@ -564,7 +564,7 @@ Read scene through a Session or Edit. Session reads committed document content; 
 
 Reads committed Session content.
 
-Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures preserve the Edit. Recover OutcomeUnknown through the original Call.
+Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures do not abort an Edit. Recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -579,7 +579,7 @@ Types: [Snapshot], [Source], [Summary].
 
 Reads committed Session content.
 
-Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection reads and recovery](common.md#collection-read).
 
@@ -594,7 +594,7 @@ Types: [Batch], [Source], [Summary].
 
 Reads committed Session content.
 
-Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
+Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.
 
 See [Collection paging and recovery](common.md#collection-page).
 

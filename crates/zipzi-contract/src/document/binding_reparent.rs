@@ -7,12 +7,16 @@
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Select the target domain for an ordinary binding grid.
 pub enum BindingGridTarget {
+    /// Bind a mesh.
     Mesh(#[doc = "Stable ID of the target mesh whose ordinary grid is being created."] String),
+    /// Bind a scene transform or Part.
     Scene(
         /// Stable ID of the target scene transform or Part whose ordinary grid is being created.
         String,
     ),
+    /// Bind Glue intensity.
     Glue(#[doc = "Stable ID of the target Glue whose ordinary grid is being created."] String),
 }
 #[derive(
@@ -24,12 +28,14 @@ pub enum BindingGridTarget {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Create, edit or delete an ordinary binding grid on a selected owner.
 pub enum BindingGridEdit {
     /// Explicitly discard owned shapes and return to the unchanged base target.
     Delete {
         /// Stable owner ID for the addressed drawing group, collection or reference selection.
         owner: String,
     },
+    /// Create an ordinary grid on the selected target.
     Create {
         /// New stable UUID for this object; it must not conflict with an existing identity.
         id: String,
@@ -37,6 +43,7 @@ pub enum BindingGridEdit {
         /// undeformed base shape.
         target: BindingGridTarget,
     },
+    /// Apply an axis or sample operation to an existing grid.
     Edit {
         /// Stable owner ID for the addressed drawing group, collection or reference selection.
         owner: String,

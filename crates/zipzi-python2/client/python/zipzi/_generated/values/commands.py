@@ -494,7 +494,7 @@ ModelingCommandRenameMesh.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandUpdatePositions(CompactValue):
-    'Replace positions for the selected mesh vertex IDs in paired order.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nvertex_ids: Stable vertex IDs selecting which positions to replace; values are paired with\npositions in the supplied order.\npositions: Absolute XY shape positions in mesh vertex order; these are positions, not vertex IDs.'
+    'Replace positions for the selected mesh vertex IDs in paired order.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nvertex_ids: Stable vertex IDs selecting which positions to replace; values are paired with\npositions in the supplied order.\npositions: Absolute XY shape positions paired with vertex_ids in the supplied order; this can be\na subset and need not follow mesh storage order.'
     _variant: _ClassVar[str] = 'update_positions'
     kind: _ClassVar[str] = "modeling"
     id: str

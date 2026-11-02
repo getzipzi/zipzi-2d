@@ -28,7 +28,8 @@ DATA: dict[str, Entry] = {'zipzi.parameters': {'children': ('zipzi.parameters.Cr
  'zipzi.parameters.Kind': {'alias': 'zipzi.modeling.parameters.ParameterKind'},
  'zipzi.parameters.Parameter': {'children': ('zipzi.parameters.Parameter.__repr__',
                                              'zipzi.parameters.Parameter.summary'),
-                                'documentation': '',
+                                'documentation': 'Authored document parameter whose stable ID identifies it in '
+                                                 'bindings and evaluation.',
                                 'fields': [('id',
                                             'Stable document object ID used by references; it is distinct from the '
                                             'exported runtime_id.'),
@@ -112,7 +113,8 @@ DATA: dict[str, Entry] = {'zipzi.parameters': {'children': ('zipzi.parameters.Cr
  'zipzi.parameters.ParameterPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.parameters.ParameterSpec': {'children': ('zipzi.parameters.ParameterSpec.__repr__',
                                                  'zipzi.parameters.ParameterSpec.summary'),
-                                    'documentation': '',
+                                    'documentation': 'Input for creating a document parameter; the host validates its '
+                                                     'range and supplies omitted defaults.',
                                     'fields': [('name',
                                                 'Human-readable display name; use the stable ID for identity because '
                                                 'names can change.'),

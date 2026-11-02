@@ -936,8 +936,11 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                         'to replace; values are paired with\n'
                                                                         'positions in the supplied order.'),
                                                                        ('positions',
-                                                                        'Absolute XY shape positions in mesh vertex '
-                                                                        'order; these are positions, not vertex IDs.')],
+                                                                        'Absolute XY shape positions paired with '
+                                                                        'vertex_ids in the supplied order; this can '
+                                                                        'be\n'
+                                                                        'a subset and need not follow mesh storage '
+                                                                        'order.')],
                                                             'kind': 'type',
                                                             'signature': '(*, id: str, vertex_ids: tuple[int, ...], '
                                                                          'positions: tuple[Vec2, ...])',

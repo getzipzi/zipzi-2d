@@ -18,6 +18,7 @@ pub enum BlendMode {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Opacity and RGB color factors applied to an object or shape.
 pub struct Appearance {
     /// Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
     /// above 1 are retained without clamping.
@@ -154,8 +155,11 @@ fn default_decimal_places() -> i32 {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Selects whether a parameter drives ordinary binding grids or BlendShape data.
 pub enum ParameterKind {
     #[default]
+    /// Drives ordinary bindings and their sampled grids.
     Normal,
+    /// Drives BlendShape key tables and constraints.
     BlendShape,
 }

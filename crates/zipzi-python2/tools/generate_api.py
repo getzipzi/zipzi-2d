@@ -292,19 +292,19 @@ def render_api(contract,header,rust_header,resolve,codec_domains,*,documentation
          '    def get(self, id: str, *, expected: Source | None = None) -> Snapshot['+domain+'.'+value+']:',
          '        '+documented(cls, 'get',
              'Read one value synchronously by stable document ID, not name. '
-             'Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures preserve the Edit. '
+             'Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures do not abort an Edit. '
              'Recover OutcomeUnknown through the original Call.', 'collection-read'),
          '        return project(lambda: self._read((id,),expected), self._single, operation='+repr(domain+'.get')+', inputs=(id,expected))',
          '    def get_many(self, ids: Sequence[str], *, expected: Source | None = None) -> Batch['+domain+'.'+value+']:',
          '        '+documented(cls, 'get_many',
              'Read selected stable IDs synchronously from one Source. '
              'Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. '
-             'Query failures preserve the Edit; recover OutcomeUnknown through the original Call.', 'collection-read'),
+             'Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.', 'collection-read'),
          '        return self._read(tuple(ids),expected)',
          '    def list(self, *, name: str | None = None, limit: int = 128, cursor: PageCursor | None = None) -> Page['+summary+']:',
          '        '+documented(cls, 'list',
              'Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. '
-             'The Page captures its Source and needs no close. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.', 'collection-page'),
+             'The Page captures its Source and needs no close. Query failures do not abort an Edit; recover OutcomeUnknown through the original Call.', 'collection-page'),
          '        return self._page(name,limit,cursor,'+summary+'.read)','']
         if cls=='Images':facade+=['    def snapshot(self, id: str) -> resources.ImageLease:',
             '        '+repr('Capture pixels of image id at this exact formal/candidate source into an independent ImageLease. '

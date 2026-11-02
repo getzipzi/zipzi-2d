@@ -43,57 +43,7 @@
     ],
     [
       "empty-summary",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:Blend",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:Grid",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:MeshGrid",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:ParameterRange",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:Reparent",
-      ""
-    ],
-    [
-      "empty-summary",
       "rust:zipzi_contract::authoring::BindingCapabilities|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::authoring::BindingFieldPatch|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::authoring::BindingFieldPatch|projection:variant:AxisParameter",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::authoring::BindingFieldPatch|projection:variant:ConstraintSample",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::authoring::BindingFieldPatch|projection:variant:SampleValue",
       ""
     ],
     [
@@ -308,31 +258,6 @@
     ],
     [
       "empty-summary",
-      "rust:zipzi_contract::authoring::MeshBindingAxisSpec|projection:binding_values.Axis",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::authoring::MeshBindingCreateSpec|projection:binding_values.MeshBindingSpec",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::authoring::MeshBindingOperation|projection:binding_values.Create",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::authoring::MeshBindingOperation|projection:binding_values.SetKeyform",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::authoring::MeshKeyformSpec|projection:binding_values.Keyform",
-      ""
-    ],
-    [
-      "empty-summary",
       "rust:zipzi_contract::authoring::MeshQuality|projection:canonical",
       ""
     ],
@@ -364,11 +289,6 @@
     [
       "empty-summary",
       "rust:zipzi_contract::authoring::OrganizationCapabilities|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::authoring::ParameterCreateSpec|projection:parameter_values.ParameterSpec",
       ""
     ],
     [
@@ -669,126 +589,6 @@
     [
       "empty-summary",
       "rust:zipzi_contract::document::AttachmentRef|projection:variant:Unresolved",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::AxisReduction|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::AxisReduction|projection:variant:Resample",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::AxisReduction|projection:variant:Slice",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BindingGridEdit|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BindingGridEdit|projection:variant:Create",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BindingGridEdit|projection:variant:Edit",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BindingGridTarget|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BindingGridTarget|projection:variant:Glue",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BindingGridTarget|projection:variant:Mesh",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BindingGridTarget|projection:variant:Scene",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:Constraint",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:CreateBinding",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:CreateConstraint",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:CreateTable",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:SetBindingTable",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:Table",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:variant:Delete",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:variant:Insert",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:variant:Move",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:variant:RemapParameter",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:variant:SetBase",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:variant:SetParameter",
       ""
     ],
     [
@@ -1458,91 +1258,6 @@
     ],
     [
       "empty-summary",
-      "rust:zipzi_contract::document::GridOperation|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:AddAxis",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:DeleteSample",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:InsertSample",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:MoveSample",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:RemapParameter",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:RemoveAxis",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:ReorderAxes",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:SetParameter",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:AddAxis",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:Create",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:DeleteSample",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:InsertSample",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:MoveSample",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:RemoveAxis",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:ReorderAxes",
-      ""
-    ],
-    [
-      "empty-summary",
       "rust:zipzi_contract::document::Model3Settings|projection:canonical",
       ""
     ],
@@ -1899,31 +1614,6 @@
     [
       "empty-summary",
       "rust:zipzi_contract::document::PackageAttachment|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::ParameterRangeEdit|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::ParameterRangePolicy|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::PartKeyformSlot|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::PartKeyformSlot|projection:variant:Samples",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::document::PartKeyformSlot|projection:variant:Static",
       ""
     ],
     [
@@ -2773,62 +2463,7 @@
     ],
     [
       "empty-summary",
-      "rust:zipzi_contract::model::Appearance|projection:binding_values.Appearance",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::Appearance|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::BindingAxis|projection:binding_values.AxisSnapshot",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::BindingAxis|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::BindingSample|projection:binding_values.Sample",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::BindingSample|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
       "rust:zipzi_contract::model::BlendMode|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::BlendShapeBinding|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::BlendShapeConstraint|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::BlendShapeKeyTable|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::ConstraintSample|projection:canonical",
       ""
     ],
     [
@@ -2883,76 +2518,6 @@
     ],
     [
       "empty-summary",
-      "rust:zipzi_contract::model::DeltaGlueKeyform|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Glue",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Mesh",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Offscreen",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Part",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Rotation",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Warp",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::DeltaMeshKeyform|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::DeltaOffscreenKeyform|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::DeltaPartKeyform|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::DeltaRotationKeyform|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::DeltaWarpKeyform|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::GlueKeyform|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
       "rust:zipzi_contract::model::GlueVertexPair|projection:canonical",
       ""
     ],
@@ -2973,32 +2538,7 @@
     ],
     [
       "empty-summary",
-      "rust:zipzi_contract::model::MeshBinding|projection:binding_values.MeshBinding",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::MeshBinding|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::MeshKeyform|projection:binding_values.KeyformSnapshot",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::MeshKeyform|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
       "rust:zipzi_contract::model::Mesh|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::OffscreenKeyform|projection:canonical",
       ""
     ],
     [
@@ -3008,32 +2548,7 @@
     ],
     [
       "empty-summary",
-      "rust:zipzi_contract::model::ParameterKind|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::Parameter|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::Parameter|projection:parameter_values.Parameter",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::PartKeyform|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
       "rust:zipzi_contract::model::Part|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::RotationKeyform|projection:canonical",
       ""
     ],
     [
@@ -3044,46 +2559,6 @@
     [
       "empty-summary",
       "rust:zipzi_contract::model::RotationTransform|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::SceneBinding|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::SceneKeyform|projection:variant:Part",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::SceneKeyform|projection:variant:Rotation",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::SceneKeyform|projection:variant:Warp",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::SceneTrack|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::SceneTrack|projection:variant:Part",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::SceneTrack|projection:variant:Rotation",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::SceneTrack|projection:variant:Warp",
       ""
     ],
     [
@@ -3104,11 +2579,6 @@
     [
       "empty-summary",
       "rust:zipzi_contract::model::Transform|projection:canonical",
-      ""
-    ],
-    [
-      "empty-summary",
-      "rust:zipzi_contract::model::WarpKeyform|projection:canonical",
       ""
     ],
     [
@@ -4623,11 +4093,6 @@
     ],
     [
       "enum-member",
-      "rust:zipzi_contract::document::ParameterRangePolicy|projection:canonical",
-      "KEEP_KEY_VALUES"
-    ],
-    [
-      "enum-member",
       "rust:zipzi_contract::document::ReferenceSelectionField|projection:canonical",
       "BLEND_CONSTRAINTS"
     ],
@@ -4758,36 +4223,6 @@
     ],
     [
       "enum-member",
-      "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
-      "GLUE"
-    ],
-    [
-      "enum-member",
-      "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
-      "MESH"
-    ],
-    [
-      "enum-member",
-      "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
-      "OFFSCREEN"
-    ],
-    [
-      "enum-member",
-      "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
-      "PART"
-    ],
-    [
-      "enum-member",
-      "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
-      "ROTATION"
-    ],
-    [
-      "enum-member",
-      "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
-      "WARP"
-    ],
-    [
-      "enum-member",
       "rust:zipzi_contract::model::DeformerOriginalSource|projection:canonical",
       "CREATED"
     ],
@@ -4800,16 +4235,6 @@
       "enum-member",
       "rust:zipzi_contract::model::DeformerOriginalSource|projection:canonical",
       "MANUAL"
-    ],
-    [
-      "enum-member",
-      "rust:zipzi_contract::model::ParameterKind|projection:canonical",
-      "BLEND_SHAPE"
-    ],
-    [
-      "enum-member",
-      "rust:zipzi_contract::model::ParameterKind|projection:canonical",
-      "NORMAL"
     ],
     [
       "enum-member",
@@ -5143,57 +4568,7 @@
     ],
     [
       "type-summary",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:Blend",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:Grid",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:MeshGrid",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:ParameterRange",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:Reparent",
-      ""
-    ],
-    [
-      "type-summary",
       "rust:zipzi_contract::authoring::BindingCapabilities|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::authoring::BindingFieldPatch|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::authoring::BindingFieldPatch|projection:variant:AxisParameter",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::authoring::BindingFieldPatch|projection:variant:ConstraintSample",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::authoring::BindingFieldPatch|projection:variant:SampleValue",
       ""
     ],
     [
@@ -5408,31 +4783,6 @@
     ],
     [
       "type-summary",
-      "rust:zipzi_contract::authoring::MeshBindingAxisSpec|projection:binding_values.Axis",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::authoring::MeshBindingCreateSpec|projection:binding_values.MeshBindingSpec",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::authoring::MeshBindingOperation|projection:binding_values.Create",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::authoring::MeshBindingOperation|projection:binding_values.SetKeyform",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::authoring::MeshKeyformSpec|projection:binding_values.Keyform",
-      ""
-    ],
-    [
-      "type-summary",
       "rust:zipzi_contract::authoring::MeshQuality|projection:canonical",
       ""
     ],
@@ -5464,11 +4814,6 @@
     [
       "type-summary",
       "rust:zipzi_contract::authoring::OrganizationCapabilities|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::authoring::ParameterCreateSpec|projection:parameter_values.ParameterSpec",
       ""
     ],
     [
@@ -5769,126 +5114,6 @@
     [
       "type-summary",
       "rust:zipzi_contract::document::AttachmentRef|projection:variant:Unresolved",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::AxisReduction|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::AxisReduction|projection:variant:Resample",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::AxisReduction|projection:variant:Slice",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BindingGridEdit|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BindingGridEdit|projection:variant:Create",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BindingGridEdit|projection:variant:Edit",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BindingGridTarget|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BindingGridTarget|projection:variant:Glue",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BindingGridTarget|projection:variant:Mesh",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BindingGridTarget|projection:variant:Scene",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:Constraint",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:CreateBinding",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:CreateConstraint",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:CreateTable",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:SetBindingTable",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:Table",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:variant:Delete",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:variant:Insert",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:variant:Move",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:variant:RemapParameter",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:variant:SetBase",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:variant:SetParameter",
       ""
     ],
     [
@@ -6558,91 +5783,6 @@
     ],
     [
       "type-summary",
-      "rust:zipzi_contract::document::GridOperation|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:AddAxis",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:DeleteSample",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:InsertSample",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:MoveSample",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:RemapParameter",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:RemoveAxis",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:ReorderAxes",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:SetParameter",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:AddAxis",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:Create",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:DeleteSample",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:InsertSample",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:MoveSample",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:RemoveAxis",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:ReorderAxes",
-      ""
-    ],
-    [
-      "type-summary",
       "rust:zipzi_contract::document::Model3Settings|projection:canonical",
       ""
     ],
@@ -6999,31 +6139,6 @@
     [
       "type-summary",
       "rust:zipzi_contract::document::PackageAttachment|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::ParameterRangeEdit|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::ParameterRangePolicy|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::PartKeyformSlot|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::PartKeyformSlot|projection:variant:Samples",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::document::PartKeyformSlot|projection:variant:Static",
       ""
     ],
     [
@@ -7873,62 +6988,7 @@
     ],
     [
       "type-summary",
-      "rust:zipzi_contract::model::Appearance|projection:binding_values.Appearance",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::Appearance|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::BindingAxis|projection:binding_values.AxisSnapshot",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::BindingAxis|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::BindingSample|projection:binding_values.Sample",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::BindingSample|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
       "rust:zipzi_contract::model::BlendMode|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::BlendShapeBinding|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::BlendShapeConstraint|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::BlendShapeKeyTable|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::BlendShapeTargetKind|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::ConstraintSample|projection:canonical",
       ""
     ],
     [
@@ -7983,76 +7043,6 @@
     ],
     [
       "type-summary",
-      "rust:zipzi_contract::model::DeltaGlueKeyform|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Glue",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Mesh",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Offscreen",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Part",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Rotation",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Warp",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::DeltaMeshKeyform|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::DeltaOffscreenKeyform|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::DeltaPartKeyform|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::DeltaRotationKeyform|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::DeltaWarpKeyform|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::GlueKeyform|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
       "rust:zipzi_contract::model::GlueVertexPair|projection:canonical",
       ""
     ],
@@ -8073,32 +7063,7 @@
     ],
     [
       "type-summary",
-      "rust:zipzi_contract::model::MeshBinding|projection:binding_values.MeshBinding",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::MeshBinding|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::MeshKeyform|projection:binding_values.KeyformSnapshot",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::MeshKeyform|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
       "rust:zipzi_contract::model::Mesh|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::OffscreenKeyform|projection:canonical",
       ""
     ],
     [
@@ -8108,32 +7073,7 @@
     ],
     [
       "type-summary",
-      "rust:zipzi_contract::model::ParameterKind|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::Parameter|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::Parameter|projection:parameter_values.Parameter",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::PartKeyform|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
       "rust:zipzi_contract::model::Part|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::RotationKeyform|projection:canonical",
       ""
     ],
     [
@@ -8144,46 +7084,6 @@
     [
       "type-summary",
       "rust:zipzi_contract::model::RotationTransform|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::SceneBinding|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::SceneKeyform|projection:variant:Part",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::SceneKeyform|projection:variant:Rotation",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::SceneKeyform|projection:variant:Warp",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::SceneTrack|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::SceneTrack|projection:variant:Part",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::SceneTrack|projection:variant:Rotation",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::SceneTrack|projection:variant:Warp",
       ""
     ],
     [
@@ -8204,11 +7104,6 @@
     [
       "type-summary",
       "rust:zipzi_contract::model::Transform|projection:canonical",
-      ""
-    ],
-    [
-      "type-summary",
-      "rust:zipzi_contract::model::WarpKeyform|projection:canonical",
       ""
     ],
     [
@@ -9023,86 +7918,6 @@
     ],
     [
       "union-branch",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:canonical",
-      "Blend"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:canonical",
-      "Grid"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:canonical",
-      "MeshGrid"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:canonical",
-      "ParameterRange"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:canonical",
-      "Reparent"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:Blend",
-      "Blend"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:Grid",
-      "Grid"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:MeshGrid",
-      "MeshGrid"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:ParameterRange",
-      "ParameterRange"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::authoring::BindingAuthoringEdit|projection:variant:Reparent",
-      "Reparent"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::authoring::BindingFieldPatch|projection:canonical",
-      "AxisParameter"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::authoring::BindingFieldPatch|projection:canonical",
-      "ConstraintSample"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::authoring::BindingFieldPatch|projection:canonical",
-      "SampleValue"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::authoring::BindingFieldPatch|projection:variant:AxisParameter",
-      "AxisParameter"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::authoring::BindingFieldPatch|projection:variant:ConstraintSample",
-      "ConstraintSample"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::authoring::BindingFieldPatch|projection:variant:SampleValue",
-      "SampleValue"
-    ],
-    [
-      "union-branch",
       "rust:zipzi_contract::authoring::CapabilityState|projection:canonical",
       "Available"
     ],
@@ -9310,16 +8125,6 @@
       "union-branch",
       "rust:zipzi_contract::authoring::ManualMeshOperation|projection:variant:ReleaseConstraint",
       "ReleaseConstraint"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::authoring::MeshBindingOperation|projection:binding_values.Create",
-      "Create"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::authoring::MeshBindingOperation|projection:binding_values.SetKeyform",
-      "SetKeyform"
     ],
     [
       "union-branch",
@@ -9600,196 +8405,6 @@
       "union-branch",
       "rust:zipzi_contract::document::AttachmentRef|projection:variant:Unresolved",
       "Unresolved"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::AxisReduction|projection:canonical",
-      "Resample"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::AxisReduction|projection:canonical",
-      "Slice"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::AxisReduction|projection:variant:Resample",
-      "Resample"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::AxisReduction|projection:variant:Slice",
-      "Slice"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BindingGridEdit|projection:canonical",
-      "Create"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BindingGridEdit|projection:canonical",
-      "Edit"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BindingGridEdit|projection:variant:Create",
-      "Create"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BindingGridEdit|projection:variant:Edit",
-      "Edit"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BindingGridTarget|projection:canonical",
-      "Glue"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BindingGridTarget|projection:canonical",
-      "Mesh"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BindingGridTarget|projection:canonical",
-      "Scene"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BindingGridTarget|projection:variant:Glue",
-      "Glue"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BindingGridTarget|projection:variant:Mesh",
-      "Mesh"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BindingGridTarget|projection:variant:Scene",
-      "Scene"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
-      "Constraint"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
-      "CreateBinding"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
-      "CreateConstraint"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
-      "CreateTable"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
-      "SetBindingTable"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:canonical",
-      "Table"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:Constraint",
-      "Constraint"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:CreateBinding",
-      "CreateBinding"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:CreateConstraint",
-      "CreateConstraint"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:CreateTable",
-      "CreateTable"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:SetBindingTable",
-      "SetBindingTable"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendAuthoringEdit|projection:variant:Table",
-      "Table"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
-      "Delete"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
-      "Insert"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
-      "Move"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
-      "RemapParameter"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
-      "SetBase"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:canonical",
-      "SetParameter"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:variant:Delete",
-      "Delete"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:variant:Insert",
-      "Insert"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:variant:Move",
-      "Move"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:variant:RemapParameter",
-      "RemapParameter"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:variant:SetBase",
-      "SetBase"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::BlendTableOperation|projection:variant:SetParameter",
-      "SetParameter"
     ],
     [
       "union-branch",
@@ -10783,156 +9398,6 @@
     ],
     [
       "union-branch",
-      "rust:zipzi_contract::document::GridOperation|projection:canonical",
-      "AddAxis"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::GridOperation|projection:canonical",
-      "DeleteSample"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::GridOperation|projection:canonical",
-      "InsertSample"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::GridOperation|projection:canonical",
-      "MoveSample"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::GridOperation|projection:canonical",
-      "RemapParameter"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::GridOperation|projection:canonical",
-      "RemoveAxis"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::GridOperation|projection:canonical",
-      "ReorderAxes"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::GridOperation|projection:canonical",
-      "SetParameter"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:AddAxis",
-      "AddAxis"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:DeleteSample",
-      "DeleteSample"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:InsertSample",
-      "InsertSample"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:MoveSample",
-      "MoveSample"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:RemapParameter",
-      "RemapParameter"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:RemoveAxis",
-      "RemoveAxis"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:ReorderAxes",
-      "ReorderAxes"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::GridOperation|projection:variant:SetParameter",
-      "SetParameter"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
-      "AddAxis"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
-      "Create"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
-      "DeleteSample"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
-      "InsertSample"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
-      "MoveSample"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
-      "RemoveAxis"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:canonical",
-      "ReorderAxes"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:AddAxis",
-      "AddAxis"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:Create",
-      "Create"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:DeleteSample",
-      "DeleteSample"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:InsertSample",
-      "InsertSample"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:MoveSample",
-      "MoveSample"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:RemoveAxis",
-      "RemoveAxis"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::MeshGridEdit|projection:variant:ReorderAxes",
-      "ReorderAxes"
-    ],
-    [
-      "union-branch",
       "rust:zipzi_contract::document::ModelTargetRef|projection:canonical",
       "Resolved"
     ],
@@ -11440,26 +9905,6 @@
       "union-branch",
       "rust:zipzi_contract::document::OrganizationEdit|projection:variant:SetParameterGroup",
       "SetParameterGroup"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::PartKeyformSlot|projection:canonical",
-      "Samples"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::PartKeyformSlot|projection:canonical",
-      "Static"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::PartKeyformSlot|projection:variant:Samples",
-      "Samples"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::document::PartKeyformSlot|projection:variant:Static",
-      "Static"
     ],
     [
       "union-branch",
@@ -12749,126 +11194,6 @@
     [
       "union-branch",
       "rust:zipzi_contract::model::DeformerOriginalShape|projection:variant:Warp",
-      "Warp"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
-      "Glue"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
-      "Mesh"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
-      "Offscreen"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
-      "Part"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
-      "Rotation"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:canonical",
-      "Warp"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Glue",
-      "Glue"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Mesh",
-      "Mesh"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Offscreen",
-      "Offscreen"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Part",
-      "Part"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Rotation",
-      "Rotation"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::DeltaKeyforms|projection:variant:Warp",
-      "Warp"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::SceneKeyform|projection:canonical",
-      "Part"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::SceneKeyform|projection:canonical",
-      "Rotation"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::SceneKeyform|projection:canonical",
-      "Warp"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::SceneKeyform|projection:variant:Part",
-      "Part"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::SceneKeyform|projection:variant:Rotation",
-      "Rotation"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::SceneKeyform|projection:variant:Warp",
-      "Warp"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::SceneTrack|projection:canonical",
-      "Part"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::SceneTrack|projection:canonical",
-      "Rotation"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::SceneTrack|projection:canonical",
-      "Warp"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::SceneTrack|projection:variant:Part",
-      "Part"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::SceneTrack|projection:variant:Rotation",
-      "Rotation"
-    ],
-    [
-      "union-branch",
-      "rust:zipzi_contract::model::SceneTrack|projection:variant:Warp",
       "Warp"
     ],
     [

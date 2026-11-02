@@ -237,6 +237,14 @@ fn test_core_lifecycle_and_topology() {
     );
     assert_eq!(doc.revision(), revision);
 
+    // A subset follows caller-supplied vertex ID order, not mesh storage order.
+    let selected = [Vec2::new(3.0, 4.0), Vec2::new(5.0, 6.0)];
+    assert!(doc.set_vertex_positions(MESH, &[20, 10], &selected).status.is_ok());
+    let positions = &doc.get_mesh(MESH).unwrap().base_positions;
+    assert_eq!(positions[3], selected[0]);
+    assert_eq!(positions[1], selected[1]);
+    assert_eq!(positions[2], before.base_positions[2]);
+
     assert_eq!(
         doc.rename_mesh(MESH, "renamed".to_string()).changes.kind,
         ChangeKind::Metadata

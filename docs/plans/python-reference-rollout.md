@@ -565,3 +565,32 @@ Snapshot/Batch/Page 的排序和 continuation、commit Job、JobTimeout 与 Outc
 `./tools/test-sdk.sh python2 --recovery` 的 JobTimeout 和 Busy/领域失败两项用例。
 两个 SDK gate 均通过 Local/Connected 测试与静态类型检查。事件 Local/Connected 行为证据
 见前一记录；尚未执行完整 SDK、GPU 或真实 Editor 服务门禁。
+
+## 13. P2 参数与绑定结构和数值证据（2026-11-02）
+
+状态：P2 **结构门禁及所列数值行为证据通过，完整语义审阅尚未结束**；不将自动非空检查
+视作整批验收。仍需逐项审阅 binding grid/BlendShape 全部操作及其计划报告、特殊投影和离线
+`format()`，并在 P3/P4 复核场景内容、Offscreen、重挂载和地址等跨领域类型。
+
+本批覆盖 `parameters`、`bindings`、`modeling_parameters`、`modeling_bindings`、
+`modeling_bindings_edits` 及跨页 Session/Edit 的参数和绑定方法。Rust 的 parameter/binding、
+model、binding grid、reparent 和 scene-content 声明分别维护其类型、字段、分支语义；不新增
+独立说明表。说明了稳定 ID 与 runtime_id、Normal/BlendShape、patch 的 None 保留、轴及样本
+身份、输入数值坐标与返回样本 ID、普通形状的绝对位置和 BlendShape 的增量、完整笛卡尔
+组合与第一轴最快的排序、零轴使用当前基础形状，以及 Slice 命中样本/Resample 在域内插值。
+确认 ConstraintSample.weight 是 BlendShape 约束权重，修正原先误写的顶点插值说明。
+共享集合读取模板明确查询失败不会中止 Edit；Session 和 Edit 各自的正式/候选 Source
+仍分别呈现。另在 P1 的 `ModelingCommandUpdatePositions.positions` 修正乱序子集按传入
+vertex_ids 配对的说明，未改变运行时行为。
+
+报告中本批类型摘要缺口 105 → 0，union 分支诊断 114 → 0，enum 成员诊断 9 → 0；
+全局类型缺口 784 → 678，稳定债务键移除 335 项，未新增。P2 已加入独立结构门禁；原有
+P0/P1 结构门禁继续执行。比较本批五页、runtime_session、runtime_edit 和 common，
+相同 233 个标题，正文字符数 114,294 → 121,491，新增主要是类型/分支解释及字段约束；
+公共规则正文无新增重复，不以增加或减少字符数替代语义验收。
+
+已执行 `generate.py --check --no-cache`、reference tooling、`cargo test --locked -p zipzi-contract`；
+`./tools/test-sdk.sh python2` 的 typed parameter mixed batch、mesh binding CPU sweep、binding
+failure/no-op 三个指定用例均通过 Local/Connected 和静态类型检查。CPU sweep 验证候选与正式源、
+参数顺序、插值 0/5/10 及范围钳制；mesh grid 四个 SDK 集成用例验证 Slice/Resample、零轴
+及轴变更的数值结果。`zipzi-core` 的 topology 用例增加并通过乱序顶点 ID 子集配对断言。

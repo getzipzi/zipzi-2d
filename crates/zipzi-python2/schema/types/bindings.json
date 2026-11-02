@@ -3,11 +3,13 @@
   "definitions": {
     "zipzi_contract::authoring::BindingAuthoringEdit": {
       "content": null,
+      "doc": "Typed binding, parameter-range and reparenting intents for planning or editing.",
       "kind": "serde_enum",
       "name": "zipzi_contract::authoring::BindingAuthoringEdit",
       "tag": null,
       "variants": [
         {
+          "doc": "Edit an ordinary binding grid.",
           "fields": [
             {
               "doc": "Typed intent for ordinary binding-grid edits; apply/plan it against a Session/Edit\nsource rather than mutating this value.",
@@ -25,6 +27,7 @@
           "rust_name": "Grid"
         },
         {
+          "doc": "Edit BlendShape authoring data.",
           "fields": [
             {
               "doc": "Typed intent for BlendShape authoring; apply/plan it against a Session/Edit source\nrather than mutating this value.",
@@ -42,6 +45,7 @@
           "rust_name": "Blend"
         },
         {
+          "doc": "Edit an ordinary mesh binding grid.",
           "fields": [
             {
               "doc": "Typed intent for mesh binding grid edits; apply/plan it against a Session/Edit\nsource rather than mutating this value.",
@@ -59,6 +63,7 @@
           "rust_name": "MeshGrid"
         },
         {
+          "doc": "Change a parameter range and its dependent coordinates.",
           "fields": [
             {
               "doc": "Typed intent for parameter range conversion; apply/plan it against a Session/Edit\nsource rather than mutating this value.",
@@ -76,6 +81,7 @@
           "rust_name": "ParameterRange"
         },
         {
+          "doc": "Plan a deformation reparenting operation.",
           "fields": [
             {
               "doc": "Typed intent for deformation reparenting; apply/plan it against a Session/Edit\nsource rather than mutating this value.",
@@ -96,11 +102,13 @@
     },
     "zipzi_contract::authoring::BindingFieldPatch": {
       "content": null,
+      "doc": "Replacement value for a selected binding field address.",
       "kind": "serde_enum",
       "name": "zipzi_contract::authoring::BindingFieldPatch",
       "tag": null,
       "variants": [
         {
+          "doc": "Replace a sample coordinate.",
           "fields": [
             {
               "doc": "Scalar value in the referenced parameter domain.",
@@ -117,6 +125,7 @@
           "rust_name": "SampleValue"
         },
         {
+          "doc": "Replace a constraint sample coordinate and weight.",
           "fields": [
             {
               "doc": "Scalar value in the referenced parameter domain.",
@@ -128,7 +137,7 @@
               "skip": false
             },
             {
-              "doc": "Dimensionless interpolation weight applied to the referenced source vertex.",
+              "doc": "Dimensionless BlendShape constraint weight at this parameter sample.",
               "name": "weight",
               "rust_name": "weight",
               "shape": {
@@ -142,6 +151,7 @@
           "rust_name": "ConstraintSample"
         },
         {
+          "doc": "Change the parameter assigned to an axis.",
           "fields": [
             {
               "doc": "Stable document parameter ID, not its exported runtime identifier.",
@@ -174,6 +184,7 @@
       ]
     },
     "zipzi_contract::authoring::MeshBindingAxisSpec": {
+      "doc": "One driving parameter and its ordered sample coordinates for a new ordinary mesh binding.",
       "fields": [
         {
           "doc": "Stable document parameter ID, not its exported runtime identifier.",
@@ -203,6 +214,7 @@
       "tuple": false
     },
     "zipzi_contract::authoring::MeshBindingCreateSpec": {
+      "doc": "Input for an ordinary mesh binding, including its target, axes and shape samples.",
       "fields": [
         {
           "doc": "Stable ID of the target mesh in this document.",
@@ -214,7 +226,7 @@
           "skip": false
         },
         {
-          "doc": "Ordered parameter axes; keyform coordinates follow this order and samples retain their\nown identities.",
+          "doc": "Ordered distinct Normal-parameter axes; a driven binding supports at most 16 axes. Each has finite,\nincreasing keys within its parameter range. Keyform coordinates follow this order.",
           "name": "axes",
           "rust_name": "axes",
           "shape": {
@@ -227,7 +239,7 @@
           "skip": false
         },
         {
-          "doc": "Shape samples for this binding; coordinate/sample identities must match its axes or key\ntable.",
+          "doc": "For driven axes, supply exactly one shape per Cartesian key combination; input order\nis normalized with the first axis varying fastest. With no active axes this must be empty.",
           "name": "keyforms",
           "rust_name": "keyforms",
           "shape": {
@@ -260,11 +272,13 @@
     },
     "zipzi_contract::authoring::MeshBindingOperation": {
       "content": null,
+      "doc": "Create an ordinary mesh binding or write a shape sample in an Edit candidate.",
       "kind": "serde_enum",
       "name": "zipzi_contract::authoring::MeshBindingOperation",
       "tag": "op",
       "variants": [
         {
+          "doc": "Create a mesh binding and allocate its identity if omitted.",
           "fields": [
             {
               "doc": "Creation specification; native admission supplies identities/defaults and rejects\ninvalid input.",
@@ -282,6 +296,7 @@
           "rust_name": "Create"
         },
         {
+          "doc": "Insert or replace the shape sample at the supplied axis coordinates.",
           "fields": [
             {
               "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
@@ -310,6 +325,7 @@
       ]
     },
     "zipzi_contract::authoring::MeshKeyformSpec": {
+      "doc": "An ordinary mesh shape at one combination of parameter coordinates, using absolute vertex positions.",
       "fields": [
         {
           "doc": "One actual parameter sample value per binding axis, in axis order; each must match a\ndeclared axis sample.",
@@ -426,11 +442,13 @@
     },
     "zipzi_contract::document::AxisReduction": {
       "content": null,
+      "doc": "Select the coordinate retained when an ordinary binding axis is removed.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::AxisReduction",
       "tag": null,
       "variants": [
         {
+          "doc": "Use an existing sample coordinate; a coordinate absent from the axis is rejected.",
           "fields": [
             {
               "doc": "Parameter coordinate at which to slice the old grid while removing an axis.",
@@ -447,6 +465,7 @@
           "rust_name": "Slice"
         },
         {
+          "doc": "Evaluate at a coordinate within the grid domain, including between existing samples.",
           "fields": [
             {
               "doc": "Parameter coordinate used to resample the old grid while reducing an axis.",
@@ -466,6 +485,7 @@
     },
     "zipzi_contract::document::BindingGridEdit": {
       "content": null,
+      "doc": "Create, edit or delete an ordinary binding grid on a selected owner.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::BindingGridEdit",
       "tag": null,
@@ -488,6 +508,7 @@
           "rust_name": "Delete"
         },
         {
+          "doc": "Create an ordinary grid on the selected target.",
           "fields": [
             {
               "doc": "New stable UUID for this object; it must not conflict with an existing identity.",
@@ -514,6 +535,7 @@
           "rust_name": "Create"
         },
         {
+          "doc": "Apply an axis or sample operation to an existing grid.",
           "fields": [
             {
               "doc": "Stable owner ID for the addressed drawing group, collection or reference selection.",
@@ -543,11 +565,13 @@
     },
     "zipzi_contract::document::BindingGridTarget": {
       "content": null,
+      "doc": "Select the target domain for an ordinary binding grid.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::BindingGridTarget",
       "tag": null,
       "variants": [
         {
+          "doc": "Bind a mesh.",
           "fields": [
             {
               "doc": "Stable ID of the target mesh whose ordinary grid is being created.",
@@ -564,6 +588,7 @@
           "rust_name": "Mesh"
         },
         {
+          "doc": "Bind a scene transform or Part.",
           "fields": [
             {
               "doc": "Stable ID of the target scene transform or Part whose ordinary grid is being created.",
@@ -580,6 +605,7 @@
           "rust_name": "Scene"
         },
         {
+          "doc": "Bind Glue intensity.",
           "fields": [
             {
               "doc": "Stable ID of the target Glue whose ordinary grid is being created.",
@@ -599,11 +625,13 @@
     },
     "zipzi_contract::document::BlendAuthoringEdit": {
       "content": null,
+      "doc": "Create or edit BlendShape tables, constraints and target bindings.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::BlendAuthoringEdit",
       "tag": null,
       "variants": [
         {
+          "doc": "Create a key table with its samples and base.",
           "fields": [
             {
               "doc": "Complete BlendShape key table with stable sample IDs and an explicit base sample.",
@@ -621,6 +649,7 @@
           "rust_name": "CreateTable"
         },
         {
+          "doc": "Create a constraint with weighted samples.",
           "fields": [
             {
               "doc": "Complete BlendShape constraint with its driving parameter and weighted samples.",
@@ -638,6 +667,7 @@
           "rust_name": "CreateConstraint"
         },
         {
+          "doc": "Create a target binding to a BlendShape key table.",
           "fields": [
             {
               "doc": "New stable UUID for this object; it must not conflict with an existing identity.",
@@ -682,6 +712,7 @@
           "rust_name": "CreateBinding"
         },
         {
+          "doc": "Edit an existing key table.",
           "fields": [
             {
               "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
@@ -708,6 +739,7 @@
           "rust_name": "Table"
         },
         {
+          "doc": "Replace the driving parameter and weighted samples of a constraint.",
           "fields": [
             {
               "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
@@ -746,6 +778,7 @@
           "rust_name": "Constraint"
         },
         {
+          "doc": "Switch a binding to another key table, optionally resetting its shape data.",
           "fields": [
             {
               "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
@@ -783,11 +816,13 @@
     },
     "zipzi_contract::document::BlendTableOperation": {
       "content": null,
+      "doc": "Edit samples, neutral base or driving parameter of a BlendShape key table.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::BlendTableOperation",
       "tag": null,
       "variants": [
         {
+          "doc": "Insert a stable sample into the key table.",
           "fields": [
             {
               "doc": "New stable sample UUID and finite parameter coordinate to insert into this key table.",
@@ -805,6 +840,7 @@
           "rust_name": "Insert"
         },
         {
+          "doc": "Change an existing sample coordinate.",
           "fields": [
             {
               "doc": "Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.",
@@ -830,6 +866,7 @@
           "rust_name": "Move"
         },
         {
+          "doc": "Remove a sample, supplying a replacement if its base role requires one.",
           "fields": [
             {
               "doc": "Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.",
@@ -859,6 +896,7 @@
           "rust_name": "Delete"
         },
         {
+          "doc": "Select an existing sample as the neutral base.",
           "fields": [
             {
               "doc": "Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.",
@@ -875,6 +913,7 @@
           "rust_name": "SetBase"
         },
         {
+          "doc": "Assign the table driving parameter.",
           "fields": [
             {
               "doc": "Stable document parameter ID, not its exported runtime identifier.",
@@ -891,6 +930,7 @@
           "rust_name": "SetParameter"
         },
         {
+          "doc": "Change the driving parameter using the chosen coordinate mapping policy.",
           "fields": [
             {
               "doc": "Stable document parameter ID, not its exported runtime identifier.",
@@ -920,11 +960,13 @@
     },
     "zipzi_contract::document::GridOperation": {
       "content": null,
+      "doc": "Edit an ordinary binding grid using stable axis and sample identities.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::GridOperation",
       "tag": null,
       "variants": [
         {
+          "doc": "Add an axis and convert the existing grid for that dimension.",
           "fields": [
             {
               "doc": "Axis definition with a parameter ID and ordered samples; axis identity is distinct\nfrom the parameter ID.",
@@ -942,6 +984,7 @@
           "rust_name": "AddAxis"
         },
         {
+          "doc": "Change the axis parameter with an explicit coordinate mapping policy.",
           "fields": [
             {
               "doc": "Stable axis ID owned by this binding, not a parameter or sample ID.",
@@ -977,6 +1020,7 @@
           "rust_name": "RemapParameter"
         },
         {
+          "doc": "Assign or clear the driving parameter of an existing axis.",
           "fields": [
             {
               "doc": "Stable axis ID owned by this binding, not a parameter or sample ID.",
@@ -1016,6 +1060,7 @@
           "rust_name": "SetParameter"
         },
         {
+          "doc": "Reorder the grid using stable axis IDs.",
           "fields": [
             {
               "doc": "Axis IDs in the requested new axis order; IDs refer to axes, not parameters.",
@@ -1035,6 +1080,7 @@
           "rust_name": "ReorderAxes"
         },
         {
+          "doc": "Insert a new sample with the supplied identity and coordinate.",
           "fields": [
             {
               "doc": "Stable axis ID owned by this binding, not a parameter or sample ID.",
@@ -1069,6 +1115,7 @@
           "rust_name": "InsertSample"
         },
         {
+          "doc": "Change the coordinate of an existing stable sample.",
           "fields": [
             {
               "doc": "Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.",
@@ -1094,6 +1141,7 @@
           "rust_name": "MoveSample"
         },
         {
+          "doc": "Remove an existing stable sample.",
           "fields": [
             {
               "doc": "Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.",
@@ -1110,6 +1158,7 @@
           "rust_name": "DeleteSample"
         },
         {
+          "doc": "Remove the axis or keep it pending, with explicit reduction when required.",
           "fields": [
             {
               "doc": "Stable axis ID owned by this binding, not a parameter or sample ID.",
@@ -1152,11 +1201,13 @@
     },
     "zipzi_contract::document::MeshGridEdit": {
       "content": null,
+      "doc": "Edit an ordinary mesh binding grid using parameter IDs and sample coordinates.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::MeshGridEdit",
       "tag": null,
       "variants": [
         {
+          "doc": "Create a zero-axis binding that uses the current mesh base shape until driven.",
           "fields": [
             {
               "doc": "New stable UUID for this object; it must not conflict with an existing identity.",
@@ -1182,6 +1233,7 @@
           "rust_name": "Create"
         },
         {
+          "doc": "Add a driving parameter axis to the binding.",
           "fields": [
             {
               "doc": "Stable binding ID owning the addressed axes or keyforms.",
@@ -1208,6 +1260,7 @@
           "rust_name": "AddAxis"
         },
         {
+          "doc": "Reorder the axes by their driving parameter IDs.",
           "fields": [
             {
               "doc": "Stable binding ID owning the addressed axes or keyforms.",
@@ -1236,6 +1289,7 @@
           "rust_name": "ReorderAxes"
         },
         {
+          "doc": "Insert a parameter coordinate on an existing axis.",
           "fields": [
             {
               "doc": "Stable binding ID owning the addressed axes or keyforms.",
@@ -1270,6 +1324,7 @@
           "rust_name": "InsertSample"
         },
         {
+          "doc": "Move an existing coordinate to another value on the same axis.",
           "fields": [
             {
               "doc": "Stable binding ID owning the addressed axes or keyforms.",
@@ -1313,6 +1368,7 @@
           "rust_name": "MoveSample"
         },
         {
+          "doc": "Delete the selected parameter coordinate.",
           "fields": [
             {
               "doc": "Stable binding ID owning the addressed axes or keyforms.",
@@ -1347,6 +1403,7 @@
           "rust_name": "DeleteSample"
         },
         {
+          "doc": "Remove a parameter axis using the specified reduction.",
           "fields": [
             {
               "doc": "Stable binding ID owning the addressed axes or keyforms.",
@@ -1385,17 +1442,20 @@
     },
     "zipzi_contract::document::PartKeyformSlot": {
       "content": null,
+      "doc": "Select the static Part slot or an ordinary binding sample combination for an Offscreen mapping.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::PartKeyformSlot",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Address the static Part slot.",
           "fields": [],
           "form": "unit",
           "name": "static",
           "rust_name": "Static"
         },
         {
+          "doc": "Address one ordinary binding sample combination.",
           "fields": [
             {
               "doc": "Stable sample IDs selecting one ordinary-binding combination, in active axis order.",
@@ -1417,6 +1477,7 @@
       ]
     },
     "zipzi_contract::model::BindingAxis": {
+      "doc": "One ordered parameter dimension of an ordinary binding grid.",
       "fields": [
         {
           "default": "",
@@ -1468,6 +1529,7 @@
       "tuple": false
     },
     "zipzi_contract::model::BindingSample": {
+      "doc": "Stable identity and numeric coordinate of one sample on a binding axis.",
       "fields": [
         {
           "doc": "Stable sample UUID within the binding axis; distinct from its numeric value.",
@@ -1494,6 +1556,7 @@
       "tuple": false
     },
     "zipzi_contract::model::BlendShapeBinding": {
+      "doc": "Binds a target to a BlendShape key table and optional constraints using typed delta shapes.",
       "fields": [
         {
           "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
@@ -1561,6 +1624,7 @@
       "tuple": false
     },
     "zipzi_contract::model::BlendShapeConstraint": {
+      "doc": "Parameter-driven weights that attenuate a BlendShape contribution.",
       "fields": [
         {
           "default": [],
@@ -1621,6 +1685,7 @@
       "tuple": false
     },
     "zipzi_contract::model::BlendShapeKeyTable": {
+      "doc": "Ordered sample identities and neutral sample for a BlendShape-driving parameter.",
       "fields": [
         {
           "default": [],
@@ -1692,41 +1757,48 @@
     },
     "zipzi_contract::model::BlendShapeTargetKind": {
       "content": null,
+      "doc": "Selects the target domain and corresponding delta-keyform payload of a BlendShape binding.",
       "kind": "serde_enum",
       "name": "zipzi_contract::model::BlendShapeTargetKind",
       "tag": null,
       "variants": [
         {
+          "doc": "Target a mesh.",
           "fields": [],
           "form": "unit",
           "name": "mesh",
           "rust_name": "Mesh"
         },
         {
+          "doc": "Target a warp transform.",
           "fields": [],
           "form": "unit",
           "name": "warp",
           "rust_name": "Warp"
         },
         {
+          "doc": "Target a rotation transform.",
           "fields": [],
           "form": "unit",
           "name": "rotation",
           "rust_name": "Rotation"
         },
         {
+          "doc": "Target a Part.",
           "fields": [],
           "form": "unit",
           "name": "part",
           "rust_name": "Part"
         },
         {
+          "doc": "Target a Glue connection.",
           "fields": [],
           "form": "unit",
           "name": "glue",
           "rust_name": "Glue"
         },
         {
+          "doc": "Target an Offscreen group.",
           "fields": [],
           "form": "unit",
           "name": "offscreen",
@@ -1735,6 +1807,7 @@
       ]
     },
     "zipzi_contract::model::ConstraintSample": {
+      "doc": "One stable parameter sample and weight in a BlendShape constraint.",
       "fields": [
         {
           "doc": "Stable constraint-sample UUID.",
@@ -1770,6 +1843,7 @@
       "tuple": false
     },
     "zipzi_contract::model::DeltaGlueKeyform": {
+      "doc": "Glue intensity delta at one BlendShape sample.",
       "fields": [
         {
           "default": "",
@@ -1798,11 +1872,13 @@
     },
     "zipzi_contract::model::DeltaKeyforms": {
       "content": "items",
+      "doc": "Typed BlendShape sample payload; choose the variant matching the binding target domain.",
       "kind": "serde_enum",
       "name": "zipzi_contract::model::DeltaKeyforms",
       "tag": "type",
       "variants": [
         {
+          "doc": "Select mesh displacement samples.",
           "fields": [
             {
               "doc": "Ordered Mesh BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.",
@@ -1823,6 +1899,7 @@
           "rust_name": "Mesh"
         },
         {
+          "doc": "Select warp lattice displacement samples.",
           "fields": [
             {
               "doc": "Ordered Warp BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.",
@@ -1843,6 +1920,7 @@
           "rust_name": "Warp"
         },
         {
+          "doc": "Select rotation-transform delta samples.",
           "fields": [
             {
               "doc": "Ordered Rotation BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.",
@@ -1863,6 +1941,7 @@
           "rust_name": "Rotation"
         },
         {
+          "doc": "Select Part drawing-order delta samples.",
           "fields": [
             {
               "doc": "Ordered Part BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.",
@@ -1883,6 +1962,7 @@
           "rust_name": "Part"
         },
         {
+          "doc": "Select Glue intensity delta samples.",
           "fields": [
             {
               "doc": "Ordered Glue BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.",
@@ -1903,6 +1983,7 @@
           "rust_name": "Glue"
         },
         {
+          "doc": "Select Offscreen appearance samples.",
           "fields": [
             {
               "doc": "Ordered Offscreen BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.",
@@ -1925,6 +2006,7 @@
       ]
     },
     "zipzi_contract::model::DeltaMeshKeyform": {
+      "doc": "Mesh displacement and optional appearance deltas at one BlendShape sample.",
       "fields": [
         {
           "default": "",
@@ -2016,6 +2098,7 @@
       "tuple": false
     },
     "zipzi_contract::model::DeltaOffscreenKeyform": {
+      "doc": "Offscreen appearance contribution at one BlendShape sample.",
       "fields": [
         {
           "default": "",
@@ -2077,6 +2160,7 @@
       "tuple": false
     },
     "zipzi_contract::model::DeltaPartKeyform": {
+      "doc": "Part drawing-order delta at one BlendShape sample.",
       "fields": [
         {
           "default": "",
@@ -2104,6 +2188,7 @@
       "tuple": false
     },
     "zipzi_contract::model::DeltaRotationKeyform": {
+      "doc": "Rotation-transform and appearance deltas at one BlendShape sample.",
       "fields": [
         {
           "default": "",
@@ -2209,6 +2294,7 @@
       "tuple": false
     },
     "zipzi_contract::model::DeltaWarpKeyform": {
+      "doc": "Warp lattice displacements and optional appearance deltas at one BlendShape sample.",
       "fields": [
         {
           "default": "",
@@ -2322,6 +2408,7 @@
       "tuple": false
     },
     "zipzi_contract::model::GlueKeyform": {
+      "doc": "Ordinary Glue intensity at one combination of binding samples.",
       "fields": [
         {
           "default": [],
@@ -2352,6 +2439,7 @@
       "tuple": false
     },
     "zipzi_contract::model::MeshBinding": {
+      "doc": "Ordinary parameter grid that drives mesh shapes and appearance.",
       "fields": [
         {
           "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
@@ -2385,7 +2473,7 @@
           "skip": false
         },
         {
-          "doc": "Shape samples for this binding; coordinate/sample identities must match its axes or key\ntable.",
+          "doc": "One shape per Cartesian combination of active axis samples, with the first axis varying\nfastest. Empty when no axis is active; the mesh base shape is then used.",
           "name": "keyforms",
           "rust_name": "keyforms",
           "shape": {
@@ -2404,6 +2492,7 @@
       "tuple": false
     },
     "zipzi_contract::model::MeshKeyform": {
+      "doc": "Ordinary mesh shape at a combination of binding sample identities; positions are absolute.",
       "fields": [
         {
           "doc": "Import-only numeric coordinates; canonical documents derive these from samples.",
@@ -2471,6 +2560,7 @@
       "tuple": false
     },
     "zipzi_contract::model::OffscreenKeyform": {
+      "doc": "Offscreen appearance selected by a Part keyform mapping.",
       "fields": [
         {
           "doc": "Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.",
@@ -2522,6 +2612,7 @@
       "tuple": false
     },
     "zipzi_contract::model::PartKeyform": {
+      "doc": "Ordinary Part drawing order at a binding sample combination.",
       "fields": [
         {
           "doc": "Import-only numeric coordinates; canonical documents derive these from samples.",
@@ -2562,6 +2653,7 @@
       "tuple": false
     },
     "zipzi_contract::model::RotationKeyform": {
+      "doc": "Ordinary rotation pose at a binding sample combination.",
       "fields": [
         {
           "doc": "Import-only numeric coordinates; canonical documents derive these from samples.",
@@ -2613,6 +2705,7 @@
       "tuple": false
     },
     "zipzi_contract::model::SceneBinding": {
+      "doc": "Ordinary parameter grid driving a Warp, Rotation or Part track.",
       "fields": [
         {
           "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
@@ -2660,6 +2753,7 @@
       "tag": null,
       "variants": [
         {
+          "doc": "Replace a Warp track sample.",
           "fields": [
             {
               "doc": "Complete Warp ordinary-binding keyform; samples identify the active axis combination.",
@@ -2677,6 +2771,7 @@
           "rust_name": "Warp"
         },
         {
+          "doc": "Replace a Rotation track sample.",
           "fields": [
             {
               "doc": "Complete Rotation ordinary-binding keyform; samples identify the active axis\ncombination.",
@@ -2694,6 +2789,7 @@
           "rust_name": "Rotation"
         },
         {
+          "doc": "Replace a Part track sample.",
           "fields": [
             {
               "doc": "Complete Part ordinary-binding keyform; samples identify the active axis combination.",
@@ -2714,11 +2810,13 @@
     },
     "zipzi_contract::model::SceneTrack": {
       "content": null,
+      "doc": "Target and ordinary keyforms driven by a scene binding.",
       "kind": "serde_enum",
       "name": "zipzi_contract::model::SceneTrack",
       "tag": null,
       "variants": [
         {
+          "doc": "Drive a warp transform with ordinary lattice shapes.",
           "fields": [
             {
               "doc": "Stable warp transform ID driven by this ordinary binding.",
@@ -2749,6 +2847,7 @@
           "rust_name": "Warp"
         },
         {
+          "doc": "Drive a rotation transform with ordinary poses.",
           "fields": [
             {
               "doc": "Stable rotation transform ID driven by this ordinary binding.",
@@ -2779,6 +2878,7 @@
           "rust_name": "Rotation"
         },
         {
+          "doc": "Drive a Part with ordinary drawing-order samples.",
           "fields": [
             {
               "doc": "Stable Part ID driven by this ordinary binding.",
@@ -2811,6 +2911,7 @@
       ]
     },
     "zipzi_contract::model::WarpKeyform": {
+      "doc": "Ordinary absolute warp lattice shape at a binding sample combination.",
       "fields": [
         {
           "default": null,

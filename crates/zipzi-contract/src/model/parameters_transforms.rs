@@ -7,6 +7,7 @@
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Authored document parameter whose stable ID identifies it in bindings and evaluation.
 pub struct Parameter {
     /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,

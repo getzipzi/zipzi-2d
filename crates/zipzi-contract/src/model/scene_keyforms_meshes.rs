@@ -46,6 +46,7 @@ impl Default for Part {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Ordinary absolute warp lattice shape at a binding sample combination.
 pub struct WarpKeyform {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     /// Optional Bezier controller for this warp shape; None means this shape has no controller.
@@ -71,6 +72,7 @@ pub struct WarpKeyform {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Ordinary rotation pose at a binding sample combination.
 pub struct RotationKeyform {
     /// Import-only numeric coordinates; canonical documents derive these from samples.
     #[serde(skip)]
@@ -93,6 +95,7 @@ pub struct RotationKeyform {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Ordinary Part drawing order at a binding sample combination.
 pub struct PartKeyform {
     /// Import-only numeric coordinates; canonical documents derive these from samples.
     #[serde(skip)]
@@ -114,15 +117,18 @@ pub struct PartKeyform {
     zipzi_api_derive::BinaryWire,
 )]
 pub enum SceneKeyform {
+    /// Replace a Warp track sample.
     Warp(
         /// Complete Warp ordinary-binding keyform; samples identify the active axis combination.
         WarpKeyform,
     ),
+    /// Replace a Rotation track sample.
     Rotation(
         /// Complete Rotation ordinary-binding keyform; samples identify the active axis
         /// combination.
         RotationKeyform,
     ),
+    /// Replace a Part track sample.
     Part(
         /// Complete Part ordinary-binding keyform; samples identify the active axis combination.
         PartKeyform,
