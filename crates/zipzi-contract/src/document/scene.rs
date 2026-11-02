@@ -130,7 +130,7 @@ pub enum SceneFieldValue {
     Label(#[doc = "Replacement display label."] String),
     /// Select an external runtime identifier.
     RuntimeId(
-        /// Replacement external runtime identifier; an empty string explicitly clears it.
+        /// Replacement external runtime identifier; native validation rejects an empty string.
         String,
     ),
     /// Select an evaluation enabled value.

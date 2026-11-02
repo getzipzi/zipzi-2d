@@ -528,7 +528,7 @@ SceneFieldValueLabel.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneFieldValueRuntimeId(CompactValue):
-    'Select an external runtime identifier.\n\nFields:\nvalue: Replacement external runtime identifier; an empty string explicitly clears it.'
+    'Select an external runtime identifier.\n\nFields:\nvalue: Replacement external runtime identifier; native validation rejects an empty string.'
     _variant: _ClassVar[str] = 'runtime_id'
     value: str
 

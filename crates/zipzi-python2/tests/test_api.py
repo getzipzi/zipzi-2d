@@ -1164,6 +1164,22 @@ class PythonSdk(unittest.TestCase):
                 self.assertLessEqual(runtime.resources.usage().blob_bytes,512<<20)
         self.assertEqual(results[0],results[1])
 
+    def test_scene_runtime_id_rejects_empty_on_both_backends(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                session = self.runtime(mode).sessions.create()
+                with session.edit("Mesh") as edit:
+                    mesh = edit.meshes.create(meshes.MeshSpec("Mesh", GEOMETRY))
+                before = session.info()
+                runtime_id = session.modeling.records(m.ModelingQuery(meshes=(mesh,))).value.meshes[0].runtime_id
+                intent = m.commands.ModelingCommandScene(intent=m.scene.SceneEditPatch(
+                    id=mesh, expected=m.scene.SceneFieldValueRuntimeId(value=runtime_id),
+                    value=m.scene.SceneFieldValueRuntimeId(value=""), clear_glue_pairs=False))
+                with self.assertRaises(zipzi.SdkFailure) as rejected:
+                    session.plan(intent)
+                self.assertEqual(rejected.exception.code, "INVALID_ID")
+                self.assertEqual(session.info(), before)
+
     def test_read_jobs_capture_sources_allow_publication_and_cancel_without_history(self):
         for mode in ("local", "connected"):
             with self.subTest(mode=mode):

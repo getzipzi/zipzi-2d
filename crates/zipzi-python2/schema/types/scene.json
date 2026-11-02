@@ -4590,7 +4590,7 @@
           "doc": "Select an external runtime identifier.",
           "fields": [
             {
-              "doc": "Replacement external runtime identifier; an empty string explicitly clears it.",
+              "doc": "Replacement external runtime identifier; native validation rejects an empty string.",
               "name": "value",
               "rust_name": "0",
               "shape": {

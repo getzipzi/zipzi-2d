@@ -1,6 +1,6 @@
 {
   "_generated_by": "zipzi-python2/tools/generate.py",
-  "contract_sha256": "e345e182e208a92831dcfa2da5f31d5b1515ca9e68980f70d10bde800beb5dfa",
+  "contract_sha256": "9c4b7af03dee44bfa60c98cd0e298527019910557377c25218a32e077845a230",
   "format_version": 2,
   "root": {
     "binary": {
@@ -813,7 +813,7 @@
     },
     {
       "path": "types/scene.json",
-      "sha256": "ce7de69b1f51606cdba74243aa8f673dc65cfe9add24dbc669a4adefe2050894"
+      "sha256": "9ba8df9ff4a68da251722bfb4b8836a4bd41b01023aa870f6060902a6ae4009a"
     },
     {
       "path": "types/spatial.json",

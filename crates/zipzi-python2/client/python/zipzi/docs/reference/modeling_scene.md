@@ -1104,7 +1104,7 @@ Select an external runtime identifier.
 
 **Fields**
 
-- `value`: Replacement external runtime identifier; an empty string explicitly clears it.
+- `value`: Replacement external runtime identifier; native validation rejects an empty string.
 
 ## zipzi.modeling.scene.SceneFieldValueTexture
 

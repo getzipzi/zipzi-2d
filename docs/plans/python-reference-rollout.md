@@ -827,3 +827,7 @@ reduction 规则；将旋转、Part、Glue、Offscreen 的样本类型写成各�
 同范围五页从 44,533 增至 58,029 字符，均为 118 个入口且规则正文展开均为零；增量是字段、
 分支和投影语义。五页加入语义验收集合；P3 场景 runtime ID 的同类错误已确认，留待 P3 修复，
 不把该跨域缺口视为 P2 的场景语义验收。
+
+P3 复核先修复 `SceneFieldValueRuntimeId`：空字符串会在场景字段验证中以 `INVALID_ID` 拒绝，
+不是清空。新增 Local/Connected 测试确认计划失败且 Session 状态不变，并验证 catalog 字段说明；
+该修复不代表 P3 其余页面的语义审阅已完成。

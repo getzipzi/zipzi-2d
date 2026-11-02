@@ -1281,8 +1281,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                                 'zipzi.modeling.scene.SceneFieldValueRuntimeId.summary'),
                                                    'documentation': 'Select an external runtime identifier.',
                                                    'fields': [('value',
-                                                               'Replacement external runtime identifier; an empty '
-                                                               'string explicitly clears it.')],
+                                                               'Replacement external runtime identifier; native '
+                                                               'validation rejects an empty string.')],
                                                    'kind': 'type',
                                                    'signature': '(*, value: str)'},
  'zipzi.modeling.scene.SceneFieldValueRuntimeId.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},

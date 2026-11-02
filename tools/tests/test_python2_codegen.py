@@ -1235,6 +1235,10 @@ class PythonReference(unittest.TestCase):
         self.assertIn(marker, catalog_from_output(changed)['zipzi.scene.Operation']['documentation'])
         self.assertIn(marker, changed['client/python/zipzi/docs/reference/scene.md'])
 
+    def test_reference_scene_runtime_id_rejects_empty(self):
+        row = self.catalog['zipzi.modeling.scene.SceneFieldValueRuntimeId']
+        self.assertIn('rejects an empty string', dict(row['fields'])['value'])
+
     def test_reference_private_union_does_not_hide_unknown_members(self):
         original = gen._api_codegen.render_api
         def unknown(*args, **kwargs):
