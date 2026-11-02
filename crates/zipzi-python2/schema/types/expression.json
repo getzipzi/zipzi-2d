@@ -380,7 +380,7 @@
           "doc": "Duplicate an expression and its entries under new identities.",
           "fields": [
             {
-              "doc": "Typed parameter reference or stable source object ID, as declared by the enclosing operation.",
+              "doc": "Stable ID of the expression to duplicate.",
               "name": "source",
               "rust_name": "source",
               "shape": {

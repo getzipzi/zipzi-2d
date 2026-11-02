@@ -1,6 +1,6 @@
 {
   "_generated_by": "zipzi-python2/tools/generate.py",
-  "contract_sha256": "bc65d9a5f616fa5abb43fbc4910a402a37c77734055bf51b9e9ade10ad1b1f64",
+  "contract_sha256": "a45167bdddc1e6b0a41b40b85123deffff98ca2a8eb0cb9f170217aa6bfb2782",
   "format_version": 2,
   "root": {
     "binary": {
@@ -757,7 +757,7 @@
     },
     {
       "path": "types/expression.json",
-      "sha256": "96b9989e00f3752cbaa89b21f1e04c241fcfa36db745d135d3c52fa3342ceaa1"
+      "sha256": "036d94eb6cc5fe63f61bfc651b8100355fadba0a6c45b19f73366f36c30dff6b"
     },
     {
       "path": "types/external.json",
@@ -769,7 +769,7 @@
     },
     {
       "path": "types/motion.json",
-      "sha256": "280ac78835e3faca7954ec35eaf5adc870f5ce38da956d5c93900550940edb26"
+      "sha256": "0ca30267fce713fc77757717566d04d6493d46b7a33907c2e7d486d55b5e4e9a"
     },
     {
       "path": "types/observation.json",
@@ -781,7 +781,7 @@
     },
     {
       "path": "types/physics.json",
-      "sha256": "918179e5418323aa2b698be0ba2854aebc7c8118a21562bd507c324f98408cfa"
+      "sha256": "64a1cd6cf346d92267d23bd9059bb6eea8f46a19316e8b8cb6641308ad21f832"
     },
     {
       "path": "types/pose.json",

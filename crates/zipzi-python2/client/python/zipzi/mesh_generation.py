@@ -131,5 +131,6 @@ from ._mesh_workflow import MeshDraft as MeshDraft, GeometryQuality as GeometryQ
 # MeshDraft presents this module as its public home, so its annotations must
 # resolve here as well as in the implementation module.
 from ._values import Source as Source
-from . import modeling as m
+from . import modeling as modeling
+m = modeling
 __all__ = ['MeshSettings', 'FillSettings', 'FillParameters', 'generate', 'MeshDraft', 'GeometryQuality', 'generate_for_mesh', 'inspect_geometry']

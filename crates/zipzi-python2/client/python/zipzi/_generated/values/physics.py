@@ -148,7 +148,7 @@ PhysicsEdit: TypeAlias = PhysicsEditCreateGroup | PhysicsEditCreateInput | Physi
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsNode(CompactValue):
-    'Stable Physics rig node with authored position and dynamics coefficients.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nposition: Authored two-dimensional Physics node position or normalization domain, as declared by the field.\nmobility: Native Physics node mobility coefficient.\ndelay: Native Physics node delay coefficient.\nacceleration: Native Physics node acceleration coefficient.\nradius: Native Physics node segment length/radius.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    'Stable Physics rig node with authored position and dynamics coefficients.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nposition: Authored two-dimensional node position in the native Physics coordinate convention.\nmobility: Native Physics node mobility coefficient.\ndelay: Native Physics node delay coefficient.\nacceleration: Native Physics node acceleration coefficient.\nradius: Native Physics node segment length/radius.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
     id: str
     position: PhysicsVector
     mobility: float

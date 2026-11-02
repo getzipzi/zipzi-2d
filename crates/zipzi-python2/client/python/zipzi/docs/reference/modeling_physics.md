@@ -398,7 +398,7 @@ Types: [ExtensionValue], [PhysicsVector](#zipzimodelingphysicsphysicsvector).
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-- `position`: Authored two-dimensional Physics node position or normalization domain, as declared by the field.
+- `position`: Authored two-dimensional node position in the native Physics coordinate convention.
 - `mobility`: Native Physics node mobility coefficient.
 - `delay`: Native Physics node delay coefficient.
 - `acceleration`: Native Physics node acceleration coefficient.

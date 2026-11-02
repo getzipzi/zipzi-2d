@@ -80,7 +80,7 @@ ExpressionEditDeleteEntries.__module__ = "zipzi.modeling.expression"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionEditDuplicate(CompactValue):
-    'Duplicate an expression and its entries under new identities.\n\nFields:\nsource: Typed parameter reference or stable source object ID, as declared by the enclosing operation.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nentry_ids: New stable entry IDs paired with the source expression entries.'
+    'Duplicate an expression and its entries under new identities.\n\nFields:\nsource: Stable ID of the expression to duplicate.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nentry_ids: New stable entry IDs paired with the source expression entries.'
     _variant: _ClassVar[str] = 'duplicate'
     source: str
     id: str

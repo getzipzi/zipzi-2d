@@ -150,7 +150,7 @@ pub enum PhysicsAxis {
 )]
 pub struct PhysicsInput {
     #[serde(rename = "Source")]
-    /// Typed parameter reference or stable source object ID, as declared by the enclosing operation.
+    /// Physics parameter reference supplying this input.
     pub source: PhysicsParameterRef,
     #[serde(rename = "Weight")]
     /// Native Physics influence weight, expressed as a percentage.
@@ -177,7 +177,7 @@ pub struct PhysicsInput {
 )]
 pub struct PhysicsOutput {
     #[serde(rename = "Destination")]
-    /// Explicit destination owner/container; order is controlled separately by before.
+    /// Physics parameter reference receiving this output.
     pub destination: PhysicsParameterRef,
     #[serde(rename = "VertexIndex")]
     /// Exported node index; native authoring rows use stable node IDs instead.
@@ -210,7 +210,7 @@ pub struct PhysicsOutput {
 )]
 pub struct PhysicsVertex {
     #[serde(rename = "Position")]
-    /// Authored two-dimensional Physics node position or normalization domain, as declared by the field.
+    /// Authored two-dimensional node position in the native Physics coordinate convention.
     pub position: PhysicsVector,
     #[serde(rename = "Mobility")]
     /// Native Physics node mobility coefficient.

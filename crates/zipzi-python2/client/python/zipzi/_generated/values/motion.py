@@ -21,7 +21,7 @@ def read_PhysicsRigSnapshot(value: object) -> PhysicsRigSnapshot:
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditCreate(CompactValue):
-    'Create a motion clip and its initial registration.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nregistration_id: Stable ID allocated for the new motion library registration.\ndestination: Explicit destination owner/container; order is controlled separately by before.'
+    'Create a motion clip and its initial registration.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nregistration_id: Stable ID allocated for the new motion library registration.\ndestination: Container for the initial registration.'
     _variant: _ClassVar[str] = 'create'
     id: str
     name: str
@@ -134,7 +134,7 @@ MotionEditDeleteGroup.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditDuplicateGroup(CompactValue):
-    'Duplicate a group and its registrations under new identities.\n\nFields:\nsource: Typed parameter reference or stable source object ID, as declared by the enclosing operation.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.'
+    'Duplicate a group and its registrations under new identities.\n\nFields:\nsource: Stable ID of the motion group to duplicate.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.'
     _variant: _ClassVar[str] = 'duplicate_group'
     source: str
     id: str
@@ -144,7 +144,7 @@ MotionEditDuplicateGroup.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditDuplicateClip(CompactValue):
-    'Duplicate a clip and create its registration.\n\nFields:\nsource: Typed parameter reference or stable source object ID, as declared by the enclosing operation.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nregistration_id: Stable ID allocated for the new motion library registration.\ndestination: Explicit destination owner/container; order is controlled separately by before.'
+    'Duplicate a clip and create its registration.\n\nFields:\nsource: Stable ID of the motion clip to duplicate.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nregistration_id: Stable ID allocated for the new motion library registration.\ndestination: Container for the new clip registration.'
     _variant: _ClassVar[str] = 'duplicate_clip'
     source: str
     id: str
@@ -255,7 +255,7 @@ MotionEditDeleteEvents.__module__ = "zipzi.modeling.motion"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MotionEditMoveEvents(CompactValue):
-    'Move or copy timed events with a time offset.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\ntime_offset: Offset in seconds added when moving or copying keys/events.\ncopy: True allocates copied identities; false transfers the existing identities.'
+    'Move or copy timed events with a time offset.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Stable ID of the clip receiving the selected events.\ntime_offset: Offset in seconds added when moving or copying keys/events.\ncopy: True allocates copied identities; false transfers the existing identities.'
     _variant: _ClassVar[str] = 'move_events'
     ids: tuple[str, ...]
     destination: str

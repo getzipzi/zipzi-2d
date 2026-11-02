@@ -481,7 +481,7 @@
               "skip": false
             },
             {
-              "doc": "Explicit destination owner/container; order is controlled separately by before.",
+              "doc": "Container for the initial registration.",
               "name": "destination",
               "rust_name": "destination",
               "shape": {
@@ -789,7 +789,7 @@
           "doc": "Duplicate a group and its registrations under new identities.",
           "fields": [
             {
-              "doc": "Typed parameter reference or stable source object ID, as declared by the enclosing operation.",
+              "doc": "Stable ID of the motion group to duplicate.",
               "name": "source",
               "rust_name": "source",
               "shape": {
@@ -824,7 +824,7 @@
           "doc": "Duplicate a clip and create its registration.",
           "fields": [
             {
-              "doc": "Typed parameter reference or stable source object ID, as declared by the enclosing operation.",
+              "doc": "Stable ID of the motion clip to duplicate.",
               "name": "source",
               "rust_name": "source",
               "shape": {
@@ -860,7 +860,7 @@
               "skip": false
             },
             {
-              "doc": "Explicit destination owner/container; order is controlled separately by before.",
+              "doc": "Container for the new clip registration.",
               "name": "destination",
               "rust_name": "destination",
               "shape": {
@@ -1172,7 +1172,7 @@
               "skip": false
             },
             {
-              "doc": "Explicit destination owner/container; order is controlled separately by before.",
+              "doc": "Stable ID of the clip receiving the selected events.",
               "name": "destination",
               "rust_name": "destination",
               "shape": {

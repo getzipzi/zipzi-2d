@@ -150,7 +150,7 @@ pub enum MotionEdit {
         name: String,
         /// Stable ID allocated for the new motion library registration.
         registration_id: String,
-        /// Explicit destination owner/container; order is controlled separately by before.
+        /// Container for the initial registration.
         destination: MotionContainer,
     },
     /// Create a motion registration group.
@@ -225,7 +225,7 @@ pub enum MotionEdit {
     },
     /// Duplicate a group and its registrations under new identities.
     DuplicateGroup {
-        /// Typed parameter reference or stable source object ID, as declared by the enclosing operation.
+        /// Stable ID of the motion group to duplicate.
         source: String,
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
@@ -234,7 +234,7 @@ pub enum MotionEdit {
     },
     /// Duplicate a clip and create its registration.
     DuplicateClip {
-        /// Typed parameter reference or stable source object ID, as declared by the enclosing operation.
+        /// Stable ID of the motion clip to duplicate.
         source: String,
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
@@ -242,7 +242,7 @@ pub enum MotionEdit {
         name: String,
         /// Stable ID allocated for the new motion library registration.
         registration_id: String,
-        /// Explicit destination owner/container; order is controlled separately by before.
+        /// Container for the new clip registration.
         destination: MotionContainer,
     },
     /// Delete a clip and its registrations.
@@ -318,7 +318,7 @@ pub enum MotionEdit {
     MoveEvents {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
-        /// Explicit destination owner/container; order is controlled separately by before.
+        /// Stable ID of the clip receiving the selected events.
         destination: String,
         /// Offset in seconds added when moving or copying keys/events.
         time_offset: f32,
@@ -412,7 +412,7 @@ pub enum ExpressionEdit {
     },
     /// Duplicate an expression and its entries under new identities.
     Duplicate {
-        /// Typed parameter reference or stable source object ID, as declared by the enclosing operation.
+        /// Stable ID of the expression to duplicate.
         source: String,
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,

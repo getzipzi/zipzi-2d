@@ -1235,7 +1235,7 @@
           "skip": false
         },
         {
-          "doc": "Authored two-dimensional Physics node position or normalization domain, as declared by the field.",
+          "doc": "Authored two-dimensional node position in the native Physics coordinate convention.",
           "name": "position",
           "rust_name": "position",
           "shape": {

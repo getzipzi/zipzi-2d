@@ -121,7 +121,7 @@ Duplicate an expression and its entries under new identities.
 
 **Fields**
 
-- `source`: Typed parameter reference or stable source object ID, as declared by the enclosing operation.
+- `source`: Stable ID of the expression to duplicate.
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
 - `name`: Human-readable display or registration name; distinct from persistent object identity.
 - `entry_ids`: New stable entry IDs paired with the source expression entries.

@@ -100,7 +100,7 @@ Types: [MotionContainer](#zipzimodelingmotionmotioncontainer).
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
 - `name`: Human-readable display or registration name; distinct from persistent object identity.
 - `registration_id`: Stable ID allocated for the new motion library registration.
-- `destination`: Explicit destination owner/container; order is controlled separately by before.
+- `destination`: Container for the initial registration.
 
 ## zipzi.modeling.motion.MotionEditCreateGroup
 
@@ -214,11 +214,11 @@ Types: [MotionContainer](#zipzimodelingmotionmotioncontainer).
 
 **Fields**
 
-- `source`: Typed parameter reference or stable source object ID, as declared by the enclosing operation.
+- `source`: Stable ID of the motion clip to duplicate.
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
 - `name`: Human-readable display or registration name; distinct from persistent object identity.
 - `registration_id`: Stable ID allocated for the new motion library registration.
-- `destination`: Explicit destination owner/container; order is controlled separately by before.
+- `destination`: Container for the new clip registration.
 
 ## zipzi.modeling.motion.MotionEditDuplicateGroup
 
@@ -230,7 +230,7 @@ Duplicate a group and its registrations under new identities.
 
 **Fields**
 
-- `source`: Typed parameter reference or stable source object ID, as declared by the enclosing operation.
+- `source`: Stable ID of the motion group to duplicate.
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
 - `name`: Human-readable display or registration name; distinct from persistent object identity.
 
@@ -261,7 +261,7 @@ Move or copy timed events with a time offset.
 **Fields**
 
 - `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
-- `destination`: Explicit destination owner/container; order is controlled separately by before.
+- `destination`: Stable ID of the clip receiving the selected events.
 - `time_offset`: Offset in seconds added when moving or copying keys/events.
 - `copy`: True allocates copied identities; false transfers the existing identities.
 

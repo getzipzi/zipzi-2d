@@ -1176,6 +1176,18 @@ class PythonReference(unittest.TestCase):
         self.assertIn(marker, row['documentation'])
         self.assertIn(marker, changed['client/python/zipzi/docs/reference/modeling_observation.md'])
 
+    def test_reference_motion_and_physics_field_context(self):
+        cases = {
+            'zipzi.modeling.motion.MotionEditDuplicateGroup': ('source', 'motion group'),
+            'zipzi.modeling.motion.MotionEditDuplicateClip': ('source', 'motion clip'),
+            'zipzi.modeling.motion.MotionEditMoveEvents': ('destination', 'clip receiving'),
+            'zipzi.modeling.physics.PhysicsNode': ('position', 'node position'),
+        }
+        for path, (field, fact) in cases.items():
+            self.assertIn(fact, dict(self.catalog[path]['fields'])[field], path)
+        for path in ('zipzi.modeling.motion.MotionEditCreate', 'zipzi.modeling.motion.MotionEditMoveEvents'):
+            self.assertNotIn('before', dict(self.catalog[path]['fields'])['destination'])
+
     def test_reference_object_kind_projection_follows_contract(self):
         contract = gen.schema.read(PACKAGE/'schema/authoring.json')
         marker = 'Changed object kind source description.'

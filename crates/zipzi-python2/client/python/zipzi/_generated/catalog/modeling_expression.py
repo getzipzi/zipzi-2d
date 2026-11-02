@@ -150,8 +150,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                        'documentation': 'Duplicate an expression and its entries under '
                                                                         'new identities.',
                                                        'fields': [('source',
-                                                                   'Typed parameter reference or stable source object '
-                                                                   'ID, as declared by the enclosing operation.'),
+                                                                   'Stable ID of the expression to duplicate.'),
                                                                   ('id',
                                                                    'Stable identity in the owning authoring domain; '
                                                                    'exported metadata IDs retain their source text.'),

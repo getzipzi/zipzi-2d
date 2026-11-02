@@ -40,7 +40,7 @@ impl PhysicsTarget {
 pub struct PhysicsNode {
     /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,
-    /// Authored two-dimensional Physics node position or normalization domain, as declared by the field.
+    /// Authored two-dimensional node position in the native Physics coordinate convention.
     pub position: wire::PhysicsVector,
     /// Native Physics node mobility coefficient.
     pub mobility: f32,

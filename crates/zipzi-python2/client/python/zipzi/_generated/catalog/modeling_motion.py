@@ -186,9 +186,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                         'persistent object identity.'),
                                                        ('registration_id',
                                                         'Stable ID allocated for the new motion library registration.'),
-                                                       ('destination',
-                                                        'Explicit destination owner/container; order is controlled '
-                                                        'separately by before.')],
+                                                       ('destination', 'Container for the initial registration.')],
                                             'kind': 'type',
                                             'signature': '(*, id: str, name: str, registration_id: str, destination: '
                                                          'MotionContainer)',
@@ -293,9 +291,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditDuplicateClip': {'children': ('zipzi.modeling.motion.MotionEditDuplicateClip.__repr__',
                                                                 'zipzi.modeling.motion.MotionEditDuplicateClip.summary'),
                                                    'documentation': 'Duplicate a clip and create its registration.',
-                                                   'fields': [('source',
-                                                               'Typed parameter reference or stable source object ID, '
-                                                               'as declared by the enclosing operation.'),
+                                                   'fields': [('source', 'Stable ID of the motion clip to duplicate.'),
                                                               ('id',
                                                                'Stable identity in the owning authoring domain; '
                                                                'exported metadata IDs retain their source text.'),
@@ -306,8 +302,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                                'Stable ID allocated for the new motion library '
                                                                'registration.'),
                                                               ('destination',
-                                                               'Explicit destination owner/container; order is '
-                                                               'controlled separately by before.')],
+                                                               'Container for the new clip registration.')],
                                                    'kind': 'type',
                                                    'signature': '(*, source: str, id: str, name: str, registration_id: '
                                                                 'str, destination: MotionContainer)',
@@ -319,8 +314,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                     'documentation': 'Duplicate a group and its registrations under '
                                                                      'new identities.',
                                                     'fields': [('source',
-                                                                'Typed parameter reference or stable source object ID, '
-                                                                'as declared by the enclosing operation.'),
+                                                                'Stable ID of the motion group to duplicate.'),
                                                                ('id',
                                                                 'Stable identity in the owning authoring domain; '
                                                                 'exported metadata IDs retain their source text.'),
@@ -358,8 +352,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                             'Ordered stable IDs selected by this operation; names and '
                                                             'row numbers are not identities.'),
                                                            ('destination',
-                                                            'Explicit destination owner/container; order is controlled '
-                                                            'separately by before.'),
+                                                            'Stable ID of the clip receiving the selected events.'),
                                                            ('time_offset',
                                                             'Offset in seconds added when moving or copying '
                                                             'keys/events.'),
