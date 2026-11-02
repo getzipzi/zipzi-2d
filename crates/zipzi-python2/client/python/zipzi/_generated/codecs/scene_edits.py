@@ -15,7 +15,7 @@ from .._modeling_support import _check_u32
 from .._modeling_support import _check_usize
 from collections.abc import Mapping
 from typing import cast
-from ..values import AttachmentEdit, AttachmentEditCreate, AttachmentEditDelete, AttachmentEditDeleteWithReplacement, AttachmentEditDuplicate, AttachmentEditReorder, AttachmentEditReplace, AttachmentEditSetSound, AttachmentEditSetUserData, OrganizationEdit, OrganizationEditCreateGroup, OrganizationEditCreateParameter, OrganizationEditCreatePart, OrganizationEditDelete, OrganizationEditDuplicate, OrganizationEditMove, OrganizationEditPatchGroup, OrganizationEditSetParameterGroup, ReparentEdit, SceneContentEdit, SceneContentEditDeformerOriginal, SceneContentEditDeleteGluePairs, SceneContentEditDeleteMeshVertices, SceneContentEditDeleteOffscreenKeyforms, SceneContentEditDeleteTriangles, SceneContentEditDuplicateGluePairs, SceneContentEditDuplicateOffscreenKeyforms, SceneContentEditInsertGluePair, SceneContentEditInsertMeshVertices, SceneContentEditInsertOffscreenKeyform, SceneContentEditInsertTriangle, SceneContentEditMeshVertices, SceneContentEditMoveGluePairs, SceneContentEditPatchGluePair, SceneContentEditPatchOffscreenKeyform, SceneContentEditPatchTriangle, SceneContentEditReorderMeshVertices, SceneContentEditReorderOffscreenKeyforms, SceneContentEditReplaceTriangles, SceneContentEditResizeWarp, SceneContentEditSetOffscreenMapping, SceneContentEditTransferGluePairs, SceneContentEditWarpAuthoring, SceneContentEditWarpBezier, SceneContentEditWarpBezierControls, SceneContentEditWarpKeepChildren, SceneContentEditWarpPoints, SceneContentEditWarpShape, SceneEdit, SceneEditCreate, SceneEditDelete, SceneEditDissolveDrawingGroup, SceneEditDuplicate, SceneEditDuplicateDrawingGroup, SceneEditEnsureDrawingGroup, SceneEditMove, SceneEditPatch, SceneEditReparent, SceneEditSetDrawingRange, SceneEditTransferOffscreen
+from ..values import AttachmentEdit, AttachmentEditCreate, AttachmentEditDelete, AttachmentEditDeleteWithReplacement, AttachmentEditDuplicate, AttachmentEditReorder, AttachmentEditReplace, AttachmentEditSetSound, AttachmentEditSetUserData, OrganizationEdit, OrganizationEditCreateGroup, OrganizationEditCreateParameter, OrganizationEditCreatePart, OrganizationEditDelete, OrganizationEditDuplicate, OrganizationEditMove, OrganizationEditPatchGroup, OrganizationEditSetParameterGroup, ReparentEdit, SceneContentEdit, SceneContentEditDeformerOriginal, SceneContentEditDeleteGluePairs, SceneContentEditDeleteMeshVertices, SceneContentEditDeleteOffscreenKeyforms, SceneContentEditDeleteTriangles, SceneContentEditDuplicateGluePairs, SceneContentEditDuplicateOffscreenKeyforms, SceneContentEditInsertGluePair, SceneContentEditInsertMeshVertices, SceneContentEditInsertOffscreenKeyform, SceneContentEditInsertTriangle, SceneContentEditMeshVertices, SceneContentEditMoveGluePairs, SceneContentEditPatchGluePair, SceneContentEditPatchOffscreenKeyform, SceneContentEditPatchTriangle, SceneContentEditReorderMeshVertices, SceneContentEditReorderOffscreenKeyforms, SceneContentEditReplaceTriangles, SceneContentEditResizeWarp, SceneContentEditRotationKeepChildren, SceneContentEditSetOffscreenMapping, SceneContentEditTransferGluePairs, SceneContentEditWarpAuthoring, SceneContentEditWarpBezier, SceneContentEditWarpBezierControls, SceneContentEditWarpKeepChildren, SceneContentEditWarpPoints, SceneContentEditWarpShape, SceneEdit, SceneEditCreate, SceneEditDelete, SceneEditDissolveDrawingGroup, SceneEditDuplicate, SceneEditDuplicateDrawingGroup, SceneEditEnsureDrawingGroup, SceneEditMove, SceneEditPatch, SceneEditReparent, SceneEditSetDrawingRange, SceneEditTransferOffscreen
 
 def validate_SceneEdit(value: SceneEdit) -> None:
     from .scene import validate_OrganizationCollection
@@ -325,6 +325,7 @@ def validate_SceneContentEdit(value: SceneContentEdit) -> None:
     from .scene import validate_OffscreenDeletePolicy
     from .bindings import validate_OffscreenKeyform
     from .scene import validate_OffscreenMappingPatch
+    from .scene import validate_RotationTransform
     from .scene import validate_ShapeTarget
     from .mesh import validate_VertexContentPatch
     from .mesh import validate_VertexDeletePolicy
@@ -435,6 +436,9 @@ def validate_SceneContentEdit(value: SceneContentEdit) -> None:
     elif isinstance(value, SceneContentEditWarpKeepChildren):
         _check_string(value.transform_id)
         validate_WarpTransform(value.warp)
+    elif isinstance(value, SceneContentEditRotationKeepChildren):
+        _check_string(value.transform_id)
+        validate_RotationTransform(value.rotation)
     elif isinstance(value, SceneContentEditResizeWarp):
         _check_string(value.transform_id)
         _check_u32(value.rows)
@@ -525,6 +529,7 @@ def encode_SceneContentEdit(value: SceneContentEdit) -> object:
     from .scene import encode_OffscreenDeletePolicy
     from .bindings import encode_OffscreenKeyform
     from .scene import encode_OffscreenMappingPatch
+    from .scene import encode_RotationTransform
     from .scene import encode_ShapeTarget
     from .mesh import encode_VertexContentPatch
     from .mesh import encode_VertexDeletePolicy
@@ -564,6 +569,8 @@ def encode_SceneContentEdit(value: SceneContentEdit) -> object:
         return {'operation': 'warp_shape', **cast(Mapping[str, object], {'transform_id': value.transform_id, 'target': encode_ShapeTarget(value.target), 'action': encode_WarpShapeAction(value.action)})}
     elif isinstance(value, SceneContentEditWarpKeepChildren):
         return {'operation': 'warp_keep_children', **cast(Mapping[str, object], {'transform_id': value.transform_id, 'warp': encode_WarpTransform(value.warp)})}
+    elif isinstance(value, SceneContentEditRotationKeepChildren):
+        return {'operation': 'rotation_keep_children', **cast(Mapping[str, object], {'transform_id': value.transform_id, 'rotation': encode_RotationTransform(value.rotation)})}
     elif isinstance(value, SceneContentEditResizeWarp):
         return {'operation': 'resize_warp', **cast(Mapping[str, object], {'transform_id': value.transform_id, 'rows': value.rows, 'columns': value.columns, 'quad': value.quad})}
     elif isinstance(value, SceneContentEditInsertGluePair):
@@ -599,6 +606,7 @@ def read_SceneContentEdit(value: object) -> SceneContentEdit:
     from .scene import read_OffscreenDeletePolicy
     from .bindings import read_OffscreenKeyform
     from .scene import read_OffscreenMappingPatch
+    from .scene import read_RotationTransform
     from .scene import read_ShapeTarget
     from .mesh import read_VertexContentPatch
     from .mesh import read_VertexDeletePolicy
@@ -608,7 +616,7 @@ def read_SceneContentEdit(value: object) -> SceneContentEdit:
     from .scene import read_WarpPointPatch
     from .scene import read_WarpShapeAction
     from .scene import read_WarpTransform
-    if isinstance(value, (SceneContentEditDeformerOriginal, SceneContentEditMeshVertices, SceneContentEditInsertMeshVertices, SceneContentEditDeleteMeshVertices, SceneContentEditReorderMeshVertices, SceneContentEditInsertTriangle, SceneContentEditPatchTriangle, SceneContentEditDeleteTriangles, SceneContentEditReplaceTriangles, SceneContentEditWarpPoints, SceneContentEditWarpBezier, SceneContentEditWarpBezierControls, SceneContentEditWarpAuthoring, SceneContentEditWarpShape, SceneContentEditWarpKeepChildren, SceneContentEditResizeWarp, SceneContentEditInsertGluePair, SceneContentEditPatchGluePair, SceneContentEditMoveGluePairs, SceneContentEditTransferGluePairs, SceneContentEditDuplicateGluePairs, SceneContentEditDeleteGluePairs, SceneContentEditInsertOffscreenKeyform, SceneContentEditPatchOffscreenKeyform, SceneContentEditDuplicateOffscreenKeyforms, SceneContentEditReorderOffscreenKeyforms, SceneContentEditDeleteOffscreenKeyforms, SceneContentEditSetOffscreenMapping,)): return value
+    if isinstance(value, (SceneContentEditDeformerOriginal, SceneContentEditMeshVertices, SceneContentEditInsertMeshVertices, SceneContentEditDeleteMeshVertices, SceneContentEditReorderMeshVertices, SceneContentEditInsertTriangle, SceneContentEditPatchTriangle, SceneContentEditDeleteTriangles, SceneContentEditReplaceTriangles, SceneContentEditWarpPoints, SceneContentEditWarpBezier, SceneContentEditWarpBezierControls, SceneContentEditWarpAuthoring, SceneContentEditWarpShape, SceneContentEditWarpKeepChildren, SceneContentEditRotationKeepChildren, SceneContentEditResizeWarp, SceneContentEditInsertGluePair, SceneContentEditPatchGluePair, SceneContentEditMoveGluePairs, SceneContentEditTransferGluePairs, SceneContentEditDuplicateGluePairs, SceneContentEditDeleteGluePairs, SceneContentEditInsertOffscreenKeyform, SceneContentEditPatchOffscreenKeyform, SceneContentEditDuplicateOffscreenKeyforms, SceneContentEditReorderOffscreenKeyforms, SceneContentEditDeleteOffscreenKeyforms, SceneContentEditSetOffscreenMapping,)): return value
     r = record(value)
     tag = string(r['operation'])
     if tag == 'deformer_original':
@@ -656,6 +664,9 @@ def read_SceneContentEdit(value: object) -> SceneContentEdit:
     elif tag == 'warp_keep_children':
         f = record(r)
         return SceneContentEditWarpKeepChildren(transform_id=string(f['transform_id']), warp=read_WarpTransform(f['warp']))
+    elif tag == 'rotation_keep_children':
+        f = record(r)
+        return SceneContentEditRotationKeepChildren(transform_id=string(f['transform_id']), rotation=read_RotationTransform(f['rotation']))
     elif tag == 'resize_warp':
         f = record(r)
         return SceneContentEditResizeWarp(transform_id=string(f['transform_id']), rows=integer(f['rows']), columns=integer(f['columns']), quad=_boolean(f['quad']))

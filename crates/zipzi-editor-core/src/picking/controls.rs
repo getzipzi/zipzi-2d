@@ -35,7 +35,7 @@ impl CanvasScene {
                     }
                 })
     }
-    /// Rotation axes scale with the viewport, independently of the authored pose scale.
+    /// Rotation tips share the pose-scaled ring used for painting and picking.
     pub fn control_points(&self, c: &ControlGeometry, t: ViewportTransform) -> Vec<ViewportPoint> {
         let mut points: Vec<_> = c.points.iter().map(|p| t.to_viewport(*p)).collect();
         if c.kind == ControlKind::Rotation && points.len() >= 2 {
@@ -51,7 +51,7 @@ impl CanvasScene {
             };
             let length = d.x.hypot(d.y);
             if length > 1e-6 {
-                let axis_length = crate::deformer::ROTATION_AXIS_LENGTH * t.scale;
+                let axis_length = self.rotation_screen_radius(c, t);
                 points[1] = ViewportPoint {
                     x: points[0].x + d.x / length * axis_length,
                     y: points[0].y + d.y / length * axis_length,

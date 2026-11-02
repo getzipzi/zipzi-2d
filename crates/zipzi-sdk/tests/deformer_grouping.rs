@@ -21,7 +21,7 @@ fn creation(id: u32, warp: bool) -> SceneEdit {
         object: if warp {
             SceneCreate::Warp { bounds: None }
         } else {
-            SceneCreate::Rotation
+            SceneCreate::Rotation { origin: None }
         },
         part_id: None,
         parent_id: None,
@@ -64,6 +64,87 @@ fn same(before: &[std::sync::Arc<DrawableFrame>], after: &[std::sync::Arc<Drawab
                 );
             }
         }
+    }
+}
+
+#[test]
+fn rotation_group_centers_current_content_through_rotation_and_warp_parents() {
+    for (source, warp_parent) in [(4, false), (3, false), (2, false), (2, true)] {
+        let mut s = setup();
+        if warp_parent {
+            s.edit("Nested rectangular parent", None, |e| {
+                e.create_transform(Transform {
+                    id: fixture::id(500),
+                    parent_id: Some(fixture::id(3).into()),
+                    data: TransformData::Warp(WarpTransform {
+                        rows: 1,
+                        columns: 1,
+                        quad: false,
+                        bezier: None,
+                        points: vec![
+                            Vec2::new(10., 20.),
+                            Vec2::new(20., 20.),
+                            Vec2::new(10., 40.),
+                            Vec2::new(20., 40.),
+                        ],
+                    }),
+                    ..Default::default()
+                })?;
+                e.edit_scene(SceneEdit::Reparent {
+                    edit: ReparentEdit::keep_local(vec![fixture::id(2)], fixture::id(500)),
+                })?;
+                Ok(())
+            })
+            .unwrap();
+        }
+        let before = samples(&mut s);
+        s.set_preview_values(
+            [
+                (fixture::id(5), 0.35),
+                (fixture::id(10), 0.2),
+                (fixture::id(20), 0.6),
+            ]
+            .into(),
+        )
+        .unwrap();
+        let current = s.preview_frame().unwrap();
+        let mesh = current
+            .drawables
+            .iter()
+            .find(|m| m.id == fixture::id(if source == 4 { 4 } else { 2 }))
+            .unwrap();
+        let bounds = mesh.positions.iter().fold(
+            [
+                f32::INFINITY,
+                f32::INFINITY,
+                f32::NEG_INFINITY,
+                f32::NEG_INFINITY,
+            ],
+            |[a, b, c, d], p| [a.min(p.x), b.min(p.y), c.max(p.x), d.max(p.y)],
+        );
+        let center = Vec2::new((bounds[0] + bounds[2]) / 2., (bounds[1] + bounds[3]) / 2.);
+        let history = s.history_lengths();
+        let plan = s
+            .plan_deformer_group(creation(400, false), vec![fixture::id(source)])
+            .unwrap();
+        s.execute_scene_plan(&plan).unwrap();
+        let created = s.preview_frame().unwrap();
+        let origin = created
+            .deformers
+            .iter()
+            .find(|d| d.id == fixture::id(400))
+            .unwrap()
+            .points[0];
+        assert!(
+            (origin.x - center.x).hypot(origin.y - center.y) < 0.001,
+            "source={source}, warp={warp_parent}: {origin:?} vs {center:?}"
+        );
+        assert_eq!(s.history_lengths(), (history.0 + 1, 0));
+        same(&before, &samples(&mut s));
+        s.undo().unwrap();
+        same(&before, &samples(&mut s));
+        s.redo().unwrap();
+        same(&before, &samples(&mut s));
     }
 }
 
@@ -294,10 +375,9 @@ fn grouping_warp_under_driven_non_affine_warp_preserves_the_existing_lattice() {
     .unwrap();
     let before = samples(&mut s);
     let history = s.history_lengths();
-    assert!(
-        s.plan_deformer_group(creation(400, false), [3, 4].map(fixture::id).into())
-            .is_err()
-    );
+    assert!(s
+        .plan_deformer_group(creation(400, false), [3, 4].map(fixture::id).into())
+        .is_err());
     assert_eq!(s.history_lengths(), history);
     assert!(s.document().get_transform(&fixture::id(400)).is_none());
     let plan = s

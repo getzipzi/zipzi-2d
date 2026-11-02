@@ -43,7 +43,12 @@ pub enum SceneCreate {
         /// native defaults.
         bounds: Option<[f32; 4]>,
     },
-    Rotation,
+    Rotation {
+        #[serde(default)]
+        /// Optional rotation origin in parent coordinates. None uses (0, 0) for an empty
+        /// deformer, or the current content center when grouping a selection.
+        origin: Option<PreciseVec2>,
+    },
     Offscreen,
     Glue {
         #[serde(default)]

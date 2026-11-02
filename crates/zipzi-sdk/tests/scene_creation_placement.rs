@@ -69,7 +69,7 @@ fn independent_creation_anchors_publish_one_history_and_survive_save_and_undo() 
     let mut s = session();
     let p = part(&mut s);
     let q = part(&mut s);
-    let parent = create(&mut s, New::Rotation, Some(&p), None);
+    let parent = create(&mut s, New::Rotation { origin: None }, Some(&p), None);
     let a = create(
         &mut s,
         New::Mesh {
@@ -152,13 +152,13 @@ fn independent_creation_anchors_publish_one_history_and_survive_save_and_undo() 
 #[test]
 fn every_deformable_default_supports_typed_root_placement_via_direct_edits() {
     let mut s = session();
-    let anchor = create(&mut s, New::Rotation, None, None);
+    let anchor = create(&mut s, New::Rotation { origin: None }, None, None);
     for object in [
         New::Mesh {
             texture: Default::default(),
         },
         New::Warp { bounds: None },
-        New::Rotation,
+        New::Rotation { origin: None },
     ] {
         let new = id();
         s.edit("Create before", None, |e| {
@@ -175,29 +175,43 @@ fn every_deformable_default_supports_typed_root_placement_via_direct_edits() {
 fn wrong_collection_missing_and_self_anchors_reject_without_consuming_redo() {
     let mut s = session();
     let p = part(&mut s);
-    let owned = create(&mut s, New::Rotation, Some(&p), None);
-    let parent = create(&mut s, New::Rotation, None, None);
-    let child = create(&mut s, New::Rotation, None, Some(&parent));
-    create(&mut s, New::Rotation, None, None);
+    let owned = create(&mut s, New::Rotation { origin: None }, Some(&p), None);
+    let parent = create(&mut s, New::Rotation { origin: None }, None, None);
+    let child = create(&mut s, New::Rotation { origin: None }, None, Some(&parent));
+    create(&mut s, New::Rotation { origin: None }, None, None);
     s.undo().unwrap();
     let history = s.history_state();
     let version = s.version();
     for anchor in [p, child.clone(), id()] {
         let new = id();
         let error = s
-            .plan_scene_edit(intent(&new, New::Rotation, None, None, None, Some(&anchor)))
+            .plan_scene_edit(intent(
+                &new,
+                New::Rotation { origin: None },
+                None,
+                None,
+                None,
+                Some(&anchor),
+            ))
             .unwrap_err();
         assert_eq!(error.code.as_ref(), "INVALID_DEFORMATION_PLACEMENT");
         assert!(s.document().get_transform(&new).is_none());
     }
     let new = id();
     assert!(s
-        .plan_scene_edit(intent(&new, New::Rotation, None, None, None, Some(&new)))
+        .plan_scene_edit(intent(
+            &new,
+            New::Rotation { origin: None },
+            None,
+            None,
+            None,
+            Some(&new)
+        ))
         .is_err());
     assert!(s
         .plan_scene_edit(intent(
             &id(),
-            New::Rotation,
+            New::Rotation { origin: None },
             None,
             None,
             Some(&owned),
@@ -213,7 +227,7 @@ fn both_destination_locks_reject_creation_and_invalid_second_edit_rolls_back() {
     let mut s = session();
     let p = part(&mut s);
     let q = part(&mut s);
-    let parent = create(&mut s, New::Rotation, Some(&p), None);
+    let parent = create(&mut s, New::Rotation { origin: None }, Some(&p), None);
     for lock in [&q, &parent] {
         let mut state = s.document().editor_state().clone();
         state.objects.insert(
@@ -229,7 +243,7 @@ fn both_destination_locks_reject_creation_and_invalid_second_edit_rolls_back() {
         let error = s
             .plan_scene_edit(intent(
                 &id(),
-                New::Rotation,
+                New::Rotation { origin: None },
                 Some(&q),
                 Some(&parent),
                 None,
@@ -247,7 +261,7 @@ fn both_destination_locks_reject_creation_and_invalid_second_edit_rolls_back() {
         .edit("Atomic", None, |e| {
             e.edit_scene(intent(
                 &new,
-                New::Rotation,
+                New::Rotation { origin: None },
                 Some(&q),
                 Some(&parent),
                 None,
@@ -255,7 +269,7 @@ fn both_destination_locks_reject_creation_and_invalid_second_edit_rolls_back() {
             ))?;
             e.edit_scene(intent(
                 &id(),
-                New::Rotation,
+                New::Rotation { origin: None },
                 Some(&q),
                 Some(&parent),
                 None,
@@ -272,7 +286,7 @@ fn both_destination_locks_reject_creation_and_invalid_second_edit_rolls_back() {
 fn offscreen_and_glue_cannot_acquire_a_deformation_position() {
     let mut s = session();
     let p = part(&mut s);
-    let anchor = create(&mut s, New::Rotation, None, None);
+    let anchor = create(&mut s, New::Rotation { origin: None }, None, None);
     for object in [
         New::Offscreen,
         New::Glue {
@@ -294,13 +308,13 @@ fn offscreen_and_glue_cannot_acquire_a_deformation_position() {
 #[test]
 fn serialized_placement_and_stale_plan_preserve_native_version_guards() {
     let mut s = session();
-    let anchor = create(&mut s, New::Rotation, None, None);
+    let anchor = create(&mut s, New::Rotation { origin: None }, None, None);
     let new = id();
     let json = serde_json::json!({"operation":"create", "id":new, "name":"JSON", "object":{"kind":"rotation"}, "deformation_before":anchor});
     let plan = s
         .plan_scene_edit(serde_json::from_value(json).unwrap())
         .unwrap();
-    create(&mut s, New::Rotation, None, None);
+    create(&mut s, New::Rotation { origin: None }, None, None);
     s.undo().unwrap();
     let history = s.history_state();
     assert!(s.execute_scene_plan(&plan).is_err());

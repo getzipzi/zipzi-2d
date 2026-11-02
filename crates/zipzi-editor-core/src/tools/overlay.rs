@@ -78,7 +78,7 @@ pub struct OverlaySnapshot {
     pub warp_transform_points: Option<usize>,
     pub warp_frame_adjusting: bool,
     pub warp_bezier_mode: Option<zipzi_core::WarpBezierEditMode>,
-    pub warp_keep_children: bool,
+    pub deformer_keep_children: bool,
     pub active_handle_radians: f32,
     /// Context for a hovered control, separate from edit errors and parameter previews.
     pub point_unavailable: Option<String>,
@@ -250,11 +250,6 @@ impl ToolController {
             } else {
                 0
             });
-            out.warp_keep_children = self
-                .gesture
-                .as_ref()
-                .is_some_and(|g| g.press().keep_children)
-                && !out.warp_frame_adjusting;
             if local
                 && (matches!(active_target, Some(HitTarget::Component(c))
                     if crate::warp_bezier::component(c.id).is_some())
@@ -276,6 +271,15 @@ impl ToolController {
             HitTarget::Component(component) => Some(component.clone()),
             _ => None,
         });
+        out.deformer_keep_children = active_target.is_some_and(|target| {
+            scene
+                .control(&target.object().id)
+                .is_some_and(|c| matches!(c.kind, ControlKind::Warp | ControlKind::Rotation))
+        }) && self
+            .gesture
+            .as_ref()
+            .is_some_and(|g| g.press().keep_children)
+            && !out.warp_frame_adjusting;
         out.active_handle = active_target.and_then(|hit| match hit {
             HitTarget::DeformerHandle(_, handle) => Some(*handle),
             HitTarget::RotationHandle(_) => Some(crate::DeformerHandle::Rotate),
@@ -378,9 +382,10 @@ impl ToolController {
             }
             let points = scene.control_points(control, t);
             let selected = selection.contains(&control.object);
-            let hovered = hovered_target
-                .as_ref()
-                .is_some_and(|h| h.object() == &control.object);
+            let hovered = control.kind != ControlKind::Rotation
+                && hovered_target
+                    .as_ref()
+                    .is_some_and(|h| h.object() == &control.object);
             if control.kind == ControlKind::Glue {
                 let mut glue_points = Vec::new();
                 if let Some(g) = scene
@@ -535,10 +540,13 @@ impl ToolController {
                                                 control.object.clone(),
                                             ))
                                     })),
-                            hovered: hovered_target == Some(HitTarget::Component(c.clone()))
-                                || (i == 1
-                                    && hovered_target
-                                        == Some(HitTarget::RotationHandle(control.object.clone()))),
+                            hovered: control.kind != ControlKind::Rotation
+                                && (hovered_target == Some(HitTarget::Component(c.clone()))
+                                    || (i == 1
+                                        && hovered_target
+                                            == Some(HitTarget::RotationHandle(
+                                                control.object.clone(),
+                                            )))),
                         });
                     }
                 }
@@ -588,11 +596,12 @@ impl ToolController {
                                                 kind,
                                             ))
                                     }),
-                                    hovered: hovered_target
-                                        == Some(HitTarget::DeformerHandle(
-                                            control.object.clone(),
-                                            kind,
-                                        )),
+                                    hovered: control.kind != ControlKind::Rotation
+                                        && hovered_target
+                                            == Some(HitTarget::DeformerHandle(
+                                                control.object.clone(),
+                                                kind,
+                                            )),
                                 }),
                         );
                 }

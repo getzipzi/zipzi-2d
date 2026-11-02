@@ -438,7 +438,13 @@ def _write_reparentcontext(value: object, w: Writer) -> None:
         _write_conversiondomain(item0, w)
     w.scalar('d', _field(value, 'edit_time_seconds'))
 
+@cache
+def _dependencies__write_scenecreate():
+    from .common import _write_precisevec2
+    return _write_precisevec2,
+
 def _write_scenecreate(value: object, w: Writer) -> None:
+    _write_precisevec2, = _dependencies__write_scenecreate()
     tag=string(getattr(value,"_variant",getattr(value,"kind",None)))
     if tag=='mesh':
         w.u32(0)
@@ -454,6 +460,11 @@ def _write_scenecreate(value: object, w: Writer) -> None:
             w.numeric('f', tuple(items0))
     elif tag=='rotation':
         w.u32(2)
+        if _field(value, 'origin') is None:
+            w.raw(b"\0")
+        else:
+            w.raw(b"\1")
+            _write_precisevec2(_field(value, 'origin'), w)
     elif tag=='offscreen':
         w.u32(3)
     elif tag=='glue':

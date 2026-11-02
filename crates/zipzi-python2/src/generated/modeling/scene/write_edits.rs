@@ -900,6 +900,24 @@ pub(crate) fn write_scenecontentedit_in(
                 .call((), Some(&content))?
                 .unbind())
         }
+        zipzi_core::document::SceneContentEdit::RotationKeepChildren {
+            transform_id: field0,
+            rotation: field1,
+        } => {
+            let content = PyDict::new(py);
+            content.set_item(
+                "transform_id",
+                (field0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+            content.set_item(
+                "rotation",
+                write_rotationtransform_in(py, (field1), classes)?,
+            )?;
+            Ok(classes
+                .getattr("SceneContentEditRotationKeepChildren")?
+                .call((), Some(&content))?
+                .unbind())
+        }
         zipzi_core::document::SceneContentEdit::ResizeWarp {
             transform_id: field0,
             rows: field1,

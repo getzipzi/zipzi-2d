@@ -117,7 +117,7 @@ class Reader:
     def finish(self) -> None:
         if self.offset!=len(self.data): raise ValueError("Trailing binary fields")
 
-INPUT_SIGNATURE = '3e5b61a7fd99338d343e20698219445a'
+INPUT_SIGNATURE = '47dbe9859095cb84bb676251e98980e7'
 
 MESH_SIGNATURE = 'f38a4fcb442823db2a155a06e4994cf2'
 

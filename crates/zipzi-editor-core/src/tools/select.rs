@@ -95,13 +95,11 @@ impl ToolController {
         let mut deferred_toggle = None;
         match &hit {
             Some(HitTarget::Component(c)) => {
-                let rotation_center_step = shift
-                    && alt
-                    && c.id == 0
+                let rotation_center_drag = c.id == 0
                     && scene
                         .control(&c.object.id)
                         .is_some_and(|control| control.kind == crate::ControlKind::Rotation);
-                if operation == SelectionOperation::Remove && !rotation_center_step {
+                if operation == SelectionOperation::Remove && !rotation_center_drag {
                     self.components.retain(|v| v != c);
                     return;
                 }

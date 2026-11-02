@@ -248,8 +248,18 @@ pub(crate) fn write_scenecreate_in(
                 .call((), Some(&content))?
                 .unbind())
         }
-        zipzi_core::document::SceneCreate::Rotation => {
-            Ok(classes.getattr("SceneCreateRotation")?.call0()?.unbind())
+        zipzi_core::document::SceneCreate::Rotation { origin: field0 } => {
+            let content = PyDict::new(py);
+            content.set_item("origin", {
+                match (field0).as_ref() {
+                    Some(item) => write_precisevec2(py, (item))?,
+                    None => py.None(),
+                }
+            })?;
+            Ok(classes
+                .getattr("SceneCreateRotation")?
+                .call((), Some(&content))?
+                .unbind())
         }
         zipzi_core::document::SceneCreate::Offscreen => {
             Ok(classes.getattr("SceneCreateOffscreen")?.call0()?.unbind())

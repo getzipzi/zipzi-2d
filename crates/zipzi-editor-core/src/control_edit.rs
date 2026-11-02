@@ -250,7 +250,7 @@ pub(crate) struct ControlEdit {
     pub space: ControlSpace,
     pub warp: Option<WarpEdit>,
     pub mesh: Option<crate::mesh_edit::MeshEdit>,
-    pub(crate) keep_children: bool,
+    pub(crate) kept_children: Option<EditOriginal>,
 }
 #[derive(Clone)]
 pub(crate) struct WarpEdit {
@@ -796,20 +796,32 @@ impl ControlEdit {
             space: ControlSpace::new(document, scene, &parent_id)?,
             warp,
             mesh,
-            keep_children: false,
+            kept_children: None,
         })
     }
-    pub(crate) fn keep_warp_children(&mut self, document: &Document) -> Result<()> {
-        let model = document.model();
-        let warp = self
-            .warp
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Keep children is available only for Warp controls"))?;
-        let plan = model
-            .plan_scene_content(zipzi_core::document::SceneContentEdit::WarpKeepChildren {
+    fn keep_children_edit(
+        &self,
+        data: &zipzi_core::TransformData,
+    ) -> zipzi_core::document::SceneContentEdit {
+        use zipzi_core::{TransformData, document::SceneContentEdit as E};
+        match data {
+            TransformData::Warp(warp) => E::WarpKeepChildren {
                 transform_id: self.object.id.clone(),
-                warp: warp.transform.warp().unwrap().clone(),
-            })
+                warp: warp.clone(),
+            },
+            TransformData::Rotation(rotation) => E::RotationKeepChildren {
+                transform_id: self.object.id.clone(),
+                rotation: rotation.clone(),
+            },
+        }
+    }
+    pub(crate) fn keep_deformer_children(&mut self, document: &Document) -> Result<()> {
+        let model = document.model();
+        let transform = model
+            .get_transform(&self.object.id)
+            .ok_or_else(|| anyhow::anyhow!("Keep children requires deformer controls"))?;
+        let plan = model
+            .plan_scene_content(self.keep_children_edit(&transform.data))
             .map_err(crate::AuthoringPlanningError::from_status)?;
         let mut originals = Vec::new();
         for id in plan.affected_ids() {
@@ -825,8 +837,18 @@ impl ControlEdit {
                 originals.push(EditOriginal::BlendBinding(v.clone()));
             }
         }
-        self.original = EditOriginal::Batch(originals);
-        self.keep_children = true;
+        self.kept_children = Some(EditOriginal::Batch(originals));
+        Ok(())
+    }
+    fn write_kept_children(
+        &self,
+        edit: &mut zipzi_sdk::EditSession<'_>,
+        data: &zipzi_core::TransformData,
+    ) -> Result<()> {
+        // Restore press channels before each preview; Warp and Rotation share
+        // this publication path instead of accumulating inverse conversions.
+        self.kept_children.as_ref().unwrap().restore(edit)?;
+        edit.edit_scene_content(self.keep_children_edit(data))?;
         Ok(())
     }
     pub fn to_model(&self, p: Vec2) -> ModelPoint {
@@ -956,7 +978,11 @@ impl ControlEdit {
                 if self.rotation {
                     let mut r = t.rotation().unwrap().clone();
                     update_rotation(&mut r.pose);
-                    edit.update_rotation(&t.id, r)?;
+                    if self.kept_children.is_some() {
+                        self.write_kept_children(edit, &zipzi_core::TransformData::Rotation(r))?;
+                    } else {
+                        edit.update_rotation(&t.id, r)?;
+                    }
                 } else {
                     edit.update_warp_points(&t.id, positions)?;
                 }
@@ -1378,14 +1404,8 @@ impl ControlEdit {
         transform: Transform,
         binding: Option<SceneBinding>,
     ) -> Result<()> {
-        if self.keep_children {
-            // Every preview starts with the frozen channels; never accumulate
-            // inverse conversions from the previous pointer position.
-            self.original.restore(edit)?;
-            edit.edit_scene_content(zipzi_core::document::SceneContentEdit::WarpKeepChildren {
-                transform_id: transform.id.clone(),
-                warp: transform.warp().unwrap().clone(),
-            })?;
+        if self.kept_children.is_some() {
+            self.write_kept_children(edit, &transform.data)?;
         } else {
             edit.replace_warp_authoring(transform, binding)?;
         }

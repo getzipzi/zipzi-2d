@@ -12,6 +12,7 @@ mod manual_mesh;
 mod overlay;
 mod region;
 mod select;
+mod transform_constraints;
 pub use hints::{HintAction, InteractionHint};
 pub use manual_mesh::{ManualMeshEdge, ManualMeshFeedback, ManualTool};
 
@@ -76,6 +77,11 @@ pub struct ToolController {
     overlay_builds: std::sync::atomic::AtomicUsize,
 }
 impl ToolController {
+    pub(crate) fn set_gesture_modifiers(&mut self, shift: bool, alt: bool) -> bool {
+        self.gesture
+            .as_mut()
+            .is_some_and(|g| g.set_modifiers(shift, alt))
+    }
     pub(crate) fn warp_selection_gizmo(
         &self,
         document: &Document,
@@ -396,12 +402,19 @@ pub enum CanvasInput {
         /// Platform primary modifier (Command on macOS), captured on press.
         primary: bool,
     },
+    /// Move with the most recent transform modifiers. Native pointer callers
+    /// supply current keys through `update_canvas_gesture_with_modifiers`.
     Move {
         point: ViewportPoint,
         left_down: bool,
     },
     Up {
         point: ViewportPoint,
+    },
+    /// Transform constraints change immediately, even with a stationary pointer.
+    ModifiersChanged {
+        shift: bool,
+        alt: bool,
     },
     Cancel,
     Leave,

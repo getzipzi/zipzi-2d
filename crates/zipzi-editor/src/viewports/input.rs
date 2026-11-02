@@ -211,18 +211,6 @@ impl ViewportSurface {
             .on_pinch(cx.listener(|this, event: &PinchEvent, window, cx| {
                 this.pinch(event, window, cx);
             }))
-            .on_modifiers_changed(cx.listener(|this, _, _, cx| {
-                if this.kind == zipzi_editor_core::ViewportKind::Modeling
-                    && this
-                        .owner
-                        .upgrade()
-                        .is_some_and(|owner| owner.read(cx).editor.manual_active())
-                {
-                    // Modifier-only presses must update the cursor and guidance
-                    // without requiring mouse movement or changing the gesture.
-                    cx.notify();
-                }
-            }))
             .on_hover(cx.listener(|this, hovered: &bool, window, cx| {
                 if !hovered && this.navigation.pan.is_none() {
                     this.input(CanvasInput::Leave, window, cx);
@@ -235,5 +223,31 @@ impl ViewportSurface {
                     }
                 }),
             )
+    }
+
+    pub(super) fn modifiers_changed(
+        &mut self,
+        event: &gpui_kit::ModifiersChangedEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.interaction.is_some() && self.navigation.pan.is_none() {
+            self.input(
+                CanvasInput::ModifiersChanged {
+                    shift: event.modifiers.shift,
+                    alt: event.modifiers.alt,
+                },
+                window,
+                cx,
+            );
+        }
+        if self.kind == zipzi_editor_core::ViewportKind::Modeling
+            && self
+                .owner
+                .upgrade()
+                .is_some_and(|owner| owner.read(cx).editor.manual_active())
+        {
+            cx.notify();
+        }
     }
 }

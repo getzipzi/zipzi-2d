@@ -60,6 +60,327 @@ fn gesture(
     )?;
     Ok(())
 }
+
+#[test]
+fn frame_axis_and_ring_update_angle_steps_on_key_changes_without_pointer_motion()
+-> anyhow::Result<()> {
+    for target in 0..3 {
+        for cancel in [false, true] {
+            let (mut editor, _dir, object) = if target == 0 {
+                mesh_editor()?
+            } else {
+                deformer_editor(true)?
+            };
+            let frame = shown(&mut editor)?;
+            let before = if target == 0 {
+                vertices(&mut editor, &object)?
+            } else {
+                control_points(&mut editor, &object)?
+            };
+            let pivot = if target == 0 {
+                ModelPoint {
+                    x: (before[0].x + before[2].x) / 2.,
+                    y: (before[0].y + before[2].y) / 2.,
+                }
+            } else {
+                before[0]
+            };
+            let center = frame.transform.to_viewport(pivot);
+            let start = if target == 0 {
+                editor.overlay().handles.last().unwrap().position
+            } else {
+                let c = frame
+                    .geometry
+                    .controls
+                    .iter()
+                    .find(|c| c.object == object)
+                    .unwrap();
+                if target == 1 {
+                    frame.geometry.control_points(c, frame.transform)[1]
+                } else {
+                    frame
+                        .geometry
+                        .deformer_gizmo(c, frame.transform)
+                        .unwrap()
+                        .outline[24]
+                        .0
+                }
+            };
+            let angle = |editor: &mut Editor| -> anyhow::Result<f64> {
+                if target == 0 {
+                    let after = vertices(editor, &object)?;
+                    let (x0, y0) = (before[0].x - pivot.x, before[0].y - pivot.y);
+                    let (x1, y1) = (after[0].x - pivot.x, after[0].y - pivot.y);
+                    Ok((x0 * y1 - y0 * x1).atan2(x0 * x1 + y0 * y1).to_degrees() as f64)
+                } else {
+                    Ok(editor
+                        .document()
+                        .unwrap()
+                        .object_index()
+                        .get(&object)
+                        .unwrap()
+                        .properties["rotation"]["pose"]["angle"]
+                        .as_f64()
+                        .unwrap())
+                }
+            };
+            pointer_input(
+                &mut editor,
+                CanvasInput::Down {
+                    point: start,
+                    shift: false,
+                    alt: false,
+                    primary: false,
+                },
+            )?;
+            // Modifier changes below the drag threshold must not create a candidate.
+            pointer_input(
+                &mut editor,
+                CanvasInput::ModifiersChanged {
+                    shift: true,
+                    alt: true,
+                },
+            )?;
+            assert!(!editor.document().unwrap().has_pending_edit());
+            pointer_input(
+                &mut editor,
+                CanvasInput::ModifiersChanged {
+                    shift: false,
+                    alt: false,
+                },
+            )?;
+            let (sin, cos) = (-23.4f32.to_radians()).sin_cos();
+            let (x, y) = (start.x - center.x, start.y - center.y);
+            let end = ViewportPoint {
+                x: center.x + x * cos - y * sin,
+                y: center.y + x * sin + y * cos,
+            };
+            pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: end,
+                    left_down: true,
+                },
+            )?;
+            assert!((angle(&mut editor)? - 23.4).abs() < 0.002);
+            for _ in 0..2 {
+                for (shift, alt, expected) in [
+                    (true, false, 30.),
+                    (true, true, 23.),
+                    (false, true, 23.4),
+                    (false, false, 23.4),
+                ] {
+                    pointer_input(&mut editor, CanvasInput::ModifiersChanged { shift, alt })?;
+                    assert!(
+                        (angle(&mut editor)? - expected).abs() < 0.002,
+                        "target={target} shift={shift} alt={alt}"
+                    );
+                    assert!(!pointer_input(
+                        &mut editor,
+                        CanvasInput::ModifiersChanged { shift, alt }
+                    )?);
+                    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+                }
+            }
+            pointer_input(
+                &mut editor,
+                if cancel {
+                    CanvasInput::Cancel
+                } else {
+                    CanvasInput::Up { point: end }
+                },
+            )?;
+            assert_eq!(
+                editor.document().unwrap().history_lengths(),
+                (usize::from(!cancel), 0)
+            );
+            assert!((angle(&mut editor)? - if cancel { 0. } else { 23.4 }).abs() < 0.002);
+            if !cancel {
+                editor.execute(EditorCommand::Undo)?;
+            }
+            let restored = if target == 0 {
+                vertices(&mut editor, &object)?
+            } else {
+                control_points(&mut editor, &object)?
+            };
+            assert_eq!(restored, before);
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn frame_and_rotation_translation_release_and_reacquire_axis_and_fine_steps_live()
+-> anyhow::Result<()> {
+    for rotation in [false, true] {
+        let (mut editor, _dir, object) = if rotation {
+            deformer_editor(true)?
+        } else {
+            mesh_editor()?
+        };
+        let frame = shown(&mut editor)?;
+        let before = if rotation {
+            control_points(&mut editor, &object)?
+        } else {
+            vertices(&mut editor, &object)?
+        };
+        let start = if rotation {
+            frame.transform.to_viewport(before[0])
+        } else {
+            let handles = editor.overlay().handles;
+            ViewportPoint {
+                x: (handles[0].position.x + handles[1].position.x) / 2.,
+                y: handles[0].position.y,
+            }
+        };
+        let at = |x, y| ViewportPoint {
+            x: start.x + x * frame.transform.scale,
+            y: start.y + y * frame.transform.scale,
+        };
+        let check = |editor: &mut Editor, dx: f32, dy: f32| -> anyhow::Result<()> {
+            let after = if rotation {
+                control_points(editor, &object)?
+            } else {
+                vertices(editor, &object)?
+            };
+            for (a, b) in before.iter().zip(after) {
+                assert!(
+                    (b.x - a.x - dx).abs() < 0.002 && (b.y - a.y - dy).abs() < 0.002,
+                    "rotation={rotation}: {a:?} -> {b:?}, expected=({dx},{dy})"
+                );
+            }
+            Ok(())
+        };
+        pointer_input(
+            &mut editor,
+            CanvasInput::Down {
+                point: start,
+                shift: false,
+                alt: false,
+                primary: false,
+            },
+        )?;
+        pointer_input(
+            &mut editor,
+            CanvasInput::Move {
+                point: at(17.4, 4.2),
+                left_down: true,
+            },
+        )?;
+        check(&mut editor, 17.4, -4.2)?;
+        for (shift, alt, dx, dy) in [
+            (true, false, 17.4, 0.),
+            (true, true, 17., 0.),
+            (false, true, 17.4, -4.2),
+        ] {
+            pointer_input(&mut editor, CanvasInput::ModifiersChanged { shift, alt })?;
+            check(&mut editor, dx, dy)?;
+        }
+        pointer_input(
+            &mut editor,
+            CanvasInput::Move {
+                point: at(5.6, 30.4),
+                left_down: true,
+            },
+        )?;
+        pointer_input(
+            &mut editor,
+            CanvasInput::ModifiersChanged {
+                shift: true,
+                alt: true,
+            },
+        )?;
+        check(&mut editor, 0., -30.)?;
+        pointer_input(
+            &mut editor,
+            CanvasInput::ModifiersChanged {
+                shift: true,
+                alt: false,
+            },
+        )?;
+        check(&mut editor, 0., -30.4)?;
+        pointer_input(
+            &mut editor,
+            CanvasInput::Move {
+                point: at(40., 5.),
+                left_down: true,
+            },
+        )?;
+        check(&mut editor, 0., -5.)?;
+        pointer_input(
+            &mut editor,
+            CanvasInput::ModifiersChanged {
+                shift: false,
+                alt: false,
+            },
+        )?;
+        check(&mut editor, 40., -5.)?;
+        pointer_input(&mut editor, CanvasInput::Up { point: at(40., 5.) })?;
+        assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+        editor.execute(EditorCommand::Undo)?;
+        check(&mut editor, 0., 0.)?;
+    }
+    Ok(())
+}
+
+#[test]
+fn frame_scale_switches_center_uniformity_and_fine_steps_live_without_accumulating_changes()
+-> anyhow::Result<()> {
+    let (mut editor, _dir, object) = mesh_editor()?;
+    let before = vertices(&mut editor, &object)?;
+    let frame = shown(&mut editor)?;
+    let center = ModelPoint {
+        x: (before[0].x + before[2].x) / 2.,
+        y: (before[0].y + before[2].y) / 2.,
+    };
+    let start = editor.overlay().handles[4].position;
+    let end = ViewportPoint {
+        x: start.x + (before[2].x - center.x) * 0.237 * frame.transform.scale,
+        y: start.y + (center.y - before[0].y) * 0.123 * frame.transform.scale,
+    };
+    pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: start,
+            shift: false,
+            alt: false,
+            primary: false,
+        },
+    )?;
+    pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: end,
+            left_down: true,
+        },
+    )?;
+    for _ in 0..2 {
+        for (shift, alt, scale) in [
+            (true, false, [1.1185, 1.1185]),
+            (true, true, [1.24, 1.24]),
+            (false, true, [1.237, 1.123]),
+            (false, false, [1.1185, 1.0615]),
+        ] {
+            pointer_input(&mut editor, CanvasInput::ModifiersChanged { shift, alt })?;
+            let pivot = if alt {
+                center
+            } else {
+                ModelPoint {
+                    x: before[0].x,
+                    y: before[2].y,
+                }
+            };
+            for (a, b) in before.iter().zip(vertices(&mut editor, &object)?) {
+                assert!((b.x - pivot.x - (a.x - pivot.x) * scale[0]).abs() < 0.002);
+                assert!((b.y - pivot.y - (a.y - pivot.y) * scale[1]).abs() < 0.002);
+            }
+        }
+    }
+    pointer_input(&mut editor, CanvasInput::Cancel)?;
+    assert_eq!(vertices(&mut editor, &object)?, before);
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
 #[test]
 fn mesh_frame_transforms_in_canvas_space_through_a_warp_parent_and_undoes_atomically()
 -> anyhow::Result<()> {
@@ -477,51 +798,104 @@ fn mixed_mesh_rotation_selection_frame_only_transforms_the_mesh() -> anyhow::Res
 }
 
 #[test]
-fn rotation_axis_and_ring_support_coarse_and_fine_steps() -> anyhow::Result<()> {
-    for axis in [false, true] {
-        for (shift, alt, expected) in [(false, false, 23.4), (true, false, 30.), (true, true, 23.)]
-        {
-            let (mut editor, _dir, object) = deformer_editor(true)?;
-            let canvas = shown(&mut editor)?;
-            let control = canvas
-                .geometry
-                .controls
-                .iter()
-                .find(|c| c.object == object)
-                .unwrap();
-            let gizmo = canvas
-                .geometry
-                .deformer_gizmo(control, canvas.transform)
-                .unwrap();
-            let start = if axis {
-                canvas.geometry.control_points(control, canvas.transform)[1]
-            } else {
-                gizmo.outline[0].0
-            };
-            let center = gizmo.center;
-            let (s, c) = (-23.4f32.to_radians()).sin_cos();
-            let (x, y) = (start.x - center.x, start.y - center.y);
-            gesture(
-                &mut editor,
-                start,
-                ViewportPoint {
-                    x: center.x + x * c - y * s,
-                    y: center.y + x * s + y * c,
-                },
-                shift,
-                alt,
-                false,
-            )?;
-            let index = editor.document().unwrap().object_index();
-            let angle = index.get(&object).unwrap().properties["rotation"]["pose"]["angle"]
-                .as_f64()
-                .unwrap();
-            assert!(
-                (angle - expected).abs() < 0.01,
-                "axis={axis} shift={shift} alt={alt}: {angle}"
-            );
-            assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
-            assert!(editor.overlay().warp_frame_lines.is_empty());
+fn object_frame_rotation_axis_and_ring_share_angle_steps() -> anyhow::Result<()> {
+    for target in 0..3 {
+        for sign in [-1., 1.] {
+            for (shift, alt, expected) in [
+                (false, false, 23.4),
+                (false, true, 23.4),
+                (true, false, 30.),
+                (true, true, 23.),
+            ] {
+                let (mut editor, _dir, object) = if target == 0 {
+                    mesh_editor()?
+                } else {
+                    deformer_editor(true)?
+                };
+                let canvas = shown(&mut editor)?;
+                let before = if target == 0 {
+                    vertices(&mut editor, &object)?
+                } else {
+                    control_points(&mut editor, &object)?
+                };
+                let pivot = if target == 0 {
+                    ModelPoint {
+                        x: (before[0].x + before[2].x) / 2.,
+                        y: (before[0].y + before[2].y) / 2.,
+                    }
+                } else {
+                    before[0]
+                };
+                let center = canvas.transform.to_viewport(pivot);
+                let start = if target == 0 {
+                    editor.overlay().handles.last().unwrap().position
+                } else {
+                    let control = canvas
+                        .geometry
+                        .controls
+                        .iter()
+                        .find(|c| c.object == object)
+                        .unwrap();
+                    if target == 1 {
+                        canvas.geometry.control_points(control, canvas.transform)[1]
+                    } else {
+                        let point = canvas
+                            .geometry
+                            .deformer_gizmo(control, canvas.transform)
+                            .unwrap()
+                            .outline[24]
+                            .0;
+                        assert_eq!(
+                            canvas.geometry.hit(
+                                point,
+                                canvas.transform,
+                                std::slice::from_ref(&object),
+                                ToolId::Select,
+                                Default::default()
+                            ),
+                            Some(HitTarget::DeformerHandle(
+                                object.clone(),
+                                DeformerHandle::Rotate
+                            ))
+                        );
+                        point
+                    }
+                };
+                let (sin, cos) = (-sign * 23.4f32.to_radians()).sin_cos();
+                let (x, y) = (start.x - center.x, start.y - center.y);
+                gesture(
+                    &mut editor,
+                    start,
+                    ViewportPoint {
+                        x: center.x + x * cos - y * sin,
+                        y: center.y + x * sin + y * cos,
+                    },
+                    shift,
+                    alt,
+                    false,
+                )?;
+                let angle = if target == 0 {
+                    let after = vertices(&mut editor, &object)?;
+                    let (x0, y0) = (before[0].x - pivot.x, before[0].y - pivot.y);
+                    let (x1, y1) = (after[0].x - pivot.x, after[0].y - pivot.y);
+                    (x0 * y1 - y0 * x1).atan2(x0 * x1 + y0 * y1).to_degrees() as f64
+                } else {
+                    editor
+                        .document()
+                        .unwrap()
+                        .object_index()
+                        .get(&object)
+                        .unwrap()
+                        .properties["rotation"]["pose"]["angle"]
+                        .as_f64()
+                        .unwrap()
+                };
+                assert!(
+                    (angle - sign as f64 * expected).abs() < 0.002,
+                    "target={target} shift={shift} alt={alt}: {angle}"
+                );
+                assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+            }
         }
     }
     Ok(())
@@ -552,10 +926,7 @@ fn rotation_native_scale_steps_and_cancellation_preserve_the_origin() -> anyhow:
         gesture(
             &mut editor,
             start,
-            ViewportPoint {
-                x: center.x + (start.x - center.x) * 1.237,
-                y: center.y + (start.y - center.y) * 1.237,
-            },
+            rotation_scale_pointer(center, start, 1.237),
             shift,
             alt,
             cancel,
@@ -599,49 +970,90 @@ fn frame_scale_fine_steps_are_uniform_and_centered() -> anyhow::Result<()> {
 }
 
 #[test]
-fn rotation_center_and_frame_edge_fine_translation_snap_canvas_units() -> anyhow::Result<()> {
+fn object_frame_and_rotation_center_share_translation_constraints_and_frozen_axis()
+-> anyhow::Result<()> {
     for rotation in [false, true] {
-        let (mut editor, _dir, object) = if rotation {
-            deformer_editor(true)?
-        } else {
-            mesh_editor()?
-        };
-        let canvas = shown(&mut editor)?;
-        let before = if rotation {
-            control_points(&mut editor, &object)?
-        } else {
-            vertices(&mut editor, &object)?
-        };
-        let start = if rotation {
-            canvas.transform.to_viewport(before[0])
-        } else {
-            let handles = editor.overlay().handles;
-            ViewportPoint {
-                x: (handles[0].position.x + handles[1].position.x) / 2.,
-                y: handles[0].position.y,
+        for (shift, alt, expected) in [
+            (false, false, [5.6, -30.4]),
+            (false, true, [5.6, -30.4]),
+            (true, false, [5.6, 0.]),
+            (true, true, [6., 0.]),
+        ] {
+            let (mut editor, _dir, object) = if rotation {
+                deformer_editor(true)?
+            } else {
+                mesh_editor()?
+            };
+            let canvas = shown(&mut editor)?;
+            let before = if rotation {
+                control_points(&mut editor, &object)?
+            } else {
+                vertices(&mut editor, &object)?
+            };
+            let start = if rotation {
+                canvas.transform.to_viewport(before[0])
+            } else {
+                let handles = editor.overlay().handles;
+                ViewportPoint {
+                    x: (handles[0].position.x + handles[1].position.x) / 2.,
+                    y: handles[0].position.y,
+                }
+            };
+            pointer_input(
+                &mut editor,
+                CanvasInput::Down {
+                    point: start,
+                    shift,
+                    alt,
+                    primary: false,
+                },
+            )?;
+            // The first move freezes X even when the pointer later moves farther along Y.
+            let at = |x, y| ViewportPoint {
+                x: start.x + x * canvas.transform.scale,
+                y: start.y + y * canvas.transform.scale,
+            };
+            pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: at(17.4, 4.2),
+                    left_down: true,
+                },
+            )?;
+            pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: at(5.6, 30.4),
+                    left_down: true,
+                },
+            )?;
+            pointer_input(
+                &mut editor,
+                CanvasInput::Up {
+                    point: at(5.6, 30.4),
+                },
+            )?;
+            let after = if rotation {
+                control_points(&mut editor, &object)?
+            } else {
+                vertices(&mut editor, &object)?
+            };
+            for (a, b) in before.iter().zip(after) {
+                assert!(
+                    (b.x - a.x - expected[0]).abs() < 0.002,
+                    "rotation={rotation} shift={shift} alt={alt}: {a:?} -> {b:?}"
+                );
+                assert!((b.y - a.y - expected[1]).abs() < 0.002);
             }
-        };
-        gesture(
-            &mut editor,
-            start,
-            ViewportPoint {
-                x: start.x + 17.4 * canvas.transform.scale,
-                y: start.y + 4.2 * canvas.transform.scale,
-            },
-            true,
-            true,
-            false,
-        )?;
-        let after = if rotation {
-            control_points(&mut editor, &object)?
-        } else {
-            vertices(&mut editor, &object)?
-        };
-        for (a, b) in before.iter().zip(after) {
-            assert!((b.x - a.x - 17.).abs() < 0.002);
-            assert!((b.y - a.y).abs() < 0.002);
+            assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+            editor.execute(EditorCommand::Undo)?;
+            let restored = if rotation {
+                control_points(&mut editor, &object)?
+            } else {
+                vertices(&mut editor, &object)?
+            };
+            assert_eq!(restored, before);
         }
-        assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     }
     Ok(())
 }
@@ -771,10 +1183,7 @@ fn native_rotation_scale_in_a_mixed_selection_never_writes_the_mesh() -> anyhow:
     gesture(
         &mut editor,
         start,
-        ViewportPoint {
-            x: center.x + (start.x - center.x) * 1.237,
-            y: center.y + (start.y - center.y) * 1.237,
-        },
+        rotation_scale_pointer(center, start, 1.237),
         true,
         true,
         false,

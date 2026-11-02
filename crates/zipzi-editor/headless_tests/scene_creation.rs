@@ -857,7 +857,19 @@ fn object_deletion_scope_choice_preserves_children_until_confirmed(cx: &mut Test
             window.find(("deletion-scope", 0usize)).label(),
             Some("Keep child objects")
         );
-        window.click(("deletion-scope", 0usize), cx);
+        // Scope choices remain reachable from the initial Cancel focus and
+        // activate through the same button keyboard behavior as other controls.
+        for _ in 0..32 {
+            if window.find(("deletion-scope", 0usize)).focused() == Some(true) {
+                break;
+            }
+            window.press("tab", cx);
+        }
+        assert_eq!(
+            window.find(("deletion-scope", 0usize)).focused(),
+            Some(true)
+        );
+        window.press("space", cx);
     })
     .unwrap();
     cx.run_until_parked();

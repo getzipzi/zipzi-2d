@@ -200,7 +200,9 @@ fn warp_native_rotation_handle_cancel_commit_and_history(cx: &mut TestAppContext
 }
 
 #[gpui_kit::test]
-fn warp_native_shift_drag_keeps_selection_and_freezes_the_canvas_axis(cx: &mut TestAppContext) {
+fn warp_native_shift_drag_keeps_selection_and_holds_axis_while_shift_is_held(
+    cx: &mut TestAppContext,
+) {
     let (h, object) = setup_warp(cx);
     cx.update_window(h.window, |_, window, cx| {
         window.activate_window();
@@ -229,7 +231,10 @@ fn warp_native_shift_drag_keeps_selection_and_freezes_the_canvas_axis(cx: &mut T
                 MouseMoveEvent {
                     position: from + point(px(offset.0), px(offset.1)),
                     pressed_button: Some(MouseButton::Left),
-                    modifiers: Modifiers::default(),
+                    modifiers: Modifiers {
+                        shift: true,
+                        ..Default::default()
+                    },
                 }
                 .to_platform_input(),
                 cx,
@@ -243,7 +248,10 @@ fn warp_native_shift_drag_keeps_selection_and_freezes_the_canvas_axis(cx: &mut T
             MouseUpEvent {
                 button: MouseButton::Left,
                 position: from + point(px(20.), px(45.)),
-                modifiers: Modifiers::default(),
+                modifiers: Modifiers {
+                    shift: true,
+                    ..Default::default()
+                },
                 click_count: 1,
             }
             .to_platform_input(),

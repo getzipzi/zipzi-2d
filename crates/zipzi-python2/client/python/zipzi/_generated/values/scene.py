@@ -490,8 +490,9 @@ SceneCreateWarp.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneCreateRotation(CompactValue):
-    'Immutable owned SceneCreateRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.'
+    'Immutable owned SceneCreateRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\norigin: Optional rotation origin in parent coordinates. None uses (0, 0) for an empty\ndeformer, or the current content center when grouping a selection.'
     _variant: _ClassVar[str] = 'rotation'
+    origin: (PreciseVec2 | None) = None
 
 SceneCreateRotation.__module__ = "zipzi.modeling.scene"
 
@@ -1001,6 +1002,15 @@ class SceneContentEditWarpKeepChildren(CompactValue):
 SceneContentEditWarpKeepChildren.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
+class SceneContentEditRotationKeepChildren(CompactValue):
+    'Immutable owned SceneContentEditRotationKeepChildren value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntransform_id: Stable ID of a static Rotation. Driven maps and ancestors are unsupported.\nrotation: Complete replacement rotation; the shared plan compensates every\nstored child shape channel atomically while retaining the hierarchy.'
+    _variant: _ClassVar[str] = 'rotation_keep_children'
+    transform_id: str
+    rotation: RotationTransform
+
+SceneContentEditRotationKeepChildren.__module__ = "zipzi.modeling.scene"
+
+@dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditResizeWarp(CompactValue):
     'Immutable owned SceneContentEditResizeWarp value. Construction owns declared collections; reading fields, repr and summary performs no IO.\n\nFields:\ntransform_id: Stable deformation-transform ID in this document.\nrows: Number of warp lattice cells vertically; a lattice has rows + 1 point rows.\ncolumns: Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.\nquad: Whether to use the quad warp interpolation mode for the lattice.'
     _variant: _ClassVar[str] = 'resize_warp'
@@ -1152,7 +1162,7 @@ class SceneContentEditSetOffscreenMapping(CompactValue):
 
 SceneContentEditSetOffscreenMapping.__module__ = "zipzi.modeling.scene"
 
-SceneContentEdit: TypeAlias = SceneContentEditDeformerOriginal | SceneContentEditMeshVertices | SceneContentEditInsertMeshVertices | SceneContentEditDeleteMeshVertices | SceneContentEditReorderMeshVertices | SceneContentEditInsertTriangle | SceneContentEditPatchTriangle | SceneContentEditDeleteTriangles | SceneContentEditReplaceTriangles | SceneContentEditWarpPoints | SceneContentEditWarpBezier | SceneContentEditWarpBezierControls | SceneContentEditWarpAuthoring | SceneContentEditWarpShape | SceneContentEditWarpKeepChildren | SceneContentEditResizeWarp | SceneContentEditInsertGluePair | SceneContentEditPatchGluePair | SceneContentEditMoveGluePairs | SceneContentEditTransferGluePairs | SceneContentEditDuplicateGluePairs | SceneContentEditDeleteGluePairs | SceneContentEditInsertOffscreenKeyform | SceneContentEditPatchOffscreenKeyform | SceneContentEditDuplicateOffscreenKeyforms | SceneContentEditReorderOffscreenKeyforms | SceneContentEditDeleteOffscreenKeyforms | SceneContentEditSetOffscreenMapping
+SceneContentEdit: TypeAlias = SceneContentEditDeformerOriginal | SceneContentEditMeshVertices | SceneContentEditInsertMeshVertices | SceneContentEditDeleteMeshVertices | SceneContentEditReorderMeshVertices | SceneContentEditInsertTriangle | SceneContentEditPatchTriangle | SceneContentEditDeleteTriangles | SceneContentEditReplaceTriangles | SceneContentEditWarpPoints | SceneContentEditWarpBezier | SceneContentEditWarpBezierControls | SceneContentEditWarpAuthoring | SceneContentEditWarpShape | SceneContentEditWarpKeepChildren | SceneContentEditRotationKeepChildren | SceneContentEditResizeWarp | SceneContentEditInsertGluePair | SceneContentEditPatchGluePair | SceneContentEditMoveGluePairs | SceneContentEditTransferGluePairs | SceneContentEditDuplicateGluePairs | SceneContentEditDeleteGluePairs | SceneContentEditInsertOffscreenKeyform | SceneContentEditPatchOffscreenKeyform | SceneContentEditDuplicateOffscreenKeyforms | SceneContentEditReorderOffscreenKeyforms | SceneContentEditDeleteOffscreenKeyforms | SceneContentEditSetOffscreenMapping
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ShapeTargetBase(CompactValue):

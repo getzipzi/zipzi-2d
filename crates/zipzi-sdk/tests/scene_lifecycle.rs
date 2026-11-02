@@ -74,7 +74,7 @@ fn scene_label_patches_avoid_global_identity_scans_through_both_entrypoints() {
         .plan_scene_edit(deletion)
         .unwrap()
         .preserves_identities());
-    let parent = create(&mut s, New::Rotation, None, None);
+    let parent = create(&mut s, New::Rotation { origin: None }, None, None);
     assert!(!s
         .document()
         .plan_scene_edit(E::Reparent {
@@ -293,7 +293,7 @@ fn pending_scene_objects_are_native_and_roundtrip_without_invented_targets() {
         None,
     );
     let warp = create(&mut s, New::Warp { bounds: None }, Some(&p), None);
-    let rotation = create(&mut s, New::Rotation, None, Some(&warp));
+    let rotation = create(&mut s, New::Rotation { origin: None }, None, Some(&warp));
     let os = create(&mut s, New::Offscreen, Some(&p), None);
     let glue = create(
         &mut s,
@@ -532,8 +532,8 @@ fn glue_management_reorder_preserves_execution_and_redo() {
 #[test]
 fn deformation_palette_order_is_separate_from_reparent_and_organization() {
     let mut s = session();
-    let a = create(&mut s, New::Rotation, None, None);
-    let b = create(&mut s, New::Rotation, None, None);
+    let a = create(&mut s, New::Rotation { origin: None }, None, None);
+    let b = create(&mut s, New::Rotation { origin: None }, None, None);
     let m = triangle(&mut s, None, None, Some(&a), 0.);
     let org = s.document().hierarchy_order().organization.clone();
     let eval = s.evaluation_revision();
@@ -572,7 +572,7 @@ fn deformation_palette_order_is_separate_from_reparent_and_organization() {
 #[test]
 fn selected_and_deformation_subtree_copies_have_explicit_distinct_closures() {
     let mut s = session();
-    let parent = create(&mut s, New::Rotation, None, None);
+    let parent = create(&mut s, New::Rotation { origin: None }, None, None);
     let child = create(&mut s, New::Warp { bounds: None }, None, Some(&parent));
     let mesh = triangle(&mut s, None, None, Some(&child), 0.);
     let p = s
@@ -706,8 +706,8 @@ fn copy_remaps_internal_masks_glue_and_owned_axis_sample_identities() {
 #[test]
 fn field_addresses_do_not_revive_after_edit_undo_or_context_roundtrips() {
     let mut s = session();
-    let a = create(&mut s, New::Rotation, None, None);
-    let b = create(&mut s, New::Rotation, None, None);
+    let a = create(&mut s, New::Rotation { origin: None }, None, None);
+    let b = create(&mut s, New::Rotation { origin: None }, None, None);
     let mesh = triangle(&mut s, None, None, Some(&a), 0.);
     let handle = s.handle(ObjectKind::Mesh, &mesh).unwrap();
     let address = s.scene_field_address(&mesh, F::Label).unwrap();
@@ -771,7 +771,7 @@ fn topology_context_expires_addresses_without_reporting_reference_target_changes
 #[test]
 fn deletion_is_atomic_for_external_users_and_retires_owned_handles() {
     let mut s = session();
-    let root = create(&mut s, New::Rotation, None, None);
+    let root = create(&mut s, New::Rotation { origin: None }, None, None);
     let mesh = triangle(&mut s, None, None, Some(&root), 0.);
     let error = s
         .plan_scene_edit(E::Delete {
@@ -1272,7 +1272,7 @@ fn failed_scene_batches_and_reduced_copy_budgets_are_atomic() {
             e.edit_scene(E::Create {
                 id: new.clone(),
                 name: "".into(),
-                object: New::Rotation,
+                object: New::Rotation { origin: None },
                 part_id: None,
                 parent_id: None,
                 before: None,

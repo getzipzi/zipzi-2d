@@ -602,6 +602,12 @@ impl DocumentSession {
             // geometry commits. Automatic fitting must not move the model at release.
             self.views.entry(viewport).or_default().default_fit = false;
         }
+        if matches!(
+            event,
+            crate::CanvasInput::Down { .. } | crate::CanvasInput::Move { .. }
+        ) {
+            self.modeling.active_viewport = Some(viewport);
+        }
         let result = self.modeling.tools.input(&mut self.document, &frame, event);
         if result.as_ref().is_ok_and(|changed| *changed) || result.is_err() {
             self.invalidate_scene();

@@ -219,6 +219,172 @@ fn positions(doc: &zipzi_core::Document, x: f32, b: f32) -> Vec<Vec<Vec2>> {
     frame.drawables.into_iter().map(|d| d.positions).collect()
 }
 
+fn rotation_fixture(parent: u8) -> AuthoringSession {
+    let mut s = fixture();
+    s.edit("Rotation preservation fixture", None, |e| {
+        if (1..=2).contains(&parent) {
+            e.create_transform(Transform {
+                id: id(30),
+                data: if parent == 1 {
+                    TransformData::Warp(WarpTransform {
+                        rows: 1,
+                        columns: 1,
+                        quad: true,
+                        bezier: None,
+                        points: vec![
+                            Vec2::new(10., 20.),
+                            Vec2::new(210., 20.),
+                            Vec2::new(10., 320.),
+                            Vec2::new(210., 320.),
+                        ],
+                    })
+                } else {
+                    TransformData::Rotation(RotationTransform {
+                        base_angle: -12.,
+                        pose: RotationPose {
+                            scale: 1.5,
+                            reflect_x: true,
+                            ..Default::default()
+                        },
+                    })
+                },
+                ..Default::default()
+            })?;
+        }
+        let mut root = e
+            .candidate_document()
+            .get_transform(&id(2))
+            .unwrap()
+            .clone();
+        root.data = TransformData::Rotation(RotationTransform {
+            base_angle: 13.,
+            pose: RotationPose {
+                origin: PreciseVec2::new(0.2, 0.4),
+                angle: 23.,
+                scale: 1.2,
+                reflect_x: parent == 3,
+                ..Default::default()
+            },
+        });
+        root.original_shape = None;
+        root.warp_authoring = None;
+        root.parent_id = (1..=2).contains(&parent).then(|| id(30).into());
+        e.replace_transform(root)
+    })
+    .unwrap();
+    s
+}
+
+#[test]
+fn rotation_keep_children_preserves_all_channels_and_nested_deformers_under_static_parents() {
+    for parent in 0..4 {
+        let mut s = rotation_fixture(parent);
+        let before = s.document().clone();
+        let history = s.history_lengths();
+        let mut rotation = before
+            .get_transform(&id(2))
+            .unwrap()
+            .rotation()
+            .unwrap()
+            .clone();
+        rotation.pose.origin.x += 0.125;
+        rotation.pose.origin.y -= 0.25;
+        rotation.pose.angle += 17.;
+        rotation.pose.scale *= 1.25;
+        let edit = E::RotationKeepChildren {
+            transform_id: id(2),
+            rotation,
+        };
+        let plan = s.plan_scene_content(edit.clone()).unwrap();
+        assert!(plan.report().preservation_samples > 0);
+        assert!(plan.report().preservation_error.unwrap() < 0.001);
+        s.execute_scene_content_plan(&plan).unwrap();
+        assert_eq!(s.history_lengths(), (history.0 + 1, 0));
+        for x in [-1., -0.73, 0., 0.39, 1.] {
+            for blend in [0., 0.27, 0.8, 1.] {
+                for (a, b) in
+                    positions(&before, x, blend)
+                        .iter()
+                        .zip(positions(s.document(), x, blend))
+                {
+                    for (a, b) in a.iter().zip(b) {
+                        assert!(
+                            (a.x - b.x).hypot(a.y - b.y) < 0.001,
+                            "parent={parent}: {a:?} vs {b:?}"
+                        );
+                    }
+                }
+            }
+        }
+        for child in [5, 7] {
+            assert_eq!(
+                before.get_mesh(&id(child)),
+                s.document().get_mesh(&id(child))
+            );
+        }
+        let after = s.document().clone();
+        let noop = s.plan_scene_content(edit).unwrap();
+        assert!(noop.is_noop());
+        s.execute_scene_content_plan(&noop).unwrap();
+        assert_eq!(s.history_lengths(), (history.0 + 1, 0));
+        s.undo().unwrap();
+        assert!(s.document().same_content(&before));
+        assert!(s.execute_scene_content_plan(&plan).is_err());
+        s.redo().unwrap();
+        assert!(s.document().same_content(&after));
+    }
+}
+
+#[test]
+fn rotation_keep_children_rejects_driven_roots_locked_children_and_singular_maps_atomically() {
+    for case in 0..3 {
+        let mut s = rotation_fixture(0);
+        if case == 0 {
+            s.edit("Driven root", None, |e| {
+                e.create_scene_binding(SceneBinding {
+                    id: id(31),
+                    axes: vec![BindingAxis::new(id(10), vec![-1., 1.])],
+                    track: SceneTrack::Rotation {
+                        target_id: id(2).into(),
+                        keyforms: [-1., 1.]
+                            .into_iter()
+                            .map(|v| RotationKeyform {
+                                keys: vec![v],
+                                rotation: RotationPose::default(),
+                                ..Default::default()
+                            })
+                            .collect(),
+                    },
+                })
+            })
+            .unwrap();
+        } else if case == 1 {
+            lock(&mut s, &id(3));
+        }
+        let before = s.document().clone();
+        let history = s.history_lengths();
+        let mut rotation = before
+            .get_transform(&id(2))
+            .unwrap()
+            .rotation()
+            .unwrap()
+            .clone();
+        rotation.pose.angle += 20.;
+        if case == 2 {
+            rotation.pose.scale = 0.;
+        }
+        assert!(
+            s.plan_scene_content(E::RotationKeepChildren {
+                transform_id: id(2),
+                rotation
+            })
+            .is_err()
+        );
+        assert!(s.document().same_content(&before));
+        assert_eq!(s.history_lengths(), history);
+    }
+}
+
 #[test]
 fn affine_keep_children_converts_all_channels_nested_warp_and_rotation_in_one_history_step() {
     let mut s = fixture();

@@ -32,7 +32,7 @@ impl Document {
         let label = match &object {
             SceneCreate::Mesh { .. } => "Mesh",
             SceneCreate::Warp { .. } => "Warp",
-            SceneCreate::Rotation => "Rotation",
+            SceneCreate::Rotation { .. } => "Rotation",
             SceneCreate::Offscreen => "Offscreen",
             SceneCreate::Glue { .. } => "Glue",
         };
@@ -53,7 +53,7 @@ impl Document {
         if let Some(anchor) = &deformation_before {
             if !matches!(
                 object,
-                SceneCreate::Mesh { .. } | SceneCreate::Warp { .. } | SceneCreate::Rotation
+                SceneCreate::Mesh { .. } | SceneCreate::Warp { .. } | SceneCreate::Rotation { .. }
             ) {
                 return Err(Status::error("NO_DEFORMATION_COLLECTION", &id));
             }
@@ -104,7 +104,7 @@ impl Document {
                     plan.domain.delta.drawing = Some(groups);
                 }
             }
-            SceneCreate::Rotation | SceneCreate::Warp { .. } => {
+            SceneCreate::Rotation { .. } | SceneCreate::Warp { .. } => {
                 let warp_authoring = matches!(&object, SceneCreate::Warp { .. }).then(|| {
                     crate::WarpAuthoringSettings {
                         bezier_grid: Some(crate::WarpBezierGrid {
@@ -142,7 +142,16 @@ impl Document {
                             .collect(),
                     })
                 } else {
-                    TransformData::Rotation(RotationTransform::default())
+                    let SceneCreate::Rotation { origin } = object else {
+                        unreachable!()
+                    };
+                    TransformData::Rotation(RotationTransform {
+                        pose: crate::RotationPose {
+                            origin: origin.unwrap_or_default(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    })
                 };
                 let t = Transform {
                     id: id.clone(),

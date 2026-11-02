@@ -65,7 +65,11 @@ impl Document {
             ));
         };
         let warp = matches!(object, SceneCreate::Warp { .. });
-        if !warp && !matches!(object, SceneCreate::Rotation) {
+        let requested_origin = match &object {
+            SceneCreate::Rotation { origin } => *origin,
+            _ => None,
+        };
+        if !warp && !matches!(object, SceneCreate::Rotation { .. }) {
             return Err(Status::error("EXPECTED_DEFORMER_CREATION", &id));
         }
         let selected: HashSet<_> = sources.iter().cloned().collect();
@@ -186,7 +190,7 @@ impl Document {
             bounds[2] + padding,
             bounds[3] + padding,
         ];
-        let coordinates = (warp && old_warp.is_none())
+        let mut coordinates = (warp && old_warp.is_none())
             .then_some(Coordinates([
                 bounds[0],
                 bounds[1],
@@ -208,7 +212,7 @@ impl Document {
                         }),
                     }
                 } else {
-                    SceneCreate::Rotation
+                    SceneCreate::Rotation { origin: None }
                 },
                 part_id,
                 parent_id,
@@ -222,6 +226,22 @@ impl Document {
         let result = candidate.apply_scene_plan(&create);
         if !result.status.is_ok() {
             return Err(result.status);
+        }
+        if !warp {
+            // A translated neutral Rotation requires the same constant change
+            // of coordinates in every child channel, including inactive shapes.
+            let mut c = rotation_coordinates.unwrap_or(Coordinates([0., 0., 1., 1.]));
+            let origin = if let Some(origin) = requested_origin {
+                origin
+            } else {
+                candidate.rotation_group_origin(&id, &roots, c, control)?
+            };
+            c.0[0] = origin.x;
+            c.0[1] = origin.y;
+            coordinates = Some(c);
+            let mut transform = candidate.get_transform(&id).unwrap().clone();
+            transform.rotation_mut().unwrap().pose.origin = origin;
+            check(candidate.replace_transform(transform).status)?;
         }
         if let Some(old) = old_warp.filter(|_| warp) {
             let mut transform = candidate.get_transform(&id).unwrap().clone();
@@ -431,6 +451,82 @@ impl Document {
             }
         }
         Ok(plan)
+    }
+
+    fn rotation_group_origin(
+        &self,
+        id: &str,
+        roots: &[String],
+        coordinates: Coordinates,
+        control: &ConversionControl,
+    ) -> Result<PreciseVec2, Status> {
+        let mut frame = crate::DrawableFrame::default();
+        check(crate::evaluation::evaluate_frame_including_hidden(
+            self,
+            &self.original_capture_context,
+            &mut frame,
+        ))?;
+        let roots: HashSet<_> = roots.iter().map(String::as_str).collect();
+        let mut bounds: Option<[f64; 4]> = None;
+        let add = |bounds: &mut Option<[f64; 4]>, p: Vec2| {
+            let (x, y) = (f64::from(p.x), f64::from(p.y));
+            *bounds = Some(bounds.map_or([x, y, x, y], |[a, b, c, d]| {
+                [a.min(x), b.min(y), c.max(x), d.max(y)]
+            }));
+        };
+        for drawable in &frame.drawables {
+            control.checkpoint()?;
+            let mut ancestor = drawable.id.as_str();
+            while !ancestor.is_empty() && !roots.contains(ancestor) {
+                ancestor = self.scene_deformer_parent(ancestor).unwrap_or("");
+            }
+            if !ancestor.is_empty() {
+                for &point in &drawable.positions {
+                    add(&mut bounds, point);
+                }
+            }
+        }
+        if bounds.is_none() {
+            for deformer in &frame.deformers {
+                let mut ancestor = deformer.id.as_str();
+                while !ancestor.is_empty() && !roots.contains(ancestor) {
+                    ancestor = self.scene_deformer_parent(ancestor).unwrap_or("");
+                }
+                if !ancestor.is_empty() && deformer.rotation_basis.is_none() {
+                    for &point in &deformer.points {
+                        add(&mut bounds, point);
+                    }
+                }
+            }
+        }
+        if bounds.is_none() {
+            for deformer in &frame.deformers {
+                if roots.contains(deformer.id.as_str()) {
+                    // A completely empty Rotation retains its existing center;
+                    // its axis endpoints never enlarge the content bounds.
+                    if let Some(&point) = deformer.points.first() {
+                        add(&mut bounds, point);
+                    }
+                }
+            }
+        }
+        let Some([x0, y0, x1, y1]) = bounds else {
+            return Ok(PreciseVec2::default());
+        };
+        let neutral = frame.deformers.iter().find(|d| d.id == id).unwrap();
+        let [x, y] = neutral.rotation_basis.unwrap();
+        let det = f64::from(x.x) * f64::from(y.y) - f64::from(x.y) * f64::from(y.x);
+        if !det.is_finite() || det == 0. {
+            return Err(Status::error("SINGULAR_PARENT", id));
+        }
+        let dx = (x0 + x1) / 2. - f64::from(neutral.points[0].x);
+        let dy = (y0 + y1) / 2. - f64::from(neutral.points[0].y);
+        // Under a Warp, the Rotation inherits upstream Rotation scale rather
+        // than the Warp lattice scale. Convert its local displacement to UV.
+        Ok(PreciseVec2::new(
+            (f64::from(y.y) * dx - f64::from(y.x) * dy) / det * coordinates.0[2],
+            (f64::from(x.x) * dy - f64::from(x.y) * dx) / det * coordinates.0[3],
+        ))
     }
 
     fn rotation_group_coordinates(&self, parent: &str) -> Option<Coordinates> {

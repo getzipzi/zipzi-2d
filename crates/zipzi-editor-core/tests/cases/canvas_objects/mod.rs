@@ -6,6 +6,7 @@ mod hierarchy_picking;
 mod lasso;
 mod object_frames;
 mod overlays_locks;
+mod rotation;
 mod selection;
 mod transforms;
 mod warp_authoring;

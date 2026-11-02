@@ -811,6 +811,27 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                   'quad: bool)'},
  'zipzi.modeling.scene.SceneContentEditResizeWarp.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentEditResizeWarp.summary': {'alias': 'zipzi.ApiDescription.summary'},
+ 'zipzi.modeling.scene.SceneContentEditRotationKeepChildren': {'children': ('zipzi.modeling.scene.SceneContentEditRotationKeepChildren.__repr__',
+                                                                            'zipzi.modeling.scene.SceneContentEditRotationKeepChildren.summary'),
+                                                               'documentation': 'Immutable owned '
+                                                                                'SceneContentEditRotationKeepChildren '
+                                                                                'value. Construction owns declared '
+                                                                                'collections; reading fields, repr and '
+                                                                                'summary performs no IO.',
+                                                               'example': 'docs/recipes.py',
+                                                               'fields': [('transform_id',
+                                                                           'Stable ID of a static Rotation. Driven '
+                                                                           'maps and ancestors are unsupported.'),
+                                                                          ('rotation',
+                                                                           'Complete replacement rotation; the shared '
+                                                                           'plan compensates every\n'
+                                                                           'stored child shape channel atomically '
+                                                                           'while retaining the hierarchy.')],
+                                                               'kind': 'type',
+                                                               'signature': '(*, transform_id: str, rotation: '
+                                                                            'RotationTransform)'},
+ 'zipzi.modeling.scene.SceneContentEditRotationKeepChildren.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
+ 'zipzi.modeling.scene.SceneContentEditRotationKeepChildren.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentEditSetOffscreenMapping': {'children': ('zipzi.modeling.scene.SceneContentEditSetOffscreenMapping.__repr__',
                                                                            'zipzi.modeling.scene.SceneContentEditSetOffscreenMapping.summary'),
                                                               'documentation': 'Immutable owned '

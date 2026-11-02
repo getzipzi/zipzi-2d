@@ -18,6 +18,8 @@ impl From<WorkspaceKind> for EditingContext {
 #[derive(Default)]
 pub(crate) struct ModelingContext {
     pub(crate) tools: ToolController,
+    /// Retained across hover leave, selection changes and candidate publication.
+    pub(crate) active_viewport: Option<crate::ViewportId>,
 }
 pub(crate) struct AnimationContext {
     pub(crate) playback: AnimationSession,

@@ -593,6 +593,14 @@ pub fn measure_scenecontentedit(value: &Bound<'_, PyAny>) -> PyResult<usize> {
                     .saturating_add(32),
             )
             .saturating_add(measure_warptransform(&(value.getattr("warp")?))?)),
+        "rotation_keep_children" => Ok(256usize
+            .saturating_add(
+                (value.getattr("transform_id")?)
+                    .len()?
+                    .saturating_mul(4)
+                    .saturating_add(32),
+            )
+            .saturating_add(measure_rotationtransform(&(value.getattr("rotation")?))?)),
         "resize_warp" => Ok(256usize
             .saturating_add(
                 (value.getattr("transform_id")?)

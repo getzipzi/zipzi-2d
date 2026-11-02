@@ -426,6 +426,16 @@ Immutable owned SceneContentEditResizeWarp value. Construction owns declared col
 - `columns`: Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.
 - `quad`: Whether to use the quad warp interpolation mode for the lattice.
 
+## zipzi.modeling.scene.SceneContentEditRotationKeepChildren
+
+`(*, transform_id: str, rotation: RotationTransform)`
+
+Immutable owned SceneContentEditRotationKeepChildren value. Construction owns declared collections; reading fields, repr and summary performs no IO.
+
+- `transform_id`: Stable ID of a static Rotation. Driven maps and ancestors are unsupported.
+- `rotation`: Complete replacement rotation; the shared plan compensates every
+stored child shape channel atomically while retaining the hierarchy.
+
 ## zipzi.modeling.scene.SceneContentEditSetOffscreenMapping
 
 `(*, offscreen_id: str, updates: tuple[OffscreenMappingPatch, ...])`

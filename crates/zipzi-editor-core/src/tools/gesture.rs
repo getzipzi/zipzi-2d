@@ -28,6 +28,12 @@ pub(super) enum Gesture {
     Controls(ControlGesture),
 }
 impl Gesture {
+    pub fn set_modifiers(&mut self, shift: bool, alt: bool) -> bool {
+        match self {
+            Self::Controls(g) => g.set_modifiers(shift, alt),
+            _ => false,
+        }
+    }
     pub fn press(&self) -> &Press {
         match self {
             Self::Select(g) => &g.press,

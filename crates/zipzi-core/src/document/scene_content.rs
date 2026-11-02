@@ -95,8 +95,25 @@ impl Document {
                 )?;
             }
             SceneContentEdit::WarpKeepChildren { transform_id, warp } => {
-                let (delta, affected, error, samples) =
-                    self.warp_keep_children_delta(transform_id, warp, control)?;
+                let (delta, affected, error, samples) = self.deformer_keep_children_delta(
+                    transform_id,
+                    &crate::TransformData::Warp(warp.clone()),
+                    control,
+                )?;
+                plan.domain.delta = delta;
+                plan.domain.affected = affected;
+                plan.report.preservation_error = Some(error);
+                plan.report.preservation_samples = samples;
+            }
+            SceneContentEdit::RotationKeepChildren {
+                transform_id,
+                rotation,
+            } => {
+                let (delta, affected, error, samples) = self.deformer_keep_children_delta(
+                    transform_id,
+                    &crate::TransformData::Rotation(rotation.clone()),
+                    control,
+                )?;
                 plan.domain.delta = delta;
                 plan.domain.affected = affected;
                 plan.report.preservation_error = Some(error);
@@ -230,7 +247,7 @@ impl Document {
         };
         let (work, items, bytes) = match edit {
             E::DeformerOriginal { .. } => return Ok((1, self.estimated_content_bytes())),
-            E::WarpKeepChildren { .. } => {
+            E::WarpKeepChildren { .. } | E::RotationKeepChildren { .. } => {
                 // Conversion fragments and native verification are bounded by the
                 // retained document; reject capacity before cloning any candidate.
                 return Ok((

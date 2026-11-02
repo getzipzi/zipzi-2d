@@ -177,7 +177,7 @@ impl SceneOperationApply for SceneOperation {
                 name,
                 placement,
                 id,
-            } => scene_create(id, name, SceneCreate::Rotation, placement),
+            } => scene_create(id, name, SceneCreate::Rotation { origin: None }, placement),
             Self::CreateGlue {
                 name,
                 a,

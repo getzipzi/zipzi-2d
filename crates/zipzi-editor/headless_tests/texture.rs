@@ -327,7 +327,23 @@ fn delete_reviews_real_users_requires_replacement_and_can_cancel(cx: &mut TestAp
     });
     click(&h, "tree-deletion-cancel", cx);
     run(&h, Some(source.id.clone()), Control::Delete, cx);
-    click(&h, ("deletion-section", 4usize), cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        for _ in 0..32 {
+            if window.find(("deletion-section", 4usize)).focused() == Some(true) {
+                break;
+            }
+            window.press("tab", cx);
+        }
+        assert_eq!(
+            window.find(("deletion-section", 4usize)).focused(),
+            Some(true)
+        );
+        window.press("enter", cx);
+        window.render_frame(cx);
+        assert!(window.try_find("deletion-texture").is_some());
+    })
+    .unwrap();
     choose(&h, "deletion-texture", "DeleteReplacement", cx);
 
     click(&h, "deletion-choice-0-0", cx);

@@ -27,6 +27,14 @@ impl ToolController {
         }
         match event {
             CanvasInput::Cancel => Ok(self.cancel(document)),
+            CanvasInput::ModifiersChanged { shift, alt } => {
+                if !self.set_gesture_modifiers(shift, alt) {
+                    return Ok(false);
+                }
+                let gesture = self.gesture.as_mut().unwrap();
+                let point = gesture.press().current;
+                gesture.update(document, &self.components, point)
+            }
             CanvasInput::Leave => {
                 if self.gesture.is_none() && self.hovered_binding == Some(frame.version.binding) {
                     self.hovered = None;

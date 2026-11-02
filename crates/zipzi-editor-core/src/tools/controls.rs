@@ -1,5 +1,10 @@
 //! Control-point and gizmo gestures: candidate ownership, transforms and feedback.
-use super::{OverlaySnapshot, gesture::Press, hints::*};
+use super::{
+    OverlaySnapshot,
+    gesture::Press,
+    hints::*,
+    transform_constraints::{TransformConstraints, TranslationAxis},
+};
 use crate::ComponentRef;
 use crate::control_edit::{ControlChange, ControlEdit, ControlScope};
 use crate::{Document, FrameVersion, HitTarget};
@@ -8,13 +13,14 @@ use anyhow::{Result, ensure};
 pub(super) struct ControlGesture {
     pub press: Press,
     pub target: HitTarget,
+    modifiers: TransformConstraints,
     edit: Option<ActiveEdit>,
 }
 struct ActiveEdit {
     edits: Vec<ControlEdit>,
     last: Option<ControlChange>,
     constrained: Option<String>,
-    axis: Option<Axis>,
+    axis: Option<TranslationAxis>,
     rotation: Option<RotationDrag>,
 }
 struct RotationDrag {
@@ -39,18 +45,28 @@ impl RotationDrag {
         self.radians as f32
     }
 }
-#[derive(Clone, Copy)]
-enum Axis {
-    Horizontal,
-    Vertical,
-}
 impl ControlGesture {
     pub fn new(press: Press, target: HitTarget) -> Self {
+        let modifiers = TransformConstraints::new(press.shift, press.alt);
         Self {
             press,
             target,
+            modifiers,
             edit: None,
         }
+    }
+    pub fn set_modifiers(&mut self, shift: bool, alt: bool) -> bool {
+        let modifiers = TransformConstraints::new(shift, alt);
+        if modifiers == self.modifiers {
+            return false;
+        }
+        if modifiers.shift != self.modifiers.shift
+            && let Some(edit) = &mut self.edit
+        {
+            edit.axis = None;
+        }
+        self.modifiers = modifiers;
+        true
     }
     pub fn editing(&self) -> bool {
         self.edit.is_some() && !self.press.adjust_frame
@@ -100,6 +116,7 @@ impl ControlGesture {
             "Invalid pointer position"
         );
         let press = &self.press;
+        let constraints = self.modifiers;
         let components = &press.components;
         let target = &self.target;
         let local_frame = matches!(target, HitTarget::DeformerHandle(object, _)
@@ -141,13 +158,17 @@ impl ControlGesture {
                 )?;
                 ensure!(
                     !press.keep_children
-                        || !edits.iter().any(|edit| edit.warp.is_some())
-                        || edits.iter().all(|edit| edit.warp.is_some()),
-                    "Keep children requires a selection of Warp controls"
+                        || !edits
+                            .iter()
+                            .any(|edit| edit.warp.is_some() || edit.rotation)
+                        || edits
+                            .iter()
+                            .all(|edit| edit.warp.is_some() || edit.rotation),
+                    "Keep children requires a selection of deformer controls"
                 );
                 for target in &mut edits {
-                    if press.keep_children && target.warp.is_some() {
-                        target.keep_warp_children(document)?;
+                    if press.keep_children && (target.warp.is_some() || target.rotation) {
+                        target.keep_deformer_children(document)?;
                     }
                 }
                 document.begin_control_edit(&edits)?;
@@ -174,53 +195,30 @@ impl ControlGesture {
                     }
                     _ => None,
                 },
-                axis: (press.shift
-                    && (matches!(target, HitTarget::Component(_))
-                        || matches!(
-                            target,
-                            HitTarget::DeformerHandle(_, crate::DeformerHandle::Move)
-                        )))
-                .then(|| {
-                    if (point.x - press.point.x).abs() >= (point.y - press.point.y).abs() {
-                        Axis::Horizontal
-                    } else {
-                        Axis::Vertical
-                    }
-                }),
+                axis: None,
             });
         }
         let edit = self.edit.as_mut().unwrap();
+        if edit.axis.is_none()
+            && (matches!(target, HitTarget::Component(_))
+                || matches!(
+                    target,
+                    HitTarget::DeformerHandle(_, crate::DeformerHandle::Move)
+                ))
+        {
+            edit.axis = constraints.translation_axis(press.point, point);
+        }
         let edits = &edit.edits;
         let start = press.transform.to_model(press.point);
-        let constrained_point = match edit.axis {
-            Some(Axis::Horizontal) => crate::ViewportPoint {
-                x: point.x,
-                y: press.point.y,
-            },
-            Some(Axis::Vertical) => crate::ViewportPoint {
-                x: press.point.x,
-                y: point.y,
-            },
-            None => point,
-        };
+        let constrained_point = edit
+            .axis
+            .map_or(point, |axis| axis.constrain(press.point, point));
         let end = press.transform.to_model(constrained_point);
-        let mut delta = crate::ModelVector {
+        let delta = crate::ModelVector {
             x: end.x - start.x,
             y: end.y - start.y,
         };
-        if press.shift && press.alt {
-            delta.x = delta.x.round();
-            delta.y = delta.y.round();
-        }
-        let pointer_angle = |radians: f32| {
-            let radians = if press.shift {
-                let step = if press.alt { 1f32 } else { 15f32 }.to_radians();
-                (radians / step).round() * step
-            } else {
-                radians
-            };
-            edits[0].rotation_pointer_angle(radians)
-        };
+        let pointer_angle = |radians| edits[0].rotation_pointer_angle(radians);
         let change = match target {
             HitTarget::RotationHandle(_) => ControlChange::Rotation {
                 translation: crate::ModelVector::default(),
@@ -299,15 +297,23 @@ impl ControlGesture {
                         let before = (start.x - center.x).hypot(start.y - center.y);
                         let after = (end.x - center.x).hypot(end.y - center.y);
                         ensure!(before > 1e-6, "Rotation scale handle is unavailable");
+                        // Freeze the press ring size. Handle padding and the
+                        // precise grab offset do not enter the authored ratio.
+                        let span =
+                            (gizmo.bounds[2] - gizmo.bounds[0]) * 0.5 / press.transform.scale;
                         ControlChange::Rotation {
                             translation: crate::ModelVector::default(),
                             angle: 0.,
-                            scale: (after / before).max(0.0001),
+                            scale: (1. + (after - before) / span).max(0.0001),
                         }
                     }
                     H::Scale(index) => {
                         let (_, opposite) = gizmo.scale_anchor(*index);
-                        let anchor = if press.alt { gizmo.center } else { opposite };
+                        let anchor = if constraints.alt {
+                            gizmo.center
+                        } else {
+                            opposite
+                        };
                         let ratio = |d: f32, span: f32| {
                             if span.abs() < 1e-5 {
                                 1.
@@ -317,10 +323,10 @@ impl ControlGesture {
                         };
                         let (sin, cos) = gizmo.frame_angle.sin_cos();
                         let (dx, dy) = (point.x - press.point.x, point.y - press.point.y);
-                        let [span_x, span_y] = gizmo.scale_span(*index, press.alt);
+                        let [span_x, span_y] = gizmo.scale_span(*index, constraints.alt);
                         let sx = ratio(dx * cos + dy * sin, span_x);
                         let sy = ratio(-dx * sin + dy * cos, span_y);
-                        let scale = if (press.shift && index % 2 == 0)
+                        let scale = if (constraints.shift && index % 2 == 0)
                             || edits.iter().any(|e| e.rotation)
                         {
                             let s = if (sx - 1.).abs() > (sy - 1.).abs() {
@@ -345,42 +351,7 @@ impl ControlGesture {
             }
             _ => ControlChange::Translate(delta),
         };
-        let change = if press.shift {
-            let angle_step: f32 = if press.alt { 1. } else { 15. };
-            match change {
-                ControlChange::Transform {
-                    scope,
-                    pivot,
-                    scale,
-                    radians,
-                    translation,
-                    axes,
-                } => ControlChange::Transform {
-                    scope,
-                    pivot,
-                    scale: if press.alt {
-                        scale.map(snap_scale)
-                    } else {
-                        scale
-                    },
-                    radians: (radians / angle_step.to_radians()).round() * angle_step.to_radians(),
-                    translation,
-                    axes,
-                },
-                ControlChange::Rotation {
-                    translation,
-                    angle,
-                    scale,
-                } => ControlChange::Rotation {
-                    translation,
-                    angle: (angle / angle_step).round() * angle_step,
-                    scale: if press.alt { snap_scale(scale) } else { scale },
-                },
-                other => other,
-            }
-        } else {
-            change
-        };
+        let change = constraints.apply(change);
         if edit.last == Some(change) {
             edit.constrained = None;
             return Ok(false);
@@ -481,10 +452,6 @@ impl ControlGesture {
             }
         }
     }
-}
-/// Ratios are relative to the frozen press shape, in percentage-point steps.
-fn snap_scale(scale: f32) -> f32 {
-    (1. + ((scale - 1.) * 100.).round() / 100.).max(0.01)
 }
 pub(super) const HINTS: &[InteractionHint] = &[
     InteractionHint::Drag(HintAction::Transform),

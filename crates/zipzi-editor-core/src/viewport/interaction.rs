@@ -116,6 +116,37 @@ impl Editor {
         token: ViewportInteractionToken,
         input: CanvasInput,
     ) -> Result<ViewportInputUpdate> {
+        self.validate_canvas_gesture_update(token, input)?;
+        self.process_canvas_gesture(token, input)
+    }
+
+    /// Native pointer events carry authoritative keyboard state. Update it and
+    /// evaluate the new pointer position together, producing one preview.
+    pub fn update_canvas_gesture_with_modifiers(
+        &mut self,
+        token: ViewportInteractionToken,
+        input: CanvasInput,
+        shift: bool,
+        alt: bool,
+    ) -> Result<ViewportInputUpdate> {
+        self.validate_canvas_gesture_update(token, input)?;
+        ensure!(
+            matches!(input, CanvasInput::Move { .. } | CanvasInput::Up { .. }),
+            "Pointer modifier updates require a move or release"
+        );
+        self.active_session_mut()
+            .unwrap()
+            .modeling
+            .tools
+            .set_gesture_modifiers(shift, alt);
+        self.process_canvas_gesture(token, input)
+    }
+
+    fn validate_canvas_gesture_update(
+        &self,
+        token: ViewportInteractionToken,
+        input: CanvasInput,
+    ) -> Result<()> {
         ensure!(
             self.viewport_interaction_valid(token)
                 && token.kind == ViewportInteractionKind::Modeling,
@@ -125,7 +156,7 @@ impl Editor {
             !matches!(input, CanvasInput::Down { .. }),
             "Begin a new canvas gesture for a pointer press"
         );
-        self.process_canvas_gesture(token, input)
+        Ok(())
     }
 
     /// Uncaptured hover never cancels a gesture, including one owned by a peer viewport.

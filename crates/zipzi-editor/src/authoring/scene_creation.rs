@@ -80,7 +80,7 @@ impl EditorView {
         let document = context.editing.document;
         let result = self
             .execute_authoring(context, window, cx, |editor, document| {
-                let plan = editor.document().unwrap().plan_scene_object_creation_in(
+                let plan = editor.plan_scene_object_creation_in(
                     projection,
                     kind,
                     default_name(kind),

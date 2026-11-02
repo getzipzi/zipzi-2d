@@ -127,7 +127,13 @@ pub fn read_scenecreate(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::docume
                 )
             },
         }),
-        "rotation" => Ok(zipzi_core::document::SceneCreate::Rotation),
+        "rotation" => Ok(zipzi_core::document::SceneCreate::Rotation {
+            origin: if value.getattr("origin")?.is_none() {
+                None
+            } else {
+                Some(read_precisevec2(&value.getattr("origin")?)?)
+            },
+        }),
         "offscreen" => Ok(zipzi_core::document::SceneCreate::Offscreen),
         "glue" => Ok(zipzi_core::document::SceneCreate::Glue {
             a: read_scenereference(&value.getattr("a")?)?,

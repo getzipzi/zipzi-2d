@@ -9,6 +9,98 @@ fn create(d: &mut Document, kind: T, selection: &[ObjectRef]) -> anyhow::Result<
     assert_eq!(object.kind, kind.object_kind());
     Ok(object)
 }
+
+#[test]
+fn empty_rotation_uses_the_current_viewport_center_and_one_history_step() -> anyhow::Result<()> {
+    use zipzi_editor_core::{PaletteProjection, ViewportMetrics, ViewportPoint};
+    let mut editor = support::editor_from_document(Document::new_blank()?);
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 640.,
+        height: 480.,
+        scale_factor: 2.,
+    });
+    let binding = editor.primary_viewport_binding().unwrap();
+    editor.set_viewport_zoom(binding, 2., None)?;
+    editor.pan_viewport(binding, ViewportPoint { x: 90., y: -60. })?;
+    let plan = editor.plan_scene_object_creation_in(
+        PaletteProjection::Organization,
+        T::Rotation,
+        "Rotation".into(),
+        &[],
+    )?;
+    let result = editor.execute_scene_object_creation(binding.document, &plan)?;
+    let object = &result.suggested_selection[0];
+    let origin = |editor: &zipzi_editor_core::Editor| {
+        editor
+            .document()
+            .unwrap()
+            .object_index()
+            .get(object)
+            .unwrap()
+            .properties["rotation"]["pose"]["origin"]
+            .clone()
+    };
+    let expected = serde_json::json!({"x": -45., "y": -30.});
+    assert_eq!(origin(&editor), expected);
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    editor.execute(zipzi_editor_core::EditorCommand::Undo)?;
+    assert!(
+        editor
+            .document()
+            .unwrap()
+            .object_index()
+            .get(object)
+            .is_none()
+    );
+    editor.execute(zipzi_editor_core::EditorCommand::Redo)?;
+    assert_eq!(origin(&editor), expected);
+    Ok(())
+}
+
+#[test]
+fn empty_rotation_retains_the_last_modeling_viewport_after_leave_and_selection_changes()
+-> anyhow::Result<()> {
+    use zipzi_editor_core::*;
+    let mut editor = support::editor_from_document(Document::new_blank()?);
+    let metrics = ViewportMetrics {
+        width: 640.,
+        height: 480.,
+        scale_factor: 1.,
+    };
+    editor.set_canvas_metrics(metrics);
+    let primary = editor.primary_viewport_binding().unwrap();
+    editor.set_viewport_zoom(primary, 1., None)?;
+    let other = ViewportId::new();
+    editor.register_viewport(other, ViewportKind::Modeling)?;
+    editor.set_viewport_metrics(other, metrics);
+    let binding = editor.viewport_binding(other).unwrap();
+    editor.pan_viewport(binding, ViewportPoint { x: -500., y: 300. })?;
+    let frame = editor.preview_for(binding)?.canvas.unwrap();
+    assert!(editor.present_frame(frame));
+    editor.hover_canvas(binding, Some(ViewportPoint { x: 320., y: 240. }))?;
+    editor.hover_canvas(binding, None)?;
+    editor.cancel_gesture();
+    for (hide, expected) in [(false, [500., 300.]), (true, [0., 0.])] {
+        if hide {
+            editor.set_viewport_visible(other, false);
+        }
+        let plan = editor.plan_scene_object_creation_in(
+            PaletteProjection::Organization,
+            T::Rotation,
+            "Rotation".into(),
+            &[],
+        )?;
+        let result = editor.execute_scene_object_creation(primary.document, &plan)?;
+        let object = &result.suggested_selection[0];
+        let index = editor.document().unwrap().object_index();
+        assert_eq!(
+            index.get(object).unwrap().properties["rotation"]["pose"]["origin"],
+            serde_json::json!({"x": expected[0], "y": expected[1]})
+        );
+        editor.execute(EditorCommand::Undo)?;
+    }
+    Ok(())
+}
 fn node<'a>(nodes: &'a [TreeNode], id: &str) -> Option<&'a TreeNode> {
     nodes.iter().find_map(|n| {
         if n.id == id {

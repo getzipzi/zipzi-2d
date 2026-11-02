@@ -19,6 +19,7 @@ mod parameter_pad_scene;
 mod parameter_toolbar_scene;
 mod physics_scene;
 mod properties_scene;
+mod rotation_scene;
 mod themes_scene;
 mod timeline_scene;
 mod toolbar_scene;
@@ -38,6 +39,11 @@ pub(super) fn run() -> anyhow::Result<()> {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
+    if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("rotation") {
+        rotation_scene::run(&directory)?;
+        println!("Rotation interaction screenshots passed.");
+        return Ok(());
+    }
     if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("deformer-original") {
         deformer_original_scene::run(&directory)?;
         println!("Deformer original screenshots passed.");

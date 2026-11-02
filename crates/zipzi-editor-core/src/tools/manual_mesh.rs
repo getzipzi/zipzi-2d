@@ -368,6 +368,7 @@ impl ManualMeshMode {
         }
         match event {
             CanvasInput::Cancel => Ok(self.cancel(document)),
+            CanvasInput::ModifiersChanged { .. } => Ok(false),
             CanvasInput::Leave => {
                 self.hover = Hit::Empty;
                 Ok(false)

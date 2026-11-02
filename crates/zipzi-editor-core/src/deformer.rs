@@ -1,10 +1,11 @@
 //! Screen-space manipulators. Painting and picking share the same geometry.
 use crate::{CanvasScene, ControlGeometry, ControlKind, ViewportPoint, ViewportTransform};
 
-// Model-space dimensions; the viewport supplies fit-to-canvas scale and zoom.
-pub(crate) const ROTATION_AXIS_LENGTH: f32 = 540.;
-const ROTATION_RING_RADIUS: f32 = 280.;
-const ROTATION_SCALE_DISTANCE: f32 = 400.;
+// Initial model-space radius; authored/inherited scale and viewport zoom apply.
+const ROTATION_RING_RADIUS: f32 = 64.;
+const ROTATION_MIN_RADIUS: f32 = 24.;
+const ROTATION_SCALE_OFFSET: f32 = 24.;
+pub(crate) const ROTATION_RING_SEGMENTS: usize = 96;
 // Fixed logical-pixel gap between the Warp control grid and its outer frame.
 const WARP_FRAME_PADDING: f32 = 12.;
 const WARP_ROTATE_OFFSET: f32 = 24.;
@@ -42,6 +43,18 @@ pub(crate) struct WarpGizmos {
 }
 
 impl CanvasScene {
+    pub(crate) fn rotation_screen_radius(&self, c: &ControlGeometry, t: ViewportTransform) -> f32 {
+        let scale = self
+            .source
+            .viewport_frame
+            .deformers
+            .iter()
+            .find(|d| d.id == c.object.id)
+            .and_then(|d| d.rotation_basis)
+            .map_or(1., |[x, _]| x.x.hypot(x.y));
+        (ROTATION_RING_RADIUS * scale * t.scale).max(ROTATION_MIN_RADIUS)
+    }
+
     pub(crate) fn object_gizmo(
         &self,
         object: &crate::ObjectRef,
@@ -69,28 +82,30 @@ impl CanvasScene {
             let [o, axis, ..] = points.as_slice() else {
                 return None;
             };
-            let axis_length = ROTATION_AXIS_LENGTH * t.scale;
-            let direction = p((axis.x - o.x) / axis_length, (axis.y - o.y) / axis_length);
-            let scale_distance = ROTATION_SCALE_DISTANCE * t.scale;
-            let radius = ROTATION_RING_RADIUS * t.scale;
+            let radius = self.rotation_screen_radius(c, t);
+            let direction = p((axis.x - o.x) / radius, (axis.y - o.y) / radius);
+            let scale_distance = radius + ROTATION_SCALE_OFFSET;
             let scale = p(
                 o.x - direction.y * scale_distance,
                 o.y + direction.x * scale_distance,
             );
             let mut outline = Vec::new();
-            for i in 0..48 {
-                let a = i as f32 * std::f32::consts::TAU / 48.;
-                let b = (i + 1) as f32 * std::f32::consts::TAU / 48.;
+            for i in 0..ROTATION_RING_SEGMENTS {
+                let a = i as f32 * std::f32::consts::TAU / ROTATION_RING_SEGMENTS as f32;
+                let b = (i + 1) as f32 * std::f32::consts::TAU / ROTATION_RING_SEGMENTS as f32;
                 outline.push((
                     p(o.x + radius * a.cos(), o.y + radius * a.sin()),
                     p(o.x + radius * b.cos(), o.y + radius * b.sin()),
                 ));
             }
-            outline.push((*o, scale));
+            outline.push((
+                p(o.x - direction.y * radius, o.y + direction.x * radius),
+                scale,
+            ));
             return Some(DeformerGizmo {
                 center: *o,
                 frame_angle: 0.,
-                bounds: b,
+                bounds: [o.x - radius, o.y - radius, o.x + radius, o.y + radius],
                 outline,
                 handles: vec![(DeformerHandle::RotationScale, scale)],
             });

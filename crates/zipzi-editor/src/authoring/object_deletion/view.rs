@@ -1,7 +1,40 @@
 //! Deletion preview, choices and optional technical report.
 use super::labels::*;
 use super::*;
+use gpui_kit::base::{Button as ReviewTab, Tabs};
 use gpui_kit::component::{ActiveTheme, button::ButtonVariants};
+
+/// Keep navigation distinct from the actions that change the deletion plan.
+fn review_tab(id: impl Into<ElementId>, label: String, selected: bool, cx: &App) -> ReviewTab {
+    // Reuse Button's focus traversal and Enter/Space activation until the base
+    // Tab primitive supplies keyboard interaction itself.
+    ReviewTab::new(id)
+        .role(Role::Tab)
+        .aria_selected(selected)
+        .h(compact::rem(compact::CONTROL))
+        .px_2()
+        .border_b_2()
+        .border_color(if selected {
+            cx.theme().foreground
+        } else {
+            transparent_black()
+        })
+        .text_size(compact::rem(compact::BODY))
+        .text_color(if selected {
+            cx.theme().foreground
+        } else {
+            cx.theme().muted_foreground
+        })
+        .selected(selected)
+        .styles(|styles| styles.disabled(|style| style.opacity(0.5)))
+        .accessibility_label(label.clone())
+        .focus(|style| style.bg(cx.theme().foreground.opacity(0.08)))
+        .when(!selected, |tab| {
+            tab.cursor_pointer()
+                .hover(|style| style.bg(cx.theme().foreground.opacity(0.05)))
+        })
+        .child(label)
+}
 
 fn technical(section: S) -> bool {
     matches!(
@@ -174,7 +207,12 @@ impl DeletionDialog {
                     .child(t!("deletion.scope_options")),
             );
         for (i, root, other, keep) in roots.iter().skip(self.scope_offset).take(4).cloned() {
-            let mut choices = div().flex().flex_wrap().gap_1();
+            let mut choices = Tabs::new(("deletion-scope-tabs", i))
+                .flex()
+                .flex_wrap()
+                .gap_1()
+                .border_b_1()
+                .border_color(cx.theme().border);
             for desired_keep in [false, true] {
                 let target = if desired_keep == keep {
                     root.clone()
@@ -187,17 +225,19 @@ impl DeletionDialog {
                     "deletion-scope"
                 };
                 choices = choices.child(
-                    compact::toggle(
-                        Button::new((id, i)).label(
-                            t!(if desired_keep {
-                                "deletion.scope_keep"
-                            } else {
-                                "deletion.scope_delete"
-                            })
-                            .into_owned(),
-                        ),
+                    review_tab(
+                        (id, i),
+                        t!(if desired_keep {
+                            "deletion.scope_keep"
+                        } else {
+                            "deletion.scope_delete"
+                        })
+                        .into_owned(),
                         desired_keep == keep,
+                        cx,
                     )
+                    .aria_position_in_set(if desired_keep { 2 } else { 1 })
+                    .aria_size_of_set(2)
                     .disabled(!current || self.working)
                     .on_click(cx.listener(move |v, _, window, cx| {
                         if v.intent.request.roots[i] != target {
@@ -211,7 +251,10 @@ impl DeletionDialog {
                 div()
                     .flex()
                     .flex_col()
-                    .gap_1()
+                    .gap_2()
+                    .p_2()
+                    .rounded(compact::rem(compact::PANEL_RADIUS))
+                    .bg(cx.theme().input_background())
                     .child(self.name(&root.object(), cx))
                     .child(choices),
             );
@@ -332,35 +375,47 @@ impl Render for DeletionDialog {
         }
         if let Some(plan) = &self.plan {
             let sections = plan.summary().sections.clone();
-            let mut tabs = div().flex().flex_wrap().gap_1();
-            for (i, section) in sections
-                .iter()
-                .enumerate()
-                .filter(|(_, s)| s.count > 0 && !technical(s.section))
-            {
-                let value = section.section;
-                tabs = tabs.child(
-                    compact::toggle(
-                        Button::new(("deletion-section", i)).label(format!(
-                            "{} ({})",
-                            section_label(value),
-                            section.count
-                        )),
-                        self.section == value,
-                    )
-                    .on_click(cx.listener(move |v, _, _, cx| {
-                        v.select_section(value);
-                        cx.notify();
-                    })),
-                );
-            }
-            if self.details
-                || sections
+            // Both groups navigate the same report. Keep them together above
+            // the active section's hint and rows, including technical sections.
+            for (is_technical, id) in [
+                (false, "deletion-report-tabs"),
+                (true, "deletion-technical-tabs"),
+            ] {
+                let visible: Vec<_> = sections
                     .iter()
-                    .filter(|s| s.count > 0 && !technical(s.section))
-                    .count()
-                    > 1
-            {
+                    .enumerate()
+                    .filter(|(_, s)| s.count > 0 && technical(s.section) == is_technical)
+                    .collect();
+                if visible.is_empty()
+                    || (is_technical && !self.details)
+                    || (!is_technical && !self.details && visible.len() == 1)
+                {
+                    continue;
+                }
+                let mut tabs = Tabs::new(id)
+                    .flex()
+                    .flex_wrap()
+                    .gap_1()
+                    .border_b_1()
+                    .border_color(cx.theme().border);
+                let total = visible.len();
+                for (position, (i, section)) in visible.into_iter().enumerate() {
+                    let value = section.section;
+                    tabs = tabs.child(
+                        review_tab(
+                            ("deletion-section", i),
+                            format!("{} ({})", section_label(value), section.count),
+                            self.section == value,
+                            cx,
+                        )
+                        .aria_position_in_set(position + 1)
+                        .aria_size_of_set(total)
+                        .on_click(cx.listener(move |v, _, _, cx| {
+                            v.select_section(value);
+                            cx.notify();
+                        })),
+                    );
+                }
                 body = body.child(tabs);
             }
             if !matches!(self.section, S::Removed | S::Decisions) {
@@ -371,36 +426,6 @@ impl Render for DeletionDialog {
                         .text_color(cx.theme().muted_foreground)
                         .child(section_hint(self.section)),
                 );
-            }
-            if self.details && sections.iter().any(|s| s.count > 0 && technical(s.section)) {
-                let mut tabs = div()
-                    .id("deletion-technical-tabs")
-                    .test_support()
-                    .flex()
-                    .flex_wrap()
-                    .gap_1();
-                for (i, section) in sections
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, s)| s.count > 0 && technical(s.section))
-                {
-                    let value = section.section;
-                    tabs = tabs.child(
-                        compact::toggle(
-                            Button::new(("deletion-section", i)).label(format!(
-                                "{} ({})",
-                                section_label(value),
-                                section.count
-                            )),
-                            self.section == value,
-                        )
-                        .on_click(cx.listener(move |v, _, _, cx| {
-                            v.select_section(value);
-                            cx.notify();
-                        })),
-                    );
-                }
-                body = body.child(tabs);
             }
         }
         if let Some(page) = &self.page {
@@ -425,7 +450,9 @@ impl Render for DeletionDialog {
                 .overflow_y_scroll()
                 .flex()
                 .flex_col()
-                .gap_2();
+                .border_1()
+                .border_color(cx.theme().border)
+                .rounded(compact::rem(compact::PANEL_RADIUS));
             for (i, row) in page.rows.clone().into_iter().enumerate() {
                 let text = match &row {
                     R::Removal { removal } => self.name(&removal.object, cx),
@@ -528,7 +555,11 @@ impl Render for DeletionDialog {
                     .flex()
                     .flex_col()
                     .gap_1()
+                    .px_3()
                     .py_2()
+                    .when(i > 0, |row| {
+                        row.border_t_1().border_color(cx.theme().border)
+                    })
                     .aria_label(text.clone())
                     .child(text);
                 if let R::Removal { removal } = &row {
@@ -732,27 +763,33 @@ impl Render for DeletionDialog {
             }
         }
         let details = self.details;
-        let mut tools = div().flex().flex_wrap().items_center().gap_2().child(
-            compact::button(
-                Button::new("deletion-details").label(
-                    t!(if details {
-                        "deletion.hide_details"
-                    } else {
-                        "deletion.show_details"
-                    })
-                    .into_owned(),
-                ),
-            )
-            .ghost()
-            .text_color(cx.theme().muted_foreground)
-            .on_click(cx.listener(|v, _, _, cx| {
-                v.details = !v.details;
-                if !v.details && technical(v.section) {
-                    v.select_section(S::Removed);
-                }
-                cx.notify();
-            })),
-        );
+        let mut tools = div()
+            .flex()
+            .flex_wrap()
+            .items_center()
+            .gap_2()
+            .pt_1()
+            .child(
+                compact::button(
+                    Button::new("deletion-details").label(
+                        t!(if details {
+                            "deletion.hide_details"
+                        } else {
+                            "deletion.show_details"
+                        })
+                        .into_owned(),
+                    ),
+                )
+                .ghost()
+                .text_color(cx.theme().muted_foreground)
+                .on_click(cx.listener(|v, _, _, cx| {
+                    v.details = !v.details;
+                    if !v.details && technical(v.section) {
+                        v.select_section(S::Removed);
+                    }
+                    cx.notify();
+                })),
+            );
         if details || self.dialog.error.is_some() || !current {
             tools = tools.child(
                 compact::button(Button::new("deletion-review"))

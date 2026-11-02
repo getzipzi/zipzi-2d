@@ -1,8 +1,8 @@
-//! Constant coordinate conversion for a static affine Warp, including every
-//! stored child channel. Nonlinear maps never fall back to node-only inversion.
+//! Constant coordinate conversion for static Warp and Rotation edits, including
+//! every stored child channel. Nonlinear maps never use node-only inversion.
 use super::*;
 use crate::document::organization::Delta;
-use crate::{DeltaKeyforms, SceneTrack, WarpTransform};
+use crate::{DeltaKeyforms, SceneTrack, TransformData, WarpTransform};
 use std::collections::HashMap;
 
 impl ParentMap {
@@ -58,35 +58,40 @@ impl ParentMap {
 }
 
 impl Document {
-    pub(in crate::document) fn warp_keep_children_delta(
+    pub(in crate::document) fn deformer_keep_children_delta(
         &self,
         id: &str,
-        next: &WarpTransform,
+        next: &TransformData,
         control: &ConversionControl,
     ) -> Result<(Delta, Vec<String>, f64, usize), Status> {
         self.authoring_unlocked(id)?;
         let transform = self
             .get_transform(id)
-            .filter(|t| t.warp().is_some())
-            .ok_or_else(|| Status::error("NOT_WARP", id))?;
-        let old = transform.warp().unwrap();
-        if (old.rows, old.columns, old.quad) != (next.rows, next.columns, next.quad) {
-            return Err(Status::error(
-                "WARP_PRESERVATION_TOPOLOGY",
-                "Keep children cannot change conversion density or interpolation",
-            ));
-        }
-        if next.points.len() != ((old.rows + 1) * (old.columns + 1)) as usize {
-            return Err(Status::error(
-                "INVALID_WARP_POINTS",
-                "Warp lattice point count changed",
-            ));
-        }
-        if let Some(controller) = &next.bezier {
-            require_ok(controller.validate())?;
-        }
+            .ok_or_else(|| Status::error("MISSING_TRANSFORM", id))?;
+        let kind = match (&transform.data, next) {
+            (TransformData::Warp(old), TransformData::Warp(next)) => {
+                if (old.rows, old.columns, old.quad) != (next.rows, next.columns, next.quad) {
+                    return Err(Status::error(
+                        "WARP_PRESERVATION_TOPOLOGY",
+                        "Keep children cannot change conversion density or interpolation",
+                    ));
+                }
+                if next.points.len() != ((old.rows + 1) * (old.columns + 1)) as usize {
+                    return Err(Status::error(
+                        "INVALID_WARP_POINTS",
+                        "Warp lattice point count changed",
+                    ));
+                }
+                if let Some(controller) = &next.bezier {
+                    require_ok(controller.validate())?;
+                }
+                "WARP"
+            }
+            (TransformData::Rotation(_), TransformData::Rotation(_)) => "ROTATION",
+            _ => return Err(Status::error("WRONG_SHAPE_TARGET", id)),
+        };
         let mut replacement = transform.clone();
-        *replacement.warp_mut().unwrap() = next.clone();
+        replacement.data = next.clone();
         require_ok(self.validate_transform(&replacement))?;
         let mut ancestor = id;
         while !ancestor.is_empty() {
@@ -94,9 +99,9 @@ impl Document {
                 || !self.blend_bindings_for_target(ancestor).is_empty()
             {
                 return Err(Status::error(
-                    "DRIVEN_WARP_PRESERVATION_UNPROVEN",
+                    format!("DRIVEN_{kind}_PRESERVATION_UNPROVEN"),
                     format!(
-                        "{ancestor}: keep children requires a static Warp and static ancestor spaces"
+                        "{ancestor}: keep children requires a static deformer and static ancestor spaces"
                     ),
                 ));
             }
@@ -104,8 +109,20 @@ impl Document {
         }
         let context = ReparentContext::default();
         let parent = self.reparent_parent_map(transform.parent(), &context, false, true)?;
-        let old_map = ParentMap::warp(old, parent)?;
-        let new_map = ParentMap::warp(next, parent)?;
+        let (old_map, new_map) = match (&transform.data, next) {
+            (TransformData::Warp(old), TransformData::Warp(next)) => (
+                ParentMap::warp(old, parent)?,
+                ParentMap::warp(next, parent)?,
+            ),
+            _ => {
+                let mut candidate = self.clone();
+                require_ok(candidate.replace_transform(replacement.clone()).status)?;
+                (
+                    self.reparent_parent_map(id, &context, false, true)?,
+                    candidate.reparent_parent_map(id, &context, false, true)?,
+                )
+            }
+        };
         let descendants: Vec<_> = self
             .mesh_order()
             .iter()
@@ -139,9 +156,12 @@ impl Document {
                 affected.push(binding);
             }
         }
-        if old.points == next.points {
+        if transform.data == *next
+            || matches!((&transform.data, next),
+            (TransformData::Warp(old), TransformData::Warp(next)) if old.points == next.points)
+        {
             let mut delta = Delta::default();
-            if old != next {
+            if transform.data != *next {
                 delta.transforms.push(replacement);
             }
             return Ok((delta, affected, 0., 0));
@@ -216,7 +236,7 @@ impl Document {
                 let changed = self.convert_rotation_parent(child, id, old_map, new_map, control)?;
                 if !changed.error.is_finite() {
                     return Err(Status::error(
-                        "WARP_PRESERVATION_TOLERANCE",
+                        format!("{kind}_PRESERVATION_TOLERANCE"),
                         "Non-finite preservation error",
                     ));
                 }
@@ -239,7 +259,7 @@ impl Document {
                             convert(&mut f.points, true)?;
                         }
                     }
-                    _ => return Err(Status::error("WARP_CHILD_CHANNEL_UNSUPPORTED", child)),
+                    _ => return Err(Status::error("DEFORMER_CHILD_CHANNEL_UNSUPPORTED", child)),
                 }
                 delta.blends.push(blend);
             }
@@ -248,38 +268,41 @@ impl Document {
         // mapping, not just the control nodes used to derive the affine basis.
         drop(convert);
         measured = measured.max(rotation_error);
-        let flat = |w: &WarpTransform| w.points.iter().flat_map(|p| [p.x, p.y]).collect::<Vec<_>>();
-        let old_flat = flat(old);
-        let new_flat = flat(next);
-        for v in [-3., -1.7, -0.1, 0.07, 0.29, 0.53, 0.81, 0.97, 1., 1.4, 3.2] {
-            for u in [-3., -1.7, -0.1, 0.07, 0.29, 0.53, 0.81, 0.97, 1., 1.4, 3.2] {
-                control.checkpoint()?;
-                let p = Vec2::new(u, v);
-                let q = new_map.inverse(old_map.point(p))?;
-                let mut a = [0.; 2];
-                let mut b = [0.; 2];
-                crate::deformers::warp_points(
-                    old.rows as i32,
-                    old.columns as i32,
-                    old.quad,
-                    &old_flat,
-                    &[u, v],
-                    &mut a,
-                    1,
-                );
-                crate::deformers::warp_points(
-                    next.rows as i32,
-                    next.columns as i32,
-                    next.quad,
-                    &new_flat,
-                    &[q.x, q.y],
-                    &mut b,
-                    1,
-                );
-                let a = parent.point(Vec2::new(a[0], a[1]));
-                let b = parent.point(Vec2::new(b[0], b[1]));
-                measure_error(&mut measured, a, b)?;
-                samples += 1;
+        if let (TransformData::Warp(old), TransformData::Warp(next)) = (&transform.data, next) {
+            let flat =
+                |w: &WarpTransform| w.points.iter().flat_map(|p| [p.x, p.y]).collect::<Vec<_>>();
+            let old_flat = flat(old);
+            let new_flat = flat(next);
+            for v in [-3., -1.7, -0.1, 0.07, 0.29, 0.53, 0.81, 0.97, 1., 1.4, 3.2] {
+                for u in [-3., -1.7, -0.1, 0.07, 0.29, 0.53, 0.81, 0.97, 1., 1.4, 3.2] {
+                    control.checkpoint()?;
+                    let p = Vec2::new(u, v);
+                    let q = new_map.inverse(old_map.point(p))?;
+                    let mut a = [0.; 2];
+                    let mut b = [0.; 2];
+                    crate::deformers::warp_points(
+                        old.rows as i32,
+                        old.columns as i32,
+                        old.quad,
+                        &old_flat,
+                        &[u, v],
+                        &mut a,
+                        1,
+                    );
+                    crate::deformers::warp_points(
+                        next.rows as i32,
+                        next.columns as i32,
+                        next.quad,
+                        &new_flat,
+                        &[q.x, q.y],
+                        &mut b,
+                        1,
+                    );
+                    let a = parent.point(Vec2::new(a[0], a[1]));
+                    let b = parent.point(Vec2::new(b[0], b[1]));
+                    measure_error(&mut measured, a, b)?;
+                    samples += 1;
+                }
             }
         }
         let mut candidate = self.clone();
@@ -326,7 +349,7 @@ impl Document {
         }
         if inputs.len() > 4096 {
             return Err(Status::error(
-                "WARP_PRESERVATION_CAPACITY",
+                format!("{kind}_PRESERVATION_CAPACITY"),
                 "Too many parameter verification poses",
             ));
         }
@@ -361,7 +384,7 @@ impl Document {
         // these samples do not claim a global floating-point error bound.
         if measured > 0.01 {
             return Err(Status::error(
-                "WARP_PRESERVATION_TOLERANCE",
+                format!("{kind}_PRESERVATION_TOLERANCE"),
                 format!("Measured preservation error {measured:.6} exceeds 0.01 canvas units"),
             ));
         }
@@ -374,7 +397,7 @@ fn measure_error(maximum: &mut f64, before: Vec2, after: Vec2) -> Result<(), Sta
         (f64::from(before.x) - f64::from(after.x)).hypot(f64::from(before.y) - f64::from(after.y));
     if !error.is_finite() {
         return Err(Status::error(
-            "WARP_PRESERVATION_TOLERANCE",
+            "DEFORMER_PRESERVATION_TOLERANCE",
             "Preservation produced a non-finite canvas position",
         ));
     }

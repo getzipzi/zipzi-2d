@@ -733,6 +733,7 @@ from .scene import SceneContentEditReorderMeshVertices as SceneContentEditReorde
 from .scene import SceneContentEditReorderOffscreenKeyforms as SceneContentEditReorderOffscreenKeyforms
 from .scene import SceneContentEditReplaceTriangles as SceneContentEditReplaceTriangles
 from .scene import SceneContentEditResizeWarp as SceneContentEditResizeWarp
+from .scene import SceneContentEditRotationKeepChildren as SceneContentEditRotationKeepChildren
 from .scene import SceneContentEditSetOffscreenMapping as SceneContentEditSetOffscreenMapping
 from .scene import SceneContentEditTransferGluePairs as SceneContentEditTransferGluePairs
 from .scene import SceneContentEditWarpAuthoring as SceneContentEditWarpAuthoring

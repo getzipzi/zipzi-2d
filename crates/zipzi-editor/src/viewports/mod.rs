@@ -439,6 +439,9 @@ impl Render for ViewportSurface {
             .flex()
             .flex_col()
             .track_focus(&self.focus)
+            // The focused container owns keyboard dispatch; the canvas body is
+            // its child and is outside the focus node's modifier-event path.
+            .on_modifiers_changed(cx.listener(Self::modifiers_changed))
             .key_context(if modal {
                 "ZipziViewport ZipziModal"
             } else {

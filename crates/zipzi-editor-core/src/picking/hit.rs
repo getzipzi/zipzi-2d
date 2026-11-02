@@ -63,6 +63,38 @@ impl CanvasScene {
                 return Some(HitTarget::Component(ComponentRef { object, id }));
             }
         }
+        // Native Rotation handles remain reachable when a compact ring's
+        // scale handle overlaps a mixed selection's generic transform frame.
+        for object in selection {
+            let Some(control) = self.control(&object.id).filter(|c| {
+                c.kind == ControlKind::Rotation
+                    && !locks.is_locked(object)
+                    && self.control_visible(c, selection, tool, visibility)
+            }) else {
+                continue;
+            };
+            let points = self.control_points(control, t);
+            for (id, p) in points.iter().enumerate() {
+                if distance2(point, *p) <= CONTROL_RADIUS * CONTROL_RADIUS {
+                    return Some(if id == 1 {
+                        HitTarget::RotationHandle(object.clone())
+                    } else {
+                        HitTarget::Component(ComponentRef {
+                            object: object.clone(),
+                            id: id as u32,
+                        })
+                    });
+                }
+            }
+            if let Some(gizmo) = self.deformer_gizmo(control, t)
+                && let Some((handle, _)) = gizmo
+                    .handles
+                    .iter()
+                    .find(|(_, p)| distance2(point, *p) <= CONTROL_RADIUS * CONTROL_RADIUS)
+            {
+                return Some(HitTarget::DeformerHandle(object.clone(), *handle));
+            }
+        }
         if let Some(frames) = warp_selection.filter(|s| !s.objects.is_empty()) {
             for (object, gizmo) in &frames.items {
                 if frames.objects.iter().any(|o| locks.is_locked(o)) {
@@ -191,7 +223,19 @@ impl CanvasScene {
                 if gizmo
                     .outline
                     .iter()
-                    .any(|&(a, b)| segment_distance2(point, a, b) <= 16.)
+                    .take(if c.kind == ControlKind::Rotation {
+                        crate::deformer::ROTATION_RING_SEGMENTS
+                    } else {
+                        usize::MAX
+                    })
+                    .any(|&(a, b)| {
+                        segment_distance2(point, a, b)
+                            <= if c.kind == ControlKind::Rotation {
+                                36.
+                            } else {
+                                16.
+                            }
+                    })
                 {
                     return Some(HitTarget::DeformerHandle(
                         c.object.clone(),

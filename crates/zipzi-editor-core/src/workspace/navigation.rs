@@ -44,6 +44,9 @@ impl Editor {
         let metrics = self.viewport_metrics(binding.viewport).unwrap();
         let session = self.entry_mut(binding.document)?.session_mut().unwrap();
         update(session.view_state_mut(binding.viewport), metrics);
+        if binding.kind == crate::ViewportKind::Modeling {
+            session.modeling.active_viewport = Some(binding.viewport);
+        }
         Ok(())
     }
     pub fn zoom_viewport(
@@ -86,6 +89,9 @@ impl Editor {
         if metrics.visible() {
             let session = self.entry_mut(binding.document)?.session_mut().unwrap();
             session.fit_view(binding.viewport, metrics)?;
+            if binding.kind == crate::ViewportKind::Modeling {
+                session.modeling.active_viewport = Some(binding.viewport);
+            }
         }
         Ok(())
     }

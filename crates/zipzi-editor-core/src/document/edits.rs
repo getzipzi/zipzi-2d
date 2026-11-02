@@ -60,7 +60,10 @@ impl Document {
         self.pending = Some(PendingEdit {
             kind: Gesture::Controls,
             original: PendingOriginal::Controls(crate::control_edit::EditOriginal::Batch(
-                targets.iter().map(|t| t.original.clone()).collect(),
+                targets
+                    .iter()
+                    .map(|t| t.kept_children.as_ref().unwrap_or(&t.original).clone())
+                    .collect(),
             )),
             edit: self
                 .session
@@ -90,7 +93,7 @@ impl Document {
         let mut mesh_positions = crate::mesh_edit::positions(targets, selected, change)
             .map_err(|e| crate::mesh_edit::PreviewConstraint(e.to_string()))?;
         let previous_revision = self.projection_revision;
-        self.invalidate_projection(targets.iter().any(|target| target.keep_children));
+        self.invalidate_projection(targets.iter().any(|target| target.kept_children.is_some()));
         let pending = self.pending.as_mut().unwrap();
         pending.changed.take();
         for (index, target) in targets.iter().enumerate() {

@@ -471,6 +471,12 @@ pub fn read_scenecontentedit(
             transform_id: value.getattr("transform_id")?.extract()?,
             warp: read_warptransform(&value.getattr("warp")?)?,
         }),
+        "rotation_keep_children" => Ok(
+            zipzi_core::document::SceneContentEdit::RotationKeepChildren {
+                transform_id: value.getattr("transform_id")?.extract()?,
+                rotation: read_rotationtransform(&value.getattr("rotation")?)?,
+            },
+        ),
         "resize_warp" => Ok(zipzi_core::document::SceneContentEdit::ResizeWarp {
             transform_id: value.getattr("transform_id")?.extract()?,
             rows: value.getattr("rows")?.extract()?,

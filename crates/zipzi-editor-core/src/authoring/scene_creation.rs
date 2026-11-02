@@ -137,6 +137,17 @@ impl Document {
         name: String,
         selection: &[ObjectRef],
     ) -> anyhow::Result<SceneObjectCreationPlan> {
+        self.plan_scene_object_creation_at(projection, kind, name, selection, None)
+    }
+
+    fn plan_scene_object_creation_at(
+        &self,
+        projection: PaletteProjection,
+        kind: SceneObjectType,
+        name: String,
+        selection: &[ObjectRef],
+        empty_origin: Option<crate::ModelPoint>,
+    ) -> anyhow::Result<SceneObjectCreationPlan> {
         self.ensure_authoring_idle()?;
         anyhow::ensure!(
             projection != PaletteProjection::Parameters,
@@ -162,7 +173,7 @@ impl Document {
                     object: if kind == SceneObjectType::Warp {
                         SceneCreate::Warp { bounds: None }
                     } else {
-                        SceneCreate::Rotation
+                        SceneCreate::Rotation { origin: None }
                     },
                     part_id,
                     parent_id: None,
@@ -248,7 +259,11 @@ impl Document {
                             texture: Default::default(),
                         },
                         SceneObjectType::Warp => SceneCreate::Warp { bounds: None },
-                        SceneObjectType::Rotation => SceneCreate::Rotation,
+                        SceneObjectType::Rotation => SceneCreate::Rotation {
+                            origin: empty_origin.map(|p| {
+                                zipzi_core::PreciseVec2::new(f64::from(p.x), f64::from(p.y))
+                            }),
+                        },
                         SceneObjectType::Offscreen => SceneCreate::Offscreen,
                         SceneObjectType::Part => unreachable!(),
                     },
@@ -468,6 +483,34 @@ impl Document {
 }
 
 impl crate::Editor {
+    /// UI creation uses the last active Modeling viewport for empty placement.
+    /// Grouping still computes its origin from the frozen evaluated selection.
+    pub fn plan_scene_object_creation_in(
+        &self,
+        projection: PaletteProjection,
+        kind: SceneObjectType,
+        name: String,
+        selection: &[ObjectRef],
+    ) -> anyhow::Result<SceneObjectCreationPlan> {
+        let binding = self
+            .active_session()
+            .and_then(|s| s.modeling.active_viewport)
+            .and_then(|viewport| self.viewport_binding(viewport))
+            .filter(|b| self.viewport_binding_valid(*b))
+            .or_else(|| self.primary_viewport_binding());
+        let center = binding.and_then(|binding| {
+            let metrics = self.viewport_metrics(binding.viewport)?;
+            let transform = crate::ViewportTransform::new(metrics, self.viewport_view(binding)?)?;
+            Some(transform.to_model(crate::ViewportPoint {
+                x: metrics.width / 2.,
+                y: metrics.height / 2.,
+            }))
+        });
+        self.document()
+            .ok_or_else(|| anyhow::anyhow!("No active document"))?
+            .plan_scene_object_creation_at(projection, kind, name, selection, center)
+    }
+
     pub fn execute_scene_object_creation(
         &mut self,
         document: crate::DocumentId,

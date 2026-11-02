@@ -506,6 +506,7 @@ def read_ReparentContext(value: object) -> ReparentContext:
     return ReparentContext(parameter_values={key0: number(v0) for key0, v0 in record(r['parameter_values']).items()}, parameter_domain=tuple(read_ConversionDomain(v0) for v0 in sequence(r['parameter_domain'])), edit_time_seconds=number(r['edit_time_seconds']))
 
 def validate_SceneCreate(value: SceneCreate) -> None:
+    from .common import validate_PreciseVec2
     if isinstance(value, SceneCreateMesh):
         validate_SceneReference(value.texture)
     elif isinstance(value, SceneCreateWarp):
@@ -517,7 +518,8 @@ def validate_SceneCreate(value: SceneCreate) -> None:
             for v0 in value.bounds:
                 _check_f32(v0)
     elif isinstance(value, SceneCreateRotation):
-        pass
+        if value.origin is not None:
+            validate_PreciseVec2(value.origin)
     elif isinstance(value, SceneCreateOffscreen):
         pass
     elif isinstance(value, SceneCreateGlue):
@@ -527,12 +529,13 @@ def validate_SceneCreate(value: SceneCreate) -> None:
         raise TypeError("Expected SceneCreate")
 
 def encode_SceneCreate(value: SceneCreate) -> object:
+    from .common import encode_PreciseVec2
     if isinstance(value, SceneCreateMesh):
         return {'kind': 'mesh', **cast(Mapping[str, object], {'texture': encode_SceneReference(value.texture)})}
     elif isinstance(value, SceneCreateWarp):
         return {'kind': 'warp', **cast(Mapping[str, object], {'bounds': None if value.bounds is None else [v0 for v0 in value.bounds]})}
     elif isinstance(value, SceneCreateRotation):
-        return {'kind': 'rotation', **cast(Mapping[str, object], {})}
+        return {'kind': 'rotation', **cast(Mapping[str, object], {'origin': None if value.origin is None else encode_PreciseVec2(value.origin)})}
     elif isinstance(value, SceneCreateOffscreen):
         return {'kind': 'offscreen', **cast(Mapping[str, object], {})}
     elif isinstance(value, SceneCreateGlue):
@@ -540,6 +543,7 @@ def encode_SceneCreate(value: SceneCreate) -> object:
     raise TypeError("Expected SceneCreate")
 
 def read_SceneCreate(value: object) -> SceneCreate:
+    from .common import read_PreciseVec2
     if isinstance(value, (SceneCreateMesh, SceneCreateWarp, SceneCreateRotation, SceneCreateOffscreen, SceneCreateGlue,)): return value
     r = record(value)
     tag = string(r['kind'])
@@ -550,7 +554,8 @@ def read_SceneCreate(value: object) -> SceneCreate:
         f = record(r)
         return SceneCreateWarp(bounds=None if f.get('bounds', None) is None else cast('tuple[float, float, float, float]', tuple(number(v0) for v0 in sequence(f.get('bounds', None)))))
     elif tag == 'rotation':
-        return SceneCreateRotation()
+        f = record(r)
+        return SceneCreateRotation(origin=None if f.get('origin', None) is None else read_PreciseVec2(f.get('origin', None)))
     elif tag == 'offscreen':
         return SceneCreateOffscreen()
     elif tag == 'glue':

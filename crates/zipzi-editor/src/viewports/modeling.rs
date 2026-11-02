@@ -72,7 +72,13 @@ impl ModelingViewport {
                     use zipzi_editor_core::DeformerHandle as H;
                     match handle {
                         H::Move => CursorStyle::OpenHand,
-                        H::Rotate => CursorStyle::Arrow,
+                        H::Rotate => {
+                            if owner.editor.current_viewport_interaction().is_some() {
+                                CursorStyle::ClosedHand
+                            } else {
+                                CursorStyle::OpenHand
+                            }
+                        }
                         H::RotationScale => CursorStyle::Crosshair,
                         H::Scale(index) => {
                             let base = [1., 2., 3., 0.][index as usize % 4];
@@ -204,7 +210,12 @@ impl ViewportSurface {
                 }
                 return;
             }
-            let moving = matches!(input, CanvasInput::Move { .. } | CanvasInput::Leave);
+            let moving = matches!(
+                input,
+                CanvasInput::Move { .. }
+                    | CanvasInput::Leave
+                    | CanvasInput::ModifiersChanged { .. }
+            );
             let result = match input {
                 CanvasInput::Down {
                     point,
@@ -214,6 +225,17 @@ impl ViewportSurface {
                 } => owner
                     .editor
                     .begin_canvas_gesture(binding, point, shift, alt, primary),
+                input @ (CanvasInput::Move { .. } | CanvasInput::Up { .. })
+                    if self.interaction.is_some() =>
+                {
+                    let modifiers = window.modifiers();
+                    owner.editor.update_canvas_gesture_with_modifiers(
+                        self.interaction.unwrap(),
+                        input,
+                        modifiers.shift,
+                        modifiers.alt,
+                    )
+                }
                 input if self.interaction.is_some() => owner
                     .editor
                     .update_canvas_gesture(self.interaction.unwrap(), input),

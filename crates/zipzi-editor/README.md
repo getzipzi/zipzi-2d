@@ -119,6 +119,9 @@ the toolbar button and Properties checkbox are absent.
 The `deformer-original` scene exercises recording, density changes, restore review,
 Cancel and Apply, checks the restored Warp lattice and captures Warp/Rotation
 record states in all three languages.
+The `rotation` scene checks content-centered creation, plain ring hover and drag
+overlays, live modifier changes, angle readouts and uniform scaling in all three
+languages. Set `ZIPZI_SCREENSHOT_SAVE=1` to save all nine images.
 
 ## Deformer creation
 
@@ -129,6 +132,11 @@ descendants. Selected parents retain their children, and organization ownership
 and drawing order stay unchanged. Base shapes, parameter keyforms and BlendShape
 deltas are converted together to preserve the evaluated result. Without a
 deformable selection, creation produces an empty deformer.
+
+New Rotation places its origin at the current evaluated content center, including
+nested Mesh descendants, and converts all child shape channels together so the
+artwork stays in place. Empty UI creation uses the last active Modeling viewport
+center, including after leaving that viewport to activate a toolbar or menu.
 
 Selected deformation roots must share a parent. Inserting a Rotation below a Warp
 requires a static axis-aligned affine Warp space; other Warp spaces reject the
@@ -184,6 +192,13 @@ and original-shape recovery remain collapsible.
 Mesh, Warp, Part and Offscreen selections have canvas transform frames.
 Rotation uses its native origin, axis, ring and scale controls; directly selected
 Rotations are excluded from generic frames, including mixed selections.
+The Rotation ring starts at a 64-model-unit radius, independently of descendant
+size. Its own and inherited Rotation scale and viewport zoom apply to that radius,
+with a 24-logical-pixel minimum. Its direction tip lies on the ring; the scale
+handle sits 24 logical pixels outside it. Controls retain their plain appearance
+on hover and during rotation, with numeric feedback in the status bar. Scaling
+uses the frozen press ring size, excluding handle padding and the grab offset
+from the authored scale ratio.
 Containers transform their drawable contents; selected deformation descendants
 are normalized so a parent and child are not moved twice. A point selection
 restricts the frame to those points. Drag frame edges to translate, square handles
@@ -195,15 +210,26 @@ Alt/Option scales around the frame center. Shift+Alt/Option enables fine steps:
 translation in one canvas-unit increments, rotation in one-degree increments,
 and scale ratios in one-percentage-point increments relative to the press shape.
 Fine translation retains axis locking; fine corner scaling is uniform and
-centered. Rotation center dragging supports the same fine translation chord;
-its axis and ring share continuous rotation across full turns. Rotation scaling
-is always uniform. Modifiers are frozen on mouse-down; changing keys during a
-drag does not change the active constraints. Snapping leaves the frozen pivot
-and parent-space conversion intact.
+centered. Object frames and Rotation controls share the same modifier policy for
+translation axis locking, rotation steps and fine translation/scale increments.
+The Rotation axis and ring share continuous rotation across full turns. Rotation
+scaling is always uniform. Shift and Alt/Option take effect as they are pressed
+or released during a drag, including with a stationary pointer. Shift locks the
+dominant translation axis until released; pressing it again chooses a new axis.
+Alt/Option changes the scale pivot immediately. Every preview recalculates from
+the same press geometry and parent space, so toggling constraints does not
+accumulate transforms or create additional undo steps.
 Container transforms involving Rotation children scale uniformly; incompatible
 parent spaces reject unrepresentable transforms.
 Escape cancels a gesture; commit creates one undo step. Locked objects and
 noneditable parameter poses retain their normal editing restrictions.
+
+Hold Command on macOS or Ctrl on Windows before dragging Warp or Rotation
+controls to keep child artwork fixed while translating, rotating or scaling the
+deformer. Both use the same coordinate compensation, including ordinary keyforms
+and BlendShape child channels. This policy stays fixed for the gesture while
+Shift/Alt constraints remain live. The edited deformer and its ancestor spaces
+must be static and reversible; unsupported conversions cancel the complete edit.
 
 Arrow keys in a focused Modeling canvas move the current selection by one canvas
 unit, Shift+arrows by ten and Alt/Option+arrows by 0.1. Text inputs, hierarchy
@@ -292,7 +318,9 @@ A single-object confirmation names the object directly; larger deletions list th
 objects and why they are included. Required choices show the reason before the
 replacement controls. Reference updates, IDs, attached records and conversion
 reports are behind **View details**. Choose whether to keep a
-group's contents with explicit scope controls. Choosing replacements or changing
+group's contents with scope tabs. Impact report tabs switch between deletion,
+dependency and blocking details; technical report tabs appear under **View details**.
+Choosing replacements or changing
 the scope updates the preview automatically; **Recheck impact** is available in
 technical details. Replacement actions stay disabled until a target is selected.
 Each deletion is one undo step.

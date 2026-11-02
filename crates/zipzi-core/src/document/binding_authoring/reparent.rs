@@ -2,8 +2,8 @@ use super::*;
 use crate::TransformId;
 use crate::deformers::{PsmVec2, rotation_parent_angle, rotation_points};
 use std::collections::HashSet;
+mod keep_children;
 mod rotation;
-mod warp_keep_children;
 
 pub use zipzi_contract::document::{
     ReparentContext, ReparentEdit, ReparentPlacement, ReparentStrategy,

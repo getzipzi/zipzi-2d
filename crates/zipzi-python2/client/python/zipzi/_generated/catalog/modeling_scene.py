@@ -85,6 +85,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                        'zipzi.modeling.scene.SceneContentEditReorderOffscreenKeyforms',
                                        'zipzi.modeling.scene.SceneContentEditReplaceTriangles',
                                        'zipzi.modeling.scene.SceneContentEditResizeWarp',
+                                       'zipzi.modeling.scene.SceneContentEditRotationKeepChildren',
                                        'zipzi.modeling.scene.SceneContentEditSetOffscreenMapping',
                                        'zipzi.modeling.scene.SceneContentEditTransferGluePairs',
                                        'zipzi.modeling.scene.SceneContentEditWarpAuthoring',
@@ -1131,9 +1132,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                                'Construction owns declared collections; reading '
                                                                'fields, repr and summary performs no IO.',
                                               'example': 'docs/recipes.py',
-                                              'fields': [],
+                                              'fields': [('origin',
+                                                          'Optional rotation origin in parent coordinates. None uses '
+                                                          '(0, 0) for an empty\n'
+                                                          'deformer, or the current content center when grouping a '
+                                                          'selection.')],
                                               'kind': 'type',
-                                              'signature': '()'},
+                                              'signature': '(*, origin: PreciseVec2 | None = None)'},
  'zipzi.modeling.scene.SceneCreateRotation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneCreateRotation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCreateWarp': {'children': ('zipzi.modeling.scene.SceneCreateWarp.__repr__',

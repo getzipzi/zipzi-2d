@@ -223,6 +223,21 @@ pub(super) fn control_points(
         .clone())
 }
 
+pub(super) fn rotation_scale_pointer(
+    center: ViewportPoint,
+    start: ViewportPoint,
+    ratio: f32,
+) -> ViewportPoint {
+    let dx = start.x - center.x;
+    let dy = start.y - center.y;
+    let distance = dx.hypot(dy);
+    let desired = distance + (ratio - 1.) * (distance - 24.);
+    ViewportPoint {
+        x: center.x + dx / distance * desired,
+        y: center.y + dy / distance * desired,
+    }
+}
+
 pub(super) fn bound_deformer_editor(
     rotation: bool,
     reversed: bool,

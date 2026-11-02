@@ -112,7 +112,8 @@ policies are Zipzi authoring algorithms. Native projects retain them; CMO3 expor
 reports authoring metadata loss, including these settings and Bezier handles.
 
 `SceneContentEdit::WarpKeepChildren` replaces a static affine Warp at its existing
-density and converts all direct child shape channels together. Mesh and Warp
+density. `RotationKeepChildren` replaces a static Rotation. Both use one conversion
+and verification pipeline to compensate all direct child shape channels. Mesh and Warp
 positions/controllers use `G⁻¹F`, BlendShape displacements use its linear part,
 and Rotation children reuse inherited-frame compensation. Deeper subtree data
 retain their inputs. Static rectangular Warp/Rotation ancestor spaces are

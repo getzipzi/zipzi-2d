@@ -156,7 +156,7 @@ fn snapshot_state(view: &EditorView, cx: &App) -> StatusBarState {
                 .then(|| {
                     let overlay = view.editor.overlay_for_viewport(token.binding);
                     overlay.interaction_label.map(|mut label| {
-                        if overlay.warp_keep_children {
+                        if overlay.deformer_keep_children {
                             label = format!("{} · {label}", t!("properties.warp_keep_children"));
                         }
                         if let Some(mode) = overlay.warp_bezier_mode {

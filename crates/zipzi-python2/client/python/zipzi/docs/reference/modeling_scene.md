@@ -592,10 +592,12 @@ Immutable owned SceneCreateOffscreen value. Construction owns declared collectio
 
 ## zipzi.modeling.scene.SceneCreateRotation
 
-`()`
+`(*, origin: PreciseVec2 | None = None)`
 
 Immutable owned SceneCreateRotation value. Construction owns declared collections; reading fields, repr and summary performs no IO.
 
+- `origin`: Optional rotation origin in parent coordinates. None uses (0, 0) for an empty
+deformer, or the current content center when grouping a selection.
 
 ## zipzi.modeling.scene.SceneCreateWarp
 

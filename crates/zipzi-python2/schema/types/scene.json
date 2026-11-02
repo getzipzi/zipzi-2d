@@ -2944,6 +2944,32 @@
         {
           "fields": [
             {
+              "doc": "Stable ID of a static Rotation. Driven maps and ancestors are unsupported.",
+              "name": "transform_id",
+              "rust_name": "transform_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "Complete replacement rotation; the shared plan compensates every\nstored child shape channel atomically while retaining the hierarchy.",
+              "name": "rotation",
+              "rust_name": "rotation",
+              "shape": {
+                "kind": "ref",
+                "name": "zipzi_contract::model::RotationTransform"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "rotation_keep_children",
+          "rust_name": "RotationKeepChildren"
+        },
+        {
+          "fields": [
+            {
               "doc": "Stable deformation-transform ID in this document.",
               "name": "transform_id",
               "rust_name": "transform_id",
@@ -3782,8 +3808,23 @@
           "rust_name": "Warp"
         },
         {
-          "fields": [],
-          "form": "unit",
+          "fields": [
+            {
+              "default": null,
+              "doc": "Optional rotation origin in parent coordinates. None uses (0, 0) for an empty\ndeformer, or the current content center when grouping a selection.",
+              "name": "origin",
+              "rust_name": "origin",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "zipzi_contract::model::PreciseVec2"
+                },
+                "kind": "optional"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
           "name": "rotation",
           "rust_name": "Rotation"
         },

@@ -83,7 +83,13 @@ pub fn measure_scenecreate(value: &Bound<'_, PyAny>) -> PyResult<usize> {
                 }
             }),
         ),
-        "rotation" => Ok(256usize),
+        "rotation" => Ok(
+            256usize.saturating_add(if (value.getattr("origin")?).is_none() {
+                0usize
+            } else {
+                measure_precisevec2(&(value.getattr("origin")?))?
+            }),
+        ),
         "offscreen" => Ok(256usize),
         "glue" => Ok(256usize
             .saturating_add(measure_scenereference(&(value.getattr("a")?))?)

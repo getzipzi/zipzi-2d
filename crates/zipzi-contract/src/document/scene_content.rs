@@ -280,6 +280,13 @@ pub enum SceneContentEdit {
         /// The shared plan compensates all child shape channels atomically.
         warp: crate::model::WarpTransform,
     },
+    RotationKeepChildren {
+        /// Stable ID of a static Rotation. Driven maps and ancestors are unsupported.
+        transform_id: String,
+        /// Complete replacement rotation; the shared plan compensates every
+        /// stored child shape channel atomically while retaining the hierarchy.
+        rotation: crate::model::RotationTransform,
+    },
     ResizeWarp {
         /// Stable deformation-transform ID in this document.
         transform_id: String,

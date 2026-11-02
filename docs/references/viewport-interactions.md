@@ -19,6 +19,8 @@ behavior by operation:
 - `lasso.rs`: freehand sampling, release rules, overlay and idle/capture hints.
 - `controls.rs`: control-point/gizmo candidate preparation, transform math,
   commit/cancel, feedback and intermediate-frame acceptance.
+- `transform_constraints.rs`: shared live modifier constraints for object frames
+  and native deformer controls, including translation axes and transform steps.
 - `hand.rs` and `glue.rs`: tool guidance; Glue shares selection gestures, while
   Hand uses viewport navigation.
 - `gesture.rs`: the explicit Select/Lasso/Controls variants, common press
@@ -29,10 +31,30 @@ behavior by operation:
 - `overlay.rs`: projection of shared scene controls; delegates gesture feedback
   to the active variant.
 
-The press snapshot holds the original scene, transform, selection and modifiers.
+The press snapshot holds the original scene, transform, selection and initial
+modifiers. Selection and keep-children policies use that snapshot; transform
+constraints track live Shift/Alt state.
 Only a control gesture can own a candidate edit. An idle control press creates no
 transaction; crossing the existing drag threshold prepares it. Selection gestures
 never own model transactions.
+
+Rotation rings start with a 64-model-unit radius, independently of descendant
+geometry. Own and inherited Rotation scale and viewport zoom apply to that radius,
+with a minimum of 24 logical pixels. Axis tips share that radius; scale handles
+sit 24 logical pixels outside the ring. Scaling uses the frozen press ring size;
+handle padding and the grab offset do not enter the authored ratio. Controls use
+each viewport's presented origin, direction and pose scale, keeping completed
+intermediate frames aligned even when a newer preview has already been requested.
+Controls keep a plain appearance on hover and during
+rotation; the status bar retains the continuous angle delta. Scale-handle spokes do not
+rotate the object. Rotation and object frames apply the same translation-axis,
+angle-step and fine translation/scale policy once, after pointer interpretation.
+Pressing or releasing Shift/Alt updates the current preview even without pointer
+motion. Pointer moves and releases also carry authoritative modifier state.
+Constraints always recompute from the press geometry; toggling them does not
+accumulate transforms or split the gesture's history entry. Shift chooses the
+dominant translation axis when activated and holds it until release; Alt changes
+the scale pivot immediately.
 
 Select and Lasso share click selection, Shift addition/toggling and Option
 subtraction (Option takes precedence over Shift). Region captures use the same
@@ -43,7 +65,9 @@ and Option can remove a previously selected point that has since become disabled
 
 For editable Warp points, Shift-click toggling is deferred until release. A
 Shift drag keeps the pressed point selected and locks the dominant canvas axis
-when it first crosses the drag threshold; later motion cannot change that axis.
+when the drag starts or Shift is pressed; later motion cannot change that axis
+while Shift remains held. Releasing Shift unlocks it, and pressing it again
+chooses a new axis.
 This applies in both Bezier and lattice-point modes. Option on a Warp scale
 handle instead scales around the frozen frame center, including uniform corner
 scaling with Shift. Option point/region subtraction remains unchanged.
@@ -95,18 +119,20 @@ the transformed residual. Changing the auto-reform toggle alone and submitting
 an unchanged control never reform geometry. Reset controller preserves grid
 points; the separate Reform action deliberately replaces their detail.
 
-Keep children fixed is transient Modeling tool state, shared with Properties'
-numeric transforms. The primary modifier (Command on macOS, Ctrl on Windows)
-enables it for a pointer gesture. The press freezes this policy; Move events do
-not reinterpret modifiers. Frame-only adjustment continues to affect only the
-frame. Unsupported Warp maps reject the gesture and cancel its whole candidate,
-without falling back to an ordinary drag.
+Keep children fixed is transient Modeling tool state. Warp also shares it with
+Properties' numeric transforms. The primary modifier (Command on macOS, Ctrl on
+Windows) enables it for Warp and Rotation pointer gestures: center/edge translation,
+rotation, and scale handles use the same coordinate compensation. The press freezes
+this keep-children policy; Shift/Alt transform constraints remain live. Frame-only
+adjustment continues to affect only the frame. Unsupported maps reject the gesture
+and cancel its whole candidate, without falling back to an ordinary drag.
+Rotation keep-children rings follow the deformer scale while the artwork stays fixed.
 
 Each keep-children preview restores captured child channels before applying the
-shared `WarpKeepChildren` plan. This avoids accumulated inverses and ensures a
-return to the starting pointer position restores absent metadata as well as
-geometry. It currently requires static, reversible affine old/new Warp maps and
-supported static ancestor spaces. All base/ordinary/BlendShape child channels are
+shared `WarpKeepChildren`/`RotationKeepChildren` conversion. This avoids accumulated
+inverses and ensures a return to the starting pointer position restores absent
+metadata as well as geometry. It requires static, reversible affine old/new Warp
+or Rotation maps and supported static ancestor spaces. All base/ordinary/BlendShape child channels are
 converted together; Rotation inheritance uses the shared reparent math. Nonlinear
 edited maps and animated ancestor spaces remain explicit refusals. Publication
 checks a 0.01 canvas-unit numerical budget, independent of zoom or device pixels.

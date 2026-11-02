@@ -49,7 +49,10 @@ fn rotation_gizmo_retains_arbitrary_angles_at_small_authored_scales_and_large_or
                 (shown_angle - angle).abs() < 0.001,
                 "angle {angle}, shown {shown_angle}, zoom {zoom}"
             );
-            assert!((dx.hypot(dy) - 540. * zoom).abs() < 0.001);
+            let gizmo = frame.geometry.deformer_gizmo(control, transform).unwrap();
+            let radius = (gizmo.bounds[2] - gizmo.bounds[0]) / 2.;
+            assert!((dx.hypot(dy) - radius).abs() < 0.001);
+            assert!(radius >= 24.);
             assert_eq!(
                 frame.geometry.hit(
                     points[1],
@@ -461,10 +464,7 @@ fn rotation_scale_handle_and_numeric_adjustment_preserve_pivot_and_history() -> 
         .unwrap();
     let gizmo = frame.geometry.deformer_gizmo(c, frame.transform).unwrap();
     let start = gizmo.handles[0].1;
-    let end = ViewportPoint {
-        x: gizmo.center.x + 2. * (start.x - gizmo.center.x),
-        y: gizmo.center.y + 2. * (start.y - gizmo.center.y),
-    };
+    let end = rotation_scale_pointer(gizmo.center, start, 2.);
     drag(&mut editor, start, end, false)?;
     let after = control_points(&mut editor, &object)?;
     assert_eq!(before[0], after[0]);
@@ -1137,7 +1137,8 @@ fn numeric_warp_rotation_and_scale_use_displayed_center_under_parent() -> anyhow
 }
 
 #[test]
-fn rotation_gizmo_follows_canvas_scale_with_matching_pick_geometry() -> anyhow::Result<()> {
+fn rotation_gizmo_scales_from_a_small_initial_size_with_matching_pick_geometry()
+-> anyhow::Result<()> {
     let (mut editor, _dir, object) = deformer_editor(true)?;
     let original = control_points(&mut editor, &object)?;
     let frame = shown(&mut editor)?;
@@ -1161,9 +1162,10 @@ fn rotation_gizmo_follows_canvas_scale_with_matching_pick_geometry() -> anyhow::
                 let points = scene.control_points(control, transform);
                 let gizmo = scene.deformer_gizmo(control, transform).unwrap();
                 let radius = |p: ViewportPoint| (p.x - gizmo.center.x).hypot(p.y - gizmo.center.y);
-                assert!((radius(points[1]) - 540. * zoom).abs() < 0.001);
-                assert!((radius(gizmo.outline[0].0) - 280. * zoom).abs() < 0.001);
-                assert!((radius(gizmo.handles[0].1) - 400. * zoom).abs() < 0.001);
+                let expected = (64. * zoom).max(24.);
+                assert!((radius(points[1]) - expected).abs() < 0.001);
+                assert!((radius(gizmo.outline[0].0) - expected).abs() < 0.001);
+                assert!((radius(gizmo.handles[0].1) - expected - 24.).abs() < 0.001);
                 let selection = std::slice::from_ref(&object);
                 let hit = |p| {
                     scene.hit(
@@ -1185,7 +1187,7 @@ fn rotation_gizmo_follows_canvas_scale_with_matching_pick_geometry() -> anyhow::
                         DeformerHandle::RotationScale
                     ))
                 );
-                // The opposite quadrant of the scaled ring is clear of the axes.
+                // The opposite quadrant of the ring is clear of the axes.
                 assert_eq!(
                     hit(gizmo.outline[30].0),
                     Some(HitTarget::DeformerHandle(

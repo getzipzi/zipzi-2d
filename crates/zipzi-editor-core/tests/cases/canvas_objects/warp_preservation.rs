@@ -60,7 +60,7 @@ fn command_drag_freezes_policy_preserves_children_and_returns_exactly_to_the_pre
                 left_down: true,
             },
         )?;
-        assert!(editor.overlay().warp_keep_children);
+        assert!(editor.overlay().deformer_keep_children);
         same(&children, &mesh_points(&mut editor)?);
         assert_ne!(initial, control_points(&mut editor, &object)?);
         pointer_input(
@@ -82,7 +82,7 @@ fn command_drag_freezes_policy_preserves_children_and_returns_exactly_to_the_pre
     assert_eq!(control_points(&mut editor, &object)?, initial);
     editor.execute(EditorCommand::Redo)?;
     same(&children, &mesh_points(&mut editor)?);
-    assert!(!editor.overlay().warp_keep_children);
+    assert!(!editor.overlay().deformer_keep_children);
     let start = edge(&mut editor, &object)?;
     drag(
         &mut editor,
@@ -154,11 +154,11 @@ fn command_rotation_and_scaling_preserve_children_without_a_persistent_mode() ->
                 left_down: true,
             },
         )?;
-        assert!(editor.overlay().warp_keep_children);
+        assert!(editor.overlay().deformer_keep_children);
         same(&children, &mesh_points(&mut editor)?);
         pointer_input(&mut editor, CanvasInput::Up { point: end })?;
         assert_ne!(initial, control_points(&mut editor, &object)?);
-        assert!(!editor.overlay().warp_keep_children);
+        assert!(!editor.overlay().deformer_keep_children);
         same(&children, &mesh_points(&mut editor)?);
         assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
         editor.execute(EditorCommand::Undo)?;

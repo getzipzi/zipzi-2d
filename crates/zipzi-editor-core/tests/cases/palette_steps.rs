@@ -182,7 +182,7 @@ fn deformation_siblings_step_without_changing_parents_and_mixed_parents_are_reje
     let plan = d.plan_scene_authoring(zipzi_sdk::SceneEdit::Create {
         id: child.clone(),
         name: "Child".into(),
-        object: zipzi_sdk::SceneCreate::Rotation,
+        object: zipzi_sdk::SceneCreate::Rotation { origin: None },
         part_id: None,
         parent_id: Some(a.id.clone()),
         before: None,
