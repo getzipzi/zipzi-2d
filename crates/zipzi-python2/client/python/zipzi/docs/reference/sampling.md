@@ -24,6 +24,8 @@ Alias of [zipzi.modeling.scene.BlendMode](modeling_scene.md#zipzimodelingscenebl
 
 `(min_triangle_area: float=0.0, model_bounds: tuple[Point, Point] | None=None, quality: bool=False) -> None`
 
+Optional authored-geometry diagnostics and per-pose CPU mesh quality checks.
+
 **Fields**
 
 - `min_triangle_area`: Area in authored coordinates: model units squared at the root, or
@@ -37,6 +39,8 @@ snapshot evaluated with default parameters. Only the requested poses are checked
 **Type**
 
 `(id: str, enabled: bool, points: Sequence[Point], rotation_axis: Point | None, rotation_basis: Sequence[Point] | None) -> None`
+
+Evaluated deformer control points and optional Rotation basis in model space.
 
 **Fields**
 
@@ -57,6 +61,8 @@ coefficients at large model origins.
 
 `(kind: DiagnosticKind, mesh_id: str, triangle_index: int | None) -> None`
 
+Geometry diagnostic for a stable mesh and, when applicable, a triangle slot.
+
 Types: [GeometryDiagnosticKind].
 
 **Fields**
@@ -75,6 +81,8 @@ Alias of [zipzi.modeling.sampling.GeometryDiagnosticKind](modeling_sampling.md#z
 **Type**
 
 `(id: str, runtime_id: str, part_id: str, raw_blend_mode: int | None, texture_asset_id: str, texture_slot: int, renderable: bool, positions: Sequence[Point], uvs: Sequence[Point], indices: Sequence[int], draw_order: int, render_order: int, opacity: float, multiply_color: Sequence[float], screen_color: Sequence[float], blend_mode: BlendMode, enabled: bool, visible: bool, double_sided: bool, inverted_mask: bool, masks: Sequence[str]) -> None`
+
+One evaluated mesh drawable with model-space geometry and rendering attributes.
 
 Types: [BlendMode].
 
@@ -112,6 +120,8 @@ above 1 are retained without clamping.
 
 `(source_revision: int, parameters: Sequence[Parameter], drawables: Sequence[Drawable], offscreens: Sequence[Offscreen], render_plan: Sequence[RenderCommand], deformers: Sequence[Deformer]) -> None`
 
+CPU-evaluated geometry, deformers and render plan for one pose.
+
 Types: [Deformer](#zipzisamplingdeformer), [Drawable](#zipzisamplingdrawable), [Offscreen](#zipzisamplingoffscreen), [Parameter](#zipzisamplingparameter), [RenderCommand](#zipzisamplingrendercommand).
 
 **Fields**
@@ -132,6 +142,8 @@ Alias of [zipzi.modeling.sampling.MeshQuality](modeling_sampling.md#zipzimodelin
 **Type**
 
 `(renderable: bool, id: str, runtime_id: str, owner_part_id: str, parent_offscreen_id: str | None, render_order: int, opacity: float, enabled: bool, blend_mode: int, flags: int, masks: Sequence[str], multiply_color: Sequence[float], screen_color: Sequence[float]) -> None`
+
+Evaluated Offscreen compositing state for one pose.
 
 **Fields**
 
@@ -156,6 +168,8 @@ above 1 are retained without clamping.
 **Type**
 
 `(id: str, requested: float, value: float, clamped: bool) -> None`
+
+Requested and effective parameter value for one evaluated pose.
 
 **Fields**
 
@@ -195,17 +209,21 @@ Types: [RenderKind](#zipzisamplingrenderkind).
 
 **Enum**
 
+Ordered rendering instruction; Offscreen begin/end delimit compositing scopes.
+
 **Members**
 
-- `BEGIN_OFFSCREEN`: 'BeginOffscreen'
-- `DRAW_MESH`: 'DrawMesh'
-- `END_OFFSCREEN`: 'EndOffscreen'
+- `BEGIN_OFFSCREEN`: 'BeginOffscreen' — Begin a named Offscreen compositing scope.
+- `DRAW_MESH`: 'DrawMesh' — Draw a named evaluated mesh.
+- `END_OFFSCREEN`: 'EndOffscreen' — End a named Offscreen compositing scope.
 
 ## zipzi.sampling.Result
 
 **Type**
 
 `(state: str, version: Version, parameters: tuple[Pose, ...], frames: Sequence[Frame], diagnostics: Sequence[Diagnostic], quality: Sequence[Sequence[MeshQuality]]) -> None`
+
+Ordered CPU sample frames, effective parameters and optional geometry diagnostics.
 
 Types: [Version], [MeshQuality], [Diagnostic](#zipzisamplingdiagnostic), [Frame](#zipzisamplingframe), [Pose](#zipzisamplingpose).
 

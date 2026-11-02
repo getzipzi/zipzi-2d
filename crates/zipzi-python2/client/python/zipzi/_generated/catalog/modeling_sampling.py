@@ -24,7 +24,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                              'signature': ''},
  'zipzi.modeling.sampling.Drawable': {'children': ('zipzi.modeling.sampling.Drawable.__repr__',
                                                    'zipzi.modeling.sampling.Drawable.summary'),
-                                      'documentation': '',
+                                      'documentation': 'One evaluated mesh drawable with model-space geometry and '
+                                                       'rendering attributes.',
                                       'fields': [('id',
                                                   'Stable document object ID used by references; it is distinct from '
                                                   'the exported runtime_id.'),
@@ -99,7 +100,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.Drawable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.DrawableFrame': {'children': ('zipzi.modeling.sampling.DrawableFrame.__repr__',
                                                         'zipzi.modeling.sampling.DrawableFrame.summary'),
-                                           'documentation': '',
+                                           'documentation': 'CPU-evaluated geometry, deformers and render plan for one '
+                                                            'pose.',
                                            'fields': [('source_revision',
                                                        'Revision used to evaluate this immutable snapshot; later name '
                                                        'edits may reuse it.'),
@@ -131,7 +133,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.DrawableFrame.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.EvaluatedDeformer': {'children': ('zipzi.modeling.sampling.EvaluatedDeformer.__repr__',
                                                             'zipzi.modeling.sampling.EvaluatedDeformer.summary'),
-                                               'documentation': '',
+                                               'documentation': 'Evaluated deformer control points and optional '
+                                                                'Rotation basis in model space.',
                                                'fields': [('id',
                                                            'Stable document object ID used by references; it is '
                                                            'distinct from the exported runtime_id.'),
@@ -163,7 +166,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.EvaluatedDeformer.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.EvaluatedParameter': {'children': ('zipzi.modeling.sampling.EvaluatedParameter.__repr__',
                                                              'zipzi.modeling.sampling.EvaluatedParameter.summary'),
-                                                'documentation': '',
+                                                'documentation': 'Requested and effective parameter value for one '
+                                                                 'evaluated pose.',
                                                 'fields': [('id',
                                                             'Stable document object ID used by references; it is '
                                                             'distinct from the exported runtime_id.'),
@@ -183,7 +187,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.EvaluatedParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.GeometryDiagnostic': {'children': ('zipzi.modeling.sampling.GeometryDiagnostic.__repr__',
                                                              'zipzi.modeling.sampling.GeometryDiagnostic.summary'),
-                                                'documentation': '',
+                                                'documentation': 'Geometry diagnostic for a stable mesh and, when '
+                                                                 'applicable, a triangle slot.',
                                                 'fields': [('kind', 'Typed geometry diagnostic category.'),
                                                            ('mesh_id',
                                                             'Stable ID of the target mesh in this document.'),
@@ -198,15 +203,23 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.GeometryDiagnostic.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.GeometryDiagnostic.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.GeometryDiagnosticKind': {'children': (),
-                                                    'documentation': '',
-                                                    'fields': [('SMALL_TRIANGLE', "'SmallTriangle'"),
-                                                               ('INCONSISTENT_WINDING', "'InconsistentWinding'"),
-                                                               ('OUTSIDE_MODEL_BOUNDS', "'OutsideModelBounds'")],
+                                                    'documentation': 'Category of an authored mesh geometry '
+                                                                     'diagnostic.',
+                                                    'fields': [('SMALL_TRIANGLE',
+                                                                "'SmallTriangle' — Triangle area falls below the "
+                                                                'requested authored-space threshold.'),
+                                                               ('INCONSISTENT_WINDING',
+                                                                "'InconsistentWinding' — Triangle winding differs from "
+                                                                'the mesh winding.'),
+                                                               ('OUTSIDE_MODEL_BOUNDS',
+                                                                "'OutsideModelBounds' — Root mesh extends outside the "
+                                                                'requested model bounds.')],
                                                     'kind': 'enum',
                                                     'signature': ''},
  'zipzi.modeling.sampling.GeometrySnapshot': {'children': ('zipzi.modeling.sampling.GeometrySnapshot.__repr__',
                                                            'zipzi.modeling.sampling.GeometrySnapshot.summary'),
-                                              'documentation': '',
+                                              'documentation': 'Authored mesh geometry with stable vertex IDs and an '
+                                                               'explicit coordinate space.',
                                               'fields': [('version',
                                                           'Exact SDK version captured for this value; not a '
                                                           'best-effort latest-version marker.'),
@@ -243,7 +256,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.GeometrySnapshot.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.GeometrySnapshot.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.GeometrySpace': {'children': (),
-                                           'documentation': '',
+                                           'documentation': 'Coordinate space of authoring geometry positions, '
+                                                            'selected by deformation context.',
                                            'fields': [],
                                            'kind': 'alias',
                                            'signature': 'GeometrySpaceModel | GeometrySpaceRotationLocal | '
@@ -253,7 +267,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                          'zipzi.modeling.sampling.GeometrySpaceWarpParameter')},
  'zipzi.modeling.sampling.GeometrySpaceModel': {'children': ('zipzi.modeling.sampling.GeometrySpaceModel.__repr__',
                                                              'zipzi.modeling.sampling.GeometrySpaceModel.summary'),
-                                                'documentation': '',
+                                                'documentation': 'Root model coordinate space.',
                                                 'fields': [],
                                                 'kind': 'type',
                                                 'signature': '()'},
@@ -261,7 +275,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.GeometrySpaceModel.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.GeometrySpaceRotationLocal': {'children': ('zipzi.modeling.sampling.GeometrySpaceRotationLocal.__repr__',
                                                                      'zipzi.modeling.sampling.GeometrySpaceRotationLocal.summary'),
-                                                        'documentation': '',
+                                                        'documentation': 'Local space of the specified Rotation '
+                                                                         'transform.',
                                                         'fields': [('value',
                                                                     'Stable rotation-transform ID defining the local '
                                                                     'position space.')],
@@ -271,7 +286,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.GeometrySpaceRotationLocal.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.GeometrySpaceWarpParameter': {'children': ('zipzi.modeling.sampling.GeometrySpaceWarpParameter.__repr__',
                                                                      'zipzi.modeling.sampling.GeometrySpaceWarpParameter.summary'),
-                                                        'documentation': '',
+                                                        'documentation': 'Parameter/lattice space of the specified '
+                                                                         'Warp transform.',
                                                         'fields': [('value',
                                                                     'Stable warp-transform ID defining the '
                                                                     'parameter/lattice position space.')],
@@ -281,7 +297,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.GeometrySpaceWarpParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.MeshQuality': {'children': ('zipzi.modeling.sampling.MeshQuality.__repr__',
                                                       'zipzi.modeling.sampling.MeshQuality.summary'),
-                                         'documentation': '',
+                                         'documentation': 'Per-mesh evaluated triangle quality for one sampled pose.',
                                          'fields': [('mesh_id',
                                                      'Stable document mesh ID, in evaluated drawable order.'),
                                                     ('visible',
@@ -322,7 +338,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.MeshQuality.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.ModelingSamples': {'children': ('zipzi.modeling.sampling.ModelingSamples.__repr__',
                                                           'zipzi.modeling.sampling.ModelingSamples.summary'),
-                                             'documentation': '',
+                                             'documentation': 'Ordered CPU sample frames, effective parameters and '
+                                                              'optional geometry diagnostics.',
                                              'fields': [('version',
                                                          'Exact SDK version captured for this value; not a best-effort '
                                                          'latest-version marker.'),
@@ -354,7 +371,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.ModelingSamples.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.OffscreenFrame': {'children': ('zipzi.modeling.sampling.OffscreenFrame.__repr__',
                                                          'zipzi.modeling.sampling.OffscreenFrame.summary'),
-                                            'documentation': '',
+                                            'documentation': 'Evaluated Offscreen compositing state for one pose.',
                                             'fields': [('renderable',
                                                         'Whether required content is available for rendering; '
                                                         'unavailable textures do not make\n'
@@ -402,7 +419,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.OffscreenFrame.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.sampling.OffscreenFrame.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.RenderCommand': {'children': (),
-                                           'documentation': '',
+                                           'documentation': 'Ordered rendering instruction; Offscreen begin/end '
+                                                            'delimit compositing scopes.',
                                            'fields': [],
                                            'kind': 'alias',
                                            'signature': 'RenderCommandBeginOffscreen | RenderCommandDrawMesh | '
@@ -412,7 +430,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
                                                          'zipzi.modeling.sampling.RenderCommandEndOffscreen')},
  'zipzi.modeling.sampling.RenderCommandBeginOffscreen': {'children': ('zipzi.modeling.sampling.RenderCommandBeginOffscreen.__repr__',
                                                                       'zipzi.modeling.sampling.RenderCommandBeginOffscreen.summary'),
-                                                         'documentation': '',
+                                                         'documentation': 'Begin a named Offscreen compositing scope.',
                                                          'fields': [('offscreen_id',
                                                                      'Stable Offscreen object ID; not a texture asset '
                                                                      'ID.')],
@@ -422,7 +440,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.RenderCommandBeginOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.RenderCommandDrawMesh': {'children': ('zipzi.modeling.sampling.RenderCommandDrawMesh.__repr__',
                                                                 'zipzi.modeling.sampling.RenderCommandDrawMesh.summary'),
-                                                   'documentation': '',
+                                                   'documentation': 'Draw a named evaluated mesh.',
                                                    'fields': [('mesh_id',
                                                                'Stable ID of the target mesh in this document.')],
                                                    'kind': 'type',
@@ -431,7 +449,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.RenderCommandDrawMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.RenderCommandEndOffscreen': {'children': ('zipzi.modeling.sampling.RenderCommandEndOffscreen.__repr__',
                                                                     'zipzi.modeling.sampling.RenderCommandEndOffscreen.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'End a named Offscreen compositing scope.',
                                                        'fields': [('offscreen_id',
                                                                    'Stable Offscreen object ID; not a texture asset '
                                                                    'ID.')],
@@ -441,7 +459,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.RenderCommandEndOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.TriangleQuality': {'children': ('zipzi.modeling.sampling.TriangleQuality.__repr__',
                                                           'zipzi.modeling.sampling.TriangleQuality.summary'),
-                                             'documentation': '',
+                                             'documentation': 'Evaluated triangle metrics relative to a frozen '
+                                                              'default-pose reference.',
                                              'fields': [('triangle_index',
                                                          "Zero-based triangle offset, in the sampled drawable's index "
                                                          'order.'),

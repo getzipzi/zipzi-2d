@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Two components in the native Physics coordinate convention.
 pub struct PhysicsVector {
     #[serde(rename = "X")]
     /// Horizontal component in the native Physics coordinate convention.
@@ -24,6 +25,7 @@ pub struct PhysicsVector {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Gravity and wind vectors used by the Physics definition.
 pub struct PhysicsForces {
     #[serde(rename = "Gravity")]
     /// Effective gravity vector in the native Physics coordinate convention.
@@ -45,6 +47,7 @@ pub struct PhysicsForces {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Exported Physics rig identity and display label.
 pub struct PhysicsDictionaryEntry {
     #[serde(rename = "Id")]
     /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -66,6 +69,7 @@ pub struct PhysicsDictionaryEntry {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Physics format metadata, effective forces, rig dictionary and validated counts.
 pub struct PhysicsMeta {
     #[serde(rename = "PhysicsSettingCount")]
     /// Exported count of Physics settings, maintained by native validation.
@@ -86,7 +90,7 @@ pub struct PhysicsMeta {
     /// Ordered exported Physics rig ID/name metadata.
     pub dictionary: Vec<PhysicsDictionaryEntry>,
     #[serde(rename = "Fps", default, skip_serializing_if = "Option::is_none")]
-    /// Nominal motion frames per second or explicit Physics fixed-step frequency, as declared by the owner.
+    /// Optional Physics fixed-step frequency in frames per second; None or zero follows the evaluation delta.
     pub fps: Option<f32>,
     #[serde(flatten)]
     /// Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
@@ -125,9 +129,13 @@ pub struct PhysicsParameterRef {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Native Physics translation or angle channel.
 pub enum PhysicsAxis {
+    /// Horizontal translation channel.
     X,
+    /// Vertical translation channel.
     Y,
+    /// Rotation-angle channel.
     Angle,
 }
 
@@ -224,6 +232,7 @@ pub struct PhysicsVertex {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Minimum, default and maximum of one Physics normalization range.
 pub struct PhysicsRange {
     #[serde(rename = "Minimum")]
     /// Lower normalization bound in the declared position or angle domain.
@@ -245,9 +254,10 @@ pub struct PhysicsRange {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Position and angle normalization ranges used by a Physics rig.
 pub struct PhysicsNormalization {
     #[serde(rename = "Position")]
-    /// Authored two-dimensional Physics node position or normalization domain, as declared by the field.
+    /// Position normalization range in the native Physics convention.
     pub position: PhysicsRange,
     #[serde(rename = "Angle")]
     /// Angle normalization range, in the native Physics coordinate convention.

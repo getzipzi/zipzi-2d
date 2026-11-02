@@ -2,6 +2,7 @@
   "_generated_by": "zipzi-python2/tools/generate.py",
   "definitions": {
     "zipzi_contract::authoring::TextureCoverage": {
+      "doc": "Sampled source-alpha and UV coverage statistics; masks and occlusion are excluded.",
       "fields": [
         {
           "doc": "Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.",

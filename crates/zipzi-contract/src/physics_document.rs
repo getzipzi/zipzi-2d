@@ -7,12 +7,16 @@ use std::sync::Arc;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Optional resolved or unresolved parameter target for Physics input or output.
 pub enum PhysicsTarget {
+    /// No parameter target is specified.
     Unspecified,
+    /// Use a stable document parameter ID.
     Resolved {
         /// Stable document parameter UUID; evaluation uses its declared range and default.
         parameter_id: String,
     },
+    /// Preserve an unresolved external parameter runtime ID.
     Unresolved {
         /// Imported/exported runtime label, distinct from the document object UUID.
         runtime_id: String,
@@ -32,6 +36,7 @@ impl PhysicsTarget {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Stable Physics rig node with authored position and dynamics coefficients.
 pub struct PhysicsNode {
     /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,
@@ -89,6 +94,7 @@ pub enum PhysicsAssetProperty {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Atomic ordered property changes for one Physics rig.
 pub struct PhysicsRigPatch {
     /// Stable ID of the group owning the affected rows or node chain.
     pub group_id: String,
@@ -104,105 +110,124 @@ pub struct PhysicsRigPatch {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Typed Physics rig property replacement, targeting stable row or node identities.
 pub enum PhysicsProperty {
+    /// Replace the rig display name.
     Name(
         /// Replacement display name of the Physics group.
         String,
     ),
+    /// Replace an input influence percentage.
     InputWeight {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
-        /// Channel value or replacement payload in the domain declared by this field type.
+        /// Replacement input influence weight, expressed as a percentage.
         value: f32,
     },
+    /// Replace an input channel.
     InputAxis {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
-        /// Channel value or replacement payload in the domain declared by this field type.
+        /// Replacement input channel.
         value: PhysicsAxis,
     },
+    /// Replace an input reflection flag.
     InputReflect {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
-        /// Channel value or replacement payload in the domain declared by this field type.
+        /// Whether the input mapping is reflected.
         value: bool,
     },
+    /// Replace an input parameter target.
     InputParameter {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
         /// Typed target reference; unresolved imported runtime labels remain explicit.
         target: PhysicsTarget,
     },
+    /// Replace an output influence percentage.
     OutputWeight {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
-        /// Channel value or replacement payload in the domain declared by this field type.
+        /// Replacement output influence weight, expressed as a percentage.
         value: f32,
     },
+    /// Replace an output multiplier.
     OutputScale {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
-        /// Channel value or replacement payload in the domain declared by this field type.
+        /// Replacement output multiplier.
         value: f32,
     },
+    /// Replace an output channel.
     OutputAxis {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
-        /// Channel value or replacement payload in the domain declared by this field type.
+        /// Replacement output channel.
         value: PhysicsAxis,
     },
+    /// Replace an output reflection flag.
     OutputReflect {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
-        /// Channel value or replacement payload in the domain declared by this field type.
+        /// Whether the output mapping is reflected.
         value: bool,
     },
+    /// Replace an output parameter target.
     OutputParameter {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
         /// Typed target reference; unresolved imported runtime labels remain explicit.
         target: PhysicsTarget,
     },
+    /// Replace an output stable node reference.
     OutputNode {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
         /// Stable node identity, independent of the node index used by exported Physics JSON.
         node_id: String,
     },
+    /// Replace an authored node position.
     VertexPosition {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
-        /// Channel value or replacement payload in the domain declared by this field type.
+        /// Replacement node position in the native Physics convention.
         value: crate::physics::PhysicsVector,
     },
+    /// Replace a node segment length/radius.
     VertexRadius {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
-        /// Channel value or replacement payload in the domain declared by this field type.
+        /// Replacement native Physics node segment length/radius.
         value: f32,
     },
+    /// Replace a node mobility coefficient.
     VertexMobility {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
-        /// Channel value or replacement payload in the domain declared by this field type.
+        /// Replacement native Physics mobility coefficient.
         value: f32,
     },
+    /// Replace a node delay coefficient.
     VertexDelay {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
-        /// Channel value or replacement payload in the domain declared by this field type.
+        /// Replacement native Physics delay coefficient.
         value: f32,
     },
+    /// Replace a node acceleration coefficient.
     VertexAcceleration {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
-        /// Channel value or replacement payload in the domain declared by this field type.
+        /// Replacement native Physics acceleration coefficient.
         value: f32,
     },
+    /// Replace the position normalization range.
     PositionNormalization(
         /// Replacement minimum/default/maximum range for position normalization.
         PhysicsRange,
     ),
+    /// Replace the angle normalization range.
     AngleNormalization(
         /// Replacement minimum/default/maximum range for angle normalization.
         PhysicsRange,
@@ -235,7 +260,9 @@ impl PhysicsProperty {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "operation", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Create, move, patch or delete Physics rigs and their owned rows.
 pub enum PhysicsEdit {
+    /// Create a rig in the Physics asset.
     CreateGroup {
         /// Stable Physics singleton ID owning these changes.
         asset_id: String,
@@ -246,6 +273,7 @@ pub enum PhysicsEdit {
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Create an input in a rig.
     CreateInput {
         /// Stable ID of the group owning the affected rows or node chain.
         group_id: String,
@@ -254,6 +282,7 @@ pub enum PhysicsEdit {
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Create an output bound to a rig node.
     CreateOutput {
         /// Stable ID of the group owning the affected rows or node chain.
         group_id: String,
@@ -264,6 +293,7 @@ pub enum PhysicsEdit {
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Insert a stable node into a rig chain.
     InsertNode {
         /// Stable ID of the group owning the affected rows or node chain.
         group_id: String,
@@ -272,22 +302,26 @@ pub enum PhysicsEdit {
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Move a node within its chain.
     MoveNode {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Duplicate a node within its chain.
     DuplicateNode {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Apply an atomic asset or rig property patch.
     Patch {
         /// Typed atomic Physics changes validated against the current candidate.
         patch: PhysicsPatch,
     },
+    /// Move selected inputs to a rig.
     MoveInputs {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
@@ -296,6 +330,7 @@ pub enum PhysicsEdit {
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Move selected outputs with explicit node-reference replacements.
     MoveOutputs {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
@@ -306,12 +341,14 @@ pub enum PhysicsEdit {
         /// Explicit old-node to replacement-node identities used when repairing output references.
         node_replacements: BTreeMap<String, String>,
     },
+    /// Reorder Physics rigs.
     ReorderGroups {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Duplicate selected Physics identities.
     Duplicate {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
@@ -320,6 +357,7 @@ pub enum PhysicsEdit {
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Delete selected Physics identities with explicit node-reference replacements.
     Delete {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
@@ -331,10 +369,11 @@ pub enum PhysicsEdit {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Stable Physics input row driven by a parameter target.
 pub struct PhysicsInput {
     /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,
-    /// Typed parameter reference or stable source object ID, as declared by the enclosing operation.
+    /// Parameter supplying this input; unresolved external IDs remain explicit.
     pub source: PhysicsTarget,
     /// Owned opaque fields attached to an imported Physics parameter reference.
     pub reference_extensions: BTreeMap<String, serde_json::Value>,
@@ -350,10 +389,11 @@ pub struct PhysicsInput {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Stable Physics output row targeting a parameter and a node.
 pub struct PhysicsOutput {
     /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,
-    /// Explicit destination owner/container; order is controlled separately by before.
+    /// Parameter receiving this output; unresolved external IDs remain explicit.
     pub destination: PhysicsTarget,
     /// Owned opaque fields attached to an imported Physics parameter reference.
     pub reference_extensions: BTreeMap<String, serde_json::Value>,
@@ -374,6 +414,7 @@ pub struct PhysicsOutput {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Authored Physics rig with ordered inputs, outputs and stable node chain.
 pub struct PhysicsSetting {
     /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,
@@ -393,6 +434,7 @@ pub struct PhysicsSetting {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Persistent Physics format definition and its rig metadata.
 pub struct PhysicsDefinition {
     /// Native Physics format version number.
     pub version: u32,
@@ -407,6 +449,7 @@ pub struct PhysicsDefinition {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Authored Physics singleton; simulation state belongs to playback, not this value.
 pub struct PhysicsAsset {
     /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,

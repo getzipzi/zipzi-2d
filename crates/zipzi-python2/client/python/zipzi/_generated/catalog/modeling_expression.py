@@ -23,7 +23,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                'signature': ''},
  'zipzi.modeling.expression.ExpressionAsset': {'children': ('zipzi.modeling.expression.ExpressionAsset.__repr__',
                                                             'zipzi.modeling.expression.ExpressionAsset.summary'),
-                                               'documentation': '',
+                                               'documentation': 'Authored expression asset with ordered parameter '
+                                                                'entries and optional fades.',
                                                'fields': [('id',
                                                            'Stable identity in the owning authoring domain; exported '
                                                            'metadata IDs retain their source text.'),
@@ -64,10 +65,15 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionAsset.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionAsset.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionBlend': {'children': (),
-                                               'documentation': '',
-                                               'fields': [('ADD', "'add'"),
-                                                          ('MULTIPLY', "'multiply'"),
-                                                          ('OVERWRITE', "'overwrite'")],
+                                               'documentation': 'How an expression entry contributes to its target '
+                                                                'parameter.',
+                                               'fields': [('ADD',
+                                                           "'add' — Add the entry value as a parameter contribution."),
+                                                          ('MULTIPLY',
+                                                           "'multiply' — Multiply using the entry value as a factor."),
+                                                          ('OVERWRITE',
+                                                           "'overwrite' — Contribute the entry value as an overwrite "
+                                                           'target.')],
                                                'kind': 'enum',
                                                'signature': ''},
  'zipzi.modeling.expression.ExpressionEdit': {'children': (),
@@ -91,7 +97,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                             'zipzi.modeling.expression.ExpressionEditReorder')},
  'zipzi.modeling.expression.ExpressionEditCreate': {'children': ('zipzi.modeling.expression.ExpressionEditCreate.__repr__',
                                                                  'zipzi.modeling.expression.ExpressionEditCreate.summary'),
-                                                    'documentation': '',
+                                                    'documentation': 'Create an expression asset.',
                                                     'fields': [('id',
                                                                 'Stable identity in the owning authoring domain; '
                                                                 'exported metadata IDs retain their source text.'),
@@ -104,7 +110,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditCreate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditCreateEntry': {'children': ('zipzi.modeling.expression.ExpressionEditCreateEntry.__repr__',
                                                                       'zipzi.modeling.expression.ExpressionEditCreateEntry.summary'),
-                                                         'documentation': '',
+                                                         'documentation': 'Create an entry in an expression.',
                                                          'fields': [('owner',
                                                                      'Stable expression asset ID owning the selected '
                                                                      'entries.'),
@@ -121,7 +127,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditCreateEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditDelete': {'children': ('zipzi.modeling.expression.ExpressionEditDelete.__repr__',
                                                                  'zipzi.modeling.expression.ExpressionEditDelete.summary'),
-                                                    'documentation': '',
+                                                    'documentation': 'Delete an expression asset.',
                                                     'fields': [('id',
                                                                 'Stable identity in the owning authoring domain; '
                                                                 'exported metadata IDs retain their source text.')],
@@ -131,7 +137,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditDelete.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditDeleteEntries': {'children': ('zipzi.modeling.expression.ExpressionEditDeleteEntries.__repr__',
                                                                         'zipzi.modeling.expression.ExpressionEditDeleteEntries.summary'),
-                                                           'documentation': '',
+                                                           'documentation': 'Delete selected expression entries.',
                                                            'fields': [('ids',
                                                                        'Ordered stable IDs selected by this operation; '
                                                                        'names and row numbers are not identities.')],
@@ -141,7 +147,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditDeleteEntries.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditDuplicate': {'children': ('zipzi.modeling.expression.ExpressionEditDuplicate.__repr__',
                                                                     'zipzi.modeling.expression.ExpressionEditDuplicate.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Duplicate an expression and its entries under '
+                                                                        'new identities.',
                                                        'fields': [('source',
                                                                    'Typed parameter reference or stable source object '
                                                                    'ID, as declared by the enclosing operation.'),
@@ -161,7 +168,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditDuplicate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditDuplicateEntries': {'children': ('zipzi.modeling.expression.ExpressionEditDuplicateEntries.__repr__',
                                                                            'zipzi.modeling.expression.ExpressionEditDuplicateEntries.summary'),
-                                                              'documentation': '',
+                                                              'documentation': 'Copy entries using explicitly paired '
+                                                                               'new identities.',
                                                               'fields': [('ids',
                                                                           'Ordered stable IDs selected by this '
                                                                           'operation; names and row numbers are not '
@@ -183,7 +191,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditDuplicateEntries.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditMoveEntries': {'children': ('zipzi.modeling.expression.ExpressionEditMoveEntries.__repr__',
                                                                       'zipzi.modeling.expression.ExpressionEditMoveEntries.summary'),
-                                                         'documentation': '',
+                                                         'documentation': 'Move entries to another expression.',
                                                          'fields': [('ids',
                                                                      'Ordered stable IDs selected by this operation; '
                                                                      'names and row numbers are not identities.'),
@@ -200,7 +208,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditMoveEntries.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditPatchEntry': {'children': ('zipzi.modeling.expression.ExpressionEditPatchEntry.__repr__',
                                                                      'zipzi.modeling.expression.ExpressionEditPatchEntry.summary'),
-                                                        'documentation': '',
+                                                        'documentation': 'Replace an entry under an exact '
+                                                                         'precondition.',
                                                         'fields': [('id',
                                                                     'Stable identity in the owning authoring domain; '
                                                                     'exported metadata IDs retain their source text.'),
@@ -218,7 +227,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditPatchEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEditReorder': {'children': ('zipzi.modeling.expression.ExpressionEditReorder.__repr__',
                                                                   'zipzi.modeling.expression.ExpressionEditReorder.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'Reorder expression assets.',
                                                      'fields': [('ids',
                                                                  'Ordered stable IDs selected by this operation; names '
                                                                  'and row numbers are not identities.')],
@@ -228,7 +237,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditReorder.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEntry': {'children': ('zipzi.modeling.expression.ExpressionEntry.__repr__',
                                                             'zipzi.modeling.expression.ExpressionEntry.summary'),
-                                               'documentation': '',
+                                               'documentation': 'One stable expression parameter contribution with an '
+                                                                'optional blend mode.',
                                                'fields': [('id',
                                                            'Stable identity in the owning authoring domain; exported '
                                                            'metadata IDs retain their source text.'),
@@ -253,7 +263,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionEntryFields': {'children': ('zipzi.modeling.expression.ExpressionEntryFields.__repr__',
                                                                   'zipzi.modeling.expression.ExpressionEntryFields.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'Typed target, value and blend replacement for '
+                                                                      'an expression entry.',
                                                      'fields': [('target',
                                                                  'Typed target reference; unresolved imported runtime '
                                                                  'labels remain explicit.'),
@@ -271,7 +282,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEntryFields.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionEntryFields.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionTarget': {'children': (),
-                                                'documentation': '',
+                                                'documentation': 'Optional resolved or unresolved expression parameter '
+                                                                 'target.',
                                                 'fields': [],
                                                 'kind': 'alias',
                                                 'signature': 'ExpressionTargetUnspecified | ExpressionTargetResolved | '
@@ -281,7 +293,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                               'zipzi.modeling.expression.ExpressionTargetUnspecified')},
  'zipzi.modeling.expression.ExpressionTargetResolved': {'children': ('zipzi.modeling.expression.ExpressionTargetResolved.__repr__',
                                                                      'zipzi.modeling.expression.ExpressionTargetResolved.summary'),
-                                                        'documentation': '',
+                                                        'documentation': 'Target a stable document parameter.',
                                                         'fields': [('parameter_id',
                                                                     'Stable document parameter UUID; evaluation uses '
                                                                     'its declared range and default.')],
@@ -291,7 +303,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionTargetResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionTargetUnresolved': {'children': ('zipzi.modeling.expression.ExpressionTargetUnresolved.__repr__',
                                                                        'zipzi.modeling.expression.ExpressionTargetUnresolved.summary'),
-                                                          'documentation': '',
+                                                          'documentation': 'Preserve an unresolved external parameter '
+                                                                           'runtime ID.',
                                                           'fields': [('runtime_id',
                                                                       'Imported/exported runtime label, distinct from '
                                                                       'the document object UUID.')],
@@ -301,7 +314,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionTargetUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionTargetUnspecified': {'children': ('zipzi.modeling.expression.ExpressionTargetUnspecified.__repr__',
                                                                         'zipzi.modeling.expression.ExpressionTargetUnspecified.summary'),
-                                                           'documentation': '',
+                                                           'documentation': 'No parameter target is specified.',
                                                            'fields': [],
                                                            'kind': 'type',
                                                            'signature': '()'},

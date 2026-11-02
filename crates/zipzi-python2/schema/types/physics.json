@@ -2,6 +2,7 @@
   "_generated_by": "zipzi-python2/tools/generate.py",
   "definitions": {
     "zipzi_contract::animation::PhysicsOutputSnapshot": {
+      "doc": "One Physics output before weighting and after application to its target parameter.",
       "fields": [
         {
           "doc": "Raw output value before weight and parameter clamping.",
@@ -154,17 +155,20 @@
     },
     "zipzi_contract::authoring::PhysicsCollection": {
       "content": null,
+      "doc": "Select a Physics rig collection or rows within one rig.",
       "kind": "serde_enum",
       "name": "zipzi_contract::authoring::PhysicsCollection",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Select Physics rigs.",
           "fields": [],
           "form": "unit",
           "name": "groups",
           "rust_name": "Groups"
         },
         {
+          "doc": "Select inputs of one rig.",
           "fields": [
             {
               "doc": "Stable Physics rig ID owning the selected rows.",
@@ -181,6 +185,7 @@
           "rust_name": "Inputs"
         },
         {
+          "doc": "Select outputs of one rig.",
           "fields": [
             {
               "doc": "Stable Physics rig ID owning the selected rows.",
@@ -197,6 +202,7 @@
           "rust_name": "Outputs"
         },
         {
+          "doc": "Select nodes of one rig.",
           "fields": [
             {
               "doc": "Stable Physics rig ID owning the selected rows.",
@@ -216,23 +222,27 @@
     },
     "zipzi_contract::physics::PhysicsAxis": {
       "content": null,
+      "doc": "Native Physics translation or angle channel.",
       "kind": "serde_enum",
       "name": "zipzi_contract::physics::PhysicsAxis",
       "tag": null,
       "variants": [
         {
+          "doc": "Horizontal translation channel.",
           "fields": [],
           "form": "unit",
           "name": "X",
           "rust_name": "X"
         },
         {
+          "doc": "Vertical translation channel.",
           "fields": [],
           "form": "unit",
           "name": "Y",
           "rust_name": "Y"
         },
         {
+          "doc": "Rotation-angle channel.",
           "fields": [],
           "form": "unit",
           "name": "Angle",
@@ -241,6 +251,7 @@
       ]
     },
     "zipzi_contract::physics::PhysicsDictionaryEntry": {
+      "doc": "Exported Physics rig identity and display label.",
       "fields": [
         {
           "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -280,6 +291,7 @@
       "tuple": false
     },
     "zipzi_contract::physics::PhysicsForces": {
+      "doc": "Gravity and wind vectors used by the Physics definition.",
       "fields": [
         {
           "doc": "Effective gravity vector in the native Physics coordinate convention.",
@@ -321,6 +333,7 @@
       "tuple": false
     },
     "zipzi_contract::physics::PhysicsMeta": {
+      "doc": "Physics format metadata, effective forces, rig dictionary and validated counts.",
       "fields": [
         {
           "doc": "Exported count of Physics settings, maintained by native validation.",
@@ -383,7 +396,7 @@
         },
         {
           "default": null,
-          "doc": "Nominal motion frames per second or explicit Physics fixed-step frequency, as declared by the owner.",
+          "doc": "Optional Physics fixed-step frequency in frames per second; None or zero follows the evaluation delta.",
           "name": "Fps",
           "rust_name": "fps",
           "shape": {
@@ -414,9 +427,10 @@
       "tuple": false
     },
     "zipzi_contract::physics::PhysicsNormalization": {
+      "doc": "Position and angle normalization ranges used by a Physics rig.",
       "fields": [
         {
-          "doc": "Authored two-dimensional Physics node position or normalization domain, as declared by the field.",
+          "doc": "Position normalization range in the native Physics convention.",
           "name": "Position",
           "rust_name": "position",
           "shape": {
@@ -455,6 +469,7 @@
       "tuple": false
     },
     "zipzi_contract::physics::PhysicsRange": {
+      "doc": "Minimum, default and maximum of one Physics normalization range.",
       "fields": [
         {
           "doc": "Lower normalization bound in the declared position or angle domain.",
@@ -490,6 +505,7 @@
       "tuple": false
     },
     "zipzi_contract::physics::PhysicsVector": {
+      "doc": "Two components in the native Physics coordinate convention.",
       "fields": [
         {
           "doc": "Horizontal component in the native Physics coordinate convention.",
@@ -516,6 +532,7 @@
       "tuple": false
     },
     "zipzi_contract::physics_document::PhysicsAsset": {
+      "doc": "Authored Physics singleton; simulation state belongs to playback, not this value.",
       "fields": [
         {
           "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -601,6 +618,7 @@
       ]
     },
     "zipzi_contract::physics_document::PhysicsDefinition": {
+      "doc": "Persistent Physics format definition and its rig metadata.",
       "fields": [
         {
           "doc": "Native Physics format version number.",
@@ -657,11 +675,13 @@
     },
     "zipzi_contract::physics_document::PhysicsEdit": {
       "content": null,
+      "doc": "Create, move, patch or delete Physics rigs and their owned rows.",
       "kind": "serde_enum",
       "name": "zipzi_contract::physics_document::PhysicsEdit",
       "tag": "operation",
       "variants": [
         {
+          "doc": "Create a rig in the Physics asset.",
           "fields": [
             {
               "doc": "Stable Physics singleton ID owning these changes.",
@@ -709,6 +729,7 @@
           "rust_name": "CreateGroup"
         },
         {
+          "doc": "Create an input in a rig.",
           "fields": [
             {
               "doc": "Stable ID of the group owning the affected rows or node chain.",
@@ -747,6 +768,7 @@
           "rust_name": "CreateInput"
         },
         {
+          "doc": "Create an output bound to a rig node.",
           "fields": [
             {
               "doc": "Stable ID of the group owning the affected rows or node chain.",
@@ -794,6 +816,7 @@
           "rust_name": "CreateOutput"
         },
         {
+          "doc": "Insert a stable node into a rig chain.",
           "fields": [
             {
               "doc": "Stable ID of the group owning the affected rows or node chain.",
@@ -833,6 +856,7 @@
           "rust_name": "InsertNode"
         },
         {
+          "doc": "Move a node within its chain.",
           "fields": [
             {
               "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -862,6 +886,7 @@
           "rust_name": "MoveNode"
         },
         {
+          "doc": "Duplicate a node within its chain.",
           "fields": [
             {
               "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -891,6 +916,7 @@
           "rust_name": "DuplicateNode"
         },
         {
+          "doc": "Apply an atomic asset or rig property patch.",
           "fields": [
             {
               "doc": "Typed atomic Physics changes validated against the current candidate.",
@@ -908,6 +934,7 @@
           "rust_name": "Patch"
         },
         {
+          "doc": "Move selected inputs to a rig.",
           "fields": [
             {
               "doc": "Ordered stable IDs selected by this operation; names and row numbers are not identities.",
@@ -949,6 +976,7 @@
           "rust_name": "MoveInputs"
         },
         {
+          "doc": "Move selected outputs with explicit node-reference replacements.",
           "fields": [
             {
               "doc": "Ordered stable IDs selected by this operation; names and row numbers are not identities.",
@@ -1002,6 +1030,7 @@
           "rust_name": "MoveOutputs"
         },
         {
+          "doc": "Reorder Physics rigs.",
           "fields": [
             {
               "doc": "Ordered stable IDs selected by this operation; names and row numbers are not identities.",
@@ -1034,6 +1063,7 @@
           "rust_name": "ReorderGroups"
         },
         {
+          "doc": "Duplicate selected Physics identities.",
           "fields": [
             {
               "doc": "Ordered stable IDs selected by this operation; names and row numbers are not identities.",
@@ -1079,6 +1109,7 @@
           "rust_name": "Duplicate"
         },
         {
+          "doc": "Delete selected Physics identities with explicit node-reference replacements.",
           "fields": [
             {
               "doc": "Ordered stable IDs selected by this operation; names and row numbers are not identities.",
@@ -1112,6 +1143,7 @@
       ]
     },
     "zipzi_contract::physics_document::PhysicsInput": {
+      "doc": "Stable Physics input row driven by a parameter target.",
       "fields": [
         {
           "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1123,7 +1155,7 @@
           "skip": false
         },
         {
-          "doc": "Typed parameter reference or stable source object ID, as declared by the enclosing operation.",
+          "doc": "Parameter supplying this input; unresolved external IDs remain explicit.",
           "name": "source",
           "rust_name": "source",
           "shape": {
@@ -1191,6 +1223,7 @@
       "tuple": false
     },
     "zipzi_contract::physics_document::PhysicsNode": {
+      "doc": "Stable Physics rig node with authored position and dynamics coefficients.",
       "fields": [
         {
           "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1266,6 +1299,7 @@
       "tuple": false
     },
     "zipzi_contract::physics_document::PhysicsOutput": {
+      "doc": "Stable Physics output row targeting a parameter and a node.",
       "fields": [
         {
           "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1277,7 +1311,7 @@
           "skip": false
         },
         {
-          "doc": "Explicit destination owner/container; order is controlled separately by before.",
+          "doc": "Parameter receiving this output; unresolved external IDs remain explicit.",
           "name": "destination",
           "rust_name": "destination",
           "shape": {
@@ -1409,11 +1443,13 @@
     },
     "zipzi_contract::physics_document::PhysicsProperty": {
       "content": null,
+      "doc": "Typed Physics rig property replacement, targeting stable row or node identities.",
       "kind": "serde_enum",
       "name": "zipzi_contract::physics_document::PhysicsProperty",
       "tag": null,
       "variants": [
         {
+          "doc": "Replace the rig display name.",
           "fields": [
             {
               "doc": "Replacement display name of the Physics group.",
@@ -1430,6 +1466,7 @@
           "rust_name": "Name"
         },
         {
+          "doc": "Replace an input influence percentage.",
           "fields": [
             {
               "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1441,7 +1478,7 @@
               "skip": false
             },
             {
-              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "doc": "Replacement input influence weight, expressed as a percentage.",
               "name": "value",
               "rust_name": "value",
               "shape": {
@@ -1455,6 +1492,7 @@
           "rust_name": "InputWeight"
         },
         {
+          "doc": "Replace an input channel.",
           "fields": [
             {
               "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1466,7 +1504,7 @@
               "skip": false
             },
             {
-              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "doc": "Replacement input channel.",
               "name": "value",
               "rust_name": "value",
               "shape": {
@@ -1481,6 +1519,7 @@
           "rust_name": "InputAxis"
         },
         {
+          "doc": "Replace an input reflection flag.",
           "fields": [
             {
               "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1492,7 +1531,7 @@
               "skip": false
             },
             {
-              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "doc": "Whether the input mapping is reflected.",
               "name": "value",
               "rust_name": "value",
               "shape": {
@@ -1506,6 +1545,7 @@
           "rust_name": "InputReflect"
         },
         {
+          "doc": "Replace an input parameter target.",
           "fields": [
             {
               "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1532,6 +1572,7 @@
           "rust_name": "InputParameter"
         },
         {
+          "doc": "Replace an output influence percentage.",
           "fields": [
             {
               "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1543,7 +1584,7 @@
               "skip": false
             },
             {
-              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "doc": "Replacement output influence weight, expressed as a percentage.",
               "name": "value",
               "rust_name": "value",
               "shape": {
@@ -1557,6 +1598,7 @@
           "rust_name": "OutputWeight"
         },
         {
+          "doc": "Replace an output multiplier.",
           "fields": [
             {
               "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1568,7 +1610,7 @@
               "skip": false
             },
             {
-              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "doc": "Replacement output multiplier.",
               "name": "value",
               "rust_name": "value",
               "shape": {
@@ -1582,6 +1624,7 @@
           "rust_name": "OutputScale"
         },
         {
+          "doc": "Replace an output channel.",
           "fields": [
             {
               "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1593,7 +1636,7 @@
               "skip": false
             },
             {
-              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "doc": "Replacement output channel.",
               "name": "value",
               "rust_name": "value",
               "shape": {
@@ -1608,6 +1651,7 @@
           "rust_name": "OutputAxis"
         },
         {
+          "doc": "Replace an output reflection flag.",
           "fields": [
             {
               "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1619,7 +1663,7 @@
               "skip": false
             },
             {
-              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "doc": "Whether the output mapping is reflected.",
               "name": "value",
               "rust_name": "value",
               "shape": {
@@ -1633,6 +1677,7 @@
           "rust_name": "OutputReflect"
         },
         {
+          "doc": "Replace an output parameter target.",
           "fields": [
             {
               "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1659,6 +1704,7 @@
           "rust_name": "OutputParameter"
         },
         {
+          "doc": "Replace an output stable node reference.",
           "fields": [
             {
               "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1684,6 +1730,7 @@
           "rust_name": "OutputNode"
         },
         {
+          "doc": "Replace an authored node position.",
           "fields": [
             {
               "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1695,7 +1742,7 @@
               "skip": false
             },
             {
-              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "doc": "Replacement node position in the native Physics convention.",
               "name": "value",
               "rust_name": "value",
               "shape": {
@@ -1710,6 +1757,7 @@
           "rust_name": "VertexPosition"
         },
         {
+          "doc": "Replace a node segment length/radius.",
           "fields": [
             {
               "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1721,7 +1769,7 @@
               "skip": false
             },
             {
-              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "doc": "Replacement native Physics node segment length/radius.",
               "name": "value",
               "rust_name": "value",
               "shape": {
@@ -1735,6 +1783,7 @@
           "rust_name": "VertexRadius"
         },
         {
+          "doc": "Replace a node mobility coefficient.",
           "fields": [
             {
               "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1746,7 +1795,7 @@
               "skip": false
             },
             {
-              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "doc": "Replacement native Physics mobility coefficient.",
               "name": "value",
               "rust_name": "value",
               "shape": {
@@ -1760,6 +1809,7 @@
           "rust_name": "VertexMobility"
         },
         {
+          "doc": "Replace a node delay coefficient.",
           "fields": [
             {
               "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1771,7 +1821,7 @@
               "skip": false
             },
             {
-              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "doc": "Replacement native Physics delay coefficient.",
               "name": "value",
               "rust_name": "value",
               "shape": {
@@ -1785,6 +1835,7 @@
           "rust_name": "VertexDelay"
         },
         {
+          "doc": "Replace a node acceleration coefficient.",
           "fields": [
             {
               "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1796,7 +1847,7 @@
               "skip": false
             },
             {
-              "doc": "Channel value or replacement payload in the domain declared by this field type.",
+              "doc": "Replacement native Physics acceleration coefficient.",
               "name": "value",
               "rust_name": "value",
               "shape": {
@@ -1810,6 +1861,7 @@
           "rust_name": "VertexAcceleration"
         },
         {
+          "doc": "Replace the position normalization range.",
           "fields": [
             {
               "doc": "Replacement minimum/default/maximum range for position normalization.",
@@ -1827,6 +1879,7 @@
           "rust_name": "PositionNormalization"
         },
         {
+          "doc": "Replace the angle normalization range.",
           "fields": [
             {
               "doc": "Replacement minimum/default/maximum range for angle normalization.",
@@ -1846,6 +1899,7 @@
       ]
     },
     "zipzi_contract::physics_document::PhysicsRigPatch": {
+      "doc": "Atomic ordered property changes for one Physics rig.",
       "fields": [
         {
           "doc": "Stable ID of the group owning the affected rows or node chain.",
@@ -1876,6 +1930,7 @@
       "tuple": false
     },
     "zipzi_contract::physics_document::PhysicsSetting": {
+      "doc": "Authored Physics rig with ordered inputs, outputs and stable node chain.",
       "fields": [
         {
           "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -1964,17 +2019,20 @@
     },
     "zipzi_contract::physics_document::PhysicsTarget": {
       "content": null,
+      "doc": "Optional resolved or unresolved parameter target for Physics input or output.",
       "kind": "serde_enum",
       "name": "zipzi_contract::physics_document::PhysicsTarget",
       "tag": "kind",
       "variants": [
         {
+          "doc": "No parameter target is specified.",
           "fields": [],
           "form": "unit",
           "name": "unspecified",
           "rust_name": "Unspecified"
         },
         {
+          "doc": "Use a stable document parameter ID.",
           "fields": [
             {
               "doc": "Stable document parameter UUID; evaluation uses its declared range and default.",
@@ -1991,6 +2049,7 @@
           "rust_name": "Resolved"
         },
         {
+          "doc": "Preserve an unresolved external parameter runtime ID.",
           "fields": [
             {
               "doc": "Imported/exported runtime label, distinct from the document object UUID.",

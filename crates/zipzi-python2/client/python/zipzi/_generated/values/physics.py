@@ -12,7 +12,7 @@ from typing import TypeAlias
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsEditCreateGroup(CompactValue):
-    '\n\nFields:\nasset_id: Stable Physics singleton ID owning these changes.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    'Create a rig in the Physics asset.\n\nFields:\nasset_id: Stable Physics singleton ID owning these changes.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'create_group'
     asset_id: str
     id: str
@@ -23,7 +23,7 @@ PhysicsEditCreateGroup.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsEditCreateInput(CompactValue):
-    '\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    'Create an input in a rig.\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'create_input'
     group_id: str
     id: str
@@ -33,7 +33,7 @@ PhysicsEditCreateInput.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsEditCreateOutput(CompactValue):
-    '\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nnode_id: Stable node identity, independent of the node index used by exported Physics JSON.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    'Create an output bound to a rig node.\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nnode_id: Stable node identity, independent of the node index used by exported Physics JSON.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'create_output'
     group_id: str
     id: str
@@ -44,7 +44,7 @@ PhysicsEditCreateOutput.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsEditInsertNode(CompactValue):
-    '\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nnode: Complete Physics node to insert, including its stable identity and authored dynamics.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    'Insert a stable node into a rig chain.\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nnode: Complete Physics node to insert, including its stable identity and authored dynamics.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'insert_node'
     group_id: str
     node: PhysicsNode
@@ -54,7 +54,7 @@ PhysicsEditInsertNode.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsEditMoveNode(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    'Move a node within its chain.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'move_node'
     id: str
     before: (str | None) = None
@@ -63,7 +63,7 @@ PhysicsEditMoveNode.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsEditDuplicateNode(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    'Duplicate a node within its chain.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'duplicate_node'
     id: str
     before: (str | None) = None
@@ -72,7 +72,7 @@ PhysicsEditDuplicateNode.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsEditPatch(CompactValue):
-    '\n\nFields:\npatch: Typed atomic Physics changes validated against the current candidate.'
+    'Apply an atomic asset or rig property patch.\n\nFields:\npatch: Typed atomic Physics changes validated against the current candidate.'
     _variant: _ClassVar[str] = 'patch'
     patch: PhysicsPatch
 
@@ -80,7 +80,7 @@ PhysicsEditPatch.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsEditMoveInputs(CompactValue):
-    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    'Move selected inputs to a rig.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'move_inputs'
     ids: tuple[str, ...]
     group_id: str
@@ -93,7 +93,7 @@ PhysicsEditMoveInputs.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsEditMoveOutputs(CompactValue):
-    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nbefore: Optional stable sibling ID before which to insert; None appends.\nnode_replacements: Explicit old-node to replacement-node identities used when repairing output references.'
+    'Move selected outputs with explicit node-reference replacements.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nbefore: Optional stable sibling ID before which to insert; None appends.\nnode_replacements: Explicit old-node to replacement-node identities used when repairing output references.'
     _variant: _ClassVar[str] = 'move_outputs'
     ids: tuple[str, ...]
     group_id: str
@@ -108,7 +108,7 @@ PhysicsEditMoveOutputs.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsEditReorderGroups(CompactValue):
-    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    'Reorder Physics rigs.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'reorder_groups'
     ids: tuple[str, ...]
     before: (str | None) = None
@@ -120,7 +120,7 @@ PhysicsEditReorderGroups.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsEditDuplicate(CompactValue):
-    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    'Duplicate selected Physics identities.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'duplicate'
     ids: tuple[str, ...]
     group_id: (str | None) = None
@@ -133,7 +133,7 @@ PhysicsEditDuplicate.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsEditDelete(CompactValue):
-    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\nnode_replacements: Explicit old-node to replacement-node identities used when repairing output references.'
+    'Delete selected Physics identities with explicit node-reference replacements.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\nnode_replacements: Explicit old-node to replacement-node identities used when repairing output references.'
     _variant: _ClassVar[str] = 'delete'
     ids: tuple[str, ...]
     node_replacements: _Mapping[str, str]
@@ -148,7 +148,7 @@ PhysicsEdit: TypeAlias = PhysicsEditCreateGroup | PhysicsEditCreateInput | Physi
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsNode(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nposition: Authored two-dimensional Physics node position or normalization domain, as declared by the field.\nmobility: Native Physics node mobility coefficient.\ndelay: Native Physics node delay coefficient.\nacceleration: Native Physics node acceleration coefficient.\nradius: Native Physics node segment length/radius.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    'Stable Physics rig node with authored position and dynamics coefficients.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nposition: Authored two-dimensional Physics node position or normalization domain, as declared by the field.\nmobility: Native Physics node mobility coefficient.\ndelay: Native Physics node delay coefficient.\nacceleration: Native Physics node acceleration coefficient.\nradius: Native Physics node segment length/radius.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
     id: str
     position: PhysicsVector
     mobility: float
@@ -164,7 +164,7 @@ PhysicsNode.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsVector(CompactValue):
-    '\n\nFields:\nX: Horizontal component in the native Physics coordinate convention.\nY: Vertical component in the native Physics coordinate convention.'
+    'Two components in the native Physics coordinate convention.\n\nFields:\nX: Horizontal component in the native Physics coordinate convention.\nY: Vertical component in the native Physics coordinate convention.'
     X: float
     Y: float
 
@@ -194,7 +194,7 @@ PhysicsAssetProperty: TypeAlias = PhysicsAssetPropertyFps
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsRigPatch(CompactValue):
-    '\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nchanges: Ordered typed property changes validated as one native operation.'
+    'Atomic ordered property changes for one Physics rig.\n\nFields:\ngroup_id: Stable ID of the group owning the affected rows or node chain.\nchanges: Ordered typed property changes validated as one native operation.'
     group_id: str
     changes: tuple[PhysicsProperty, ...]
 
@@ -205,7 +205,7 @@ PhysicsRigPatch.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsPropertyName(CompactValue):
-    '\n\nFields:\nvalue: Replacement display name of the Physics group.'
+    'Replace the rig display name.\n\nFields:\nvalue: Replacement display name of the Physics group.'
     _variant: _ClassVar[str] = 'Name'
     value: str
 
@@ -213,7 +213,7 @@ PhysicsPropertyName.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsPropertyInputWeight(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    'Replace an input influence percentage.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Replacement input influence weight, expressed as a percentage.'
     _variant: _ClassVar[str] = 'InputWeight'
     id: str
     value: float
@@ -222,7 +222,7 @@ PhysicsPropertyInputWeight.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsPropertyInputAxis(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    'Replace an input channel.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Replacement input channel.'
     _variant: _ClassVar[str] = 'InputAxis'
     id: str
     value: PhysicsAxis
@@ -231,7 +231,7 @@ PhysicsPropertyInputAxis.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsPropertyInputReflect(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    'Replace an input reflection flag.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Whether the input mapping is reflected.'
     _variant: _ClassVar[str] = 'InputReflect'
     id: str
     value: bool
@@ -240,7 +240,7 @@ PhysicsPropertyInputReflect.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsPropertyInputParameter(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.'
+    'Replace an input parameter target.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.'
     _variant: _ClassVar[str] = 'InputParameter'
     id: str
     target: PhysicsTarget
@@ -249,7 +249,7 @@ PhysicsPropertyInputParameter.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsPropertyOutputWeight(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    'Replace an output influence percentage.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Replacement output influence weight, expressed as a percentage.'
     _variant: _ClassVar[str] = 'OutputWeight'
     id: str
     value: float
@@ -258,7 +258,7 @@ PhysicsPropertyOutputWeight.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsPropertyOutputScale(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    'Replace an output multiplier.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Replacement output multiplier.'
     _variant: _ClassVar[str] = 'OutputScale'
     id: str
     value: float
@@ -267,7 +267,7 @@ PhysicsPropertyOutputScale.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsPropertyOutputAxis(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    'Replace an output channel.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Replacement output channel.'
     _variant: _ClassVar[str] = 'OutputAxis'
     id: str
     value: PhysicsAxis
@@ -276,7 +276,7 @@ PhysicsPropertyOutputAxis.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsPropertyOutputReflect(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    'Replace an output reflection flag.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Whether the output mapping is reflected.'
     _variant: _ClassVar[str] = 'OutputReflect'
     id: str
     value: bool
@@ -285,7 +285,7 @@ PhysicsPropertyOutputReflect.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsPropertyOutputParameter(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.'
+    'Replace an output parameter target.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.'
     _variant: _ClassVar[str] = 'OutputParameter'
     id: str
     target: PhysicsTarget
@@ -294,7 +294,7 @@ PhysicsPropertyOutputParameter.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsPropertyOutputNode(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nnode_id: Stable node identity, independent of the node index used by exported Physics JSON.'
+    'Replace an output stable node reference.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nnode_id: Stable node identity, independent of the node index used by exported Physics JSON.'
     _variant: _ClassVar[str] = 'OutputNode'
     id: str
     node_id: str
@@ -303,7 +303,7 @@ PhysicsPropertyOutputNode.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsPropertyVertexPosition(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    'Replace an authored node position.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Replacement node position in the native Physics convention.'
     _variant: _ClassVar[str] = 'VertexPosition'
     id: str
     value: PhysicsVector
@@ -312,7 +312,7 @@ PhysicsPropertyVertexPosition.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsPropertyVertexRadius(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    'Replace a node segment length/radius.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Replacement native Physics node segment length/radius.'
     _variant: _ClassVar[str] = 'VertexRadius'
     id: str
     value: float
@@ -321,7 +321,7 @@ PhysicsPropertyVertexRadius.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsPropertyVertexMobility(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    'Replace a node mobility coefficient.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Replacement native Physics mobility coefficient.'
     _variant: _ClassVar[str] = 'VertexMobility'
     id: str
     value: float
@@ -330,7 +330,7 @@ PhysicsPropertyVertexMobility.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsPropertyVertexDelay(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    'Replace a node delay coefficient.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Replacement native Physics delay coefficient.'
     _variant: _ClassVar[str] = 'VertexDelay'
     id: str
     value: float
@@ -339,7 +339,7 @@ PhysicsPropertyVertexDelay.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsPropertyVertexAcceleration(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Channel value or replacement payload in the domain declared by this field type.'
+    'Replace a node acceleration coefficient.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nvalue: Replacement native Physics acceleration coefficient.'
     _variant: _ClassVar[str] = 'VertexAcceleration'
     id: str
     value: float
@@ -348,7 +348,7 @@ PhysicsPropertyVertexAcceleration.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsPropertyPositionNormalization(CompactValue):
-    '\n\nFields:\nvalue: Replacement minimum/default/maximum range for position normalization.'
+    'Replace the position normalization range.\n\nFields:\nvalue: Replacement minimum/default/maximum range for position normalization.'
     _variant: _ClassVar[str] = 'PositionNormalization'
     value: PhysicsRange
 
@@ -356,7 +356,7 @@ PhysicsPropertyPositionNormalization.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsPropertyAngleNormalization(CompactValue):
-    '\n\nFields:\nvalue: Replacement minimum/default/maximum range for angle normalization.'
+    'Replace the angle normalization range.\n\nFields:\nvalue: Replacement minimum/default/maximum range for angle normalization.'
     _variant: _ClassVar[str] = 'AngleNormalization'
     value: PhysicsRange
 
@@ -365,7 +365,7 @@ PhysicsPropertyAngleNormalization.__module__ = "zipzi.modeling.physics"
 PhysicsProperty: TypeAlias = PhysicsPropertyName | PhysicsPropertyInputWeight | PhysicsPropertyInputAxis | PhysicsPropertyInputReflect | PhysicsPropertyInputParameter | PhysicsPropertyOutputWeight | PhysicsPropertyOutputScale | PhysicsPropertyOutputAxis | PhysicsPropertyOutputReflect | PhysicsPropertyOutputParameter | PhysicsPropertyOutputNode | PhysicsPropertyVertexPosition | PhysicsPropertyVertexRadius | PhysicsPropertyVertexMobility | PhysicsPropertyVertexDelay | PhysicsPropertyVertexAcceleration | PhysicsPropertyPositionNormalization | PhysicsPropertyAngleNormalization
 
 class PhysicsAxis(str, Enum):
-    ''
+    'Native Physics translation or angle channel.'
     __module__ = "zipzi.modeling.physics"
     X = 'X'
     Y = 'Y'
@@ -373,14 +373,14 @@ class PhysicsAxis(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsTargetUnspecified(CompactValue):
-    ''
+    'No parameter target is specified.'
     _variant: _ClassVar[str] = 'unspecified'
 
 PhysicsTargetUnspecified.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsTargetResolved(CompactValue):
-    '\n\nFields:\nparameter_id: Stable document parameter UUID; evaluation uses its declared range and default.'
+    'Use a stable document parameter ID.\n\nFields:\nparameter_id: Stable document parameter UUID; evaluation uses its declared range and default.'
     _variant: _ClassVar[str] = 'resolved'
     parameter_id: str
 
@@ -388,7 +388,7 @@ PhysicsTargetResolved.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsTargetUnresolved(CompactValue):
-    '\n\nFields:\nruntime_id: Imported/exported runtime label, distinct from the document object UUID.'
+    'Preserve an unresolved external parameter runtime ID.\n\nFields:\nruntime_id: Imported/exported runtime label, distinct from the document object UUID.'
     _variant: _ClassVar[str] = 'unresolved'
     runtime_id: str
 
@@ -398,7 +398,7 @@ PhysicsTarget: TypeAlias = PhysicsTargetUnspecified | PhysicsTargetResolved | Ph
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsRange(CompactValue):
-    '\n\nFields:\nMinimum: Lower normalization bound in the declared position or angle domain.\nDefault: Neutral normalization coordinate between the declared bounds.\nMaximum: Upper normalization bound in the declared position or angle domain.'
+    'Minimum, default and maximum of one Physics normalization range.\n\nFields:\nMinimum: Lower normalization bound in the declared position or angle domain.\nDefault: Neutral normalization coordinate between the declared bounds.\nMaximum: Upper normalization bound in the declared position or angle domain.'
     Minimum: float
     Default: float
     Maximum: float
@@ -407,7 +407,7 @@ PhysicsRange.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsAsset(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ndata: Complete persistent Physics definition; simulation state lives outside the document.\nopaque_source_ids: Original runtime-ID namespace used to validate preservation of opaque imported fields.\nopaque_source_content_hash: Original imported-content hash used to detect unsupported changes to opaque fields.'
+    'Authored Physics singleton; simulation state belongs to playback, not this value.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ndata: Complete persistent Physics definition; simulation state lives outside the document.\nopaque_source_ids: Original runtime-ID namespace used to validate preservation of opaque imported fields.\nopaque_source_content_hash: Original imported-content hash used to detect unsupported changes to opaque fields.'
     id: str
     data: PhysicsDefinition
     opaque_source_ids: (_Mapping[str, str] | None) = None
@@ -420,7 +420,7 @@ PhysicsAsset.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsDefinition(CompactValue):
-    '\n\nFields:\nversion: Native Physics format version number.\nmeta: Physics format metadata and counts maintained by native authoring validation.\nsettings: Ordered shared Physics rig definitions.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    'Persistent Physics format definition and its rig metadata.\n\nFields:\nversion: Native Physics format version number.\nmeta: Physics format metadata and counts maintained by native authoring validation.\nsettings: Ordered shared Physics rig definitions.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
     version: int
     meta: PhysicsMeta
     settings: tuple[PhysicsSetting, ...]
@@ -434,7 +434,7 @@ PhysicsDefinition.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsMeta(CompactValue):
-    '\n\nFields:\nPhysicsSettingCount: Exported count of Physics settings, maintained by native validation.\nTotalInputCount: Exported count of Physics inputs, maintained by native validation.\nTotalOutputCount: Exported count of Physics outputs, maintained by native validation.\nVertexCount: Exported count of Physics nodes, maintained by native validation.\nEffectiveForces: Native effective gravity and wind vectors.\nPhysicsDictionary: Ordered exported Physics rig ID/name metadata.\nFps: Nominal motion frames per second or explicit Physics fixed-step frequency, as declared by the owner.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    'Physics format metadata, effective forces, rig dictionary and validated counts.\n\nFields:\nPhysicsSettingCount: Exported count of Physics settings, maintained by native validation.\nTotalInputCount: Exported count of Physics inputs, maintained by native validation.\nTotalOutputCount: Exported count of Physics outputs, maintained by native validation.\nVertexCount: Exported count of Physics nodes, maintained by native validation.\nEffectiveForces: Native effective gravity and wind vectors.\nPhysicsDictionary: Ordered exported Physics rig ID/name metadata.\nFps: Optional Physics fixed-step frequency in frames per second; None or zero follows the evaluation delta.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
     PhysicsSettingCount: int
     TotalInputCount: int
     TotalOutputCount: int
@@ -452,7 +452,7 @@ PhysicsMeta.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsForces(CompactValue):
-    '\n\nFields:\nGravity: Effective gravity vector in the native Physics coordinate convention.\nWind: Effective wind vector in the native Physics coordinate convention.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    'Gravity and wind vectors used by the Physics definition.\n\nFields:\nGravity: Effective gravity vector in the native Physics coordinate convention.\nWind: Effective wind vector in the native Physics coordinate convention.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
     Gravity: PhysicsVector
     Wind: PhysicsVector
     extensions: _Mapping[str, ExtensionValue]
@@ -464,7 +464,7 @@ PhysicsForces.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsDictionaryEntry(CompactValue):
-    '\n\nFields:\nId: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nName: Human-readable display or registration name; distinct from persistent object identity.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    'Exported Physics rig identity and display label.\n\nFields:\nId: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nName: Human-readable display or registration name; distinct from persistent object identity.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
     Id: str
     Name: str
     extensions: _Mapping[str, ExtensionValue]
@@ -476,7 +476,7 @@ PhysicsDictionaryEntry.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsSetting(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nexternal_id: Imported/exported Physics rig label, distinct from its persistent group UUID.\ninputs: Ordered Physics input rows, each with a stable identity and typed parameter source.\noutputs: Ordered Physics output rows, each with a stable identity and node reference.\nvertices: Ordered Physics node chain; outputs refer to stable node IDs.\nnormalization: Native position and angle normalization ranges for this Physics rig.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    'Authored Physics rig with ordered inputs, outputs and stable node chain.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nexternal_id: Imported/exported Physics rig label, distinct from its persistent group UUID.\ninputs: Ordered Physics input rows, each with a stable identity and typed parameter source.\noutputs: Ordered Physics output rows, each with a stable identity and node reference.\nvertices: Ordered Physics node chain; outputs refer to stable node IDs.\nnormalization: Native position and angle normalization ranges for this Physics rig.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
     id: str
     external_id: str
     inputs: tuple[PhysicsInput, ...]
@@ -495,7 +495,7 @@ PhysicsSetting.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsInput(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nsource: Typed parameter reference or stable source object ID, as declared by the enclosing operation.\nreference_extensions: Owned opaque fields attached to an imported Physics parameter reference.\nweight: Native Physics influence weight, expressed as a percentage.\nkind: Native Physics axis/channel discriminator; distinct from an object identity.\nreflect: Whether the native Physics mapping reflects the selected axis.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    'Stable Physics input row driven by a parameter target.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nsource: Parameter supplying this input; unresolved external IDs remain explicit.\nreference_extensions: Owned opaque fields attached to an imported Physics parameter reference.\nweight: Native Physics influence weight, expressed as a percentage.\nkind: Native Physics axis/channel discriminator; distinct from an object identity.\nreflect: Whether the native Physics mapping reflects the selected axis.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
     id: str
     source: PhysicsTarget
     reference_extensions: _Mapping[str, ExtensionValue]
@@ -512,7 +512,7 @@ PhysicsInput.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsOutput(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nreference_extensions: Owned opaque fields attached to an imported Physics parameter reference.\nnode_id: Stable node identity, independent of the node index used by exported Physics JSON.\nscale: Native Physics output multiplier applied to the selected axis.\nweight: Native Physics influence weight, expressed as a percentage.\nkind: Native Physics axis/channel discriminator; distinct from an object identity.\nreflect: Whether the native Physics mapping reflects the selected axis.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    'Stable Physics output row targeting a parameter and a node.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ndestination: Parameter receiving this output; unresolved external IDs remain explicit.\nreference_extensions: Owned opaque fields attached to an imported Physics parameter reference.\nnode_id: Stable node identity, independent of the node index used by exported Physics JSON.\nscale: Native Physics output multiplier applied to the selected axis.\nweight: Native Physics influence weight, expressed as a percentage.\nkind: Native Physics axis/channel discriminator; distinct from an object identity.\nreflect: Whether the native Physics mapping reflects the selected axis.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
     id: str
     destination: PhysicsTarget
     reference_extensions: _Mapping[str, ExtensionValue]
@@ -531,7 +531,7 @@ PhysicsOutput.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsNormalization(CompactValue):
-    '\n\nFields:\nPosition: Authored two-dimensional Physics node position or normalization domain, as declared by the field.\nAngle: Angle normalization range, in the native Physics coordinate convention.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
+    'Position and angle normalization ranges used by a Physics rig.\n\nFields:\nPosition: Position normalization range in the native Physics convention.\nAngle: Angle normalization range, in the native Physics coordinate convention.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.'
     Position: PhysicsRange
     Angle: PhysicsRange
     extensions: _Mapping[str, ExtensionValue]
@@ -543,14 +543,14 @@ PhysicsNormalization.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsCollectionGroups(CompactValue):
-    ''
+    'Select Physics rigs.'
     _variant: _ClassVar[str] = 'groups'
 
 PhysicsCollectionGroups.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsCollectionInputs(CompactValue):
-    '\n\nFields:\ngroup_id: Stable Physics rig ID owning the selected rows.'
+    'Select inputs of one rig.\n\nFields:\ngroup_id: Stable Physics rig ID owning the selected rows.'
     _variant: _ClassVar[str] = 'inputs'
     group_id: str
 
@@ -558,7 +558,7 @@ PhysicsCollectionInputs.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsCollectionOutputs(CompactValue):
-    '\n\nFields:\ngroup_id: Stable Physics rig ID owning the selected rows.'
+    'Select outputs of one rig.\n\nFields:\ngroup_id: Stable Physics rig ID owning the selected rows.'
     _variant: _ClassVar[str] = 'outputs'
     group_id: str
 
@@ -566,7 +566,7 @@ PhysicsCollectionOutputs.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsCollectionNodes(CompactValue):
-    '\n\nFields:\ngroup_id: Stable Physics rig ID owning the selected rows.'
+    'Select nodes of one rig.\n\nFields:\ngroup_id: Stable Physics rig ID owning the selected rows.'
     _variant: _ClassVar[str] = 'nodes'
     group_id: str
 
@@ -598,7 +598,7 @@ PhysicsRigSnapshot.__module__ = "zipzi.modeling.physics"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PhysicsOutputSnapshot(CompactValue):
-    '\n\nFields:\nraw: Raw output value before weight and parameter clamping.\nbefore: Parameter value immediately before this output.\nafter: Parameter value after applying this output and clamping.\nclamped: Whether the SDK clamped this output to the target parameter range.'
+    'One Physics output before weighting and after application to its target parameter.\n\nFields:\nraw: Raw output value before weight and parameter clamping.\nbefore: Parameter value immediately before this output.\nafter: Parameter value after applying this output and clamping.\nclamped: Whether the SDK clamped this output to the target parameter range.'
     raw: float
     before: float
     after: float

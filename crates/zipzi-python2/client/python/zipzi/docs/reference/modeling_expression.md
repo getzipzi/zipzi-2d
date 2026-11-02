@@ -20,6 +20,8 @@ Canonical expression modeling values.
 
 `(*, id: str, name: str, file_type: str | None = None, fade_in: float | None = None, fade_out: float | None = None, entries: tuple[ExpressionEntry, ...], extensions: _Mapping[str, ExtensionValue], opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
 
+Authored expression asset with ordered parameter entries and optional fades.
+
 Types: [ExtensionValue], [ExpressionEntry](#zipzimodelingexpressionexpressionentry).
 
 **Fields**
@@ -39,11 +41,13 @@ cannot silently change the meaning of those fields.
 
 **Enum**
 
+How an expression entry contributes to its target parameter.
+
 **Members**
 
-- `ADD`: 'add'
-- `MULTIPLY`: 'multiply'
-- `OVERWRITE`: 'overwrite'
+- `ADD`: 'add' — Add the entry value as a parameter contribution.
+- `MULTIPLY`: 'multiply' — Multiply using the entry value as a factor.
+- `OVERWRITE`: 'overwrite' — Contribute the entry value as an overwrite target.
 
 ## zipzi.modeling.expression.ExpressionEdit
 
@@ -62,6 +66,8 @@ Types: [ExpressionEditCreate](#zipzimodelingexpressionexpressioneditcreate), [Ex
 
 `(*, id: str, name: str)`
 
+Create an expression asset.
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -72,6 +78,8 @@ Types: [ExpressionEditCreate](#zipzimodelingexpressionexpressioneditcreate), [Ex
 **Type**
 
 `(*, owner: str, id: str, before: str | None = None)`
+
+Create an entry in an expression.
 
 **Fields**
 
@@ -85,6 +93,8 @@ Types: [ExpressionEditCreate](#zipzimodelingexpressionexpressioneditcreate), [Ex
 
 `(*, id: str)`
 
+Delete an expression asset.
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -95,6 +105,8 @@ Types: [ExpressionEditCreate](#zipzimodelingexpressionexpressioneditcreate), [Ex
 
 `(*, ids: tuple[str, ...])`
 
+Delete selected expression entries.
+
 **Fields**
 
 - `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
@@ -104,6 +116,8 @@ Types: [ExpressionEditCreate](#zipzimodelingexpressionexpressioneditcreate), [Ex
 **Type**
 
 `(*, source: str, id: str, name: str, entry_ids: tuple[str, ...])`
+
+Duplicate an expression and its entries under new identities.
 
 **Fields**
 
@@ -118,6 +132,8 @@ Types: [ExpressionEditCreate](#zipzimodelingexpressionexpressioneditcreate), [Ex
 
 `(*, ids: tuple[str, ...], new_ids: tuple[str, ...], destination: str, before: str | None = None)`
 
+Copy entries using explicitly paired new identities.
+
 **Fields**
 
 - `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
@@ -131,6 +147,8 @@ Types: [ExpressionEditCreate](#zipzimodelingexpressionexpressioneditcreate), [Ex
 
 `(*, ids: tuple[str, ...], destination: str, before: str | None = None)`
 
+Move entries to another expression.
+
 **Fields**
 
 - `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
@@ -142,6 +160,8 @@ Types: [ExpressionEditCreate](#zipzimodelingexpressionexpressioneditcreate), [Ex
 **Type**
 
 `(*, id: str, expected: ExpressionEntryFields, fields: ExpressionEntryFields)`
+
+Replace an entry under an exact precondition.
 
 Types: [ExpressionEntryFields](#zipzimodelingexpressionexpressionentryfields).
 
@@ -157,6 +177,8 @@ Types: [ExpressionEntryFields](#zipzimodelingexpressionexpressionentryfields).
 
 `(*, ids: tuple[str, ...])`
 
+Reorder expression assets.
+
 **Fields**
 
 - `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
@@ -166,6 +188,8 @@ Types: [ExpressionEntryFields](#zipzimodelingexpressionexpressionentryfields).
 **Type**
 
 `(*, id: str, target: ExpressionTarget, value: float, blend: ExpressionBlend | None = None, extensions: _Mapping[str, ExtensionValue])`
+
+One stable expression parameter contribution with an optional blend mode.
 
 Types: [ExtensionValue], [ExpressionBlend](#zipzimodelingexpressionexpressionblend), [ExpressionTarget](#zipzimodelingexpressionexpressiontarget).
 
@@ -183,6 +207,8 @@ Types: [ExtensionValue], [ExpressionBlend](#zipzimodelingexpressionexpressionble
 
 `(*, target: ExpressionTarget, value: float, blend: ExpressionBlend | None = None)`
 
+Typed target, value and blend replacement for an expression entry.
+
 Types: [ExpressionBlend](#zipzimodelingexpressionexpressionblend), [ExpressionTarget](#zipzimodelingexpressionexpressiontarget).
 
 **Fields**
@@ -197,6 +223,8 @@ Types: [ExpressionBlend](#zipzimodelingexpressionexpressionblend), [ExpressionTa
 
 `ExpressionTargetUnspecified | ExpressionTargetResolved | ExpressionTargetUnresolved`
 
+Optional resolved or unresolved expression parameter target.
+
 Types: [ExpressionTargetResolved](#zipzimodelingexpressionexpressiontargetresolved), [ExpressionTargetUnresolved](#zipzimodelingexpressionexpressiontargetunresolved), [ExpressionTargetUnspecified](#zipzimodelingexpressionexpressiontargetunspecified).
 
 
@@ -205,6 +233,8 @@ Types: [ExpressionTargetResolved](#zipzimodelingexpressionexpressiontargetresolv
 **Type**
 
 `(*, parameter_id: str)`
+
+Target a stable document parameter.
 
 **Fields**
 
@@ -216,6 +246,8 @@ Types: [ExpressionTargetResolved](#zipzimodelingexpressionexpressiontargetresolv
 
 `(*, runtime_id: str)`
 
+Preserve an unresolved external parameter runtime ID.
+
 **Fields**
 
 - `runtime_id`: Imported/exported runtime label, distinct from the document object UUID.
@@ -225,6 +257,8 @@ Types: [ExpressionTargetResolved](#zipzimodelingexpressionexpressiontargetresolv
 **Type**
 
 `()`
+
+No parameter target is specified.
 
 
 [ExtensionValue]: modeling.md#zipzimodelingextensionvalue

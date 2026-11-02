@@ -25,7 +25,7 @@ class Pose(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class Checks(CompactValue):
-    '\n\nFields:\nmin_triangle_area: Area in authored coordinates: model units squared at the root, or\nthe appropriate rotation-local / Warp-parameter units under a parent.\nmodel_bounds: Optional expected model bounds for root meshes only.\nquality: Include per-pose mesh quality in evaluated Y-up model space, relative to this\nsnapshot evaluated with default parameters. Only the requested poses are checked.'
+    'Optional authored-geometry diagnostics and per-pose CPU mesh quality checks.\n\nFields:\nmin_triangle_area: Area in authored coordinates: model units squared at the root, or\nthe appropriate rotation-local / Warp-parameter units under a parent.\nmodel_bounds: Optional expected model bounds for root meshes only.\nquality: Include per-pose mesh quality in evaluated Y-up model space, relative to this\nsnapshot evaluated with default parameters. Only the requested poses are checked.'
     __module__ = "zipzi.sampling"
     min_triangle_area: float
     model_bounds: tuple[Point, Point] | None
@@ -59,7 +59,7 @@ def encode_Checks(value: Checks) -> dict[str, object]:
 
 @dataclass(frozen=True, init=False, repr=False)
 class Parameter(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nrequested: Requested parameter value before range/repeat handling, in the parameter domain.\nvalue: Effective parameter value after native range/repeat handling, in the parameter domain.\nclamped: Whether the effective parameter value differs due to range clamping.'
+    'Requested and effective parameter value for one evaluated pose.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nrequested: Requested parameter value before range/repeat handling, in the parameter domain.\nvalue: Effective parameter value after native range/repeat handling, in the parameter domain.\nclamped: Whether the effective parameter value differs due to range clamping.'
     __module__ = "zipzi.sampling"
     id: str
     requested: float
@@ -81,7 +81,7 @@ from .values.scene import BlendMode as BlendMode
 
 @dataclass(frozen=True, init=False, repr=False)
 class Drawable(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\npart_id: Organizational Part owner ID; independent of the deformation parent. An empty string\nrepresents the root/unassigned container.\nraw_blend_mode: Original format-specific blend-mode code; None means no preserved raw code.\ntexture_asset_id: Resolved image-asset object ID used by this drawable; separate from its evaluated\ntexture slot.\ntexture_slot: Resolved texture slot index; separate from the persistent texture asset ID.\nrenderable: Geometry remains editable when this resource cannot contribute color.\npositions: Final evaluated XY vertex positions in Y-up model units; ordered for indices and UVs.\nuvs: Texture UV pairs ordered by vertex_ids; keep one UV for each position.\nindices: Flattened triangle indices into evaluated positions/UVs; these are offsets, not\nauthoring vertex IDs.\ndraw_order: Evaluated integer drawing-order coordinate before final render sorting.\nrender_order: Final evaluated drawing sequence rank after hierarchy and group ordering.\nopacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.\nmultiply_color: Evaluated RGBA multiply factors, channel order R, G, B, A.\nscreen_color: Evaluated RGBA screen factors, channel order R, G, B, A.\nblend_mode: Compositing mode used when drawing this object.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\nvisible: Whether the evaluated object is visible after hierarchical visibility rules.\ndouble_sided: Whether both triangle faces contribute to drawing.\ninverted_mask: Whether to invert the combined clipping mask for this drawable.\nmasks: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.'
+    'One evaluated mesh drawable with model-space geometry and rendering attributes.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\npart_id: Organizational Part owner ID; independent of the deformation parent. An empty string\nrepresents the root/unassigned container.\nraw_blend_mode: Original format-specific blend-mode code; None means no preserved raw code.\ntexture_asset_id: Resolved image-asset object ID used by this drawable; separate from its evaluated\ntexture slot.\ntexture_slot: Resolved texture slot index; separate from the persistent texture asset ID.\nrenderable: Geometry remains editable when this resource cannot contribute color.\npositions: Final evaluated XY vertex positions in Y-up model units; ordered for indices and UVs.\nuvs: Texture UV pairs ordered by vertex_ids; keep one UV for each position.\nindices: Flattened triangle indices into evaluated positions/UVs; these are offsets, not\nauthoring vertex IDs.\ndraw_order: Evaluated integer drawing-order coordinate before final render sorting.\nrender_order: Final evaluated drawing sequence rank after hierarchy and group ordering.\nopacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.\nmultiply_color: Evaluated RGBA multiply factors, channel order R, G, B, A.\nscreen_color: Evaluated RGBA screen factors, channel order R, G, B, A.\nblend_mode: Compositing mode used when drawing this object.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\nvisible: Whether the evaluated object is visible after hierarchical visibility rules.\ndouble_sided: Whether both triangle faces contribute to drawing.\ninverted_mask: Whether to invert the combined clipping mask for this drawable.\nmasks: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.'
     __module__ = "zipzi.sampling"
     id: str
     runtime_id: str
@@ -135,7 +135,7 @@ class Drawable(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class Offscreen(CompactValue):
-    '\n\nFields:\nrenderable: Whether required content is available for rendering; unavailable textures do not make\ngeometry uneditable.\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nowner_part_id: Stable Part ID whose contents are composited by this Offscreen.\nparent_offscreen_id: Enclosing Offscreen ID; None means output is composited directly to the main target.\nrender_order: Final evaluated drawing sequence rank after hierarchy and group ordering.\nopacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\nblend_mode: Compositing mode used when drawing this object.\nflags: Preserved format-specific Offscreen compositing flags.\nmasks: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.\nmultiply_color: Evaluated RGBA multiply factors, channel order R, G, B, A.\nscreen_color: Evaluated RGBA screen factors, channel order R, G, B, A.'
+    'Evaluated Offscreen compositing state for one pose.\n\nFields:\nrenderable: Whether required content is available for rendering; unavailable textures do not make\ngeometry uneditable.\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nowner_part_id: Stable Part ID whose contents are composited by this Offscreen.\nparent_offscreen_id: Enclosing Offscreen ID; None means output is composited directly to the main target.\nrender_order: Final evaluated drawing sequence rank after hierarchy and group ordering.\nopacity: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values\nabove 1 are retained without clamping.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\nblend_mode: Compositing mode used when drawing this object.\nflags: Preserved format-specific Offscreen compositing flags.\nmasks: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.\nmultiply_color: Evaluated RGBA multiply factors, channel order R, G, B, A.\nscreen_color: Evaluated RGBA screen factors, channel order R, G, B, A.'
     __module__ = "zipzi.sampling"
     renderable: bool
     id: str
@@ -172,11 +172,14 @@ class Offscreen(CompactValue):
         return cls(renderable=_flag(_get(value, 'renderable')), id=_text(_get(value, 'id')), runtime_id=_text(_get(value, 'runtime_id')), owner_part_id=_text(_get(value, 'owner_part_id')), parent_offscreen_id=None if _get(value, 'parent_offscreen_id') is None else _text(_get(value, 'parent_offscreen_id')), render_order=_whole(_get(value, 'render_order'), 'i32'), opacity=_numeric(_get(value, 'opacity'), 'f32'), enabled=_flag(_get(value, 'enabled')), blend_mode=_whole(_get(value, 'blend_mode'), 'u32'), flags=_whole(_get(value, 'flags'), 'u8'), masks=tuple(_text(item) for item in _items(_get(value, 'masks'))), multiply_color=cast('tuple[float, float, float, float]', _array(tuple(_numeric(item, 'f32') for item in _items(_get(value, 'multiply_color'))), 4)), screen_color=cast('tuple[float, float, float, float]', _array(tuple(_numeric(item, 'f32') for item in _items(_get(value, 'screen_color'))), 4)))
 
 class RenderKind(str, Enum):
-    ''
+    'Ordered rendering instruction; Offscreen begin/end delimit compositing scopes.'
     __module__ = "zipzi.sampling"
     BEGIN_OFFSCREEN = 'BeginOffscreen'
+    'Begin a named Offscreen compositing scope.'
     DRAW_MESH = 'DrawMesh'
+    'Draw a named evaluated mesh.'
     END_OFFSCREEN = 'EndOffscreen'
+    'End a named Offscreen compositing scope.'
 
 @dataclass(frozen=True, repr=False)
 class RenderCommand(CompactValue):
@@ -195,7 +198,7 @@ def read_RenderCommand(value: object) -> RenderCommand:
 
 @dataclass(frozen=True, init=False, repr=False)
 class Deformer(CompactValue):
-    "\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\npoints: Final model coordinates (X-right/Y-up), matching\nDrawable::positions. Warp points are row-major; rotation points are the\ntransformed origin and unit X/Y axes.\nrotation_axis: Unit direction of the rotation's local X axis in model space, evaluated\nwithout translation or scale so tiny imported scales retain their angle.\nrotation_basis: Local X/Y basis vectors with evaluated scale and reflections, before\ntranslation. Unlike subtracting points, these retain small rotation\ncoefficients at large model origins."
+    "Evaluated deformer control points and optional Rotation basis in model space.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\npoints: Final model coordinates (X-right/Y-up), matching\nDrawable::positions. Warp points are row-major; rotation points are the\ntransformed origin and unit X/Y axes.\nrotation_axis: Unit direction of the rotation's local X axis in model space, evaluated\nwithout translation or scale so tiny imported scales retain their angle.\nrotation_basis: Local X/Y basis vectors with evaluated scale and reflections, before\ntranslation. Unlike subtracting points, these retain small rotation\ncoefficients at large model origins."
     __module__ = "zipzi.sampling"
     id: str
     enabled: bool
@@ -217,7 +220,7 @@ class Deformer(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class Frame(CompactValue):
-    '\n\nFields:\nsource_revision: Revision used to evaluate this immutable snapshot; later name edits may reuse it.\nparameters: Requested/effective/clamped parameter records for this evaluated pose.\ndrawables: Evaluated drawable records in this pose, including their immutable geometry and appearance.\noffscreens: Evaluated Offscreen compositing records for this pose.\nrender_plan: Ordered render commands; Offscreen begin/end delimit the compositing scopes.\ndeformers: Editor controls evaluated in the same pose as the drawables.'
+    'CPU-evaluated geometry, deformers and render plan for one pose.\n\nFields:\nsource_revision: Revision used to evaluate this immutable snapshot; later name edits may reuse it.\nparameters: Requested/effective/clamped parameter records for this evaluated pose.\ndrawables: Evaluated drawable records in this pose, including their immutable geometry and appearance.\noffscreens: Evaluated Offscreen compositing records for this pose.\nrender_plan: Ordered render commands; Offscreen begin/end delimit the compositing scopes.\ndeformers: Editor controls evaluated in the same pose as the drawables.'
     __module__ = "zipzi.sampling"
     source_revision: int
     parameters: tuple[Parameter, ...]
@@ -243,7 +246,7 @@ from .values.sampling import GeometryDiagnosticKind as DiagnosticKind
 
 @dataclass(frozen=True, init=False, repr=False)
 class Diagnostic(CompactValue):
-    '\n\nFields:\nkind: Typed geometry diagnostic category.\nmesh_id: Stable ID of the target mesh in this document.\ntriangle_index: Optional zero-based index of the offending triangle; None means the diagnostic is not\ntriangle-specific.'
+    'Geometry diagnostic for a stable mesh and, when applicable, a triangle slot.\n\nFields:\nkind: Typed geometry diagnostic category.\nmesh_id: Stable ID of the target mesh in this document.\ntriangle_index: Optional zero-based index of the offending triangle; None means the diagnostic is not\ntriangle-specific.'
     __module__ = "zipzi.sampling"
     kind: DiagnosticKind
     mesh_id: str
@@ -270,7 +273,7 @@ from .codecs.sampling import read_MeshQuality as read_MeshQuality
 
 @dataclass(frozen=True, init=False, repr=False)
 class Result(CompactValue):
-    '\n\nFields:\nstate: Captured sampling source state, distinguishing formal content from an Edit candidate.\nversion: Exact SDK version captured for this value; not a best-effort latest-version marker.\nparameters: Effective parameter maps in the same order as requested poses; each map is keyed by\ndocument parameter ID.\nframes: CPU-evaluated frames in the same order as requested parameter maps.\ndiagnostics: Structured diagnostics from this query or operation; an empty list means none were reported.\nquality: Per-pose evaluated mesh quality in frame order when Checks.quality is true; empty otherwise.\nUses default parameters of this same frozen source as the reference, without image coverage.'
+    'Ordered CPU sample frames, effective parameters and optional geometry diagnostics.\n\nFields:\nstate: Captured sampling source state, distinguishing formal content from an Edit candidate.\nversion: Exact SDK version captured for this value; not a best-effort latest-version marker.\nparameters: Effective parameter maps in the same order as requested poses; each map is keyed by\ndocument parameter ID.\nframes: CPU-evaluated frames in the same order as requested parameter maps.\ndiagnostics: Structured diagnostics from this query or operation; an empty list means none were reported.\nquality: Per-pose evaluated mesh quality in frame order when Checks.quality is true; empty otherwise.\nUses default parameters of this same frozen source as the reference, without image coverage.'
     __module__ = "zipzi.sampling"
     state: str
     version: Version

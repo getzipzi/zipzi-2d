@@ -57,21 +57,29 @@ pub struct ConversionCost {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// How an expression entry contributes to its target parameter.
 pub enum ExpressionBlend {
+    /// Add the entry value as a parameter contribution.
     Add,
+    /// Multiply using the entry value as a factor.
     Multiply,
+    /// Contribute the entry value as an overwrite target.
     Overwrite,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Optional resolved or unresolved expression parameter target.
 pub enum ExpressionTarget {
+    /// No parameter target is specified.
     Unspecified,
+    /// Target a stable document parameter.
     Resolved {
         /// Stable document parameter UUID; evaluation uses its declared range and default.
         parameter_id: String,
     },
+    /// Preserve an unresolved external parameter runtime ID.
     Unresolved {
         /// Imported/exported runtime label, distinct from the document object UUID.
         runtime_id: String,
@@ -81,6 +89,7 @@ pub enum ExpressionTarget {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// One stable expression parameter contribution with an optional blend mode.
 pub struct ExpressionEntry {
     /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,
@@ -97,12 +106,16 @@ pub struct ExpressionEntry {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Optional resolved or unresolved Part target in Pose data.
 pub enum PosePartRef {
+    /// No Part target is specified.
     Unspecified,
+    /// Target a stable document Part.
     Resolved {
         /// Stable document Part UUID for this opacity or visibility reference.
         part_id: String,
     },
+    /// Preserve an unresolved external Part runtime ID.
     Unresolved {
         /// Imported/exported runtime label, distinct from the document object UUID.
         runtime_id: String,
@@ -112,6 +125,7 @@ pub enum PosePartRef {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Stable Pose group entry with a Part target and optional links.
 pub struct PoseEntry {
     /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,
@@ -126,6 +140,7 @@ pub struct PoseEntry {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Stable link from a Pose entry to another Part target.
 pub struct PoseLink {
     /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,
@@ -135,6 +150,7 @@ pub struct PoseLink {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Ordered Pose entries sharing a named group.
 pub struct PoseGroup {
     /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,
@@ -147,6 +163,7 @@ pub struct PoseGroup {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Authored Pose singleton with groups and optional fade settings.
 pub struct PoseAsset {
     /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,

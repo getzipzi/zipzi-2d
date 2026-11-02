@@ -20,6 +20,8 @@ Canonical preview modeling values.
 
 `(*, texture_report: ObservationTextureReport | None = None, view: ObservationView | None = None, queries: tuple[SpatialQuery, ...], sequence: int, frames: tuple[PreviewFrame, ...])`
 
+Ordered results from one Preview sample request against its frozen source.
+
 Types: [ObservationTextureReport], [ObservationView], [PreviewFrame](#zipzimodelingpreviewpreviewframe), [SpatialQuery].
 
 **Fields**
@@ -36,6 +38,8 @@ Types: [ObservationTextureReport], [ObservationView], [PreviewFrame](#zipzimodel
 
 `PreviewCommandSetParameter | PreviewCommandScheduleMotion | PreviewCommandScheduleRegistration | PreviewCommandScheduleExpression | PreviewCommandScheduleParameter | PreviewCommandSetPhysics | PreviewCommandReset`
 
+Typed control applied to one frozen-source Preview without publishing authored changes.
+
 Types: [PreviewCommandReset](#zipzimodelingpreviewpreviewcommandreset), [PreviewCommandScheduleExpression](#zipzimodelingpreviewpreviewcommandscheduleexpression), [PreviewCommandScheduleMotion](#zipzimodelingpreviewpreviewcommandschedulemotion), [PreviewCommandScheduleParameter](#zipzimodelingpreviewpreviewcommandscheduleparameter), [PreviewCommandScheduleRegistration](#zipzimodelingpreviewpreviewcommandscheduleregistration), [PreviewCommandSetParameter](#zipzimodelingpreviewpreviewcommandsetparameter), [PreviewCommandSetPhysics](#zipzimodelingpreviewpreviewcommandsetphysics).
 
 
@@ -45,12 +49,16 @@ Types: [PreviewCommandReset](#zipzimodelingpreviewpreviewcommandreset), [Preview
 
 `()`
 
+Reset this Preview playback state.
+
 
 ## zipzi.modeling.preview.PreviewCommandScheduleExpression
 
 **Type**
 
 `(*, id: str, time: float)`
+
+Schedule an expression asset.
 
 **Fields**
 
@@ -63,6 +71,8 @@ Types: [PreviewCommandReset](#zipzimodelingpreviewpreviewcommandreset), [Preview
 
 `(*, id: str, time: float)`
 
+Schedule a clip using its own fades.
+
 **Fields**
 
 - `id`: Clip UUID; uses the clip's own fades.
@@ -73,6 +83,8 @@ Types: [PreviewCommandReset](#zipzimodelingpreviewpreviewcommandreset), [Preview
 **Type**
 
 `(*, id: str, time: float, value: float)`
+
+Schedule a parameter input on the Preview clock.
 
 **Fields**
 
@@ -86,6 +98,8 @@ Types: [PreviewCommandReset](#zipzimodelingpreviewpreviewcommandreset), [Preview
 
 `(*, id: str, time: float)`
 
+Schedule a motion registration using its fade overrides.
+
 **Fields**
 
 - `id`: Registration UUID; uses the registration's SDK fade overrides.
@@ -96,6 +110,8 @@ Types: [PreviewCommandReset](#zipzimodelingpreviewpreviewcommandreset), [Preview
 **Type**
 
 `(*, id: str, value: float)`
+
+Set a base parameter value for this Preview.
 
 **Fields**
 
@@ -108,6 +124,8 @@ Types: [PreviewCommandReset](#zipzimodelingpreviewpreviewcommandreset), [Preview
 
 `(*, enabled: bool, stabilized_start: bool)`
 
+Configure the Preview Physics stage and stabilized-start policy.
+
 **Fields**
 
 - `enabled`: Enable the SDK Physics stage in this Preview only.
@@ -118,6 +136,8 @@ Types: [PreviewCommandReset](#zipzimodelingpreviewpreviewcommandreset), [Preview
 **Type**
 
 `(*, observation: ObservationImage | None = None, spatial: tuple[SpatialResult, ...], preview_id: int, sequence: int, index: int, motion: MotionSnapshot, geometry: DrawableFrame | None = None)`
+
+One sampled Preview target, with optional CPU geometry, spatial results and GPU observation.
 
 Types: [MotionSnapshot], [ObservationImage], [DrawableFrame], [SpatialResult].
 
@@ -136,6 +156,8 @@ Types: [MotionSnapshot], [ObservationImage], [DrawableFrame], [SpatialResult].
 **Type**
 
 `(*, sequence: int, time: float)`
+
+Accepted Preview operation ordinal and current playback clock.
 
 **Fields**
 

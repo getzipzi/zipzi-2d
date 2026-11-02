@@ -21,7 +21,8 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
                     'signature': ''},
  'zipzi.sampling.BlendMode': {'alias': 'zipzi.modeling.scene.BlendMode'},
  'zipzi.sampling.Checks': {'children': ('zipzi.sampling.Checks.__repr__', 'zipzi.sampling.Checks.summary'),
-                           'documentation': '',
+                           'documentation': 'Optional authored-geometry diagnostics and per-pose CPU mesh quality '
+                                            'checks.',
                            'fields': [('min_triangle_area',
                                        'Area in authored coordinates: model units squared at the root, or\n'
                                        'the appropriate rotation-local / Warp-parameter units under a parent.'),
@@ -36,7 +37,8 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
  'zipzi.sampling.Checks.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.sampling.Checks.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.Deformer': {'children': ('zipzi.sampling.Deformer.__repr__', 'zipzi.sampling.Deformer.summary'),
-                             'documentation': '',
+                             'documentation': 'Evaluated deformer control points and optional Rotation basis in model '
+                                              'space.',
                              'fields': [('id',
                                          'Stable document object ID used by references; it is distinct from the '
                                          'exported runtime_id.'),
@@ -60,7 +62,8 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
  'zipzi.sampling.Deformer.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.sampling.Deformer.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.Diagnostic': {'children': ('zipzi.sampling.Diagnostic.__repr__', 'zipzi.sampling.Diagnostic.summary'),
-                               'documentation': '',
+                               'documentation': 'Geometry diagnostic for a stable mesh and, when applicable, a '
+                                                'triangle slot.',
                                'fields': [('kind', 'Typed geometry diagnostic category.'),
                                           ('mesh_id', 'Stable ID of the target mesh in this document.'),
                                           ('triangle_index',
@@ -74,7 +77,8 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
  'zipzi.sampling.Diagnostic.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.DiagnosticKind': {'alias': 'zipzi.modeling.sampling.GeometryDiagnosticKind'},
  'zipzi.sampling.Drawable': {'children': ('zipzi.sampling.Drawable.__repr__', 'zipzi.sampling.Drawable.summary'),
-                             'documentation': '',
+                             'documentation': 'One evaluated mesh drawable with model-space geometry and rendering '
+                                              'attributes.',
                              'fields': [('id',
                                          'Stable document object ID used by references; it is distinct from the '
                                          'exported runtime_id.'),
@@ -139,7 +143,7 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
  'zipzi.sampling.Drawable.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.sampling.Drawable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.Frame': {'children': ('zipzi.sampling.Frame.__repr__', 'zipzi.sampling.Frame.summary'),
-                          'documentation': '',
+                          'documentation': 'CPU-evaluated geometry, deformers and render plan for one pose.',
                           'fields': [('source_revision',
                                       'Revision used to evaluate this immutable snapshot; later name edits may reuse '
                                       'it.'),
@@ -167,7 +171,7 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
  'zipzi.sampling.MeshQuality.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.sampling.MeshQuality.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.Offscreen': {'children': ('zipzi.sampling.Offscreen.__repr__', 'zipzi.sampling.Offscreen.summary'),
-                              'documentation': '',
+                              'documentation': 'Evaluated Offscreen compositing state for one pose.',
                               'fields': [('renderable',
                                           'Whether required content is available for rendering; unavailable textures '
                                           'do not make\n'
@@ -207,7 +211,7 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
  'zipzi.sampling.Offscreen.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.sampling.Offscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.Parameter': {'children': ('zipzi.sampling.Parameter.__repr__', 'zipzi.sampling.Parameter.summary'),
-                              'documentation': '',
+                              'documentation': 'Requested and effective parameter value for one evaluated pose.',
                               'fields': [('id',
                                           'Stable document object ID used by references; it is distinct from the '
                                           'exported runtime_id.'),
@@ -246,14 +250,18 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
  'zipzi.sampling.RenderCommand.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.sampling.RenderCommand.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.RenderKind': {'children': (),
-                               'documentation': '',
-                               'fields': [('BEGIN_OFFSCREEN', "'BeginOffscreen'"),
-                                          ('DRAW_MESH', "'DrawMesh'"),
-                                          ('END_OFFSCREEN', "'EndOffscreen'")],
+                               'documentation': 'Ordered rendering instruction; Offscreen begin/end delimit '
+                                                'compositing scopes.',
+                               'fields': [('BEGIN_OFFSCREEN',
+                                           "'BeginOffscreen' — Begin a named Offscreen compositing scope."),
+                                          ('DRAW_MESH', "'DrawMesh' — Draw a named evaluated mesh."),
+                                          ('END_OFFSCREEN',
+                                           "'EndOffscreen' — End a named Offscreen compositing scope.")],
                                'kind': 'enum',
                                'signature': ''},
  'zipzi.sampling.Result': {'children': ('zipzi.sampling.Result.__repr__', 'zipzi.sampling.Result.summary'),
-                           'documentation': '',
+                           'documentation': 'Ordered CPU sample frames, effective parameters and optional geometry '
+                                            'diagnostics.',
                            'fields': [('version',
                                        'Exact SDK version captured for this value; not a best-effort latest-version '
                                        'marker.'),

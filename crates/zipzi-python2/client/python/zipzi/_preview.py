@@ -87,7 +87,7 @@ class Preview(Owned):
             lambda owner:self._backend.sample_preview(self._token,targets,geometry,incremental,selected,view,owner),"preview",decode)
 
     def sample(self, times: Sequence[float], *, geometry: bool = True, queries: Sequence[m.SpatialQuery] = (), view: m.ObservationView | None = None) -> Job[Snapshot[m.PreviewBatch]]:
-        """Submit canonical seeks in target order; wait for a frozen-source batch.
+        """Submit canonical seeks at absolute Preview-clock times in seconds, in target order; wait for a frozen-source batch.
 
         View batches use the host observation frame limit; CPU-only batches allow
         1..64 frames. Duplicates/backward times are retained. CPU geometry is optional.
@@ -125,11 +125,11 @@ class Preview(Owned):
         return self._request("estimate_observation",lambda:self._backend.estimate_preview_observation(self._token,targets,view,geometry,selected,self),decode)
 
     def seek(self, time: float, *, geometry: bool = True, queries: Sequence[m.SpatialQuery] = (), view: m.ObservationView | None = None) -> Job[Snapshot[m.PreviewBatch]]:
-        """Submit one canonical seek and return a one-frame batch Job; an interrupted SDK seek preserves its prior state; late cancellation reports the completed outcome."""
+        """Submit one canonical seek to an absolute Preview-clock time in seconds and return a one-frame batch Job; an interrupted SDK seek preserves its prior state; late cancellation reports the completed outcome."""
         return self._sample((time,),geometry,False,queries,view)
 
     def advance_to(self, time: float, *, geometry: bool = True, queries: Sequence[m.SpatialQuery] = (), view: m.ObservationView | None = None) -> Job[Snapshot[m.PreviewBatch]]:
-        """Submit SDK canonical incremental playback. Cancellation may retain completed simulation steps; discard cancelled output. Backward targets use canonical seek."""
+        """Submit SDK canonical incremental playback to an absolute Preview-clock time in seconds. Cancellation may retain completed simulation steps; discard cancelled output. Backward targets use canonical seek."""
         return self._sample((time,),geometry,True,queries,view)
 
     def __enter__(self) -> Preview:

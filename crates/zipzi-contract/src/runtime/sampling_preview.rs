@@ -12,31 +12,37 @@ pub struct ModelingSampleData {
 
 #[derive(Debug, Clone, Serialize, Deserialize, zipzi_api_derive::ApiShape)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+/// Typed control applied to one frozen-source Preview without publishing authored changes.
 pub enum PreviewCommand {
+    /// Set a base parameter value for this Preview.
     SetParameter {
         /// Document parameter UUID; the SDK validates existence and domain.
         id: String,
         /// Finite base value in the parameter's authored domain.
         value: f32,
     },
+    /// Schedule a clip using its own fades.
     ScheduleMotion {
         /// Clip UUID; uses the clip's own fades.
         id: String,
         /// Absolute activation time in seconds on this Preview's clock.
         time: f32,
     },
+    /// Schedule a motion registration using its fade overrides.
     ScheduleRegistration {
         /// Registration UUID; uses the registration's SDK fade overrides.
         id: String,
         /// Absolute activation time in seconds on this Preview's clock.
         time: f32,
     },
+    /// Schedule an expression asset.
     ScheduleExpression {
         /// Native expression asset UUID.
         id: String,
         /// Absolute activation time in seconds on this Preview's clock.
         time: f32,
     },
+    /// Schedule a parameter input on the Preview clock.
     ScheduleParameter {
         /// Document parameter UUID for an SDK input activation.
         id: String,
@@ -45,16 +51,19 @@ pub enum PreviewCommand {
         /// Finite parameter input in the authored parameter domain.
         value: f32,
     },
+    /// Configure the Preview Physics stage and stabilized-start policy.
     SetPhysics {
         /// Enable the SDK Physics stage in this Preview only.
         enabled: bool,
         /// Use the SDK stabilized-start policy on canonical replay.
         stabilized_start: bool,
     },
+    /// Reset this Preview playback state.
     Reset,
 }
 
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape)]
+/// Accepted Preview operation ordinal and current playback clock.
 pub struct PreviewState {
     /// Monotonic accepted operation ordinal, including cancelled sample requests.
     pub sequence: u64,
@@ -163,6 +172,7 @@ pub struct ObservationBatch {
 }
 
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
+/// One sampled Preview target, with optional CPU geometry, spatial results and GPU observation.
 pub struct PreviewFrame {
     /// Optional GPU image from this exact animation state and once-resolved batch textures.
     pub observation: Option<ObservationImage>,
@@ -181,6 +191,7 @@ pub struct PreviewFrame {
 }
 
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
+/// Ordered results from one Preview sample request against its frozen source.
 pub struct PreviewBatch {
     /// Verified texture content for a View; None for CPU-only sampling.
     pub texture_report: Option<ObservationTextureReport>,

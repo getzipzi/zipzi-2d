@@ -6,6 +6,7 @@
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryOutput,
 )]
+/// Evaluated triangle metrics relative to a frozen default-pose reference.
 pub struct TriangleQuality {
     /// Zero-based triangle offset, in the sampled drawable's index order.
     pub triangle_index: usize,
@@ -30,6 +31,7 @@ pub struct TriangleQuality {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryOutput,
 )]
+/// Sampled source-alpha and UV coverage statistics; masks and occlusion are excluded.
 pub struct TextureCoverage {
     /// Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.
     pub alpha_threshold: u8,
@@ -61,6 +63,7 @@ pub struct TextureCoverage {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryOutput,
 )]
+/// Per-mesh evaluated triangle quality for one sampled pose.
 pub struct MeshQuality {
     /// Stable document mesh ID, in evaluated drawable order.
     pub mesh_id: String,
@@ -86,6 +89,7 @@ pub struct MeshQuality {
 }
 
 #[derive(Debug, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
+/// Ordered CPU sample frames, effective parameters and optional geometry diagnostics.
 pub struct ModelingSamples {
     /// Exact SDK version captured for this value; not a best-effort latest-version marker.
     pub version: Version,

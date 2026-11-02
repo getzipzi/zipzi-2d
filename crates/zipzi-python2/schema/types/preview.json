@@ -2,6 +2,7 @@
   "_generated_by": "zipzi-python2/tools/generate.py",
   "definitions": {
     "zipzi_contract::runtime::PreviewBatch": {
+      "doc": "Ordered results from one Preview sample request against its frozen source.",
       "fields": [
         {
           "default": null,
@@ -74,11 +75,13 @@
     },
     "zipzi_contract::runtime::PreviewCommand": {
       "content": null,
+      "doc": "Typed control applied to one frozen-source Preview without publishing authored changes.",
       "kind": "serde_enum",
       "name": "zipzi_contract::runtime::PreviewCommand",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Set a base parameter value for this Preview.",
           "fields": [
             {
               "doc": "Document parameter UUID; the SDK validates existence and domain.",
@@ -104,6 +107,7 @@
           "rust_name": "SetParameter"
         },
         {
+          "doc": "Schedule a clip using its own fades.",
           "fields": [
             {
               "doc": "Clip UUID; uses the clip's own fades.",
@@ -129,6 +133,7 @@
           "rust_name": "ScheduleMotion"
         },
         {
+          "doc": "Schedule a motion registration using its fade overrides.",
           "fields": [
             {
               "doc": "Registration UUID; uses the registration's SDK fade overrides.",
@@ -154,6 +159,7 @@
           "rust_name": "ScheduleRegistration"
         },
         {
+          "doc": "Schedule an expression asset.",
           "fields": [
             {
               "doc": "Native expression asset UUID.",
@@ -179,6 +185,7 @@
           "rust_name": "ScheduleExpression"
         },
         {
+          "doc": "Schedule a parameter input on the Preview clock.",
           "fields": [
             {
               "doc": "Document parameter UUID for an SDK input activation.",
@@ -213,6 +220,7 @@
           "rust_name": "ScheduleParameter"
         },
         {
+          "doc": "Configure the Preview Physics stage and stabilized-start policy.",
           "fields": [
             {
               "doc": "Enable the SDK Physics stage in this Preview only.",
@@ -238,6 +246,7 @@
           "rust_name": "SetPhysics"
         },
         {
+          "doc": "Reset this Preview playback state.",
           "fields": [],
           "form": "unit",
           "name": "reset",
@@ -246,6 +255,7 @@
       ]
     },
     "zipzi_contract::runtime::PreviewFrame": {
+      "doc": "One sampled Preview target, with optional CPU geometry, spatial results and GPU observation.",
       "fields": [
         {
           "default": null,
@@ -332,6 +342,7 @@
       "tuple": false
     },
     "zipzi_contract::runtime::PreviewState": {
+      "doc": "Accepted Preview operation ordinal and current playback clock.",
       "fields": [
         {
           "doc": "Monotonic accepted operation ordinal, including cancelled sample requests.",

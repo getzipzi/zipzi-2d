@@ -12,7 +12,7 @@ from typing import TypeAlias
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionEditCreate(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.'
+    'Create an expression asset.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.'
     _variant: _ClassVar[str] = 'create'
     id: str
     name: str
@@ -21,7 +21,7 @@ ExpressionEditCreate.__module__ = "zipzi.modeling.expression"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionEditCreateEntry(CompactValue):
-    '\n\nFields:\nowner: Stable expression asset ID owning the selected entries.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    'Create an entry in an expression.\n\nFields:\nowner: Stable expression asset ID owning the selected entries.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'create_entry'
     owner: str
     id: str
@@ -31,7 +31,7 @@ ExpressionEditCreateEntry.__module__ = "zipzi.modeling.expression"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionEditPatchEntry(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nexpected: Exact current field values required by the optimistic edit; stale values reject it.\nfields: Typed replacement fields for the addressed object, applied atomically.'
+    'Replace an entry under an exact precondition.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nexpected: Exact current field values required by the optimistic edit; stale values reject it.\nfields: Typed replacement fields for the addressed object, applied atomically.'
     _variant: _ClassVar[str] = 'patch_entry'
     id: str
     expected: ExpressionEntryFields
@@ -41,7 +41,7 @@ ExpressionEditPatchEntry.__module__ = "zipzi.modeling.expression"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionEditMoveEntries(CompactValue):
-    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    'Move entries to another expression.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'move_entries'
     ids: tuple[str, ...]
     destination: str
@@ -54,7 +54,7 @@ ExpressionEditMoveEntries.__module__ = "zipzi.modeling.expression"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionEditDuplicateEntries(CompactValue):
-    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\nnew_ids: New stable identities paired with the selected source objects.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
+    'Copy entries using explicitly paired new identities.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.\nnew_ids: New stable identities paired with the selected source objects.\ndestination: Explicit destination owner/container; order is controlled separately by before.\nbefore: Optional stable sibling ID before which to insert; None appends.'
     _variant: _ClassVar[str] = 'duplicate_entries'
     ids: tuple[str, ...]
     new_ids: tuple[str, ...]
@@ -69,7 +69,7 @@ ExpressionEditDuplicateEntries.__module__ = "zipzi.modeling.expression"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionEditDeleteEntries(CompactValue):
-    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
+    'Delete selected expression entries.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
     _variant: _ClassVar[str] = 'delete_entries'
     ids: tuple[str, ...]
 
@@ -80,7 +80,7 @@ ExpressionEditDeleteEntries.__module__ = "zipzi.modeling.expression"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionEditDuplicate(CompactValue):
-    '\n\nFields:\nsource: Typed parameter reference or stable source object ID, as declared by the enclosing operation.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nentry_ids: New stable entry IDs paired with the source expression entries.'
+    'Duplicate an expression and its entries under new identities.\n\nFields:\nsource: Typed parameter reference or stable source object ID, as declared by the enclosing operation.\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Human-readable display or registration name; distinct from persistent object identity.\nentry_ids: New stable entry IDs paired with the source expression entries.'
     _variant: _ClassVar[str] = 'duplicate'
     source: str
     id: str
@@ -94,7 +94,7 @@ ExpressionEditDuplicate.__module__ = "zipzi.modeling.expression"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionEditDelete(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
+    'Delete an expression asset.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.'
     _variant: _ClassVar[str] = 'delete'
     id: str
 
@@ -102,7 +102,7 @@ ExpressionEditDelete.__module__ = "zipzi.modeling.expression"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionEditReorder(CompactValue):
-    '\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
+    'Reorder expression assets.\n\nFields:\nids: Ordered stable IDs selected by this operation; names and row numbers are not identities.'
     _variant: _ClassVar[str] = 'reorder'
     ids: tuple[str, ...]
 
@@ -115,7 +115,7 @@ ExpressionEdit: TypeAlias = ExpressionEditCreate | ExpressionEditCreateEntry | E
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionEntryFields(CompactValue):
-    '\n\nFields:\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.\nvalue: Channel value or replacement payload in the domain declared by this field type.\nblend: Optional expression blend mode; None uses the native Add default.'
+    'Typed target, value and blend replacement for an expression entry.\n\nFields:\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.\nvalue: Channel value or replacement payload in the domain declared by this field type.\nblend: Optional expression blend mode; None uses the native Add default.'
     target: ExpressionTarget
     value: float
     blend: (ExpressionBlend | None) = None
@@ -124,14 +124,14 @@ ExpressionEntryFields.__module__ = "zipzi.modeling.expression"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionTargetUnspecified(CompactValue):
-    ''
+    'No parameter target is specified.'
     _variant: _ClassVar[str] = 'unspecified'
 
 ExpressionTargetUnspecified.__module__ = "zipzi.modeling.expression"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionTargetResolved(CompactValue):
-    '\n\nFields:\nparameter_id: Stable document parameter UUID; evaluation uses its declared range and default.'
+    'Target a stable document parameter.\n\nFields:\nparameter_id: Stable document parameter UUID; evaluation uses its declared range and default.'
     _variant: _ClassVar[str] = 'resolved'
     parameter_id: str
 
@@ -139,7 +139,7 @@ ExpressionTargetResolved.__module__ = "zipzi.modeling.expression"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionTargetUnresolved(CompactValue):
-    '\n\nFields:\nruntime_id: Imported/exported runtime label, distinct from the document object UUID.'
+    'Preserve an unresolved external parameter runtime ID.\n\nFields:\nruntime_id: Imported/exported runtime label, distinct from the document object UUID.'
     _variant: _ClassVar[str] = 'unresolved'
     runtime_id: str
 
@@ -148,7 +148,7 @@ ExpressionTargetUnresolved.__module__ = "zipzi.modeling.expression"
 ExpressionTarget: TypeAlias = ExpressionTargetUnspecified | ExpressionTargetResolved | ExpressionTargetUnresolved
 
 class ExpressionBlend(str, Enum):
-    ''
+    'How an expression entry contributes to its target parameter.'
     __module__ = "zipzi.modeling.expression"
     ADD = 'add'
     MULTIPLY = 'multiply'
@@ -156,7 +156,7 @@ class ExpressionBlend(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionAsset(CompactValue):
-    '\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Registration name in model3; independent of parameter display names.\nfile_type: Optional format type label retained from the imported expression or Pose asset.\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.\nfade_out: Optional fade-out duration in seconds; None retains the format/runtime default.\nentries: Ordered owned registrations or expression/Pose entries, with stable identities.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.\nopaque_source_ids: Full Parameter UUID-to-runtime-ID namespace when opaque fields exist.\nopaque_source_content_hash: Hash of imported content when opaque fields exist; known-field edits\ncannot silently change the meaning of those fields.'
+    'Authored expression asset with ordered parameter entries and optional fades.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\nname: Registration name in model3; independent of parameter display names.\nfile_type: Optional format type label retained from the imported expression or Pose asset.\nfade_in: Optional fade-in duration in seconds; None retains the format/runtime default.\nfade_out: Optional fade-out duration in seconds; None retains the format/runtime default.\nentries: Ordered owned registrations or expression/Pose entries, with stable identities.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.\nopaque_source_ids: Full Parameter UUID-to-runtime-ID namespace when opaque fields exist.\nopaque_source_content_hash: Hash of imported content when opaque fields exist; known-field edits\ncannot silently change the meaning of those fields.'
     id: str
     name: str
     file_type: (str | None) = None
@@ -176,7 +176,7 @@ ExpressionAsset.__module__ = "zipzi.modeling.expression"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExpressionEntry(CompactValue):
-    "\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.\nvalue: Channel value or replacement payload in the domain declared by this field type.\nblend: Missing means Framework's default Add blend.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed."
+    "One stable expression parameter contribution with an optional blend mode.\n\nFields:\nid: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.\ntarget: Typed target reference; unresolved imported runtime labels remain explicit.\nvalue: Channel value or replacement payload in the domain declared by this field type.\nblend: Missing means Framework's default Add blend.\nextensions: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed."
     id: str
     target: ExpressionTarget
     value: float

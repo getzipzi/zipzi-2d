@@ -70,6 +70,7 @@ pub struct GeometryBounds {
     Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, zipzi_api_derive::ApiShape,
 )]
 #[serde(default)]
+/// Optional authored-geometry diagnostics and per-pose CPU mesh quality checks.
 pub struct GeometryChecks {
     /// Area in authored coordinates: model units squared at the root, or
     /// the appropriate rotation-local / Warp-parameter units under a parent.
@@ -102,9 +103,13 @@ impl Default for GeometryChecks {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryOutput,
 )]
+/// Category of an authored mesh geometry diagnostic.
 pub enum GeometryDiagnosticKind {
+    /// Triangle area falls below the requested authored-space threshold.
     SmallTriangle,
+    /// Triangle winding differs from the mesh winding.
     InconsistentWinding,
+    /// Root mesh extends outside the requested model bounds.
     OutsideModelBounds,
 }
 
@@ -118,6 +123,7 @@ pub enum GeometryDiagnosticKind {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryOutput,
 )]
+/// Geometry diagnostic for a stable mesh and, when applicable, a triangle slot.
 pub struct GeometryDiagnostic {
     /// Typed geometry diagnostic category.
     pub kind: GeometryDiagnosticKind,

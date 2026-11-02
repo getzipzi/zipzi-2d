@@ -8,6 +8,7 @@
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Motion curve control point in clip-local seconds and channel-value units; it has no stable key identity.
 pub struct MotionPoint {
     /// Absolute time in seconds within the owning motion clip.
     pub time: f32,
@@ -40,11 +41,14 @@ impl MotionKey {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Interpolation from a preceding key to a stable endpoint key.
 pub enum MotionSegment {
+    /// Interpolate linearly between the preceding and endpoint key.
     Linear {
         /// Segment endpoint key or source-range end time, as declared by the enclosing type.
         end: MotionKey,
     },
+    /// Interpolate using two time/value control points and the endpoint key.
     Bezier {
         /// First Bezier control point in seconds/channel-value coordinates; it has no key identity.
         control1: MotionPoint,
@@ -53,10 +57,12 @@ pub enum MotionSegment {
         /// Segment endpoint key or source-range end time, as declared by the enclosing type.
         end: MotionKey,
     },
+    /// Hold the preceding value through the segment before its endpoint.
     Stepped {
         /// Segment endpoint key or source-range end time, as declared by the enclosing type.
         end: MotionKey,
     },
+    /// Use the endpoint value over the segment before its endpoint.
     InverseStepped {
         /// Segment endpoint key or source-range end time, as declared by the enclosing type.
         end: MotionKey,
@@ -86,22 +92,28 @@ impl MotionSegment {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Select the model, parameter or Part channel driven by a motion track.
 pub enum MotionTrackTarget {
+    /// No track target is specified.
     Unspecified,
+    /// Target a model-level runtime channel.
     Model {
         /// Imported/exported runtime label, distinct from the document object UUID.
         runtime_id: String,
     },
+    /// Target a stable document parameter.
     Parameter {
         /// Stable document parameter UUID; evaluation uses its declared range and default.
         parameter_id: String,
     },
+    /// Target a stable Part opacity channel.
     PartOpacity {
         /// Stable document Part UUID for this opacity or visibility reference.
         part_id: String,
     },
+    /// Preserve a source category and runtime ID that did not resolve.
     Unresolved {
-        /// Imported Physics target category retained by this wire metadata record.
+        /// Imported motion target category retained with the unresolved runtime ID.
         category: String,
         /// Imported/exported runtime label, distinct from the document object UUID.
         runtime_id: String,
@@ -111,6 +123,7 @@ pub enum MotionTrackTarget {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Ordered motion curve targeting one channel, with persistent key identities.
 pub struct MotionTrack {
     /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,
@@ -138,6 +151,7 @@ impl MotionTrack {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Timed string event owned by a motion clip.
 pub struct MotionEvent {
     /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,
@@ -152,6 +166,7 @@ pub struct MotionEvent {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Authored motion asset with ordered tracks and events; playback state is separate.
 pub struct MotionClip {
     /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,
@@ -159,7 +174,7 @@ pub struct MotionClip {
     pub name: String,
     /// Motion playback duration in seconds; authoring keys may retain source-range provenance.
     pub duration: f32,
-    /// Nominal motion frames per second or explicit Physics fixed-step frequency, as declared by the owner.
+    /// Nominal motion frames per second, including the native loop-tail convention.
     pub fps: f32,
     /// Whether motion playback repeats after its duration.
     pub looping: bool,
@@ -208,6 +223,7 @@ pub struct MotionRegistration {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Named container of motion registrations, distinct from the referenced clips.
 pub struct MotionGroup {
     /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,
@@ -255,6 +271,7 @@ impl MotionClip {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Authored expression asset with ordered parameter entries and optional fades.
 pub struct ExpressionAsset {
     /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
     pub id: String,

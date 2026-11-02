@@ -20,6 +20,8 @@ Canonical sampling modeling values.
 
 `(*, id: str, runtime_id: str, part_id: str, raw_blend_mode: int | None = None, texture_asset_id: str, texture_slot: int, renderable: bool = True, positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], indices: tuple[int, ...], draw_order: int, render_order: int, opacity: float, multiply_color: tuple[float, float, float, float], screen_color: tuple[float, float, float, float], blend_mode: BlendMode, enabled: bool, visible: bool, double_sided: bool, inverted_mask: bool, masks: tuple[str, ...])`
 
+One evaluated mesh drawable with model-space geometry and rendering attributes.
+
 Types: [Vec2], [BlendMode].
 
 **Fields**
@@ -56,6 +58,8 @@ above 1 are retained without clamping.
 
 `(*, source_revision: int, parameters: tuple[EvaluatedParameter, ...], drawables: tuple[Drawable, ...], offscreens: tuple[OffscreenFrame, ...], render_plan: tuple[RenderCommand, ...], deformers: tuple[EvaluatedDeformer, ...])`
 
+CPU-evaluated geometry, deformers and render plan for one pose.
+
 Types: [Drawable](#zipzimodelingsamplingdrawable), [EvaluatedDeformer](#zipzimodelingsamplingevaluateddeformer), [EvaluatedParameter](#zipzimodelingsamplingevaluatedparameter), [OffscreenFrame](#zipzimodelingsamplingoffscreenframe), [RenderCommand](#zipzimodelingsamplingrendercommand).
 
 **Fields**
@@ -72,6 +76,8 @@ Types: [Drawable](#zipzimodelingsamplingdrawable), [EvaluatedDeformer](#zipzimod
 **Type**
 
 `(*, id: str, enabled: bool, points: tuple[Vec2, ...], rotation_axis: Vec2 | None = None, rotation_basis: tuple[Vec2, Vec2] | None = None)`
+
+Evaluated deformer control points and optional Rotation basis in model space.
 
 Types: [Vec2].
 
@@ -94,6 +100,8 @@ coefficients at large model origins.
 
 `(*, id: str, requested: float, value: float, clamped: bool)`
 
+Requested and effective parameter value for one evaluated pose.
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
@@ -106,6 +114,8 @@ coefficients at large model origins.
 **Type**
 
 `(*, kind: GeometryDiagnosticKind, mesh_id: str, triangle_index: int | None = None)`
+
+Geometry diagnostic for a stable mesh and, when applicable, a triangle slot.
 
 Types: [GeometryDiagnosticKind](#zipzimodelingsamplinggeometrydiagnostickind).
 
@@ -120,17 +130,21 @@ triangle-specific.
 
 **Enum**
 
+Category of an authored mesh geometry diagnostic.
+
 **Members**
 
-- `SMALL_TRIANGLE`: 'SmallTriangle'
-- `INCONSISTENT_WINDING`: 'InconsistentWinding'
-- `OUTSIDE_MODEL_BOUNDS`: 'OutsideModelBounds'
+- `SMALL_TRIANGLE`: 'SmallTriangle' — Triangle area falls below the requested authored-space threshold.
+- `INCONSISTENT_WINDING`: 'InconsistentWinding' — Triangle winding differs from the mesh winding.
+- `OUTSIDE_MODEL_BOUNDS`: 'OutsideModelBounds' — Root mesh extends outside the requested model bounds.
 
 ## zipzi.modeling.sampling.GeometrySnapshot
 
 **Type**
 
 `(*, version: _Version, mesh_id: str, vertex_ids: tuple[int, ...], positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], triangles: tuple[tuple[int, int, int], ...], meshing: MeshMeshing | None = None, space: GeometrySpace)`
+
+Authored mesh geometry with stable vertex IDs and an explicit coordinate space.
 
 Types: [Version], [Vec2], [MeshMeshing], [GeometrySpace](#zipzimodelingsamplinggeometryspace).
 
@@ -152,6 +166,8 @@ array offsets.
 
 `GeometrySpaceModel | GeometrySpaceRotationLocal | GeometrySpaceWarpParameter`
 
+Coordinate space of authoring geometry positions, selected by deformation context.
+
 Types: [GeometrySpaceModel](#zipzimodelingsamplinggeometryspacemodel), [GeometrySpaceRotationLocal](#zipzimodelingsamplinggeometryspacerotationlocal), [GeometrySpaceWarpParameter](#zipzimodelingsamplinggeometryspacewarpparameter).
 
 
@@ -161,12 +177,16 @@ Types: [GeometrySpaceModel](#zipzimodelingsamplinggeometryspacemodel), [Geometry
 
 `()`
 
+Root model coordinate space.
+
 
 ## zipzi.modeling.sampling.GeometrySpaceRotationLocal
 
 **Type**
 
 `(*, value: str)`
+
+Local space of the specified Rotation transform.
 
 **Fields**
 
@@ -178,6 +198,8 @@ Types: [GeometrySpaceModel](#zipzimodelingsamplinggeometryspacemodel), [Geometry
 
 `(*, value: str)`
 
+Parameter/lattice space of the specified Warp transform.
+
 **Fields**
 
 - `value`: Stable warp-transform ID defining the parameter/lattice position space.
@@ -187,6 +209,8 @@ Types: [GeometrySpaceModel](#zipzimodelingsamplinggeometryspacemodel), [Geometry
 **Type**
 
 `(*, mesh_id: str, visible: bool, vertex_count: int, triangles: tuple[TriangleQuality, ...], min_angle_degrees: float | None = None, max_aspect_ratio: float | None = None, max_edge_stretch: float | None = None, degenerate_triangles: int, flipped_triangles: int, texture_coverage: TextureCoverage | None = None)`
+
+Per-mesh evaluated triangle quality for one sampled pose.
 
 Types: [TextureCoverage], [TriangleQuality](#zipzimodelingsamplingtrianglequality).
 
@@ -210,6 +234,8 @@ of the same frozen authoring source. This does not certify unsampled parameter i
 
 `(*, version: _Version, parameters: tuple[_Mapping[str, float], ...], frames: tuple[DrawableFrame, ...], diagnostics: tuple[GeometryDiagnostic, ...], quality: tuple[tuple[MeshQuality, ...], ...])`
 
+Ordered CPU sample frames, effective parameters and optional geometry diagnostics.
+
 Types: [Version], [DrawableFrame](#zipzimodelingsamplingdrawableframe), [GeometryDiagnostic](#zipzimodelingsamplinggeometrydiagnostic), [MeshQuality](#zipzimodelingsamplingmeshquality).
 
 **Fields**
@@ -227,6 +253,8 @@ Uses default parameters of this same frozen source as the reference, without ima
 **Type**
 
 `(*, renderable: bool = True, id: str, runtime_id: str, owner_part_id: str, parent_offscreen_id: str | None = None, render_order: int, opacity: float, enabled: bool, blend_mode: int, flags: int, masks: tuple[str, ...], multiply_color: tuple[float, float, float, float], screen_color: tuple[float, float, float, float])`
+
+Evaluated Offscreen compositing state for one pose.
 
 **Fields**
 
@@ -252,6 +280,8 @@ above 1 are retained without clamping.
 
 `RenderCommandBeginOffscreen | RenderCommandDrawMesh | RenderCommandEndOffscreen`
 
+Ordered rendering instruction; Offscreen begin/end delimit compositing scopes.
+
 Types: [RenderCommandBeginOffscreen](#zipzimodelingsamplingrendercommandbeginoffscreen), [RenderCommandDrawMesh](#zipzimodelingsamplingrendercommanddrawmesh), [RenderCommandEndOffscreen](#zipzimodelingsamplingrendercommandendoffscreen).
 
 
@@ -260,6 +290,8 @@ Types: [RenderCommandBeginOffscreen](#zipzimodelingsamplingrendercommandbeginoff
 **Type**
 
 `(*, offscreen_id: str)`
+
+Begin a named Offscreen compositing scope.
 
 **Fields**
 
@@ -271,6 +303,8 @@ Types: [RenderCommandBeginOffscreen](#zipzimodelingsamplingrendercommandbeginoff
 
 `(*, mesh_id: str)`
 
+Draw a named evaluated mesh.
+
 **Fields**
 
 - `mesh_id`: Stable ID of the target mesh in this document.
@@ -281,6 +315,8 @@ Types: [RenderCommandBeginOffscreen](#zipzimodelingsamplingrendercommandbeginoff
 
 `(*, offscreen_id: str)`
 
+End a named Offscreen compositing scope.
+
 **Fields**
 
 - `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
@@ -290,6 +326,8 @@ Types: [RenderCommandBeginOffscreen](#zipzimodelingsamplingrendercommandbeginoff
 **Type**
 
 `(*, triangle_index: int, area: float, min_angle_degrees: float, aspect_ratio: float | None = None, relative_area: float | None = None, edge_stretch: float | None = None)`
+
+Evaluated triangle metrics relative to a frozen default-pose reference.
 
 **Fields**
 

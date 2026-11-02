@@ -65,7 +65,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                             'signature': ''},
  'zipzi.modeling.physics.PhysicsAsset': {'children': ('zipzi.modeling.physics.PhysicsAsset.__repr__',
                                                       'zipzi.modeling.physics.PhysicsAsset.summary'),
-                                         'documentation': '',
+                                         'documentation': 'Authored Physics singleton; simulation state belongs to '
+                                                          'playback, not this value.',
                                          'fields': [('id',
                                                      'Stable identity in the owning authoring domain; exported '
                                                      'metadata IDs retain their source text.'),
@@ -100,12 +101,15 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsAssetPropertyFps.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsAssetPropertyFps.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsAxis': {'children': (),
-                                        'documentation': '',
-                                        'fields': [('X', "'X'"), ('Y', "'Y'"), ('ANGLE', "'Angle'")],
+                                        'documentation': 'Native Physics translation or angle channel.',
+                                        'fields': [('X', "'X' — Horizontal translation channel."),
+                                                   ('Y', "'Y' — Vertical translation channel."),
+                                                   ('ANGLE', "'Angle' — Rotation-angle channel.")],
                                         'kind': 'enum',
                                         'signature': ''},
  'zipzi.modeling.physics.PhysicsCollection': {'children': (),
-                                              'documentation': '',
+                                              'documentation': 'Select a Physics rig collection or rows within one '
+                                                               'rig.',
                                               'fields': [],
                                               'kind': 'alias',
                                               'signature': 'PhysicsCollectionGroups | PhysicsCollectionInputs | '
@@ -116,7 +120,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                             'zipzi.modeling.physics.PhysicsCollectionOutputs')},
  'zipzi.modeling.physics.PhysicsCollectionGroups': {'children': ('zipzi.modeling.physics.PhysicsCollectionGroups.__repr__',
                                                                  'zipzi.modeling.physics.PhysicsCollectionGroups.summary'),
-                                                    'documentation': '',
+                                                    'documentation': 'Select Physics rigs.',
                                                     'fields': [],
                                                     'kind': 'type',
                                                     'signature': '()'},
@@ -124,7 +128,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsCollectionGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsCollectionInputs': {'children': ('zipzi.modeling.physics.PhysicsCollectionInputs.__repr__',
                                                                  'zipzi.modeling.physics.PhysicsCollectionInputs.summary'),
-                                                    'documentation': '',
+                                                    'documentation': 'Select inputs of one rig.',
                                                     'fields': [('group_id',
                                                                 'Stable Physics rig ID owning the selected rows.')],
                                                     'kind': 'type',
@@ -133,7 +137,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsCollectionInputs.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsCollectionNodes': {'children': ('zipzi.modeling.physics.PhysicsCollectionNodes.__repr__',
                                                                 'zipzi.modeling.physics.PhysicsCollectionNodes.summary'),
-                                                   'documentation': '',
+                                                   'documentation': 'Select nodes of one rig.',
                                                    'fields': [('group_id',
                                                                'Stable Physics rig ID owning the selected rows.')],
                                                    'kind': 'type',
@@ -142,7 +146,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsCollectionNodes.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsCollectionOutputs': {'children': ('zipzi.modeling.physics.PhysicsCollectionOutputs.__repr__',
                                                                   'zipzi.modeling.physics.PhysicsCollectionOutputs.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'Select outputs of one rig.',
                                                      'fields': [('group_id',
                                                                  'Stable Physics rig ID owning the selected rows.')],
                                                      'kind': 'type',
@@ -151,7 +155,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsCollectionOutputs.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsDefinition': {'children': ('zipzi.modeling.physics.PhysicsDefinition.__repr__',
                                                            'zipzi.modeling.physics.PhysicsDefinition.summary'),
-                                              'documentation': '',
+                                              'documentation': 'Persistent Physics format definition and its rig '
+                                                               'metadata.',
                                               'fields': [('version', 'Native Physics format version number.'),
                                                          ('meta',
                                                           'Physics format metadata and counts maintained by native '
@@ -171,7 +176,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsDefinition.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsDictionaryEntry': {'children': ('zipzi.modeling.physics.PhysicsDictionaryEntry.__repr__',
                                                                 'zipzi.modeling.physics.PhysicsDictionaryEntry.summary'),
-                                                   'documentation': '',
+                                                   'documentation': 'Exported Physics rig identity and display label.',
                                                    'fields': [('Id',
                                                                'Stable identity in the owning authoring domain; '
                                                                'exported metadata IDs retain their source text.'),
@@ -188,7 +193,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsDictionaryEntry.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsDictionaryEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEdit': {'children': (),
-                                        'documentation': '',
+                                        'documentation': 'Create, move, patch or delete Physics rigs and their owned '
+                                                         'rows.',
                                         'fields': [],
                                         'kind': 'alias',
                                         'signature': 'PhysicsEditCreateGroup | PhysicsEditCreateInput | '
@@ -211,7 +217,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                       'zipzi.modeling.physics.PhysicsEditReorderGroups')},
  'zipzi.modeling.physics.PhysicsEditCreateGroup': {'children': ('zipzi.modeling.physics.PhysicsEditCreateGroup.__repr__',
                                                                 'zipzi.modeling.physics.PhysicsEditCreateGroup.summary'),
-                                                   'documentation': '',
+                                                   'documentation': 'Create a rig in the Physics asset.',
                                                    'fields': [('asset_id',
                                                                'Stable Physics singleton ID owning these changes.'),
                                                               ('id',
@@ -230,7 +236,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditCreateGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditCreateInput': {'children': ('zipzi.modeling.physics.PhysicsEditCreateInput.__repr__',
                                                                 'zipzi.modeling.physics.PhysicsEditCreateInput.summary'),
-                                                   'documentation': '',
+                                                   'documentation': 'Create an input in a rig.',
                                                    'fields': [('group_id',
                                                                'Stable ID of the group owning the affected rows or '
                                                                'node chain.'),
@@ -247,7 +253,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditCreateInput.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditCreateOutput': {'children': ('zipzi.modeling.physics.PhysicsEditCreateOutput.__repr__',
                                                                  'zipzi.modeling.physics.PhysicsEditCreateOutput.summary'),
-                                                    'documentation': '',
+                                                    'documentation': 'Create an output bound to a rig node.',
                                                     'fields': [('group_id',
                                                                 'Stable ID of the group owning the affected rows or '
                                                                 'node chain.'),
@@ -267,7 +273,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditCreateOutput.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditDelete': {'children': ('zipzi.modeling.physics.PhysicsEditDelete.__repr__',
                                                            'zipzi.modeling.physics.PhysicsEditDelete.summary'),
-                                              'documentation': '',
+                                              'documentation': 'Delete selected Physics identities with explicit '
+                                                               'node-reference replacements.',
                                               'fields': [('ids',
                                                           'Ordered stable IDs selected by this operation; names and '
                                                           'row numbers are not identities.'),
@@ -281,7 +288,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditDelete.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditDuplicate': {'children': ('zipzi.modeling.physics.PhysicsEditDuplicate.__repr__',
                                                               'zipzi.modeling.physics.PhysicsEditDuplicate.summary'),
-                                                 'documentation': '',
+                                                 'documentation': 'Duplicate selected Physics identities.',
                                                  'fields': [('ids',
                                                              'Ordered stable IDs selected by this operation; names and '
                                                              'row numbers are not identities.'),
@@ -298,7 +305,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditDuplicate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditDuplicateNode': {'children': ('zipzi.modeling.physics.PhysicsEditDuplicateNode.__repr__',
                                                                   'zipzi.modeling.physics.PhysicsEditDuplicateNode.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'Duplicate a node within its chain.',
                                                      'fields': [('id',
                                                                  'Stable identity in the owning authoring domain; '
                                                                  'exported metadata IDs retain their source text.'),
@@ -311,7 +318,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditDuplicateNode.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditInsertNode': {'children': ('zipzi.modeling.physics.PhysicsEditInsertNode.__repr__',
                                                                'zipzi.modeling.physics.PhysicsEditInsertNode.summary'),
-                                                  'documentation': '',
+                                                  'documentation': 'Insert a stable node into a rig chain.',
                                                   'fields': [('group_id',
                                                               'Stable ID of the group owning the affected rows or node '
                                                               'chain.'),
@@ -329,7 +336,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditInsertNode.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditMoveInputs': {'children': ('zipzi.modeling.physics.PhysicsEditMoveInputs.__repr__',
                                                                'zipzi.modeling.physics.PhysicsEditMoveInputs.summary'),
-                                                  'documentation': '',
+                                                  'documentation': 'Move selected inputs to a rig.',
                                                   'fields': [('ids',
                                                               'Ordered stable IDs selected by this operation; names '
                                                               'and row numbers are not identities.'),
@@ -346,7 +353,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditMoveInputs.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditMoveNode': {'children': ('zipzi.modeling.physics.PhysicsEditMoveNode.__repr__',
                                                              'zipzi.modeling.physics.PhysicsEditMoveNode.summary'),
-                                                'documentation': '',
+                                                'documentation': 'Move a node within its chain.',
                                                 'fields': [('id',
                                                             'Stable identity in the owning authoring domain; exported '
                                                             'metadata IDs retain their source text.'),
@@ -359,7 +366,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditMoveNode.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditMoveOutputs': {'children': ('zipzi.modeling.physics.PhysicsEditMoveOutputs.__repr__',
                                                                 'zipzi.modeling.physics.PhysicsEditMoveOutputs.summary'),
-                                                   'documentation': '',
+                                                   'documentation': 'Move selected outputs with explicit '
+                                                                    'node-reference replacements.',
                                                    'fields': [('ids',
                                                                'Ordered stable IDs selected by this operation; names '
                                                                'and row numbers are not identities.'),
@@ -380,7 +388,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditMoveOutputs.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditPatch': {'children': ('zipzi.modeling.physics.PhysicsEditPatch.__repr__',
                                                           'zipzi.modeling.physics.PhysicsEditPatch.summary'),
-                                             'documentation': '',
+                                             'documentation': 'Apply an atomic asset or rig property patch.',
                                              'fields': [('patch',
                                                          'Typed atomic Physics changes validated against the current '
                                                          'candidate.')],
@@ -391,7 +399,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEditReorderGroups': {'children': ('zipzi.modeling.physics.PhysicsEditReorderGroups.__repr__',
                                                                   'zipzi.modeling.physics.PhysicsEditReorderGroups.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'Reorder Physics rigs.',
                                                      'fields': [('ids',
                                                                  'Ordered stable IDs selected by this operation; names '
                                                                  'and row numbers are not identities.'),
@@ -405,7 +413,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditReorderGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsForces': {'children': ('zipzi.modeling.physics.PhysicsForces.__repr__',
                                                        'zipzi.modeling.physics.PhysicsForces.summary'),
-                                          'documentation': '',
+                                          'documentation': 'Gravity and wind vectors used by the Physics definition.',
                                           'fields': [('Gravity',
                                                       'Effective gravity vector in the native Physics coordinate '
                                                       'convention.'),
@@ -424,13 +432,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsForces.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsInput': {'children': ('zipzi.modeling.physics.PhysicsInput.__repr__',
                                                       'zipzi.modeling.physics.PhysicsInput.summary'),
-                                         'documentation': '',
+                                         'documentation': 'Stable Physics input row driven by a parameter target.',
                                          'fields': [('id',
                                                      'Stable identity in the owning authoring domain; exported '
                                                      'metadata IDs retain their source text.'),
                                                     ('source',
-                                                     'Typed parameter reference or stable source object ID, as '
-                                                     'declared by the enclosing operation.'),
+                                                     'Parameter supplying this input; unresolved external IDs remain '
+                                                     'explicit.'),
                                                     ('reference_extensions',
                                                      'Owned opaque fields attached to an imported Physics parameter '
                                                      'reference.'),
@@ -456,7 +464,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsInput.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsMeta': {'children': ('zipzi.modeling.physics.PhysicsMeta.__repr__',
                                                      'zipzi.modeling.physics.PhysicsMeta.summary'),
-                                        'documentation': '',
+                                        'documentation': 'Physics format metadata, effective forces, rig dictionary '
+                                                         'and validated counts.',
                                         'fields': [('PhysicsSettingCount',
                                                     'Exported count of Physics settings, maintained by native '
                                                     'validation.'),
@@ -473,8 +482,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                    ('PhysicsDictionary',
                                                     'Ordered exported Physics rig ID/name metadata.'),
                                                    ('Fps',
-                                                    'Nominal motion frames per second or explicit Physics fixed-step '
-                                                    'frequency, as declared by the owner.'),
+                                                    'Optional Physics fixed-step frequency in frames per second; None '
+                                                    'or zero follows the evaluation delta.'),
                                                    ('extensions',
                                                     'Owned opaque imported fields preserved for format roundtrips; '
                                                     'declared fields cannot be shadowed.')],
@@ -491,7 +500,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsMeta.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsNode': {'children': ('zipzi.modeling.physics.PhysicsNode.__repr__',
                                                      'zipzi.modeling.physics.PhysicsNode.summary'),
-                                        'documentation': '',
+                                        'documentation': 'Stable Physics rig node with authored position and dynamics '
+                                                         'coefficients.',
                                         'fields': [('id',
                                                     'Stable identity in the owning authoring domain; exported metadata '
                                                     'IDs retain their source text.'),
@@ -515,10 +525,11 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsNode.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsNormalization': {'children': ('zipzi.modeling.physics.PhysicsNormalization.__repr__',
                                                               'zipzi.modeling.physics.PhysicsNormalization.summary'),
-                                                 'documentation': '',
+                                                 'documentation': 'Position and angle normalization ranges used by a '
+                                                                  'Physics rig.',
                                                  'fields': [('Position',
-                                                             'Authored two-dimensional Physics node position or '
-                                                             'normalization domain, as declared by the field.'),
+                                                             'Position normalization range in the native Physics '
+                                                             'convention.'),
                                                             ('Angle',
                                                              'Angle normalization range, in the native Physics '
                                                              'coordinate convention.'),
@@ -534,13 +545,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsNormalization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsOutput': {'children': ('zipzi.modeling.physics.PhysicsOutput.__repr__',
                                                        'zipzi.modeling.physics.PhysicsOutput.summary'),
-                                          'documentation': '',
+                                          'documentation': 'Stable Physics output row targeting a parameter and a '
+                                                           'node.',
                                           'fields': [('id',
                                                       'Stable identity in the owning authoring domain; exported '
                                                       'metadata IDs retain their source text.'),
                                                      ('destination',
-                                                      'Explicit destination owner/container; order is controlled '
-                                                      'separately by before.'),
+                                                      'Parameter receiving this output; unresolved external IDs remain '
+                                                      'explicit.'),
                                                      ('reference_extensions',
                                                       'Owned opaque fields attached to an imported Physics parameter '
                                                       'reference.'),
@@ -571,7 +583,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsOutput.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsOutputSnapshot': {'children': ('zipzi.modeling.physics.PhysicsOutputSnapshot.__repr__',
                                                                'zipzi.modeling.physics.PhysicsOutputSnapshot.summary'),
-                                                  'documentation': '',
+                                                  'documentation': 'One Physics output before weighting and after '
+                                                                   'application to its target parameter.',
                                                   'fields': [('raw',
                                                               'Raw output value before weight and parameter clamping.'),
                                                              ('before',
@@ -604,7 +617,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsProperty': {'children': (),
-                                            'documentation': '',
+                                            'documentation': 'Typed Physics rig property replacement, targeting stable '
+                                                             'row or node identities.',
                                             'fields': [],
                                             'kind': 'alias',
                                             'signature': 'PhysicsPropertyName | PhysicsPropertyInputWeight | '
@@ -638,7 +652,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                           'zipzi.modeling.physics.PhysicsPropertyVertexRadius')},
  'zipzi.modeling.physics.PhysicsPropertyAngleNormalization': {'children': ('zipzi.modeling.physics.PhysicsPropertyAngleNormalization.__repr__',
                                                                            'zipzi.modeling.physics.PhysicsPropertyAngleNormalization.summary'),
-                                                              'documentation': '',
+                                                              'documentation': 'Replace the angle normalization range.',
                                                               'fields': [('value',
                                                                           'Replacement minimum/default/maximum range '
                                                                           'for angle normalization.')],
@@ -649,13 +663,11 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyAngleNormalization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyInputAxis': {'children': ('zipzi.modeling.physics.PhysicsPropertyInputAxis.__repr__',
                                                                   'zipzi.modeling.physics.PhysicsPropertyInputAxis.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'Replace an input channel.',
                                                      'fields': [('id',
                                                                  'Stable identity in the owning authoring domain; '
                                                                  'exported metadata IDs retain their source text.'),
-                                                                ('value',
-                                                                 'Channel value or replacement payload in the domain '
-                                                                 'declared by this field type.')],
+                                                                ('value', 'Replacement input channel.')],
                                                      'kind': 'type',
                                                      'signature': '(*, id: str, value: PhysicsAxis)',
                                                      'type_refs': ('zipzi.modeling.physics.PhysicsAxis',)},
@@ -663,7 +675,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyInputAxis.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyInputParameter': {'children': ('zipzi.modeling.physics.PhysicsPropertyInputParameter.__repr__',
                                                                        'zipzi.modeling.physics.PhysicsPropertyInputParameter.summary'),
-                                                          'documentation': '',
+                                                          'documentation': 'Replace an input parameter target.',
                                                           'fields': [('id',
                                                                       'Stable identity in the owning authoring domain; '
                                                                       'exported metadata IDs retain their source '
@@ -678,33 +690,32 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyInputParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyInputReflect': {'children': ('zipzi.modeling.physics.PhysicsPropertyInputReflect.__repr__',
                                                                      'zipzi.modeling.physics.PhysicsPropertyInputReflect.summary'),
-                                                        'documentation': '',
+                                                        'documentation': 'Replace an input reflection flag.',
                                                         'fields': [('id',
                                                                     'Stable identity in the owning authoring domain; '
                                                                     'exported metadata IDs retain their source text.'),
                                                                    ('value',
-                                                                    'Channel value or replacement payload in the '
-                                                                    'domain declared by this field type.')],
+                                                                    'Whether the input mapping is reflected.')],
                                                         'kind': 'type',
                                                         'signature': '(*, id: str, value: bool)'},
  'zipzi.modeling.physics.PhysicsPropertyInputReflect.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyInputReflect.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyInputWeight': {'children': ('zipzi.modeling.physics.PhysicsPropertyInputWeight.__repr__',
                                                                     'zipzi.modeling.physics.PhysicsPropertyInputWeight.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Replace an input influence percentage.',
                                                        'fields': [('id',
                                                                    'Stable identity in the owning authoring domain; '
                                                                    'exported metadata IDs retain their source text.'),
                                                                   ('value',
-                                                                   'Channel value or replacement payload in the domain '
-                                                                   'declared by this field type.')],
+                                                                   'Replacement input influence weight, expressed as a '
+                                                                   'percentage.')],
                                                        'kind': 'type',
                                                        'signature': '(*, id: str, value: float)'},
  'zipzi.modeling.physics.PhysicsPropertyInputWeight.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyInputWeight.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyName': {'children': ('zipzi.modeling.physics.PhysicsPropertyName.__repr__',
                                                              'zipzi.modeling.physics.PhysicsPropertyName.summary'),
-                                                'documentation': '',
+                                                'documentation': 'Replace the rig display name.',
                                                 'fields': [('value', 'Replacement display name of the Physics group.')],
                                                 'kind': 'type',
                                                 'signature': '(*, value: str)'},
@@ -712,13 +723,11 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyName.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyOutputAxis': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputAxis.__repr__',
                                                                    'zipzi.modeling.physics.PhysicsPropertyOutputAxis.summary'),
-                                                      'documentation': '',
+                                                      'documentation': 'Replace an output channel.',
                                                       'fields': [('id',
                                                                   'Stable identity in the owning authoring domain; '
                                                                   'exported metadata IDs retain their source text.'),
-                                                                 ('value',
-                                                                  'Channel value or replacement payload in the domain '
-                                                                  'declared by this field type.')],
+                                                                 ('value', 'Replacement output channel.')],
                                                       'kind': 'type',
                                                       'signature': '(*, id: str, value: PhysicsAxis)',
                                                       'type_refs': ('zipzi.modeling.physics.PhysicsAxis',)},
@@ -726,7 +735,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyOutputAxis.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyOutputNode': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputNode.__repr__',
                                                                    'zipzi.modeling.physics.PhysicsPropertyOutputNode.summary'),
-                                                      'documentation': '',
+                                                      'documentation': 'Replace an output stable node reference.',
                                                       'fields': [('id',
                                                                   'Stable identity in the owning authoring domain; '
                                                                   'exported metadata IDs retain their source text.'),
@@ -739,7 +748,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyOutputNode.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyOutputParameter': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputParameter.__repr__',
                                                                         'zipzi.modeling.physics.PhysicsPropertyOutputParameter.summary'),
-                                                           'documentation': '',
+                                                           'documentation': 'Replace an output parameter target.',
                                                            'fields': [('id',
                                                                        'Stable identity in the owning authoring '
                                                                        'domain; exported metadata IDs retain their '
@@ -754,46 +763,44 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyOutputParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyOutputReflect': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputReflect.__repr__',
                                                                       'zipzi.modeling.physics.PhysicsPropertyOutputReflect.summary'),
-                                                         'documentation': '',
+                                                         'documentation': 'Replace an output reflection flag.',
                                                          'fields': [('id',
                                                                      'Stable identity in the owning authoring domain; '
                                                                      'exported metadata IDs retain their source text.'),
                                                                     ('value',
-                                                                     'Channel value or replacement payload in the '
-                                                                     'domain declared by this field type.')],
+                                                                     'Whether the output mapping is reflected.')],
                                                          'kind': 'type',
                                                          'signature': '(*, id: str, value: bool)'},
  'zipzi.modeling.physics.PhysicsPropertyOutputReflect.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyOutputReflect.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyOutputScale': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputScale.__repr__',
                                                                     'zipzi.modeling.physics.PhysicsPropertyOutputScale.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Replace an output multiplier.',
                                                        'fields': [('id',
                                                                    'Stable identity in the owning authoring domain; '
                                                                    'exported metadata IDs retain their source text.'),
-                                                                  ('value',
-                                                                   'Channel value or replacement payload in the domain '
-                                                                   'declared by this field type.')],
+                                                                  ('value', 'Replacement output multiplier.')],
                                                        'kind': 'type',
                                                        'signature': '(*, id: str, value: float)'},
  'zipzi.modeling.physics.PhysicsPropertyOutputScale.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyOutputScale.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyOutputWeight': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputWeight.__repr__',
                                                                      'zipzi.modeling.physics.PhysicsPropertyOutputWeight.summary'),
-                                                        'documentation': '',
+                                                        'documentation': 'Replace an output influence percentage.',
                                                         'fields': [('id',
                                                                     'Stable identity in the owning authoring domain; '
                                                                     'exported metadata IDs retain their source text.'),
                                                                    ('value',
-                                                                    'Channel value or replacement payload in the '
-                                                                    'domain declared by this field type.')],
+                                                                    'Replacement output influence weight, expressed as '
+                                                                    'a percentage.')],
                                                         'kind': 'type',
                                                         'signature': '(*, id: str, value: float)'},
  'zipzi.modeling.physics.PhysicsPropertyOutputWeight.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyOutputWeight.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyPositionNormalization': {'children': ('zipzi.modeling.physics.PhysicsPropertyPositionNormalization.__repr__',
                                                                               'zipzi.modeling.physics.PhysicsPropertyPositionNormalization.summary'),
-                                                                 'documentation': '',
+                                                                 'documentation': 'Replace the position normalization '
+                                                                                  'range.',
                                                                  'fields': [('value',
                                                                              'Replacement minimum/default/maximum '
                                                                              'range for position normalization.')],
@@ -804,55 +811,55 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyPositionNormalization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyVertexAcceleration': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexAcceleration.__repr__',
                                                                            'zipzi.modeling.physics.PhysicsPropertyVertexAcceleration.summary'),
-                                                              'documentation': '',
+                                                              'documentation': 'Replace a node acceleration '
+                                                                               'coefficient.',
                                                               'fields': [('id',
                                                                           'Stable identity in the owning authoring '
                                                                           'domain; exported metadata IDs retain their '
                                                                           'source text.'),
                                                                          ('value',
-                                                                          'Channel value or replacement payload in the '
-                                                                          'domain declared by this field type.')],
+                                                                          'Replacement native Physics acceleration '
+                                                                          'coefficient.')],
                                                               'kind': 'type',
                                                               'signature': '(*, id: str, value: float)'},
  'zipzi.modeling.physics.PhysicsPropertyVertexAcceleration.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyVertexAcceleration.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyVertexDelay': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexDelay.__repr__',
                                                                     'zipzi.modeling.physics.PhysicsPropertyVertexDelay.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Replace a node delay coefficient.',
                                                        'fields': [('id',
                                                                    'Stable identity in the owning authoring domain; '
                                                                    'exported metadata IDs retain their source text.'),
                                                                   ('value',
-                                                                   'Channel value or replacement payload in the domain '
-                                                                   'declared by this field type.')],
+                                                                   'Replacement native Physics delay coefficient.')],
                                                        'kind': 'type',
                                                        'signature': '(*, id: str, value: float)'},
  'zipzi.modeling.physics.PhysicsPropertyVertexDelay.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyVertexDelay.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyVertexMobility': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexMobility.__repr__',
                                                                        'zipzi.modeling.physics.PhysicsPropertyVertexMobility.summary'),
-                                                          'documentation': '',
+                                                          'documentation': 'Replace a node mobility coefficient.',
                                                           'fields': [('id',
                                                                       'Stable identity in the owning authoring domain; '
                                                                       'exported metadata IDs retain their source '
                                                                       'text.'),
                                                                      ('value',
-                                                                      'Channel value or replacement payload in the '
-                                                                      'domain declared by this field type.')],
+                                                                      'Replacement native Physics mobility '
+                                                                      'coefficient.')],
                                                           'kind': 'type',
                                                           'signature': '(*, id: str, value: float)'},
  'zipzi.modeling.physics.PhysicsPropertyVertexMobility.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyVertexMobility.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyVertexPosition': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexPosition.__repr__',
                                                                        'zipzi.modeling.physics.PhysicsPropertyVertexPosition.summary'),
-                                                          'documentation': '',
+                                                          'documentation': 'Replace an authored node position.',
                                                           'fields': [('id',
                                                                       'Stable identity in the owning authoring domain; '
                                                                       'exported metadata IDs retain their source '
                                                                       'text.'),
                                                                      ('value',
-                                                                      'Channel value or replacement payload in the '
-                                                                      'domain declared by this field type.')],
+                                                                      'Replacement node position in the native Physics '
+                                                                      'convention.')],
                                                           'kind': 'type',
                                                           'signature': '(*, id: str, value: PhysicsVector)',
                                                           'type_refs': ('zipzi.modeling.physics.PhysicsVector',)},
@@ -860,20 +867,21 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyVertexPosition.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsPropertyVertexRadius': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexRadius.__repr__',
                                                                      'zipzi.modeling.physics.PhysicsPropertyVertexRadius.summary'),
-                                                        'documentation': '',
+                                                        'documentation': 'Replace a node segment length/radius.',
                                                         'fields': [('id',
                                                                     'Stable identity in the owning authoring domain; '
                                                                     'exported metadata IDs retain their source text.'),
                                                                    ('value',
-                                                                    'Channel value or replacement payload in the '
-                                                                    'domain declared by this field type.')],
+                                                                    'Replacement native Physics node segment '
+                                                                    'length/radius.')],
                                                         'kind': 'type',
                                                         'signature': '(*, id: str, value: float)'},
  'zipzi.modeling.physics.PhysicsPropertyVertexRadius.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsPropertyVertexRadius.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsRange': {'children': ('zipzi.modeling.physics.PhysicsRange.__repr__',
                                                       'zipzi.modeling.physics.PhysicsRange.summary'),
-                                         'documentation': '',
+                                         'documentation': 'Minimum, default and maximum of one Physics normalization '
+                                                          'range.',
                                          'fields': [('Minimum',
                                                      'Lower normalization bound in the declared position or angle '
                                                      'domain.'),
@@ -888,7 +896,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsRange.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsRigPatch': {'children': ('zipzi.modeling.physics.PhysicsRigPatch.__repr__',
                                                          'zipzi.modeling.physics.PhysicsRigPatch.summary'),
-                                            'documentation': '',
+                                            'documentation': 'Atomic ordered property changes for one Physics rig.',
                                             'fields': [('group_id',
                                                         'Stable ID of the group owning the affected rows or node '
                                                         'chain.'),
@@ -935,7 +943,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsRigSnapshot.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsSetting': {'children': ('zipzi.modeling.physics.PhysicsSetting.__repr__',
                                                         'zipzi.modeling.physics.PhysicsSetting.summary'),
-                                           'documentation': '',
+                                           'documentation': 'Authored Physics rig with ordered inputs, outputs and '
+                                                            'stable node chain.',
                                            'fields': [('id',
                                                        'Stable identity in the owning authoring domain; exported '
                                                        'metadata IDs retain their source text.'),
@@ -969,7 +978,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsSetting.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsSetting.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsTarget': {'children': (),
-                                          'documentation': '',
+                                          'documentation': 'Optional resolved or unresolved parameter target for '
+                                                           'Physics input or output.',
                                           'fields': [],
                                           'kind': 'alias',
                                           'signature': 'PhysicsTargetUnspecified | PhysicsTargetResolved | '
@@ -979,7 +989,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                         'zipzi.modeling.physics.PhysicsTargetUnspecified')},
  'zipzi.modeling.physics.PhysicsTargetResolved': {'children': ('zipzi.modeling.physics.PhysicsTargetResolved.__repr__',
                                                                'zipzi.modeling.physics.PhysicsTargetResolved.summary'),
-                                                  'documentation': '',
+                                                  'documentation': 'Use a stable document parameter ID.',
                                                   'fields': [('parameter_id',
                                                               'Stable document parameter UUID; evaluation uses its '
                                                               'declared range and default.')],
@@ -989,7 +999,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsTargetResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsTargetUnresolved': {'children': ('zipzi.modeling.physics.PhysicsTargetUnresolved.__repr__',
                                                                  'zipzi.modeling.physics.PhysicsTargetUnresolved.summary'),
-                                                    'documentation': '',
+                                                    'documentation': 'Preserve an unresolved external parameter '
+                                                                     'runtime ID.',
                                                     'fields': [('runtime_id',
                                                                 'Imported/exported runtime label, distinct from the '
                                                                 'document object UUID.')],
@@ -999,7 +1010,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsTargetUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsTargetUnspecified': {'children': ('zipzi.modeling.physics.PhysicsTargetUnspecified.__repr__',
                                                                   'zipzi.modeling.physics.PhysicsTargetUnspecified.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'No parameter target is specified.',
                                                      'fields': [],
                                                      'kind': 'type',
                                                      'signature': '()'},
@@ -1007,7 +1018,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsTargetUnspecified.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsVector': {'children': ('zipzi.modeling.physics.PhysicsVector.__repr__',
                                                        'zipzi.modeling.physics.PhysicsVector.summary'),
-                                          'documentation': '',
+                                          'documentation': 'Two components in the native Physics coordinate '
+                                                           'convention.',
                                           'fields': [('X',
                                                       'Horizontal component in the native Physics coordinate '
                                                       'convention.'),

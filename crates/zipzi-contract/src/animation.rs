@@ -42,6 +42,7 @@ pub struct PhysicsRigSnapshot {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// One Physics output before weighting and after application to its target parameter.
 pub struct PhysicsOutputSnapshot {
     /// Raw output value before weight and parameter clamping.
     pub raw: f32,
@@ -120,6 +121,7 @@ pub struct MotionSnapshot {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Motion playback location and loop identity on the Preview clock.
 pub struct MotionPlaybackPosition {
     /// Source motion clip UUID for this SDK playback position.
     pub motion_id: String,

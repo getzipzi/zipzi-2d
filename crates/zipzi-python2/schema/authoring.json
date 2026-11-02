@@ -1,6 +1,6 @@
 {
   "_generated_by": "zipzi-python2/tools/generate.py",
-  "contract_sha256": "42aada97154e8d30c7e5359096cb6005fe7b29a9df0491d848063bce76ea307e",
+  "contract_sha256": "d76ef68844f66c8e2add1da4b0d8680d423d56a4827ded2627742842ba8cca31",
   "format_version": 2,
   "root": {
     "binary": {
@@ -757,7 +757,7 @@
     },
     {
       "path": "types/expression.json",
-      "sha256": "2663be51b8cf1c6766b81294b2cc63408c3f27bf15178b630b7ad97656c56925"
+      "sha256": "96b9989e00f3752cbaa89b21f1e04c241fcfa36db745d135d3c52fa3342ceaa1"
     },
     {
       "path": "types/external.json",
@@ -769,11 +769,11 @@
     },
     {
       "path": "types/motion.json",
-      "sha256": "404f29d10d646ff8c4f82b62d3ae568dcd1737e95ea0421c4690c0e72f8375f5"
+      "sha256": "280ac78835e3faca7954ec35eaf5adc870f5ce38da956d5c93900550940edb26"
     },
     {
       "path": "types/observation.json",
-      "sha256": "339c02a3312a72dfcef85f8fdc58302b8dcab548db971553664c1833172ec419"
+      "sha256": "0c0e16475170362163a2be372c27b5a0c94eb80bf2b917dc89f19db7b18bea3b"
     },
     {
       "path": "types/parameters.json",
@@ -781,15 +781,15 @@
     },
     {
       "path": "types/physics.json",
-      "sha256": "98a2722a23451ab786dc8b1facdfd747559440059a021bbc3efb8c35a7008c87"
+      "sha256": "918179e5418323aa2b698be0ba2854aebc7c8118a21562bd507c324f98408cfa"
     },
     {
       "path": "types/pose.json",
-      "sha256": "76e22467b5f505c2bdd993198341cdc4df546eb2950560f2884fb21091bdf9c5"
+      "sha256": "d352ed1a569e50d92eadf8dc8607f9584f8583dca5078448c2ce40ddf4507bc7"
     },
     {
       "path": "types/preview.json",
-      "sha256": "09ff2c6dc712e1804446b52a9fb18640799537f6129ad5d8ac772b40cf9f03af"
+      "sha256": "d3c33da564bd4a5ceafe75cde7bc46f1bff787950d115ae04bc24f52f2eb3b35"
     },
     {
       "path": "types/project.json",
@@ -809,7 +809,7 @@
     },
     {
       "path": "types/sampling.json",
-      "sha256": "f6e5753af4896b6402b24e79e3b6278e8c2630263d4612afa49f4b946eb5c7d3"
+      "sha256": "bb0bd9275c7b20566770003127aea50851d25352dd90473d11afa64dd458d81b"
     },
     {
       "path": "types/scene.json",

@@ -351,6 +351,8 @@ Uses default parameters of the same source as reference; checks requested frames
 
 `(*, alpha_threshold: int, pixel_step: int, sampled_pixels: int, covered_pixels: int, transparent_covered_pixels: int, opaque_pixels: int, uncovered_opaque_pixels: int, transparent_coverage_fraction: float | None = None, uncovered_opaque_fraction: float | None = None, out_of_bounds_triangles: int)`
 
+Sampled source-alpha and UV coverage statistics; masks and occlusion are excluded.
+
 **Fields**
 
 - `alpha_threshold`: Alpha >= this value counts as painted. Coverage ignores filtering, masks and occlusion.

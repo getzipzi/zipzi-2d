@@ -904,7 +904,8 @@ class PythonReference(unittest.TestCase):
                                   'parameters bindings modeling_parameters modeling_bindings modeling_bindings_edits '
                                   'resources modeling_resources modeling_mesh scene modeling_scene modeling_scene_edits '
                                   'references modeling_addressing modeling_addressing_kinds modeling_addressing_patches '
-                                  'modeling_addressing_selectors modeling_deletion modeling_deletion_decisions modeling_project').split())
+                                  'modeling_addressing_selectors modeling_deletion modeling_deletion_decisions modeling_project '
+                                  'animation sampling modeling_motion modeling_expression modeling_physics modeling_pose modeling_preview modeling_sampling').split())
     BATCH_PAGES = {
         'S': 'meshes',
         'P1': 'runtime runtime_session runtime_edit modeling modeling_common modeling_runtime ops modeling_commands modeling_queries events',
@@ -1109,6 +1110,20 @@ class PythonReference(unittest.TestCase):
         self.assertIn('retaining local data', self.catalog['zipzi.scene.ReparentLocal']['documentation'])
         self.assertIn('candidate operations', self.catalog['zipzi.scene.Operation']['documentation'])
 
+    def test_reference_preview_motion_and_sampling_semantics(self):
+        sample = self.catalog['zipzi.animation.Preview.sample']['documentation']
+        self.assertIn('seconds', sample)
+        self.assertIn('frozen-source', sample)
+        motion = self.catalog['zipzi.modeling.motion.MotionSegmentInverseStepped']['documentation']
+        self.assertIn('endpoint value', motion)
+        weight = dict(self.catalog['zipzi.modeling.physics.PhysicsPropertyInputWeight']['fields'])
+        self.assertIn('percentage', weight['value'])
+        drawable = dict(self.catalog['zipzi.modeling.sampling.Drawable']['fields'])
+        self.assertIn('Y-up model units', drawable['positions'])
+        self.assertIn('offsets, not', drawable['indices'])
+        render = dict(self.catalog['zipzi.sampling.RenderKind']['fields'])
+        self.assertIn('Offscreen compositing scope', render['BEGIN_OFFSCREEN'])
+
     def test_reference_project_export_and_extension_navigation(self):
         extension = self.catalog['zipzi.modeling.ExtensionValue']
         self.assertIn('JSON-compatible', extension['documentation'])
@@ -1139,6 +1154,17 @@ class PythonReference(unittest.TestCase):
         self.assertIn('recreation', ref)
         patch = dict(self.catalog['zipzi.modeling.addressing.AddressPatchScene']['fields'])
         self.assertIn('must match', patch['value'])
+
+    def test_reference_render_kind_follows_contract_branch(self):
+        contract = gen.schema.read(PACKAGE/'schema/authoring.json')
+        marker = 'Changed render command source description.'
+        shape = contract['definitions']['zipzi_contract::evaluation::RenderCommand']
+        shape['variants'][0]['doc'] = marker
+        changed = gen.render(contract)
+        self.assertIn(marker, changed['client/python/zipzi/_generated/sampling_values.py'])
+        row = catalog_from_output(changed)['zipzi.sampling.RenderKind']
+        self.assertIn(marker, dict(row['fields'])['BEGIN_OFFSCREEN'])
+        self.assertIn(marker, changed['client/python/zipzi/docs/reference/sampling.md'])
 
     def test_reference_object_kind_projection_follows_contract(self):
         contract = gen.schema.read(PACKAGE/'schema/authoring.json')
@@ -1241,6 +1267,8 @@ for path, facts in (
     ('modeling.deletion.DeletionReviewState', ('explicit confirmation', 'Outstanding decisions', 'blockers')),
     ('modeling.ExtensionValue', ('JSON-compatible', 'read-only', 'finite')),
     ('Session.project.export', ('diagnostics', 'durable', 'project_report')),
+    ('animation.Preview.sample', ('seconds', 'frozen-source', 'CPU-only')),
+    ('modeling.motion.MotionSegmentInverseStepped', ('endpoint value',)),
 ):
     text = zipzi.describe(path).format()
     for fact in facts:

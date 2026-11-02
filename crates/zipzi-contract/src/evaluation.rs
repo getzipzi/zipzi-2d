@@ -13,6 +13,7 @@ pub type PreviewValues = HashMap<String, f32>;
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryOutput,
 )]
+/// One evaluated mesh drawable with model-space geometry and rendering attributes.
 pub struct Drawable {
     /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,
@@ -101,6 +102,7 @@ impl Default for Drawable {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryOutput,
 )]
+/// Requested and effective parameter value for one evaluated pose.
 pub struct EvaluatedParameter {
     /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,
@@ -122,15 +124,19 @@ pub struct EvaluatedParameter {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryOutput,
 )]
+/// Ordered rendering instruction; Offscreen begin/end delimit compositing scopes.
 pub enum RenderCommand {
+    /// Begin a named Offscreen compositing scope.
     BeginOffscreen {
         /// Stable Offscreen object ID; not a texture asset ID.
         offscreen_id: String,
     },
+    /// Draw a named evaluated mesh.
     DrawMesh {
         /// Stable ID of the target mesh in this document.
         mesh_id: String,
     },
+    /// End a named Offscreen compositing scope.
     EndOffscreen {
         /// Stable Offscreen object ID; not a texture asset ID.
         offscreen_id: String,
@@ -146,6 +152,7 @@ pub enum RenderCommand {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryOutput,
 )]
+/// Evaluated Offscreen compositing state for one pose.
 pub struct OffscreenFrame {
     #[serde(default = "renderable_default")]
     /// Whether required content is available for rendering; unavailable textures do not make
@@ -188,6 +195,7 @@ pub struct OffscreenFrame {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryOutput,
 )]
+/// CPU-evaluated geometry, deformers and render plan for one pose.
 pub struct DrawableFrame {
     /// Revision used to evaluate this immutable snapshot; later name edits may reuse it.
     pub source_revision: u64,
@@ -213,6 +221,7 @@ pub struct DrawableFrame {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryOutput,
 )]
+/// Evaluated deformer control points and optional Rotation basis in model space.
 pub struct EvaluatedDeformer {
     /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,

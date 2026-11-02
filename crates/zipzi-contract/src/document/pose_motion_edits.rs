@@ -1,12 +1,16 @@
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Select a Pose group, entry or link collection.
 pub enum PoseCollection {
+    /// Select Pose groups.
     Groups,
+    /// Select entries in one group.
     Entries {
         /// Stable ID of the group owning the affected rows or node chain.
         group_id: String,
     },
+    /// Select links in one entry.
     Links {
         /// Stable ID of the owning entry; links remain owned by that entry.
         entry_id: String,
@@ -15,19 +19,24 @@ pub enum PoseCollection {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Typed replacement fields for a Pose asset or owned row.
 pub enum PoseFields {
+    /// Replace Pose asset fade settings.
     Asset {
         /// Optional fade-in duration in seconds; None retains the format/runtime default.
         fade_in: Option<f32>,
     },
+    /// Replace a Pose group label.
     Group {
         /// Human-readable display or registration name; distinct from persistent object identity.
         name: String,
     },
+    /// Replace an entry Part reference.
     Entry {
         /// Typed resolved/unresolved Part reference retained by the Pose entry or link.
         part: PosePartRef,
     },
+    /// Replace a link Part target.
     Link {
         /// Typed target reference; unresolved imported runtime labels remain explicit.
         target: PosePartRef,
@@ -36,7 +45,9 @@ pub enum PoseFields {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "operation", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Create, move, patch or delete Pose assets and owned rows.
 pub enum PoseEdit {
+    /// Create the Pose singleton.
     Create {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
@@ -52,6 +63,7 @@ pub enum PoseEdit {
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Create an entry in a group.
     CreateEntry {
         /// Stable ID of the group owning the affected rows or node chain.
         group_id: String,
@@ -60,6 +72,7 @@ pub enum PoseEdit {
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Create a link owned by an entry.
     CreateLink {
         /// Stable ID of the owning entry; links remain owned by that entry.
         entry_id: String,
@@ -68,6 +81,7 @@ pub enum PoseEdit {
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Replace matching fields under an exact precondition.
     Patch {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
@@ -76,6 +90,7 @@ pub enum PoseEdit {
         /// Typed replacement fields for the addressed object, applied atomically.
         fields: PoseFields,
     },
+    /// Move selected owned identities to a compatible collection.
     Move {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
@@ -84,6 +99,7 @@ pub enum PoseEdit {
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Duplicate selected owned identities into a compatible collection.
     Duplicate {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
@@ -92,6 +108,7 @@ pub enum PoseEdit {
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Delete selected Pose identities.
     Delete {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
@@ -110,8 +127,11 @@ pub enum PoseEdit {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "id", rename_all = "snake_case")]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Select the ungrouped root or a motion registration group.
 pub enum MotionContainer {
+    /// Select ungrouped motion registrations.
     Root,
+    /// Select registrations in one motion group.
     Group(
         /// Destination motion-group identity; Root selects ungrouped registrations.
         String,
@@ -120,7 +140,9 @@ pub enum MotionContainer {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Edit motion clips, registrations, tracks, keys and events independently of playback.
 pub enum MotionEdit {
+    /// Create a motion clip and its initial registration.
     Create {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
@@ -131,22 +153,26 @@ pub enum MotionEdit {
         /// Explicit destination owner/container; order is controlled separately by before.
         destination: MotionContainer,
     },
+    /// Create a motion registration group.
     CreateGroup {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
         /// Human-readable display or registration name; distinct from persistent object identity.
         name: String,
     },
+    /// Rename a motion group.
     RenameGroup {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
         /// Human-readable display or registration name; distinct from persistent object identity.
         name: String,
     },
+    /// Reorder motion groups.
     ReorderGroups {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
     },
+    /// Register an existing clip in the selected container.
     Register {
         /// Complete replacement motion registration; its owner is selected separately.
         entry: MotionRegistration,
@@ -155,6 +181,7 @@ pub enum MotionEdit {
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Replace a registration under an exact precondition.
     PatchRegistration {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
@@ -163,6 +190,7 @@ pub enum MotionEdit {
         /// Complete replacement motion registration; its owner is selected separately.
         entry: MotionRegistration,
     },
+    /// Move registrations to another container.
     MoveRegistrations {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
@@ -171,6 +199,7 @@ pub enum MotionEdit {
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Duplicate registrations into a container.
     DuplicateRegistrations {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
@@ -179,18 +208,22 @@ pub enum MotionEdit {
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Delete selected registrations subject to clip retention rules.
     DeleteRegistrations {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
     },
+    /// Move group registrations to the ungrouped root and remove the group.
     DissolveGroup {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
     },
+    /// Remove a group and its registrations while retaining required last clip registrations.
     DeleteGroup {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
     },
+    /// Duplicate a group and its registrations under new identities.
     DuplicateGroup {
         /// Typed parameter reference or stable source object ID, as declared by the enclosing operation.
         source: String,
@@ -199,6 +232,7 @@ pub enum MotionEdit {
         /// Human-readable display or registration name; distinct from persistent object identity.
         name: String,
     },
+    /// Duplicate a clip and create its registration.
     DuplicateClip {
         /// Typed parameter reference or stable source object ID, as declared by the enclosing operation.
         source: String,
@@ -211,16 +245,19 @@ pub enum MotionEdit {
         /// Explicit destination owner/container; order is controlled separately by before.
         destination: MotionContainer,
     },
+    /// Delete a clip and its registrations.
     DeleteClip {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
     },
+    /// Change display order of tracks in a clip.
     ReorderTracks {
         /// Stable ID of the motion clip owning the affected track or event.
         clip: String,
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
     },
+    /// Create a track with a persistent initial key.
     CreateTrack {
         /// Stable ID of the motion clip owning the affected track or event.
         clip: String,
@@ -231,12 +268,14 @@ pub enum MotionEdit {
         /// Absolute time in seconds within the owning motion clip.
         time: f32,
     },
+    /// Set the target channel of an existing track.
     SetTrackTarget {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
         /// Typed target reference; unresolved imported runtime labels remain explicit.
         target: MotionTrackTarget,
     },
+    /// Move or copy tracks to another clip.
     MoveTracks {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
@@ -247,10 +286,12 @@ pub enum MotionEdit {
         /// True allocates copied identities; false transfers the existing identities.
         copy: bool,
     },
+    /// Delete selected motion tracks.
     DeleteTracks {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
     },
+    /// Move or copy stable keys to a track with a time offset.
     TransferKeys {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
@@ -261,16 +302,19 @@ pub enum MotionEdit {
         /// True allocates copied identities; false transfers the existing identities.
         copy: bool,
     },
+    /// Insert or replace a timed event in a clip.
     SetEvent {
         /// Stable ID of the motion clip owning the affected track or event.
         clip: String,
         /// Owned motion event with a stable ID, time in seconds and string payload.
         event: MotionEvent,
     },
+    /// Delete selected motion events.
     DeleteEvents {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
     },
+    /// Move or copy timed events with a time offset.
     MoveEvents {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
@@ -292,6 +336,7 @@ pub enum MotionEdit {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Typed target, value and blend replacement for an expression entry.
 pub struct ExpressionEntryFields {
     /// Typed target reference; unresolved imported runtime labels remain explicit.
     pub target: ExpressionTarget,
@@ -315,12 +360,14 @@ impl From<&ExpressionEntry> for ExpressionEntryFields {
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum ExpressionEdit {
+    /// Create an expression asset.
     Create {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
         /// Human-readable display or registration name; distinct from persistent object identity.
         name: String,
     },
+    /// Create an entry in an expression.
     CreateEntry {
         /// Stable expression asset ID owning the selected entries.
         owner: String,
@@ -329,6 +376,7 @@ pub enum ExpressionEdit {
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Replace an entry under an exact precondition.
     PatchEntry {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
@@ -337,6 +385,7 @@ pub enum ExpressionEdit {
         /// Typed replacement fields for the addressed object, applied atomically.
         fields: ExpressionEntryFields,
     },
+    /// Move entries to another expression.
     MoveEntries {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
@@ -345,6 +394,7 @@ pub enum ExpressionEdit {
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Copy entries using explicitly paired new identities.
     DuplicateEntries {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
@@ -355,10 +405,12 @@ pub enum ExpressionEdit {
         /// Optional stable sibling ID before which to insert; None appends.
         before: Option<String>,
     },
+    /// Delete selected expression entries.
     DeleteEntries {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,
     },
+    /// Duplicate an expression and its entries under new identities.
     Duplicate {
         /// Typed parameter reference or stable source object ID, as declared by the enclosing operation.
         source: String,
@@ -369,10 +421,12 @@ pub enum ExpressionEdit {
         /// New stable entry IDs paired with the source expression entries.
         entry_ids: Vec<String>,
     },
+    /// Delete an expression asset.
     Delete {
         /// Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
         id: String,
     },
+    /// Reorder expression assets.
     Reorder {
         /// Ordered stable IDs selected by this operation; names and row numbers are not identities.
         ids: Vec<String>,

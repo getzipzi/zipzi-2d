@@ -61,7 +61,7 @@ Alias of [zipzi.Buffer.__exit__](runtime.md#zipzibuffer__exit__).
 
 `(time: float, *, geometry: bool=True, queries: Sequence[m.SpatialQuery]=(), view: m.ObservationView | None=None) -> Job[Snapshot[m.PreviewBatch]]`
 
-Submit SDK canonical incremental playback. Cancellation may retain completed simulation steps; discard cancelled output. Backward targets use canonical seek.
+Submit SDK canonical incremental playback to an absolute Preview-clock time in seconds. Cancellation may retain completed simulation steps; discard cancelled output. Backward targets use canonical seek.
 
 Types: [Job], [Snapshot], [ObservationView], [PreviewBatch], [SpatialQuery].
 
@@ -127,7 +127,7 @@ Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 
 `(times: Sequence[float], *, geometry: bool=True, queries: Sequence[m.SpatialQuery]=(), view: m.ObservationView | None=None) -> Job[Snapshot[m.PreviewBatch]]`
 
-Submit canonical seeks in target order; wait for a frozen-source batch.
+Submit canonical seeks at absolute Preview-clock times in seconds, in target order; wait for a frozen-source batch.
 
 View batches use the host observation frame limit; CPU-only batches allow
 1..64 frames. Duplicates/backward times are retained. CPU geometry is optional.
@@ -150,7 +150,7 @@ Types: [Job], [Snapshot], [ObservationView], [PreviewBatch], [SpatialQuery].
 
 `(time: float, *, geometry: bool=True, queries: Sequence[m.SpatialQuery]=(), view: m.ObservationView | None=None) -> Job[Snapshot[m.PreviewBatch]]`
 
-Submit one canonical seek and return a one-frame batch Job; an interrupted SDK seek preserves its prior state; late cancellation reports the completed outcome.
+Submit one canonical seek to an absolute Preview-clock time in seconds and return a one-frame batch Job; an interrupted SDK seek preserves its prior state; late cancellation reports the completed outcome.
 
 Types: [Job], [Snapshot], [ObservationView], [PreviewBatch], [SpatialQuery].
 

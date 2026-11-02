@@ -214,8 +214,8 @@ def render_dtos(contract, header, resolve=lambda shape: shape):
             if n=='RenderCommand':
                 vs=variants(s)
                 if any(len(v['fields'])!=1 or v['fields'][0]['shape']['kind']!='string' for v in vs):raise ValueError('Unreviewed render command projection')
-                lines+=['class RenderKind(str, Enum):','    __module__ = "zipzi.sampling"']
-                for v in vs:lines+=['    '+re.sub(r'(?<!^)(?=[A-Z])','_',v['rust_name']).upper()+' = '+repr(v['name'])]
+                lines+=['class RenderKind(str, Enum):','    '+repr(s.get('doc','')),'    __module__ = "zipzi.sampling"']
+                for v in vs:lines+=['    '+re.sub(r'(?<!^)(?=[A-Z])','_',v['rust_name']).upper()+' = '+repr(v['name']),'    '+repr(v.get('doc',''))]
                 lines+=['','@dataclass(frozen=True)','class RenderCommand:','    '+repr('One ordered native render-plan command.\n\nFields:\nkind: BeginOffscreen, DrawMesh or EndOffscreen; begin/end commands delimit compositing scopes.\nid: Stable mesh ID for DrawMesh, or Offscreen ID for begin/end commands.'),'    __module__ = "zipzi.sampling"','    kind: RenderKind','    id: str','','def read_RenderCommand(value: object) -> RenderCommand:', '    if isinstance(value, RenderCommand): return value','    tag, content = _variant(value)']
                 for v in vs:lines+=['    if tag == '+repr(v['name'])+': return RenderCommand(RenderKind(tag), _text(_get(content, '+repr(v['fields'][0]['name'])+')))']
                 lines+=['    raise ValueError("Unknown render command")',''];continue

@@ -20,6 +20,8 @@ Canonical physics modeling values.
 
 `(*, id: str, data: PhysicsDefinition, opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
 
+Authored Physics singleton; simulation state belongs to playback, not this value.
+
 Types: [PhysicsDefinition](#zipzimodelingphysicsphysicsdefinition).
 
 **Fields**
@@ -49,17 +51,21 @@ Alias of [zipzi.modeling.physics.PhysicsAssetProperty](modeling_physics.md#zipzi
 
 **Enum**
 
+Native Physics translation or angle channel.
+
 **Members**
 
-- `X`: 'X'
-- `Y`: 'Y'
-- `ANGLE`: 'Angle'
+- `X`: 'X' — Horizontal translation channel.
+- `Y`: 'Y' — Vertical translation channel.
+- `ANGLE`: 'Angle' — Rotation-angle channel.
 
 ## zipzi.modeling.physics.PhysicsCollection
 
 **Alias**
 
 `PhysicsCollectionGroups | PhysicsCollectionInputs | PhysicsCollectionOutputs | PhysicsCollectionNodes`
+
+Select a Physics rig collection or rows within one rig.
 
 Types: [PhysicsCollectionGroups](#zipzimodelingphysicsphysicscollectiongroups), [PhysicsCollectionInputs](#zipzimodelingphysicsphysicscollectioninputs), [PhysicsCollectionNodes](#zipzimodelingphysicsphysicscollectionnodes), [PhysicsCollectionOutputs](#zipzimodelingphysicsphysicscollectionoutputs).
 
@@ -70,12 +76,16 @@ Types: [PhysicsCollectionGroups](#zipzimodelingphysicsphysicscollectiongroups), 
 
 `()`
 
+Select Physics rigs.
+
 
 ## zipzi.modeling.physics.PhysicsCollectionInputs
 
 **Type**
 
 `(*, group_id: str)`
+
+Select inputs of one rig.
 
 **Fields**
 
@@ -87,6 +97,8 @@ Types: [PhysicsCollectionGroups](#zipzimodelingphysicsphysicscollectiongroups), 
 
 `(*, group_id: str)`
 
+Select nodes of one rig.
+
 **Fields**
 
 - `group_id`: Stable Physics rig ID owning the selected rows.
@@ -97,6 +109,8 @@ Types: [PhysicsCollectionGroups](#zipzimodelingphysicsphysicscollectiongroups), 
 
 `(*, group_id: str)`
 
+Select outputs of one rig.
+
 **Fields**
 
 - `group_id`: Stable Physics rig ID owning the selected rows.
@@ -106,6 +120,8 @@ Types: [PhysicsCollectionGroups](#zipzimodelingphysicsphysicscollectiongroups), 
 **Type**
 
 `(*, version: int, meta: PhysicsMeta, settings: tuple[PhysicsSetting, ...], extensions: _Mapping[str, ExtensionValue])`
+
+Persistent Physics format definition and its rig metadata.
 
 Types: [ExtensionValue], [PhysicsMeta](#zipzimodelingphysicsphysicsmeta), [PhysicsSetting](#zipzimodelingphysicsphysicssetting).
 
@@ -122,6 +138,8 @@ Types: [ExtensionValue], [PhysicsMeta](#zipzimodelingphysicsphysicsmeta), [Physi
 
 `(*, Id: str, Name: str, extensions: _Mapping[str, ExtensionValue])`
 
+Exported Physics rig identity and display label.
+
 Types: [ExtensionValue].
 
 **Fields**
@@ -136,6 +154,8 @@ Types: [ExtensionValue].
 
 `PhysicsEditCreateGroup | PhysicsEditCreateInput | PhysicsEditCreateOutput | PhysicsEditInsertNode | PhysicsEditMoveNode | PhysicsEditDuplicateNode | PhysicsEditPatch | PhysicsEditMoveInputs | PhysicsEditMoveOutputs | PhysicsEditReorderGroups | PhysicsEditDuplicate | PhysicsEditDelete`
 
+Create, move, patch or delete Physics rigs and their owned rows.
+
 Types: [PhysicsEditCreateGroup](#zipzimodelingphysicsphysicseditcreategroup), [PhysicsEditCreateInput](#zipzimodelingphysicsphysicseditcreateinput), [PhysicsEditCreateOutput](#zipzimodelingphysicsphysicseditcreateoutput), [PhysicsEditDelete](#zipzimodelingphysicsphysicseditdelete), [PhysicsEditDuplicate](#zipzimodelingphysicsphysicseditduplicate), [PhysicsEditDuplicateNode](#zipzimodelingphysicsphysicseditduplicatenode), [PhysicsEditInsertNode](#zipzimodelingphysicsphysicseditinsertnode), [PhysicsEditMoveInputs](#zipzimodelingphysicsphysicseditmoveinputs), [PhysicsEditMoveNode](#zipzimodelingphysicsphysicseditmovenode), [PhysicsEditMoveOutputs](#zipzimodelingphysicsphysicseditmoveoutputs), [PhysicsEditPatch](#zipzimodelingphysicsphysicseditpatch), [PhysicsEditReorderGroups](#zipzimodelingphysicsphysicseditreordergroups).
 
 
@@ -144,6 +164,8 @@ Types: [PhysicsEditCreateGroup](#zipzimodelingphysicsphysicseditcreategroup), [P
 **Type**
 
 `(*, asset_id: str, id: str, name: str, before: str | None = None)`
+
+Create a rig in the Physics asset.
 
 **Fields**
 
@@ -158,6 +180,8 @@ Types: [PhysicsEditCreateGroup](#zipzimodelingphysicsphysicseditcreategroup), [P
 
 `(*, group_id: str, id: str, before: str | None = None)`
 
+Create an input in a rig.
+
 **Fields**
 
 - `group_id`: Stable ID of the group owning the affected rows or node chain.
@@ -169,6 +193,8 @@ Types: [PhysicsEditCreateGroup](#zipzimodelingphysicsphysicseditcreategroup), [P
 **Type**
 
 `(*, group_id: str, id: str, node_id: str, before: str | None = None)`
+
+Create an output bound to a rig node.
 
 **Fields**
 
@@ -183,6 +209,8 @@ Types: [PhysicsEditCreateGroup](#zipzimodelingphysicsphysicseditcreategroup), [P
 
 `(*, ids: tuple[str, ...], node_replacements: _Mapping[str, str])`
 
+Delete selected Physics identities with explicit node-reference replacements.
+
 **Fields**
 
 - `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
@@ -193,6 +221,8 @@ Types: [PhysicsEditCreateGroup](#zipzimodelingphysicsphysicseditcreategroup), [P
 **Type**
 
 `(*, ids: tuple[str, ...], group_id: str | None = None, before: str | None = None)`
+
+Duplicate selected Physics identities.
 
 **Fields**
 
@@ -206,6 +236,8 @@ Types: [PhysicsEditCreateGroup](#zipzimodelingphysicsphysicseditcreategroup), [P
 
 `(*, id: str, before: str | None = None)`
 
+Duplicate a node within its chain.
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -216,6 +248,8 @@ Types: [PhysicsEditCreateGroup](#zipzimodelingphysicsphysicseditcreategroup), [P
 **Type**
 
 `(*, group_id: str, node: PhysicsNode, before: str | None = None)`
+
+Insert a stable node into a rig chain.
 
 Types: [PhysicsNode](#zipzimodelingphysicsphysicsnode).
 
@@ -231,6 +265,8 @@ Types: [PhysicsNode](#zipzimodelingphysicsphysicsnode).
 
 `(*, ids: tuple[str, ...], group_id: str, before: str | None = None)`
 
+Move selected inputs to a rig.
+
 **Fields**
 
 - `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
@@ -243,6 +279,8 @@ Types: [PhysicsNode](#zipzimodelingphysicsphysicsnode).
 
 `(*, id: str, before: str | None = None)`
 
+Move a node within its chain.
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -253,6 +291,8 @@ Types: [PhysicsNode](#zipzimodelingphysicsphysicsnode).
 **Type**
 
 `(*, ids: tuple[str, ...], group_id: str, before: str | None = None, node_replacements: _Mapping[str, str])`
+
+Move selected outputs with explicit node-reference replacements.
 
 **Fields**
 
@@ -267,6 +307,8 @@ Types: [PhysicsNode](#zipzimodelingphysicsphysicsnode).
 
 `(*, patch: PhysicsPatch)`
 
+Apply an atomic asset or rig property patch.
+
 Types: [PhysicsPatch](#zipzimodelingphysicsphysicspatch).
 
 **Fields**
@@ -279,6 +321,8 @@ Types: [PhysicsPatch](#zipzimodelingphysicsphysicspatch).
 
 `(*, ids: tuple[str, ...], before: str | None = None)`
 
+Reorder Physics rigs.
+
 **Fields**
 
 - `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
@@ -289,6 +333,8 @@ Types: [PhysicsPatch](#zipzimodelingphysicsphysicspatch).
 **Type**
 
 `(*, Gravity: PhysicsVector, Wind: PhysicsVector, extensions: _Mapping[str, ExtensionValue])`
+
+Gravity and wind vectors used by the Physics definition.
 
 Types: [ExtensionValue], [PhysicsVector](#zipzimodelingphysicsphysicsvector).
 
@@ -304,12 +350,14 @@ Types: [ExtensionValue], [PhysicsVector](#zipzimodelingphysicsphysicsvector).
 
 `(*, id: str, source: PhysicsTarget, reference_extensions: _Mapping[str, ExtensionValue], weight: float, kind: PhysicsAxis, reflect: bool, extensions: _Mapping[str, ExtensionValue])`
 
+Stable Physics input row driven by a parameter target.
+
 Types: [ExtensionValue], [PhysicsAxis](#zipzimodelingphysicsphysicsaxis), [PhysicsTarget](#zipzimodelingphysicsphysicstarget).
 
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-- `source`: Typed parameter reference or stable source object ID, as declared by the enclosing operation.
+- `source`: Parameter supplying this input; unresolved external IDs remain explicit.
 - `reference_extensions`: Owned opaque fields attached to an imported Physics parameter reference.
 - `weight`: Native Physics influence weight, expressed as a percentage.
 - `kind`: Native Physics axis/channel discriminator; distinct from an object identity.
@@ -322,6 +370,8 @@ Types: [ExtensionValue], [PhysicsAxis](#zipzimodelingphysicsphysicsaxis), [Physi
 
 `(*, PhysicsSettingCount: int, TotalInputCount: int, TotalOutputCount: int, VertexCount: int, EffectiveForces: PhysicsForces, PhysicsDictionary: tuple[PhysicsDictionaryEntry, ...], Fps: float | None = None, extensions: _Mapping[str, ExtensionValue])`
 
+Physics format metadata, effective forces, rig dictionary and validated counts.
+
 Types: [ExtensionValue], [PhysicsDictionaryEntry](#zipzimodelingphysicsphysicsdictionaryentry), [PhysicsForces](#zipzimodelingphysicsphysicsforces).
 
 **Fields**
@@ -332,7 +382,7 @@ Types: [ExtensionValue], [PhysicsDictionaryEntry](#zipzimodelingphysicsphysicsdi
 - `VertexCount`: Exported count of Physics nodes, maintained by native validation.
 - `EffectiveForces`: Native effective gravity and wind vectors.
 - `PhysicsDictionary`: Ordered exported Physics rig ID/name metadata.
-- `Fps`: Nominal motion frames per second or explicit Physics fixed-step frequency, as declared by the owner.
+- `Fps`: Optional Physics fixed-step frequency in frames per second; None or zero follows the evaluation delta.
 - `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
 
 ## zipzi.modeling.physics.PhysicsNode
@@ -340,6 +390,8 @@ Types: [ExtensionValue], [PhysicsDictionaryEntry](#zipzimodelingphysicsphysicsdi
 **Type**
 
 `(*, id: str, position: PhysicsVector, mobility: float, delay: float, acceleration: float, radius: float, extensions: _Mapping[str, ExtensionValue])`
+
+Stable Physics rig node with authored position and dynamics coefficients.
 
 Types: [ExtensionValue], [PhysicsVector](#zipzimodelingphysicsphysicsvector).
 
@@ -359,11 +411,13 @@ Types: [ExtensionValue], [PhysicsVector](#zipzimodelingphysicsphysicsvector).
 
 `(*, Position: PhysicsRange, Angle: PhysicsRange, extensions: _Mapping[str, ExtensionValue])`
 
+Position and angle normalization ranges used by a Physics rig.
+
 Types: [ExtensionValue], [PhysicsRange](#zipzimodelingphysicsphysicsrange).
 
 **Fields**
 
-- `Position`: Authored two-dimensional Physics node position or normalization domain, as declared by the field.
+- `Position`: Position normalization range in the native Physics convention.
 - `Angle`: Angle normalization range, in the native Physics coordinate convention.
 - `extensions`: Owned opaque imported fields preserved for format roundtrips; declared fields cannot be shadowed.
 
@@ -373,12 +427,14 @@ Types: [ExtensionValue], [PhysicsRange](#zipzimodelingphysicsphysicsrange).
 
 `(*, id: str, destination: PhysicsTarget, reference_extensions: _Mapping[str, ExtensionValue], node_id: str, scale: float, weight: float, kind: PhysicsAxis, reflect: bool, extensions: _Mapping[str, ExtensionValue])`
 
+Stable Physics output row targeting a parameter and a node.
+
 Types: [ExtensionValue], [PhysicsAxis](#zipzimodelingphysicsphysicsaxis), [PhysicsTarget](#zipzimodelingphysicsphysicstarget).
 
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-- `destination`: Explicit destination owner/container; order is controlled separately by before.
+- `destination`: Parameter receiving this output; unresolved external IDs remain explicit.
 - `reference_extensions`: Owned opaque fields attached to an imported Physics parameter reference.
 - `node_id`: Stable node identity, independent of the node index used by exported Physics JSON.
 - `scale`: Native Physics output multiplier applied to the selected axis.
@@ -392,6 +448,8 @@ Types: [ExtensionValue], [PhysicsAxis](#zipzimodelingphysicsphysicsaxis), [Physi
 **Type**
 
 `(*, raw: float, before: float, after: float, clamped: bool)`
+
+One Physics output before weighting and after application to its target parameter.
 
 **Fields**
 
@@ -422,6 +480,8 @@ Types: [PhysicsAssetProperty](#zipzimodelingphysicsphysicsassetproperty), [Physi
 
 `PhysicsPropertyName | PhysicsPropertyInputWeight | PhysicsPropertyInputAxis | PhysicsPropertyInputReflect | PhysicsPropertyInputParameter | PhysicsPropertyOutputWeight | PhysicsPropertyOutputScale | PhysicsPropertyOutputAxis | PhysicsPropertyOutputReflect | PhysicsPropertyOutputParameter | PhysicsPropertyOutputNode | PhysicsPropertyVertexPosition | PhysicsPropertyVertexRadius | PhysicsPropertyVertexMobility | PhysicsPropertyVertexDelay | PhysicsPropertyVertexAcceleration | PhysicsPropertyPositionNormalization | PhysicsPropertyAngleNormalization`
 
+Typed Physics rig property replacement, targeting stable row or node identities.
+
 Types: [PhysicsPropertyAngleNormalization](#zipzimodelingphysicsphysicspropertyanglenormalization), [PhysicsPropertyInputAxis](#zipzimodelingphysicsphysicspropertyinputaxis), [PhysicsPropertyInputParameter](#zipzimodelingphysicsphysicspropertyinputparameter), [PhysicsPropertyInputReflect](#zipzimodelingphysicsphysicspropertyinputreflect), [PhysicsPropertyInputWeight](#zipzimodelingphysicsphysicspropertyinputweight), [PhysicsPropertyName](#zipzimodelingphysicsphysicspropertyname), [PhysicsPropertyOutputAxis](#zipzimodelingphysicsphysicspropertyoutputaxis), [PhysicsPropertyOutputNode](#zipzimodelingphysicsphysicspropertyoutputnode), [PhysicsPropertyOutputParameter](#zipzimodelingphysicsphysicspropertyoutputparameter), [PhysicsPropertyOutputReflect](#zipzimodelingphysicsphysicspropertyoutputreflect), [PhysicsPropertyOutputScale](#zipzimodelingphysicsphysicspropertyoutputscale), [PhysicsPropertyOutputWeight](#zipzimodelingphysicsphysicspropertyoutputweight), [PhysicsPropertyPositionNormalization](#zipzimodelingphysicsphysicspropertypositionnormalization), [PhysicsPropertyVertexAcceleration](#zipzimodelingphysicsphysicspropertyvertexacceleration), [PhysicsPropertyVertexDelay](#zipzimodelingphysicsphysicspropertyvertexdelay), [PhysicsPropertyVertexMobility](#zipzimodelingphysicsphysicspropertyvertexmobility), [PhysicsPropertyVertexPosition](#zipzimodelingphysicsphysicspropertyvertexposition), [PhysicsPropertyVertexRadius](#zipzimodelingphysicsphysicspropertyvertexradius).
 
 
@@ -430,6 +490,8 @@ Types: [PhysicsPropertyAngleNormalization](#zipzimodelingphysicsphysicspropertya
 **Type**
 
 `(*, value: PhysicsRange)`
+
+Replace the angle normalization range.
 
 Types: [PhysicsRange](#zipzimodelingphysicsphysicsrange).
 
@@ -443,18 +505,22 @@ Types: [PhysicsRange](#zipzimodelingphysicsphysicsrange).
 
 `(*, id: str, value: PhysicsAxis)`
 
+Replace an input channel.
+
 Types: [PhysicsAxis](#zipzimodelingphysicsphysicsaxis).
 
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-- `value`: Channel value or replacement payload in the domain declared by this field type.
+- `value`: Replacement input channel.
 
 ## zipzi.modeling.physics.PhysicsPropertyInputParameter
 
 **Type**
 
 `(*, id: str, target: PhysicsTarget)`
+
+Replace an input parameter target.
 
 Types: [PhysicsTarget](#zipzimodelingphysicsphysicstarget).
 
@@ -469,10 +535,12 @@ Types: [PhysicsTarget](#zipzimodelingphysicsphysicstarget).
 
 `(*, id: str, value: bool)`
 
+Replace an input reflection flag.
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-- `value`: Channel value or replacement payload in the domain declared by this field type.
+- `value`: Whether the input mapping is reflected.
 
 ## zipzi.modeling.physics.PhysicsPropertyInputWeight
 
@@ -480,16 +548,20 @@ Types: [PhysicsTarget](#zipzimodelingphysicsphysicstarget).
 
 `(*, id: str, value: float)`
 
+Replace an input influence percentage.
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-- `value`: Channel value or replacement payload in the domain declared by this field type.
+- `value`: Replacement input influence weight, expressed as a percentage.
 
 ## zipzi.modeling.physics.PhysicsPropertyName
 
 **Type**
 
 `(*, value: str)`
+
+Replace the rig display name.
 
 **Fields**
 
@@ -501,18 +573,22 @@ Types: [PhysicsTarget](#zipzimodelingphysicsphysicstarget).
 
 `(*, id: str, value: PhysicsAxis)`
 
+Replace an output channel.
+
 Types: [PhysicsAxis](#zipzimodelingphysicsphysicsaxis).
 
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-- `value`: Channel value or replacement payload in the domain declared by this field type.
+- `value`: Replacement output channel.
 
 ## zipzi.modeling.physics.PhysicsPropertyOutputNode
 
 **Type**
 
 `(*, id: str, node_id: str)`
+
+Replace an output stable node reference.
 
 **Fields**
 
@@ -524,6 +600,8 @@ Types: [PhysicsAxis](#zipzimodelingphysicsphysicsaxis).
 **Type**
 
 `(*, id: str, target: PhysicsTarget)`
+
+Replace an output parameter target.
 
 Types: [PhysicsTarget](#zipzimodelingphysicsphysicstarget).
 
@@ -538,10 +616,12 @@ Types: [PhysicsTarget](#zipzimodelingphysicsphysicstarget).
 
 `(*, id: str, value: bool)`
 
+Replace an output reflection flag.
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-- `value`: Channel value or replacement payload in the domain declared by this field type.
+- `value`: Whether the output mapping is reflected.
 
 ## zipzi.modeling.physics.PhysicsPropertyOutputScale
 
@@ -549,10 +629,12 @@ Types: [PhysicsTarget](#zipzimodelingphysicsphysicstarget).
 
 `(*, id: str, value: float)`
 
+Replace an output multiplier.
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-- `value`: Channel value or replacement payload in the domain declared by this field type.
+- `value`: Replacement output multiplier.
 
 ## zipzi.modeling.physics.PhysicsPropertyOutputWeight
 
@@ -560,16 +642,20 @@ Types: [PhysicsTarget](#zipzimodelingphysicsphysicstarget).
 
 `(*, id: str, value: float)`
 
+Replace an output influence percentage.
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-- `value`: Channel value or replacement payload in the domain declared by this field type.
+- `value`: Replacement output influence weight, expressed as a percentage.
 
 ## zipzi.modeling.physics.PhysicsPropertyPositionNormalization
 
 **Type**
 
 `(*, value: PhysicsRange)`
+
+Replace the position normalization range.
 
 Types: [PhysicsRange](#zipzimodelingphysicsphysicsrange).
 
@@ -583,10 +669,12 @@ Types: [PhysicsRange](#zipzimodelingphysicsphysicsrange).
 
 `(*, id: str, value: float)`
 
+Replace a node acceleration coefficient.
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-- `value`: Channel value or replacement payload in the domain declared by this field type.
+- `value`: Replacement native Physics acceleration coefficient.
 
 ## zipzi.modeling.physics.PhysicsPropertyVertexDelay
 
@@ -594,10 +682,12 @@ Types: [PhysicsRange](#zipzimodelingphysicsphysicsrange).
 
 `(*, id: str, value: float)`
 
+Replace a node delay coefficient.
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-- `value`: Channel value or replacement payload in the domain declared by this field type.
+- `value`: Replacement native Physics delay coefficient.
 
 ## zipzi.modeling.physics.PhysicsPropertyVertexMobility
 
@@ -605,10 +695,12 @@ Types: [PhysicsRange](#zipzimodelingphysicsphysicsrange).
 
 `(*, id: str, value: float)`
 
+Replace a node mobility coefficient.
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-- `value`: Channel value or replacement payload in the domain declared by this field type.
+- `value`: Replacement native Physics mobility coefficient.
 
 ## zipzi.modeling.physics.PhysicsPropertyVertexPosition
 
@@ -616,12 +708,14 @@ Types: [PhysicsRange](#zipzimodelingphysicsphysicsrange).
 
 `(*, id: str, value: PhysicsVector)`
 
+Replace an authored node position.
+
 Types: [PhysicsVector](#zipzimodelingphysicsphysicsvector).
 
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-- `value`: Channel value or replacement payload in the domain declared by this field type.
+- `value`: Replacement node position in the native Physics convention.
 
 ## zipzi.modeling.physics.PhysicsPropertyVertexRadius
 
@@ -629,16 +723,20 @@ Types: [PhysicsVector](#zipzimodelingphysicsphysicsvector).
 
 `(*, id: str, value: float)`
 
+Replace a node segment length/radius.
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
-- `value`: Channel value or replacement payload in the domain declared by this field type.
+- `value`: Replacement native Physics node segment length/radius.
 
 ## zipzi.modeling.physics.PhysicsRange
 
 **Type**
 
 `(*, Minimum: float, Default: float, Maximum: float)`
+
+Minimum, default and maximum of one Physics normalization range.
 
 **Fields**
 
@@ -651,6 +749,8 @@ Types: [PhysicsVector](#zipzimodelingphysicsphysicsvector).
 **Type**
 
 `(*, group_id: str, changes: tuple[PhysicsProperty, ...])`
+
+Atomic ordered property changes for one Physics rig.
 
 Types: [PhysicsProperty](#zipzimodelingphysicsphysicsproperty).
 
@@ -689,6 +789,8 @@ gravity direction with rotating input axes.
 
 `(*, id: str, external_id: str, inputs: tuple[PhysicsInput, ...], outputs: tuple[PhysicsOutput, ...], vertices: tuple[PhysicsNode, ...], normalization: PhysicsNormalization, extensions: _Mapping[str, ExtensionValue])`
 
+Authored Physics rig with ordered inputs, outputs and stable node chain.
+
 Types: [ExtensionValue], [PhysicsInput](#zipzimodelingphysicsphysicsinput), [PhysicsNode](#zipzimodelingphysicsphysicsnode), [PhysicsNormalization](#zipzimodelingphysicsphysicsnormalization), [PhysicsOutput](#zipzimodelingphysicsphysicsoutput).
 
 **Fields**
@@ -707,6 +809,8 @@ Types: [ExtensionValue], [PhysicsInput](#zipzimodelingphysicsphysicsinput), [Phy
 
 `PhysicsTargetUnspecified | PhysicsTargetResolved | PhysicsTargetUnresolved`
 
+Optional resolved or unresolved parameter target for Physics input or output.
+
 Types: [PhysicsTargetResolved](#zipzimodelingphysicsphysicstargetresolved), [PhysicsTargetUnresolved](#zipzimodelingphysicsphysicstargetunresolved), [PhysicsTargetUnspecified](#zipzimodelingphysicsphysicstargetunspecified).
 
 
@@ -715,6 +819,8 @@ Types: [PhysicsTargetResolved](#zipzimodelingphysicsphysicstargetresolved), [Phy
 **Type**
 
 `(*, parameter_id: str)`
+
+Use a stable document parameter ID.
 
 **Fields**
 
@@ -726,6 +832,8 @@ Types: [PhysicsTargetResolved](#zipzimodelingphysicsphysicstargetresolved), [Phy
 
 `(*, runtime_id: str)`
 
+Preserve an unresolved external parameter runtime ID.
+
 **Fields**
 
 - `runtime_id`: Imported/exported runtime label, distinct from the document object UUID.
@@ -736,12 +844,16 @@ Types: [PhysicsTargetResolved](#zipzimodelingphysicsphysicstargetresolved), [Phy
 
 `()`
 
+No parameter target is specified.
+
 
 ## zipzi.modeling.physics.PhysicsVector
 
 **Type**
 
 `(*, X: float, Y: float)`
+
+Two components in the native Physics coordinate convention.
 
 **Fields**
 

@@ -16,7 +16,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
                             'signature': ''},
  'zipzi.modeling.preview.PreviewBatch': {'children': ('zipzi.modeling.preview.PreviewBatch.__repr__',
                                                       'zipzi.modeling.preview.PreviewBatch.summary'),
-                                         'documentation': '',
+                                         'documentation': 'Ordered results from one Preview sample request against its '
+                                                          'frozen source.',
                                          'fields': [('texture_report',
                                                      'Verified texture content for a View; None for CPU-only '
                                                      'sampling.'),
@@ -43,7 +44,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewBatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.preview.PreviewBatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.preview.PreviewCommand': {'children': (),
-                                           'documentation': '',
+                                           'documentation': 'Typed control applied to one frozen-source Preview '
+                                                            'without publishing authored changes.',
                                            'fields': [],
                                            'kind': 'alias',
                                            'signature': 'PreviewCommandSetParameter | PreviewCommandScheduleMotion | '
@@ -60,7 +62,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
                                                          'zipzi.modeling.preview.PreviewCommandSetPhysics')},
  'zipzi.modeling.preview.PreviewCommandReset': {'children': ('zipzi.modeling.preview.PreviewCommandReset.__repr__',
                                                              'zipzi.modeling.preview.PreviewCommandReset.summary'),
-                                                'documentation': '',
+                                                'documentation': 'Reset this Preview playback state.',
                                                 'fields': [],
                                                 'kind': 'type',
                                                 'signature': '()'},
@@ -68,7 +70,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandReset.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.preview.PreviewCommandScheduleExpression': {'children': ('zipzi.modeling.preview.PreviewCommandScheduleExpression.__repr__',
                                                                           'zipzi.modeling.preview.PreviewCommandScheduleExpression.summary'),
-                                                             'documentation': '',
+                                                             'documentation': 'Schedule an expression asset.',
                                                              'fields': [('id', 'Native expression asset UUID.'),
                                                                         ('time',
                                                                          'Absolute activation time in seconds on this '
@@ -79,7 +81,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandScheduleExpression.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.preview.PreviewCommandScheduleMotion': {'children': ('zipzi.modeling.preview.PreviewCommandScheduleMotion.__repr__',
                                                                       'zipzi.modeling.preview.PreviewCommandScheduleMotion.summary'),
-                                                         'documentation': '',
+                                                         'documentation': 'Schedule a clip using its own fades.',
                                                          'fields': [('id', "Clip UUID; uses the clip's own fades."),
                                                                     ('time',
                                                                      'Absolute activation time in seconds on this '
@@ -90,7 +92,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandScheduleMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.preview.PreviewCommandScheduleParameter': {'children': ('zipzi.modeling.preview.PreviewCommandScheduleParameter.__repr__',
                                                                          'zipzi.modeling.preview.PreviewCommandScheduleParameter.summary'),
-                                                            'documentation': '',
+                                                            'documentation': 'Schedule a parameter input on the '
+                                                                             'Preview clock.',
                                                             'fields': [('id',
                                                                         'Document parameter UUID for an SDK input '
                                                                         'activation.'),
@@ -106,7 +109,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandScheduleParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.preview.PreviewCommandScheduleRegistration': {'children': ('zipzi.modeling.preview.PreviewCommandScheduleRegistration.__repr__',
                                                                             'zipzi.modeling.preview.PreviewCommandScheduleRegistration.summary'),
-                                                               'documentation': '',
+                                                               'documentation': 'Schedule a motion registration using '
+                                                                                'its fade overrides.',
                                                                'fields': [('id',
                                                                            "Registration UUID; uses the registration's "
                                                                            'SDK fade overrides.'),
@@ -119,7 +123,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandScheduleRegistration.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.preview.PreviewCommandSetParameter': {'children': ('zipzi.modeling.preview.PreviewCommandSetParameter.__repr__',
                                                                     'zipzi.modeling.preview.PreviewCommandSetParameter.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Set a base parameter value for this Preview.',
                                                        'fields': [('id',
                                                                    'Document parameter UUID; the SDK validates '
                                                                    'existence and domain.'),
@@ -132,7 +136,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandSetParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.preview.PreviewCommandSetPhysics': {'children': ('zipzi.modeling.preview.PreviewCommandSetPhysics.__repr__',
                                                                   'zipzi.modeling.preview.PreviewCommandSetPhysics.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'Configure the Preview Physics stage and '
+                                                                      'stabilized-start policy.',
                                                      'fields': [('enabled',
                                                                  'Enable the SDK Physics stage in this Preview only.'),
                                                                 ('stabilized_start',
@@ -144,7 +149,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandSetPhysics.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.preview.PreviewFrame': {'children': ('zipzi.modeling.preview.PreviewFrame.__repr__',
                                                       'zipzi.modeling.preview.PreviewFrame.summary'),
-                                         'documentation': '',
+                                         'documentation': 'One sampled Preview target, with optional CPU geometry, '
+                                                          'spatial results and GPU observation.',
                                          'fields': [('observation',
                                                      'Optional GPU image from this exact animation state and '
                                                      'once-resolved batch textures.'),
@@ -177,7 +183,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewFrame.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.preview.PreviewState': {'children': ('zipzi.modeling.preview.PreviewState.__repr__',
                                                       'zipzi.modeling.preview.PreviewState.summary'),
-                                         'documentation': '',
+                                         'documentation': 'Accepted Preview operation ordinal and current playback '
+                                                          'clock.',
                                          'fields': [('sequence',
                                                      'Monotonic accepted operation ordinal, including cancelled sample '
                                                      'requests.'),

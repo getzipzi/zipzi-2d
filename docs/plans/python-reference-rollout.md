@@ -691,3 +691,32 @@ zipzi-contract`；计划列出的 PSD 导入/保存/替换/导出、缺失资源
 不表示保存，导出后 Session 仍 modified；新增无轴绑定的 CMO3 测试确认默认拒绝时返回
 `EXPORT_LOSS` 和诊断报告，`allow_loss=True` 可发布且不改变历史。离线 format 检查
 扩展类型及导出报告提示，未加载 native/GPU。
+
+## 17. P6 动画、Preview 和 CPU 采样结构检查（2026-11-02）
+
+状态：P6 **结构门禁与指定 CPU 数值行为证据通过，完整语义审阅待复核**。仍需逐项核实
+所有物理量、资产编辑和播放组合，及其与 P7 observation/inspection 的交互；不把非空摘要
+或 CPU 成功解释为 GPU/Editor 验收。
+
+范围为 `animation`、`sampling`、`modeling_motion`、`modeling_expression`、
+`modeling_physics`、`modeling_pose`、`modeling_preview`、`modeling_sampling`，以及
+Session/Edit 的 Preview/采样入口。Rust contract 的 animation、motion、expression、Pose、
+Physics、preview 和 sampling 声明维护类型与分支语义；Preview 方法本身说明绝对时钟时间以秒
+计、冻结 Source、独立状态、seek/advance/sample、Job 与取消边界。补充普通曲线与
+InverseStepped 的端点行为、Expression 混合方式、稳定 key/registration/entry 身份、
+Physics 输入/输出百分比权重与各自的原生量纲、稳定 node ID 与导出索引区别、模型坐标与
+绘制索引/顶点 ID 区别，以及采样质量相对同源默认姿态的限制。修正 motion unresolved target
+误称 Physics、Physics 输出目标误称容器等字段说明，没有改变运行行为。
+
+`sampling.RenderKind` 是将 Rust render-command union 投影为 Python enum 的特殊表示；其类与
+成员说明由同一 contract union/分支生成，来源变更测试检查 Python、catalog、reference。
+P6 类型摘要缺口 182 → 0、union 分支诊断 226 → 0、enum 成员诊断 12 → 0；全局缺口
+202 → 20，稳定债务键移除 602 项、无新增。本批八页加入独立结构门禁。
+比较这八页及 runtime_session、runtime_edit、common，相同 351 个标题，正文 172,323 →
+181,923 字符，新增为分支、字段和导航说明；共享规则正文未新增重复。字符变化不证明
+语义已全部验收。
+
+已运行无缓存生成、reference tooling、`cargo test --locked -p zipzi-contract`；计划指定的
+动画资产/地址/sidecar、独立 Preview 数值和候选源、旋转基底三项 Python 测试均通过
+Local/Connected 与静态类型检查。离线 format 检查 Preview 秒制时间和 Motion 分段，且不
+加载 native/GPU。尚未运行全量 SDK、GPU 或真实 Editor 服务门禁。

@@ -57,8 +57,9 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
                                        'type_refs': ('zipzi.animation.Preview',)},
  'zipzi.animation.Preview.__exit__': {'alias': 'zipzi.Buffer.__exit__'},
  'zipzi.animation.Preview.advance_to': {'children': (),
-                                        'documentation': 'Submit SDK canonical incremental playback. Cancellation may '
-                                                         'retain completed simulation steps; discard cancelled output. '
+                                        'documentation': 'Submit SDK canonical incremental playback to an absolute '
+                                                         'Preview-clock time in seconds. Cancellation may retain '
+                                                         'completed simulation steps; discard cancelled output. '
                                                          'Backward targets use canonical seek.',
                                         'fields': [],
                                         'kind': 'callable',
@@ -116,8 +117,8 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
                                   'type_refs': ('zipzi.Snapshot', 'zipzi.modeling.preview.PreviewState')},
  'zipzi.animation.Preview.pending_request': {'alias': 'zipzi.Buffer.pending_request'},
  'zipzi.animation.Preview.sample': {'children': (),
-                                    'documentation': 'Submit canonical seeks in target order; wait for a frozen-source '
-                                                     'batch.\n'
+                                    'documentation': 'Submit canonical seeks at absolute Preview-clock times in '
+                                                     'seconds, in target order; wait for a frozen-source batch.\n'
                                                      '\n'
                                                      'View batches use the host observation frame limit; CPU-only '
                                                      'batches allow\n'
@@ -151,9 +152,10 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
                                                   'zipzi.modeling.preview.PreviewBatch',
                                                   'zipzi.modeling.spatial.SpatialQuery')},
  'zipzi.animation.Preview.seek': {'children': (),
-                                  'documentation': 'Submit one canonical seek and return a one-frame batch Job; an '
-                                                   'interrupted SDK seek preserves its prior state; late cancellation '
-                                                   'reports the completed outcome.',
+                                  'documentation': 'Submit one canonical seek to an absolute Preview-clock time in '
+                                                   'seconds and return a one-frame batch Job; an interrupted SDK seek '
+                                                   'preserves its prior state; late cancellation reports the completed '
+                                                   'outcome.',
                                   'fields': [],
                                   'kind': 'callable',
                                   'signature': '(time: float, *, geometry: bool=True, queries: '

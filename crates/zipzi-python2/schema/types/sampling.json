@@ -30,6 +30,7 @@
       "tuple": false
     },
     "zipzi_contract::authoring::GeometryChecks": {
+      "doc": "Optional authored-geometry diagnostics and per-pose CPU mesh quality checks.",
       "fields": [
         {
           "default": 0.0,
@@ -72,6 +73,7 @@
       "tuple": false
     },
     "zipzi_contract::authoring::GeometryDiagnostic": {
+      "doc": "Geometry diagnostic for a stable mesh and, when applicable, a triangle slot.",
       "fields": [
         {
           "doc": "Typed geometry diagnostic category.",
@@ -113,23 +115,27 @@
     },
     "zipzi_contract::authoring::GeometryDiagnosticKind": {
       "content": null,
+      "doc": "Category of an authored mesh geometry diagnostic.",
       "kind": "serde_enum",
       "name": "zipzi_contract::authoring::GeometryDiagnosticKind",
       "tag": null,
       "variants": [
         {
+          "doc": "Triangle area falls below the requested authored-space threshold.",
           "fields": [],
           "form": "unit",
           "name": "SmallTriangle",
           "rust_name": "SmallTriangle"
         },
         {
+          "doc": "Triangle winding differs from the mesh winding.",
           "fields": [],
           "form": "unit",
           "name": "InconsistentWinding",
           "rust_name": "InconsistentWinding"
         },
         {
+          "doc": "Root mesh extends outside the requested model bounds.",
           "fields": [],
           "form": "unit",
           "name": "OutsideModelBounds",
@@ -138,6 +144,7 @@
       ]
     },
     "zipzi_contract::authoring::GeometrySnapshot": {
+      "doc": "Authored mesh geometry with stable vertex IDs and an explicit coordinate space.",
       "fields": [
         {
           "doc": "Exact SDK version captured for this value; not a best-effort latest-version marker.",
@@ -245,17 +252,20 @@
     },
     "zipzi_contract::authoring::GeometrySpace": {
       "content": null,
+      "doc": "Coordinate space of authoring geometry positions, selected by deformation context.",
       "kind": "serde_enum",
       "name": "zipzi_contract::authoring::GeometrySpace",
       "tag": null,
       "variants": [
         {
+          "doc": "Root model coordinate space.",
           "fields": [],
           "form": "unit",
           "name": "Model",
           "rust_name": "Model"
         },
         {
+          "doc": "Local space of the specified Rotation transform.",
           "fields": [
             {
               "doc": "Stable rotation-transform ID defining the local position space.",
@@ -272,6 +282,7 @@
           "rust_name": "RotationLocal"
         },
         {
+          "doc": "Parameter/lattice space of the specified Warp transform.",
           "fields": [
             {
               "doc": "Stable warp-transform ID defining the parameter/lattice position space.",
@@ -290,6 +301,7 @@
       ]
     },
     "zipzi_contract::authoring::MeshQuality": {
+      "doc": "Per-mesh evaluated triangle quality for one sampled pose.",
       "fields": [
         {
           "doc": "Stable document mesh ID, in evaluated drawable order.",
@@ -409,6 +421,7 @@
       "tuple": false
     },
     "zipzi_contract::authoring::ModelingSamples": {
+      "doc": "Ordered CPU sample frames, effective parameters and optional geometry diagnostics.",
       "fields": [
         {
           "doc": "Exact SDK version captured for this value; not a best-effort latest-version marker.",
@@ -485,6 +498,7 @@
       "tuple": false
     },
     "zipzi_contract::authoring::TriangleQuality": {
+      "doc": "Evaluated triangle metrics relative to a frozen default-pose reference.",
       "fields": [
         {
           "doc": "Zero-based triangle offset, in the sampled drawable's index order.",
@@ -559,6 +573,7 @@
       "tuple": false
     },
     "zipzi_contract::evaluation::Drawable": {
+      "doc": "One evaluated mesh drawable with model-space geometry and rendering attributes.",
       "fields": [
         {
           "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
@@ -790,6 +805,7 @@
       "tuple": false
     },
     "zipzi_contract::evaluation::DrawableFrame": {
+      "doc": "CPU-evaluated geometry, deformers and render plan for one pose.",
       "fields": [
         {
           "doc": "Revision used to evaluate this immutable snapshot; later name edits may reuse it.",
@@ -872,6 +888,7 @@
       "tuple": false
     },
     "zipzi_contract::evaluation::EvaluatedDeformer": {
+      "doc": "Evaluated deformer control points and optional Rotation basis in model space.",
       "fields": [
         {
           "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
@@ -943,6 +960,7 @@
       "tuple": false
     },
     "zipzi_contract::evaluation::EvaluatedParameter": {
+      "doc": "Requested and effective parameter value for one evaluated pose.",
       "fields": [
         {
           "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
@@ -987,6 +1005,7 @@
       "tuple": false
     },
     "zipzi_contract::evaluation::OffscreenFrame": {
+      "doc": "Evaluated Offscreen compositing state for one pose.",
       "fields": [
         {
           "default": true,
@@ -1129,11 +1148,13 @@
     },
     "zipzi_contract::evaluation::RenderCommand": {
       "content": null,
+      "doc": "Ordered rendering instruction; Offscreen begin/end delimit compositing scopes.",
       "kind": "serde_enum",
       "name": "zipzi_contract::evaluation::RenderCommand",
       "tag": null,
       "variants": [
         {
+          "doc": "Begin a named Offscreen compositing scope.",
           "fields": [
             {
               "doc": "Stable Offscreen object ID; not a texture asset ID.",
@@ -1150,6 +1171,7 @@
           "rust_name": "BeginOffscreen"
         },
         {
+          "doc": "Draw a named evaluated mesh.",
           "fields": [
             {
               "doc": "Stable ID of the target mesh in this document.",
@@ -1166,6 +1188,7 @@
           "rust_name": "DrawMesh"
         },
         {
+          "doc": "End a named Offscreen compositing scope.",
           "fields": [
             {
               "doc": "Stable Offscreen object ID; not a texture asset ID.",

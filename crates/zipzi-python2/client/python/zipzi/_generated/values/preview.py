@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PreviewCommandSetParameter(CompactValue):
-    "\n\nFields:\nid: Document parameter UUID; the SDK validates existence and domain.\nvalue: Finite base value in the parameter's authored domain."
+    "Set a base parameter value for this Preview.\n\nFields:\nid: Document parameter UUID; the SDK validates existence and domain.\nvalue: Finite base value in the parameter's authored domain."
     _variant: _ClassVar[str] = 'set_parameter'
     id: str
     value: float
@@ -25,7 +25,7 @@ PreviewCommandSetParameter.__module__ = "zipzi.modeling.preview"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PreviewCommandScheduleMotion(CompactValue):
-    "\n\nFields:\nid: Clip UUID; uses the clip's own fades.\ntime: Absolute activation time in seconds on this Preview's clock."
+    "Schedule a clip using its own fades.\n\nFields:\nid: Clip UUID; uses the clip's own fades.\ntime: Absolute activation time in seconds on this Preview's clock."
     _variant: _ClassVar[str] = 'schedule_motion'
     id: str
     time: float
@@ -34,7 +34,7 @@ PreviewCommandScheduleMotion.__module__ = "zipzi.modeling.preview"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PreviewCommandScheduleRegistration(CompactValue):
-    "\n\nFields:\nid: Registration UUID; uses the registration's SDK fade overrides.\ntime: Absolute activation time in seconds on this Preview's clock."
+    "Schedule a motion registration using its fade overrides.\n\nFields:\nid: Registration UUID; uses the registration's SDK fade overrides.\ntime: Absolute activation time in seconds on this Preview's clock."
     _variant: _ClassVar[str] = 'schedule_registration'
     id: str
     time: float
@@ -43,7 +43,7 @@ PreviewCommandScheduleRegistration.__module__ = "zipzi.modeling.preview"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PreviewCommandScheduleExpression(CompactValue):
-    "\n\nFields:\nid: Native expression asset UUID.\ntime: Absolute activation time in seconds on this Preview's clock."
+    "Schedule an expression asset.\n\nFields:\nid: Native expression asset UUID.\ntime: Absolute activation time in seconds on this Preview's clock."
     _variant: _ClassVar[str] = 'schedule_expression'
     id: str
     time: float
@@ -52,7 +52,7 @@ PreviewCommandScheduleExpression.__module__ = "zipzi.modeling.preview"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PreviewCommandScheduleParameter(CompactValue):
-    "\n\nFields:\nid: Document parameter UUID for an SDK input activation.\ntime: Absolute activation time in seconds on this Preview's clock.\nvalue: Finite parameter input in the authored parameter domain."
+    "Schedule a parameter input on the Preview clock.\n\nFields:\nid: Document parameter UUID for an SDK input activation.\ntime: Absolute activation time in seconds on this Preview's clock.\nvalue: Finite parameter input in the authored parameter domain."
     _variant: _ClassVar[str] = 'schedule_parameter'
     id: str
     time: float
@@ -62,7 +62,7 @@ PreviewCommandScheduleParameter.__module__ = "zipzi.modeling.preview"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PreviewCommandSetPhysics(CompactValue):
-    '\n\nFields:\nenabled: Enable the SDK Physics stage in this Preview only.\nstabilized_start: Use the SDK stabilized-start policy on canonical replay.'
+    'Configure the Preview Physics stage and stabilized-start policy.\n\nFields:\nenabled: Enable the SDK Physics stage in this Preview only.\nstabilized_start: Use the SDK stabilized-start policy on canonical replay.'
     _variant: _ClassVar[str] = 'set_physics'
     enabled: bool
     stabilized_start: bool
@@ -71,7 +71,7 @@ PreviewCommandSetPhysics.__module__ = "zipzi.modeling.preview"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PreviewCommandReset(CompactValue):
-    ''
+    'Reset this Preview playback state.'
     _variant: _ClassVar[str] = 'reset'
 
 PreviewCommandReset.__module__ = "zipzi.modeling.preview"
@@ -80,7 +80,7 @@ PreviewCommand: TypeAlias = PreviewCommandSetParameter | PreviewCommandScheduleM
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PreviewState(CompactValue):
-    '\n\nFields:\nsequence: Monotonic accepted operation ordinal, including cancelled sample requests.\ntime: Actual SDK clock after the last completed operation, in seconds.'
+    'Accepted Preview operation ordinal and current playback clock.\n\nFields:\nsequence: Monotonic accepted operation ordinal, including cancelled sample requests.\ntime: Actual SDK clock after the last completed operation, in seconds.'
     sequence: int
     time: float
 
@@ -88,7 +88,7 @@ PreviewState.__module__ = "zipzi.modeling.preview"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PreviewBatch(CompactValue):
-    '\n\nFields:\ntexture_report: Verified texture content for a View; None for CPU-only sampling.\nview: Explicit image view when GPU observation was requested; None keeps CPU-only behavior.\nqueries: Owned geometric query descriptors aligned with every frame.spatial slot.\nsequence: Accepted sample request ordinal shared by these ordered frames.\nframes: Owned frames in requested target order, retaining duplicate and backward targets.'
+    'Ordered results from one Preview sample request against its frozen source.\n\nFields:\ntexture_report: Verified texture content for a View; None for CPU-only sampling.\nview: Explicit image view when GPU observation was requested; None keeps CPU-only behavior.\nqueries: Owned geometric query descriptors aligned with every frame.spatial slot.\nsequence: Accepted sample request ordinal shared by these ordered frames.\nframes: Owned frames in requested target order, retaining duplicate and backward targets.'
     texture_report: (ObservationTextureReport | None) = None
     view: (ObservationView | None) = None
     queries: tuple[SpatialQuery, ...]
@@ -103,7 +103,7 @@ PreviewBatch.__module__ = "zipzi.modeling.preview"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PreviewFrame(CompactValue):
-    '\n\nFields:\nobservation: Optional GPU image from this exact animation state and once-resolved batch textures.\nspatial: Geometric query results in the corresponding request order, from this exact SDK state.\npreview_id: Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.\nsequence: Accepted sample request ordinal; pair with the outer Source and Preview identity.\nindex: Zero-based target slot in the ordered sample request.\nmotion: SDK Motion/Expression/Physics/Pose result and actual sample coordinates.\ngeometry: Evaluated CPU geometry when requested; model_opacity remains a separate SDK channel.'
+    'One sampled Preview target, with optional CPU geometry, spatial results and GPU observation.\n\nFields:\nobservation: Optional GPU image from this exact animation state and once-resolved batch textures.\nspatial: Geometric query results in the corresponding request order, from this exact SDK state.\npreview_id: Runtime-wide Preview serial; pair with the outer Source.runtime for view identity.\nsequence: Accepted sample request ordinal; pair with the outer Source and Preview identity.\nindex: Zero-based target slot in the ordered sample request.\nmotion: SDK Motion/Expression/Physics/Pose result and actual sample coordinates.\ngeometry: Evaluated CPU geometry when requested; model_opacity remains a separate SDK channel.'
     observation: (ObservationImage | None) = None
     spatial: tuple[SpatialResult, ...]
     preview_id: int

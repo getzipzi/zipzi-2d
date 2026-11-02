@@ -2,6 +2,7 @@
   "_generated_by": "zipzi-python2/tools/generate.py",
   "definitions": {
     "zipzi_contract::document::PoseAsset": {
+      "doc": "Authored Pose singleton with groups and optional fade settings.",
       "fields": [
         {
           "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -100,17 +101,20 @@
     },
     "zipzi_contract::document::PoseCollection": {
       "content": null,
+      "doc": "Select a Pose group, entry or link collection.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::PoseCollection",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Select Pose groups.",
           "fields": [],
           "form": "unit",
           "name": "groups",
           "rust_name": "Groups"
         },
         {
+          "doc": "Select entries in one group.",
           "fields": [
             {
               "doc": "Stable ID of the group owning the affected rows or node chain.",
@@ -127,6 +131,7 @@
           "rust_name": "Entries"
         },
         {
+          "doc": "Select links in one entry.",
           "fields": [
             {
               "doc": "Stable ID of the owning entry; links remain owned by that entry.",
@@ -146,11 +151,13 @@
     },
     "zipzi_contract::document::PoseEdit": {
       "content": null,
+      "doc": "Create, move, patch or delete Pose assets and owned rows.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::PoseEdit",
       "tag": "operation",
       "variants": [
         {
+          "doc": "Create the Pose singleton.",
           "fields": [
             {
               "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -215,6 +222,7 @@
           "rust_name": "CreateGroup"
         },
         {
+          "doc": "Create an entry in a group.",
           "fields": [
             {
               "doc": "Stable ID of the group owning the affected rows or node chain.",
@@ -253,6 +261,7 @@
           "rust_name": "CreateEntry"
         },
         {
+          "doc": "Create a link owned by an entry.",
           "fields": [
             {
               "doc": "Stable ID of the owning entry; links remain owned by that entry.",
@@ -291,6 +300,7 @@
           "rust_name": "CreateLink"
         },
         {
+          "doc": "Replace matching fields under an exact precondition.",
           "fields": [
             {
               "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -327,6 +337,7 @@
           "rust_name": "Patch"
         },
         {
+          "doc": "Move selected owned identities to a compatible collection.",
           "fields": [
             {
               "doc": "Ordered stable IDs selected by this operation; names and row numbers are not identities.",
@@ -369,6 +380,7 @@
           "rust_name": "Move"
         },
         {
+          "doc": "Duplicate selected owned identities into a compatible collection.",
           "fields": [
             {
               "doc": "Ordered stable IDs selected by this operation; names and row numbers are not identities.",
@@ -411,6 +423,7 @@
           "rust_name": "Duplicate"
         },
         {
+          "doc": "Delete selected Pose identities.",
           "fields": [
             {
               "doc": "Ordered stable IDs selected by this operation; names and row numbers are not identities.",
@@ -471,6 +484,7 @@
       ]
     },
     "zipzi_contract::document::PoseEntry": {
+      "doc": "Stable Pose group entry with a Part target and optional links.",
       "fields": [
         {
           "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -528,11 +542,13 @@
     },
     "zipzi_contract::document::PoseFields": {
       "content": null,
+      "doc": "Typed replacement fields for a Pose asset or owned row.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::PoseFields",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Replace Pose asset fade settings.",
           "fields": [
             {
               "default": null,
@@ -553,6 +569,7 @@
           "rust_name": "Asset"
         },
         {
+          "doc": "Replace a Pose group label.",
           "fields": [
             {
               "doc": "Human-readable display or registration name; distinct from persistent object identity.",
@@ -569,6 +586,7 @@
           "rust_name": "Group"
         },
         {
+          "doc": "Replace an entry Part reference.",
           "fields": [
             {
               "doc": "Typed resolved/unresolved Part reference retained by the Pose entry or link.",
@@ -586,6 +604,7 @@
           "rust_name": "Entry"
         },
         {
+          "doc": "Replace a link Part target.",
           "fields": [
             {
               "doc": "Typed target reference; unresolved imported runtime labels remain explicit.",
@@ -605,6 +624,7 @@
       ]
     },
     "zipzi_contract::document::PoseGroup": {
+      "doc": "Ordered Pose entries sharing a named group.",
       "fields": [
         {
           "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -644,6 +664,7 @@
       "tuple": false
     },
     "zipzi_contract::document::PoseLink": {
+      "doc": "Stable link from a Pose entry to another Part target.",
       "fields": [
         {
           "doc": "Stable identity in the owning authoring domain; exported metadata IDs retain their source text.",
@@ -672,17 +693,20 @@
     },
     "zipzi_contract::document::PosePartRef": {
       "content": null,
+      "doc": "Optional resolved or unresolved Part target in Pose data.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::PosePartRef",
       "tag": "kind",
       "variants": [
         {
+          "doc": "No Part target is specified.",
           "fields": [],
           "form": "unit",
           "name": "unspecified",
           "rust_name": "Unspecified"
         },
         {
+          "doc": "Target a stable document Part.",
           "fields": [
             {
               "doc": "Stable document Part UUID for this opacity or visibility reference.",
@@ -699,6 +723,7 @@
           "rust_name": "Resolved"
         },
         {
+          "doc": "Preserve an unresolved external Part runtime ID.",
           "fields": [
             {
               "doc": "Imported/exported runtime label, distinct from the document object UUID.",

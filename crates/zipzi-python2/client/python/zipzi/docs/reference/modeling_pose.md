@@ -20,6 +20,8 @@ Canonical pose modeling values.
 
 `(*, id: str, file_type: str | None = None, fade_in: float | None = None, groups: tuple[PoseGroup, ...], extensions: _Mapping[str, ExtensionValue], opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
 
+Authored Pose singleton with groups and optional fade settings.
+
 Types: [ExtensionValue], [PoseGroup](#zipzimodelingposeposegroup).
 
 **Fields**
@@ -38,6 +40,8 @@ Types: [ExtensionValue], [PoseGroup](#zipzimodelingposeposegroup).
 
 `PoseCollectionGroups | PoseCollectionEntries | PoseCollectionLinks`
 
+Select a Pose group, entry or link collection.
+
 Types: [PoseCollectionEntries](#zipzimodelingposeposecollectionentries), [PoseCollectionGroups](#zipzimodelingposeposecollectiongroups), [PoseCollectionLinks](#zipzimodelingposeposecollectionlinks).
 
 
@@ -46,6 +50,8 @@ Types: [PoseCollectionEntries](#zipzimodelingposeposecollectionentries), [PoseCo
 **Type**
 
 `(*, group_id: str)`
+
+Select entries in one group.
 
 **Fields**
 
@@ -57,12 +63,16 @@ Types: [PoseCollectionEntries](#zipzimodelingposeposecollectionentries), [PoseCo
 
 `()`
 
+Select Pose groups.
+
 
 ## zipzi.modeling.pose.PoseCollectionLinks
 
 **Type**
 
 `(*, entry_id: str)`
+
+Select links in one entry.
 
 **Fields**
 
@@ -74,6 +84,8 @@ Types: [PoseCollectionEntries](#zipzimodelingposeposecollectionentries), [PoseCo
 
 `PoseEditCreate | PoseEditCreateGroup | PoseEditCreateEntry | PoseEditCreateLink | PoseEditPatch | PoseEditMove | PoseEditDuplicate | PoseEditDelete | PoseEditDissolveGroup`
 
+Create, move, patch or delete Pose assets and owned rows.
+
 Types: [PoseEditCreate](#zipzimodelingposeposeeditcreate), [PoseEditCreateEntry](#zipzimodelingposeposeeditcreateentry), [PoseEditCreateGroup](#zipzimodelingposeposeeditcreategroup), [PoseEditCreateLink](#zipzimodelingposeposeeditcreatelink), [PoseEditDelete](#zipzimodelingposeposeeditdelete), [PoseEditDissolveGroup](#zipzimodelingposeposeeditdissolvegroup), [PoseEditDuplicate](#zipzimodelingposeposeeditduplicate), [PoseEditMove](#zipzimodelingposeposeeditmove), [PoseEditPatch](#zipzimodelingposeposeeditpatch).
 
 
@@ -82,6 +94,8 @@ Types: [PoseEditCreate](#zipzimodelingposeposeeditcreate), [PoseEditCreateEntry]
 **Type**
 
 `(*, id: str)`
+
+Create the Pose singleton.
 
 **Fields**
 
@@ -92,6 +106,8 @@ Types: [PoseEditCreate](#zipzimodelingposeposeeditcreate), [PoseEditCreateEntry]
 **Type**
 
 `(*, group_id: str, id: str, before: str | None = None)`
+
+Create an entry in a group.
 
 **Fields**
 
@@ -120,6 +136,8 @@ Also creates the singleton when absent, in the same transaction.
 
 `(*, entry_id: str, id: str, before: str | None = None)`
 
+Create a link owned by an entry.
+
 **Fields**
 
 - `entry_id`: Stable ID of the owning entry; links remain owned by that entry.
@@ -131,6 +149,8 @@ Also creates the singleton when absent, in the same transaction.
 **Type**
 
 `(*, ids: tuple[str, ...])`
+
+Delete selected Pose identities.
 
 **Fields**
 
@@ -156,6 +176,8 @@ A Pose group has no root member container; a receiving group is required.
 
 `(*, ids: tuple[str, ...], destination: PoseCollection, before: str | None = None)`
 
+Duplicate selected owned identities into a compatible collection.
+
 Types: [PoseCollection](#zipzimodelingposeposecollection).
 
 **Fields**
@@ -169,6 +191,8 @@ Types: [PoseCollection](#zipzimodelingposeposecollection).
 **Type**
 
 `(*, ids: tuple[str, ...], destination: PoseCollection, before: str | None = None)`
+
+Move selected owned identities to a compatible collection.
 
 Types: [PoseCollection](#zipzimodelingposeposecollection).
 
@@ -184,6 +208,8 @@ Types: [PoseCollection](#zipzimodelingposeposecollection).
 
 `(*, id: str, expected: PoseFields, fields: PoseFields)`
 
+Replace matching fields under an exact precondition.
+
 Types: [PoseFields](#zipzimodelingposeposefields).
 
 **Fields**
@@ -197,6 +223,8 @@ Types: [PoseFields](#zipzimodelingposeposefields).
 **Type**
 
 `(*, id: str, part: PosePartRef, links: tuple[PoseLink, ...] | None = None, extensions: _Mapping[str, ExtensionValue])`
+
+Stable Pose group entry with a Part target and optional links.
 
 Types: [ExtensionValue], [PoseLink](#zipzimodelingposeposelink), [PosePartRef](#zipzimodelingposeposepartref).
 
@@ -213,6 +241,8 @@ Types: [ExtensionValue], [PoseLink](#zipzimodelingposeposelink), [PosePartRef](#
 
 `PoseFieldsAsset | PoseFieldsGroup | PoseFieldsEntry | PoseFieldsLink`
 
+Typed replacement fields for a Pose asset or owned row.
+
 Types: [PoseFieldsAsset](#zipzimodelingposeposefieldsasset), [PoseFieldsEntry](#zipzimodelingposeposefieldsentry), [PoseFieldsGroup](#zipzimodelingposeposefieldsgroup), [PoseFieldsLink](#zipzimodelingposeposefieldslink).
 
 
@@ -221,6 +251,8 @@ Types: [PoseFieldsAsset](#zipzimodelingposeposefieldsasset), [PoseFieldsEntry](#
 **Type**
 
 `(*, fade_in: float | None = None)`
+
+Replace Pose asset fade settings.
 
 **Fields**
 
@@ -231,6 +263,8 @@ Types: [PoseFieldsAsset](#zipzimodelingposeposefieldsasset), [PoseFieldsEntry](#
 **Type**
 
 `(*, part: PosePartRef)`
+
+Replace an entry Part reference.
 
 Types: [PosePartRef](#zipzimodelingposeposepartref).
 
@@ -244,6 +278,8 @@ Types: [PosePartRef](#zipzimodelingposeposepartref).
 
 `(*, name: str)`
 
+Replace a Pose group label.
+
 **Fields**
 
 - `name`: Human-readable display or registration name; distinct from persistent object identity.
@@ -253,6 +289,8 @@ Types: [PosePartRef](#zipzimodelingposeposepartref).
 **Type**
 
 `(*, target: PosePartRef)`
+
+Replace a link Part target.
 
 Types: [PosePartRef](#zipzimodelingposeposepartref).
 
@@ -265,6 +303,8 @@ Types: [PosePartRef](#zipzimodelingposeposepartref).
 **Type**
 
 `(*, id: str, name: str, entries: tuple[PoseEntry, ...])`
+
+Ordered Pose entries sharing a named group.
 
 Types: [PoseEntry](#zipzimodelingposeposeentry).
 
@@ -280,6 +320,8 @@ Types: [PoseEntry](#zipzimodelingposeposeentry).
 
 `(*, id: str, target: PosePartRef)`
 
+Stable link from a Pose entry to another Part target.
+
 Types: [PosePartRef](#zipzimodelingposeposepartref).
 
 **Fields**
@@ -293,6 +335,8 @@ Types: [PosePartRef](#zipzimodelingposeposepartref).
 
 `PosePartRefUnspecified | PosePartRefResolved | PosePartRefUnresolved`
 
+Optional resolved or unresolved Part target in Pose data.
+
 Types: [PosePartRefResolved](#zipzimodelingposeposepartrefresolved), [PosePartRefUnresolved](#zipzimodelingposeposepartrefunresolved), [PosePartRefUnspecified](#zipzimodelingposeposepartrefunspecified).
 
 
@@ -301,6 +345,8 @@ Types: [PosePartRefResolved](#zipzimodelingposeposepartrefresolved), [PosePartRe
 **Type**
 
 `(*, part_id: str)`
+
+Target a stable document Part.
 
 **Fields**
 
@@ -312,6 +358,8 @@ Types: [PosePartRefResolved](#zipzimodelingposeposepartrefresolved), [PosePartRe
 
 `(*, runtime_id: str)`
 
+Preserve an unresolved external Part runtime ID.
+
 **Fields**
 
 - `runtime_id`: Imported/exported runtime label, distinct from the document object UUID.
@@ -321,6 +369,8 @@ Types: [PosePartRefResolved](#zipzimodelingposeposepartrefresolved), [PosePartRe
 **Type**
 
 `()`
+
+No Part target is specified.
 
 
 [ExtensionValue]: modeling.md#zipzimodelingextensionvalue

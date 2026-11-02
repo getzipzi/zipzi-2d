@@ -552,7 +552,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservedBounds.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.observation.TextureCoverage': {'children': ('zipzi.modeling.observation.TextureCoverage.__repr__',
                                                              'zipzi.modeling.observation.TextureCoverage.summary'),
-                                                'documentation': '',
+                                                'documentation': 'Sampled source-alpha and UV coverage statistics; '
+                                                                 'masks and occlusion are excluded.',
                                                 'fields': [('alpha_threshold',
                                                             'Alpha >= this value counts as painted. Coverage ignores '
                                                             'filtering, masks and occlusion.'),
